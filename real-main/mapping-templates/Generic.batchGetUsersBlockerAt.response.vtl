@@ -1,0 +1,16 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#foreach ($item in $ctx.result.data.${table})
+  #if (! $util.isNull($item))
+    #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])
+    #foreach ($index in $indexes)
+      ## the blocked vs blocker swap here is because here we're from the perspective
+      ## of the caller, vs in the DB we are perspective of the item
+      $util.qr($ctx.prev.result.items[$index].put('blockerAt', $item.blockedAt))
+    #end
+  #end
+#end
+
+$util.toJson($ctx.prev.result)

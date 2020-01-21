@@ -1,0 +1,12 @@
+#if (! $util.isNull($ctx.source.likeStatus))
+  #return ($ctx.source.likeStatus)
+#end
+
+{
+    "version": "2018-05-29",
+    "operation": "GetItem",
+    "key": {
+        "partitionKey": { "S": "like/$ctx.identity.cognitoIdentityId/$ctx.source.postId" },
+        "sortKey": { "S": "-" }
+    }
+}

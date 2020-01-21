@@ -1,0 +1,27 @@
+## are we looking at a public user?
+#if ($ctx.source.privacyStatus == 'PUBLIC')
+  #return
+#end
+
+## are we looking at a ourselves?
+#if ($ctx.source.userId == $ctx.identity.cognitoIdentityId)
+  #return
+#end
+
+## has the followedStatus already been computed? if so, use it
+#if (! $util.isNull($ctx.source.followedStatus))
+  #if ($ctx.source.followedStatus == 'FOLLOWING')
+    #return
+  #end
+  $util.error('Caller is not following user, and user is private')
+#end
+
+## fetch the followed status
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": {"S": "following/$ctx.identity.cognitoIdentityId/$ctx.source.userId"},
+    "sortKey": {"S": "-"}
+  }
+}

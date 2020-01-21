@@ -1,0 +1,20 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#if ($ctx.prev.result.items.isEmpty())
+  #return ()
+#end
+
+#set ($userItem = $ctx.prev.result.items[0])
+
+#if (! $util.isNull($userItem.blockerAt))
+  ## we are blocked! we see only an absolute minimum profile
+  #set ($userItem = {
+    'userId': $userItem.userId,
+    'username': $userItem.username,
+    'blockerAt': $userItem.blockerAt
+  })
+#end
+
+$util.toJson($userItem)

@@ -1,0 +1,9 @@
+## private to the user themselves
+#if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
+  #return ()
+#end
+
+$util.qr($ctx.stash.put('userId', $ctx.source.userId))
+$util.qr($ctx.stash.put('likeStatus', 'ANONYMOUSLY_LIKED'))
+
+{}

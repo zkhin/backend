@@ -1,0 +1,14 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#foreach ($item in $ctx.result.data.${table})
+  #if (! $util.isNull($item))
+    #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])
+    #foreach ($index in $indexes)
+      $util.qr($ctx.stash.posts.items[$index].put('postedBy', $item))
+    #end
+  #end
+#end
+
+{}

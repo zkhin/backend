@@ -1,0 +1,11 @@
+## is caller blocked by this user?
+#if (! $util.isNull($ctx.source.blockerAt))
+  #return
+#end
+
+## has the user hidden their follow counts & lists?
+#if ($ctx.source.followCountsHidden and $ctx.source.userId != $ctx.identity.cognitoIdentityId)
+  #return
+#end
+
+{}

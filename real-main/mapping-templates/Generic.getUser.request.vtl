@@ -1,0 +1,13 @@
+## expects ctx.stash.userId to be set to the user to look up
+#if ($util.isNull($ctx.stash.userId))
+  #return ()
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "user/$ctx.stash.userId" },
+    "sortKey": { "S": "profile" }
+  }
+}

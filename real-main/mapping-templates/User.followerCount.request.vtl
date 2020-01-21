@@ -1,0 +1,14 @@
+#set ($count = $util.defaultIfNull($ctx.source.followerCount, 0))
+
+## if followCountsHidden is set, and the caller is not looking at their
+## own profile, hide the count
+#if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
+  #if ($util.defaultIfNull($ctx.source.followCountsHidden, false))
+    #set ($count = $util.toJson(null))
+  #end
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $count,
+}

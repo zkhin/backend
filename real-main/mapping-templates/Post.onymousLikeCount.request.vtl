@@ -1,0 +1,9 @@
+## postedBy is filed in by the parent
+#if ($ctx.source.postedBy.likesDisabled || $ctx.source.likesDisabled)
+  #return ()
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $util.toJson($util.defaultIfNull($ctx.source.onymousLikeCount, 0))
+}

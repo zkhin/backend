@@ -1,0 +1,19 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($result = {
+  'items': [],
+  'nextToken': $ctx.prev.result.nextToken
+})
+
+#foreach ($user in $ctx.prev.result.items)
+  #if ($util.isNull($user.blockerAt))
+    $util.qr($result.items.add($user))
+  #end
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $util.toJson($result)
+}

@@ -1,0 +1,28 @@
+## Expects a $ctx.prev.result with two keys:
+##  - nextToken (nullable string)
+##  - userIds (list of strings)
+
+#if ($ctx.prev.result.userIds.isEmpty())
+  #return ({
+    'nextToken': $ctx.prev.result.nextToken,
+    'items': []
+  })
+#end
+
+#set ($keys = [])
+#foreach ($userId in $ctx.prev.result.userIds)
+  $util.qr($keys.add({
+    "partitionKey": {"S": "user/$userId"},
+    "sortKey": {"S": "profile"}
+  }))
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($keys)
+    }
+  }
+}

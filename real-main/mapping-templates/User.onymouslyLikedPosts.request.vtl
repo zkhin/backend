@@ -1,0 +1,9 @@
+## blockerAt will be filled in if caller has been blocked
+#if (! $util.isNull($ctx.source.blockerAt))
+  #return ()
+#end
+
+$util.qr($ctx.stash.put('userId', $ctx.source.userId))
+$util.qr($ctx.stash.put('likeStatus', 'ONYMOUSLY_LIKED'))
+
+{}

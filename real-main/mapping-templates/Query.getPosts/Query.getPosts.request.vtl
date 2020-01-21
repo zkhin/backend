@@ -1,0 +1,4 @@
+$util.qr($ctx.stash.put('postStatus', $util.defaultIfNull($ctx.args.postStatus, 'COMPLETED')))
+$util.qr($ctx.stash.put('userId', $util.defaultIfNull($ctx.args.userId, $ctx.identity.cognitoIdentityId)))
+
+{}

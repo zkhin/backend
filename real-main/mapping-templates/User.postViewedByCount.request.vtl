@@ -1,0 +1,11 @@
+#set ($count = $util.defaultIfNull($ctx.source.postViewedByCount, 0))
+
+## if viewCountsHidden is set, hide the postViewedByCount
+#if ($util.defaultIfNull($ctx.source.viewCountsHidden, false))
+  #set ($count = $util.toJson(null))
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $count,
+}

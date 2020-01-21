@@ -1,0 +1,12 @@
+#if (! $util.isNull($ctx.stash.accessGranted))
+  #return ({})
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "user/$ctx.stash.userId" },
+    "sortKey": { "S": "profile" }
+  }
+}

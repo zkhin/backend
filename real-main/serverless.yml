@@ -1,0 +1,1407 @@
+# Welcome to Serverless!
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: real-main
+frameworkVersion: '>=1.0.0 <2.0.0'
+
+provider:
+  name: aws
+  stackName: real-${self:provider.stage}-main
+  stage: ${opt:stage, 'dev'}
+  runtime: python3.8
+  logRetentionInDays: 7
+  timeout: 30
+
+  environment:
+    REGION: '#{AWS::Region}'
+    # using cloud formation as a buffer here to avoid resource dependency loops. Deploy twice to get correct values.
+    COGNITO_USER_POOL_ID: ${cf:${self:provider.stackName}.CognitoUserPoolId, 'placeholder'}
+    COGNITO_BACKEND_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoBackendUserPoolClientId, 'placeholder'}
+    COGNITO_TESTING_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoTestingUserPoolClientId, 'placeholder'}
+
+    DYNAMODB_TABLE: ${self:provider.stackName}
+    UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}  # naming to avoid resource dependency loops
+    PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
+    PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
+    PLACEHOLDER_PHOTOS_CLOUDFRONT_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
+    CLOUDFRONT_DOMAIN: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsDomainName, 'placeholder'}
+    SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1  # choosen manually when creating a key pair in the console
+    SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
+    ES_SEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
+    FLAGGED_ALERT_THRESHOLD: ${self:custom.envvars.FLAGGED_ALERT_THRESHOLD.${self:provider.stage}}
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - cognito-idp:*
+      Resource: arn:aws:cognito-idp:*:*:*
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        - !GetAtt DynamoDbTable.Arn
+        - !Join [ /, [ !GetAtt DynamoDbTable.Arn, index, '*' ] ]
+    - Effect: Allow
+      Action:
+        - secretsmanager:GetSecretValue
+      Resource: arn:aws:secretsmanager:*:*:*
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.UPLOADS_BUCKET}' ] ]  # needed for 404's to work (via s3:ListBucket)
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.UPLOADS_BUCKET}', '/*' ] ]
+    - Effect: Allow
+      Action:
+        - es:ESHttp*
+      Resource: !Join [ '', [ !GetAtt ElasticSearchDomain.DomainArn, '/*' ] ]
+    - Effect: Allow
+      Action:
+        - s3:ListBucket
+      Resource: !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.PLACEHOLDER_PHOTOS_BUCKET}' ] ]
+
+custom:
+  envvars:
+    FLAGGED_ALERT_THRESHOLD:
+      dev: 3  # avoid alerts when running integration test suite
+      production: 1
+
+  splitStacks:
+    perType: false
+
+  appSync:
+    name: ${self:service}-${self:provider.stage}
+    authenticationType: AWS_IAM
+    logConfig:
+      level: ERROR
+    substitutions:
+      table: ${self:provider.environment.DYNAMODB_TABLE}
+
+    mappingTemplates:
+
+      - type: Query
+        field: self
+        request: Query.self/Query.self.request.vtl
+        response: Query.self/Query.self.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.batchGetUsers
+
+      - type: Query
+        field: user
+        request: Query.user/Query.user.request.vtl
+        response: Query.user/Query.user.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+
+      - type: Query
+        field: searchUsers
+        request: Generic.passThru.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.searchUsers.searchUsers
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: Query
+        field: trendingUsers
+        request: Generic.passThru.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.trendingUsers.fetchUserIds
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: User
+        field: photoUrl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: User
+        field: photoUrl64p
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: User
+        field: photoUrl480p
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: User
+        field: photoUrl1080p
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: User
+        field: photoUrl4k
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: User
+        field: followedStatus
+        dataSource: DynamodbDataSource
+
+      - type: User
+        field: followerStatus
+        dataSource: DynamodbDataSource
+
+      - type: User
+        field: followCountsHidden
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: followedCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: followerCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: followedUsers
+        request: User.followedUsers/User.followedUsers.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.validatePublicOrFollower
+          - User.followedUsers.fetchFollowedUserIds
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: User
+        field: followerUsers
+        request: User.followerUsers/User.followerUsers.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.validatePublicOrFollower
+          - User.followerUsers.fetchFollowerUserIds
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: User
+        field: postCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: languageCode
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: themeCode
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: bio
+        request: User.bio/User.bio.request.vtl
+        response: User.bio/User.bio.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.checkAccess.checkIfBlocked
+          - Generic.checkAccess.checkIfPublic
+          - Generic.checkAccess.checkIfFollower
+
+      - type: User
+        field: email
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: phoneNumber
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: acceptedEULAVersion
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: commentsDisabled
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: likesDisabled
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: verificationHidden
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: blockedAt
+        dataSource: DynamodbDataSource
+
+      - type: User
+        field: blockerAt
+        dataSource: DynamodbDataSource
+
+      - type: User
+        field: viewCountsHidden
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: postViewedByCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: onymouslyLikedPosts
+        request: User.onymouslyLikedPosts.request.vtl
+        response: Generic.paginatedPosts.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.fetchLikesByUser
+          - Generic.batchGetPosts
+          - Generic.batchGetPostsPostedBy
+          - Generic.batchGetPostsPostedByBlockerAt
+          - Generic.batchGetPostsPostedByFollowedStatus
+
+      - type: User
+        field: anonymouslyLikedPosts
+        request: User.anonymouslyLikedPosts.request.vtl
+        response: Generic.paginatedPosts.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.fetchLikesByUser
+          - Generic.batchGetPosts
+          - Generic.batchGetPostsPostedBy
+          - Generic.batchGetPostsPostedByBlockerAt
+          - Generic.batchGetPostsPostedByFollowedStatus
+
+      - type: Mutation
+        field: createCognitoOnlyUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: createFacebookUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: createGoogleUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: startChangeUserEmail
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: finishChangeUserEmail
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: startChangeUserPhoneNumber
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: finishChangeUserPhoneNumber
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: resetUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: setUserDetails
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: setUserAcceptedEULAVersion
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Query
+        field: getFollowedUsersWithStories
+        request: Generic.passThru.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.getFollowedUsersWithStories.fetchUserIds
+          - Generic.batchGetUsers
+
+      - type: Mutation
+        field: followUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: unfollowUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: acceptFollowerUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: denyFollowerUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: blockUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: unblockUser
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Query
+        field: getBlockedUsers
+        request: Generic.passThru.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+            - Query.getBlockedUsers.fetchUserIds
+            - Generic.batchGetUsers
+
+      - type: Mutation
+        field: onymouslyLikePost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: anonymouslyLikePost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: dislikePost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Post
+        field: flagStatus
+        dataSource: DynamodbDataSource
+
+      - type: Post
+        field: likeStatus
+        dataSource: DynamodbDataSource
+
+      - type: Post
+        field: viewedByCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: viewedBy
+        request: Generic.passThru.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Post.viewedBy.fetchUserIds
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: Post
+        field: commentsDisabled
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: likesDisabled
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: verificationHidden
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: onymousLikeCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: anonymousLikeCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: onymouslyLikedBy
+        request: Post.onymouslyLikedBy/Post.onymouslyLikedBy.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Post.onymouslyLikedBy.fetchLikes
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: Post
+        field: mediaObjects
+        dataSource: DynamodbDataSource
+
+      - type: Query
+        field: getFeed
+        request: Generic.passThru.request.vtl
+        response: Query.getFeed/Query.getFeed.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.getFeed.fetchFeed
+          - Generic.batchGetPosts
+          - Generic.batchGetPostsPostedBy
+
+      - type: Query
+        field: getStories
+        request: Query.getStories/Query.getStories.request.vtl
+        response: Query.getStories/Query.getStories.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.checkAccess.checkIfBlocked
+          - Generic.checkAccess.checkIfPublic
+          - Generic.checkAccess.checkIfFollower
+          - Query.getStories.fetchPosts
+          - Generic.batchGetPostsPostedBy
+
+      - type: Query
+        field: trendingPosts
+        request: Generic.passThru.request.vtl
+        response: Generic.paginatedPosts.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.trendingPosts.fetchPostIds
+          - Generic.batchGetPosts
+          - Generic.batchGetPostsPostedBy
+          - Generic.batchGetPostsPostedByBlockerAt
+          - Generic.batchGetPostsPostedByFollowedStatus
+
+      - type: Query
+        field: getPost
+        request: Generic.passThru.request.vtl
+        response: Query.getPost/Query.getPost.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.getPost.fetchPost
+          - Generic.checkAccess.checkIfBlocked
+          - Generic.checkAccess.checkIfPublic
+          - Generic.checkAccess.checkIfFollower
+          - Generic.getUser
+
+      - type: Query
+        field: getPosts
+        request: Query.getPosts/Query.getPosts.request.vtl
+        response: Query.getPosts/Query.getPosts.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.checkAccess.checkIfBlocked
+          - Generic.checkAccess.checkIfPublic
+          - Generic.checkAccess.checkIfFollower
+          - Query.getPosts.fetchPosts
+          - Generic.batchGetPostsPostedBy
+
+      - type: Query
+        field: getMediaObjects
+        request: Query.getMediaObjects/Query.getMediaObjects.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.checkAccess.checkIfBlocked
+          - Generic.checkAccess.checkIfPublic
+          - Generic.checkAccess.checkIfFollower
+          - Query.getMediaObjects.fetchMedia
+
+      - type: Mutation
+        field: addPost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: editPost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: editPostExpiresAt
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: flagPost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: deletePost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: archivePost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: restoreArchivedPost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: reportPostViews
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: MediaObject
+        field: isVerified
+        dataSource: DynamodbDataSource
+
+      - type: MediaObject
+        field: url
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: MediaObject
+        field: url64p
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: MediaObject
+        field: url480p
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: MediaObject
+        field: url1080p
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: MediaObject
+        field: url4k
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: MediaObject
+        field: uploadUrl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: lambdaClientError
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: lambdaServerError
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+    functionConfigurations:
+
+      - dataSource: DynamodbDataSource
+        name: Generic.getUser
+        request: Generic.getUser.request.vtl
+        response: Generic.getUser.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.validatePublicOrFollower
+        request: Generic.validatePublicOrFollower.request.vtl
+        response: Generic.validatePublicOrFollower.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetUsers
+        request: Generic.batchGetUsers.request.vtl
+        response: Generic.batchGetUsers.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetUsersBlockerAt
+        request: Generic.batchGetUsersBlockerAt.request.vtl
+        response: Generic.batchGetUsersBlockerAt.response.vtl
+
+      - dataSource: NoneDataSource
+        name: Generic.filterUsersBlockerAt
+        request: Generic.filterUsersBlockerAt.request.vtl
+        response: Generic.passThru.response.vtl
+
+      - dataSource: ElasticSearchDataSource
+        name: Query.searchUsers.searchUsers
+        request: Query.searchUsers/Pipeline.searchUsers.request.vtl
+        response: Query.searchUsers/Pipeline.searchUsers.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.trendingUsers.fetchUserIds
+        request: Query.trendingUsers/Pipeline.fetchUserIds.request.vtl
+        response: Query.trendingUsers/Pipeline.fetchUserIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getBlockedUsers.fetchUserIds
+        request: Query.getBlockedUsers/Pipeline.fetchUserIds.request.vtl
+        response: Query.getBlockedUsers/Pipeline.fetchUserIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.checkAccess.checkIfBlocked
+        request: Generic.checkAccess/Pipeline.checkIfBlocked.request.vtl
+        response: Generic.checkAccess/Pipeline.checkIfBlocked.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.checkAccess.checkIfPublic
+        request: Generic.checkAccess/Pipeline.checkIfPublic.request.vtl
+        response: Generic.checkAccess/Pipeline.checkIfPublic.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.checkAccess.checkIfFollower
+        request: Generic.checkAccess/Pipeline.checkIfFollower.request.vtl
+        response: Generic.checkAccess/Pipeline.checkIfFollower.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getFollowedUsersWithStories.fetchUserIds
+        request: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.request.vtl
+        response: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getPost.fetchPost
+        request: Query.getPost/Pipeline.fetchPost.request.vtl
+        response: Query.getPost/Pipeline.fetchPost.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getFeed.fetchFeed
+        request: Query.getFeed/Pipeline.fetchFeed.request.vtl
+        response: Generic.passThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Post.onymouslyLikedBy.fetchLikes
+        request: Post.onymouslyLikedBy/Pipeline.fetchLikes.request.vtl
+        response: Post.onymouslyLikedBy/Pipeline.fetchLikes.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.fetchLikesByUser
+        request: Generic.fetchLikesByUser.request.vtl
+        response: Generic.passThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetPosts
+        request: Generic.batchGetPosts.request.vtl
+        response: Generic.batchGetPosts.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetPostsPostedBy
+        request: Generic.batchGetPostsPostedBy.request.vtl
+        response: Generic.batchGetPostsPostedBy.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetPostsPostedByBlockerAt
+        request: Generic.batchGetPostsPostedByBlockerAt.request.vtl
+        response: Generic.batchGetPostsPostedByBlockerAt.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetPostsPostedByFollowedStatus
+        request: Generic.batchGetPostsPostedByFollowedStatus.request.vtl
+        response: Generic.batchGetPostsPostedByFollowedStatus.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getStories.fetchPosts
+        request: Query.getStories/Pipeline.fetchPosts.request.vtl
+        response: Query.getStories/Pipeline.fetchPosts.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getPosts.fetchPosts
+        request: Query.getPosts/Pipeline.fetchPosts.request.vtl
+        response: Query.getPosts/Pipeline.fetchPosts.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.getMediaObjects.fetchMedia
+        request: Query.getMediaObjects/Pipeline.fetchMedia.request.vtl
+        response: Generic.passThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.trendingPosts.fetchPostIds
+        request: Query.trendingPosts/Pipeline.fetchPostIds.request.vtl
+        response: Query.trendingPosts/Pipeline.fetchPostIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: User.followedUsers.fetchFollowedUserIds
+        request: User.followedUsers/Pipeline.fetchFollowedUserIds.request.vtl
+        response: User.followedUsers/Pipeline.fetchFollowedUserIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: User.followerUsers.fetchFollowerUserIds
+        request: User.followerUsers/Pipeline.fetchFollowerUserIds.request.vtl
+        response: User.followerUsers/Pipeline.fetchFollowerUserIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Post.viewedBy.fetchUserIds
+        request: Post.viewedBy/Pipeline.fetchUserIds.request.vtl
+        response: Post.viewedBy/Pipeline.fetchUserIds.response.vtl
+
+    dataSources:
+
+      - type: NONE
+        name: NoneDataSource
+
+      - type: AMAZON_DYNAMODB
+        name: DynamodbDataSource
+        config:
+          tableName: ${self:provider.environment.DYNAMODB_TABLE}
+
+      - type: AWS_LAMBDA
+        name: LambdaDataSource
+        config:
+          functionName: appSyncDispatch
+
+      - type: AMAZON_ELASTICSEARCH
+        name: ElasticSearchDataSource
+        config:
+          endpoint: !Join [ '', [ 'https://', !GetAtt ElasticSearchDomain.DomainEndpoint ] ]
+          # the custom iamRoleStatements stanza is actually necessary because of a bug
+          # https://github.com/sid88in/serverless-appsync-plugin/issues/233
+          iamRoleStatements:
+            - Effect: Allow
+              Action:
+                - es:ESHttpGet
+              Resource: !Join [ '', [ !GetAtt ElasticSearchDomain.Arn, '/*' ] ]
+
+  # https://github.com/ACloudGuru/serverless-plugin-aws-alerts
+  alerts:
+    stages:
+      - production
+      - staging
+      - dev  # for now
+    dashboards: true
+    topics:
+      alarm:
+        topic: ${self:service}-${self:provider.stage}-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: mike+${self:provider.stage}-#{AWS::AccountId}@real.app
+    definitions:
+      functionThrottles:
+        period: 300
+      functionErrors:
+        period: 300
+      functionFlagged:
+        metric: postsFlagged
+        threshold: 1
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 1
+        datapointsToAlarm: 1
+        comparisonOperator: GreaterThanOrEqualToThreshold
+        treatMissingData: missing
+        pattern: 'FLAGGED'
+      functionCognitoServerErrors:
+        metric: cognitoServerErrors
+        threshold: 1
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 1
+        datapointsToAlarm: 1
+        comparisonOperator: GreaterThanOrEqualToThreshold
+        treatMissingData: missing
+        pattern: 'ERROR - CognitoClientException'
+
+resources:
+
+  # https://serverless-stack.com/chapters/configure-cognito-user-pool-in-serverless.html
+  Resources:
+
+    # Keeping schema generic to allow for future fleibility
+    # Follows design patterns explained here: https://www.youtube.com/watch?v=HaEPXoXVf2k
+    DynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        AttributeDefinitions:
+          - AttributeName: partitionKey
+            AttributeType: S
+          - AttributeName: sortKey
+            AttributeType: S
+          - AttributeName: gsiA1PartitionKey
+            AttributeType: S
+          - AttributeName: gsiA1SortKey
+            AttributeType: S
+          - AttributeName: gsiA2PartitionKey
+            AttributeType: S
+          - AttributeName: gsiA2SortKey
+            AttributeType: S
+          - AttributeName: gsiK1PartitionKey
+            AttributeType: S
+          - AttributeName: gsiK1SortKey
+            AttributeType: S
+          - AttributeName: gsiK2PartitionKey
+            AttributeType: S
+          - AttributeName: gsiK2SortKey
+            AttributeType: S
+          - AttributeName: gsiK3PartitionKey
+            AttributeType: S
+          - AttributeName: gsiK3SortKey
+            AttributeType: N
+        KeySchema:
+          - AttributeName: partitionKey
+            KeyType: HASH
+          - AttributeName: sortKey
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI-A1
+            KeySchema:
+            - AttributeName: gsiA1PartitionKey
+              KeyType: HASH
+            - AttributeName: gsiA1SortKey
+              KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI-A2
+            KeySchema:
+            - AttributeName: gsiA2PartitionKey
+              KeyType: HASH
+            - AttributeName: gsiA2SortKey
+              KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI-K1
+            KeySchema:
+            - AttributeName: gsiK1PartitionKey
+              KeyType: HASH
+            - AttributeName: gsiK1SortKey
+              KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+          - IndexName: GSI-K2
+            KeySchema:
+            - AttributeName: gsiK2PartitionKey
+              KeyType: HASH
+            - AttributeName: gsiK2SortKey
+              KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+          - IndexName: GSI-K3
+            KeySchema:
+            - AttributeName: gsiK3PartitionKey
+              KeyType: HASH
+            - AttributeName: gsiK3SortKey
+              KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+
+    ElasticSearchDomain:
+      Type: AWS::Elasticsearch::Domain
+      Properties:
+        DomainName: ${self:provider.stackName}
+        EBSOptions:
+          EBSEnabled: true
+          VolumeType: gp2
+          VolumeSize: 10
+        ElasticsearchClusterConfig:
+          InstanceType: t2.small.elasticsearch
+          InstanceCount: 2
+          DedicatedMasterEnabled: false
+          ZoneAwarenessEnabled: false
+        ElasticsearchVersion: 7.1
+
+    CognitoIdentityPool:
+      Type: AWS::Cognito::IdentityPool
+      DeletionPolicy: Retain
+      Properties:
+        IdentityPoolName: RealIdentityPool_${self:provider.stage}  # AWS validation doesn't allow dashes in this string
+        AllowUnauthenticatedIdentities: true
+        CognitoIdentityProviders:
+          - ClientId:
+              Ref: CognitoTestingUserPoolClient
+            ProviderName: !GetAtt CognitoUserPool.ProviderName
+            ServerSideTokenCheck: true
+          - ClientId:
+              Ref: CognitoFrontendUserPoolClient
+            ProviderName: !GetAtt CognitoUserPool.ProviderName
+            ServerSideTokenCheck: true
+          - ClientId:
+              Ref: CognitoBackendUserPoolClient
+            ProviderName: !GetAtt CognitoUserPool.ProviderName
+            ServerSideTokenCheck: true
+        # Google should be set up as an OIDC provider before deploying
+        # https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
+        # https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7
+        OpenIdConnectProviderARNs:
+          - 'arn:aws:iam::#{AWS::AccountId}:oidc-provider/accounts.google.com'
+        SupportedLoginProviders:
+          graph.facebook.com: '864583797262307'
+
+    CognitoIdentityPoolRoles:
+      Type: AWS::Cognito::IdentityPoolRoleAttachment
+      Properties:
+        IdentityPoolId:
+          Ref: CognitoIdentityPool
+        Roles:
+          authenticated: !GetAtt CognitoIdentityPoolAuthRole.Arn
+          unauthenticated: !GetAtt CognitoIdentityPoolUnauthenticatedAuthRole.Arn
+
+    # IAM role used for authenticated users
+    # https://serverless-stack.com/chapters/configure-cognito-identity-pool-in-serverless.html
+    # https://github.com/sid88in/serverless-appsync-plugin/issues/70#issuecomment-384055728
+    CognitoIdentityPoolAuthRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Action:
+                - sts:AssumeRoleWithWebIdentity
+              Condition:
+                StringEquals:
+                  cognito-identity.amazonaws.com:aud:
+                    Ref: CognitoIdentityPool
+        Policies:
+          - PolicyName: CognitoIdentityPoolAuthenticatedPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - appsync:GraphQL
+                  Resource:
+                    # 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
+                    - !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
+
+    # Empty IAM role used for unauthenticated users
+    CognitoIdentityPoolUnauthenticatedAuthRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Action:
+                - sts:AssumeRoleWithWebIdentity
+              Condition:
+                StringEquals:
+                  cognito-identity.amazonaws.com:aud:
+                    Ref: CognitoIdentityPool
+
+    # IAM role for Cognito to send SMS's
+    CognitoSNSRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - cognito-idp.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: CognitoSNSPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: sns:publish
+                  Resource: '*'
+
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpool.html
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      DeletionPolicy: Retain
+      Properties:
+        UserPoolName: RealUserPool-${self:provider.stage}
+        AliasAttributes:
+          - email
+          - phone_number
+          - preferred_username
+        AutoVerifiedAttributes:
+          - email
+          - phone_number
+        EmailConfiguration:
+          EmailSendingAccount: DEVELOPER
+          SourceArn: arn:aws:ses:us-east-1:#{AWS::AccountId}:identity/no-reply@real.app
+        SmsConfiguration:
+          SnsCallerArn: !GetAtt CognitoSNSRole.Arn
+        Schema:
+          - Name: unverified_email
+            AttributeDataType: String
+            Mutable: true
+          - Name: unverified_phone
+            AttributeDataType: String
+            Mutable: true
+
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpoolclient.html
+    CognitoBackendUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: RealBackendUserPoolClient-${self:provider.stage}
+        UserPoolId:
+          Ref: CognitoUserPool
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+        GenerateSecret: false
+
+    CognitoTestingUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: RealTestingUserPoolClient-${self:provider.stage}
+        UserPoolId:
+          Ref: CognitoUserPool
+        ExplicitAuthFlows:
+          - USER_PASSWORD_AUTH
+        GenerateSecret: false
+        SupportedIdentityProviders:
+          - COGNITO
+        CallbackURLs:
+          - real.app://oauth-callback
+        LogoutURLs:
+          - real.app://oauth-signout
+        AllowedOAuthFlows:
+          - code
+        AllowedOAuthFlowsUserPoolClient: true
+        AllowedOAuthScopes:
+          - aws.cognito.signin.user.admin
+          - email
+          - openid
+          - phone
+          - profile
+        ReadAttributes:
+          - email
+          - phone_number
+          - family_name
+          - email_verified
+          - phone_number_verified
+        WriteAttributes:
+          - email
+          - phone_number
+          - family_name
+
+    CognitoFrontendUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: RealFrontendUserPoolClient-${self:provider.stage}
+        UserPoolId:
+          Ref: CognitoUserPool
+        ExplicitAuthFlows:
+          - USER_PASSWORD_AUTH
+        GenerateSecret: false
+        SupportedIdentityProviders:
+          - COGNITO
+        CallbackURLs:
+          - real.app://oauth-callback
+        LogoutURLs:
+          - real.app://oauth-signout
+        AllowedOAuthFlows:
+          - code
+        AllowedOAuthFlowsUserPoolClient: true
+        AllowedOAuthScopes:
+          - aws.cognito.signin.user.admin
+          - email
+          - openid
+          - phone
+          - profile
+        ReadAttributes:
+          - email
+          - phone_number
+        WriteAttributes:
+          - email
+          - phone_number
+
+    S3BucketUploads:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        BucketName: ${self:provider.environment.UPLOADS_BUCKET}
+        AccessControl: Private
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+
+    S3UploadsBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: ${self:provider.environment.UPLOADS_BUCKET}
+        PolicyDocument:
+          Statement:
+            - Action:
+                - 's3:GetObject'
+              Effect: Allow
+              Resource: !Join [ /, [ !GetAtt S3BucketUploads.Arn, '*' ] ]
+              Principal:
+                CanonicalUser: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsS3CanonicalUserId}
+            - Action:
+                - 's3:PutObject'
+              Effect: Allow
+              Resource: !Join [ /, [ !GetAtt S3BucketUploads.Arn, '*' ] ]
+              Principal:
+                CanonicalUser: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsS3CanonicalUserId}
+              Condition:
+                StringEquals:
+                  s3:x-amz-acl: bucket-owner-full-control
+
+    S3ObjectCreatedLambdaPermissionUploadsS3:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !GetAtt S3ObjectCreatedLambdaFunction.Arn
+        Action: lambda:InvokeFunction
+        Principal: s3.amazonaws.com
+        SourceAccount: '#{AWS::AccountId}'
+        SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+
+    FrontendLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: /frontend/real-${self:provider.stage}-frontend
+        RetentionInDays: 7
+
+    FrontendLogger:
+      Type: AWS::IAM::User
+      Properties:
+        UserName: real-${self:provider.stage}-frontend-logger
+        Policies:
+          - PolicyName: real-${self:provider.stage}-frontend-logger-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:DescribeLogStreams
+                    - logs:CreateLogStream
+                  Resource:
+                    - !GetAtt FrontendLogGroup.Arn
+                - Effect: Allow
+                  Action:
+                    - logs:PutLogEvents
+                  Resource:
+                    - !Join [ /, [ !GetAtt FrontendLogGroup.Arn, '*' ] ]
+
+    FrontendLoggerAccessKey:
+      Type: AWS::IAM::AccessKey
+      Properties:
+        UserName:
+          Ref: FrontendLogger
+
+  Outputs:
+
+    CognitoUserPoolId:
+      Value:
+        Ref: CognitoUserPool
+
+    CognitoBackendUserPoolClientId:
+      Value:
+        Ref: CognitoBackendUserPoolClient
+
+    CognitoTestingUserPoolClientId:
+      Value:
+        Ref: CognitoTestingUserPoolClient
+
+    CognitoFrontendUserPoolClientId:
+      Value:
+        Ref: CognitoFrontendUserPoolClient
+
+    CognitoIdentityPoolId:
+      Value:
+        Ref: CognitoIdentityPool
+
+    ElasticSearchEndpoint:
+      Value: !GetAtt ElasticSearchDomain.DomainEndpoint
+
+    FrontendLoggerAccessKeyId:
+      Value:
+        Ref: FrontendLoggerAccessKey
+
+    FrontendLoggerSecretAccessKey:
+      Value: !GetAtt FrontendLoggerAccessKey.SecretAccessKey
+
+    GitBranch:
+      Value: ${git:branch}
+
+    GitDescribe:
+      Value: ${git:describeLight}
+
+    GitIsDirty:
+      Value: ${git:isDirty}
+
+    UploadsBucketName:
+      Value: ${self:provider.environment.UPLOADS_BUCKET}
+
+    UploadsBucketDomainName:
+      Value: !GetAtt S3BucketUploads.DomainName
+
+functions:
+
+  appSyncDispatch:
+    name: ${self:provider.stackName}-appSyncDispatch
+    handler: app.handlers.appsync.dispatch
+    timeout: 10
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    alarms:
+      - functionFlagged
+      - functionErrors
+      - functionThrottles
+
+  # https://serverless.com/framework/docs/providers/aws/events/s3#custom-bucket-configuration
+  s3ObjectCreated:
+    name: ${self:provider.stackName}-s3ObjectCreated
+    handler: app.handlers.s3.uploads_object_created
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - s3:
+          bucket: uploads  # translated to 'S3BucketUploads' by serverless
+          event: s3:ObjectCreated:*
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  reindexTrendingUsers:
+    name: ${self:provider.stackName}-reindexTrendingUsers
+    handler: app.handlers.cron.reindex_trending_users
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 minute)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  reindexTrendingPosts:
+    name: ${self:provider.stackName}-reindexTrendingPosts
+    handler: app.handlers.cron.reindex_trending_posts
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 minute)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  deleteRecentlyExpiredPosts:
+    name: ${self:provider.stackName}-deleteRecentlyExpiredPosts
+    handler: app.handlers.cron.delete_recently_expired_posts
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 minute)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  deleteOlderExpiredPosts:
+    name: ${self:provider.stackName}-deleteOlderExpiredPosts
+    handler: app.handlers.cron.delete_older_expired_posts
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 day)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  deleteUnconfirmedExpiredUsers:
+    name: ${self:provider.stackName}-deleteUnconfirmedExpiredUsers
+    handler: app.handlers.cron.delete_unconfirmed_expired_users_in_cognito
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 hour)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  cognitoPreSignUp:
+    name: ${self:provider.stackName}-cognitoPreSignUp
+    handler: app.handlers.cognito.pre_sign_up
+    events:
+      - cognitoUserPool:
+          pool: '-' # translated to `CognitoUserPool` by serveless
+          trigger: PreSignUp
+    alarms:
+      - functionCognitoServerErrors
+      - functionThrottles
+
+  cognitoPreAuth:
+    name: ${self:provider.stackName}-cognitoPreAuth
+    handler: app.handlers.cognito.pre_auth
+    events:
+      - cognitoUserPool:
+          pool: '-' # translated to `CognitoUserPool` by serveless
+          trigger: PreAuthentication
+    alarms:
+      - functionCognitoServerErrors
+      - functionThrottles
+
+  cognitoCustomMessage:
+    name: ${self:provider.stackName}-cognitoCustomMessage
+    handler: app.handlers.cognito.custom_message
+    events:
+      - cognitoUserPool:
+          pool: '-' # translated to `CognitoUserPool` by serveless
+          trigger: CustomMessage
+    alarms:
+      - functionCognitoServerErrors
+      - functionThrottles
+
+  dynamoStream:
+    name: ${self:provider.stackName}-dynamoStream
+    handler: app.handlers.elasticsearch.dynamodb_stream
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt DynamoDbTable.StreamArn
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+# keep this miminal for smaller packages and thus faster deployments
+package:
+  exclude:
+    - ./**
+  include:
+    - app/**/*.py
+    - mapping-templates/**
+    - requirements.txt
+    - schema.graphql
+
+plugins:
+  - serverless-appsync-plugin
+  - serverless-pseudo-parameters
+  - serverless-plugin-aws-alerts
+  - serverless-plugin-split-stacks
+  - serverless-plugin-git-variables

@@ -1,0 +1,47 @@
+#if ($ctx.stash.posts.items.isEmpty())
+  #return ()
+#end
+
+## BatchGetItem does not preserve order
+#set ($queryKeys = [])
+$util.qr($ctx.stash.put('pkToIndex', {}))
+
+#foreach ($item in $ctx.stash.posts.items)
+
+  #if ($item.postedByUserId == $ctx.identity.cognitoIdentityId)
+    $util.qr($item['postedBy'].put('followedStatus', 'SELF'))
+
+  #else
+    ## Set the default. This is overriden in the response template when an
+    ## item is found in dynamo
+    $util.qr($item['postedBy'].put('followedStatus', 'NOT_FOLLOWING'))
+
+    #set ($pk = "following/$ctx.identity.cognitoIdentityId/$item.postedByUserId")
+    #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
+      $util.qr($ctx.stash.pkToIndex.put($pk, []))
+      $util.qr($queryKeys.add({
+        "partitionKey": {"S": "$pk"},
+        "sortKey": {"S": "-"}
+      }))
+    #end
+
+    #set ($index = $velocityCount - 1)
+    $util.qr($ctx.stash.pkToIndex[$pk].add($index))
+  #end
+
+#end
+
+## If all the trending posts were our own, no query here
+#if ($queryKeys.isEmpty())
+  #return ()
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($queryKeys)
+    }
+  }
+}

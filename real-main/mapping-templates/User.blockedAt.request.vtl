@@ -1,0 +1,12 @@
+#if (! $util.isNull($ctx.source.blockedAt))
+  #return ($ctx.source.blockedAt)
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "block/$ctx.identity.cognitoIdentityId/$ctx.source.userId" },
+    "sortKey": { "S": "-" }
+  }
+}

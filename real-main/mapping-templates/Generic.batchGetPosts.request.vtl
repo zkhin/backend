@@ -1,0 +1,30 @@
+$util.qr($ctx.stash.put('posts', {
+  'items': [],
+  'nextToken': $ctx.prev.result.nextToken
+}))
+
+#if ($ctx.prev.result.items.isEmpty())
+  #return ()
+#end
+
+## BatchGetItem does not preserve order
+#set ($keys = [])
+$util.qr($ctx.stash.put('postPkToIndex', {}))
+
+#foreach ($item in $ctx.prev.result.items)
+  #set ($index = $velocityCount - 1)
+  #set ($postPk = "post/$item.postId")
+  $util.qr($ctx.stash.postPkToIndex.put($postPk, $index))
+  $util.qr($keys.add({"partitionKey": {"S": "$postPk"}, "sortKey": {"S": "-"}}))
+  $util.qr($ctx.stash.posts.items.add(null))
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($keys)
+    }
+  }
+}

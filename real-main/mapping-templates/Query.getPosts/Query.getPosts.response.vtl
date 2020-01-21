@@ -1,0 +1,8 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+$util.toJson({
+  "items": $ctx.stash.posts.items,
+  "nextToken": $ctx.stash.posts.nextToken
+})
