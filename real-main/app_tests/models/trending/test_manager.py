@@ -126,9 +126,9 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
 def test_reindex_deletes_as_needed(trending_manager):
     now = datetime.utcnow()
 
-    # add one post item in the future a second
+    # add one post item just over a day ago
     post_id = 'post-id'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id, 1, now=(now - timedelta(minutes=1)))
+    trending_manager.record_view_count(TrendingItemType.POST, post_id, 1, now=(now - timedelta(hours=25)))
 
     # check we can see that post item
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))

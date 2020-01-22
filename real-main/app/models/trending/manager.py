@@ -16,7 +16,7 @@ class TrendingManager:
     exceptions = exceptions
 
     average_lifetime = timedelta(days=1)
-    min_score_cutoff = 1
+    min_score_cutoff = 0.37  # ~ 1/e
 
     def __init__(self, clients, managers=None):
         managers = managers or {}
