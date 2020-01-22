@@ -243,9 +243,10 @@ class Post:
         if text == '' and not post_media:
             raise exceptions.PostException('Cannot set text to null on text-only post')
 
+        text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
-            self.id, text=text, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
-            verification_hidden=verification_hidden,
+            self.id, text=text, text_tags=text_tags, comments_disabled=comments_disabled,
+            likes_disabled=likes_disabled, verification_hidden=verification_hidden,
         )
         self.item['mediaObjects'] = post_media
         return self

@@ -219,3 +219,38 @@ test('Edit post set verificationHidden', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPost']['verificationHidden']).toBe(false)
 })
+
+
+test('Edit post text ensure textTagged users is rewritten', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
+  const [, otherUserId, , , otherUsername] = await loginCache.getCleanLogin()
+
+  // we add a post a tag
+  let postId = uuidv4()
+  let text = `hi @${theirUsername}!`
+  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['text']).toBe(text)
+  expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['addPost']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
+  expect(resp['data']['addPost']['textTaggedUsers'][0]['user']['userId']).toBe(theirUserId)
+  expect(resp['data']['addPost']['textTaggedUsers'][0]['user']['username']).toBe(theirUsername)
+
+  // they change their username
+  const theirNewUsername = theirUsername.split('').reverse().join('')
+  resp = await theirClient.mutate({mutation: schema.setUsername, variables: {username: theirNewUsername}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['username']).toBe(theirNewUsername)
+
+  // we edit the post, using their *old* username and a new user's
+  // should rewrite the tags to a whole new set
+  let newText = `hi @${theirUsername}! say hi to @${otherUsername}`
+  resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, text: newText}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPost']['text']).toBe(newText)
+  expect(resp['data']['editPost']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['editPost']['textTaggedUsers'][0]['tag']).toBe(`@${otherUsername}`)
+  expect(resp['data']['editPost']['textTaggedUsers'][0]['user']['userId']).toBe(otherUserId)
+  expect(resp['data']['editPost']['textTaggedUsers'][0]['user']['username']).toBe(otherUsername)
+})

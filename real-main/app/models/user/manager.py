@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import re
 
 from app.models import follow, trending
 
@@ -19,6 +20,7 @@ class UserManager:
     enums = enums
     exceptions = exceptions
     client_names = ['cloudfront', 'cognito', 'dynamo', 'facebook', 'google', 's3_uploads', 's3_placeholder_photos']
+    username_tag_regex = re.compile('@' + UserValidate.username_regex.pattern)
 
     def __init__(self, clients, managers=None, placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY):
         managers = managers or {}
@@ -145,3 +147,18 @@ class UserManager:
         real_user = self.get_user_by_username('real')
         if real_user and real_user.id != user.id:
             self.follow_manager.request_to_follow(user, real_user)
+
+    def get_text_tags(self, text):
+        """
+        Given a fragment of text, return a list of objects of form
+            {'tag': '@username', 'userId': '...'}
+        representing all the users tagged in the text.
+        """
+        username_tags = set(re.findall(self.username_tag_regex, text))
+        # note that dynamo does not support batch gets using GSI's, and the username is in a GSI
+        text_tags = []
+        for tag in username_tags:
+            user_item = self.dynamo.get_user_by_username(tag[1:])
+            if user_item:
+                text_tags.append({'tag': tag, 'userId': user_item['userId']})
+        return text_tags

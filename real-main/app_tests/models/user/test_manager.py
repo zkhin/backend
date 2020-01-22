@@ -1,3 +1,4 @@
+import re
 from unittest.mock import call
 
 import pytest
@@ -334,3 +335,47 @@ def test_get_random_placeholder_photo_code(user_manager):
     s3_client.put_object(path, b'placeholder', 'image/jpeg')
     code = user_manager.get_random_placeholder_photo_code()
     assert code in ['black-white-cat', 'orange-person']
+
+
+def test_get_text_tags(user_manager):
+    # no tags
+    text = 'no tags here'
+    assert user_manager.get_text_tags(text) == []
+
+    # with tags, but not of users that exist
+    text = 'hey @youDontExist and @meneither'
+    assert user_manager.get_text_tags(text) == []
+
+    # create two users in the DB
+    user_id1 = 'my-user-id'
+    username1 = 'therealuser'
+    user_manager.create_cognito_only_user(user_id1, username1)
+
+    user_id2 = 'my-other-id'
+    username2 = 'bestUsername'
+    user_manager.create_cognito_only_user(user_id2, username2)
+
+    # with tags, some that exist and others that dont
+    text = f'hey @{username1} and @nopenope and @{username2}'
+    assert sorted(user_manager.get_text_tags(text), key=lambda x: x['tag']) == sorted([
+        {'tag': f'@{username1}', 'userId': user_id1},
+        {'tag': f'@{username2}', 'userId': user_id2},
+    ], key=lambda x: x['tag'])
+
+
+def test_username_tag_regex(user_manager):
+    reg = user_manager.username_tag_regex
+
+    # no tags
+    assert re.findall(reg, '') == []
+    assert re.findall(reg, 'no tags here') == []
+
+    # basic tags
+    assert re.findall(reg, 'hi @you how @are @you') == ['@you', '@are', '@you']
+    assert re.findall(reg, 'hi @y3o@m.e@ever_yone') == ['@y3o', '@m.e', '@ever_yone']
+
+    # near misses
+    assert re.findall(reg, 'too @34 @.. @go!forit @no-no') == []
+
+    # uglies
+    assert re.findall(reg, 'hi @._._ @4_. @A_A\n@B.4\r@333!?') == ['@._._', '@4_.', '@A_A', '@B.4', '@333']

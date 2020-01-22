@@ -67,9 +67,11 @@ class PostManager:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with negative lifetime'
             raise exceptions.PostException(msg)
 
+        text_tags = self.user_manager.get_text_tags(text) if text is not None else None
+
         # add the pending post & media to dynamo in a transaction
         transacts = [self.dynamo.transact_add_pending_post(
-            posted_by_user_id, post_id, text=text, posted_at=now, expires_at=expires_at,
+            posted_by_user_id, post_id, posted_at=now, expires_at=expires_at, text=text, text_tags=text_tags,
             comments_disabled=comments_disabled, likes_disabled=likes_disabled,
             verification_hidden=verification_hidden,
         )]

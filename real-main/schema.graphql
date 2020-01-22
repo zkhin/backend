@@ -343,6 +343,7 @@ type Post {
   postStatus: PostStatus  # null & 'COMPLETED' are synonymous
   expiresAt: AWSDateTime  # null indicates no expiration
   text: String
+  textTaggedUsers: [TextTaggedUser!]!  # max of 100
   mediaObjects: [MediaObject!]!
   flagStatus: FlagStatus!  # has the caller flagged this post?
   likeStatus: LikeStatus!  # has the caller liked this post?
@@ -371,4 +372,9 @@ type Post {
 type PaginatedPosts {
   items: [Post!]!
   nextToken: String
+}
+
+type TextTaggedUser {
+  tag: String!  # ex: '@ian'
+  user: User    # null if user has been deleted, or has blocked caller
 }

@@ -335,7 +335,7 @@ module.exports.unblockUser = gql(`mutation UnblockUser ($userId: ID!) {
   }
 }`)
 
-module.exports.addTextOnlyPost = gql(`mutation AddMediaPost (
+module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
   $postId: ID!,
   $text: String,
   $lifetime: String,
@@ -356,6 +356,13 @@ module.exports.addTextOnlyPost = gql(`mutation AddMediaPost (
     postStatus
     expiresAt
     text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+        username
+      }
+    }
     mediaObjects {
       mediaId
     }
@@ -370,7 +377,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddMediaPost (
   }
 }`)
 
-module.exports.addOneMediaPost = gql(`mutation AddMediaPost (
+module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
   $postId: ID!,
   $mediaId: ID!,
   $mediaType: MediaObjectType!,
@@ -397,6 +404,14 @@ module.exports.addOneMediaPost = gql(`mutation AddMediaPost (
     postStatus
     expiresAt
     verificationHidden
+    text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+        username
+      }
+    }
     mediaObjects {
       mediaId
       mediaStatus
@@ -415,7 +430,7 @@ module.exports.addOneMediaPost = gql(`mutation AddMediaPost (
   }
 }`)
 
-module.exports.addTwoMediaPost = gql(`mutation AddMediaPost (
+module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost (
   $postId: ID!, $mediaId1: ID!, $mediaType1: MediaObjectType!, $mediaId2: ID!, $mediaType2: MediaObjectType!
 ) {
   addPost (
@@ -446,6 +461,13 @@ module.exports.getPost = gql(`query GetPost ($postId: ID!, $onymouslyLikedByLimi
     }
     expiresAt
     text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+        username
+      }
+    }
     mediaObjects {
       mediaId
       mediaStatus
@@ -543,6 +565,13 @@ module.exports.editPost = gql(
         postCount
       }
       text
+      textTaggedUsers {
+        tag
+        user {
+          userId
+          username
+        }
+      }
       mediaObjects {
         mediaId
         mediaStatus

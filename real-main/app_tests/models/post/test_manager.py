@@ -71,15 +71,32 @@ def test_add_text_only_post(post_manager, user_manager):
     assert post.item['postedByUserId'] == user_id
     assert post.item['postedAt'] == now.isoformat() + 'Z'
     assert post.item['text'] == 'lore ipsum'
+    assert post.item['textTags'] == []
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert 'expiresAt' not in post.item
     assert list(post_manager.media_dynamo.generate_by_post(post_id)) == []
 
 
+def test_add_text_with_tags_post(post_manager, user_manager):
+    user_id = 'pbuid'
+    username = 'pbUname'
+    post_id = 'pid'
+    text = 'Tagging you @pbUname!'
+
+    # add the post
+    user_manager.create_cognito_only_user(user_id, username)
+    post_manager.add_post(user_id, post_id, text=text)
+
+    # retrieve the post & media, check it
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['text'] == text
+    assert post.item['textTags'] == [{'tag': '@pbUname', 'userId': 'pbuid'}]
+
+
 def test_add_media_post(post_manager):
     user_id = 'pbuid'
     post_id = 'pid'
-    text = 'lore ipsum'
     now = datetime.utcnow()
     media_id = 'mid'
     media_type = 'mtype'
@@ -89,15 +106,16 @@ def test_add_media_post(post_manager):
     }
 
     # add the post (& media)
-    post_manager.add_post(user_id, post_id, text=text, now=now, media_uploads=[media_upload])
+    post_manager.add_post(user_id, post_id, now=now, media_uploads=[media_upload])
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['postedByUserId'] == user_id
     assert post.item['postedAt'] == now.isoformat() + 'Z'
-    assert post.item['text'] == 'lore ipsum'
     assert post.item['postStatus'] == PostStatus.PENDING
+    assert 'text' not in post.item
+    assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
 
     media_items = list(post_manager.media_dynamo.generate_by_post(post_id))

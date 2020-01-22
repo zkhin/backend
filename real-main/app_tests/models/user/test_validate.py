@@ -32,9 +32,14 @@ def test_username_bad_chars_fails_validation(user_validate):
     for bad_char in bad_chars:
         with pytest.raises(UserValidationException):
             user_validate.username('aaa' + bad_char)
+        with pytest.raises(UserValidationException):
+            user_validate.username(bad_char + 'aaa')
+        with pytest.raises(UserValidationException):
+            user_validate.username(bad_char * 3)
 
 
 def test_good_username_validates(user_validate):
     user_validate.username('buzz_lightyear')
     user_validate.username('buzz.lightyear')
     user_validate.username('UpAndOver')
+    user_validate.username('__.0009A_...')

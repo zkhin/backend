@@ -80,7 +80,8 @@ class PostDynamo:
         }
         return self.client.generate_all_scan(query_kwargs)
 
-    def transact_add_pending_post(self, posted_by_user_id, post_id, text=None, posted_at=None, expires_at=None,
+    def transact_add_pending_post(self, posted_by_user_id, post_id, posted_at=None, expires_at=None,
+                                  text=None, text_tags=None,
                                   comments_disabled=None, likes_disabled=None, verification_hidden=None):
         posted_at_str = real_datetime.serialize(posted_at or datetime.utcnow())
         post_status = enums.PostStatus.PENDING
@@ -107,6 +108,14 @@ class PostDynamo:
             })
         if text:
             post_item['text'] = {'S': text}
+        if text_tags is not None:
+            post_item['textTags'] = {'L': [
+                {'M': {
+                    'tag': {'S': text_tag['tag']},
+                    'userId': {'S': text_tag['userId']},
+                }}
+                for text_tag in text_tags
+            ]}
         if comments_disabled is not None:
             post_item['commentsDisabled'] = {'BOOL': comments_disabled}
         if likes_disabled is not None:
@@ -237,7 +246,8 @@ class PostDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             raise exceptions.PostDoesNotExist(post_id)
 
-    def set(self, post_id, text=None, comments_disabled=None, likes_disabled=None, verification_hidden=None):
+    def set(self, post_id, text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
+            verification_hidden=None):
         args = [text, comments_disabled, likes_disabled, verification_hidden]
         assert any(k is not None for k in args), 'Action-less post edit requested'
 
@@ -249,11 +259,16 @@ class PostDynamo:
             # empty string deletes
             if text == '':
                 exp_actions['REMOVE'].append('#text')
+                exp_actions['REMOVE'].append('textTags')
                 exp_names['#text'] = 'text'
             else:
                 exp_actions['SET'].append('#text = :text')
                 exp_names['#text'] = 'text'
                 exp_values[':text'] = text
+
+                if text_tags is not None:
+                    exp_actions['SET'].append('textTags = :tu')
+                    exp_values[':tu'] = text_tags
 
         if comments_disabled is not None:
             exp_actions['SET'].append('commentsDisabled = :cd')

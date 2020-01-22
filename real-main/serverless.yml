@@ -466,6 +466,16 @@ custom:
         field: mediaObjects
         dataSource: DynamodbDataSource
 
+      - type: Post
+        field: textTaggedUsers
+        request: Post.textTaggedUsers/Post.textTaggedUsers.request.vtl
+        response: Post.textTaggedUsers/Post.textTaggedUsers.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
       - type: Query
         field: getFeed
         request: Generic.passThru.request.vtl

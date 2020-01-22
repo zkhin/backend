@@ -1,0 +1,13 @@
+#if ($util.isNull($ctx.source.textTags) or $ctx.source.textTags.isEmpty())
+  #return ([])
+#end
+
+#set ($userIds = [])
+#foreach ($textTag in $ctx.source.textTags)
+  $util.qr($userIds.add($textTag.userId))
+#end
+
+$util.toJson({
+  'nextToken': null,
+  'userIds': $userIds
+})

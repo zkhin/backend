@@ -67,11 +67,12 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     post_id = 'pid'
     posted_at = datetime.utcnow()
     expires_at = datetime.utcnow()
-    text = 'lore ipsum'
+    text = 'lore @ipsum'
+    text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
 
     transacts = [post_dynamo.transact_add_pending_post(
-        user_id, post_id, text=text, posted_at=posted_at, expires_at=expires_at, comments_disabled=True,
-        likes_disabled=False, verification_hidden=True,
+        user_id, post_id, posted_at=posted_at, expires_at=expires_at, text=text, text_tags=text_tags,
+        comments_disabled=True, likes_disabled=False, verification_hidden=True,
     )]
     post_dynamo.client.transact_write_items(transacts)
 
@@ -94,7 +95,8 @@ def test_transact_add_pending_post_with_options(post_dynamo):
         'gsiA1SortKey': PostStatus.PENDING + '/' + expires_at_str,
         'gsiK1PartitionKey': 'post/' + expires_at_str[:10],
         'gsiK1SortKey': expires_at_str[11:-1],
-        'text': 'lore ipsum',
+        'text': text,
+        'textTags': text_tags,
         'commentsDisabled': True,
         'likesDisabled': False,
         'verificationHidden': True,
@@ -570,23 +572,38 @@ def test_set_no_values(post_dynamo):
 def test_set_text(post_dynamo, dynamo_client):
     # create a post with some text
     text = 'for shiz'
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', text=text)]
+    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', text=text, text_tags=[])]
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post('pid1')
     assert post_item['text'] == text
+    assert post_item['textTags'] == []
 
     # edit that text
     new_text = 'over the rainbow'
-    post_item = post_dynamo.set('pid1', text=new_text)
+    post_item = post_dynamo.set('pid1', text=new_text, text_tags=[])
     assert post_item['text'] == new_text
+    assert post_item['textTags'] == []
     post_item = post_dynamo.get_post('pid1')
     assert post_item['text'] == new_text
+    assert post_item['textTags'] == []
+
+    # edit that text with a tag
+    new_text = 'over the @rainbow'
+    new_text_tags = [{'tag': '@rainbow', 'userId': 'tagged-uid'}]
+    post_item = post_dynamo.set('pid1', text=new_text, text_tags=new_text_tags)
+    assert post_item['text'] == new_text
+    assert post_item['textTags'] == new_text_tags
+    post_item = post_dynamo.get_post('pid1')
+    assert post_item['text'] == new_text
+    assert post_item['textTags'] == new_text_tags
 
     # delete that text
     post_item = post_dynamo.set('pid1', text='')
     assert 'text' not in post_item
+    assert 'textTags' not in post_item
     post_item = post_dynamo.get_post('pid1')
     assert 'text' not in post_item
+    assert 'textTags' not in post_item
 
 
 def test_set_comments_disabled(post_dynamo, dynamo_client):

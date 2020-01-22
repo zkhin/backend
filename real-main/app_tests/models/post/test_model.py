@@ -18,8 +18,12 @@ from app.models.trending import TrendingManager
 
 
 @pytest.fixture
-def post(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager):
+    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+
+
+@pytest.fixture
+def post(post_manager, user):
     yield post_manager.add_post(user.id, 'pid1', text='t')
 
 
@@ -135,21 +139,24 @@ def test_clear_expires_at(post_with_expiration):
     ]
 
 
-def test_set(post):
+def test_set(post, user):
+    username = user.item['username']
     org_text = post.item['text']
 
     # verify starting values
     assert post.item['text'] == org_text
+    assert post.item['textTags'] == []
     assert post.item.get('commentsDisabled', False) is False
     assert post.item.get('likesDisabled', False) is False
     assert post.item.get('verificationHidden', False) is False
 
     # do some edits
-    new_text = 'its a new dawn, its a new day'
+    new_text = f'its a new dawn, right @{user.item["username"]}, its a new day'
     post.set(text=new_text, comments_disabled=True, likes_disabled=True, verification_hidden=True)
 
     # verify new values
     assert post.item['text'] == new_text
+    assert post.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
     assert post.item.get('commentsDisabled', False) is True
     assert post.item.get('likesDisabled', False) is True
     assert post.item.get('verificationHidden', False) is True
@@ -159,6 +166,7 @@ def test_set(post):
 
     # verify only edited values changed
     assert post.item['text'] == new_text
+    assert post.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
     assert post.item.get('commentsDisabled', False) is True
     assert post.item.get('likesDisabled', False) is False
     assert post.item.get('verificationHidden', False) is True
@@ -192,8 +200,10 @@ def test_set_text_to_null_media_post(post_manager, post_with_media):
     # verify we can null out the text on that post if we want
     post.set(text='')
     assert 'text' not in post.item
+    assert 'textTags' not in post.item
     post.refresh_item()
     assert 'text' not in post.item
+    assert 'textTags' not in post.item
 
 
 def test_complete_error_for_status(post_manager, post):
