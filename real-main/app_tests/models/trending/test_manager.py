@@ -127,17 +127,23 @@ def test_reindex_deletes_as_needed(trending_manager):
     now = datetime.utcnow()
 
     # add one post item just over a day ago
-    post_id = 'post-id'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id, 1, now=(now - timedelta(hours=25)))
+    post_id_1 = 'post-id-over'
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 1, now=(now - timedelta(hours=25)))
 
-    # check we can see that post item
+    # add another post item just under a day ago
+    post_id_2 = 'post-id-under'
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 1, now=(now - timedelta(hours=23)))
+
+    # check we can see those post items
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
-    assert len(post_items) == 1
-    assert post_items[0]['partitionKey'] == f'trending/{post_id}'
+    assert len(post_items) == 2
+    assert post_items[0]['partitionKey'] == f'trending/{post_id_1}'
+    assert post_items[1]['partitionKey'] == f'trending/{post_id_2}'
 
     # reindex
     trending_manager.reindex(TrendingItemType.POST, cutoff=now)
 
-    # check the post item has disappeared
+    # check that one post item has disappeared, and the other has not
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
-    assert len(post_items) == 0
+    assert len(post_items) == 1
+    assert post_items[0]['partitionKey'] == f'trending/{post_id_2}'
