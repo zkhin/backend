@@ -69,7 +69,7 @@ test('Add media post fails verification to small', async () => {
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId, mediaId, mediaType: 'IMAGE', takenInReal: true, originalFormat: 'HEIC'},
+    variables: {postId, mediaId, mediaType: 'IMAGE', takenInReal: false, originalFormat: 'HEIC'},
   })
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
