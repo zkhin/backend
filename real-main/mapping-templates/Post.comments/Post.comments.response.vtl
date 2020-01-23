@@ -1,0 +1,24 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+## build a map from userId to user object
+#set ($userIdToUser = {})
+#foreach ($user in $ctx.prev.result.items)
+  $util.qr($userIdToUser.put($user.userId, $user))
+#end
+
+## missing users represent users who have blocked caller
+#set ($comments = [])
+#foreach ($comment in $ctx.stash.comments)
+  #set ($user = $userIdToUser[$comment.userId])
+  #if (! $util.isNull($user))
+    $util.qr($comment.put('commentedBy', $user))
+    $util.qr($comments.add($comment))
+  #end
+#end
+
+$util.toJson({
+  'nextToken': $ctx.prev.result.nextToken,
+  'items': $comments
+})

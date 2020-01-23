@@ -372,6 +372,23 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
       postCount
     }
     commentsDisabled
+    commentCount
+    comments {
+      items {
+        commentId
+        commentedAt
+        commentedBy {
+          userId
+        }
+        text
+        textTaggedUsers {
+          tag
+          user {
+            userId
+          }
+        }
+      }
+    }
     likesDisabled
     verificationHidden
   }
@@ -479,6 +496,23 @@ module.exports.getPost = gql(`query GetPost ($postId: ID!, $onymouslyLikedByLimi
     flagStatus
     likeStatus
     commentsDisabled
+    commentCount
+    comments {
+      items {
+        commentId
+        commentedAt
+        commentedBy {
+          userId
+        }
+        text
+        textTaggedUsers {
+          tag
+          user {
+            userId
+          }
+        }
+      }
+    }
     likesDisabled
     verificationHidden
     onymousLikeCount
@@ -841,6 +875,44 @@ module.exports.trendingPosts = gql(`query TrendingPosts ($limit: Int) {
         blockerAt
         privacyStatus
         followedStatus
+      }
+    }
+  }
+}`)
+
+
+module.exports.addComment = gql(`mutation AddComment ($commentId: ID!, $postId: ID!, $text: String!) {
+  addComment (commentId: $commentId, postId: $postId, text: $text) {
+    commentId
+    commentedAt
+    commentedBy {
+      userId
+    }
+    text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+        username
+      }
+    }
+  }
+}`)
+
+
+module.exports.deleteComment = gql(`mutation DeleteComment ($commentId: ID!) {
+  deleteComment (commentId: $commentId) {
+    commentId
+    commentedAt
+    commentedBy {
+      userId
+    }
+    text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+        username
       }
     }
   }

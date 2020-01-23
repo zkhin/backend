@@ -372,3 +372,37 @@ test('resetUser with optional username intializes new user correctly', async () 
   resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
   expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
 })
+
+
+test('resetUser deletes any comments we have added to posts', async () => {
+  const [ourClient, , , , ourUsername] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // they add a post
+  const postId = uuidv4()
+  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // we add a comment to that post
+  const commentId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addComment, variables: {postId, commentId, text: 'lore'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addComment']['commentId']).toBe(commentId)
+
+  // check they can see our comment on the post
+  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['getPost']['commentCount']).toBe(1)
+  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(commentId)
+
+  // we reset our user, should delete the comment
+  await ourClient.mutate({mutation: schema.resetUser, variables: {newUsername: ourUsername}})
+
+  // check the comment has disappeared
+  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['getPost']['commentCount']).toBe(0)
+  expect(resp['data']['getPost']['comments']['items']).toHaveLength(0)
+})

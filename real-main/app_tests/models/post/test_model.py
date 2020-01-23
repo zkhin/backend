@@ -7,6 +7,7 @@ from unittest.mock import call, Mock
 from isodate.duration import Duration
 import pytest
 
+from app.models.comment import CommentManager
 from app.models.feed import FeedManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
@@ -511,6 +512,7 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
+    post.comment_manager = Mock(CommentManager({}))
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
@@ -535,6 +537,9 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # check calls to mocked out managers
+    assert post.comment_manager.mock_calls == [
+        call.delete_all_on_post(post.id),
+    ]
     assert post.like_manager.mock_calls == [
         call.dislike_all_of_post(post.id),
     ]
@@ -563,6 +568,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
+    post.comment_manager = Mock(CommentManager({}))
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
@@ -586,6 +592,9 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # check calls to mocked out managers
+    assert post.comment_manager.mock_calls == [
+        call.delete_all_on_post(post.id),
+    ]
     assert post.like_manager.mock_calls == [
         call.dislike_all_of_post(post.id),
     ]
@@ -620,6 +629,7 @@ def test_delete_completed_media_post(post_manager, post_with_media, user_manager
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
+    post.comment_manager = Mock(CommentManager({}))
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
@@ -648,6 +658,9 @@ def test_delete_completed_media_post(post_manager, post_with_media, user_manager
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # check calls to mocked out managers
+    assert post.comment_manager.mock_calls == [
+        call.delete_all_on_post(post.id),
+    ]
     assert post.like_manager.mock_calls == [
         call.dislike_all_of_post(post.id),
     ]

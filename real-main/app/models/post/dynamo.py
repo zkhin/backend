@@ -384,3 +384,35 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey) and #count_name > :zero',
             },
         }
+
+    def transact_increment_comment_count(self, post_id):
+        return {
+            'Update': {
+                'Key': {
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': '-'},
+                },
+                'UpdateExpression': 'ADD commentCount :one',
+                'ExpressionAttributeValues': {
+                    ':one': {'N': '1'},
+                },
+                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
+            },
+        }
+
+    def transact_decrement_comment_count(self, post_id):
+        return {
+            'Update': {
+                'Key': {
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': '-'},
+                },
+                'UpdateExpression': 'ADD commentCount :negative_one',
+                'ExpressionAttributeValues': {
+                    ':negative_one': {'N': '-1'},
+                    ':zero': {'N': '0'},
+                },
+                # only updates and no going below zero
+                'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
+            },
+        }

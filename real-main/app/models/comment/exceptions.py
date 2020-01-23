@@ -1,0 +1,2 @@
+class CommentException(Exception):
+    pass

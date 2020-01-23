@@ -140,7 +140,7 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
 })
 
 
-test('Edit post set commentsDisabled', async () => {
+test('Disable comments causes existing comments to disappear, then reappear when comments re-enabled', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
@@ -150,20 +150,45 @@ test('Edit post set commentsDisabled', async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
 
-  // edit the coment disabled status
+  // we add a comment to that post
+  const commentId = uuidv4()
+  let variables = {commentId, postId, text: 'lore'}
+  resp = await ourClient.mutate({mutation: schema.addComment, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addComment']['commentId']).toBe(commentId)
+
+  // check we see the comment
+  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['getPost']['commentsDisabled']).toBe(false)
+  expect(resp['data']['getPost']['commentCount']).toBe(1)
+  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(commentId)
+
+  // disable comments on the post
   resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, commentsDisabled: true}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPost']['commentsDisabled']).toBe(true)
 
-  // check it saved to db
+  // check that comment has disappeared
   resp = await ourClient.query({query: schema.getPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getPost']['commentsDisabled']).toBe(true)
+  expect(resp['data']['getPost']['commentCount']).toBeNull()
+  expect(resp['data']['getPost']['comments']).toBeNull()
 
-  // edit the coment disabled status
+  // re-enable comments on the post
   resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, commentsDisabled: false}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPost']['commentsDisabled']).toBe(false)
+
+  // check that comment has re-appeared
+  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['getPost']['commentsDisabled']).toBe(false)
+  expect(resp['data']['getPost']['commentCount']).toBe(1)
+  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(commentId)
 })
 
 

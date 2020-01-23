@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import itertools
 import logging
 
-from app.models import feed, followed_first_story, like, media, post_view, trending, user
+from app.models import comment, feed, followed_first_story, like, media, post_view, trending, user
 from app.models.media.dynamo import MediaDynamo
 from app.models.user.dynamo import UserDynamo
 
@@ -21,6 +21,7 @@ class PostManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['post'] = self
+        self.comment_manager = managers.get('comment') or comment.CommentManager(clients, managers=managers)
         self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
         self.followed_first_story_manager = (
@@ -44,6 +45,7 @@ class PostManager:
 
     def init_post(self, post_item):
         kwargs = {
+            'comment_manager': self.comment_manager,
             'feed_manager': self.feed_manager,
             'followed_first_story_manager': self.followed_first_story_manager,
             'like_manager': self.like_manager,

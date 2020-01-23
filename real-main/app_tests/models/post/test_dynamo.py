@@ -749,3 +749,38 @@ def test_generate_expired_post_pks_with_scan(post_dynamo, dynamo_client):
     assert expired_posts[0]['sortKey'] == post1['sortKey']
     assert expired_posts[1]['partitionKey'] == post2['partitionKey']
     assert expired_posts[1]['sortKey'] == post2['sortKey']
+
+
+def test_transact_increment_decrement_comment_count(post_dynamo):
+    post_id = 'pid'
+
+    # add a post, verify starts with no comment count
+    transact = post_dynamo.transact_add_pending_post('uid', post_id, text='lore ipsum')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('commentCount', 0) == 0
+
+    # verify we can't decrement count below zero
+    transact = post_dynamo.transact_decrement_comment_count(post_id)
+    with pytest.raises(post_dynamo.client.exceptions.ClientError):
+        post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('commentCount', 0) == 0
+
+    # increment the count, verify
+    transact = post_dynamo.transact_increment_comment_count(post_id)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('commentCount', 0) == 1
+
+    # increment the count, verify
+    transact = post_dynamo.transact_increment_comment_count(post_id)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('commentCount', 0) == 2
+
+    # decrement the count, verify
+    transact = post_dynamo.transact_decrement_comment_count(post_id)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('commentCount', 0) == 1

@@ -153,9 +153,10 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `following/{followerUserId}/{followedUserId}` | `-`| `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `followedFirstStory/{followerUserId}/{postedByUserId}` | `-`| `1` | `postId`, `postedAt`, `postedByUserId`, `expiresAt` | `followedFirstStory/{followerUserId}` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
-| `post/{postId}` | `-` | `1` | `postId`, `postedAt`, `postedByUserId`, `postStatus`, `expiresAt`, `text`, `viewedByCount:Number`, `onymousLikeCount:Number`, `anonymousLikeCount:Number`, `flagCount:Number`, `commentsDisabled:Boolean`, `likesDisabled:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` |
+| `post/{postId}` | `-` | `1` | `postId`, `postedAt`, `postedByUserId`, `postStatus`, `expiresAt`, `text`, `textTags:[{tag, userId}]`, `viewedByCount:Number`, `onymousLikeCount:Number`, `anonymousLikeCount:Number`, `flagCount:Number`, `commentCount:Number`, `commentsDisabled:Boolean`, `likesDisabled:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` |
 | `flag/{flaggerUserId}/{postId}` | `-`| `1` | `flaggerUserId`, `postId`, `flaggedAt` | `flag/{flaggerUserId}` | `{flaggedAt}` | `flag/{postId}` | `{flaggedAt}` |
 | `media/{mediaId}` | `-` | `0` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` |
+| `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | `trending/{itemType}` | `{score:Number}` |
@@ -169,6 +170,7 @@ Note that:
  - attributes that end with `At` are  (ex: `followedAt`) are of type [AWSDateTime](https://docs.aws.amazon.com/appsync/latest/devguide/scalars.html#appsync-defined-scalars), ie an ISO8601 datetime string, with timezone information that is always just 'Z'
  - `expiresAtDate` is of type [AWSDate](https://docs.aws.amazon.com/appsync/latest/devguide/scalars.html#appsync-defined-scalars) and `expiresAtTime` is of type [AWSTime](https://docs.aws.amazon.com/appsync/latest/devguide/scalars.html#appsync-defined-scalars). Neither have timezone information.
  - keys that depend on optional attributes (ex: for posts, the GSI-A1 and GSI-K1 keys depend on `expiresAt`) will not be set if the optional attribute is not present
+ - `textTags` is a list of maps, each map having two keys `tag` and `userId` both with string values
 
 #### Global Secondary Indexes
 

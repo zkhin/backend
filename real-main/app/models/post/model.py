@@ -23,7 +23,7 @@ class Post:
 
     def __init__(self, item, clients, trending_manager=None, feed_manager=None, followed_first_story_manager=None,
                  like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
-                 flagged_alert_threshold=FLAGGED_ALERT_THRESHOLD):
+                 comment_manager=None, flagged_alert_threshold=FLAGGED_ALERT_THRESHOLD):
         self.flagged_alert_threshold = flagged_alert_threshold
 
         if 'dynamo' in clients:
@@ -31,6 +31,8 @@ class Post:
             self.media_dynamo = MediaDynamo(clients['dynamo'])
             self.user_dynamo = UserDynamo(clients['dynamo'])
 
+        if comment_manager:
+            self.comment_manager = comment_manager
         if feed_manager:
             self.feed_manager = feed_manager
         if followed_first_story_manager:
@@ -189,6 +191,9 @@ class Post:
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
+
+        # delete all comments on the post
+        self.comment_manager.delete_all_on_post(self.id)
 
         # unflag all flags of the post
         for flag_item in self.dynamo.generate_flag_items_by_post(self.id):

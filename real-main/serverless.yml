@@ -402,6 +402,16 @@ custom:
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
 
+      - type: Mutation
+        field: addComment
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: deleteComment
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
       - type: Post
         field: flagStatus
         dataSource: DynamodbDataSource
@@ -468,8 +478,34 @@ custom:
 
       - type: Post
         field: textTaggedUsers
-        request: Post.textTaggedUsers/Post.textTaggedUsers.request.vtl
-        response: Post.textTaggedUsers/Post.textTaggedUsers.response.vtl
+        request: Source.textTaggedUsers/before.request.vtl
+        response: Source.textTaggedUsers/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: Post
+        field: commentCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: comments
+        request: Post.comments/Post.comments.request.vtl
+        response: Post.comments/Post.comments.response.vtl
+        kind: PIPELINE
+        functions:
+          - Post.comments.fetchComments
+          - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerAt
+          - Generic.filterUsersBlockerAt
+
+      - type: Comment
+        field: textTaggedUsers
+        request: Source.textTaggedUsers/before.request.vtl
+        response: Source.textTaggedUsers/after.response.vtl
         kind: PIPELINE
         functions:
           - Generic.batchGetUsers
@@ -705,6 +741,11 @@ custom:
         name: Post.onymouslyLikedBy.fetchLikes
         request: Post.onymouslyLikedBy/Pipeline.fetchLikes.request.vtl
         response: Post.onymouslyLikedBy/Pipeline.fetchLikes.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Post.comments.fetchComments
+        request: Post.comments/Pipeline.fetchComments.request.vtl
+        response: Post.comments/Pipeline.fetchComments.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.fetchLikesByUser

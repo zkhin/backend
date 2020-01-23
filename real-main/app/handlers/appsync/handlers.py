@@ -8,6 +8,7 @@ from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, Facebook
                          SecretsManagerClient, S3Client)
 from app.lib import datetime as real_datetime
 from app.models.block import BlockManager
+from app.models.comment import CommentManager
 from app.models.follow import FollowManager
 from app.models.follow.enums import FollowStatus
 from app.models.followed_first_story import FollowedFirstStoryManager
@@ -42,6 +43,7 @@ clients = {
 # shared hash of all managers, allows inter-manager communication
 managers = {}
 block_manager = managers.get('block') or BlockManager(clients, managers=managers)
+comment_manager = managers.get('comment') or CommentManager(clients, managers=managers)
 ffs_manager = managers.get('followed_first_story') or FollowedFirstStoryManager(clients, managers=managers)
 follow_manager = managers.get('follow') or FollowManager(clients, managers=managers)
 like_manager = managers.get('like') or LikeManager(clients, managers=managers)
@@ -236,8 +238,9 @@ def reset_user(caller_user_id, arguments, source, context):
     for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
         post_manager.init_post(post_item).delete()
 
-    # unlike everything we've liked
+    # delete all our likes & comments
     like_manager.dislike_all_by_user(caller_user_id)
+    comment_manager.delete_all_by_user(caller_user_id)
 
     # remove all our blocks and all blocks of us
     block_manager.unblock_all_blocks_by_user(caller_user_id)
@@ -709,6 +712,32 @@ def report_post_views(caller_user_id, arguments, source, context):
 
     post_view_manager.record_views(caller_user_id, post_ids)
     return True
+
+
+@routes.register('Mutation.addComment')
+def add_comment(caller_user_id, arguments, source, context):
+    comment_id = arguments['commentId']
+    post_id = arguments['postId']
+    text = arguments['text']
+
+    try:
+        comment = comment_manager.add_comment(comment_id, post_id, caller_user_id, text)
+    except comment_manager.exceptions.CommentException as err:
+        raise ClientException(str(err))
+
+    return comment.serialize()
+
+
+@routes.register('Mutation.deleteComment')
+def delete_comment(caller_user_id, arguments, source, context):
+    comment_id = arguments['commentId']
+
+    try:
+        comment = comment_manager.delete_comment(comment_id, caller_user_id)
+    except comment_manager.exceptions.CommentException as err:
+        raise ClientException(str(err))
+
+    return comment.serialize()
 
 
 @routes.register('Mutation.lambdaClientError')
