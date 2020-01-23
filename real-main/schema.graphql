@@ -187,8 +187,7 @@ type Mutation {
 
   # Add a comment
   #   - trying to comment on a post we do not have access to is an error
-  #   - trying to comment on a post that has comments disabled, or if
-  #     we have comments disabled is an error
+  #   - trying to comment on a post that has comments disabled is an error
   #   - commentId should be a client-side generated uuidv4
   addComment(commentId: ID!, postId: ID!, text: String!): Comment
 
