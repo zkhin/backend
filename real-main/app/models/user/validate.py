@@ -8,7 +8,7 @@ logger = logging.getLogger()
 
 class UserValidate:
 
-    # username restrictions: same as instagram
+    # username restrictions: same as other social networks
     username_regex = re.compile('[a-zA-Z0-9_.]{3,30}')
 
     def username(self, username):
