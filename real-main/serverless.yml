@@ -285,6 +285,17 @@ custom:
           - Generic.batchGetPostsPostedByBlockerAt
           - Generic.batchGetPostsPostedByFollowedStatus
 
+      - type: User
+        field: blockedUsers
+        request: User.blockedUsers/before.request.vtl
+        response: Generic.passThru.response.vtl
+        kind: PIPELINE
+        functions:
+            - User.blockedUsers.fetchUserIds
+            - Generic.batchGetUsers
+            - Generic.batchGetUsersBlockerAt
+            - Generic.filterUsersBlockerAt
+
       - type: Mutation
         field: createCognitoOnlyUser
         dataSource: LambdaDataSource
@@ -373,15 +384,6 @@ custom:
         field: unblockUser
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
-
-      - type: Query
-        field: getBlockedUsers
-        request: Generic.passThru.request.vtl
-        response: Generic.passThru.response.vtl
-        kind: PIPELINE
-        functions:
-            - Query.getBlockedUsers.fetchUserIds
-            - Generic.batchGetUsers
 
       - type: Mutation
         field: onymouslyLikePost
@@ -699,9 +701,9 @@ custom:
         response: Query.trendingUsers/Pipeline.fetchUserIds.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Query.getBlockedUsers.fetchUserIds
-        request: Query.getBlockedUsers/Pipeline.fetchUserIds.request.vtl
-        response: Query.getBlockedUsers/Pipeline.fetchUserIds.response.vtl
+        name: User.blockedUsers.fetchUserIds
+        request: User.blockedUsers/Pipeline.fetchUserIds.request.vtl
+        response: User.blockedUsers/Pipeline.fetchUserIds.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.checkAccess.checkIfBlocked

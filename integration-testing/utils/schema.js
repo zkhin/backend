@@ -70,6 +70,12 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
         userId
       }
     }
+    blockedUsers {
+      items {
+        userId
+        blockedAt
+      }
+    }
   }
 }`)
 
@@ -130,6 +136,12 @@ module.exports.user = gql(`query User ($userId: ID!) {
     followedUsers {
       items {
         userId
+      }
+    }
+    blockedUsers {
+      items {
+        userId
+        blockedAt
       }
     }
   }
@@ -758,29 +770,6 @@ module.exports.ourFollowerUsers = gql(`query OurFollowerUsers ($followStatus: Fo
         followedStatus
         followerStatus
       }
-    }
-  }
-}`)
-
-module.exports.getBlockedUsers = gql(`query GetBlockedUsers {
-  getBlockedUsers {
-    items {
-      userId
-      blockedAt
-      username
-      photoUrl
-      privacyStatus
-      followedStatus
-      followerStatus
-      followedCount
-      followerCount
-      postCount
-      fullName
-      themeCode
-      bio
-      email
-      phoneNumber
-      languageCode
     }
   }
 }`)

@@ -15,7 +15,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
-test('Query.getBlockedUsers, User.blockedAt respond correctly to blocking and unblocking', async () => {
+test('User.blockedUsers, User.blockedAt respond correctly to blocking and unblocking', async () => {
   // us and them
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
@@ -26,9 +26,9 @@ test('Query.getBlockedUsers, User.blockedAt respond correctly to blocking and un
   expect(resp['data']['user']['userId']).toBe(theirUserId)
   expect(resp['data']['user']['blockedAt']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getBlockedUsers})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(0)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(0)
 
   // block them
   resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
@@ -43,11 +43,11 @@ test('Query.getBlockedUsers, User.blockedAt respond correctly to blocking and un
   expect(resp['data']['user']['userId']).toBe(theirUserId)
   expect(resp['data']['user']['blockedAt']).toBe(blockedAt)
 
-  resp = await ourClient.query({query: schema.getBlockedUsers})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(1)
-  expect(resp['data']['getBlockedUsers']['items'][0]['userId']).toBe(theirUserId)
-  expect(resp['data']['getBlockedUsers']['items'][0]['blockedAt']).toBe(blockedAt)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(1)
+  expect(resp['data']['self']['blockedUsers']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['blockedUsers']['items'][0]['blockedAt']).toBe(blockedAt)
 
   // unblock them
   resp = await ourClient.mutate({mutation: schema.unblockUser, variables: {userId: theirUserId}})
@@ -61,9 +61,9 @@ test('Query.getBlockedUsers, User.blockedAt respond correctly to blocking and un
   expect(resp['data']['user']['userId']).toBe(theirUserId)
   expect(resp['data']['user']['blockedAt']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getBlockedUsers})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(0)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(0)
 })
 
 
@@ -96,10 +96,10 @@ test('Trying to block or unblock yourself is an error', async () => {
 })
 
 
-test('Query.getBlockedUsers ordering', async () => {
+test('User.blockedUsers ordering, privacy', async () => {
   // us and two others
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, other1UserId] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
   const [, other2UserId] = await loginCache.getCleanLogin()
 
   // we block both of them
@@ -112,11 +112,16 @@ test('Query.getBlockedUsers ordering', async () => {
   expect(resp['data']['blockUser']['userId']).toBe(other2UserId)
 
   // check that they appear in the right order
-  resp = await ourClient.query({query: schema.getBlockedUsers})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(2)
-  expect(resp['data']['getBlockedUsers']['items'][0]['userId']).toBe(other2UserId)
-  expect(resp['data']['getBlockedUsers']['items'][1]['userId']).toBe(other1UserId)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(2)
+  expect(resp['data']['self']['blockedUsers']['items'][0]['userId']).toBe(other2UserId)
+  expect(resp['data']['self']['blockedUsers']['items'][1]['userId']).toBe(other1UserId)
+
+  // check another user can't see our blocked users
+  resp = await other1Client.query({query: schema.user, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['blockedUsers']).toBeNull()
 })
 
 

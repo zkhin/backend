@@ -278,7 +278,7 @@ test('resetUser deletes any likes on our posts', async () => {
 
 test('resetUser deletes all blocks of us and by us', async () => {
   // us and two other users
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
   const [, other1UserId] = await loginCache.getCleanLogin()
   const [other2Client] = await loginCache.getCleanLogin()
 
@@ -292,16 +292,16 @@ test('resetUser deletes all blocks of us and by us', async () => {
   expect(resp['data']['blockUser']['userId']).toBe(ourUserId)
 
   // verify those blocks show up
-  resp = await ourClient.query({query: schema.getBlockedUsers})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(1)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(1)
 
-  resp = await other2Client.query({query: schema.getBlockedUsers})
+  resp = await other2Client.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(1)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(1)
 
-  // reset our user
-  resp = await ourClient.mutate({mutation: schema.resetUser})
+  // reset our user, and re-initialize
+  resp = await ourClient.mutate({mutation: schema.resetUser, variables: {newUsername: ourUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['resetUser']['userId']).toBe(ourUserId)
 
@@ -309,13 +309,13 @@ test('resetUser deletes all blocks of us and by us', async () => {
   await other2Client.resetStore()
 
   // verify both of the blocks have now disappeared
-  resp = await ourClient.query({query: schema.getBlockedUsers})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(0)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(0)
 
-  resp = await other2Client.query({query: schema.getBlockedUsers})
+  resp = await other2Client.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getBlockedUsers']['items']).toHaveLength(0)
+  expect(resp['data']['self']['blockedUsers']['items']).toHaveLength(0)
 })
 
 

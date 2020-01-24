@@ -108,6 +108,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['acceptedEULAVersion'] = null
   ourUserFull['anonymouslyLikedPosts'] = null
   ourUserFull['bio'] = null
+  ourUserFull['blockedUsers'] = null
   ourUserFull['commentsDisabled'] = null
   ourUserFull['email'] = null
   ourUserFull['followCountsHidden'] = null
