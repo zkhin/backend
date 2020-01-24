@@ -15,6 +15,16 @@
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 
+## if the target user is private, and caller is not a follower, then short-curcuit the next queries
+#if ($ctx.stash.followedStatus != 'SELF')
+  #if ($ctx.source.privacyStatus == 'PRIVATE' and $ctx.stash.followedStatus != 'FOLLOWING')
+    #return ({
+      'userIds': []
+    })
+  #end
+#end
+
+
 {
   "version": "2018-05-29",
   "operation": "Query",

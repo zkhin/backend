@@ -1,19 +1,13 @@
-## are we looking at a public user?
-#if ($ctx.source.privacyStatus == 'PUBLIC')
+## has the followedStatus already been computed? if so, use it
+#if (! $util.isNull($ctx.source.followedStatus))
+  $util.qr($ctx.stash.put('followedStatus', $ctx.source.followedStatus))
   #return
 #end
 
 ## are we looking at a ourselves?
 #if ($ctx.source.userId == $ctx.identity.cognitoIdentityId)
+  $util.qr($ctx.stash.put('followedStatus', 'SELF'))
   #return
-#end
-
-## has the followedStatus already been computed? if so, use it
-#if (! $util.isNull($ctx.source.followedStatus))
-  #if ($ctx.source.followedStatus == 'FOLLOWING')
-    #return
-  #end
-  $util.error('Caller is not following user, and user is private')
 #end
 
 ## fetch the followed status

@@ -171,10 +171,10 @@ custom:
       - type: User
         field: followedUsers
         request: User.followedUsers/User.followedUsers.request.vtl
-        response: Generic.passThru.response.vtl
+        response: User.followedUsers/User.followedUsers.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.validatePublicOrFollower
+          - Stash.followedStatus
           - User.followedUsers.fetchFollowedUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerAt
@@ -183,10 +183,10 @@ custom:
       - type: User
         field: followerUsers
         request: User.followerUsers/User.followerUsers.request.vtl
-        response: Generic.passThru.response.vtl
+        response: User.followerUsers/User.followerUsers.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.validatePublicOrFollower
+          - Stash.followedStatus
           - User.followerUsers.fetchFollowerUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerAt
@@ -249,10 +249,6 @@ custom:
 
       - type: User
         field: blockedAt
-        dataSource: DynamodbDataSource
-
-      - type: User
-        field: blockerAt
         dataSource: DynamodbDataSource
 
       - type: User
@@ -673,9 +669,9 @@ custom:
         response: Generic.getUser.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.validatePublicOrFollower
-        request: Generic.validatePublicOrFollower.request.vtl
-        response: Generic.validatePublicOrFollower.response.vtl
+        name: Stash.followedStatus
+        request: Stash.followedStatus.request.vtl
+        response: Stash.followedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetUsers

@@ -46,84 +46,94 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
   await misc.sleep(2000)
 
-  // we set our profile photo
-  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId1}})
+  // we set some details on our profile
+  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {
+    photoMediaId: mediaId1,
+    bio: 'testing',
+    fullName: 'test test',
+  }})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
-
-  // they add a media post, complete it
-  let [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  resp = await theirClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, mediaType},
-  })
+  resp = await ourClient.mutate({mutation: schema.setUserAcceptedEULAVersion, variables: {version: 'v2020-01-01.1'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId2)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
-
-  // they set their profile photo
-  resp = await theirClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId1}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
-
-  // retrieve their full user object
-  resp = await theirClient.query({query: schema.user, variables: {userId: theirUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['userId']).toBe(theirUserId)
-  const theirUser = resp['data']['user']
-
-  // verify we can see their profile as normal
-  resp = await ourClient.query({query: schema.user, variables: {userId: theirUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['userId']).toBe(theirUser['userId'])
-  expect(resp['data']['user']['username']).toBe(theirUser['username'])
-  expect(resp['data']['user']['fullName']).toBe(theirUser['fullName'])
-  expect(resp['data']['user']['bio']).toBe(theirUser['bio'])
-  expect(resp['data']['user']['privacyStatus']).toBe(theirUser['privacyStatus'])
-  expect(resp['data']['user']['email']).toBeNull()
-  expect(resp['data']['user']['phoneNumber']).toBeNull()
-  expect(resp['data']['user']['languageCode']).toBeNull()
-  expect(resp['data']['user']['postCount']).toBe(theirUser['postCount'])
-  expect(resp['data']['user']['likesDisabled']).toBeNull()
-  expect(resp['data']['user']['commentsDisabled']).toBeNull()
-  expect(resp['data']['user']['verificationHidden']).toBeNull()
-  expect(resp['data']['user']['followCountsHidden']).toBeNull()
-  expect(resp['data']['user']['followedCount']).toBe(theirUser['followedCount'])
-  expect(resp['data']['user']['followerCount']).toBe(theirUser['followerCount'])
-  expect(resp['data']['user']['themeCode']).toBe(theirUser['themeCode'])
-  expect(resp['data']['user']['photoUrl']).toBeTruthy()
-  expect(resp['data']['user']['blockedAt']).toBeTruthy()
-  expect(resp['data']['user']['blockerAt']).toBeNull()
 
   // retrieve our user object
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['userId']).toBe(ourUserId)
-  const ourUser = resp['data']['self']
+  const ourUserFull = resp['data']['self']
+  expect(ourUserFull['userId']).toBe(ourUserId)
+  expect(ourUserFull['username']).not.toBeNull()
+  expect(ourUserFull['acceptedEULAVersion']).not.toBeNull()
+  expect(ourUserFull['anonymouslyLikedPosts']['items']).toHaveLength(0)
+  expect(ourUserFull['bio']).not.toBeNull()
+  expect(ourUserFull['blockedAt']).toBeNull()
+  expect(ourUserFull['blockerAt']).toBeNull()
+  expect(ourUserFull['commentsDisabled']).toBe(false)
+  expect(ourUserFull['email']).not.toBeNull()
+  expect(ourUserFull['followCountsHidden']).toBe(false)
+  expect(ourUserFull['followerCount']).toBe(0)
+  expect(ourUserFull['followedCount']).toBe(0)
+  expect(ourUserFull['followerStatus']).toBe('SELF')
+  expect(ourUserFull['followedStatus']).toBe('SELF')
+  expect(ourUserFull['followerUsers']['items']).toHaveLength(0)
+  expect(ourUserFull['followedUsers']['items']).toHaveLength(0)
+  expect(ourUserFull['fullName']).not.toBeNull()
+  expect(ourUserFull['languageCode']).not.toBeNull()
+  expect(ourUserFull['likesDisabled']).toBe(false)
+  expect(ourUserFull['onymouslyLikedPosts']['items']).toHaveLength(0)
+  // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
+  // expect(ourUserFull['phoneNumber']).not.toBeNull()
+  expect(ourUserFull['photoUrl']).not.toBeNull()
+  expect(ourUserFull['photoUrl1080p']).not.toBeNull()
+  expect(ourUserFull['photoUrl480p']).not.toBeNull()
+  expect(ourUserFull['photoUrl4k']).not.toBeNull()
+  expect(ourUserFull['photoUrl64p']).not.toBeNull()
+  expect(ourUserFull['postCount']).toBe(1)
+  expect(ourUserFull['postViewedByCount']).toBe(0)
+  expect(ourUserFull['privacyStatus']).toBe('PUBLIC')
+  expect(ourUserFull['signedUpAt']).not.toBeNull()
+  expect(ourUserFull['themeCode']).not.toBeNull()
+  expect(ourUserFull['verificationHidden']).toBe(false)
+  expect(ourUserFull['viewCountsHidden']).toBe(false)
 
   // verify they see only a absolutely minimal profile of us
   resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['userId']).toBe(ourUser['userId'])
-  expect(resp['data']['user']['username']).toBe(ourUser['username'])
-  expect(resp['data']['user']['blockedAt']).toBeNull()
-  expect(resp['data']['user']['blockerAt']).toBeTruthy()
-  // everything below is nulled out
-  expect(resp['data']['user']['privacyStatus']).toBeNull()
-  expect(resp['data']['user']['followCountsHidden']).toBeNull()
-  expect(resp['data']['user']['fullName']).toBeNull()
-  expect(resp['data']['user']['bio']).toBeNull()
-  expect(resp['data']['user']['email']).toBeNull()
-  expect(resp['data']['user']['phoneNumber']).toBeNull()
-  expect(resp['data']['user']['languageCode']).toBeNull()
-  expect(resp['data']['user']['postCount']).toBe(0)
-  expect(resp['data']['user']['followedCount']).toBe(0)
-  expect(resp['data']['user']['followerCount']).toBe(0)
-  expect(resp['data']['user']['themeCode']).toBe('black.white')  // the default
-  expect(resp['data']['user']['photoUrl']).toBeNull()
+  const ourUserLimited = resp['data']['user']
+  expect(ourUserLimited['userId']).toBe(ourUserFull['userId'])
+  expect(ourUserLimited['username']).toBe(ourUserFull['username'])
+  expect(ourUserLimited['blockerAt']).toBeTruthy()
+
+  // adjust everything nulled out or changed, then compare
+  ourUserLimited['blockerAt'] = null
+  ourUserFull['acceptedEULAVersion'] = null
+  ourUserFull['anonymouslyLikedPosts'] = null
+  ourUserFull['bio'] = null
+  ourUserFull['commentsDisabled'] = null
+  ourUserFull['email'] = null
+  ourUserFull['followCountsHidden'] = null
+  ourUserFull['followedCount'] = null
+  ourUserFull['followerCount'] = null
+  ourUserFull['followedStatus'] = 'NOT_FOLLOWING'
+  ourUserFull['followerStatus'] = 'NOT_FOLLOWING'
+  ourUserFull['followedUsers'] = null
+  ourUserFull['followerUsers'] = null
+  ourUserFull['fullName'] = null
+  ourUserFull['languageCode'] = null
+  ourUserFull['likesDisabled'] = null
+  ourUserFull['onymouslyLikedPosts'] = null
+  // ourUserFull['phoneNumber'] is already null
+  ourUserFull['photoUrl'] = null
+  ourUserFull['photoUrl1080p'] = null
+  ourUserFull['photoUrl480p'] = null
+  ourUserFull['photoUrl4k'] = null
+  ourUserFull['photoUrl64p'] = null
+  ourUserFull['postCount'] = null
+  ourUserFull['privacyStatus'] = null
+  ourUserFull['signedUpAt'] = null
+  ourUserFull['themeCode'] = null
+  ourUserFull['verificationHidden'] = null
+  ourUserFull['viewCountsHidden'] = null
+  expect(ourUserFull).toEqual(ourUserLimited)
 })
 
 

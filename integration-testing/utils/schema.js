@@ -60,6 +60,16 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
         }
       }
     }
+    followerUsers {
+      items {
+        userId
+      }
+    }
+    followedUsers {
+      items {
+        userId
+      }
+    }
   }
 }`)
 
@@ -110,6 +120,16 @@ module.exports.user = gql(`query User ($userId: ID!) {
           mediaId
           url
         }
+      }
+    }
+    followerUsers {
+      items {
+        userId
+      }
+    }
+    followedUsers {
+      items {
+        userId
       }
     }
   }

@@ -1,14 +1,18 @@
-#set ($count = $util.defaultIfNull($ctx.source.followerCount, 0))
+## If caller is blocked by target, and this field is being resolved
+## then we can be guaranteed that parent resolver filled in blockerAt
+#if (! $util.isNull($ctx.source.blockerAt))
+  #return
+#end
 
 ## if followCountsHidden is set, and the caller is not looking at their
 ## own profile, hide the count
 #if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
   #if ($util.defaultIfNull($ctx.source.followCountsHidden, false))
-    #set ($count = $util.toJson(null))
+    #return
   #end
 #end
 
 {
   "version": "2018-05-29",
-  "payload": $count,
+  "payload": $util.defaultIfNull($ctx.source.followerCount, 0)
 }

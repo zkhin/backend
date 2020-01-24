@@ -215,7 +215,7 @@ type User {
   privacyStatus: PrivacyStatus
   followedStatus: FollowStatus!  # is the caller following them?
   followerStatus: FollowStatus!  # are they following the caller?
-  postCount: Int!  # only posts with COMPLETED status
+  postCount: Int  # only posts with COMPLETED status
   fullName: String
   themeCode: String
   blockedAt: AWSDateTime  # has the caller blocked this user, and if so, when?

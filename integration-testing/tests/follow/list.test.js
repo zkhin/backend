@@ -290,10 +290,10 @@ test('getFollowe[d|r]Users queries correctly hide responses when querying about 
 
   // we can *not* see their FOLLOWING relationships
   resp = await ourClient.query({query: schema.followedUsers, variables: {followStatus: 'FOLLOWING', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followedUsers']).toBeNull()
   resp = await ourClient.query({query: schema.followerUsers, variables: {followStatus: 'FOLLOWING', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followerUsers']).toBeNull()
 
   // request to follow them
@@ -303,10 +303,10 @@ test('getFollowe[d|r]Users queries correctly hide responses when querying about 
 
   // still can't see FOLLOWING relationships
   resp = await ourClient.query({query: schema.followedUsers, variables: {followStatus: 'FOLLOWING', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followedUsers']).toBeNull()
   resp = await ourClient.query({query: schema.followerUsers, variables: {followStatus: 'FOLLOWING', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followerUsers']).toBeNull()
 
   // they deny the follow request
@@ -315,10 +315,10 @@ test('getFollowe[d|r]Users queries correctly hide responses when querying about 
 
   // still can't see FOLLOWING relationships
   resp = await ourClient.query({query: schema.followedUsers, variables: {followStatus: 'FOLLOWING', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followedUsers']).toBeNull()
   resp = await ourClient.query({query: schema.followerUsers, variables: {followStatus: 'FOLLOWING', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followerUsers']).toBeNull()
 
   // they accept the follow request
@@ -336,17 +336,17 @@ test('getFollowe[d|r]Users queries correctly hide responses when querying about 
 
   // we still *cannot* see their REQUESTED relationships
   resp = await ourClient.query({query: schema.followedUsers, variables: {followStatus: 'REQUESTED', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toHaveLength(1)
   expect(resp['data']['user']['followedUsers']).toBeNull()
   resp = await ourClient.query({query: schema.followerUsers, variables: {followStatus: 'REQUESTED', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toHaveLength(1)
   expect(resp['data']['user']['followerUsers']).toBeNull()
 
   // we still *cannot* see their DENIED relationships
   resp = await ourClient.query({query: schema.followedUsers, variables: {followStatus: 'DENIED', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toHaveLength(1)
   expect(resp['data']['user']['followedUsers']).toBeNull()
   resp = await ourClient.query({query: schema.followerUsers, variables: {followStatus: 'DENIED', userId}})
-  expect(resp['errors'].length).toBeTruthy()
+  expect(resp['errors']).toHaveLength(1)
   expect(resp['data']['user']['followerUsers']).toBeNull()
 })
