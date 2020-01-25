@@ -30,7 +30,7 @@ test('Cant request over 100 of any of the like lists', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify these queries go through with just under the limit
-  resp = await ourClient.query({query: schema.getPost, variables: {postId, onymouslyLikedByLimit: 100}})
+  resp = await ourClient.query({query: schema.post, variables: {postId, onymouslyLikedByLimit: 100}})
   expect(resp['errors']).toBeUndefined()
   resp = await ourClient.query({query: schema.self, variables: {onymouslyLikedPostsLimit: 100}})
   expect(resp['errors']).toBeUndefined()
@@ -38,7 +38,7 @@ test('Cant request over 100 of any of the like lists', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify they fail when asking for just over the limit
-  resp = await ourClient.query({query: schema.getPost, variables: {postId, onymouslyLikedByLimit: 101}})
+  resp = await ourClient.query({query: schema.post, variables: {postId, onymouslyLikedByLimit: 101}})
   expect(resp['errors'].length).toBeTruthy()
   resp = await ourClient.query({query: schema.self, variables: {onymouslyLikedPostsLimit: 101}})
   expect(resp['errors'].length).toBeTruthy()
@@ -67,9 +67,9 @@ test('Order of users that have onymously liked a post', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // check details on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  let post = resp['data']['getPost']
+  let post = resp['data']['post']
   expect(post['likeStatus']).toBe('ONYMOUSLY_LIKED')
   expect(post['onymousLikeCount']).toBe(3)
   expect(post['onymouslyLikedBy']['items']).toHaveLength(3)
@@ -78,12 +78,12 @@ test('Order of users that have onymously liked a post', async () => {
   expect(post['onymouslyLikedBy']['items'][2]['userId']).toBe(other1UserId)
 
   // check order of list of users that onymously liked the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(3)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(other2UserId)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][1]['userId']).toBe(ourUserId)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][2]['userId']).toBe(other1UserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(3)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(other2UserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][1]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][2]['userId']).toBe(other1UserId)
 
   // we dislike it
   resp = await ourClient.mutate({mutation: schema.dislikePost, variables: {postId}})
@@ -96,11 +96,11 @@ test('Order of users that have onymously liked a post', async () => {
   expect(post['onymouslyLikedBy']['items'][1]['userId']).toBe(other1UserId)
 
   // check order of list of users that onymously liked the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(2)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(other2UserId)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][1]['userId']).toBe(other1UserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(2)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(other2UserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][1]['userId']).toBe(other1UserId)
 
   // other2 dislikes it
   resp = await other2Client.mutate({mutation: schema.dislikePost, variables: {postId}})
@@ -112,9 +112,9 @@ test('Order of users that have onymously liked a post', async () => {
   expect(post['onymouslyLikedBy']['items'][0]['userId']).toBe(other1UserId)
 
   // double check the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['likeStatus']).toBe('NOT_LIKED')
   expect(post['onymousLikeCount']).toBe(1)
   expect(post['onymouslyLikedBy']['items']).toHaveLength(1)

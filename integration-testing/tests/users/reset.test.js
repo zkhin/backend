@@ -207,11 +207,11 @@ test('resetUser deletes any likes we have placed', async () => {
   expect(resp['data']['onymouslyLikePost']['postId']).toBe(postId)
 
   // check the post for that like
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymousLikeCount']).toBe(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
   // we reset our account
   resp = await ourClient.mutate({mutation: schema.resetUser})
@@ -222,10 +222,10 @@ test('resetUser deletes any likes we have placed', async () => {
   await theirClient.resetStore()
 
   // check the post no longer has that like
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymousLikeCount']).toBe(0)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['onymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
 })
 
 
@@ -245,10 +245,10 @@ test('resetUser deletes any likes on our posts', async () => {
   expect(resp['data']['onymouslyLikePost']['postId']).toBe(postId)
 
   // check the list of onymous likers of the post
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
 
   // check their list of onymously liked posts
   resp = await theirClient.query({query: schema.self})
@@ -265,9 +265,9 @@ test('resetUser deletes any likes on our posts', async () => {
   await theirClient.resetStore()
 
   // check post is gone
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']).toBeNull()
+  expect(resp['data']['post']).toBeNull()
 
   // check their list of onymously liked posts
   resp = await theirClient.query({query: schema.self})
@@ -335,17 +335,17 @@ test('resetUser deletes users flags of posts', async () => {
   expect(resp['data']['flagPost']['postId']).toBe(postId)
 
   // check we can see we flagged the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['flagStatus']).toBe('FLAGGED')
+  expect(resp['data']['post']['flagStatus']).toBe('FLAGGED')
 
   // we reset our user, should clear the flag
   await ourClient.mutate({mutation: schema.resetUser, variables: {newUsername: ourUsername}})
 
   // check we can that we have not flagged the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['flagStatus']).toBe('NOT_FLAGGED')
+  expect(resp['data']['post']['flagStatus']).toBe('NOT_FLAGGED')
 })
 
 
@@ -391,18 +391,18 @@ test('resetUser deletes any comments we have added to posts', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(commentId)
 
   // check they can see our comment on the post
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['commentCount']).toBe(1)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(commentId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(commentId)
 
   // we reset our user, should delete the comment
   await ourClient.mutate({mutation: schema.resetUser, variables: {newUsername: ourUsername}})
 
   // check the comment has disappeared
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['commentCount']).toBe(0)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(0)
+  expect(resp['data']['post']['commentCount']).toBe(0)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(0)
 })

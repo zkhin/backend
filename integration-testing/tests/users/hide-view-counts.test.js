@@ -61,15 +61,15 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['user']['postViewedByCount']).toBe(0)
 
   // check both us can see view counts on the post, they can't see our list of viewedBy
-  resp = await ourClient.query({query: schema.getPostViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(0)
-  expect(resp['data']['getPost']['viewedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
-  resp = await theirClient.query({query: schema.getPostViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']['getPost']['viewedByCount']).toBe(0)
-  expect(resp['data']['getPost']['viewedBy']).toBeNull()
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['viewedBy']).toBeNull()
 
   // hide our view counts
   resp = await ourClient.mutate({mutation: schema.setUserViewCountsHidden, variables: {value: true}})
@@ -86,15 +86,15 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['user']['postViewedByCount']).toBeNull()
 
   // check neither of us can see view counts on the post, or the viewedBy list
-  resp = await ourClient.query({query: schema.getPostViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']['getPost']['viewedByCount']).toBeNull()
-  expect(resp['data']['getPost']['viewedBy']).toBeNull()
+  expect(resp['data']['post']['viewedByCount']).toBeNull()
+  expect(resp['data']['post']['viewedBy']).toBeNull()
 
-  resp = await theirClient.query({query: schema.getPostViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']['getPost']['viewedByCount']).toBeNull()
-  expect(resp['data']['getPost']['viewedBy']).toBeNull()
+  expect(resp['data']['post']['viewedByCount']).toBeNull()
+  expect(resp['data']['post']['viewedBy']).toBeNull()
 
   // unhide our view counts
   resp = await ourClient.mutate({mutation: schema.setUserViewCountsHidden, variables: {value: false}})
@@ -111,13 +111,13 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['user']['postViewedByCount']).toBe(0)
 
   // check both us can see view counts on it, only us the viewedBy list
-  resp = await ourClient.query({query: schema.getPostViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(0)
-  expect(resp['data']['getPost']['viewedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
-  resp = await theirClient.query({query: schema.getPostViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']['getPost']['viewedByCount']).toBe(0)
-  expect(resp['data']['getPost']['viewedBy']).toBeNull()
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['viewedBy']).toBeNull()
 })

@@ -96,10 +96,10 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // check the post is not already flagged
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['flagStatus']).toBe('NOT_FLAGGED')
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['flagStatus']).toBe('NOT_FLAGGED')
 
   // flag the post
   resp = await ourClient.mutate({mutation: schema.flagPost, variables: {postId}})
@@ -108,10 +108,10 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
   expect(resp['data']['flagPost']['flagStatus']).toBe('FLAGGED')
 
   // double check that was saved
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['flagStatus']).toBe('FLAGGED')
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['flagStatus']).toBe('FLAGGED')
 })
 
 

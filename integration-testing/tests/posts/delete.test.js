@@ -190,10 +190,10 @@ test('When a post is deleted, any likes of it disappear', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify the post is now in the like lists
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
   resp = await ourClient.query({query: schema.self })
   expect(resp['errors']).toBeUndefined()

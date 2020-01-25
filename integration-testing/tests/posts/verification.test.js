@@ -48,9 +48,9 @@ test('Add media post passes verification', async () => {
   await misc.sleep(4000)
 
   // check the post & media have changed status and look good
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(1)
@@ -85,12 +85,12 @@ test('Add media post fails verification to small', async () => {
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleep(3000)
 
   // check the post & media have changed status and look good
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(1)
@@ -128,9 +128,9 @@ test('Add media post fails verification no attributes', async () => {
   await misc.sleep(4000)
 
   // check the post & media have changed status and look good
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(1)
@@ -169,9 +169,9 @@ test('Add media post verification hidden hides verification state', async () => 
   await misc.sleep(2000)
 
   // check the post & media have changed status and look good
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(1)
@@ -188,12 +188,12 @@ test('Add media post verification hidden hides verification state', async () => 
   expect(resp['data']['editPost']['verificationHidden']).toBe(false)
 
   // now the real verification status of the media should show up
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['getPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getPost']['mediaObjects'][0]['isVerified']).toBe(false)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['post']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['post']['mediaObjects'][0]['isVerified']).toBe(false)
 
   // change the verification hidden setting of the post again
   resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, verificationHidden: true}})
@@ -202,12 +202,12 @@ test('Add media post verification hidden hides verification state', async () => 
   expect(resp['data']['editPost']['verificationHidden']).toBe(true)
 
   // now the real verification status of the media should *not* show up
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['getPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getPost']['mediaObjects'][0]['isVerified']).toBe(true)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['post']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['post']['mediaObjects'][0]['isVerified']).toBe(true)
 })
 
 
@@ -223,16 +223,16 @@ test('Add media post verification hidden hides verification state', async () => 
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 
   // verify when we look at our post we see the verification hidden setting
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['verificationHidden']).toBe(false)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['verificationHidden']).toBe(false)
 
   // verify when someone else looks at our post they do *not* see the verification hidden setting
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['verificationHidden']).toBeNull()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['verificationHidden']).toBeNull()
 
   // we set the verification hidden setting
   resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, verificationHidden: true}})
@@ -241,14 +241,14 @@ test('Add media post verification hidden hides verification state', async () => 
   expect(resp['data']['editPost']['verificationHidden']).toBe(true)
 
   // verify when we look at our post we see the verification hidden setting
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['verificationHidden']).toBe(true)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['verificationHidden']).toBe(true)
 
   // verify when someone else looks at our post they do *not* see the verification hidden setting
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['verificationHidden']).toBeNull()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['verificationHidden']).toBeNull()
 })

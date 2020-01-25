@@ -32,11 +32,11 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   expect(resp['errors']).toBeUndefined()
 
   // verify we can see the like
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymousLikeCount']).toBe(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
 
   // we block them
   resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
@@ -44,10 +44,10 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // verify we can see the like has disappeared
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymousLikeCount']).toBe(0)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['onymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
 })
 
 

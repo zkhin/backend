@@ -533,6 +533,17 @@ custom:
           - Generic.batchGetPostsPostedBy
 
       - type: Query
+        field: post
+        request: Generic.passThru.request.vtl
+        response: Query.post/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.post.fetchPost
+          - Post.pipeline.postedBy
+          - Post.pipeline.postedByBlockerAt
+          - Post.pipeline.postedByFollowedStatus
+
+      - type: Query
         field: trendingPosts
         request: Generic.passThru.request.vtl
         response: Generic.paginatedPosts.response.vtl
@@ -544,17 +555,17 @@ custom:
           - Generic.batchGetPostsPostedByBlockerAt
           - Generic.batchGetPostsPostedByFollowedStatus
 
+      # DEPRECATED: use Query.post instead
       - type: Query
         field: getPost
         request: Generic.passThru.request.vtl
-        response: Query.getPost/Query.getPost.response.vtl
+        response: Query.post/after.response.vtl
         kind: PIPELINE
         functions:
-          - Query.getPost.fetchPost
-          - Generic.checkAccess.checkIfBlocked
-          - Generic.checkAccess.checkIfPublic
-          - Generic.checkAccess.checkIfFollower
-          - Generic.getUser
+          - Query.post.fetchPost
+          - Post.pipeline.postedBy
+          - Post.pipeline.postedByBlockerAt
+          - Post.pipeline.postedByFollowedStatus
 
       - type: Query
         field: getPosts
@@ -676,6 +687,21 @@ custom:
         response: Stash.followedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
+        name: Post.pipeline.postedBy
+        request: Post.pipeline.postedBy.request.vtl
+        response: Post.pipeline.postedBy.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Post.pipeline.postedByBlockerAt
+        request: Post.pipeline.postedByBlockerAt.request.vtl
+        response: Post.pipeline.postedByBlockerAt.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Post.pipeline.postedByFollowedStatus
+        request: Post.pipeline.postedByFollowedStatus.request.vtl
+        response: Post.pipeline.postedByFollowedStatus.response.vtl
+
+      - dataSource: DynamodbDataSource
         name: Generic.batchGetUsers
         request: Generic.batchGetUsers.request.vtl
         response: Generic.batchGetUsers.response.vtl
@@ -726,9 +752,9 @@ custom:
         response: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Query.getPost.fetchPost
-        request: Query.getPost/Pipeline.fetchPost.request.vtl
-        response: Query.getPost/Pipeline.fetchPost.response.vtl
+        name: Query.post.fetchPost
+        request: Query.post/Pipeline.fetchPost.request.vtl
+        response: Query.post/Pipeline.fetchPost.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.getFeed.fetchFeed

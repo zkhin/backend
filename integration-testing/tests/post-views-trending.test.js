@@ -49,12 +49,12 @@ test('Report post views', async () => {
   expect(resp['data']['self']['postViewedByCount']).toBe(0)
 
   // verify niether of the posts have views
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId1}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(0)
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId2}})
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
 
   // they report to have viewed both posts
   resp = await theirClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId1, postId2]}})
@@ -75,23 +75,23 @@ test('Report post views', async () => {
   expect(resp['data']['self']['postViewedByCount']).toBe(0)
 
   // verify the two posts have the right viewed by counts
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId1}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(1)
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId2}})
+  expect(resp['data']['post']['viewedByCount']).toBe(1)
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(2)
+  expect(resp['data']['post']['viewedByCount']).toBe(2)
 
   // verify the two posts have the right viewedBy lists
-  resp = await ourClient.query({query: schema.getPostViewedBy, variables: {postId: postId1}})
+  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['viewedBy']['items'][0]['userId']).toBe(theirUserId)
-  resp = await ourClient.query({query: schema.getPostViewedBy, variables: {postId: postId2}})
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(theirUserId)
+  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedBy']['items']).toHaveLength(2)
-  expect(resp['data']['getPost']['viewedBy']['items'][0]['userId']).toBe(ourUserId)
-  expect(resp['data']['getPost']['viewedBy']['items'][1]['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(2)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(theirUserId)
 })
 
 
@@ -114,9 +114,9 @@ test('Post views are de-duplicated by user', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postViewedByCount']).toBe(1)
 
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(1)
+  expect(resp['data']['post']['viewedByCount']).toBe(1)
 
   // we report to have viewed that post once
   resp = await ourClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId]}})
@@ -127,9 +127,9 @@ test('Post views are de-duplicated by user', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postViewedByCount']).toBe(2)
 
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(2)
+  expect(resp['data']['post']['viewedByCount']).toBe(2)
 
   // they report to have viewed that post yet again
   resp = await theirClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId, postId]}})
@@ -140,9 +140,9 @@ test('Post views are de-duplicated by user', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postViewedByCount']).toBe(2)
 
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['viewedByCount']).toBe(2)
+  expect(resp['data']['post']['viewedByCount']).toBe(2)
 })
 
 

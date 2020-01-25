@@ -1,0 +1,9 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($post = $ctx.prev.result)
+#set ($postedBy = $ctx.result)
+
+$util.qr($post.put('postedBy', $postedBy))
+$util.toJson($post)

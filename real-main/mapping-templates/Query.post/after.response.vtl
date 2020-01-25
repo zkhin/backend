@@ -1,0 +1,19 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($post = $ctx.prev.result)
+
+## hide if post owner is blocking caller
+#if (! $util.isNull($post.postedBy.blockerAt))
+  #return
+#end
+
+## hide if post owner private and caller is not a follower or self
+#if ($post.postedBy.privacyStatus == 'PRIVATE')
+  #if ($post.postedBy.followedStatus != 'SELF' and $post.postedBy.followedStatus != 'FOLLOWING')
+    #return
+  #end
+#end
+
+$util.toJson($post)

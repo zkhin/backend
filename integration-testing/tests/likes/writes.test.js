@@ -248,9 +248,9 @@ test('Onymously like, then dislike, a post', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // check that post shows no sign of likes
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  let post = resp['data']['getPost']
+  let post = resp['data']['post']
   expect(post['likeStatus']).toBe('NOT_LIKED')
   expect(post['onymousLikeCount']).toBe(0)
   expect(post['onymouslyLikedBy']['items']).toHaveLength(0)
@@ -266,9 +266,9 @@ test('Onymously like, then dislike, a post', async () => {
   expect(post['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
   // check that like shows up on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['likeStatus']).toBe('ONYMOUSLY_LIKED')
   expect(post['anonymousLikeCount']).toBe(0)
   expect(post['onymousLikeCount']).toBe(1)
@@ -291,9 +291,9 @@ test('Onymously like, then dislike, a post', async () => {
   expect(post['onymouslyLikedBy']['items']).toHaveLength(0)
 
   // check the like has disappeared from the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['likeStatus']).toBe('NOT_LIKED')
   expect(post['anonymousLikeCount']).toBe(0)
   expect(post['onymousLikeCount']).toBe(0)
@@ -314,9 +314,9 @@ test('Anonymously like, then dislike, a post', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // check that post shows no sign of likes
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  let post = resp['data']['getPost']
+  let post = resp['data']['post']
   expect(post['likeStatus']).toBe('NOT_LIKED')
   expect(post['anonymousLikeCount']).toBe(0)
   expect(post['onymouslyLikedBy']['items']).toHaveLength(0)
@@ -331,9 +331,9 @@ test('Anonymously like, then dislike, a post', async () => {
   expect(post['onymouslyLikedBy']['items']).toHaveLength(0)
 
   // check that like shows up on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['likeStatus']).toBe('ANONYMOUSLY_LIKED')
   expect(post['anonymousLikeCount']).toBe(1)
   expect(post['onymousLikeCount']).toBe(0)
@@ -355,9 +355,9 @@ test('Anonymously like, then dislike, a post', async () => {
   expect(post['onymouslyLikedBy']['items']).toHaveLength(0)
 
   // check the like has disappeared from the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['likeStatus']).toBe('NOT_LIKED')
   expect(post['anonymousLikeCount']).toBe(0)
   expect(post['onymousLikeCount']).toBe(0)

@@ -44,13 +44,13 @@ test('Delete comments', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(ourCommentId)
 
   // check we see both comments, in order, on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(2)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(2)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(theirCommentId)
-  expect(resp['data']['getPost']['comments']['items'][1]['commentId']).toBe(ourCommentId)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(2)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(2)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(theirCommentId)
+  expect(resp['data']['post']['comments']['items'][1]['commentId']).toBe(ourCommentId)
 
   // they delete their comment
   variables = {commentId: theirCommentId}
@@ -59,12 +59,12 @@ test('Delete comments', async () => {
   expect(resp['data']['deleteComment']['commentId']).toBe(theirCommentId)
 
   // check we only see one comment on the post now
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(1)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(ourCommentId)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(ourCommentId)
 
   // we delete our comment
   variables = {commentId: ourCommentId}
@@ -73,11 +73,11 @@ test('Delete comments', async () => {
   expect(resp['data']['deleteComment']['commentId']).toBe(ourCommentId)
 
   // check no comments appear on the post now
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(0)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(0)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(0)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(0)
 })
 
 
@@ -102,12 +102,12 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(theirCommentId)
 
   // check we can see that comment on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(1)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(theirCommentId)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(theirCommentId)
 
   // we delete their comment
   variables = {commentId: theirCommentId}
@@ -116,11 +116,11 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp['data']['deleteComment']['commentId']).toBe(theirCommentId)
 
   // check no comments appear on the post now
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(0)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(0)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(0)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(0)
 })
 
 
@@ -157,12 +157,12 @@ test('Cant delete someone elses comment on someone elses post', async () => {
   await expect(ourClient.mutate({mutation: schema.deleteComment, variables})).rejects.toThrow()
 
   // check they can see that comment on the post
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(1)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(theirCommentId)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(theirCommentId)
 })
 
 
@@ -190,12 +190,12 @@ test('Can delete comments even if we have comments disabled and the post has com
   resp = await ourClient.mutate({mutation: schema.setUserMentalHealthSettings, variables})
 
   // verify we can see that comment on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(1)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(ourCommentId)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(ourCommentId)
 
   // we disable comments on the post
   variables = {postId, commentsDisabled: true}
@@ -203,11 +203,11 @@ test('Can delete comments even if we have comments disabled and the post has com
   expect(resp['errors']).toBeUndefined()
 
   // verify we can't see comments on post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBeNull()
-  expect(resp['data']['getPost']['comments']).toBeNull()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBeNull()
+  expect(resp['data']['post']['comments']).toBeNull()
 
   // but we can still delete the comment
   variables = {commentId: ourCommentId}
@@ -221,9 +221,9 @@ test('Can delete comments even if we have comments disabled and the post has com
   expect(resp['errors']).toBeUndefined()
 
   // verify the comment has disappeared from the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(0)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(0)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(0)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(0)
 })

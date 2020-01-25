@@ -33,9 +33,9 @@ test('Add text-only post no expiration', async () => {
   expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
@@ -101,9 +101,9 @@ test('Add media post', async () => {
   await misc.sleep(3000)
 
   // check the post & media have changed status and look good
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(1)
@@ -205,12 +205,12 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 
   // double check those values stuck
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentsDisabled']).toBe(false)
-  expect(resp['data']['getPost']['likesDisabled']).toBe(false)
-  expect(resp['data']['getPost']['verificationHidden']).toBe(false)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentsDisabled']).toBe(false)
+  expect(resp['data']['post']['likesDisabled']).toBe(false)
+  expect(resp['data']['post']['verificationHidden']).toBe(false)
 
   // create a post, specify both to true
   postId = uuidv4()
@@ -223,10 +223,10 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['addPost']['verificationHidden']).toBe(true)
 
   // double check those values stuck
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentsDisabled']).toBe(true)
-  expect(resp['data']['getPost']['likesDisabled']).toBe(true)
-  expect(resp['data']['getPost']['verificationHidden']).toBe(true)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentsDisabled']).toBe(true)
+  expect(resp['data']['post']['likesDisabled']).toBe(true)
+  expect(resp['data']['post']['verificationHidden']).toBe(true)
 })

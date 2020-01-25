@@ -499,8 +499,8 @@ module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost (
   }
 }`)
 
-module.exports.getPost = gql(`query GetPost ($postId: ID!, $onymouslyLikedByLimit: Int) {
-  getPost (postId: $postId) {
+module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int) {
+  post (postId: $postId) {
     postId
     postStatus
     postedAt
@@ -558,8 +558,14 @@ module.exports.getPost = gql(`query GetPost ($postId: ID!, $onymouslyLikedByLimi
   }
 }`)
 
-module.exports.getPostViewedBy = gql(`query GetPostViewedBy ($postId: ID!) {
+module.exports.getPost = gql(`query GetPost ($postId: ID!) {
   getPost (postId: $postId) {
+    postId
+  }
+}`)
+
+module.exports.postViewedBy = gql(`query PostViewedBy ($postId: ID!) {
+  post (postId: $postId) {
     postId
     viewedByCount
     viewedBy {

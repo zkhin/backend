@@ -1,0 +1,20 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+#set ($post = $ctx.prev.result)
+
+#if ($util.isNull($post))
+  #return
+#end
+
+#if ($callerUserId == $post.postedBy.userId)
+  $util.qr($post.postedBy.put('blockerAt', null))
+  #return ($post)
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "block/$post.postedBy.userId/$callerUserId" },
+    "sortKey": { "S": "-" }
+  }
+}

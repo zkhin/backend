@@ -286,10 +286,10 @@ test('Post count reacts to user archiving posts', async () => {
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
   await misc.sleep(3000)  // let the s3 trigger fire
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['getPost']['postedBy']['postCount']).toBe(2)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['postedBy']['postCount']).toBe(2)
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postCount']).toBe(2)
@@ -346,10 +346,10 @@ test('When a post is archived, any likes of it disappear', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify the post is now in the like lists
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
   resp = await ourClient.query({query: schema.self })
   expect(resp['errors']).toBeUndefined()
@@ -369,11 +369,12 @@ test('When a post is archived, any likes of it disappear', async () => {
   // clear our cache
   await ourClient.resetStore()
 
-  // verify the post has disappeared from the like lists
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  // verify we can no longer see the post
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']).toBeNull()
 
+  // verify the post has disappeared from the like lists
   resp = await ourClient.query({query: schema.self })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['onymouslyLikedPosts']['items']).toHaveLength(0)

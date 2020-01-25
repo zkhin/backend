@@ -162,17 +162,17 @@ test('Blocked cannot see blocker in list that have onymously liked a post, block
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // verify they do not see us in the list of likers of the post
-  resp = await theirClient.query({query: schema.getPost, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
 
   // verify we see them in the list of likers of the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(2)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][1]['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(2)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][1]['userId']).toBe(theirUserId)
 })
 
 
@@ -340,12 +340,12 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   await misc.sleep(2000)
 
   // verify they cannot see our post or likers of the post
-  resp = await theirClient.query({query: schema.getPost, variables: {postId: postId1}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']['getPost']).toBeNull()
+  resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']).toBeNull()
 
   // verify we can see their post and likers of the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId2}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
 })

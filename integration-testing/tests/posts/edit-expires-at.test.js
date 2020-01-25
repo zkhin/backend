@@ -142,9 +142,9 @@ test('Edit Post.expiresAt with UTC', async () => {
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
 
   // pull the post again to make sure that new value stuck in DB
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['expiresAt']).not.toBeNull()
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
@@ -177,9 +177,9 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
 
   // pull the post again to make sure that new value stuck in DB
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['expiresAt']).not.toBeNull()
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)

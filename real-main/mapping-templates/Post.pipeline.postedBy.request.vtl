@@ -1,0 +1,14 @@
+#set ($post = $ctx.prev.result)
+
+#if ($util.isNull($post))
+  #return
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "user/$post.postedByUserId" },
+    "sortKey": { "S": "profile" }
+  }
+}

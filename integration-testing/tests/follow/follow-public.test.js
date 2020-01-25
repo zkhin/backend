@@ -138,10 +138,10 @@ test('When we stop following a public user, any likes of ours on their posts are
   expect(resp['data']['anonymouslyLikePost']['likeStatus']).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId1}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
@@ -159,10 +159,10 @@ test('When we stop following a public user, any likes of ours on their posts are
   expect(resp['data']['unfollowUser']['followedStatus']).toBe('NOT_FOLLOWING')
 
   // check nothing changed in those lists
-  resp = await ourClient.query({query: schema.getPost, variables: {postId: postId1}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()

@@ -38,14 +38,14 @@ test('Add a comments', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(ourCommentId)
 
   // check we can see that comment
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(1)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(1)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(ourCommentId)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['getPost']['comments']['items'][0]['text']).toBe(ourText)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(ourCommentId)
+  expect(resp['data']['post']['comments']['items'][0]['commentedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['comments']['items'][0]['text']).toBe(ourText)
 
   // they comment on the post
   const theirCommentId = uuidv4()
@@ -56,15 +56,15 @@ test('Add a comments', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(theirCommentId)
 
   // check we see both comments, in order, on the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-  expect(resp['data']['getPost']['commentCount']).toBe(2)
-  expect(resp['data']['getPost']['comments']['items']).toHaveLength(2)
-  expect(resp['data']['getPost']['comments']['items'][0]['commentId']).toBe(ourCommentId)
-  expect(resp['data']['getPost']['comments']['items'][1]['commentId']).toBe(theirCommentId)
-  expect(resp['data']['getPost']['comments']['items'][1]['commentedBy']['userId']).toBe(theirUserId)
-  expect(resp['data']['getPost']['comments']['items'][1]['text']).toBe(theirText)
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(2)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(2)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(ourCommentId)
+  expect(resp['data']['post']['comments']['items'][1]['commentId']).toBe(theirCommentId)
+  expect(resp['data']['post']['comments']['items'][1]['commentedBy']['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['comments']['items'][1]['text']).toBe(theirText)
 })
 
 

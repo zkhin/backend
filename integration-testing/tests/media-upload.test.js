@@ -152,9 +152,9 @@ test('Add post with one video', async () => {
   await misc.uploadMedia(videoPath, videoContentType, uploadUrl)
   await misc.sleep(2000)
 
-  resp = await appsyncClient.query({query: schema.getPost, variables: {postId}})
+  resp = await appsyncClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['getPost']
+  post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(1)

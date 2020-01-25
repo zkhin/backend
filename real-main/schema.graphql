@@ -45,6 +45,11 @@ type Query {
   #  - ordered by soonest-to-expire-first
   getStories(userId: ID, limit: Int, nextToken: String): PaginatedPosts!
 
+  # A specific post
+  #  - posts that do not have COMPLETED postStatus are private to only the post owner
+  #  - posts of private users are private to only them and their followers
+  post(postId: ID!): Post
+
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
 
@@ -56,9 +61,7 @@ type Query {
   #    to the user's posts, if the user is a private user)
   getPosts(userId: ID, postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts!
 
-  # Get a specific post.
-  #  - if this post belongs to someone else, then it is only visible if postStatus is COMPLETED
-  #    (and we must have access to the post, if the owner of the post is a private user)
+  # DEPRECATED: use Query.post instead
   getPost(postId: ID!): Post
 
   # Get a user's MediaObjects.

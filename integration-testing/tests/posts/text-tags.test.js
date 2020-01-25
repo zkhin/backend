@@ -104,13 +104,13 @@ test('Changing username should not affect who is in tags', async () => {
   expect(resp['data']['setUserDetails']['username']).toBe(ourNewUsername)
 
   // look at the post again, text tags shouldn't have changed
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['text']).toBe(text)
-  expect(resp['data']['getPost']['textTaggedUsers']).toHaveLength(1)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['tag']).toBe(`@${ourUsername}`)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['user']['userId']).toBe(ourUserId)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['user']['username']).toBe(ourNewUsername)
+  expect(resp['data']['post']['text']).toBe(text)
+  expect(resp['data']['post']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['post']['textTaggedUsers'][0]['tag']).toBe(`@${ourUsername}`)
+  expect(resp['data']['post']['textTaggedUsers'][0]['user']['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['textTaggedUsers'][0]['user']['username']).toBe(ourNewUsername)
 })
 
 
@@ -153,13 +153,13 @@ test('Tagged user blocks caller', async () => {
   expect(resp['data']['addPost']['textTaggedUsers'][0]['user']['username']).toBe(theirUsername)
 
   // we see tags of them in the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['text']).toBe(text)
-  expect(resp['data']['getPost']['textTaggedUsers']).toHaveLength(1)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['user']['userId']).toBe(theirUserId)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['user']['username']).toBe(theirUsername)
+  expect(resp['data']['post']['text']).toBe(text)
+  expect(resp['data']['post']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['post']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
+  expect(resp['data']['post']['textTaggedUsers'][0]['user']['userId']).toBe(theirUserId)
+  expect(resp['data']['post']['textTaggedUsers'][0]['user']['username']).toBe(theirUsername)
 
   // they block us
   resp = await theirClient.mutate({mutation: schema.blockUser, variables: {userId: ourUserId}})
@@ -168,10 +168,10 @@ test('Tagged user blocks caller', async () => {
   expect(resp['data']['blockUser']['blockedAt']).toBeTruthy()
 
   // we don't seem them in the tag in the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['text']).toBe(text)
-  expect(resp['data']['getPost']['textTaggedUsers']).toHaveLength(1)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
-  expect(resp['data']['getPost']['textTaggedUsers'][0]['user']).toBe(null)
+  expect(resp['data']['post']['text']).toBe(text)
+  expect(resp['data']['post']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['post']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
+  expect(resp['data']['post']['textTaggedUsers'][0]['user']).toBe(null)
 })
