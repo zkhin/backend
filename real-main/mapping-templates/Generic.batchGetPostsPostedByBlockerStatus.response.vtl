@@ -8,9 +8,10 @@
     #foreach ($index in $indexes)
       ## the blocked vs blocker swap here is because here we're from the perspective
       ## of the caller, vs in the DB we are perspective of the item
-      $util.qr($ctx.prev.result.items[$index].put('blockerAt', $item.blockedAt))
+      $util.qr($ctx.stash.posts.items[$index]['postedBy'].put('blockerAt', $item.blockedAt))
+      $util.qr($ctx.stash.posts.items[$index]['postedBy'].put('blockerStatus', 'BLOCKING'))
     #end
   #end
 #end
 
-$util.toJson($ctx.prev.result)
+{}

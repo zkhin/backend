@@ -67,6 +67,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['bio']).not.toBeNull()
   expect(ourUserFull['blockedAt']).toBeNull()
   expect(ourUserFull['blockerAt']).toBeNull()
+  expect(ourUserFull['blockedStatus']).toBe('SELF')
+  expect(ourUserFull['blockerStatus']).toBe('SELF')
   expect(ourUserFull['commentsDisabled']).toBe(false)
   expect(ourUserFull['email']).not.toBeNull()
   expect(ourUserFull['followCountsHidden']).toBe(false)
@@ -102,12 +104,15 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserLimited['userId']).toBe(ourUserFull['userId'])
   expect(ourUserLimited['username']).toBe(ourUserFull['username'])
   expect(ourUserLimited['blockerAt']).toBeTruthy()
+  expect(ourUserLimited['blockerStatus']).toBe('BLOCKING')
 
   // adjust everything nulled out or changed, then compare
   ourUserLimited['blockerAt'] = null
   ourUserFull['acceptedEULAVersion'] = null
   ourUserFull['anonymouslyLikedPosts'] = null
   ourUserFull['bio'] = null
+  ourUserFull['blockerStatus'] = 'BLOCKING'
+  ourUserFull['blockedStatus'] = 'NOT_BLOCKING'
   ourUserFull['blockedUsers'] = null
   ourUserFull['commentsDisabled'] = null
   ourUserFull['email'] = null

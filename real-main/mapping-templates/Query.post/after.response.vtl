@@ -5,7 +5,7 @@
 #set ($post = $ctx.prev.result)
 
 ## hide if post owner is blocking caller
-#if (! $util.isNull($post.postedBy.blockerAt))
+#if ($post.postedBy.blockerStatus == 'BLOCKING')
   #return
 #end
 

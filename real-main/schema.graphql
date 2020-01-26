@@ -217,11 +217,16 @@ type User {
   postCount: Int  # only posts with COMPLETED status
   fullName: String
   themeCode: String
-  blockedAt: AWSDateTime  # has the caller blocked this user, and if so, when?
-  blockerAt: AWSDateTime  # have they blocked the caller, and if so, when?
   followedCount: Int  # null when looking at someone else's profile who is hidding follow counts
   followerCount: Int  # null when looking at someone else's profile who is hidding follow counts
   signedUpAt: AWSDateTime
+
+  # DEPRECATED: use User.blockedStatus and User.blockerStatus instead
+  blockedAt: AWSDateTime  # has the caller blocked this user, and if so, when?
+  blockerAt: AWSDateTime  # have they blocked the caller, and if so, when?
+
+  blockedStatus: BlockStatus!  # is the caller blocking them?
+  blockerStatus: BlockStatus!  # are they blocking the caller?
 
   # Sum of user's posts' viewedByCount
   #   - null if user has viewCountsHidden set
@@ -286,6 +291,12 @@ enum FollowStatus {
   SELF
   REQUESTED
   DENIED
+}
+
+enum BlockStatus {
+  NOT_BLOCKING
+  BLOCKING
+  SELF
 }
 
 enum MediaObjectType {

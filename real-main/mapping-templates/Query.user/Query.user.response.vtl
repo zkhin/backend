@@ -3,18 +3,22 @@
 #end
 
 #if ($ctx.prev.result.items.isEmpty())
-  #return ()
+  #return
 #end
 
-#set ($userItem = $ctx.prev.result.items[0])
+#set ($user = $ctx.prev.result.items[0])
 
-#if (! $util.isNull($userItem.blockerAt))
+#if ($user.blockerStatus == 'BLOCKING')
   ## we are blocked! we see only an absolute minimum profile
-  #set ($userItem = {
-    'userId': $userItem.userId,
-    'username': $userItem.username,
-    'blockerAt': $userItem.blockerAt
+  #set ($user = {
+    'userId': $user.userId,
+    'username': $user.username,
+    'blockerAt': $user.blockerAt,
+    'blockedStatus': $user.blockedStatus,
+    'blockerStatus': $user.blockerStatus,
+    'followedStatus': $user.followedStatus,
+    'followerStatus': $user.followerStatus
   })
 #end
 
-$util.toJson($userItem)
+$util.toJson($user)

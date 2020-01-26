@@ -35,6 +35,8 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     themeCode
     blockedAt
     blockerAt
+    blockedStatus
+    blockerStatus
     acceptedEULAVersion
     commentsDisabled
     likesDisabled
@@ -74,6 +76,7 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
       items {
         userId
         blockedAt
+        blockedStatus
       }
     }
   }
@@ -103,6 +106,8 @@ module.exports.user = gql(`query User ($userId: ID!) {
     themeCode
     blockedAt
     blockerAt
+    blockedStatus
+    blockerStatus
     acceptedEULAVersion
     commentsDisabled
     likesDisabled
@@ -142,6 +147,7 @@ module.exports.user = gql(`query User ($userId: ID!) {
       items {
         userId
         blockedAt
+        blockedStatus
       }
     }
   }
@@ -329,6 +335,7 @@ module.exports.blockUser = gql(`mutation BlockUser ($userId: ID!) {
   blockUser (userId: $userId) {
     userId
     blockedAt
+    blockedStatus
     username
     photoUrl
     privacyStatus
@@ -350,6 +357,7 @@ module.exports.unblockUser = gql(`mutation UnblockUser ($userId: ID!) {
   unblockUser (userId: $userId) {
     userId
     blockedAt
+    blockedStatus
     username
     photoUrl
     privacyStatus
@@ -877,6 +885,7 @@ module.exports.trendingUsers = gql(`query TrendingUsers ($limit: Int) {
     items {
       userId
       blockerAt
+      blockerStatus
     }
   }
 }`)
@@ -888,6 +897,7 @@ module.exports.trendingPosts = gql(`query TrendingPosts ($limit: Int) {
       postedBy {
         userId
         blockerAt
+        blockerStatus
         privacyStatus
         followedStatus
       }

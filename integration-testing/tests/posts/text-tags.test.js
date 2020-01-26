@@ -166,6 +166,7 @@ test('Tagged user blocks caller', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(ourUserId)
   expect(resp['data']['blockUser']['blockedAt']).toBeTruthy()
+  expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
 
   // we don't seem them in the tag in the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})

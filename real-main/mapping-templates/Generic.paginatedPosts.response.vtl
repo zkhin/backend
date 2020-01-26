@@ -11,7 +11,7 @@
 
   ## Velocity apparently has no 'continue' statement
   #if (!$util.isNull($post.postedBy))
-    #if ($util.isNull($post.postedBy.blockerAt))
+    #if ($post.postedBy.blockerStatus != 'BLOCKING')
       #if ($post.postedBy.privacyStatus == 'PUBLIC' || $post.postedBy.followedStatus == 'FOLLOWING')
         $util.qr($result.items.add($post))
       #end

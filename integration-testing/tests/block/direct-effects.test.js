@@ -25,6 +25,7 @@ test('User.blockedUsers, User.blockedAt respond correctly to blocking and unbloc
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['userId']).toBe(theirUserId)
   expect(resp['data']['user']['blockedAt']).toBeNull()
+  expect(resp['data']['user']['blockedStatus']).toBe('NOT_BLOCKING')
 
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
@@ -35,6 +36,7 @@ test('User.blockedUsers, User.blockedAt respond correctly to blocking and unbloc
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
   expect(resp['data']['blockUser']['blockedAt']).toBeTruthy()
+  expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
   const blockedAt = resp['data']['blockUser']['blockedAt']
 
   // verify that block shows up
@@ -42,6 +44,7 @@ test('User.blockedUsers, User.blockedAt respond correctly to blocking and unbloc
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['userId']).toBe(theirUserId)
   expect(resp['data']['user']['blockedAt']).toBe(blockedAt)
+  expect(resp['data']['user']['blockedStatus']).toBe('BLOCKING')
 
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
@@ -54,12 +57,14 @@ test('User.blockedUsers, User.blockedAt respond correctly to blocking and unbloc
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['unblockUser']['userId']).toBe(theirUserId)
   expect(resp['data']['unblockUser']['blockedAt']).toBeNull()
+  expect(resp['data']['unblockUser']['blockedStatus']).toBe('NOT_BLOCKING')
 
   // verify that block has disappeared
   resp = await ourClient.query({query: schema.user, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['userId']).toBe(theirUserId)
   expect(resp['data']['user']['blockedAt']).toBeNull()
+  expect(resp['data']['user']['blockedStatus']).toBe('NOT_BLOCKING')
 
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()

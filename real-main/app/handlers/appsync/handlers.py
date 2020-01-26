@@ -396,6 +396,7 @@ def block_user(caller_user_id, arguments, source, context):
 
     resp = blocked_user.serialize()
     resp['blockedAt'] = block_item['blockedAt']
+    resp['blockedStatus'] = block_manager.enums.BlockStatus.BLOCKING
     return resp
 
 
@@ -422,6 +423,7 @@ def unblock_user(caller_user_id, arguments, source, context):
 
     resp = blocked_user.serialize()
     resp['blockedAt'] = None
+    resp['blockedStatus'] = block_manager.enums.BlockStatus.NOT_BLOCKING
     return resp
 
 

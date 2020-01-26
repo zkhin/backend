@@ -6,4 +6,10 @@
   $util.error('User does not exist')
 #end
 
-$util.toJson($ctx.prev.result.items[0])
+#set ($user = $ctx.prev.result.items[0])
+$util.qr($user.put('blockedStatus', 'SELF'))
+$util.qr($user.put('blockerStatus', 'SELF'))
+$util.qr($user.put('followedStatus', 'SELF'))
+$util.qr($user.put('followerStatus', 'SELF'))
+
+$util.toJson($user)

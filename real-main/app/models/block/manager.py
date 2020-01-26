@@ -2,7 +2,7 @@ import logging
 
 from app.models import follow, like
 
-from . import exceptions
+from . import enums, exceptions
 from .dynamo import BlockDynamo
 
 logger = logging.getLogger()
@@ -10,6 +10,7 @@ logger = logging.getLogger()
 
 class BlockManager:
 
+    enums = enums
     exceptions = exceptions
 
     def __init__(self, clients, managers=None):

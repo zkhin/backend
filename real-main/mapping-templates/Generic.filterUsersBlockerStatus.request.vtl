@@ -8,7 +8,7 @@
 })
 
 #foreach ($user in $ctx.prev.result.items)
-  #if ($util.isNull($user.blockerAt))
+  #if ($user.blockerStatus != 'BLOCKING')
     $util.qr($result.items.add($user))
   #end
 #end

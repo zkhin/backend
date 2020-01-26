@@ -96,7 +96,7 @@ custom:
         kind: PIPELINE
         functions:
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
 
       - type: Query
         field: searchUsers
@@ -106,8 +106,8 @@ custom:
         functions:
           - Query.searchUsers.searchUsers
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: Query
         field: trendingUsers
@@ -117,8 +117,8 @@ custom:
         functions:
           - Query.trendingUsers.fetchUserIds
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: User
         field: photoUrl
@@ -177,8 +177,8 @@ custom:
           - Stash.followedStatus
           - User.followedUsers.fetchFollowedUserIds
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: User
         field: followerUsers
@@ -189,8 +189,8 @@ custom:
           - Stash.followedStatus
           - User.followerUsers.fetchFollowerUserIds
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: User
         field: postCount
@@ -252,6 +252,10 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: User
+        field: blockedStatus
+        dataSource: DynamodbDataSource
+
+      - type: User
         field: viewCountsHidden
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl
@@ -270,7 +274,7 @@ custom:
           - Generic.fetchLikesByUser
           - Generic.batchGetPosts
           - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerAt
+          - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
 
       - type: User
@@ -282,7 +286,7 @@ custom:
           - Generic.fetchLikesByUser
           - Generic.batchGetPosts
           - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerAt
+          - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
 
       - type: User
@@ -293,8 +297,8 @@ custom:
         functions:
             - User.blockedUsers.fetchUserIds
             - Generic.batchGetUsers
-            - Generic.batchGetUsersBlockerAt
-            - Generic.filterUsersBlockerAt
+            - Generic.batchGetUsersBlockerStatus
+            - Generic.filterUsersBlockerStatus
 
       - type: Mutation
         field: createCognitoOnlyUser
@@ -431,8 +435,8 @@ custom:
         functions:
           - Post.viewedBy.fetchUserIds
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: Post
         field: commentsDisabled
@@ -467,8 +471,8 @@ custom:
         functions:
           - Post.onymouslyLikedBy.fetchLikes
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: Post
         field: mediaObjects
@@ -481,8 +485,8 @@ custom:
         kind: PIPELINE
         functions:
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: Post
         field: commentCount
@@ -497,8 +501,8 @@ custom:
         functions:
           - Post.comments.fetchComments
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: Comment
         field: textTaggedUsers
@@ -507,8 +511,8 @@ custom:
         kind: PIPELINE
         functions:
           - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerAt
-          - Generic.filterUsersBlockerAt
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
 
       - type: Query
         field: getFeed
@@ -540,7 +544,7 @@ custom:
         functions:
           - Query.post.fetchPost
           - Post.pipeline.postedBy
-          - Post.pipeline.postedByBlockerAt
+          - Post.pipeline.postedByBlockerStatus
           - Post.pipeline.postedByFollowedStatus
 
       - type: Query
@@ -552,7 +556,7 @@ custom:
           - Query.trendingPosts.fetchPostIds
           - Generic.batchGetPosts
           - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerAt
+          - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
 
       # DEPRECATED: use Query.post instead
@@ -564,7 +568,7 @@ custom:
         functions:
           - Query.post.fetchPost
           - Post.pipeline.postedBy
-          - Post.pipeline.postedByBlockerAt
+          - Post.pipeline.postedByBlockerStatus
           - Post.pipeline.postedByFollowedStatus
 
       - type: Query
@@ -692,9 +696,9 @@ custom:
         response: Post.pipeline.postedBy.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Post.pipeline.postedByBlockerAt
-        request: Post.pipeline.postedByBlockerAt.request.vtl
-        response: Post.pipeline.postedByBlockerAt.response.vtl
+        name: Post.pipeline.postedByBlockerStatus
+        request: Post.pipeline.postedByBlockerStatus.request.vtl
+        response: Post.pipeline.postedByBlockerStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.pipeline.postedByFollowedStatus
@@ -707,13 +711,13 @@ custom:
         response: Generic.batchGetUsers.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetUsersBlockerAt
-        request: Generic.batchGetUsersBlockerAt.request.vtl
-        response: Generic.batchGetUsersBlockerAt.response.vtl
+        name: Generic.batchGetUsersBlockerStatus
+        request: Generic.batchGetUsersBlockerStatus.request.vtl
+        response: Generic.batchGetUsersBlockerStatus.response.vtl
 
       - dataSource: NoneDataSource
-        name: Generic.filterUsersBlockerAt
-        request: Generic.filterUsersBlockerAt.request.vtl
+        name: Generic.filterUsersBlockerStatus
+        request: Generic.filterUsersBlockerStatus.request.vtl
         response: Generic.passThru.response.vtl
 
       - dataSource: ElasticSearchDataSource
@@ -787,9 +791,9 @@ custom:
         response: Generic.batchGetPostsPostedBy.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetPostsPostedByBlockerAt
-        request: Generic.batchGetPostsPostedByBlockerAt.request.vtl
-        response: Generic.batchGetPostsPostedByBlockerAt.response.vtl
+        name: Generic.batchGetPostsPostedByBlockerStatus
+        request: Generic.batchGetPostsPostedByBlockerStatus.request.vtl
+        response: Generic.batchGetPostsPostedByBlockerStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetPostsPostedByFollowedStatus
