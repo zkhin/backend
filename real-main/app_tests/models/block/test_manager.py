@@ -2,37 +2,7 @@ from unittest.mock import call, Mock
 
 import pytest
 
-from app.models.block import BlockManager
-from app.models.follow import FollowManager
-from app.models.follow.dynamo import FollowDynamo
 from app.models.like.enums import LikeStatus
-from app.models.post import PostManager
-from app.models.user import UserManager
-
-
-@pytest.fixture
-def user_manager(dynamo_client, cognito_client, s3_client):
-    cognito_client.configure_mock(**{'get_user_attributes.return_value': {}})
-    yield UserManager({'dynamo': dynamo_client, 'cognito': cognito_client, 's3_placeholder_photos': s3_client})
-
-
-@pytest.fixture
-def post_manager(dynamo_client):
-    yield PostManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
-def follow_dynamo(dynamo_client):
-    yield FollowDynamo(dynamo_client)
-
-
-@pytest.fixture
-def block_manager(dynamo_client):
-    block_manager = BlockManager({'dynamo': dynamo_client})
-    follow_manager = FollowManager({})
-    block_manager.follow_manager = Mock(follow_manager)
-    block_manager.follow_manager.exceptions = follow_manager.exceptions
-    yield block_manager
 
 
 @pytest.fixture
@@ -55,7 +25,11 @@ def blocked_user_2(user_manager):
     yield user_manager.create_cognito_only_user('blocked-uid-2', 'bockedUname2')
 
 
-def test_block_unfollows(block_manager, blocker_user, blocked_user):
+def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_user):
+    # mock out calls to the follow manager
+    block_manager.follow_manager = Mock(follow_manager)
+    block_manager.follow_manager.exceptions = follow_manager.exceptions
+
     block_item = block_manager.block(blocker_user, blocked_user)
     assert block_item['blockerUserId'] == blocker_user.id
     assert block_item['blockedUserId'] == blocked_user.id

@@ -2,6 +2,7 @@ from os import path
 from io import BytesIO
 
 from PIL import Image
+import pytest
 
 from app.models.media.enums import MediaSize
 
@@ -11,6 +12,14 @@ grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jp
 grant_rotated_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-rotated.jpg')
 blank_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'big-blank.jpg')
 squirrel_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'squirrel.png')
+
+
+@pytest.fixture
+def media_awaiting_upload(media_manager, post_manager):
+    media_uploads = [{'mediaId': 'mid', 'mediaType': media_manager.enums.MediaType.IMAGE}]
+    post = post_manager.add_post('uid', 'pid', media_uploads=media_uploads)
+    media_item = post.item['mediaObjects'][0]
+    yield media_manager.init_media(media_item)
 
 
 def test_set_height_and_width(dynamo_client, s3_client, media_awaiting_upload):

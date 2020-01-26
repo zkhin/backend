@@ -1,5 +1,15 @@
 from app.models.media.enums import MediaStatus
 
+import pytest
+
+
+@pytest.fixture
+def media_awaiting_upload(media_manager, post_manager):
+    media_uploads = [{'mediaId': 'mid', 'mediaType': media_manager.enums.MediaType.IMAGE}]
+    post = post_manager.add_post('uid', 'pid', media_uploads=media_uploads)
+    media_item = post.item['mediaObjects'][0]
+    yield media_manager.init_media(media_item)
+
 
 def test_refresh_item(dynamo_client, media_awaiting_upload):
     media = media_awaiting_upload

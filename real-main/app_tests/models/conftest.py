@@ -5,6 +5,17 @@ from moto import mock_dynamodb2, mock_s3
 import pytest
 
 from app.clients import CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient, S3Client
+from app.models.block import BlockManager
+from app.models.comment import CommentManager
+from app.models.feed import FeedManager
+from app.models.follow import FollowManager
+from app.models.followed_first_story import FollowedFirstStoryManager
+from app.models.like import LikeManager
+from app.models.media import MediaManager
+from app.models.post import PostManager
+from app.models.post_view import PostViewManager
+from app.models.trending import TrendingManager
+from app.models.user import UserManager
 
 from app_tests.dynamodb.table_schema import table_schema
 
@@ -57,3 +68,69 @@ def s3_client(s3_clients):
 @pytest.fixture
 def s3_client_2(s3_clients):
     yield s3_clients['s3_placeholder_photos']
+
+
+@pytest.fixture
+def block_manager(dynamo_client):
+    yield BlockManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def comment_manager(dynamo_client, user_manager):
+    yield CommentManager({'dynamo': dynamo_client}, managers={'user': user_manager})
+
+
+@pytest.fixture
+def feed_manager(dynamo_client):
+    yield FeedManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def follow_manager(dynamo_client):
+    yield FollowManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def ffs_manager(dynamo_client):
+    yield FollowedFirstStoryManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def like_manager(dynamo_client):
+    yield LikeManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def media_manager(dynamo_client, s3_client):
+    yield MediaManager({'dynamo': dynamo_client, 's3_uploads': s3_client})
+
+
+@pytest.fixture
+def post_manager(dynamo_client, s3_client):
+    yield PostManager({'dynamo': dynamo_client, 's3_uploads': s3_client})
+
+
+@pytest.fixture
+def post_view_manager(dynamo_client):
+    yield PostViewManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def trending_manager(dynamo_client):
+    yield TrendingManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def user_manager(cloudfront_client, dynamo_client, s3_client, s3_client_2, cognito_client, facebook_client,
+                 google_client):
+    cognito_client.configure_mock(**{'get_user_attributes.return_value': {}})
+    clients = {
+        'cloudfront': cloudfront_client,
+        'dynamo': dynamo_client,
+        's3_uploads': s3_client,
+        's3_placeholder_photos': s3_client_2,
+        'cognito': cognito_client,
+        'facebook': facebook_client,
+        'google': google_client,
+    }
+    yield UserManager(clients)

@@ -3,21 +3,9 @@ from uuid import uuid4
 from isodate.duration import Duration
 import pytest
 
-from app.models.follow import FollowManager
 from app.models.follow.enums import FollowStatus
 from app.models.like.enums import LikeStatus
-from app.models.post import PostManager
 from app.models.user.enums import UserPrivacyStatus
-
-
-@pytest.fixture
-def post_manager(dynamo_client):
-    yield PostManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
-def follow_manager(dynamo_client):
-    yield FollowManager({'dynamo': dynamo_client})
 
 
 @pytest.fixture

@@ -3,13 +3,7 @@ import math
 
 import pytest
 
-from app.models.trending import TrendingManager
 from app.models.trending.enums import TrendingItemType
-
-
-@pytest.fixture
-def trending_manager(dynamo_client):
-    yield TrendingManager({'dynamo': dynamo_client})
 
 
 def test_record_view_count_new_trending(trending_manager):

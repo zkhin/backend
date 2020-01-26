@@ -12,6 +12,21 @@ def follow_dynamo(dynamo_client):
     yield FollowDynamo(dynamo_client)
 
 
+@pytest.fixture
+def user1(user_manager):
+    yield user_manager.create_cognito_only_user('uid1', 'uname1')
+
+
+@pytest.fixture
+def user2(user_manager):
+    yield user_manager.create_cognito_only_user('uid2', 'uname2')
+
+
+@pytest.fixture
+def user3(user_manager):
+    yield user_manager.create_cognito_only_user('uid3', 'uname3')
+
+
 def test_transact_add_following(follow_dynamo, user1, user2):
     # verify doesn't already exist
     follow_item = follow_dynamo.get_following(user1.id, user2.id)

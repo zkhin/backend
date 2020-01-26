@@ -6,6 +6,12 @@ from app.models.post.exceptions import UnableToDecrementPostLikeCounter
 
 
 @pytest.fixture
+def post(dynamo_client, like_manager, user_manager, post_manager):
+    posted_by_user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+    yield post_manager.add_post(posted_by_user.id, 'pid', text='lore ipsum')
+
+
+@pytest.fixture
 def user(user_manager):
     yield user_manager.create_cognito_only_user('lbuid', 'lbUname')
 

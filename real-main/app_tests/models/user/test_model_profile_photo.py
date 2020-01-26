@@ -2,10 +2,7 @@ from unittest.mock import call
 
 import pytest
 
-from app.models.media import MediaManager
 from app.models.media.enums import MediaSize
-from app.models.post import PostManager
-from app.models.post.dynamo import PostDynamo
 
 
 @pytest.fixture
@@ -17,22 +14,7 @@ def user(user_manager):
 
 
 @pytest.fixture
-def post_manager(dynamo_client):
-    yield PostManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
-def media_manager(dynamo_client):
-    yield MediaManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
-def post_dynamo(dynamo_client):
-    yield PostDynamo(dynamo_client)
-
-
-@pytest.fixture
-def uploaded_media(user, post_manager, post_dynamo, media_manager):
+def uploaded_media(user, post_manager, media_manager):
     post_id = 'post-id'
     media_id = 'media-id'
     photo_data = b'uploaded image'
@@ -48,12 +30,14 @@ def uploaded_media(user, post_manager, post_dynamo, media_manager):
         path = media.get_s3_path(size)
         user.s3_uploads_client.put_object(path, photo_data, 'application/octet-stream')
     media.set_status('UPLOADED')
-    post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post.item, 'COMPLETED')])
+    post_manager.dynamo.client.transact_write_items([
+        post_manager.dynamo.transact_set_post_status(post.item, 'COMPLETED'),
+    ])
     yield media
 
 
 @pytest.fixture
-def another_uploaded_media(user, post_manager, post_dynamo, media_manager):
+def another_uploaded_media(user, post_manager, media_manager):
     post_id = 'post-id-2'
     media_id = 'media-id-2'
     photo_data = b'another uploaded image'
@@ -69,7 +53,9 @@ def another_uploaded_media(user, post_manager, post_dynamo, media_manager):
         path = media.get_s3_path(size)
         user.s3_uploads_client.put_object(path, photo_data, 'application/octet-stream')
     media.set_status('UPLOADED')
-    post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post.item, 'COMPLETED')])
+    post_manager.dynamo.client.transact_write_items([
+        post_manager.dynamo.transact_set_post_status(post.item, 'COMPLETED'),
+    ])
     yield media
 
 

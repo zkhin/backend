@@ -4,13 +4,6 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from app.models.post_view import PostViewManager
-
-
-@pytest.fixture
-def post_view_manager(dynamo_client):
-    yield PostViewManager({'dynamo': dynamo_client})
-
 
 @pytest.fixture
 def posts(post_manager, user_manager):
