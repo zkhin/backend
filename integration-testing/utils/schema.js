@@ -40,6 +40,7 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     acceptedEULAVersion
     commentsDisabled
     likesDisabled
+    sharingDisabled
     verificationHidden
     postViewedByCount
     viewCountsHidden
@@ -111,6 +112,7 @@ module.exports.user = gql(`query User ($userId: ID!) {
     acceptedEULAVersion
     commentsDisabled
     likesDisabled
+    sharingDisabled
     verificationHidden
     postViewedByCount
     viewCountsHidden
@@ -268,16 +270,19 @@ module.exports.setUserMentalHealthSettings = gql(
   `mutation SetUserCommentsDisabled (
     $commentsDisabled: Boolean,
     $likesDisabled: Boolean,
+    $sharingDisabled: Boolean,
     $verificationHidden: Boolean,
   ) {
     setUserDetails (
       commentsDisabled: $commentsDisabled,
       likesDisabled: $likesDisabled,
+      sharingDisabled: $sharingDisabled,
       verificationHidden: $verificationHidden,
     ) {
       userId
       commentsDisabled
       likesDisabled
+      sharingDisabled
       verificationHidden
     }
   }`
@@ -381,6 +386,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
   $lifetime: String,
   $commentsDisabled: Boolean,
   $likesDisabled: Boolean,
+  $sharingDisabled: Boolean,
   $verificationHidden: Boolean,
 ) {
   addPost (
@@ -389,6 +395,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
     lifetime: $lifetime,
     commentsDisabled: $commentsDisabled,
     likesDisabled: $likesDisabled,
+    sharingDisabled: $sharingDisabled,
     verificationHidden: $verificationHidden,
   ) {
     postId
@@ -430,6 +437,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
       }
     }
     likesDisabled
+    sharingDisabled
     verificationHidden
   }
 }`)
@@ -554,6 +562,7 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
       }
     }
     likesDisabled
+    sharingDisabled
     verificationHidden
     onymousLikeCount
     anonymousLikeCount
@@ -629,6 +638,7 @@ module.exports.editPost = gql(
     $text: String,
     $commentsDisabled: Boolean,
     $likesDisabled: Boolean,
+    $sharingDisabled: Boolean,
     $verificationHidden: Boolean,
   ) {
     editPost(
@@ -636,6 +646,7 @@ module.exports.editPost = gql(
       text: $text,
       commentsDisabled: $commentsDisabled,
       likesDisabled: $likesDisabled,
+      sharingDisabled: $sharingDisabled,
       verificationHidden: $verificationHidden,
     ) {
       postId
@@ -659,6 +670,7 @@ module.exports.editPost = gql(
       }
       commentsDisabled
       likesDisabled
+      sharingDisabled
       verificationHidden
     }
   }`

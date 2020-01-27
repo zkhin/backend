@@ -116,7 +116,8 @@ class UserDynamo:
 
     def set_user_details(self, user_id, full_name=None, bio=None, language_code=None, theme_code=None,
                          follow_counts_hidden=None, view_counts_hidden=None, email=None, phone=None,
-                         comments_disabled=None, likes_disabled=None, verification_hidden=None):
+                         comments_disabled=None, likes_disabled=None, sharing_disabled=None,
+                         verification_hidden=None):
         """
         Update the user profile details.
         To ignore an attribute, leave it set to None.
@@ -143,6 +144,7 @@ class UserDynamo:
         process_attr('phoneNumber', phone)
         process_attr('commentsDisabled', comments_disabled)
         process_attr('likesDisabled', likes_disabled)
+        process_attr('sharingDisabled', sharing_disabled)
         process_attr('verificationHidden', verification_hidden)
 
         query_kwargs = {

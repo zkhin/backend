@@ -81,8 +81,8 @@ class PostDynamo:
         return self.client.generate_all_scan(query_kwargs)
 
     def transact_add_pending_post(self, posted_by_user_id, post_id, posted_at=None, expires_at=None,
-                                  text=None, text_tags=None,
-                                  comments_disabled=None, likes_disabled=None, verification_hidden=None):
+                                  text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
+                                  sharing_disabled=None, verification_hidden=None):
         posted_at_str = real_datetime.serialize(posted_at or datetime.utcnow())
         post_status = enums.PostStatus.PENDING
         post_item = {
@@ -120,6 +120,8 @@ class PostDynamo:
             post_item['commentsDisabled'] = {'BOOL': comments_disabled}
         if likes_disabled is not None:
             post_item['likesDisabled'] = {'BOOL': likes_disabled}
+        if sharing_disabled is not None:
+            post_item['sharingDisabled'] = {'BOOL': sharing_disabled}
         if verification_hidden is not None:
             post_item['verificationHidden'] = {'BOOL': verification_hidden}
 
@@ -247,8 +249,8 @@ class PostDynamo:
             raise exceptions.PostDoesNotExist(post_id)
 
     def set(self, post_id, text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
-            verification_hidden=None):
-        args = [text, comments_disabled, likes_disabled, verification_hidden]
+            sharing_disabled=None, verification_hidden=None):
+        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
         assert any(k is not None for k in args), 'Action-less post edit requested'
 
         exp_actions = defaultdict(list)
@@ -277,6 +279,10 @@ class PostDynamo:
         if likes_disabled is not None:
             exp_actions['SET'].append('likesDisabled = :ld')
             exp_values[':ld'] = likes_disabled
+
+        if sharing_disabled is not None:
+            exp_actions['SET'].append('sharingDisabled = :sd')
+            exp_values[':sd'] = sharing_disabled
 
         if verification_hidden is not None:
             exp_actions['SET'].append('verificationHidden = :vd')

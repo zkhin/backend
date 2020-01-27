@@ -135,6 +135,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['photoUrl64p'] = null
   ourUserFull['postCount'] = null
   ourUserFull['privacyStatus'] = null
+  ourUserFull['sharingDisabled'] = null
   ourUserFull['signedUpAt'] = null
   ourUserFull['themeCode'] = null
   ourUserFull['verificationHidden'] = null

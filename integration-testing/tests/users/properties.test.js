@@ -478,6 +478,32 @@ test('User likesDisabled - get, set, privacy', async () => {
 })
 
 
+test('User sharingDisabled - get, set, privacy', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we should default to false
+  let resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['sharingDisabled']).toBe(false)
+
+  // we change it
+  resp = await ourClient.mutate({mutation: schema.setUserMentalHealthSettings, variables: {sharingDisabled: true}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['sharingDisabled']).toBe(true)
+
+  // check to make sure that version stuck
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['sharingDisabled']).toBe(true)
+
+  // check another user can't see values
+  const [theirClient] = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['sharingDisabled']).toBeNull()
+})
+
+
 test('User verificationHidden - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 

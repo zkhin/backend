@@ -72,7 +72,7 @@ def test_transact_add_pending_post_with_options(post_dynamo):
 
     transacts = [post_dynamo.transact_add_pending_post(
         user_id, post_id, posted_at=posted_at, expires_at=expires_at, text=text, text_tags=text_tags,
-        comments_disabled=True, likes_disabled=False, verification_hidden=True,
+        comments_disabled=True, likes_disabled=False, sharing_disabled=False, verification_hidden=True,
     )]
     post_dynamo.client.transact_write_items(transacts)
 
@@ -99,6 +99,7 @@ def test_transact_add_pending_post_with_options(post_dynamo):
         'textTags': text_tags,
         'commentsDisabled': True,
         'likesDisabled': False,
+        'sharingDisabled': False,
         'verificationHidden': True,
     }
 
@@ -640,6 +641,24 @@ def test_set_likes_disabled(post_dynamo, dynamo_client):
     # double check the value stuck
     post_item = post_dynamo.get_post('pid1')
     assert post_item['likesDisabled'] is False
+
+
+def test_set_sharing_disabled(post_dynamo, dynamo_client):
+    # create a post with some text, media objects
+    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', text='t')]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post('pid1')
+    assert 'sharingDisabled' not in post_item
+
+    # edit it back and forth
+    post_item = post_dynamo.set('pid1', sharing_disabled=True)
+    assert post_item['sharingDisabled'] is True
+    post_item = post_dynamo.set('pid1', sharing_disabled=False)
+    assert post_item['sharingDisabled'] is False
+
+    # double check the value stuck
+    post_item = post_dynamo.get_post('pid1')
+    assert post_item['sharingDisabled'] is False
 
 
 def test_set_verification_hidden(post_dynamo, dynamo_client):

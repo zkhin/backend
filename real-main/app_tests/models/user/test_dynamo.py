@@ -218,7 +218,7 @@ def test_set_user_details(user_dynamo):
     resp = user_dynamo.set_user_details(user_id, full_name='f', bio='b', language_code='l', theme_code='tc',
                                         follow_counts_hidden=True, view_counts_hidden=True,
                                         email='e', phone='p', comments_disabled=True, likes_disabled=True,
-                                        verification_hidden=True)
+                                        sharing_disabled=True, verification_hidden=True)
     expected = {
         **expected_base_item,
         **{
@@ -232,6 +232,7 @@ def test_set_user_details(user_dynamo):
             'phoneNumber': 'p',
             'commentsDisabled': True,
             'likesDisabled': True,
+            'sharingDisabled': True,
             'verificationHidden': True,
         },
     }
@@ -259,6 +260,7 @@ def test_set_user_details_delete_all_optional(user_dynamo):
             'phoneNumber': 'p',
             'commentsDisabled': True,
             'likesDisabled': True,
+            'sharingDisabled': True,
             'verificationHidden': True,
         },
     }
@@ -267,14 +269,14 @@ def test_set_user_details_delete_all_optional(user_dynamo):
     resp = user_dynamo.set_user_details(user_id, full_name='f', bio='b', language_code='l', theme_code='tc',
                                         follow_counts_hidden=True, view_counts_hidden=True,
                                         email='e', phone='p', comments_disabled=True, likes_disabled=True,
-                                        verification_hidden=True)
+                                        sharing_disabled=True, verification_hidden=True)
     assert resp == expected_full_item
 
     # delete all optionals
     resp = user_dynamo.set_user_details(user_id, full_name='', bio='', language_code='', theme_code='',
                                         follow_counts_hidden=False, view_counts_hidden=False,
                                         email='', phone='', comments_disabled=False, likes_disabled=False,
-                                        verification_hidden=False)
+                                        sharing_disabled=False, verification_hidden=False)
     assert resp == expected_base_item
 
 

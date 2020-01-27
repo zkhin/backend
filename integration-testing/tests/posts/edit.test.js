@@ -219,6 +219,33 @@ test('Edit post set likesDisabled', async () => {
 })
 
 
+test('Edit post set sharingDisabled', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const postId = uuidv4()
+
+  // we add a post
+  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'my wayward son'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
+
+  // edit the sharing disabled status
+  resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, sharingDisabled: true}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPost']['sharingDisabled']).toBe(true)
+
+  // check it saved to db
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['sharingDisabled']).toBe(true)
+
+  // edit the sharing disabled status
+  resp = await ourClient.mutate({mutation: schema.editPost, variables: {postId, sharingDisabled: false}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPost']['sharingDisabled']).toBe(false)
+})
+
+
 test('Edit post set verificationHidden', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()

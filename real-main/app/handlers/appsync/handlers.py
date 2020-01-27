@@ -148,11 +148,12 @@ def set_user_details(caller_user_id, arguments, source, context):
     theme_code = arguments.get('themeCode')
     comments_disabled = arguments.get('commentsDisabled')
     likes_disabled = arguments.get('likesDisabled')
+    sharing_disabled = arguments.get('sharingDisabled')
     verification_hidden = arguments.get('verificationHidden')
 
     args = (
         username, full_name, bio, photo_media_id, privacy_status, follow_counts_hidden, view_counts_hidden,
-        language_code, theme_code, comments_disabled, likes_disabled, verification_hidden,
+        language_code, theme_code, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,
     )
     if all(v is None for v in args):
         raise ClientException('Called without any arguments... probably not what you intended?')
@@ -201,6 +202,7 @@ def set_user_details(caller_user_id, arguments, source, context):
         view_counts_hidden=view_counts_hidden,
         comments_disabled=comments_disabled,
         likes_disabled=likes_disabled,
+        sharing_disabled=sharing_disabled,
         verification_hidden=verification_hidden,
     )
     return user.serialize()
@@ -446,6 +448,7 @@ def add_post(caller_user_id, arguments, source, context):
     # mental health settings: the user-level settings are defaults
     comments_disabled = argument_with_user_level_default('commentsDisabled')
     likes_disabled = argument_with_user_level_default('likesDisabled')
+    sharing_disabled = argument_with_user_level_default('sharingDisabled')
     verification_hidden = argument_with_user_level_default('verificationHidden')
 
     lifetime_iso = arguments.get('lifetime')
@@ -460,7 +463,7 @@ def add_post(caller_user_id, arguments, source, context):
     try:
         post = post_manager.add_post(
             user.id, post_id, media_uploads=media, text=text, lifetime_duration=lifetime_duration,
-            comments_disabled=comments_disabled, likes_disabled=likes_disabled,
+            comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
         )
     except post_manager.exceptions.PostException as err:
@@ -482,6 +485,7 @@ def edit_post(caller_user_id, arguments, source, context):
         'text': arguments.get('text'),
         'comments_disabled': arguments.get('commentsDisabled'),
         'likes_disabled': arguments.get('likesDisabled'),
+        'sharing_disabled': arguments.get('sharingDisabled'),
         'verification_hidden': arguments.get('verificationHidden'),
     }
 

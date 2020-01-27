@@ -239,8 +239,9 @@ class Post:
         self.item['flagCount'] = flag_count - 1
         return self
 
-    def set(self, text=None, comments_disabled=None, likes_disabled=None, verification_hidden=None):
-        args = [text, comments_disabled, likes_disabled, verification_hidden]
+    def set(self, text=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
+            verification_hidden=None):
+        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
         if all(v is None for v in args):
             raise exceptions.PostException(f'Empty edit requested')
 
@@ -251,7 +252,7 @@ class Post:
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
             self.id, text=text, text_tags=text_tags, comments_disabled=comments_disabled,
-            likes_disabled=likes_disabled, verification_hidden=verification_hidden,
+            likes_disabled=likes_disabled, sharing_disabled=sharing_disabled, verification_hidden=verification_hidden,
         )
         self.item['mediaObjects'] = post_media
         return self

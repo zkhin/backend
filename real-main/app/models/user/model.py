@@ -146,8 +146,8 @@ class User:
             self.s3_uploads_client.copy_object(source_path, dest_path)
 
     def update_details(self, full_name=None, bio=None, language_code=None, theme_code=None,
-                       follow_counts_hidden=None, view_counts_hidden=None,
-                       comments_disabled=None, likes_disabled=None, verification_hidden=None):
+                       follow_counts_hidden=None, view_counts_hidden=None, comments_disabled=None,
+                       likes_disabled=None, sharing_disabled=None, verification_hidden=None):
         "To delete a detail, set it to the empty string. Ex: `full_name=''`"
         kwargs = {}
 
@@ -174,6 +174,9 @@ class User:
 
         if likes_disabled is not None and likes_disabled != self.item.get('likesDisabled', False):
             kwargs['likes_disabled'] = likes_disabled
+
+        if sharing_disabled is not None and sharing_disabled != self.item.get('sharingDisabled', False):
+            kwargs['sharing_disabled'] = sharing_disabled
 
         if verification_hidden is not None and verification_hidden != self.item.get('verificationHidden', False):
             kwargs['verification_hidden'] = verification_hidden

@@ -108,6 +108,7 @@ type Mutation {
     viewCountsHidden: Boolean,
     commentsDisabled: Boolean,
     likesDisabled: Boolean,
+    sharingDisabled: Boolean,
     verificationHidden: Boolean,
     languageCode: String,
     themeCode: String
@@ -140,6 +141,7 @@ type Mutation {
     mediaObjectUploads: [MediaObjectUpload!],
     commentsDisabled: Boolean,
     likesDisabled: Boolean,
+    sharingDisabled: Boolean,
     verificationHidden: Boolean,
   ): Post
 
@@ -149,6 +151,7 @@ type Mutation {
     text: String,
     commentsDisabled: Boolean,
     likesDisabled: Boolean,
+    sharingDisabled: Boolean,
     verificationHidden: Boolean,
   ): Post
 
@@ -245,6 +248,7 @@ type User {
   viewCountsHidden: Boolean
   commentsDisabled: Boolean
   likesDisabled: Boolean
+  sharingDisabled: Boolean
   verificationHidden: Boolean
 
   # List of posts the user has anonymously liked
@@ -373,6 +377,7 @@ type Post {
   flagStatus: FlagStatus!  # has the caller flagged this post?
   likeStatus: LikeStatus!  # has the caller liked this post?
   likesDisabled: Boolean
+  sharingDisabled: Boolean
   verificationHidden: Boolean
   onymousLikeCount: Int  # onymous means non-anonymous, null if likes are disabled
   anonymousLikeCount: Int  # null if likes disabled

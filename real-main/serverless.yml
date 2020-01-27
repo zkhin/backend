@@ -243,6 +243,11 @@ custom:
         response: Generic.passThru.response.vtl
 
       - type: User
+        field: sharingDisabled
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
         field: verificationHidden
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl
@@ -445,6 +450,11 @@ custom:
 
       - type: Post
         field: likesDisabled
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Post
+        field: sharingDisabled
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl
 

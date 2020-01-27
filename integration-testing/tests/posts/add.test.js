@@ -150,15 +150,17 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 
   // set user-level mental health settings to true (which provide the defaults)
-  variables = {commentsDisabled: true, likesDisabled: true, verificationHidden: true}
+  variables = {commentsDisabled: true, likesDisabled: true, sharingDisabled: true, verificationHidden: true}
   resp = await ourClient.mutate({mutation: schema.setUserMentalHealthSettings, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['userId']).toBe(ourUserId)
   expect(resp['data']['setUserDetails']['commentsDisabled']).toBe(true)
   expect(resp['data']['setUserDetails']['likesDisabled']).toBe(true)
+  expect(resp['data']['setUserDetails']['sharingDisabled']).toBe(true)
   expect(resp['data']['setUserDetails']['verificationHidden']).toBe(true)
 
   // check those new user-level settings are used as defaults for a new post
@@ -168,15 +170,17 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
   expect(resp['data']['addPost']['likesDisabled']).toBe(true)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(true)
   expect(resp['data']['addPost']['verificationHidden']).toBe(true)
 
   // change the user-level mental health setting defaults
-  variables = {commentsDisabled: false, likesDisabled: false, verificationHidden: false}
+  variables = {commentsDisabled: false, likesDisabled: false, sharingDisabled: false, verificationHidden: false}
   resp = await ourClient.mutate({mutation: schema.setUserMentalHealthSettings, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['userId']).toBe(ourUserId)
   expect(resp['data']['setUserDetails']['commentsDisabled']).toBe(false)
   expect(resp['data']['setUserDetails']['likesDisabled']).toBe(false)
+  expect(resp['data']['setUserDetails']['sharingDisabled']).toBe(false)
   expect(resp['data']['setUserDetails']['verificationHidden']).toBe(false)
 
   // check those new user-level settings are used as defaults for a new post
@@ -186,6 +190,7 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 })
 
@@ -196,12 +201,20 @@ test('Mental health settings specify values', async () => {
 
   // create a post, specify both to false
   let postId = uuidv4()
-  let variables = {postId, text, commentsDisabled: false, likesDisabled: false, verificationHidden: false}
+  let variables = {
+    postId,
+    text,
+    commentsDisabled: false,
+    likesDisabled: false,
+    sharingDisabled: false,
+    verificationHidden: false,
+  }
   let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 
   // double check those values stuck
@@ -210,16 +223,25 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentsDisabled']).toBe(false)
   expect(resp['data']['post']['likesDisabled']).toBe(false)
+  expect(resp['data']['post']['sharingDisabled']).toBe(false)
   expect(resp['data']['post']['verificationHidden']).toBe(false)
 
   // create a post, specify both to true
   postId = uuidv4()
-  variables = {postId, text, commentsDisabled: true, likesDisabled: true, verificationHidden: true}
+  variables = {
+    postId,
+    text,
+    commentsDisabled: true,
+    likesDisabled: true,
+    sharingDisabled: true,
+    verificationHidden: true,
+  }
   resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
   expect(resp['data']['addPost']['likesDisabled']).toBe(true)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(true)
   expect(resp['data']['addPost']['verificationHidden']).toBe(true)
 
   // double check those values stuck
@@ -228,5 +250,6 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentsDisabled']).toBe(true)
   expect(resp['data']['post']['likesDisabled']).toBe(true)
+  expect(resp['data']['post']['sharingDisabled']).toBe(true)
   expect(resp['data']['post']['verificationHidden']).toBe(true)
 })

@@ -149,28 +149,32 @@ def test_set(post, user):
     assert post.item['textTags'] == []
     assert post.item.get('commentsDisabled', False) is False
     assert post.item.get('likesDisabled', False) is False
+    assert post.item.get('sharingDisabled', False) is False
     assert post.item.get('verificationHidden', False) is False
 
     # do some edits
     new_text = f'its a new dawn, right @{user.item["username"]}, its a new day'
-    post.set(text=new_text, comments_disabled=True, likes_disabled=True, verification_hidden=True)
+    post.set(text=new_text, comments_disabled=True, likes_disabled=True, sharing_disabled=True,
+             verification_hidden=True)
 
     # verify new values
     assert post.item['text'] == new_text
     assert post.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
     assert post.item.get('commentsDisabled', False) is True
     assert post.item.get('likesDisabled', False) is True
+    assert post.item.get('sharingDisabled', False) is True
     assert post.item.get('verificationHidden', False) is True
 
     # edit some params, ignore others
-    post.set(likes_disabled=False)
+    post.set(likes_disabled=False, verification_hidden=False)
 
     # verify only edited values changed
     assert post.item['text'] == new_text
     assert post.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
     assert post.item.get('commentsDisabled', False) is True
     assert post.item.get('likesDisabled', False) is False
-    assert post.item.get('verificationHidden', False) is True
+    assert post.item.get('sharingDisabled', False) is True
+    assert post.item.get('verificationHidden', False) is False
 
 
 def test_set_cant_create_contentless_post(post_manager, post):
