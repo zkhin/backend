@@ -371,10 +371,10 @@ test('User language code - get, set, privacy', async () => {
 test('User theme code - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  // we should default to 'black.white'
+  // we should default to 'black.green'
   let resp = await ourClient.query({query: schema.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['themeCode']).toBe('black.white')
+  expect(resp['data']['user']['themeCode']).toBe('black.green')
 
   // we change our theme code
   resp = await ourClient.mutate({mutation: schema.setUserThemeCode, variables: {themeCode: 'green.orange'}})

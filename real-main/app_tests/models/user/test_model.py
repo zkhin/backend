@@ -100,7 +100,7 @@ def test_update_no_details(user):
 
 def test_update_with_defaults_causes_no_update(user):
     org_user_item = user.item
-    user.update_details(language_code='en', theme_code='black.white')
+    user.update_details(language_code='en', theme_code='black.green')
     # check the user_item has not been replaced
     assert user.item is org_user_item
 

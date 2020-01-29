@@ -160,7 +160,7 @@ class User:
         if language_code is not None and language_code != self.item.get('languageCode', 'en'):
             kwargs['language_code'] = language_code
 
-        if theme_code is not None and theme_code != self.item.get('themeCode', 'black.white'):
+        if theme_code is not None and theme_code != self.item.get('themeCode', 'black.green'):
             kwargs['theme_code'] = theme_code
 
         if follow_counts_hidden is not None and follow_counts_hidden != self.item.get('followCountsHidden', False):
