@@ -84,21 +84,21 @@ custom:
 
       - type: Query
         field: self
-        request: Query.self/Query.self.request.vtl
-        response: Query.self/Query.self.response.vtl
+        request: Query.self/before.request.vtl
+        response: Query.self/after.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.batchGetUsers
+          - Query.pipeline.user
 
       - type: Query
         field: user
-        request: Query.user/Query.user.request.vtl
-        response: Query.user/Query.user.response.vtl
+        request: Query.user/before.request.vtl
+        response: Query.user/after.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Query.pipeline.user
+          - Query.pipeline.userBlockerStatus
+          - Query.pipeline.userFollowedStatus
 
       - type: Query
         field: searchUsers
@@ -822,6 +822,21 @@ custom:
         name: Album.posts.fetchPostIds
         request: Album.posts/Pipeline.fetchPostIds.request.vtl
         response: Album.posts/Pipeline.fetchPostIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.pipeline.user
+        request: Query.pipeline.user.request.vtl
+        response: Generic.passThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.pipeline.userBlockerStatus
+        request: Query.pipeline.userBlockerStatus.request.vtl
+        response: Query.pipeline.userBlockerStatus.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.pipeline.userFollowedStatus
+        request: Query.pipeline.userFollowedStatus.request.vtl
+        response: Query.pipeline.userFollowedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetUsers

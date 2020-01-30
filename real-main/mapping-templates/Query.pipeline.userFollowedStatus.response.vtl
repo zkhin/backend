@@ -1,0 +1,9 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($user = $ctx.prev.result)
+#set ($followedStatus = $ctx.result.followStatus)
+
+$util.qr($user.put('followedStatus', $followedStatus))
+$util.toJson($user)

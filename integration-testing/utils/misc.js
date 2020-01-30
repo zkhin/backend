@@ -36,7 +36,7 @@ const sleepUntilPostCompleted = async (gqlClient, postId) => {
   while (waitedMs < maxWaitMs) {
     let resp = await gqlClient.query({query: queryPost, variables: {postId}})
     if (resp['data']['post']['postStatus'] == 'COMPLETED') return
-    sleep(pollingIntervalMs)
+    await sleep(pollingIntervalMs)
     waitedMs += pollingIntervalMs
   }
   throw Error(`Post ${postId} never reached status COMPLETED`)
