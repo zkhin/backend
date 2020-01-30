@@ -62,47 +62,7 @@ test('Add media post passes verification', async () => {
 })
 
 
-test('Add media post fails verification to small', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  // we add a media post, give s3 trigger a second to fire
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId, mediaId, mediaType: 'IMAGE', takenInReal: false, originalFormat: 'HEIC'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  let post = resp['data']['addPost']
-  expect(post['postId']).toBe(postId)
-  expect(post['postStatus']).toBe('PENDING')
-  expect(post['mediaObjects']).toHaveLength(1)
-  expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(post['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
-  expect(post['mediaObjects'][0]['isVerified']).toBe(false)
-  expect(post['mediaObjects'][0]['uploadUrl']).toBeTruthy()
-  expect(post['mediaObjects'][0]['url']).toBeNull()
-  const uploadUrl = post['mediaObjects'][0]['uploadUrl']
-
-  // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
-
-  // check the post & media have changed status and look good
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  post = resp['data']['post']
-  expect(post['postId']).toBe(postId)
-  expect(post['postStatus']).toBe('COMPLETED')
-  expect(post['mediaObjects']).toHaveLength(1)
-  expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(post['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
-  expect(post['mediaObjects'][0]['isVerified']).toBe(false)
-  expect(post['mediaObjects'][0]['uploadUrl']).toBeNull()
-  expect(post['mediaObjects'][0]['url']).toBeTruthy()
-})
-
-
-test('Add media post fails verification no attributes', async () => {
+test('Add media post fails verification', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a media post, give s3 trigger a second to fire
@@ -124,7 +84,7 @@ test('Add media post fails verification no attributes', async () => {
   const uploadUrl = post['mediaObjects'][0]['uploadUrl']
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(bigGrantPath, contentType, uploadUrl)
+  await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
@@ -211,7 +171,7 @@ test('Add media post verification hidden hides verification state', async () => 
 })
 
 
-test('Add media post verification hidden hides verification state', async () => {
+test('Post verification hidden setting is private to post owner', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
 
