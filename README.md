@@ -48,6 +48,7 @@ In general, only stacks that have been changed since the last deployment need to
 However, if a stack changed naming or versioning of a resource that another stack depends on, then the dependent stack needs to be redeployed as well. For example:
 
 - when the `real-lambda-layers` stack is redeployed with new python packages, its lambda layer version number is incremented
+- old versions of the `real-lambda-layers` are retained to allow rolling back a deployment of a dependent stack (ie: `real-main`) if necessary. Old versions of the layer should be deleted manually via the AWS Console once all stacks using the layer have been upgraded to use the new version.
 - in order for the `real-main` lambda handlers to the latest version of that lambda layer, `real-main` must be redeployed as well
 
 ## External-facing API's, resources

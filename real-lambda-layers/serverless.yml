@@ -25,6 +25,10 @@ custom:
 
 
 resources:
+  Resources:
+    PythonRequirementsLambdaLayer:
+      UpdateReplacePolicy: Retain
+
   Outputs:
 
     PythonRequirementsLambdaLayer:
