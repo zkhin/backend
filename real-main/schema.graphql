@@ -65,7 +65,7 @@ type Query {
   #    to the user's posts, if the user is a private user)
   getPosts(userId: ID, postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts!
 
-  # DEPRECATED: use Query.post instead
+  # DEPRECATED (in v2020-01-29.1): use Query.post instead
   getPost(postId: ID!): Post
 
   # Get a user's MediaObjects.
@@ -242,7 +242,7 @@ type User {
   followerCount: Int  # null when looking at someone else's profile who is hidding follow counts
   signedUpAt: AWSDateTime
 
-  # DEPRECATED: use User.blockedStatus and User.blockerStatus instead
+  # DEPRECATED (in v2020-01-29.1): use User.blockedStatus and User.blockerStatus instead
   blockedAt: AWSDateTime  # has the caller blocked this user, and if so, when?
   blockerAt: AWSDateTime  # have they blocked the caller, and if so, when?
 

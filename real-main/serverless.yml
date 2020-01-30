@@ -213,13 +213,8 @@ custom:
 
       - type: User
         field: bio
-        request: User.bio/User.bio.request.vtl
-        response: User.bio/User.bio.response.vtl
-        kind: PIPELINE
-        functions:
-          - Generic.checkAccess.checkIfBlocked
-          - Generic.checkAccess.checkIfPublic
-          - Generic.checkAccess.checkIfFollower
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
 
       - type: User
         field: email
