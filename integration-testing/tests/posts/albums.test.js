@@ -182,7 +182,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
 
   // upload the media, thus completing the post
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify the post is now COMPLETED
   resp = await ourClient.query({query: schema.post, variables: {postId}})

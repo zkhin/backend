@@ -45,7 +45,7 @@ test('Add media post passes verification', async () => {
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(bigGrantPath, contentType, uploadUrl)
-  await misc.sleep(4000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -85,7 +85,7 @@ test('Add media post fails verification to small', async () => {
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -125,7 +125,7 @@ test('Add media post fails verification no attributes', async () => {
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(bigGrantPath, contentType, uploadUrl)
-  await misc.sleep(4000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -166,7 +166,7 @@ test('Add media post verification hidden hides verification state', async () => 
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
   resp = await ourClient.query({query: schema.post, variables: {postId}})

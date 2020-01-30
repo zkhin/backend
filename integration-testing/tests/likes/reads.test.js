@@ -213,7 +213,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp['errors']).toBeUndefined()
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we anonymously like the post, they onymously like it
   resp = await ourClient.mutate({mutation: schema.anonymouslyLikePost, variables: {postId}})

@@ -90,7 +90,7 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   // upload the image, give the s3 trigger a second to fire
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(client, postId)
 
   // get our uploaded/completed media, we should have just that one media object
   resp = await client.query({query: schema.getMediaObjects})

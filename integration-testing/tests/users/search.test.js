@@ -298,7 +298,7 @@ test('User search returns urls for profile pics', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // set our profile photo to that media
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})

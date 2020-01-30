@@ -129,7 +129,7 @@ test('Set and delete our profile photo', async () => {
   // upload the image, give the s3 trigger a second to fire
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // get our uploaded/completed media, we should have just that one media object
   resp = await ourClient.query({query: schema.getMediaObjects})

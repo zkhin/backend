@@ -98,7 +98,7 @@ test('Add media post', async () => {
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
   resp = await ourClient.query({query: schema.post, variables: {postId}})

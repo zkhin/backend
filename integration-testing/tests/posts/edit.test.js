@@ -36,7 +36,7 @@ test('Edit post', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify it has no text
   resp = await ourClient.query({query: schema.post, variables: {postId}})

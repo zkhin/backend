@@ -98,9 +98,10 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // we add a media post that is also a story
+  const postId = uuidv4()
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: uuidv4(), mediaId: uuidv4(), mediaType: 'IMAGE', lifetime: 'P1D'},
+    variables: {postId, mediaId: uuidv4(), mediaType: 'IMAGE', lifetime: 'P1D'},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -109,7 +110,7 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   const mediaId = resp['data']['addPost']['mediaObjects'][0]['mediaId']
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify they see us as a followed and a follower
   resp = await theirClient.query({query: schema.ourFollowedUsers})

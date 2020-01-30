@@ -68,7 +68,7 @@ test('Add post with two images', async () => {
   // upload the first of those images, give the s3 trigger a second to fire
   uploadUrl = media1['uploadUrl']
   await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleep(5000)  // no way to check if just this one media object is done uploading
 
   // get the post and check that everything looks as expected
   resp = await appsyncClient.query({query: schema.getPosts, variables: {postStatus: 'PENDING'}})
@@ -97,7 +97,7 @@ test('Add post with two images', async () => {
   // upload the second of those images, give the s3 trigger a second to fire
   uploadUrl = media2['uploadUrl']
   await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(appsyncClient, postId)
 
   // get the post and check that everything looks as expected
   resp = await appsyncClient.query({query: schema.getPosts, variables: {postStatus: 'COMPLETED'}})
@@ -150,7 +150,7 @@ test('Add post with one video', async () => {
   // upload the video , give the s3 trigger a second to fire
   uploadUrl = post['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(videoPath, videoContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(appsyncClient, postId)
 
   resp = await appsyncClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
@@ -190,7 +190,7 @@ test('Uploading image sets width and height', async () => {
 
   // upload the first of those images, give the s3 trigger a second to fire
   await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check width and height are now set
   resp = await ourClient.query({query: schema.getMediaObjects})
@@ -216,7 +216,7 @@ test('Uploading png image results in error', async () => {
 
   // upload a png, give the s3 trigger a second to fire
   await misc.uploadMedia(pngPath, pngContentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleep(5000)
 
   // check that media ended up in an ERROR state
   resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'ERROR'}})
@@ -240,7 +240,8 @@ test('Thumbnails built on successful upload', async () => {
 
   // upload a big jpeg, give the s3 trigger a second to fire
   await misc.uploadMedia(bigImagePath, bigImageContentType, uploadUrl)
-  await misc.sleep(5000)
+  await misc.sleep(5000)  // big jpeg, so takes at least a few seconds to process
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   resp = await ourClient.query({query: schema.getMediaObjects})
   expect(resp['errors']).toBeUndefined()

@@ -44,7 +44,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId1)
 
   // we set some details on our profile
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {
@@ -332,7 +332,7 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId1)
 
   // they add a media post, complete it
   let [postId2, mediaId2] = [uuidv4(), uuidv4()]
@@ -345,7 +345,7 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(theirClient, postId2)
 
   // verify they cannot see our post or likers of the post
   resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})

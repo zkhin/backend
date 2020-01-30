@@ -108,7 +108,7 @@ test('Add posts with media show up in stories', async () => {
   const uploadUrl1 = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(filePath, contentType, uploadUrl1)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId1)
 
   // we add a media post, give s3 trigger a second to fire
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
@@ -122,7 +122,7 @@ test('Add posts with media show up in stories', async () => {
   const uploadUrl2 = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(filePath, contentType, uploadUrl2)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // verify we see those stories, with media
   resp = await ourClient.query({query: schema.getStories})

@@ -55,7 +55,7 @@ test('Visiblity of post(), getPosts(), getMediaObjects() for a public user', asy
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we should see the post
   resp = await ourClient.query({query: schema.getPosts})
@@ -122,7 +122,7 @@ test('Visiblity of post(), getPosts(), getMediaObjects() for a private user', as
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we should see the post
   resp = await ourClient.query({query: schema.getPosts})
@@ -175,7 +175,7 @@ test('Visiblity of post(), getPosts(), getMediaObjects() for the follow stages u
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // request to follow, should *not* be able to see post or mediaObject
   resp = await followerClient.mutate({mutation: schema.followUser, variables: {userId: ourUserId}})

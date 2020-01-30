@@ -36,7 +36,7 @@ test('Archiving an image post', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check we see that post in the feed, in the posts, and in the mediaObjects
   resp = await ourClient.query({query: schema.getFeed})
@@ -109,7 +109,7 @@ test('Archiving an image post does not affect media urls', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the urls are as we expect
   resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'UPLOADED'}})
@@ -165,7 +165,7 @@ test('Restoring an archived image post', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // archive the post
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
@@ -285,7 +285,8 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(3000)  // let the s3 trigger fire
+  await misc.sleepUntilPostCompleted(ourClient, postId)
+
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
