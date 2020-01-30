@@ -1,0 +1,21 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+#set ($album = $ctx.prev.result)
+
+#if ($util.isNull($album))
+  #return
+#end
+
+#if ($callerUserId == $album.ownedBy.userId)
+  $util.qr($album.ownedBy.put('blockerAt', null))
+  $util.qr($album.ownedBy.put('blockerStatus', 'SELF'))
+  #return ($album)
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "block/$album.ownedBy.userId/$callerUserId" },
+    "sortKey": { "S": "-" }
+  }
+}

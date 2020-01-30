@@ -95,7 +95,7 @@ def test_get_placeholder_photo_path(user, uploaded_media):
 
 def test_get_photo_url(user, uploaded_media, cloudfront_client):
     user.placeholder_photos_directory = 'pp-photo-dir'
-    user.placeholder_photos_cloudfront_domain = 'pp-photo-domain'
+    user.frontend_resources_domain = 'pp-photo-domain'
 
     # neither set
     for size in MediaSize._ALL:
@@ -104,7 +104,7 @@ def test_get_photo_url(user, uploaded_media, cloudfront_client):
     # placeholder code set
     placeholder_photo_code = 'pp-code'
     user.item['placeholderPhotoCode'] = placeholder_photo_code
-    url_root = f'https://{user.placeholder_photos_cloudfront_domain}/{user.placeholder_photos_directory}'
+    url_root = f'https://{user.frontend_resources_domain}/{user.placeholder_photos_directory}'
     for size in MediaSize._ALL:
         url = user.get_photo_url(size)
         assert url == f'{url_root}/{placeholder_photo_code}/{size}.jpg'

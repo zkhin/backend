@@ -52,10 +52,10 @@ def test_add_post_view(post_view_dynamo):
     post_view_item = post_view_dynamo.add_post_view(post_item, user_id, view_count, viewed_at)
     viewed_at_str = viewed_at.isoformat() + 'Z'
     assert post_view_item == {
-        'partitionKey': f'postView/pid/uid',
+        'partitionKey': 'postView/pid/uid',
         'sortKey': '-',
         'schemaVersion': 0,
-        'gsiA1PartitionKey': f'postView/pid',
+        'gsiA1PartitionKey': 'postView/pid',
         'gsiA1SortKey': viewed_at_str,
         'postId': 'pid',
         'postedByUserId': 'pbuid',

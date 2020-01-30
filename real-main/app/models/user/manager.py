@@ -3,7 +3,7 @@ import os
 import random
 import re
 
-from app.models import follow, trending
+from app.models import block, follow, trending
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -25,6 +25,7 @@ class UserManager:
     def __init__(self, clients, managers=None, placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY):
         managers = managers or {}
         managers['user'] = self
+        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
 
@@ -47,6 +48,7 @@ class UserManager:
 
     def init_user(self, user_item):
         kwargs = {
+            'block_manager': getattr(self, 'block_manager', None),
             'follow_manager': getattr(self, 'follow_manager', None),
             'trending_manager': getattr(self, 'trending_manager', None),
         }

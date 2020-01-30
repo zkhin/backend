@@ -3,6 +3,7 @@ import itertools
 import logging
 
 from app.models import comment, feed, followed_first_story, like, media, post_view, trending, user
+from app.models.album.dynamo import AlbumDynamo
 from app.models.media.dynamo import MediaDynamo
 from app.models.user.dynamo import UserDynamo
 
@@ -36,6 +37,7 @@ class PostManager:
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
+            self.album_dynamo = AlbumDynamo(clients['dynamo'])
             self.media_dynamo = MediaDynamo(clients['dynamo'])
             self.user_dynamo = UserDynamo(clients['dynamo'])
 
@@ -56,7 +58,7 @@ class PostManager:
         }
         return Post(post_item, self.clients, **kwargs) if post_item else None
 
-    def add_post(self, posted_by_user_id, post_id, media_uploads=[], text=None, lifetime_duration=None,
+    def add_post(self, posted_by_user_id, post_id, media_uploads=[], text=None, lifetime_duration=None, album_id=None,
                  comments_disabled=None, likes_disabled=None, sharing_disabled=None, verification_hidden=None,
                  now=None):
         now = now or datetime.utcnow()
@@ -72,11 +74,20 @@ class PostManager:
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
 
+        # if an album is specified, verify it exists and is ours
+        if album_id:
+            album_item = self.album_dynamo.get_album(album_id)
+            if not album_item:
+                raise exceptions.PostException(f'Album `{album_id}` does not exist')
+            if album_item['ownedByUserId'] != posted_by_user_id:
+                msg = f'Album `{album_id}` does not not belong to caller user `{posted_by_user_id}`'
+                raise exceptions.PostException(msg)
+
         # add the pending post & media to dynamo in a transaction
         transacts = [self.dynamo.transact_add_pending_post(
             posted_by_user_id, post_id, posted_at=now, expires_at=expires_at, text=text, text_tags=text_tags,
             comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
-            verification_hidden=verification_hidden,
+            verification_hidden=verification_hidden, album_id=album_id,
         )]
         for mu in media_uploads:
             # 'media_upload' is straight from graphql, format dictated by schema

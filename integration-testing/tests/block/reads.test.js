@@ -108,6 +108,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // adjust everything nulled out or changed, then compare
   ourUserLimited['blockerAt'] = null
+  ourUserFull['albumCount'] = null
+  ourUserFull['albums'] = null
   ourUserFull['acceptedEULAVersion'] = null
   ourUserFull['anonymouslyLikedPosts'] = null
   ourUserFull['bio'] = null

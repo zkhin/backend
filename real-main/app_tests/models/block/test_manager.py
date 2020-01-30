@@ -82,6 +82,15 @@ def test_is_blocked(block_manager, blocker_user, blocked_user):
     assert block_manager.is_blocked(blocker_user.id, blocked_user.id) is False
 
 
+def test_get_block_status(block_manager, blocker_user, blocked_user):
+    assert block_manager.get_block_status(blocker_user.id, blocker_user.id) == 'SELF'
+    assert block_manager.get_block_status(blocker_user.id, blocked_user.id) == 'NOT_BLOCKING'
+    assert block_manager.block(blocker_user, blocked_user)
+    assert block_manager.get_block_status(blocker_user.id, blocked_user.id) == 'BLOCKING'
+    assert block_manager.unblock(blocker_user, blocked_user)
+    assert block_manager.get_block_status(blocker_user.id, blocked_user.id) == 'NOT_BLOCKING'
+
+
 def test_cant_double_block(block_manager, blocker_user, blocked_user):
     block_item = block_manager.block(blocker_user, blocked_user)
     assert block_item['blockerUserId'] == blocker_user.id

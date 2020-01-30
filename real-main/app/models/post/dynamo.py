@@ -80,7 +80,7 @@ class PostDynamo:
         }
         return self.client.generate_all_scan(query_kwargs)
 
-    def transact_add_pending_post(self, posted_by_user_id, post_id, posted_at=None, expires_at=None,
+    def transact_add_pending_post(self, posted_by_user_id, post_id, posted_at=None, expires_at=None, album_id=None,
                                   text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
                                   sharing_disabled=None, verification_hidden=None):
         posted_at_str = real_datetime.serialize(posted_at or datetime.utcnow())
@@ -105,6 +105,12 @@ class PostDynamo:
                 'gsiA1SortKey': {'S': f'{post_status}/{expires_at_str}'},
                 'gsiK1PartitionKey': {'S': f'post/{expires_at_date_str}'},
                 'gsiK1SortKey': {'S': expires_at_time_str},
+            })
+        if album_id:
+            post_item.update({
+                'albumId': {'S': album_id},
+                'gsiK2PartitionKey': {'S': f'post/{album_id}'},
+                'gsiK2SortKey': {'S': f'{post_status}/{posted_at_str}'},
             })
         if text:
             post_item['text'] = {'S': text}
@@ -211,11 +217,14 @@ class PostDynamo:
         return self.client.generate_all_query(query_kwargs)
 
     def transact_set_post_status(self, post_item, status):
-        exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsiA2SortKey']
+        exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :skPostedAt']
         exp_values = {
             ':postStatus': {'S': status},
-            ':gsiA2SortKey': {'S': f'{status}/{post_item["postedAt"]}'},
+            ':skPostedAt': {'S': f'{status}/{post_item["postedAt"]}'},
         }
+
+        if 'albumId' in post_item:
+            exp_sets.append('gsiK2SortKey = :skPostedAt')
 
         if 'expiresAt' in post_item:
             exp_sets.append('gsiA1SortKey = :gsiA1SortKey')
@@ -422,3 +431,42 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
             },
         }
+
+    def transact_set_album_id(self, post_item, album_id):
+        post_id = post_item['postId']
+        post_status = post_item['postStatus']
+        posted_at = post_item['postedAt']
+        transact_item = {
+            'Update': {
+                'Key': {
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': '-'},
+                },
+                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
+            },
+        }
+        if album_id:
+            transact_item['Update']['UpdateExpression'] = (
+                'SET albumId = :aid, gsiK2PartitionKey = :pk, gsiK2SortKey = :sk'
+            )
+            transact_item['Update']['ExpressionAttributeValues'] = {
+                ':aid': {'S': album_id},
+                ':pk': {'S': f'post/{album_id}'},
+                ':sk': {'S': f'{post_status}/{posted_at}'},
+                ':ps': {'S': post_status},
+            }
+            transact_item['Update']['ConditionExpression'] += ' and postStatus = :ps'
+        else:
+            transact_item['Update']['UpdateExpression'] = 'REMOVE albumId, gsiK2PartitionKey, gsiK2SortKey'
+        return transact_item
+
+    def generate_post_ids_in_album(self, album_id):
+        query_kwargs = {
+            'KeyConditionExpression': Key('gsiK2PartitionKey').eq(f'post/{album_id}'),
+            'IndexName': 'GSI-K2',
+            'ProjectionExpression': 'partitionKey',
+        }
+        return map(
+            lambda item: item['partitionKey'].split('/')[1],
+            self.client.generate_all_query(query_kwargs),
+        )

@@ -65,6 +65,7 @@ def test_transact_add_pending_post_sans_options(post_dynamo):
 def test_transact_add_pending_post_with_options(post_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
+    album_id = 'aid'
     posted_at = datetime.utcnow()
     expires_at = datetime.utcnow()
     text = 'lore @ipsum'
@@ -73,6 +74,7 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     transacts = [post_dynamo.transact_add_pending_post(
         user_id, post_id, posted_at=posted_at, expires_at=expires_at, text=text, text_tags=text_tags,
         comments_disabled=True, likes_disabled=False, sharing_disabled=False, verification_hidden=True,
+        album_id=album_id,
     )]
     post_dynamo.client.transact_write_items(transacts)
 
@@ -89,12 +91,15 @@ def test_transact_add_pending_post_with_options(post_dynamo):
         'postedByUserId': 'pbuid',
         'postId': 'pid',
         'postStatus': PostStatus.PENDING,
+        'albumId': 'aid',
         'postedAt': posted_at_str,
         'expiresAt': expires_at_str,
         'gsiA1PartitionKey': 'post/pbuid',
         'gsiA1SortKey': PostStatus.PENDING + '/' + expires_at_str,
         'gsiK1PartitionKey': 'post/' + expires_at_str[:10],
         'gsiK1SortKey': expires_at_str[11:-1],
+        'gsiK2PartitionKey': 'post/aid',
+        'gsiK2SortKey': PostStatus.PENDING + '/' + posted_at_str,
         'text': text,
         'textTags': text_tags,
         'commentsDisabled': True,
@@ -179,16 +184,18 @@ def test_transact_set_post_status(post_dynamo):
     assert post_item['postStatus'] == new_status
     assert post_item['gsiA2SortKey'].startswith(new_status + '/')
     assert 'gsiA1SortKey' not in post_item
+    assert 'gsiK2SortKey' not in post_item
 
 
-def test_transact_set_post_status_with_expires_at(post_dynamo):
+def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     post_id = 'my-post-id'
     user_id = 'my-user-id'
 
     # add a post, verify starts pending
     expires_at = datetime.utcnow() + duration.Duration(days=1)
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text='lore ipsum', expires_at=expires_at)]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.client.transact_write_items([
+        post_dynamo.transact_add_pending_post(user_id, post_id, text='l', expires_at=expires_at, album_id='aid'),
+    ])
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.PENDING
 
@@ -199,6 +206,7 @@ def test_transact_set_post_status_with_expires_at(post_dynamo):
     assert post_item['postStatus'] == new_status
     assert post_item['gsiA2SortKey'].startswith(new_status + '/')
     assert post_item['gsiA1SortKey'].startswith(new_status + '/')
+    assert post_item['gsiK2SortKey'].startswith(new_status + '/')
 
 
 def test_flag_formed_correctly(post_dynamo):
@@ -803,3 +811,84 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 1
+
+
+def test_transact_set_album_id(post_dynamo):
+    post_id = 'pid'
+
+    # add a post without an album_id
+    transact = post_dynamo.transact_add_pending_post('uid', post_id, text='lore ipsum')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert 'albumId' not in post_item
+    assert 'gsiK2PartitionKey' not in post_item
+    assert 'gsiK2SortKey' not in post_item
+
+    # set the album_id, verify that worked
+    transact = post_dynamo.transact_set_album_id(post_item, 'aid')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['albumId'] == 'aid'
+    assert post_item['gsiK2PartitionKey'] == 'post/aid'
+    assert post_item['gsiK2SortKey'] == 'PENDING/' + post_item['postedAt']
+
+    # change the album id, verify that worked
+    transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['albumId'] == 'aid2'
+    assert post_item['gsiK2PartitionKey'] == 'post/aid2'
+    assert post_item['gsiK2SortKey'] == 'PENDING/' + post_item['postedAt']
+
+    # remove the album id, verify that worked
+    transact = post_dynamo.transact_set_album_id(post_item, None)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert 'albumId' not in post_item
+    assert 'gsiK2PartitionKey' not in post_item
+    assert 'gsiK2SortKey' not in post_item
+
+
+def test_transact_set_album_id_fails_wrong_status(post_dynamo):
+    post_id = 'pid'
+
+    # add a post without an album_id
+    transact = post_dynamo.transact_add_pending_post('uid', post_id, text='lore ipsum')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert 'albumId' not in post_item
+    assert 'gsiK2PartitionKey' not in post_item
+    assert 'gsiK2SortKey' not in post_item
+
+    # change the in-mem status so it doesn't match dynamo
+    # verify transaction fails rather than write conflicting data to db
+    post_item['postStatus'] = 'COMPLETED'
+    transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
+    with pytest.raises(post_dynamo.client.exceptions.ClientError):
+        post_dynamo.client.transact_write_items([transact])
+
+    # verify nothing changed
+    post_item = post_dynamo.get_post(post_id)
+    assert 'albumId' not in post_item
+    assert 'gsiK2PartitionKey' not in post_item
+    assert 'gsiK2SortKey' not in post_item
+
+
+def test_generate_post_ids_in_album(post_dynamo):
+    # generate for an empty set
+    assert list(post_dynamo.generate_post_ids_in_album('aid-nope')) == []
+
+    # add two posts in an album
+    album_id = 'aid'
+    post_id_1, post_id_2 = 'pid1', 'pid2'
+    transacts = [
+        post_dynamo.transact_add_pending_post('uid', post_id_1, text='lore', album_id=album_id),
+        post_dynamo.transact_add_pending_post('uid', post_id_2, text='lore', album_id=album_id),
+    ]
+    post_dynamo.client.transact_write_items(transacts)
+
+    # verify we can generate the post_ids of those posts
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id))
+    assert len(post_ids) == 2
+    assert post_id_1 in post_ids
+    assert post_id_2 in post_ids

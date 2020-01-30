@@ -1,0 +1,42 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+
+## BatchGetItem does not preserve order
+#set ($queryKeys = [])
+$util.qr($ctx.stash.put('pkToIndex', {}))
+
+#foreach ($targetUser in $ctx.prev.result.items)
+
+  #if ($targetUser.userId == $callerUserId)
+    $util.qr($targetUser.put('followedStatus', 'SELF'))
+
+  #else
+    ## Set the default. This is overriden in the response template for found items
+    $util.qr($targetUser.put('followedStatus', 'NOT_FOLLOWING'))
+
+    #set ($pk = "following/$callerUserId/$targetUser.userId")
+    #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
+      $util.qr($ctx.stash.pkToIndex.put($pk, []))
+      $util.qr($queryKeys.add({
+        "partitionKey": {"S": "$pk"},
+        "sortKey": {"S": "-"}
+      }))
+    #end
+
+    #set ($index = $velocityCount - 1)
+    $util.qr($ctx.stash.pkToIndex[$pk].add($index))
+  #end
+#end
+
+#if ($queryKeys.isEmpty())
+  #return ($ctx.prev.result)
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($queryKeys)
+    }
+  }
+}

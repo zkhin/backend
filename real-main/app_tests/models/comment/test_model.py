@@ -13,10 +13,9 @@ def comment(user, post_manager, comment_manager):
 
 
 def test_serialize(comment, user):
-    resp = comment.serialize()
-    assert resp['commentId'] == comment.id
-    assert resp['commentedBy']['userId'] == comment.item['userId']
-    assert resp['commentedBy']['username'] == user.item['username']
+    resp = comment.serialize('caller-uid')
+    assert resp.pop('commentedBy')['userId'] == user.id
+    assert resp == comment.item
 
 
 def test_delete(comment, post_manager):

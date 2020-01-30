@@ -46,7 +46,7 @@ def test_build_item(feed_dynamo):
         'postId': 'pid',
         'postedAt': posted_at,
         'postedByUserId': 'pbuid',
-        'gsiK2PartitionKey': f'feed/fuid/pbuid',
+        'gsiK2PartitionKey': 'feed/fuid/pbuid',
         'gsiK2SortKey': posted_at,
     }
 

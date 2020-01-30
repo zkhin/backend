@@ -21,10 +21,10 @@ class Comment:
         self.id = comment_item['commentId']
         self.item = comment_item
 
-    def serialize(self):
+    def serialize(self, caller_user_id):
         resp = self.item.copy()
         user = self.user_manager.get_user(resp['userId'])
-        resp['commentedBy'] = user.serialize()
+        resp['commentedBy'] = user.serialize(caller_user_id)
         return resp
 
     def delete(self):

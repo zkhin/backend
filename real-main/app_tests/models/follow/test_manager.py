@@ -31,6 +31,32 @@ def users_private(follow_manager, users):
     yield (our_user, their_user)
 
 
+def test_get_follow_status(follow_manager, users):
+    our_user, their_user = users
+    assert follow_manager.get_follow_status(our_user.id, our_user.id) == 'SELF'
+    assert follow_manager.get_follow_status(our_user.id, their_user.id) == 'NOT_FOLLOWING'
+
+    # we follow them, then unfollow them
+    follow_manager.request_to_follow(our_user, their_user)
+    assert follow_manager.get_follow_status(our_user.id, their_user.id) == 'FOLLOWING'
+    follow_manager.unfollow(our_user.id, their_user.id)
+    assert follow_manager.get_follow_status(our_user.id, their_user.id) == 'NOT_FOLLOWING'
+
+    # we go private
+    our_user.set_privacy_status(UserPrivacyStatus.PRIVATE)
+
+    # they go through the follow request process, checking follow status along the way
+    assert follow_manager.get_follow_status(their_user.id, our_user.id) == 'NOT_FOLLOWING'
+    follow_manager.request_to_follow(their_user, our_user)
+    assert follow_manager.get_follow_status(their_user.id, our_user.id) == 'REQUESTED'
+    follow_manager.deny_follow_request(their_user.id, our_user.id)
+    assert follow_manager.get_follow_status(their_user.id, our_user.id) == 'DENIED'
+    follow_manager.accept_follow_request(their_user.id, our_user.id)
+    assert follow_manager.get_follow_status(their_user.id, our_user.id) == 'FOLLOWING'
+    follow_manager.unfollow(their_user.id, our_user.id)
+    assert follow_manager.get_follow_status(their_user.id, our_user.id) == 'NOT_FOLLOWING'
+
+
 def test_request_to_follow_public_user(follow_manager, users):
     our_user, their_user = users
 

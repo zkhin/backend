@@ -25,7 +25,7 @@ provider:
     UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}  # naming to avoid resource dependency loops
     PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
     PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
-    PLACEHOLDER_PHOTOS_CLOUDFRONT_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
+    FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
     CLOUDFRONT_DOMAIN: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsDomainName, 'placeholder'}
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1  # choosen manually when creating a key pair in the console
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
@@ -78,6 +78,7 @@ custom:
       level: ERROR
     substitutions:
       table: ${self:provider.environment.DYNAMODB_TABLE}
+      frontendResourcesDomain: ${self:provider.environment.FRONTEND_RESOURCES_DOMAIN}
 
     mappingTemplates:
 
@@ -97,6 +98,7 @@ custom:
         functions:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Query
         field: searchUsers
@@ -108,6 +110,7 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Query
         field: trendingUsers
@@ -119,6 +122,7 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: User
         field: photoUrl
@@ -171,26 +175,26 @@ custom:
       - type: User
         field: followedUsers
         request: User.followedUsers/User.followedUsers.request.vtl
-        response: User.followedUsers/User.followedUsers.response.vtl
+        response: Generic.passThru.response.vtl
         kind: PIPELINE
         functions:
-          - Stash.followedStatus
           - User.followedUsers.fetchFollowedUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: User
         field: followerUsers
         request: User.followerUsers/User.followerUsers.request.vtl
-        response: User.followerUsers/User.followerUsers.response.vtl
+        response: Generic.passThru.response.vtl
         kind: PIPELINE
         functions:
-          - Stash.followedStatus
           - User.followerUsers.fetchFollowerUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: User
         field: postCount
@@ -304,6 +308,16 @@ custom:
             - Generic.batchGetUsers
             - Generic.batchGetUsersBlockerStatus
             - Generic.filterUsersBlockerStatus
+            - Generic.batchGetUsersFollowedStatus
+
+      - type: User
+        field: albumCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
+        field: albums
+        dataSource: DynamodbDataSource
 
       - type: Mutation
         field: createCognitoOnlyUser
@@ -419,6 +433,21 @@ custom:
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
 
+      - type: Mutation
+        field: addAlbum
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: editAlbum
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: deleteAlbum
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
       - type: Post
         field: flagStatus
         dataSource: DynamodbDataSource
@@ -442,6 +471,7 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Post
         field: commentsDisabled
@@ -483,6 +513,7 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Post
         field: mediaObjects
@@ -497,6 +528,7 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Post
         field: commentCount
@@ -513,6 +545,50 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
+
+      - type: Post
+        field: album
+        dataSource: DynamodbDataSource
+
+      - type: Album
+        field: url
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Album
+        field: url4k
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Album
+        field: url1080p
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Album
+        field: url480p
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Album
+        field: url64p
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Album
+        field: postCount
+        dataSource: NoneDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: Album
+        field: posts
+        request: Generic.passThru.request.vtl
+        response: Album.posts/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Album.posts.fetchPostIds
+          - Generic.batchGetPosts
 
       - type: Comment
         field: textTaggedUsers
@@ -523,6 +599,7 @@ custom:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
           - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Query
         field: getFeed
@@ -569,6 +646,17 @@ custom:
           - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
 
+      - type: Query
+        field: album
+        request: Generic.passThru.request.vtl
+        response: Query.album/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Query.album.fetchAlbum
+          - Album.pipeline.ownedBy
+          - Album.pipeline.ownedByBlockerStatus
+          - Album.pipeline.ownedByFollowedStatus
+
       # DEPRECATED: use Query.post instead
       - type: Query
         field: getPost
@@ -611,6 +699,11 @@ custom:
 
       - type: Mutation
         field: editPost
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
+        field: editPostAlbum
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
 
@@ -696,11 +789,6 @@ custom:
         response: Generic.getUser.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Stash.followedStatus
-        request: Stash.followedStatus.request.vtl
-        response: Stash.followedStatus.response.vtl
-
-      - dataSource: DynamodbDataSource
         name: Post.pipeline.postedBy
         request: Post.pipeline.postedBy.request.vtl
         response: Post.pipeline.postedBy.response.vtl
@@ -716,6 +804,26 @@ custom:
         response: Post.pipeline.postedByFollowedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
+        name: Album.pipeline.ownedBy
+        request: Album.pipeline.ownedBy.request.vtl
+        response: Album.pipeline.ownedBy.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Album.pipeline.ownedByBlockerStatus
+        request: Album.pipeline.ownedByBlockerStatus.request.vtl
+        response: Album.pipeline.ownedByBlockerStatus.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Album.pipeline.ownedByFollowedStatus
+        request: Album.pipeline.ownedByFollowedStatus.request.vtl
+        response: Album.pipeline.ownedByFollowedStatus.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Album.posts.fetchPostIds
+        request: Album.posts/Pipeline.fetchPostIds.request.vtl
+        response: Album.posts/Pipeline.fetchPostIds.response.vtl
+
+      - dataSource: DynamodbDataSource
         name: Generic.batchGetUsers
         request: Generic.batchGetUsers.request.vtl
         response: Generic.batchGetUsers.response.vtl
@@ -729,6 +837,11 @@ custom:
         name: Generic.filterUsersBlockerStatus
         request: Generic.filterUsersBlockerStatus.request.vtl
         response: Generic.passThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Generic.batchGetUsersFollowedStatus
+        request: Generic.batchGetUsersFollowedStatus.request.vtl
+        response: Generic.batchGetUsersFollowedStatus.response.vtl
 
       - dataSource: ElasticSearchDataSource
         name: Query.searchUsers.searchUsers
@@ -769,6 +882,11 @@ custom:
         name: Query.post.fetchPost
         request: Query.post/Pipeline.fetchPost.request.vtl
         response: Query.post/Pipeline.fetchPost.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.album.fetchAlbum
+        request: Query.album/Pipeline.fetchAlbum.request.vtl
+        response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.getFeed.fetchFeed

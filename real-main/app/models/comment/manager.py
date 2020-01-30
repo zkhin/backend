@@ -65,7 +65,7 @@ class CommentManager:
         ]
         transact_exceptions = [
             exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
-            exceptions.CommentException(f'Unable to increment Post.commentCount'),
+            exceptions.CommentException('Unable to increment Post.commentCount'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 

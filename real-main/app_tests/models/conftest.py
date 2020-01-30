@@ -5,6 +5,7 @@ from moto import mock_dynamodb2, mock_s3
 import pytest
 
 from app.clients import CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient, S3Client
+from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.comment import CommentManager
 from app.models.feed import FeedManager
@@ -68,6 +69,11 @@ def s3_client(s3_clients):
 @pytest.fixture
 def s3_client_2(s3_clients):
     yield s3_clients['s3_placeholder_photos']
+
+
+@pytest.fixture
+def album_manager(dynamo_client):
+    yield AlbumManager({'dynamo': dynamo_client})
 
 
 @pytest.fixture

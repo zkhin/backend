@@ -90,7 +90,7 @@ class UserDynamo:
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
-                'sortKey': f'profile',
+                'sortKey': 'profile',
             },
         }
 
@@ -107,7 +107,7 @@ class UserDynamo:
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
-                'sortKey': f'profile',
+                'sortKey': 'profile',
             },
             'UpdateExpression': 'SET privacyStatus = :ps',
             'ExpressionAttributeValues': {':ps': privacy_status},
@@ -150,7 +150,7 @@ class UserDynamo:
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
-                'sortKey': f'profile',
+                'sortKey': 'profile',
             },
             'UpdateExpression': ' '.join([f'{k} {", ".join(v)}' for k, v in expression_actions.items()]),
         }
@@ -163,7 +163,7 @@ class UserDynamo:
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
-                'sortKey': f'profile',
+                'sortKey': 'profile',
             },
         }
         if version is None:
@@ -209,23 +209,29 @@ class UserDynamo:
         }
         return transact
 
-    def transact_increment_post_count(self, user_id):
-        return self._transact_increment_count(user_id, 'postCount')
+    def transact_increment_album_count(self, user_id):
+        return self._transact_increment_count(user_id, 'albumCount')
 
-    def transact_increment_follower_count(self, user_id):
-        return self._transact_increment_count(user_id, 'followerCount')
+    def transact_decrement_album_count(self, user_id):
+        return self._transact_decrement_count(user_id, 'albumCount')
 
     def transact_increment_followed_count(self, user_id):
         return self._transact_increment_count(user_id, 'followedCount')
 
-    def transact_decrement_post_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'postCount')
+    def transact_decrement_followed_count(self, user_id):
+        return self._transact_decrement_count(user_id, 'followedCount')
+
+    def transact_increment_follower_count(self, user_id):
+        return self._transact_increment_count(user_id, 'followerCount')
 
     def transact_decrement_follower_count(self, user_id):
         return self._transact_decrement_count(user_id, 'followerCount')
 
-    def transact_decrement_followed_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'followedCount')
+    def transact_increment_post_count(self, user_id):
+        return self._transact_increment_count(user_id, 'postCount')
+
+    def transact_decrement_post_count(self, user_id):
+        return self._transact_decrement_count(user_id, 'postCount')
 
     def increment_post_viewed_by_count(self, user_id):
         query_kwargs = {

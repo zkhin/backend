@@ -406,3 +406,28 @@ test('resetUser deletes any comments we have added to posts', async () => {
   expect(resp['data']['post']['commentCount']).toBe(0)
   expect(resp['data']['post']['comments']['items']).toHaveLength(0)
 })
+
+
+test('resetUser deletes any albums we have added', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // we create an album
+  const albumId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
+
+  // verify they can see the album
+  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['album']['albumId']).toBe(albumId)
+
+  // we reset our user, should delete the album
+  await ourClient.mutate({mutation: schema.resetUser})
+
+  // verify the album has disapeared
+  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['album']).toBeNull()
+})

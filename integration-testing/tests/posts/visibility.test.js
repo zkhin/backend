@@ -55,7 +55,7 @@ test('Visiblity of post(), getPosts(), getMediaObjects() for a public user', asy
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(filePath, contentType, uploadUrl)
-  await misc.sleep(2000)
+  await misc.sleep(3000)
 
   // we should see the post
   resp = await ourClient.query({query: schema.getPosts})

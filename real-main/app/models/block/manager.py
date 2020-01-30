@@ -27,6 +27,12 @@ class BlockManager:
         block_item = self.dynamo.get_block(blocker_user_id, blocked_user_id)
         return bool(block_item)
 
+    def get_block_status(self, blocker_user_id, blocked_user_id):
+        if blocker_user_id == blocked_user_id:
+            return enums.BlockStatus.SELF
+        block_item = self.dynamo.get_block(blocker_user_id, blocked_user_id)
+        return enums.BlockStatus.BLOCKING if block_item else enums.BlockStatus.NOT_BLOCKING
+
     def block(self, blocker_user, blocked_user):
         block_item = self.dynamo.add_block(blocker_user.id, blocked_user.id)
 

@@ -398,5 +398,37 @@ def test_delete_user_with_profile_pic(user):
         assert not user.s3_uploads_client.exists(path)
 
 
-def test_serailize(user):
-    assert user.serialize() == user.item
+def test_serailize_self(user):
+    resp = user.serialize(user.id)
+    assert resp.pop('blockerStatus') == 'SELF'
+    assert resp.pop('followedStatus') == 'SELF'
+    assert resp == user.item
+
+
+def test_serailize_unrelated(user, user2):
+    resp = user.serialize(user2.id)
+    assert resp.pop('blockerStatus') == 'NOT_BLOCKING'
+    assert resp.pop('followedStatus') == 'NOT_FOLLOWING'
+    assert resp == user.item
+
+
+def test_serailize_blocker(user, user2, block_manager):
+    # they block caller
+    block_manager.block(user, user2)
+    user.refresh_item()
+
+    resp = user.serialize(user2.id)
+    assert resp.pop('blockerStatus') == 'BLOCKING'
+    assert resp.pop('followedStatus') == 'NOT_FOLLOWING'
+    assert resp == user.item
+
+
+def test_serailize_followed(user, user2, follow_manager):
+    # caller follows them
+    follow_manager.request_to_follow(user2, user)
+    user.refresh_item()
+
+    resp = user.serialize(user2.id)
+    assert resp.pop('blockerStatus') == 'NOT_BLOCKING'
+    assert resp.pop('followedStatus') == 'FOLLOWING'
+    assert resp == user.item

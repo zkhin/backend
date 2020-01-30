@@ -1,0 +1,2 @@
+class AlbumException(Exception):
+    pass

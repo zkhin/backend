@@ -80,6 +80,30 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
         blockedStatus
       }
     }
+    albumCount
+    albums {
+      items {
+        albumId
+        ownedBy {
+          userId
+        }
+        name
+        description
+        createdAt
+        url
+        url4k
+        url1080p
+        url480p
+        url64p
+        postCount
+        postsLastUpdatedAt
+        posts {
+          items {
+            postId
+          }
+        }
+      }
+    }
   }
 }`)
 
@@ -150,6 +174,25 @@ module.exports.user = gql(`query User ($userId: ID!) {
         userId
         blockedAt
         blockedStatus
+      }
+    }
+    albumCount
+    albums {
+      items {
+        albumId
+        ownedBy {
+          userId
+        }
+        createdAt
+        name
+        description
+        postCount
+        postsLastUpdatedAt
+        posts {
+          items {
+            postId
+          }
+        }
       }
     }
   }
@@ -382,6 +425,7 @@ module.exports.unblockUser = gql(`mutation UnblockUser ($userId: ID!) {
 
 module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
   $postId: ID!,
+  $albumId: ID,
   $text: String,
   $lifetime: String,
   $commentsDisabled: Boolean,
@@ -391,6 +435,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
 ) {
   addPost (
     postId: $postId,
+    albumId: $albumId,
     text: $text,
     lifetime: $lifetime,
     commentsDisabled: $commentsDisabled,
@@ -402,6 +447,9 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
     postedAt
     postStatus
     expiresAt
+    album {
+      albumId
+    }
     text
     textTaggedUsers {
       tag
@@ -445,6 +493,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
 module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
   $postId: ID!,
   $mediaId: ID!,
+  $albumId: ID,
   $mediaType: MediaObjectType!,
   $text: String,
   $lifetime: String
@@ -454,6 +503,7 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
 ) {
   addPost (
     postId: $postId,
+    albumId: $albumId,
     text: $text,
     verificationHidden: $verificationHidden,
     mediaObjectUploads: [{
@@ -476,6 +526,9 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
         userId
         username
       }
+    }
+    album {
+      albumId
     }
     mediaObjects {
       mediaId
@@ -525,6 +578,9 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
       postCount
     }
     expiresAt
+    album {
+      albumId
+    }
     text
     textTaggedUsers {
       tag
@@ -672,6 +728,17 @@ module.exports.editPost = gql(
       likesDisabled
       sharingDisabled
       verificationHidden
+    }
+  }`
+)
+
+module.exports.editPostAlbum = gql(
+  `mutation EditPostAlbum ($postId: ID!, $albumId: ID) {
+    editPostAlbum(postId: $postId, albumId: $albumId) {
+      postId
+      album {
+        albumId
+      }
     }
   }`
 )
@@ -950,6 +1017,106 @@ module.exports.deleteComment = gql(`mutation DeleteComment ($commentId: ID!) {
       user {
         userId
         username
+      }
+    }
+  }
+}`)
+
+
+module.exports.addAlbum = gql(`mutation AddAlbum ($albumId: ID!, $name: String!, $description: String) {
+  addAlbum (albumId: $albumId, name: $name, description: $description) {
+    albumId
+    ownedBy {
+      userId
+    }
+    createdAt
+    name
+    description
+    url
+    url4k
+    url1080p
+    url480p
+    url64p
+    postCount
+    postsLastUpdatedAt
+    posts {
+      items {
+        postId
+      }
+    }
+  }
+}`)
+
+
+module.exports.editAlbum = gql(`mutation EditAlbum ($albumId: ID!, $name: String, $description: String) {
+  editAlbum (albumId: $albumId, name: $name, description: $description) {
+    albumId
+    ownedBy {
+      userId
+    }
+    createdAt
+    name
+    description
+    url
+    url4k
+    url1080p
+    url480p
+    url64p
+    postCount
+    postsLastUpdatedAt
+    posts {
+      items {
+        postId
+      }
+    }
+  }
+}`)
+
+
+module.exports.deleteAlbum = gql(`mutation DeleteAlbum ($albumId: ID!) {
+  deleteAlbum (albumId: $albumId) {
+    albumId
+    ownedBy {
+      userId
+    }
+    createdAt
+    name
+    description
+    url
+    url4k
+    url1080p
+    url480p
+    url64p
+    postCount
+    postsLastUpdatedAt
+    posts {
+      items {
+        postId
+      }
+    }
+  }
+}`)
+
+
+module.exports.album = gql(`query Album ($albumId: ID!) {
+  album (albumId: $albumId) {
+    albumId
+    ownedBy {
+      userId
+    }
+    createdAt
+    name
+    description
+    url
+    url4k
+    url1080p
+    url480p
+    url64p
+    postCount
+    postsLastUpdatedAt
+    posts {
+      items {
+        postId
       }
     }
   }

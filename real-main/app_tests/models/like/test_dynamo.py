@@ -128,7 +128,7 @@ def test_generate_of_post(like_dynamo):
 
     # generate & check
     like_items = like_dynamo.generate_of_post(post_id)
-    assert [(l['likedByUserId'], l['postId']) for l in like_items] == [('luid1', 'pid')]
+    assert [(li['likedByUserId'], li['postId']) for li in like_items] == [('luid1', 'pid')]
 
     # add a like on a different post, same users
     liked_by_user_id = 'luid1'
@@ -141,7 +141,7 @@ def test_generate_of_post(like_dynamo):
 
     # generate & check
     like_items = like_dynamo.generate_of_post(post_id)
-    assert [(l['likedByUserId'], l['postId']) for l in like_items] == [('luid1', 'pid')]
+    assert [(li['likedByUserId'], li['postId']) for li in like_items] == [('luid1', 'pid')]
 
     # add another like on the post
     liked_by_user_id = 'luid2'
@@ -154,7 +154,7 @@ def test_generate_of_post(like_dynamo):
 
     # generate & check
     like_items = like_dynamo.generate_of_post(post_id)
-    liked_by_and_post_ids = sorted([(l['likedByUserId'], l['postId']) for l in like_items])
+    liked_by_and_post_ids = sorted([(li['likedByUserId'], li['postId']) for li in like_items])
     assert liked_by_and_post_ids == [('luid1', 'pid'), ('luid2', 'pid')]
 
 
@@ -174,7 +174,7 @@ def test_generate_by_liked_by(like_dynamo):
 
     # generate & check
     like_items = like_dynamo.generate_by_liked_by(liked_by_user_id)
-    assert [(l['likedByUserId'], l['postId']) for l in like_items] == [('luid', 'pid1')]
+    assert [(li['likedByUserId'], li['postId']) for li in like_items] == [('luid', 'pid1')]
 
     # add another like on that post by a different user
     transact = like_dynamo.transact_add_like('luidother', post_item, LikeStatus.ONYMOUSLY_LIKED)
@@ -182,7 +182,7 @@ def test_generate_by_liked_by(like_dynamo):
 
     # generate & check
     like_items = like_dynamo.generate_by_liked_by(liked_by_user_id)
-    assert [(l['likedByUserId'], l['postId']) for l in like_items] == [('luid', 'pid1')]
+    assert [(li['likedByUserId'], li['postId']) for li in like_items] == [('luid', 'pid1')]
 
     # add another like by that user
     post_item = {
@@ -194,7 +194,7 @@ def test_generate_by_liked_by(like_dynamo):
 
     # generate & check
     like_items = like_dynamo.generate_by_liked_by(liked_by_user_id)
-    liked_by_and_post_ids = sorted([(l['likedByUserId'], l['postId']) for l in like_items])
+    liked_by_and_post_ids = sorted([(li['likedByUserId'], li['postId']) for li in like_items])
     assert liked_by_and_post_ids == [('luid', 'pid1'), ('luid', 'pid2')]
 
 

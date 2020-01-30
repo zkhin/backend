@@ -81,7 +81,7 @@ class MediaDynamo:
                     'partitionKey': {'S': f'media/{media_item["mediaId"]}'},
                     'sortKey': {'S': '-'},
                 },
-                'UpdateExpression': f'SET mediaStatus = :status, gsiA1SortKey = :status, gsiA2SortKey = :gsiA2SK',
+                'UpdateExpression': 'SET mediaStatus = :status, gsiA1SortKey = :status, gsiA2SortKey = :gsiA2SK',
                 'ExpressionAttributeValues': {
                     ':status': {'S': status},
                     ':gsiA2SK': {'S': f'{media_item["mediaType"]}/{status}/{media_item["postedAt"]}'},

@@ -7,6 +7,7 @@ import isodate
 from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
                          SecretsManagerClient, S3Client)
 from app.lib import datetime as real_datetime
+from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.comment import CommentManager
 from app.models.follow import FollowManager
@@ -42,6 +43,7 @@ clients = {
 
 # shared hash of all managers, allows inter-manager communication
 managers = {}
+album_manager = managers.get('album') or AlbumManager(clients, managers=managers)
 block_manager = managers.get('block') or BlockManager(clients, managers=managers)
 comment_manager = managers.get('comment') or CommentManager(clients, managers=managers)
 ffs_manager = managers.get('followed_first_story') or FollowedFirstStoryManager(clients, managers=managers)
@@ -62,7 +64,7 @@ def create_cognito_only_user(caller_user_id, arguments, source, context):
         user = user_manager.create_cognito_only_user(caller_user_id, username, full_name=full_name)
     except user_manager.exceptions.UserValidationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.createFacebookUser')
@@ -74,7 +76,7 @@ def create_facebook_user(caller_user_id, arguments, source, context):
         user = user_manager.create_facebook_user(caller_user_id, username, facebook_access_token, full_name=full_name)
     except user_manager.exceptions.UserValidationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.createGoogleUser')
@@ -86,7 +88,7 @@ def create_google_user(caller_user_id, arguments, source, context):
         user = user_manager.create_google_user(caller_user_id, username, google_id_token, full_name=full_name)
     except user_manager.exceptions.UserValidationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.startChangeUserEmail')
@@ -97,7 +99,7 @@ def start_change_user_email(caller_user_id, arguments, source, context):
         user.start_change_contact_attribute('email', email)
     except user_manager.exceptions.UserVerificationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.finishChangeUserEmail')
@@ -109,7 +111,7 @@ def finish_change_user_email(caller_user_id, arguments, source, context):
         user.finish_change_contact_attribute('email', access_token, code)
     except user_manager.exceptions.UserVerificationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.startChangeUserPhoneNumber')
@@ -120,7 +122,7 @@ def start_change_user_phone_number(caller_user_id, arguments, source, context):
         user.start_change_contact_attribute('phone', phone)
     except user_manager.exceptions.UserVerificationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.finishChangeUserPhoneNumber')
@@ -132,7 +134,7 @@ def finish_change_user_phone_number(caller_user_id, arguments, source, context):
         user.finish_change_contact_attribute('phone', access_token, code)
     except user_manager.exceptions.UserVerificationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.setUserDetails')
@@ -205,7 +207,7 @@ def set_user_details(caller_user_id, arguments, source, context):
         sharing_disabled=sharing_disabled,
         verification_hidden=verification_hidden,
     )
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.setUserAcceptedEULAVersion')
@@ -220,7 +222,7 @@ def set_user_accepted_eula_version(caller_user_id, arguments, source, context):
     if version == '':
         version = None
     user.set_accepted_eula_version(version)
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.resetUser')
@@ -240,9 +242,10 @@ def reset_user(caller_user_id, arguments, source, context):
     for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
         post_manager.init_post(post_item).delete()
 
-    # delete all our likes & comments
+    # delete all our likes & comments & albums
     like_manager.dislike_all_by_user(caller_user_id)
     comment_manager.delete_all_by_user(caller_user_id)
+    album_manager.delete_all_by_user(caller_user_id)
 
     # remove all our blocks and all blocks of us
     block_manager.unblock_all_blocks_by_user(caller_user_id)
@@ -253,6 +256,9 @@ def reset_user(caller_user_id, arguments, source, context):
     user_item = user.delete() if user else None
 
     if not new_username:
+        if user_item:
+            user_item['blockerStatus'] = block_manager.enums.BlockStatus.SELF
+            user_item['followedStatus'] = follow_manager.enums.FollowStatus.SELF
         return user_item
 
     # equivalent to calling Mutation.createCognitoOnlyUser()
@@ -260,7 +266,7 @@ def reset_user(caller_user_id, arguments, source, context):
         user = user_manager.create_cognito_only_user(caller_user_id, new_username)
     except user_manager.exceptions.UserValidationException as err:
         raise ClientException(str(err))
-    return user.serialize()
+    return user.serialize(caller_user_id)
 
 
 @routes.register('User.photoUrl')
@@ -299,7 +305,7 @@ def follow_user(caller_user_id, arguments, source, context):
     followed_user_id = arguments['userId']
 
     if follower_user_id == followed_user_id:
-        raise ClientException(f'User cannot follow themselves')
+        raise ClientException('User cannot follow themselves')
 
     follower_user = user_manager.get_user(follower_user_id)
     if not follower_user:
@@ -322,7 +328,7 @@ def follow_user(caller_user_id, arguments, source, context):
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = followed_user.serialize()
+    resp = followed_user.serialize(caller_user_id)
     resp['followedStatus'] = follow_status
     if follow_status == FollowStatus.FOLLOWING:
         resp['followerCount'] = followed_user.item.get('followerCount', 0) + 1
@@ -339,7 +345,7 @@ def unfollow_user(caller_user_id, arguments, source, context):
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = user_manager.get_user(followed_user_id).serialize()
+    resp = user_manager.get_user(followed_user_id).serialize(caller_user_id)
     resp['followedStatus'] = FollowStatus.NOT_FOLLOWING
     # TODO: decrement followerCount if needed
     return resp
@@ -354,7 +360,7 @@ def accept_follower_user(caller_user_id, arguments, source, context):
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = user_manager.get_user(user_id).serialize()
+    resp = user_manager.get_user(user_id).serialize(caller_user_id)
     resp['followerStatus'] = FollowStatus.FOLLOWING
     # TODO: increment followerCount if needed
     return resp
@@ -369,7 +375,7 @@ def deny_follower_user(caller_user_id, arguments, source, context):
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = user_manager.get_user(user_id).serialize()
+    resp = user_manager.get_user(user_id).serialize(caller_user_id)
     resp['followerStatus'] = FollowStatus.DENIED
     # TODO: decrement followerCount if needed
     return resp
@@ -396,7 +402,7 @@ def block_user(caller_user_id, arguments, source, context):
     except block_manager.exceptions.AlreadyBlocked as err:
         raise ClientException(str(err))
 
-    resp = blocked_user.serialize()
+    resp = blocked_user.serialize(caller_user_id)
     resp['blockedAt'] = block_item['blockedAt']
     resp['blockedStatus'] = block_manager.enums.BlockStatus.BLOCKING
     return resp
@@ -423,7 +429,7 @@ def unblock_user(caller_user_id, arguments, source, context):
     except block_manager.exceptions.NotBlocked as err:
         raise ClientException(str(err))
 
-    resp = blocked_user.serialize()
+    resp = blocked_user.serialize(caller_user_id)
     resp['blockedAt'] = None
     resp['blockedStatus'] = block_manager.enums.BlockStatus.NOT_BLOCKING
     return resp
@@ -438,6 +444,7 @@ def add_post(caller_user_id, arguments, source, context):
     post_id = arguments['postId']
     text = arguments.get('text')
     media = arguments.get('mediaObjectUploads', [])
+    album_id = arguments.get('albumId')
 
     def argument_with_user_level_default(name):
         value = arguments.get(name)
@@ -460,22 +467,23 @@ def add_post(caller_user_id, arguments, source, context):
     else:
         lifetime_duration = None
 
+    org_post_count = user.item.get('postCount', 0)
     try:
         post = post_manager.add_post(
-            user.id, post_id, media_uploads=media, text=text, lifetime_duration=lifetime_duration,
+            user.id, post_id, media_uploads=media, text=text, lifetime_duration=lifetime_duration, album_id=album_id,
             comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
         )
     except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
-    resp = post.serialize()
+    resp = post.serialize(caller_user_id)
 
     # if the posts was completed right away (ie a text-only post), then the user's postCount was incremented
     if post.post_status == post_manager.enums.PostStatus.COMPLETED:
-        resp['postedBy']['postCount'] = user.item.get('postCount', 0) + 1
+        resp['postedBy']['postCount'] = org_post_count + 1
 
-    return post.item
+    return resp
 
 
 @routes.register('Mutation.editPost')
@@ -501,7 +509,27 @@ def edit_post(caller_user_id, arguments, source, context):
     except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
-    return post.serialize()
+    return post.serialize(caller_user_id)
+
+
+@routes.register('Mutation.editPostAlbum')
+def edit_post_album(caller_user_id, arguments, source, context):
+    post_id = arguments['postId']
+    album_id = arguments.get('albumId')
+
+    post = post_manager.get_post(post_id)
+    if not post:
+        raise ClientException(f'Post `{post_id}` does not exist')
+
+    if caller_user_id != post.item['postedByUserId']:
+        raise ClientException("Cannot edit another user's post")
+
+    try:
+        post.set_album(album_id)
+    except post_manager.exceptions.PostException as err:
+        raise ClientException(str(err))
+
+    return post.serialize(caller_user_id)
 
 
 @routes.register('Mutation.editPostExpiresAt')
@@ -520,7 +548,7 @@ def edit_post_expires_at(caller_user_id, arguments, source, context):
         raise ClientException("Cannot set expiresAt to datetime in the past: `{expires_at}`")
 
     post.set_expires_at(expires_at)
-    return post.serialize()
+    return post.serialize(caller_user_id)
 
 
 @routes.register('Mutation.flagPost')
@@ -553,7 +581,7 @@ def flag_post(caller_user_id, arguments, source, context):
     except post.exceptions.AlreadyFlagged as err:
         raise ClientException(str(err))
 
-    resp = post.serialize()
+    resp = post.serialize(caller_user_id)
     resp['flagStatus'] = post.FlagStatus.FLAGGED
     return resp
 
@@ -574,7 +602,7 @@ def archive_post(caller_user_id, arguments, source, context):
     except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
-    return post.serialize()
+    return post.serialize(caller_user_id)
 
 
 @routes.register('Mutation.deletePost')
@@ -593,7 +621,7 @@ def delete_post(caller_user_id, arguments, source, context):
     except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
-    return post.serialize()
+    return post.serialize(caller_user_id)
 
 
 @routes.register('Mutation.restoreArchivedPost')
@@ -612,7 +640,7 @@ def restore_archived_post(caller_user_id, arguments, source, context):
     except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
-    return post.serialize()
+    return post.serialize(caller_user_id)
 
 
 @routes.register('Mutation.onymouslyLikePost')
@@ -629,7 +657,7 @@ def onymously_like_post(caller_user_id, arguments, source, context):
     except like_manager.exceptions.LikeException as err:
         raise ClientException(str(err))
 
-    resp = post.serialize()
+    resp = post.serialize(caller_user_id)
     resp['likeStatus'] = LikeStatus.ONYMOUSLY_LIKED
     return resp
 
@@ -648,7 +676,7 @@ def anonymously_like_post(caller_user_id, arguments, source, context):
     except like_manager.exceptions.LikeException as err:
         raise ClientException(str(err))
 
-    resp = post.serialize()
+    resp = post.serialize(caller_user_id)
     resp['likeStatus'] = LikeStatus.ANONYMOUSLY_LIKED
     return resp
 
@@ -668,7 +696,7 @@ def dislike_post(caller_user_id, arguments, source, context):
     prev_like_status = like.item['likeStatus']
     like.dislike()
 
-    resp = post_manager.init_post(post).serialize()
+    resp = post_manager.init_post(post).serialize(caller_user_id)
     post_like_count = 'onymousLikeCount' if prev_like_status == LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
     resp[post_like_count] -= 1
     resp['likeStatus'] = LikeStatus.NOT_LIKED
@@ -731,7 +759,7 @@ def add_comment(caller_user_id, arguments, source, context):
     except comment_manager.exceptions.CommentException as err:
         raise ClientException(str(err))
 
-    return comment.serialize()
+    return comment.serialize(caller_user_id)
 
 
 @routes.register('Mutation.deleteComment')
@@ -743,7 +771,61 @@ def delete_comment(caller_user_id, arguments, source, context):
     except comment_manager.exceptions.CommentException as err:
         raise ClientException(str(err))
 
-    return comment.serialize()
+    return comment.serialize(caller_user_id)
+
+
+@routes.register('Mutation.addAlbum')
+def add_album(caller_user_id, arguments, source, context):
+    album_id = arguments['albumId']
+    name = arguments['name']
+    description = arguments.get('description')
+
+    try:
+        album = album_manager.add_album(caller_user_id, album_id, name, description=description)
+    except album_manager.exceptions.AlbumException as err:
+        raise ClientException(str(err))
+
+    return album.serialize(caller_user_id)
+
+
+@routes.register('Mutation.editAlbum')
+def edit_album(caller_user_id, arguments, source, context):
+    album_id = arguments['albumId']
+    name = arguments.get('name')
+    description = arguments.get('description')
+
+    album = album_manager.get_album(album_id)
+    if not album:
+        raise ClientException(f'Album `{album_id}` does not exist')
+
+    if album.item['ownedByUserId'] != caller_user_id:
+        raise ClientException(f'Caller `{caller_user_id}` does not own Album `{album_id}`')
+
+    try:
+        album.update(name=name, description=description)
+    except album_manager.exceptions.AlbumException as err:
+        raise ClientException(str(err))
+
+    return album.serialize(caller_user_id)
+
+
+@routes.register('Mutation.deleteAlbum')
+def delete_album(caller_user_id, arguments, source, context):
+    album_id = arguments['albumId']
+
+    album = album_manager.get_album(album_id)
+    if not album:
+        raise ClientException(f'Album `{album_id}` does not exist')
+
+    if album.item['ownedByUserId'] != caller_user_id:
+        raise ClientException(f'Caller `{caller_user_id}` does not own Album `{album_id}`')
+
+    try:
+        album.delete()
+    except album_manager.exceptions.AlbumException as err:
+        raise ClientException(str(err))
+
+    return album.serialize(caller_user_id)
 
 
 @routes.register('Mutation.lambdaClientError')

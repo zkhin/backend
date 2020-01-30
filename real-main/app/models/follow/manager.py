@@ -31,6 +31,14 @@ class FollowManager:
             self.ffs_dynamo = FollowedFirstStoryDynamo(clients['dynamo'])
             self.post_dynamo = PostDynamo(clients['dynamo'])
 
+    def get_follow_status(self, follower_user_id, followed_user_id):
+        if follower_user_id == followed_user_id:
+            return enums.FollowStatus.SELF
+        follow_item = self.dynamo.get_following(follower_user_id, followed_user_id)
+        if not follow_item:
+            return enums.FollowStatus.NOT_FOLLOWING
+        return follow_item['followStatus']
+
     def generate_follower_user_ids(self, followed_user_id):
         "Return a generator that produces user ids of users that follow the given user"
         gen = self.dynamo.generate_follower_items(followed_user_id)

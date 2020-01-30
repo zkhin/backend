@@ -1,0 +1,22 @@
+#if ($ctx.args.limit < 1 or $ctx.args.limit > 100)
+  $util.error('Limit cannot be less than 1 or greater than 100')
+#end
+#set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
+
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query": {
+    "expression": "gsiK2PartitionKey = :pk and begins_with(gsiK2SortKey, :skPrefix)",
+    "expressionValues": {
+      ":pk": { "S": "post/$ctx.source.albumId" },
+      ":skPrefix": { "S": "COMPLETED/" }
+    }
+  },
+  "index": "GSI-K2",
+  "scanIndexForward": false,
+  "limit": $limit
+  #if ($ctx.args.nextToken)
+  , "nextToken": "$ctx.args.nextToken"
+  #end
+}

@@ -1,0 +1,11 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+## the index is keys-only and the next template in the
+## pipeline expects for postId to be filled in
+#foreach ($post in $ctx.result.items)
+  $util.qr($post.put('postId', $post.partitionKey.substring(5)))
+#end
+
+$util.toJson($ctx.result)

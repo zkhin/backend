@@ -1,0 +1,19 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($album = $ctx.prev.result)
+
+## hide if album owner is blocking caller
+#if ($album.ownedBy.blockerStatus == 'BLOCKING')
+  #return
+#end
+
+## hide if album owner private and caller is not a follower or self
+#if ($album.ownedBy.privacyStatus == 'PRIVATE')
+  #if ($album.ownedBy.followedStatus != 'SELF' and $album.ownedBy.followedStatus != 'FOLLOWING')
+    #return
+  #end
+#end
+
+$util.toJson($album)

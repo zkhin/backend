@@ -1,6 +1,7 @@
 import logging
 import os
 
+from app.models.album.dynamo import AlbumDynamo
 from app.models.media.dynamo import MediaDynamo
 from app.models.media.enums import MediaStatus
 from app.models.user.dynamo import UserDynamo
@@ -28,6 +29,7 @@ class Post:
 
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
+            self.album_dynamo = AlbumDynamo(clients['dynamo'])
             self.media_dynamo = MediaDynamo(clients['dynamo'])
             self.user_dynamo = UserDynamo(clients['dynamo'])
 
@@ -60,9 +62,11 @@ class Post:
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
 
-    def serialize(self):
-        self.item['postedBy'] = self.user_manager.get_user(self.posted_by_user_id).serialize()
-        return self.item
+    def serialize(self, caller_user_id):
+        resp = self.item.copy()
+        user = self.user_manager.get_user(self.posted_by_user_id)
+        resp['postedBy'] = user.serialize(caller_user_id)
+        return resp
 
     def complete(self):
         "Transition the post to COMPLETED status"
@@ -75,6 +79,9 @@ class Post:
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED),
             self.user_dynamo.transact_increment_post_count(self.posted_by_user_id),
         ]
+        if album_id := self.item.get('albumId'):
+            transacts.append(self.album_dynamo.transact_add_post(album_id))
+
         self.dynamo.client.transact_write_items(transacts)
         self.item = self.dynamo.get_post(self.id, strongly_consistent=True)
 
@@ -97,6 +104,8 @@ class Post:
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED)]
         if self.post_status == PostStatus.COMPLETED:
             transacts.append(self.user_dynamo.transact_decrement_post_count(self.posted_by_user_id))
+            if album_id := self.item.get('albumId'):
+                transacts.append(self.album_dynamo.transact_remove_post(album_id))
 
         for media_item in self.media_dynamo.generate_by_post(self.id):
             transacts.append(self.media_dynamo.transact_set_status(media_item, MediaStatus.ARCHIVED))
@@ -147,6 +156,8 @@ class Post:
         transacts = [self.dynamo.transact_set_post_status(self.item, post_status)]
         if post_status == PostStatus.COMPLETED:
             transacts.append(self.user_dynamo.transact_increment_post_count(self.posted_by_user_id))
+            if album_id := self.item.get('albumId'):
+                transacts.append(self.album_dynamo.transact_add_post(album_id))
 
         for media_item, media_status in zip(media_items, media_statuses):
             transacts.append(self.media_dynamo.transact_set_status(media_item, media_status))
@@ -176,6 +187,8 @@ class Post:
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING)]
         if self.post_status == PostStatus.COMPLETED:
             transacts.append(self.user_dynamo.transact_decrement_post_count(self.posted_by_user_id))
+            if album_id := self.item.get('albumId'):
+                transacts.append(self.album_dynamo.transact_remove_post(album_id))
 
         for media_item in self.media_dynamo.generate_by_post(self.id):
             transacts.append(self.media_dynamo.transact_set_status(media_item, MediaStatus.DELETING))
@@ -243,7 +256,7 @@ class Post:
             verification_hidden=None):
         args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
         if all(v is None for v in args):
-            raise exceptions.PostException(f'Empty edit requested')
+            raise exceptions.PostException('Empty edit requested')
 
         post_media = list(self.media_dynamo.generate_by_post(self.id))
         if text == '' and not post_media:
@@ -266,4 +279,31 @@ class Post:
         now_item = self.item.copy() if 'expiresAt' in self.item else None
         if prev_item or now_item:
             self.followed_first_story_manager.refresh_after_story_change(story_prev=prev_item, story_now=now_item)
+        return self
+
+    def set_album(self, album_id):
+        "Set the album the post is in. Set album_id to None to remove the post from all albums."
+        prev_album_id = self.item.get('albumId')
+
+        if prev_album_id == album_id:
+            return self
+
+        # if an album is specified, verify it exists and is ours
+        if album_id:
+            album_item = self.album_dynamo.get_album(album_id)
+            if not album_item:
+                raise exceptions.PostException(f'Album `{album_id}` does not exist')
+            if album_item['ownedByUserId'] != self.posted_by_user_id:
+                msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
+                raise exceptions.PostException(msg)
+
+        transacts = [self.dynamo.transact_set_album_id(self.item, album_id)]
+        if self.item['postStatus'] == PostStatus.COMPLETED:
+            if prev_album_id:
+                transacts.append(self.album_dynamo.transact_remove_post(prev_album_id))
+            if album_id:
+                transacts.append(self.album_dynamo.transact_add_post(album_id))
+
+        self.dynamo.client.transact_write_items(transacts)
+        self.refresh_item(strongly_consistent=True)
         return self

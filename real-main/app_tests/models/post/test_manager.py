@@ -9,11 +9,20 @@ from app.models.post.enums import PostStatus
 
 
 @pytest.fixture
-def posts(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager):
+    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+
+
+@pytest.fixture
+def posts(post_manager, user):
     post1 = post_manager.add_post(user.id, 'pid1', text='t')
     post2 = post_manager.add_post(user.id, 'pid2', text='t')
     yield (post1, post2)
+
+
+@pytest.fixture
+def album(album_manager, user):
+    yield album_manager.add_album(user.id, 'aid', 'album name')
 
 
 def test_get_post(post_manager, user_manager):
@@ -94,6 +103,17 @@ def test_add_text_with_tags_post(post_manager, user_manager):
     assert post.item['textTags'] == [{'tag': '@pbUname', 'userId': 'pbuid'}]
 
 
+def test_add_post_album_errors(user_manager, post_manager, user, album):
+    # can't create post with album that doesn't exist
+    with pytest.raises(post_manager.exceptions.PostException):
+        post_manager.add_post(user.id, 'pid-42', text='t', album_id='aid-dne')
+
+    # can't create post in somebody else's album
+    user2 = user_manager.create_cognito_only_user('uid-2', 'uname2')
+    with pytest.raises(post_manager.exceptions.PostException):
+        post_manager.add_post(user2.id, 'pid-42', text='t', album_id=album.id)
+
+
 def test_add_media_post(post_manager):
     user_id = 'pbuid'
     post_id = 'pid'
@@ -127,7 +147,7 @@ def test_add_media_post(post_manager):
     assert 'expiresAt' not in media_items[0]
 
 
-def test_add_media_post_with_options(post_manager):
+def test_add_media_post_with_options(post_manager, album):
     user_id = 'pbuid'
     post_id = 'pid'
     text = 'lore ipsum'
@@ -145,7 +165,7 @@ def test_add_media_post_with_options(post_manager):
     # add the post (& media)
     post_manager.add_post(
         user_id, post_id, text=text, now=now, media_uploads=[media_upload], lifetime_duration=lifetime_duration,
-        comments_disabled=False, likes_disabled=True, verification_hidden=False,
+        album_id=album.id, comments_disabled=False, likes_disabled=True, verification_hidden=False,
     )
     expires_at = now + lifetime_duration
 
@@ -153,6 +173,7 @@ def test_add_media_post_with_options(post_manager):
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['postedByUserId'] == user_id
+    assert post.item['albumId'] == album.id
     assert post.item['postedAt'] == now.isoformat() + 'Z'
     assert post.item['text'] == 'lore ipsum'
     assert post.item['postStatus'] == PostStatus.PENDING

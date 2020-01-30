@@ -10,7 +10,7 @@ from .validate import UserValidate
 logger = logging.getLogger()
 
 PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('PLACEHOLDER_PHOTOS_DIRECTORY')
-PLACEHOLDER_PHOTOS_CLOUDFRONT_DOMAIN = os.environ.get('PLACEHOLDER_PHOTOS_CLOUDFRONT_DOMAIN')
+FRONTEND_RESOURCES_DOMAIN = os.environ.get('FRONTEND_RESOURCES_DOMAIN')
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
@@ -34,15 +34,17 @@ class User:
     client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
     photo_file_ext = MediaExt.JPG
 
-    def __init__(self, user_item, clients, follow_manager=None, trending_manager=None,
+    def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
                  placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY,
-                 placeholder_photos_cloudfront_domain=PLACEHOLDER_PHOTOS_CLOUDFRONT_DOMAIN):
+                 frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
         self.clients = clients
         for client_name in self.client_names:
             if client_name in clients:
                 setattr(self, f'{client_name}_client', clients[client_name])
         if 'dynamo' in clients:
             self.dynamo = UserDynamo(clients['dynamo'])
+        if block_manager:
+            self.block_manager = block_manager
         if follow_manager:
             self.follow_manager = follow_manager
         if trending_manager:
@@ -51,7 +53,7 @@ class User:
         self.item = user_item
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
-        self.placeholder_photos_cloudfront_domain = placeholder_photos_cloudfront_domain
+        self.frontend_resources_domain = frontend_resources_domain
 
     def get_photo_path(self, size, photo_media_id=None):
         photo_media_id = photo_media_id or self.item.get('photoMediaId')
@@ -72,16 +74,19 @@ class User:
         if photo_path:
             return self.cloudfront_client.generate_presigned_url(photo_path, ['GET', 'HEAD'])
         placeholder_path = self.get_placeholder_photo_path(size)
-        if placeholder_path and self.placeholder_photos_cloudfront_domain:
-            return f'https://{self.placeholder_photos_cloudfront_domain}/{placeholder_path}'
+        if placeholder_path and self.frontend_resources_domain:
+            return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
     def refresh_item(self):
         self.item = self.dynamo.get_user(self.id)
         return self
 
-    def serialize(self):
-        return self.item
+    def serialize(self, caller_user_id):
+        resp = self.item.copy()
+        resp['blockerStatus'] = self.block_manager.get_block_status(self.id, caller_user_id)
+        resp['followedStatus'] = self.follow_manager.get_follow_status(caller_user_id, self.id)
+        return resp
 
     def set_accepted_eula_version(self, version):
         if version == self.item.get('acceptedEULAVersion'):

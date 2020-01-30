@@ -53,6 +53,10 @@ type Query {
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
 
+  # A specific album
+  #  - albums of private users are private to only them and their followers
+  album(albumId: ID!): Album
+
   # Get a user's posts.
   #  - userId defaults to caller's userId if unset
   #  - postStatus defaults to COMPLETED if unset
@@ -136,6 +140,7 @@ type Mutation {
   #   - if lifetime is unset, defaults to infinite
   addPost(
     postId: ID!,
+    albumId: ID,
     lifetime: String,
     text: String,
     mediaObjectUploads: [MediaObjectUpload!],
@@ -154,6 +159,11 @@ type Mutation {
     sharingDisabled: Boolean,
     verificationHidden: Boolean,
   ): Post
+
+  # Edit Post.album
+  #   - to remove the post from its album, set albumId to null
+  #   - to change which album the post is in, set albumId to the id of the new album
+  editPostAlbum(postId: ID!, albumId: ID): Post
 
   # Edit Post.expiresAt
   #   - leave expiresAt unset, or set it to null to make the post last forever
@@ -196,6 +206,14 @@ type Mutation {
   # Delete a comment
   #   - deleting a comment that is neither ours nor on a post of ours is an error
   deleteComment(commentId: ID!): Comment
+
+  addAlbum(albumId: ID!, name: String!, description: String): Album
+  # Edit an Album
+  #   - attributes to be left unchanged should be left undefined or set to null
+  #   - to remove string attribute, set it to the empty string
+  #   - Album.name is a required attribute so trying to remove it is an error
+  editAlbum(albumId: ID!, name: String, description: String): Album
+  deleteAlbum(albumId: ID!): Album
 
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
@@ -277,6 +295,12 @@ type User {
   #  - private to user themselves only
   #  - ordered by blockedAt, most recent first
   blockedUsers(limit: Int, nextToken: String): PaginatedUsers
+
+  # Albums
+  #  - if this is a private user, then caller must be following the user
+  #  - ordered with most recently created album first
+  albums(limit: Int, nextToken: String): PaginatedAlbums
+  albumCount: Int
 }
 
 type PaginatedUsers {
@@ -374,6 +398,7 @@ type Post {
   text: String
   textTaggedUsers: [TextTaggedUser!]!  # max of 100
   mediaObjects: [MediaObject!]!
+  album: Album
   flagStatus: FlagStatus!  # has the caller flagged this post?
   likeStatus: LikeStatus!  # has the caller liked this post?
   likesDisabled: Boolean
@@ -425,5 +450,32 @@ type Comment {
 
 type PaginatedComments {
   items: [Comment!]!
+  nextToken: String
+}
+
+type Album {
+  albumId: ID!
+  createdAt: AWSDateTime!
+  ownedBy: User!
+  name: String!
+  description: String
+
+  # Album art urls
+  url: AWSURL  # native
+  url4k: AWSURL
+  url1080p: AWSURL
+  url480p: AWSURL
+  url64p: AWSURL
+
+  # Posts in the album
+  #   - posts with status COMPLETED only
+  #   - ordered by postedAt, most recent post first
+  posts(limit: Int, nextToken: String): PaginatedPosts!
+  postCount: Int!
+  postsLastUpdatedAt: AWSDateTime
+}
+
+type PaginatedAlbums {
+  items: [Album!]!
   nextToken: String
 }
