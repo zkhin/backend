@@ -45,12 +45,12 @@ test('Posts that are not within a day of expiring do not show up as a stories', 
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   // verify they still have no stories
-  resp = await theirClient.query({query: schema.getStories})
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
-  resp = await ourClient.query({query: schema.getStories, variables: {userId: theirUserId}})
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
 
   // verify we don't see them as having stories
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
@@ -78,10 +78,10 @@ test('Add a post that shows up as story', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // that post should show up as a story for them
-  resp = await ourClient.query({query: schema.getStories, variables: {userId: theirUserId}})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
 
   // they should show up as having a story to us
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
@@ -92,7 +92,7 @@ test('Add a post that shows up as story', async () => {
 
 
 test('Add posts with media show up in stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const contentType = 'image/jpeg'
   const filePath = path.join(__dirname, '..', 'fixtures', 'grant.jpg')
 
@@ -125,22 +125,22 @@ test('Add posts with media show up in stories', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // verify we see those stories, with media
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(2)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId1)
-  expect(resp['data']['getStories']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
-  expect(resp['data']['getStories']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
-  expect(resp['data']['getStories']['items'][1]['postId']).toBe(postId2)
-  expect(resp['data']['getStories']['items'][1]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][1]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
-  expect(resp['data']['getStories']['items'][1]['mediaObjects'][0]['url']).toBeTruthy()
+  expect(resp['data']['user']['stories']['items']).toHaveLength(2)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId1)
+  expect(resp['data']['user']['stories']['items'][0]['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(resp['data']['user']['stories']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
+  expect(resp['data']['user']['stories']['items'][1]['postId']).toBe(postId2)
+  expect(resp['data']['user']['stories']['items'][1]['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][1]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
+  expect(resp['data']['user']['stories']['items'][1]['mediaObjects'][0]['url']).toBeTruthy()
 })
 
 
 test('Stories are ordered by first-to-expire-first', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // we add three stories with various lifetimes
   const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]
@@ -164,12 +164,12 @@ test('Stories are ordered by first-to-expire-first', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId3)
 
   // verify those show up in the right order
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(3)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId2)
-  expect(resp['data']['getStories']['items'][1]['postId']).toBe(postId1)
-  expect(resp['data']['getStories']['items'][2]['postId']).toBe(postId3)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(3)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId2)
+  expect(resp['data']['user']['stories']['items'][1]['postId']).toBe(postId1)
+  expect(resp['data']['user']['stories']['items'][2]['postId']).toBe(postId3)
 })
 
 
@@ -254,77 +254,53 @@ test('Stories of private user are visible to themselves and followers only', asy
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // verify we can see our story
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
-  resp = await ourClient.query({query: schema.getStories, variables: {userId: ourUserId}})
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
 
   // verify new user, not yet following us, cannot see our stories
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: schema.getStories, variables: {userId: ourUserId}})
-  expect(resp['data']).toBeNull()
-  expect(resp['errors'].map(e => e['message'])).toEqual(['Access denied'])
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['stories']).toBeNull()
 
   // they request to follow us, verify still cannot see our stories
   resp = await theirClient.mutate({mutation: schema.followUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus']).toBe('REQUESTED')
-  resp = await theirClient.query({query: schema.getStories, variables: {userId: ourUserId}})
-  expect(resp['data']).toBeNull()
-  expect(resp['errors'].map(e => e['message'])).toEqual(['Access denied'])
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['stories']).toBeNull()
 
   // we deny their request, verify they cannot see our stories
   resp = await ourClient.mutate({mutation: schema.denyFollowerUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['denyFollowerUser']['followerStatus']).toBe('DENIED')
-  resp = await theirClient.query({query: schema.getStories, variables: {userId: ourUserId}})
-  expect(resp['data']).toBeNull()
-  expect(resp['errors'].map(e => e['message'])).toEqual(['Access denied'])
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['stories']).toBeNull()
 
   // approve their request, verify they can now see our stories
   resp = await ourClient.mutate({mutation: schema.acceptFollowerUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['acceptFollowerUser']['followerStatus']).toBe('FOLLOWING')
-  resp = await theirClient.query({query: schema.getStories, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
 
   // they unfollow us, verify they cannot see our stories
   resp = await theirClient.mutate({mutation: schema.unfollowUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['unfollowUser']['followedStatus']).toBe('NOT_FOLLOWING')
-
-  /* Normally, the apollo client is able to automatically trigger clearing of its
-   * query cache upon mutation via some matching of id's and attribute names.
-   * However, the call to unfollowUser() above fails to automatically clear the
-   * getStories() cache.
-   *
-   * Note that using refetchQueries & awaitRefetchQueries in the unfollowUser()
-   * mutation doesn't work, as the getStories() returns an error rather than an
-   * empty set of data.
-   *
-   * Is there a way to link the unfollowUser mutation to the getStories query
-   * in the schema so that the auto-cache clearing works?
-   *
-   * For now, this call will set cached data for the getStories() query to null
-   * (not quite the same as clearing the cache of the result of this query).
-   */
-  // https://www.apollographql.com/docs/react/caching/cache-interaction/#writequery-and-writefragment
-  // https://www.apollographql.com/docs/react/api/apollo-client/#ApolloClient.writeQuery
-  theirClient.writeQuery({
-    query: schema.getStories,
-    variables: {userId: ourUserId},
-    data: {'getStories': null},
-  })
-
-  resp = await theirClient.query({query: schema.getStories, variables: {userId: ourUserId}})
-  expect(resp['data']['getStories']).toBeNull()  // we see the data we wrote to the cache
-  expect(resp['errors'].map(e => e['message'])).toEqual(['Access denied'])
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['stories']).toBeNull()
 })
 
 
@@ -348,10 +324,10 @@ test.skip('Post that expires is removed from stories', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // cron job hasn't yet run, so that post should be a story
-  resp = await theirClient.query({query: schema.getStories})
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
@@ -360,9 +336,9 @@ test.skip('Post that expires is removed from stories', async () => {
   // TODO trigger the cron job
 
   // that post should now have disappeared from stories
-  resp = await theirClient.query({query: schema.getStories})
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
@@ -388,10 +364,10 @@ test('Post that is archived is removed from stories', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // that post should be a story
-  resp = await theirClient.query({query: schema.getStories})
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
@@ -403,9 +379,9 @@ test('Post that is archived is removed from stories', async () => {
   expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
 
   // that post should now have disappeared from stories
-  resp = await theirClient.query({query: schema.getStories})
+  resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)

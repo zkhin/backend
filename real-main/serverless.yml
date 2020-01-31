@@ -265,6 +265,10 @@ custom:
         response: Generic.passThru.response.vtl
 
       - type: User
+        field: stories
+        dataSource: DynamodbDataSource
+
+      - type: User
         field: postViewedByCount
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl

@@ -187,7 +187,7 @@ test('Edit Post.expiresAt with non-UTC', async () => {
 
 
 test('Adding and clearing Post.expiresAt removes and adds it to users stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // add a post with no lifetime
@@ -197,9 +197,9 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp['data']['addPost']['expiresAt']).toBeNull()
 
   // check we start with no stories
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
 
   // set the post's expiresAt, changing it to a story
   const expiresAt = moment().add(moment.duration('PT1H')).toISOString()
@@ -209,10 +209,10 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
 
   // check we now have a story
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
 
   // remove the post's expiresAt, changing it to not be a story
   resp = await ourClient.mutate({mutation: schema.editPostExpiresAt, variables: {postId}})
@@ -221,9 +221,9 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeNull()
 
   // check no longer have a story
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
 })
 
 

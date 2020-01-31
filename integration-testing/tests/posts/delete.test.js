@@ -40,10 +40,10 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp['data']['getPosts']['items'][0]['postId']).toBe(postId)
 
   // verify we see it as a story
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(1)
-  expect(resp['data']['getStories']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
 
   // verify our post count reacted
   resp = await ourClient.query({query: schema.self})
@@ -76,9 +76,9 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp['data']['getPosts']['items']).toHaveLength(0)
 
   // verify we cannot see it as a story
-  resp = await ourClient.query({query: schema.getStories})
+  resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getStories']['items']).toHaveLength(0)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(0)
 
   // verify our post count reacted
   resp = await ourClient.query({query: schema.self})

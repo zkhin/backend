@@ -39,10 +39,7 @@ type Query {
   #  - ordered by user-with-story-closest-to-expiring-first
   getFollowedUsersWithStories(limit: Int, nextToken: String): PaginatedUsers!
 
-  # Get list of user's stories
-  #  - userId defaults to caller's userId if unset
-  #  - if this is a private user, we must be following the user
-  #  - ordered by soonest-to-expire-first
+  # DEPRECATED: use User.stories instead
   getStories(userId: ID, limit: Int, nextToken: String): PaginatedPosts!
 
   # A specific post
@@ -268,6 +265,11 @@ type User {
   likesDisabled: Boolean
   sharingDisabled: Boolean
   verificationHidden: Boolean
+
+  # User's list of stories
+  #   - if this is a private user, then caller must be following the user
+  #   - ordered by expiration date, with the next to expire first
+  stories(limit: Int, nextToken: String): PaginatedPosts
 
   # List of posts the user has anonymously liked
   #  - private to user themselves only

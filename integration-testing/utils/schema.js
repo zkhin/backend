@@ -875,20 +875,22 @@ module.exports.getFollowedUsersWithStories = gql(`{
   }
 }`)
 
-module.exports.getStories = gql(`query GetStories ($userId: ID) {
-  getStories (userId: $userId) {
-    items {
-      postId
-      postedAt
-      postedBy {
-        userId
-      }
-      expiresAt
-      text
-      mediaObjects {
-        mediaId
-        mediaStatus
-        url
+module.exports.userStories = gql(`query UserStories ($userId: ID!) {
+  user (userId: $userId) {
+    stories {
+      items {
+        postId
+        postedAt
+        postedBy {
+          userId
+        }
+        expiresAt
+        text
+        mediaObjects {
+          mediaId
+          mediaStatus
+          url
+        }
       }
     }
   }
