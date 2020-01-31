@@ -128,6 +128,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['fullName'] = null
   ourUserFull['languageCode'] = null
   ourUserFull['likesDisabled'] = null
+  ourUserFull['mediaObjects'] = null
   ourUserFull['onymouslyLikedPosts'] = null
   // ourUserFull['phoneNumber'] is already null
   ourUserFull['photoUrl'] = null
@@ -136,9 +137,11 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['photoUrl4k'] = null
   ourUserFull['photoUrl64p'] = null
   ourUserFull['postCount'] = null
+  ourUserFull['posts'] = null
   ourUserFull['privacyStatus'] = null
   ourUserFull['sharingDisabled'] = null
   ourUserFull['signedUpAt'] = null
+  ourUserFull['stories'] = null
   ourUserFull['themeCode'] = null
   ourUserFull['verificationHidden'] = null
   ourUserFull['viewCountsHidden'] = null

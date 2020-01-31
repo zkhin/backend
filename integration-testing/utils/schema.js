@@ -45,6 +45,21 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     postViewedByCount
     viewCountsHidden
     signedUpAt
+    stories {
+      items {
+        postId
+      }
+    }
+    posts {
+      items {
+        postId
+      }
+    }
+    mediaObjects {
+      items {
+        mediaId
+      }
+    }
     anonymouslyLikedPosts (limit: $anonymouslyLikedPostsLimit) {
       items {
         postId
@@ -141,6 +156,21 @@ module.exports.user = gql(`query User ($userId: ID!) {
     postViewedByCount
     viewCountsHidden
     signedUpAt
+    stories {
+      items {
+        postId
+      }
+    }
+    posts {
+      items {
+        postId
+      }
+    }
+    mediaObjects {
+      items {
+        mediaId
+      }
+    }
     anonymouslyLikedPosts {
       items {
         postId
