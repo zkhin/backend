@@ -8,16 +8,16 @@ type Query {
   # For all queries that return Paginated lists of items:
   #
   # The 'limit' argument:
-  #  - may be set to values from 1 to 100, inclusive
-  #  - defaults to 20 if left unset
-  #  - is an upper bound on the number of items returned. Note that just because less items are
-  #    returned than 'limit', that does *not* indicate their are no more items available.
+  #   - may be set to values from 1 to 100, inclusive
+  #   - defaults to 20 if left unset
+  #   - is an upper bound on the number of items returned. Note that just because less items are
+  #     returned than 'limit', that does *not* indicate their are no more items available.
   #
   # The 'nextToken' argument / response field:
-  #  - in a response, if set to null, that indicates there are no more items available on the server
-  #  - if set to a non-null value (ie an opaque string), then that string can be passed as the `nextToken`
-  #    argument in a subsequent call of the same query to retrieve more items starting from where the last
-  #    result set ended
+  #   - in a response, if set to null, that indicates there are no more items available on the server
+  #   - if set to a non-null value (ie an opaque string), then that string can be passed as the `nextToken`
+  #     argument in a subsequent call of the same query to retrieve more items starting from where the last
+  #     result set ended
   ####
 
   # The caller's user object, or throw an error
@@ -43,15 +43,15 @@ type Query {
   getStories(userId: ID, limit: Int, nextToken: String): PaginatedPosts!
 
   # A specific post
-  #  - posts that do not have COMPLETED postStatus are private to only the post owner
-  #  - posts of private users are private to only them and their followers
+  #   - posts that do not have COMPLETED postStatus are private to only the post owner
+  #   - posts of private users are private to only themselves and their followers
   post(postId: ID!): Post
 
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
 
   # A specific album
-  #  - albums of private users are private to only them and their followers
+  #   - albums of a private user are private to only themselves and their followers
   album(albumId: ID!): Album
 
   # Get a user's posts.
@@ -90,10 +90,10 @@ type Mutation {
   finishChangeUserPhoneNumber(cognitoAccessToken: String!, verificationCode: String!): User
 
   # Reset the caller's user account to its initial state (primarily for integration testing)
-  #  - excluding cognito, all state associated with user is deleted - including followers, others's comments on our posts, etc
-  #  - the user's preferred_username in congito will be deleted
-  #  - if the `newUsername` argument is set, then the caller's account will be re-initialized with the given username.
-  #    This is equivalent to calling Mutation.createCognitoOnlyUser(username: $newUsername) directly after this call.
+  #   - excluding cognito, all state associated with user is deleted - including followers, others's comments on our posts, etc
+  #   - the user's preferred_username in congito will be deleted
+  #   - if the `newUsername` argument is set, then the caller's account will be re-initialized with the given username.
+  #     This is equivalent to calling Mutation.createCognitoOnlyUser(username: $newUsername) directly after this call.
   resetUser(newUsername: String): User
 
   # Set optional user details.
@@ -250,8 +250,8 @@ type User {
   #   - null if user has viewCountsHidden set
   postViewedByCount: Int
 
-  # if user is private: readable by followers and user themselves only
-  # else: readable by all
+  # User's bio
+  #   - the bio of a private user is private to only themselves and their followers
   bio: String
 
   # private to user themselves only
@@ -266,41 +266,41 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
 
-  # User's list of stories
-  #   - if this is a private user, then caller must be following the user
+  # User's stories
+  #   - stories of a private user are private to only themselves and their followers
   #   - ordered by expiration date, with the next to expire first
   stories(limit: Int, nextToken: String): PaginatedPosts
 
-  # List of posts the user has anonymously liked
-  #  - private to user themselves only
-  #  - ordered with most recently liked post first
+  # Posts the user has anonymously liked
+  #   - private to user themselves only
+  #   - ordered with most recently liked post first
   anonymouslyLikedPosts(limit: Int, nextToken: String): PaginatedPosts
 
-  # List of posts the user has onymously liked
-  #  - if the user has blocked caller, will be null
-  #  - ordered with most recently liked post first
+  # Posts the user has onymously liked
+  #   - if the user has blocked caller, will be null
+  #   - ordered with most recently liked post first
   onymouslyLikedPosts(limit: Int, nextToken: String): PaginatedPosts
 
-  # List of users the user follows
-  #  - null for users with followCountsHidden set, or if user has blocked caller
-  #  - followStatus cannot be set to NOT_FOLLOWING
-  #  - followStatus can be set to values different from the default only when looking at our own user
+  # Users the user follows
+  #   - null for users with followCountsHidden set, or if user has blocked caller
+  #   - followStatus cannot be set to NOT_FOLLOWING
+  #   - followStatus can be set to values different from the default only when looking at our own user
   followedUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
 
-  # List of users that follow the user
-  #  - null for users with followCountsHidden set, or if user has blocked caller
-  #  - followStatus cannot be set to NOT_FOLLOWING
-  #  - followStatus can be set to values different from the default only when looking at our own user
+  # Users that follow the user
+  #   - null for users with followCountsHidden set, or if user has blocked caller
+  #   - followStatus cannot be set to NOT_FOLLOWING
+  #   - followStatus can be set to values different from the default only when looking at our own user
   followerUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
 
-  # List of users the user has blocked
-  #  - private to user themselves only
-  #  - ordered by blockedAt, most recent first
+  # Users the user has blocked
+  #   - private to user themselves only
+  #   - ordered by blockedAt, most recent first
   blockedUsers(limit: Int, nextToken: String): PaginatedUsers
 
-  # Albums
-  #  - if this is a private user, then caller must be following the user
-  #  - ordered with most recently created album first
+  # User's albums
+  #   - albums of a private user are private to only themselves and their followers
+  #   - ordered with most recently created album first
   albums(limit: Int, nextToken: String): PaginatedAlbums
   albumCount: Int
 }
@@ -424,7 +424,7 @@ type Post {
   #   - null if likes are disabled
   onymouslyLikedBy(limit: Int, nextToken: String): PaginatedUsers
 
-  # Comments
+  # Comments on the post
   #   - null if comments are disabled
   #   - ordered by commentedAt, oldest comment first
   comments(limit: Int, nextToken: String): PaginatedComments
