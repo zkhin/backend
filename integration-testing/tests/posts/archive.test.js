@@ -48,10 +48,10 @@ test('Archiving an image post', async () => {
   expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
   expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getPosts})
+  resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(1)
-  expect(resp['data']['getPosts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
+  expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
 
   resp = await ourClient.query({query: schema.getMediaObjects})
   expect(resp['errors']).toBeUndefined()
@@ -70,19 +70,19 @@ test('Archiving an image post', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getFeed']['items']).toHaveLength(0)
 
-  resp = await ourClient.query({query: schema.getPosts})
+  resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(0)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: schema.getMediaObjects})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getMediaObjects']['items']).toHaveLength(0)
 
   // post and media should be visible when specifically requesting archived posts
-  resp = await ourClient.query({query: schema.getPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
+  resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(1)
-  expect(resp['data']['getPosts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
+  expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
 
   resp = await ourClient.query({
     query: schema.getMediaObjects,
@@ -191,10 +191,10 @@ test('Restoring an archived image post', async () => {
   expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
   expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getPosts})
+  resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(1)
-  expect(resp['data']['getPosts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
+  expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
 
   resp = await ourClient.query({query: schema.getMediaObjects})
   expect(resp['errors']).toBeUndefined()
@@ -202,9 +202,9 @@ test('Restoring an archived image post', async () => {
   expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 
   // post and media should not be visible when specifically requesting archived posts
-  resp = await ourClient.query({query: schema.getPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
+  resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(0)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(0)
 
   resp = await ourClient.query({
     query: schema.getMediaObjects,

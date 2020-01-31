@@ -35,7 +35,7 @@ afterAll(async () => await loginCache.clean())
 
 
 test('Add post with two images', async () => {
-  const [appsyncClient] = await loginCache.getCleanLogin()
+  const [appsyncClient, userId] = await loginCache.getCleanLogin()
   // a few consts, variables
   let resp, post, uploadUrl, media1, media2
 
@@ -71,10 +71,10 @@ test('Add post with two images', async () => {
   await misc.sleep(5000)  // no way to check if just this one media object is done uploading
 
   // get the post and check that everything looks as expected
-  resp = await appsyncClient.query({query: schema.getPosts, variables: {postStatus: 'PENDING'}})
+  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'PENDING'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(1)
-  post = resp['data']['getPosts']['items'][0]
+  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
+  post = resp['data']['user']['posts']['items'][0]
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('PENDING')
   expect(post['mediaObjects']).toHaveLength(2)
@@ -90,9 +90,9 @@ test('Add post with two images', async () => {
   expect(media2['uploadUrl']).toMatch(/^https:\/\//)
 
   // we shouldn't find any completed posts now
-  resp = await appsyncClient.query({query: schema.getPosts, variables: {postStatus: 'COMPLETED'}})
+  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'COMPLETED'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(0)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(0)
 
   // upload the second of those images, give the s3 trigger a second to fire
   uploadUrl = media2['uploadUrl']
@@ -100,10 +100,10 @@ test('Add post with two images', async () => {
   await misc.sleepUntilPostCompleted(appsyncClient, postId)
 
   // get the post and check that everything looks as expected
-  resp = await appsyncClient.query({query: schema.getPosts, variables: {postStatus: 'COMPLETED'}})
+  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'COMPLETED'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(1)
-  post = resp['data']['getPosts']['items'][0]
+  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
+  post = resp['data']['user']['posts']['items'][0]
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
   expect(post['mediaObjects']).toHaveLength(2)
@@ -119,9 +119,9 @@ test('Add post with two images', async () => {
   expect(media2['uploadUrl']).toBeNull()
 
   // we shouldn't find any pending posts now
-  resp = await appsyncClient.query({query: schema.getPosts, variables: {postStatus: 'PENDING'}})
+  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'PENDING'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(0)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(0)
 })
 
 

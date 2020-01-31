@@ -54,12 +54,7 @@ type Query {
   #   - albums of a private user are private to only themselves and their followers
   album(albumId: ID!): Album
 
-  # Get a user's posts.
-  #  - userId defaults to caller's userId if unset
-  #  - postStatus defaults to COMPLETED if unset
-  #  - if we are looking at someone else's posts (ie userId is set and not to caller's userId),
-  #    then postStatus cannot be set to anything other than COMPLETED (and we must have access
-  #    to the user's posts, if the user is a private user)
+  # DEPRECATED: use User.posts instead
   getPosts(userId: ID, postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts!
 
   # DEPRECATED (in v2020-01-29.1): use Query.post instead
@@ -270,6 +265,12 @@ type User {
   #   - stories of a private user are private to only themselves and their followers
   #   - ordered by expiration date, with the next to expire first
   stories(limit: Int, nextToken: String): PaginatedPosts
+
+  # User's posts
+  #   - postStatus defaults to COMPLETED if unset
+  #   - when looking at another user's posts, postStatus may only be set to COMPLETED
+  #   - posts of a private user are private to only themselves and their followers
+  posts(postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts
 
   # Posts the user has anonymously liked
   #   - private to user themselves only

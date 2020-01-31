@@ -259,26 +259,28 @@ const getFollowerUsers = gql(`{
   }
 }`)
 
-const getPosts = gql(`{
-  getPosts (limit: 3) {
-    items {
-      postId
-      postedAt
-      postedBy {
-        userId
-        username
+const selfPosts = gql(`{
+  self {
+    posts (limit: 3) {
+      items {
+        postId
+        postedAt
+        postedBy {
+          userId
+          username
+        }
+        postStatus
+        text
+        mediaObjects {
+          mediaId
+          mediaType
+          mediaStatus
+          url
+          uploadUrl
+        }
       }
-      postStatus
-      text
-      mediaObjects {
-        mediaId
-        mediaType
-        mediaStatus
-        url
-        uploadUrl
-      }
+      nextToken
     }
-    nextToken
   }
 }`)
 

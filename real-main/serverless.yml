@@ -269,6 +269,10 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: User
+        field: posts
+        dataSource: DynamodbDataSource
+
+      - type: User
         field: postViewedByCount
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl
@@ -610,6 +614,7 @@ custom:
           - Generic.batchGetPosts
           - Generic.batchGetPostsPostedBy
 
+      # DEPRECATED: use User.posts instead
       - type: Query
         field: getStories
         request: Query.getStories/Query.getStories.request.vtl
@@ -668,6 +673,7 @@ custom:
           - Post.pipeline.postedByBlockerStatus
           - Post.pipeline.postedByFollowedStatus
 
+      # DEPRECATED: use User.posts instead
       - type: Query
         field: getPosts
         request: Query.getPosts/Query.getPosts.request.vtl

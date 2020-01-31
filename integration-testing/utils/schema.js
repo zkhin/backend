@@ -649,23 +649,25 @@ module.exports.postViewedBy = gql(`query PostViewedBy ($postId: ID!) {
   }
 }`)
 
-module.exports.getPosts = gql(`query GetPosts ($userId: ID, $postStatus: PostStatus) {
-  getPosts (userId: $userId, postStatus: $postStatus) {
-    items {
-      postId
-      postedAt
-      postStatus
-      expiresAt
-      text
-      mediaObjects {
-        mediaId
-        mediaStatus
-        url
-        uploadUrl
-      }
-      postedBy {
-        userId
-        postCount
+module.exports.userPosts = gql(`query GetPosts ($userId: ID!, $postStatus: PostStatus) {
+  user (userId: $userId) {
+    posts (postStatus: $postStatus) {
+      items {
+        postId
+        postedAt
+        postStatus
+        expiresAt
+        text
+        mediaObjects {
+          mediaId
+          mediaStatus
+          url
+          uploadUrl
+        }
+        postedBy {
+          userId
+          postCount
+        }
       }
     }
   }

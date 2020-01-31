@@ -128,12 +128,12 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['self']['followerUsers']['items'][0]['userId']).toBe(ourUserId)
 
   // verify they see our posts, media objects
-  resp = await theirClient.query({query: schema.getPosts, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPosts']['items']).toHaveLength(3)
-  expect(resp['data']['getPosts']['items'][0]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['getPosts']['items'][1]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['getPosts']['items'][2]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(3)
+  expect(resp['data']['user']['posts']['items'][0]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['user']['posts']['items'][1]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['user']['posts']['items'][2]['postedBy']['userId']).toBe(ourUserId)
   resp = await theirClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
@@ -180,9 +180,6 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['self']['followerUsers']['items']).toHaveLength(0)
 
   // verify they do not see our posts, media objects
-  resp = await theirClient.query({query: schema.getPosts, variables: {userId: ourUserId}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
   resp = await theirClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors'].length).toBeTruthy()
   expect(resp['data']).toBeNull()
