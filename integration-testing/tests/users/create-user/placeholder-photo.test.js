@@ -93,10 +93,10 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   await misc.sleepUntilPostCompleted(client, postId)
 
   // get our uploaded/completed media, we should have just that one media object
-  resp = await client.query({query: schema.getMediaObjects})
+  resp = await client.query({query: schema.userMediaObjects})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 
   // set our photo
   resp = await client.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})

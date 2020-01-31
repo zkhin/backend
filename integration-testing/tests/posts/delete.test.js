@@ -116,10 +116,13 @@ test('Deleting post with media', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(1)
   expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'AWAITING_UPLOAD'}})
+  resp = await ourClient.query({
+    query: schema.userMediaObjects,
+    variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
+  })
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 
   // delete the post
   resp = await ourClient.mutate({mutation: schema.deletePost, variables: {postId}})
@@ -135,12 +138,18 @@ test('Deleting post with media', async () => {
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'DELETING'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'AWAITING_UPLOAD'}})
+  resp = await ourClient.query({
+    query: schema.userMediaObjects,
+    variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
+  })
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(0)
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'DELETING'}})
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
+  resp = await ourClient.query({
+    query: schema.userMediaObjects,
+    variables: {userId: ourUserId, mediaStatus: 'DELETING'},
+  })
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(0)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
 })
 
 

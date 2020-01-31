@@ -167,7 +167,7 @@ test('Add post with one video', async () => {
 
 
 test('Uploading image sets width and height', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
@@ -181,29 +181,32 @@ test('Uploading image sets width and height', async () => {
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
 
   // double check width and height are not yet set
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'AWAITING_UPLOAD'}})
+  resp = await ourClient.query({
+    query: schema.userMediaObjects,
+    variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
+  })
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getMediaObjects']['items'][0]['height']).toBeNull()
-  expect(resp['data']['getMediaObjects']['items'][0]['width']).toBeNull()
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['height']).toBeNull()
+  expect(resp['data']['user']['mediaObjects']['items'][0]['width']).toBeNull()
 
   // upload the first of those images, give the s3 trigger a second to fire
   await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check width and height are now set
-  resp = await ourClient.query({query: schema.getMediaObjects})
+  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getMediaObjects']['items'][0]['height']).toBe(imageHeight)
-  expect(resp['data']['getMediaObjects']['items'][0]['width']).toBe(imageWidth)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['height']).toBe(imageHeight)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['width']).toBe(imageWidth)
 })
 
 
 test('Uploading png image results in error', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
@@ -219,15 +222,18 @@ test('Uploading png image results in error', async () => {
   await misc.sleep(5000)
 
   // check that media ended up in an ERROR state
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {mediaStatus: 'ERROR'}})
+  resp = await ourClient.query({
+    query: schema.userMediaObjects,
+    variables: {userId: ourUserId, mediaStatus: 'ERROR'},
+  })
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 })
 
 
 test('Thumbnails built on successful upload', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
@@ -243,15 +249,15 @@ test('Thumbnails built on successful upload', async () => {
   await misc.sleep(5000)  // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
-  resp = await ourClient.query({query: schema.getMediaObjects})
+  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-  const url = resp['data']['getMediaObjects']['items'][0]['url']
-  const url64p = resp['data']['getMediaObjects']['items'][0]['url64p']
-  const url480p = resp['data']['getMediaObjects']['items'][0]['url480p']
-  const url1080p = resp['data']['getMediaObjects']['items'][0]['url1080p']
-  const url4k = resp['data']['getMediaObjects']['items'][0]['url4k']
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  const url = resp['data']['user']['mediaObjects']['items'][0]['url']
+  const url64p = resp['data']['user']['mediaObjects']['items'][0]['url64p']
+  const url480p = resp['data']['user']['mediaObjects']['items'][0]['url480p']
+  const url1080p = resp['data']['user']['mediaObjects']['items'][0]['url1080p']
+  const url4k = resp['data']['user']['mediaObjects']['items'][0]['url4k']
   expect(url).toBeTruthy()
   expect(url64p).toBeTruthy()
   expect(url480p).toBeTruthy()

@@ -649,7 +649,7 @@ module.exports.postViewedBy = gql(`query PostViewedBy ($postId: ID!) {
   }
 }`)
 
-module.exports.userPosts = gql(`query GetPosts ($userId: ID!, $postStatus: PostStatus) {
+module.exports.userPosts = gql(`query UserPosts ($userId: ID!, $postStatus: PostStatus) {
   user (userId: $userId) {
     posts (postStatus: $postStatus) {
       items {
@@ -673,19 +673,21 @@ module.exports.userPosts = gql(`query GetPosts ($userId: ID!, $postStatus: PostS
   }
 }`)
 
-module.exports.getMediaObjects = gql(`query GetMediaObjects ($userId: ID, $mediaStatus: MediaObjectStatus) {
-  getMediaObjects (userId: $userId, mediaStatus: $mediaStatus) {
-    items {
-      mediaId
-      mediaStatus
-      uploadUrl
-      height
-      width
-      url
-      url64p
-      url480p
-      url1080p
-      url4k
+module.exports.userMediaObjects = gql(`query UserMediaObjects ($userId: ID!, $mediaStatus: MediaObjectStatus) {
+  user (userId: $userId) {
+    mediaObjects (mediaStatus: $mediaStatus) {
+      items {
+        mediaId
+        mediaStatus
+        uploadUrl
+        height
+        width
+        url
+        url64p
+        url480p
+        url1080p
+        url4k
+      }
     }
   }
 }`)

@@ -273,6 +273,11 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: User
+        field: mediaObjects
+        dataSource: DynamodbDataSource
+        response: Generic.passThru.response.vtl
+
+      - type: User
         field: postViewedByCount
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl
@@ -686,6 +691,7 @@ custom:
           - Query.getPosts.fetchPosts
           - Generic.batchGetPostsPostedBy
 
+      # DEPRECATED: use User.mediaObjects instead
       - type: Query
         field: getMediaObjects
         request: Query.getMediaObjects/Query.getMediaObjects.request.vtl

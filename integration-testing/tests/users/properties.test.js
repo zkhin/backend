@@ -107,7 +107,7 @@ test('Try to get user that does not exist', async () => {
 
 
 test('Set and delete our profile photo', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // check that it's not already set
   let resp = await ourClient.query({query: schema.self})
@@ -132,10 +132,10 @@ test('Set and delete our profile photo', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // get our uploaded/completed media, we should have just that one media object
-  resp = await ourClient.query({query: schema.getMediaObjects})
+  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 
   // set our photo
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})

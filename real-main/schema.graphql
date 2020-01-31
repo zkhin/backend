@@ -60,13 +60,7 @@ type Query {
   # DEPRECATED (in v2020-01-29.1): use Query.post instead
   getPost(postId: ID!): Post
 
-  # Get a user's MediaObjects.
-  #  - userId defaults to caller's userId if unset
-  #  - mediaStatus defaults to UPLOADED if unset
-  #  - mediaType defaults to IMAGE if unset
-  #  - if we are looking at someone else's media (ie userId is set and not to caller's userId),
-  #    then mediaStatus cannot be set to anything other than UPLOADED (and we must have access
-  #    to the  users's posts, if the user is a private user)
+  # DEPRECATED: use User.mediaObjects instead
   getMediaObjects(userId: ID, mediaStatus: MediaObjectStatus, mediaType: MediaObjectType, limit: Int, nextToken: String): PaginatedMediaObjects!
 }
 
@@ -271,6 +265,18 @@ type User {
   #   - when looking at another user's posts, postStatus may only be set to COMPLETED
   #   - posts of a private user are private to only themselves and their followers
   posts(postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts
+
+  # User's media objects
+  #   - mediaStatus defaults to UPLOADED if unset
+  #   - mediaType defaults to IMAGE if unset
+  #   - when looking at another user's media objects, mediaStatus may only be set to UPLOADED
+  #   - media objcts of a private user are private to only themselves and their followers
+  mediaObjects(
+    mediaStatus: MediaObjectStatus,
+    mediaType: MediaObjectType,
+    limit: Int,
+    nextToken: String,
+  ): PaginatedMediaObjects
 
   # Posts the user has anonymously liked
   #   - private to user themselves only

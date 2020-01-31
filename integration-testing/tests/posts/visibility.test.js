@@ -22,7 +22,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
-test('Visiblity of post(), user.posts(), getMediaObjects() for a public user', async () => {
+test('Visiblity of post(), user.posts(), user.mediaObjects() for a public user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // a user that follows us
@@ -44,14 +44,14 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for a public user', a
 
   // test we can see the uploadUrl if we ask for the incomplete mediaObjects directly
   resp = await ourClient.query({
-    query: schema.getMediaObjects,
+    query: schema.userMediaObjects,
     variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
   })
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getMediaObjects']['items'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
-  expect(resp['data']['getMediaObjects']['items'][0]['uploadUrl']).not.toBeNull()
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
+  expect(resp['data']['user']['mediaObjects']['items'][0]['uploadUrl']).not.toBeNull()
 
   // upload the media, give S3 trigger a second to fire
   await misc.uploadMedia(filePath, contentType, uploadUrl)
@@ -69,12 +69,9 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for a public user', a
   expect(resp['data']['post']).toMatchObject({postId})
 
   // we should see the media object
-  resp = await ourClient.query({query: schema.getMediaObjects})
+  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
+  expect(resp['data']['user']['mediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
 
   // our follower should be able to see the post
   resp = await followerClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
@@ -85,9 +82,9 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for a public user', a
   expect(resp['data']['post']).toMatchObject({postId})
 
   // our follower should be able to see the media
-  resp = await followerClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
+  resp = await followerClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
+  expect(resp['data']['user']['mediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
 
   // the rando off the internet should be able to see the post
   resp = await randoClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
@@ -98,13 +95,13 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for a public user', a
   expect(resp['data']['post']).toMatchObject({postId})
 
   // the rando off the internet should be able to see the media object
-  resp = await randoClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
+  resp = await randoClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
+  expect(resp['data']['user']['mediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
 })
 
 
-test('Visiblity of post(), user.posts(), getMediaObjects() for a private user', async () => {
+test('Visiblity of post(), user.posts(), user.mediaObjects() for a private user', async () => {
   // our user, set to private
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   let resp = await ourClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
@@ -136,12 +133,9 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for a private user', 
   expect(resp['data']['post']).toMatchObject({postId})
 
   // we should see the media object
-  resp = await ourClient.query({query: schema.getMediaObjects})
+  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
-  resp = await ourClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
+  expect(resp['data']['user']['mediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
 
   // the rando off the internet should *not* be able to see the post
   resp = await randoClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
@@ -151,13 +145,13 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for a private user', 
   expect(resp['data']['post']).toBeNull()
 
   // the rando off the internet should *not* be able to see the media object
-  resp = await randoClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['data']).toBeNull()
-  expect(resp['errors'].length).not.toBe(0)
+  resp = await randoClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['mediaObjects']).toBeNull()
 })
 
 
-test('Visiblity of post(), user.posts(), getMediaObjects() for the follow stages user', async () => {
+test('Visiblity of post(), user.posts(), user.mediaObjects() for the follow stages user', async () => {
   // our user, set to private
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   let resp = await ourClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
@@ -185,9 +179,9 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for the follow stages
   expect(resp['data']['user']['posts']).toBeNull()
   resp = await followerClient.query({query: schema.post, variables: {postId}})
   expect(resp['data']['post']).toBeNull()
-  resp = await followerClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['data']).toBeNull()
-  expect(resp['errors'].length).not.toBe(0)
+  resp = await followerClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['mediaObjects']).toBeNull()
 
   // deny the follow request, should *not* be able to see post or mediaObject
   resp = await ourClient.mutate({mutation: schema.denyFollowerUser, variables: {userId: followerUserId}})
@@ -197,9 +191,9 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for the follow stages
   expect(resp['data']['user']['posts']).toBeNull()
   resp = await followerClient.query({query: schema.post, variables: {postId}})
   expect(resp['data']['post']).toBeNull()
-  resp = await followerClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['data']).toBeNull()
-  expect(resp['errors'].length).not.toBe(0)
+  resp = await followerClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['mediaObjects']).toBeNull()
 
   // accept the follow request, should be able to see post and mediaObject
   resp = await ourClient.mutate({mutation: schema.acceptFollowerUser, variables: {userId: followerUserId}})
@@ -210,9 +204,9 @@ test('Visiblity of post(), user.posts(), getMediaObjects() for the follow stages
   resp = await followerClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']).toMatchObject({postId})
-  resp = await followerClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
+  resp = await followerClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getMediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
+  expect(resp['data']['user']['mediaObjects']['items']).toEqual([expect.objectContaining({mediaId})])
 })
 
 

@@ -273,9 +273,9 @@ test('Blocked cannot see blockers posts, mediaObjects or stories', async () => {
   resp = await theirClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']).toBeNull()
-  resp = await theirClient.query({query: schema.getMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+  resp = await theirClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['mediaObjects']).toBeNull()
 
   // verify we can see their posts, mediaObjects or stories
   resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
@@ -284,8 +284,9 @@ test('Blocked cannot see blockers posts, mediaObjects or stories', async () => {
   resp = await theirClient.query({query: schema.userPosts, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
-  resp = await theirClient.query({query: schema.getMediaObjects, variables: {userId: theirUserId}})
+  resp = await theirClient.query({query: schema.userMediaObjects, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
 })
 
 
