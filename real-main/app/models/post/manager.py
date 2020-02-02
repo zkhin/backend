@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import itertools
 import logging
 
-from app.models import comment, feed, followed_first_story, like, media, post_view, trending, user
+from app.models import comment, feed, flag, followed_first_story, like, media, post_view, trending, user
 from app.models.album.dynamo import AlbumDynamo
 from app.models.media.dynamo import MediaDynamo
 from app.models.user.dynamo import UserDynamo
@@ -23,12 +23,13 @@ class PostManager:
         managers = managers or {}
         managers['post'] = self
         self.comment_manager = managers.get('comment') or comment.CommentManager(clients, managers=managers)
-        self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
+        self.flag_manager = managers.get('flag') or flag.FlagManager(clients, managers=managers)
         self.followed_first_story_manager = (
             managers.get('followed_first_story')
             or followed_first_story.FollowedFirstStoryManager(clients, managers=managers)
         )
+        self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
         self.media_manager = managers.get('media') or media.MediaManager(clients, managers=managers)
         self.post_view_manager = managers.get('post_view') or post_view.PostViewManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
@@ -49,6 +50,7 @@ class PostManager:
         kwargs = {
             'comment_manager': self.comment_manager,
             'feed_manager': self.feed_manager,
+            'flag_manager': self.flag_manager,
             'followed_first_story_manager': self.followed_first_story_manager,
             'like_manager': self.like_manager,
             'media_manager': self.media_manager,
@@ -109,18 +111,6 @@ class PostManager:
             for mu in media_uploads
         ]
         return post
-
-    def generate_posts_flagged_by_user(self, user_id):
-        return map(
-            lambda flag_item: self.get_post(flag_item['postId']),
-            self.dynamo.generate_flag_items_by_user(user_id)
-        )
-
-    def generate_user_ids_who_flagged_post(self, post_id):
-        return map(
-            lambda flag_item: flag_item['flaggerUserId'],
-            self.dynamo.generate_flag_items_by_post(post_id)
-        )
 
     def delete_recently_expired_posts(self, now=None):
         "Delete posts that expired yesterday or today"

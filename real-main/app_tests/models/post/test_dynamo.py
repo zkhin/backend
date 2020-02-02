@@ -220,189 +220,33 @@ def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     assert post_item['gsiK2SortKey'].startswith(new_status + '/')
 
 
-def test_flag_formed_correctly(post_dynamo):
-    post_id = 'their-post-id'
-    user_id = 'my-user-id'
-    now = datetime.utcnow()
+def test_transact_increment_decrement_flag_count(post_dynamo):
+    post_id = 'pid'
 
-    # add a post, flag it
-    transacts = [post_dynamo.transact_add_pending_post('other-user-id', post_id, text='lore ipsum')]
+    # add a post
+    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, text='lore ipsum')]
     post_dynamo.client.transact_write_items(transacts)
-    post_dynamo.add_flag_and_increment_flag_count(post_id, user_id, now=now)
 
-    # pull the flag directly from the DB
-    flag_pk = f'flag/{user_id}/{post_id}'
-    flag_sk = '-'
-    flag_item = post_dynamo.client.get_item({'partitionKey': flag_pk, 'sortKey': flag_sk})
-    assert flag_item == {
-        'partitionKey': flag_pk,
-        'sortKey': flag_sk,
-        'schemaVersion': 1,
-        'gsiA1PartitionKey': f'flag/{user_id}',
-        'gsiA1SortKey': now.isoformat() + 'Z',
-        'gsiA2PartitionKey': f'flag/{post_id}',
-        'gsiA2SortKey': now.isoformat() + 'Z',
-        'flaggedAt': now.isoformat() + 'Z',
-        'flaggerUserId': user_id,
-        'postId': post_id,
-    }
+    # check it has no flags
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('flagCount', 0) == 0
 
+    # check first increment works
+    transacts = [post_dynamo.transact_increment_flag_count(post_id)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('flagCount', 0) == 1
 
-def test_flag_count_increments_correctly(post_dynamo):
-    post_id = 'my-post-id'
-    user_id = 'my-user-id'
-
-    # add a post, verify the flag count
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text='lore ipsum')]
+    # check decrement works
+    transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('flagCount', 0) == 0
 
-    # flag it, verify count
-    post_dynamo.add_flag_and_increment_flag_count(post_id, 'other-user-1')
-    assert post_dynamo.get_post(post_id).get('flagCount', 0) == 1
-
-    # flag it again, verify count
-    post_dynamo.add_flag_and_increment_flag_count(post_id, 'other-user-2')
-    assert post_dynamo.get_post(post_id).get('flagCount', 0) == 2
-
-
-def test_post_already_flagged(post_dynamo):
-    post_id = 'my-post-id'
-    user_id = 'my-user-id'
-    other_user_id = 'other-uid'
-
-    # add a post, another users flags it, verify the count
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_dynamo.add_flag_and_increment_flag_count(post_id, other_user_id)
-    assert post_dynamo.get_post(post_id).get('flagCount', 0) == 1
-
-    # that user tries to flag it again
-    with pytest.raises(exceptions.AlreadyFlagged):
-        post_dynamo.add_flag_and_increment_flag_count(post_id, other_user_id)
-
-
-def test_cant_flag_post_does_not_exist(post_dynamo):
-    post_id = 'my-post-id'
-    user_id = 'my-user-id'
-
-    with pytest.raises(exceptions.PostDoesNotExist):
-        post_dynamo.add_flag_and_increment_flag_count(post_id, user_id)
-
-
-def test_delete_flag_and_decrement_count(post_dynamo):
-    post_id = 'my-post-id'
-    user_id = 'my-user-id'
-
-    # first on a non-existent post
-    with pytest.raises(exceptions.PostDoesNotExist):
-        post_dynamo.delete_flag_and_decrement_flag_count(post_id, user_id)
-
-    # create the post
-    transacts = [post_dynamo.transact_add_pending_post('other-user-id', post_id, text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-
-    # now on a post that we haven't flagged
-    # can't be tested, yet https://github.com/spulec/moto/issues/1071
-    # with pytest.raises(NotFlagged):
-    #     post_dynamo.delete_flag_and_decrement_flag_count(post_id, user_id)
-
-    # now flag the post, verify that worked
-    post_dynamo.add_flag_and_increment_flag_count(post_id, user_id)
-    assert post_dynamo.get_post(post_id).get('flagCount', 0) == 1
-
-    # now unflag the post, verify that worked
-    post_dynamo.delete_flag_and_decrement_flag_count(post_id, user_id)
-    assert post_dynamo.get_post(post_id).get('flagCount', 0) == 0
-
-
-def test_generate_flag_items_by_user(post_dynamo):
-    user_id = 'my-user-id'
-    other_user_id = 'other-user-id'
-    post_id_1 = 'my-post-id-1'
-    post_id_2 = 'my-post-id-2'
-
-    # verify we have no flag items
-    items = list(post_dynamo.generate_flag_items_by_user(user_id))
-    assert items == []
-
-    # add a post, flag it
-    transact = post_dynamo.transact_add_pending_post(other_user_id, post_id_1, text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_dynamo.add_flag_and_increment_flag_count(post_id_1, user_id)
-
-    # verify we have that flag item
-    items = list(post_dynamo.generate_flag_items_by_user(user_id))
-    assert len(items) == 1
-    assert items[0]['flaggerUserId'] == user_id
-    assert items[0]['postId'] == post_id_1
-
-    # add another post, flag it
-    transact = post_dynamo.transact_add_pending_post(other_user_id, post_id_2, text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_dynamo.add_flag_and_increment_flag_count(post_id_2, user_id)
-
-    # verify we have both flag items
-    items = list(post_dynamo.generate_flag_items_by_user(user_id))
-    assert len(items) == 2
-    assert items[0]['flaggerUserId'] == user_id
-    assert items[0]['postId'] == post_id_1
-    assert items[1]['flaggerUserId'] == user_id
-    assert items[1]['postId'] == post_id_2
-
-    # unflag the first post
-    post_dynamo.delete_flag_and_decrement_flag_count(post_id_1, user_id)
-
-    # verify we have just the second flag item
-    items = list(post_dynamo.generate_flag_items_by_user(user_id))
-    assert len(items) == 1
-    assert items[0]['flaggerUserId'] == user_id
-    assert items[0]['postId'] == post_id_2
-
-
-def test_generate_flag_items_by_post(post_dynamo):
-    user_id_1 = 'my-user-id-1'
-    user_id_2 = 'my-user-id-2'
-    poster_user_id = 'other-user-id'
-    post_id = 'my-post-id'
-
-    # add post
-    transact = post_dynamo.transact_add_pending_post(poster_user_id, post_id, text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-
-    # verify we have no flag items
-    items = list(post_dynamo.generate_flag_items_by_post(post_id))
-    assert items == []
-
-    # flag that post
-    post_dynamo.add_flag_and_increment_flag_count(post_id, user_id_1)
-
-    # verify we have that flag item
-    items = list(post_dynamo.generate_flag_items_by_post(post_id))
-    assert len(items) == 1
-    assert items[0]['flaggerUserId'] == user_id_1
-    assert items[0]['postId'] == post_id
-
-    # flag that post again
-    post_dynamo.add_flag_and_increment_flag_count(post_id, user_id_2)
-
-    # verify we have both flag items
-    items = list(post_dynamo.generate_flag_items_by_post(post_id))
-    assert len(items) == 2
-    assert items[0]['flaggerUserId'] == user_id_1
-    assert items[0]['postId'] == post_id
-    assert items[1]['flaggerUserId'] == user_id_2
-    assert items[1]['postId'] == post_id
-
-    # unflag the first post
-    post_dynamo.delete_flag_and_decrement_flag_count(post_id, user_id_1)
-
-    # verify we have just the second flag item
-    items = list(post_dynamo.generate_flag_items_by_post(post_id))
-    assert len(items) == 1
-    assert items[0]['flaggerUserId'] == user_id_2
-    assert items[0]['postId'] == post_id
+    # check can't decrement below zero
+    transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
+    with pytest.raises(post_dynamo.client.exceptions.ClientError):
+        post_dynamo.client.transact_write_items(transacts)
 
 
 def test_batch_get_posted_by_user_ids_not_found(post_dynamo):

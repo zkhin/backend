@@ -136,27 +136,8 @@ class PostDynamo:
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 
-    def add_flag_and_increment_flag_count(self, post_id, user_id, now=None):
-        now = now or datetime.utcnow()
-        flaggedAt = real_datetime.serialize(now)
-        add_flag = {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '1'},
-                    'partitionKey': {'S': f'flag/{user_id}/{post_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'flag/{user_id}'},
-                    'gsiA1SortKey': {'S': flaggedAt},
-                    'gsiA2PartitionKey': {'S': f'flag/{post_id}'},
-                    'gsiA2SortKey': {'S': flaggedAt},
-                    'postId': {'S': post_id},
-                    'flaggerUserId': {'S': user_id},
-                    'flaggedAt': {'S': flaggedAt},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # only creates
-            }
-        }
-        increment_flag_count = {
+    def transact_increment_flag_count(self, post_id):
+        return {
             'Update': {
                 'Key': {
                     'partitionKey': {'S': f'post/{post_id}'},
@@ -169,22 +150,9 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             }
         }
-        self.client.transact_write_items(
-            [add_flag, increment_flag_count],
-            [exceptions.AlreadyFlagged(post_id, user_id), exceptions.PostDoesNotExist(post_id)],
-        )
 
-    def delete_flag_and_decrement_flag_count(self, post_id, user_id):
-        delete_flag = {
-            'Delete': {
-                'Key': {
-                    'partitionKey': {'S': f'flag/{user_id}/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
-        }
-        decrement_flag_count = {
+    def transact_decrement_flag_count(self, post_id):
+        return {
             'Update': {
                 'Key': {
                     'partitionKey': {'S': f'post/{post_id}'},
@@ -193,28 +161,11 @@ class PostDynamo:
                 'UpdateExpression': 'ADD flagCount :neg_one',
                 'ExpressionAttributeValues': {
                     ':neg_one': {'N': '-1'},
+                    ':zero': {'N': '0'},
                 },
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
+                'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
             }
         }
-        self.client.transact_write_items(
-            [delete_flag, decrement_flag_count],
-            [exceptions.NotFlagged(post_id, user_id), exceptions.PostDoesNotExist(post_id)],
-        )
-
-    def generate_flag_items_by_user(self, user_id):
-        query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'flag/{user_id}'),
-            'IndexName': 'GSI-A1',
-        }
-        return self.client.generate_all_query(query_kwargs)
-
-    def generate_flag_items_by_post(self, post_id):
-        query_kwargs = {
-            'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'flag/{post_id}'),
-            'IndexName': 'GSI-A2',
-        }
-        return self.client.generate_all_query(query_kwargs)
 
     def transact_set_post_status(self, post_item, status, original_post_id=None):
         exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :skPostedAt']

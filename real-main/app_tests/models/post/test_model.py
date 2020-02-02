@@ -49,30 +49,6 @@ def test_refresh_item(post):
     assert new_post_item == post.item
 
 
-def test_flag(post):
-    # verify the flag count
-    assert post.item.get('flagCount', 0) == 0
-
-    # flag the post
-    post = post.flag('other-user-id')
-    assert post.item.get('flagCount', 0) == 1
-
-
-def test_flag_threshold_met(caplog, post):
-    # verify the flag count
-    assert post.item.get('flagCount', 0) == 0
-
-    # add enough flags until the threshold is met
-    with caplog.at_level(logging.WARNING):
-        for _ in range(post.flagged_alert_threshold):
-            random_user_id = ''.join(random.choices(string.ascii_lowercase, k=10))
-            post.flag(random_user_id)
-
-    # verify an error was logged
-    assert 'FLAGGED' in caplog.text
-    assert post.id in caplog.text
-
-
 def test_set_expires_at(post):
     # add a post without an expires at
     assert 'expiresAt' not in post.item

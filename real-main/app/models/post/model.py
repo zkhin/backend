@@ -12,9 +12,6 @@ from .enums import FlagStatus, PostStatus
 
 logger = logging.getLogger()
 
-# number of times a post must get flagged before an alert is fired
-FLAGGED_ALERT_THRESHOLD = int(os.environ.get('FLAGGED_ALERT_THRESHOLD', 1))
-
 
 class Post:
 
@@ -24,8 +21,7 @@ class Post:
 
     def __init__(self, item, clients, trending_manager=None, feed_manager=None, followed_first_story_manager=None,
                  like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
-                 comment_manager=None, flagged_alert_threshold=FLAGGED_ALERT_THRESHOLD):
-        self.flagged_alert_threshold = flagged_alert_threshold
+                 comment_manager=None, flag_manager=None):
 
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
@@ -37,6 +33,8 @@ class Post:
             self.comment_manager = comment_manager
         if feed_manager:
             self.feed_manager = feed_manager
+        if flag_manager:
+            self.flag_manager = flag_manager
         if followed_first_story_manager:
             self.followed_first_story_manager = followed_first_story_manager
         if like_manager:
@@ -222,8 +220,7 @@ class Post:
         self.comment_manager.delete_all_on_post(self.id)
 
         # unflag all flags of the post
-        for flag_item in self.dynamo.generate_flag_items_by_post(self.id):
-            self.unflag(flag_item['flaggerUserId'])
+        self.flag_manager.unflag_all_on_post(self.id)
 
         # if it was the first followed story, refresh that
         if self.item.get('expiresAt'):
@@ -246,23 +243,6 @@ class Post:
             self.dynamo.client.delete_item_by_pk(media.item)
         self.dynamo.client.delete_item_by_pk(self.item)
 
-        return self
-
-    def flag(self, user_id):
-        flag_count = self.item.get('flagCount', 0)
-        self.dynamo.add_flag_and_increment_flag_count(self.id, user_id)
-        self.item['flagCount'] = flag_count + 1
-
-        # raise an alert if needed, piggy backing on error alerting for now
-        if self.item['flagCount'] >= self.flagged_alert_threshold:
-            logger.warning(f'FLAGGED: Post `{self.id}` has been flagged `{self.item["flagCount"]}` time(s).')
-
-        return self
-
-    def unflag(self, user_id):
-        flag_count = self.item.get('flagCount', 0)
-        self.dynamo.delete_flag_and_decrement_flag_count(self.id, user_id)
-        self.item['flagCount'] = flag_count - 1
         return self
 
     def set(self, text=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,

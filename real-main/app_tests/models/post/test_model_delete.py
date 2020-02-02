@@ -5,6 +5,7 @@ import pytest
 
 from app.models.comment import CommentManager
 from app.models.feed import FeedManager
+from app.models.flag import FlagManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
 from app.models.media.enums import MediaStatus, MediaSize
@@ -37,19 +38,16 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
-    # flag the post
-    post.flag('flag_uid')
-    assert post.item['flagCount'] == 1
-
     # check our starting post count
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
     post.comment_manager = Mock(CommentManager({}))
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
+    post.flag_manager = Mock(FlagManager({}))
+    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
+    post.like_manager = Mock(LikeManager({}))
     post.post_view_manager = Mock(PostViewManager({}))
     post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
 
@@ -58,9 +56,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert post.item['postStatus'] == PostStatus.DELETING
     assert post.item['mediaObjects'] == []
     post_item = post.item
-
-    # check the post has been unflagged
-    assert list(post_manager.dynamo.generate_flag_items_by_post(post.id)) == []
 
     # check the post is no longer in the DB
     post.refresh_item()
@@ -74,14 +69,17 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert post.comment_manager.mock_calls == [
         call.delete_all_on_post(post.id),
     ]
-    assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+    assert post.flag_manager.mock_calls == [
+        call.unflag_all_on_post(post.id),
+    ]
+    assert post.feed_manager.mock_calls == [
+        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == [
         call.refresh_after_story_change(story_prev=post_item),
     ]
-    assert post.feed_manager.mock_calls == [
-        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+    assert post.like_manager.mock_calls == [
+        call.dislike_all_of_post(post.id),
     ]
     assert post.post_view_manager.mock_calls == [
         call.delete_all_for_post(post.id),

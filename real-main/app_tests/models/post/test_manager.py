@@ -192,59 +192,6 @@ def test_add_media_post_with_options(post_manager, album):
     assert media_items[0]['originalFormat'] == 'org-format'
 
 
-def test_generate_posts_flagged_by_user(post_manager, posts):
-    post1, post2 = posts
-    our_user_id = 'uid-our'
-
-    # check with no flagged posts
-    resp = list(post_manager.generate_posts_flagged_by_user(our_user_id))
-    assert resp == []
-
-    # add a post and flag it behind the scenes
-    post_manager.dynamo.add_flag_and_increment_flag_count(post1.id, our_user_id)
-
-    # check with one flagged post
-    resp = list(post_manager.generate_posts_flagged_by_user(our_user_id))
-    assert len(resp) == 1
-    assert resp[0].id == post1.id
-
-    # add another post and flag it behind the scenes
-    post_manager.dynamo.add_flag_and_increment_flag_count(post2.id, our_user_id)
-
-    # check with two flagged posts
-    resp = list(post_manager.generate_posts_flagged_by_user(our_user_id))
-    assert len(resp) == 2
-    assert resp[0].id == post1.id
-    assert resp[1].id == post2.id
-
-
-def test_generate_user_ids_who_flagged_post(post_manager, posts):
-    post, _ = posts
-    user_id_1 = 'uid-1'
-    user_id_2 = 'uid-2'
-
-    # check with no flagged posts
-    resp = list(post_manager.generate_user_ids_who_flagged_post(post.id))
-    assert resp == []
-
-    # flag it
-    post_manager.dynamo.add_flag_and_increment_flag_count(post.id, user_id_1)
-
-    # check with one flag
-    resp = list(post_manager.generate_user_ids_who_flagged_post(post.id))
-    assert len(resp) == 1
-    assert resp[0] == user_id_1
-
-    # flag it again
-    post_manager.dynamo.add_flag_and_increment_flag_count(post.id, user_id_2)
-
-    # check with two flags
-    resp = list(post_manager.generate_user_ids_who_flagged_post(post.id))
-    assert len(resp) == 2
-    assert resp[0] == user_id_1
-    assert resp[1] == user_id_2
-
-
 def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
     now = datetime.utcnow()

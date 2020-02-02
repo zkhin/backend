@@ -10,6 +10,7 @@ from app.lib import datetime as real_datetime
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.comment import CommentManager
+from app.models.flag import FlagManager
 from app.models.follow import FollowManager
 from app.models.follow.enums import FollowStatus
 from app.models.followed_first_story import FollowedFirstStoryManager
@@ -20,7 +21,6 @@ from app.models.post import PostManager
 from app.models.post_view import PostViewManager
 from app.models.trending import TrendingManager
 from app.models.user import UserManager
-from app.models.user.enums import UserPrivacyStatus
 
 from . import routes
 from .exceptions import ClientException
@@ -47,6 +47,7 @@ album_manager = managers.get('album') or AlbumManager(clients, managers=managers
 block_manager = managers.get('block') or BlockManager(clients, managers=managers)
 comment_manager = managers.get('comment') or CommentManager(clients, managers=managers)
 ffs_manager = managers.get('followed_first_story') or FollowedFirstStoryManager(clients, managers=managers)
+flag_manager = managers.get('flag') or FlagManager(clients, managers=managers)
 follow_manager = managers.get('follow') or FollowManager(clients, managers=managers)
 like_manager = managers.get('like') or LikeManager(clients, managers=managers)
 media_manager = managers.get('media') or MediaManager(clients, managers=managers)
@@ -235,8 +236,7 @@ def reset_user(caller_user_id, arguments, source, context):
     follow_manager.reset_follower_items(caller_user_id)
 
     # unflag everything we've flagged
-    for post in post_manager.generate_posts_flagged_by_user(caller_user_id):
-        post.unflag(caller_user_id)
+    flag_manager.unflag_all_by_user(caller_user_id)
 
     # delete all our posts, and all likes on those posts
     for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
@@ -559,30 +559,13 @@ def flag_post(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    # can't flag a post of a user that has blocked us
-    posted_by_user = user_manager.get_user(post.item['postedByUserId'])
-    if block_manager.is_blocked(posted_by_user.id, caller_user_id):
-        raise ClientException(f'User has been blocked by owner of post `{post_id}`')
-
-    # can't flag a post of a user we have blocked
-    if block_manager.is_blocked(caller_user_id, posted_by_user.id):
-        raise ClientException(f'User has blocked owner of post `{post_id}`')
-
-    # if the post is from a private user (other than ourselves) then we must be a follower to like the post
-    if caller_user_id != posted_by_user.id:
-        if posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
-            following = follow_manager.dynamo.get_following(caller_user_id, posted_by_user.id)
-            if not following or following['followStatus'] != FollowStatus.FOLLOWING:
-                raise ClientException(f'User does not have access to post `{post_id}`')
-
-    # flag the post
     try:
-        post.flag(caller_user_id)
-    except post.exceptions.AlreadyFlagged as err:
+        post = flag_manager.flag_post(caller_user_id, post)
+    except (flag_manager.exceptions.FlagException, post_manager.exceptions.PostException) as err:
         raise ClientException(str(err))
 
     resp = post.serialize(caller_user_id)
-    resp['flagStatus'] = post.FlagStatus.FLAGGED
+    resp['flagStatus'] = flag_manager.enums.FlagStatus.FLAGGED
     return resp
 
 
