@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const requestImageSize = require('request-image-size')
 const uuidv4 = require('uuid/v4')
@@ -8,20 +9,20 @@ const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
-const imagePath = path.join(__dirname, '..', 'fixtures', 'grant.jpg')
+const imageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
 const imageContentType = 'image/jpeg'
 const imageHeight = 320
 const imageWidth = 240
 
-const bigImagePath = path.join(__dirname, '..', 'fixtures', 'big-blank.jpg')
+const bigImageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'big-blank.jpg'))
 const bigImageContentType = 'image/jpeg'
 const bigImageHeight = 2000
 const bigImageWidth = 4000
 
-const videoPath = path.join(__dirname, '..', 'fixtures', 'IMG_0009.MOV')
+const videoData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'IMG_0009.MOV'))
 const videoContentType = 'video/quicktime'
 
-const pngPath = path.join(__dirname, '..', 'fixtures', 'squirrel.png')
+const pngData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'squirrel.png'))
 const pngContentType = 'image/png'
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -67,7 +68,7 @@ test('Add post with two images', async () => {
 
   // upload the first of those images, give the s3 trigger a second to fire
   uploadUrl = media1['uploadUrl']
-  await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleep(5000)  // no way to check if just this one media object is done uploading
 
   // get the post and check that everything looks as expected
@@ -96,7 +97,7 @@ test('Add post with two images', async () => {
 
   // upload the second of those images, give the s3 trigger a second to fire
   uploadUrl = media2['uploadUrl']
-  await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(appsyncClient, postId)
 
   // get the post and check that everything looks as expected
@@ -129,7 +130,7 @@ test('Add post with one video', async () => {
   const [appsyncClient] = await loginCache.getCleanLogin()
   let resp, post, uploadUrl
 
-  // add a pending post object with two images
+  // add a pending post object for a video
   const postId = uuidv4()
   const mediaId = uuidv4()
   resp = await appsyncClient.mutate({
@@ -149,7 +150,7 @@ test('Add post with one video', async () => {
 
   // upload the video , give the s3 trigger a second to fire
   uploadUrl = post['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(videoPath, videoContentType, uploadUrl)
+  await misc.uploadMedia(videoData, videoContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(appsyncClient, postId)
 
   resp = await appsyncClient.query({query: schema.post, variables: {postId}})
@@ -192,7 +193,7 @@ test('Uploading image sets width and height', async () => {
   expect(resp['data']['user']['mediaObjects']['items'][0]['width']).toBeNull()
 
   // upload the first of those images, give the s3 trigger a second to fire
-  await misc.uploadMedia(imagePath, imageContentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check width and height are now set
@@ -218,7 +219,7 @@ test('Uploading png image results in error', async () => {
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
 
   // upload a png, give the s3 trigger a second to fire
-  await misc.uploadMedia(pngPath, pngContentType, uploadUrl)
+  await misc.uploadMedia(pngData, pngContentType, uploadUrl)
   await misc.sleep(5000)
 
   // check that media ended up in an ERROR state
@@ -245,7 +246,7 @@ test('Thumbnails built on successful upload', async () => {
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
 
   // upload a big jpeg, give the s3 trigger a second to fire
-  await misc.uploadMedia(bigImagePath, bigImageContentType, uploadUrl)
+  await misc.uploadMedia(bigImageData, bigImageContentType, uploadUrl)
   await misc.sleep(5000)  // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostCompleted(ourClient, postId)
 

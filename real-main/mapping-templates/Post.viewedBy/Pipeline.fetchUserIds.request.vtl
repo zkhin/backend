@@ -1,14 +1,3 @@
-## hidden from everyone except owner of the post
-## note that the posts's postedBy is guaranteed to be filled in by the parent
-#if ($ctx.identity.cognitoIdentityId != $ctx.source.postedBy.userId)
-  $util.error('Post.viewedBy is only visible to the owner of the post')
-#end
-
-## check if user has choosen to hide their view counts
-#if ($ctx.source.postedBy.viewCountsHidden)
-  $util.error('User has hidden view counts')
-#end
-
 #if ($ctx.args.limit < 1 or $ctx.args.limit > 100)
   $util.error('Limit cannot be less than 1 or greater than 100')
 #end

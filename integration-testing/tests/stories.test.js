@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
@@ -94,7 +95,7 @@ test('Add a post that shows up as story', async () => {
 test('Add posts with media show up in stories', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const contentType = 'image/jpeg'
-  const filePath = path.join(__dirname, '..', 'fixtures', 'grant.jpg')
+  const imageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
 
   // we add a media post, give s3 trigger a second to fire
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
@@ -107,7 +108,7 @@ test('Add posts with media show up in stories', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
   const uploadUrl1 = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(filePath, contentType, uploadUrl1)
+  await misc.uploadMedia(imageData, contentType, uploadUrl1)
   await misc.sleepUntilPostCompleted(ourClient, postId1)
 
   // we add a media post, give s3 trigger a second to fire
@@ -121,7 +122,7 @@ test('Add posts with media show up in stories', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
   const uploadUrl2 = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(filePath, contentType, uploadUrl2)
+  await misc.uploadMedia(imageData, contentType, uploadUrl2)
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // verify we see those stories, with media

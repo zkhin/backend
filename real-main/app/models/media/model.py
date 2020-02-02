@@ -150,6 +150,12 @@ class Media:
             path = self.get_s3_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
 
+    def set_checksum(self):
+        path = self.get_s3_path(enums.MediaSize.NATIVE)
+        checksum = self.s3_uploads_client.get_object_checksum(path)
+        self.item = self.dynamo.set_checksum(self.item, checksum)
+        return self
+
     def is_original_jpeg(self):
         try:
             image = Image.open(self.original_image_data_stream)

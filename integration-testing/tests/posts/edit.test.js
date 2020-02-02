@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -8,7 +9,7 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
-const filePath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -35,7 +36,7 @@ test('Edit post', async () => {
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify it has no text

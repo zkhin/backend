@@ -22,6 +22,17 @@ def media_item(media_dynamo, post_manager):
     yield post.item['mediaObjects'][0]
 
 
+@pytest.fixture
+def media_item_2(media_dynamo, post_manager):
+    media_id = 'my-media-id-2'
+    user_id = 'my-user-id-2'
+
+    # add a post with media
+    media_uploads = [{'mediaId': media_id, 'mediaType': 'IMAGE'}]
+    post = post_manager.add_post(user_id, 'pid-2', media_uploads=media_uploads)
+    yield post.item['mediaObjects'][0]
+
+
 def test_media_does_not_exist(media_dynamo):
     media_id = 'my-post-id'
     resp = media_dynamo.get_media(media_id)
@@ -253,3 +264,31 @@ def test_transact_add_media_already_exists(media_dynamo):
     # try to add it again
     with pytest.raises(media_dynamo.client.exceptions.ConditionalCheckFailedException):
         media_dynamo.client.transact_write_items(transacts)
+
+
+def test_set_checksum(media_dynamo, media_item):
+    # no support for deleting a checksum
+    with pytest.raises(AssertionError):
+        media_dynamo.set_checksum(media_item, None)
+
+    checksum = 'checksum'
+    new_item = media_dynamo.set_checksum(media_item, checksum)
+    assert new_item.pop('checksum') == 'checksum'
+    assert new_item.pop('gsiK1PartitionKey') == 'media/checksum'
+    assert new_item.pop('gsiK1SortKey') == media_item['postedAt']
+    assert new_item == media_item
+
+
+def test_get_first_media_id_with_checksum(media_dynamo, media_item, media_item_2):
+    checksum = 'shaken, not checked'
+
+    # no media
+    assert media_dynamo.get_first_media_id_with_checksum(checksum) is None
+
+    # one media
+    media_dynamo.set_checksum(media_item_2, checksum)
+    assert media_dynamo.get_first_media_id_with_checksum(checksum) == media_item_2['mediaId']
+
+    # two media, we should get the one with earliest postedAt
+    media_dynamo.set_checksum(media_item, checksum)
+    assert media_dynamo.get_first_media_id_with_checksum(checksum) == media_item['mediaId']

@@ -153,6 +153,7 @@ def test_delete_completed_media_post(post_manager, post_with_media, user_manager
     for size in MediaSize._ALL:
         media_path = media.get_s3_path(size)
         post_manager.clients['s3_uploads'].put_object(media_path, b'anything', 'application/octet-stream')
+    media.set_checksum()
 
     # complete the post
     post.complete()

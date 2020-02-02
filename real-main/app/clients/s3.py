@@ -20,6 +20,16 @@ class S3Client:
     def get_object_data_stream(self, path):
         return self.bucket.Object(path).get()['Body']
 
+    def get_object_checksum(self, path):
+        resp = self.boto_client.head_object(Bucket=self.bucket_name, Key=path)
+        # etags start and end with '"', as required by RFC
+        checksum = resp['ResponseMetadata']['HTTPHeaders']['etag'][1:-1]
+        # Not all S3 etags are md5 checksums
+        # https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+        if '-' in checksum:
+            raise Exception(f'S3 object at `{path}` does not have md5 etag')
+        return checksum
+
     def list_common_prefixes(self, path_prefix):
         resp = self.boto_client.list_objects_v2(
             Bucket=self.bucket_name,

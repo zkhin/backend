@@ -1,0 +1,12 @@
+## hidden from everyone except owner of the post
+## note that the posts's postedBy is guaranteed to be filled in by the parent
+#if ($ctx.identity.cognitoIdentityId != $ctx.source.postedBy.userId)
+  #return
+#end
+
+## check if user has choosen to hide their view counts
+#if ($ctx.source.postedBy.viewCountsHidden)
+  #return
+#end
+
+{}

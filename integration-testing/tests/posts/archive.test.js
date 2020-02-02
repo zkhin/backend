@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -8,7 +9,7 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
-const filePath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -35,7 +36,7 @@ test('Archiving an image post', async () => {
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check we see that post in the feed, in the posts, and in the mediaObjects
@@ -108,7 +109,7 @@ test('Archiving an image post does not affect media urls', async () => {
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the urls are as we expect
@@ -170,7 +171,7 @@ test('Restoring an archived image post', async () => {
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // archive the post
@@ -290,7 +291,7 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['data']['addPost']['postedBy']['postCount']).toBe(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   resp = await ourClient.query({query: schema.post, variables: {postId}})

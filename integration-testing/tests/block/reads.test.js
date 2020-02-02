@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -7,7 +8,7 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const grantPath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -43,7 +44,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId1)
 
   // we set some details on our profile
@@ -338,7 +339,7 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId1)
 
   // they add a media post, complete it
@@ -351,7 +352,7 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(theirClient, postId2)
 
   // verify they cannot see our post or likers of the post

@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -7,7 +8,7 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const grantPath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -297,7 +298,7 @@ test('User search returns urls for profile pics', async () => {
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // set our profile photo to that media

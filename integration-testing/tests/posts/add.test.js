@@ -1,19 +1,20 @@
 /* eslint-env jest */
 
 const moment = require('moment')
-const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const contentType = 'image/jpeg'
-const filePath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const imageContentType = 'image/jpeg'
+const imageData = misc.generateRandomJpeg(300, 200)
+const imageData2 = misc.generateRandomJpeg(300, 200)
 
 const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
+  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 
@@ -32,6 +33,7 @@ test('Add text-only post no expiration', async () => {
   expect(post['postId']).toBe(postId)
   expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
+  expect(post['originalPost']['postId']).toBe(postId)
 
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
@@ -39,6 +41,7 @@ test('Add text-only post no expiration', async () => {
   expect(post['postId']).toBe(postId)
   expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
+  expect(post['originalPost']['postId']).toBe(postId)
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
@@ -76,7 +79,7 @@ test('Add text-only post with expiration', async () => {
 })
 
 
-test('Add media post', async () => {
+test('Add media post, check non-duplicates are not marked as such', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a media post, give s3 trigger a second to fire
@@ -94,11 +97,22 @@ test('Add media post', async () => {
   expect(post['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
   expect(post['mediaObjects'][0]['uploadUrl']).toBeTruthy()
   expect(post['mediaObjects'][0]['url']).toBeNull()
-  const uploadUrl = post['mediaObjects'][0]['uploadUrl']
+  let uploadUrl = post['mediaObjects'][0]['uploadUrl']
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
+
+  // add another media post with a different image
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  resp = await ourClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: postId2, mediaId: mediaId2, mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(imageData2, imageContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // check the post & media have changed status and look good
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -106,12 +120,25 @@ test('Add media post', async () => {
   post = resp['data']['post']
   expect(post['postId']).toBe(postId)
   expect(post['postStatus']).toBe('COMPLETED')
+  expect(post['originalPost']['postId']).toBe(postId)
   expect(post['mediaObjects']).toHaveLength(1)
   expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(post['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
   expect(post['mediaObjects'][0]['isVerified']).toBe(false)
   expect(post['mediaObjects'][0]['uploadUrl']).toBeNull()
   expect(post['mediaObjects'][0]['url']).toBeTruthy()
+
+  // check the originalPost properties don't point at each other
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['originalPost']['postId']).toBe(postId)
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId2)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['originalPost']['postId']).toBe(postId2)
 })
 
 
@@ -252,4 +279,88 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['post']['likesDisabled']).toBe(true)
   expect(resp['data']['post']['sharingDisabled']).toBe(true)
   expect(resp['data']['post']['verificationHidden']).toBe(true)
+})
+
+
+test('Post.originalPost - duplicates caught on creation, privacy', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  const ourPostId = uuidv4()
+  const theirPostId = uuidv4()
+
+  // we add a media post, complete it, check it's original
+  let variables = {postId: ourPostId, mediaId: uuidv4(), mediaType: 'IMAGE'}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(ourPostId)
+  expect(resp['data']['addPost']['originalPost']).toBeNull()
+  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, ourPostId)
+
+  // they add another media post with the same media, original should point back to first post
+  variables = {postId: theirPostId, mediaId: uuidv4(), mediaType: 'IMAGE'}
+  resp = await theirClient.mutate({mutation: schema.addOneMediaPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(theirPostId)
+  expect(resp['data']['addPost']['originalPost']).toBeNull()
+  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(theirClient, theirPostId)
+
+  // check each others post objects directly
+  resp = await theirClient.query({query: schema.post, variables: {postId: ourPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(ourPostId)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
+  resp = await ourClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
+
+  // we block them
+  resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
+  expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
+
+  // verify they can't see their post's originalPost
+  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['originalPost']).toBeNull()
+
+  // we unblock them
+  resp = await ourClient.mutate({mutation: schema.unblockUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['unblockUser']['userId']).toBe(theirUserId)
+  expect(resp['data']['unblockUser']['blockedStatus']).toBe('NOT_BLOCKING')
+
+  // we go private
+  resp = await ourClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
+
+  // verify they can't see their post's originalPost
+  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['originalPost']).toBeNull()
+
+  // they request to follow us, we accept
+  resp = await theirClient.mutate({mutation: schema.followUser, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['followUser']['followedStatus']).toBe('REQUESTED')
+  resp = await ourClient.mutate({mutation: schema.acceptFollowerUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['acceptFollowerUser']['followerStatus']).toBe('FOLLOWING')
+
+  // verify they *can* see their post's originalPost
+  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
 })

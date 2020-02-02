@@ -465,13 +465,24 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: Post
+        field: originalPost
+        request: Post.originalPost/before.request.vtl
+        response: Post.originalPost/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Post.pipeline.fetchPost
+          - Post.pipeline.postedBy
+          - Post.pipeline.postedByBlockerStatus
+          - Post.pipeline.postedByFollowedStatus
+
+      - type: Post
         field: viewedByCount
         dataSource: NoneDataSource
         response: Generic.passThru.response.vtl
 
       - type: Post
         field: viewedBy
-        request: Generic.passThru.request.vtl
+        request: Post.viewedBy/before.request.vtl
         response: Generic.passThru.response.vtl
         kind: PIPELINE
         functions:
@@ -634,11 +645,11 @@ custom:
 
       - type: Query
         field: post
-        request: Generic.passThru.request.vtl
+        request: Query.post/before.request.vtl
         response: Query.post/after.response.vtl
         kind: PIPELINE
         functions:
-          - Query.post.fetchPost
+          - Post.pipeline.fetchPost
           - Post.pipeline.postedBy
           - Post.pipeline.postedByBlockerStatus
           - Post.pipeline.postedByFollowedStatus
@@ -669,11 +680,11 @@ custom:
       # DEPRECATED: use Query.post instead
       - type: Query
         field: getPost
-        request: Generic.passThru.request.vtl
+        request: Query.post/before.request.vtl
         response: Query.post/after.response.vtl
         kind: PIPELINE
         functions:
-          - Query.post.fetchPost
+          - Post.pipeline.fetchPost
           - Post.pipeline.postedBy
           - Post.pipeline.postedByBlockerStatus
           - Post.pipeline.postedByFollowedStatus
@@ -800,6 +811,11 @@ custom:
         response: Generic.getUser.response.vtl
 
       - dataSource: DynamodbDataSource
+        name: Post.pipeline.fetchPost
+        request: Post.pipeline.fetchPost.request.vtl
+        response: Post.pipeline.fetchPost.response.vtl
+
+      - dataSource: DynamodbDataSource
         name: Post.pipeline.postedBy
         request: Post.pipeline.postedBy.request.vtl
         response: Post.pipeline.postedBy.response.vtl
@@ -903,11 +919,6 @@ custom:
         name: Query.getFollowedUsersWithStories.fetchUserIds
         request: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.request.vtl
         response: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.post.fetchPost
-        request: Query.post/Pipeline.fetchPost.request.vtl
-        response: Query.post/Pipeline.fetchPost.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.album.fetchAlbum

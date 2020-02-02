@@ -5,6 +5,7 @@ import pytest
 
 from app.models.feed import FeedManager
 from app.models.followed_first_story import FollowedFirstStoryManager
+from app.models.media.enums import MediaSize
 from app.models.post.enums import PostStatus
 from app.models.post.exceptions import PostException
 
@@ -21,26 +22,32 @@ def post(post_manager, user):
 
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t')
+    user = user_manager.create_cognito_only_user('pbuid1', 'pbUname1')
+    post = post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'mediaType': 'IMAGE'}], text='t')
+    post_manager.media_dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum1')
+    yield post
 
 
 @pytest.fixture
 def post_with_media_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t',
+    post = post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], text='t',
         lifetime_duration=Duration(hours=1),
     )
+    post_manager.media_dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum2')
+    yield post
 
 
 @pytest.fixture
 def post_with_media_with_album(album_manager, post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    album = album_manager.add_album(user.id, 'aid-2', 'album name')
-    yield post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t', album_id=album.id
+    user = user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
+    album = album_manager.add_album(user.id, 'aid-3', 'album name 3')
+    post = post_manager.add_post(
+        user.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'mediaType': 'IMAGE'}], text='t', album_id=album.id
     )
+    post_manager.media_dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum3')
+    yield post
 
 
 def test_complete_error_for_status(post_manager, post):
@@ -88,6 +95,7 @@ def test_complete(post_manager, post_with_media, user_manager):
     # complete the post, check state
     post.complete()
     assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert 'originalPostId' not in post.item
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
 
@@ -154,3 +162,41 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
+
+
+def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_album):
+    post1, post2 = post_with_media, post_with_media_with_album
+
+    # set the checksum on the media of both posts to the same thing
+    media1 = post_manager.media_manager.init_media(post1.item['mediaObjects'][0])
+    media2 = post_manager.media_manager.init_media(post2.item['mediaObjects'][0])
+
+    # put some native-size media up in the mock s3, same content
+    media_path1 = media1.get_s3_path(MediaSize.NATIVE)
+    media_path2 = media2.get_s3_path(MediaSize.NATIVE)
+    post_manager.clients['s3_uploads'].put_object(media_path1, b'anything', 'application/octet-stream')
+    post_manager.clients['s3_uploads'].put_object(media_path2, b'anything', 'application/octet-stream')
+
+    # mock out some calls to far-flung other managers
+    post1.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
+    post1.feed_manager = Mock(FeedManager({}))
+    post2.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
+    post2.feed_manager = Mock(FeedManager({}))
+
+    # complete the post that has the earlier postedAt, should not get an originalPostId
+    media1.set_checksum()
+    post1.complete()
+    assert post1.item['postStatus'] == PostStatus.COMPLETED
+    assert 'originalPostId' not in post1.item
+    post1.refresh_item()
+    assert post1.item['postStatus'] == PostStatus.COMPLETED
+    assert 'originalPostId' not in post1.item
+
+    # complete the post with the later postedAt, *should* get an originalPostId
+    media2.set_checksum()
+    post2.complete()
+    assert post2.item['postStatus'] == PostStatus.COMPLETED
+    assert post2.item['originalPostId'] == post1.id
+    post2.refresh_item()
+    assert post2.item['postStatus'] == PostStatus.COMPLETED
+    assert post2.item['originalPostId'] == post1.id

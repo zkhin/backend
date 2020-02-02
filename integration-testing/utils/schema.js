@@ -480,6 +480,9 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
     album {
       albumId
     }
+    originalPost {
+      postId
+    }
     text
     textTaggedUsers {
       tag
@@ -560,6 +563,9 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
     album {
       albumId
     }
+    originalPost {
+      postId
+    }
     mediaObjects {
       mediaId
       mediaStatus
@@ -611,6 +617,9 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
     album {
       albumId
     }
+    originalPost {
+      postId
+    }
     text
     textTaggedUsers {
       tag
@@ -658,6 +667,11 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
       }
     }
     viewedByCount
+    viewedBy {
+      items {
+        userId
+      }
+    }
   }
 }`)
 

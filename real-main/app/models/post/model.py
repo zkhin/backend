@@ -3,7 +3,7 @@ import os
 
 from app.models.album.dynamo import AlbumDynamo
 from app.models.media.dynamo import MediaDynamo
-from app.models.media.enums import MediaStatus
+from app.models.media.enums import MediaType, MediaStatus
 from app.models.user.dynamo import UserDynamo
 
 from . import enums, exceptions
@@ -74,9 +74,22 @@ class Post:
             msg = f'Refusing to change post `{self.id}` with status `{self.post_status}` to `{PostStatus.COMPLETED}`'
             raise exceptions.PostException(msg)
 
+        # Determine the original_post_id, if this post isn't original
+        # Note that in order to simplify the problem and focus on the use case that matters,
+        # we declare that only posts with exactly one media item of type IMAGE may be non-original.
+        # That is to say, text-only posts or multiple-media posts will never have originalPostId set.
+        original_post_id = None
+        media_items = list(self.media_dynamo.generate_by_post(self.id))
+        media_item = media_items[0] if media_items else None
+        if media_item and media_item['mediaType'] == MediaType.IMAGE:
+            first_media_id = self.media_dynamo.get_first_media_id_with_checksum(media_item['checksum'])
+            if first_media_id and first_media_id != media_item['mediaId']:
+                first_media_item = self.media_dynamo.get_media(first_media_id)
+                original_post_id = first_media_item['postId'] if first_media_item else None
+
         # complete the post
         transacts = [
-            self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED),
+            self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, original_post_id=original_post_id),
             self.user_dynamo.transact_increment_post_count(self.posted_by_user_id),
         ]
         if album_id := self.item.get('albumId'):

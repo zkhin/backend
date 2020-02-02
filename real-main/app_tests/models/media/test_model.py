@@ -1,4 +1,4 @@
-from app.models.media.enums import MediaStatus
+from app.models.media.enums import MediaSize, MediaStatus
 
 import pytest
 
@@ -41,3 +41,20 @@ def test_set_status(media_awaiting_upload):
 
     media_awaiting_upload.refresh_item()
     assert media_awaiting_upload.item['mediaStatus'] == MediaStatus.ERROR
+
+
+def test_set_checksum(media_manager, media_awaiting_upload):
+    media = media_awaiting_upload
+    assert 'checksum' not in media.item
+
+    # put some content with a known md5 up in s3
+    content = b'anything'
+    md5 = 'f0e166dc34d14d6c228ffac576c9a43c'
+    media_path = media.get_s3_path(MediaSize.NATIVE)
+    media_manager.clients['s3_uploads'].put_object(media_path, content, 'application/octet-stream')
+
+    # set the checksum, check what was saved to the DB
+    media.set_checksum()
+    assert media.item['checksum'] == md5
+    media.refresh_item()
+    assert media.item['checksum'] == md5

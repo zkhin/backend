@@ -216,12 +216,16 @@ class PostDynamo:
         }
         return self.client.generate_all_query(query_kwargs)
 
-    def transact_set_post_status(self, post_item, status):
+    def transact_set_post_status(self, post_item, status, original_post_id=None):
         exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :skPostedAt']
         exp_values = {
             ':postStatus': {'S': status},
             ':skPostedAt': {'S': f'{status}/{post_item["postedAt"]}'},
         }
+
+        if original_post_id:
+            exp_sets.append('originalPostId = :opi')
+            exp_values[':opi'] = {'S': original_post_id}
 
         if 'albumId' in post_item:
             exp_sets.append('gsiK2SortKey = :skPostedAt')

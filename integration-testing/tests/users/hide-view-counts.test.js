@@ -67,7 +67,7 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
   resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
-  expect(resp['errors']).toHaveLength(1)
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBe(0)
   expect(resp['data']['post']['viewedBy']).toBeNull()
 
@@ -87,12 +87,12 @@ test('Verify it really hides view counts on user and post', async () => {
 
   // check neither of us can see view counts on the post, or the viewedBy list
   resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
-  expect(resp['errors']).toHaveLength(1)
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBeNull()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 
   resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
-  expect(resp['errors']).toHaveLength(1)
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBeNull()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 
@@ -117,7 +117,7 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
   resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
-  expect(resp['errors']).toHaveLength(1)
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBe(0)
   expect(resp['data']['post']['viewedBy']).toBeNull()
 })

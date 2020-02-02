@@ -1,0 +1,13 @@
+#set ($post = $ctx.source)
+#set ($originalPostId = $util.defaultIfNull($post.originalPostId, $post.postId))
+
+## if we're awaiting a media upload, then originalPost is null
+#if ($post.postStatus == 'PENDING' or $post.postStatus == 'ERROR')
+  #return
+#end
+
+#if ($originalPostId == $post.postId)
+  #return ($post)
+#end
+
+$util.toJson({'postId': $originalPostId})

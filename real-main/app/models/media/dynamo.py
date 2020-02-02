@@ -74,6 +74,33 @@ class MediaDynamo:
         }
         return self.client.update_item(query_kwargs)
 
+    def set_checksum(self, media_item, checksum):
+        assert checksum  # no deletes
+        media_id = media_item['mediaId']
+        posted_at_str = media_item['postedAt']
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'media/{media_id}',
+                'sortKey': '-',
+            },
+            'UpdateExpression': 'SET checksum = :checksum, gsiK1PartitionKey = :pk, gsiK1SortKey = :sk',
+            'ExpressionAttributeValues': {
+                ':checksum': checksum,
+                ':pk': f'media/{checksum}',
+                ':sk': posted_at_str,
+            },
+        }
+        return self.client.update_item(query_kwargs)
+
+    def get_first_media_id_with_checksum(self, checksum):
+        query_kwargs = {
+            'KeyConditionExpression': Key('gsiK1PartitionKey').eq(f'media/{checksum}'),
+            'IndexName': 'GSI-K1',
+        }
+        media_keys = self.client.query_head(query_kwargs)
+        media_id = media_keys['partitionKey'].split('/')[1] if media_keys else None
+        return media_id
+
     def transact_set_status(self, media_item, status):
         return {
             'Update': {

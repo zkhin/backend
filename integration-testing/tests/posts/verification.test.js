@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -8,8 +9,8 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
-const smallGrantPath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
-const bigGrantPath = path.join(__dirname, '..', '..', 'fixtures', 'big-grant.jpg')
+const smallGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const bigGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'big-grant.jpg'))
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -44,7 +45,7 @@ test('Add media post passes verification', async () => {
   const uploadUrl = post['mediaObjects'][0]['uploadUrl']
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(bigGrantPath, contentType, uploadUrl)
+  await misc.uploadMedia(bigGrantData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
@@ -84,7 +85,7 @@ test('Add media post fails verification', async () => {
   const uploadUrl = post['mediaObjects'][0]['uploadUrl']
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
+  await misc.uploadMedia(smallGrantData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good
@@ -125,7 +126,7 @@ test('Add media post verification hidden hides verification state', async () => 
   const uploadUrl = post['mediaObjects'][0]['uploadUrl']
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(smallGrantPath, contentType, uploadUrl)
+  await misc.uploadMedia(smallGrantData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post & media have changed status and look good

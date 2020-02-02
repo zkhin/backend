@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const moment = require('moment')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
@@ -8,7 +9,7 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const grantPath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -181,7 +182,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['data']['album']['posts']['items']).toHaveLength(0)
 
   // upload the media, thus completing the post
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify the post is now COMPLETED

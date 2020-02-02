@@ -12,7 +12,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
+const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(300, 200)
+const imageContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -490,4 +494,107 @@ test('We do not see trending posts of users that have blocked us', async () => {
   expect(firstPost['postedBy']['blockerStatus']).toBe('SELF')
   expect(firstPost['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(firstPost['postedBy']['followedStatus']).toBe('SELF')
+})
+
+
+test('Post views on duplicate posts are viewed post and original post, only original get trending', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we add a media post
+  const ourPostId = uuidv4()
+  let resp = await ourClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: ourPostId, mediaId: uuidv4(), mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  // upload the media, thus completing the post
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, ourPostId)
+
+  // they add a media post that's a duplicate of ours
+  const theirPostId = uuidv4()
+  resp = await theirClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: theirPostId, mediaId: uuidv4(), mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  // upload the media, thus completing the post
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(theirClient, theirPostId)
+
+  // verify the original post is our post on both posts, and there are no views on either post
+  resp = await ourClient.query({query: schema.post, variables: {postId: ourPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(ourPostId)
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
+  resp = await ourClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
+
+  // they record one post view on their post
+  resp = await theirClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [theirPostId]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // verify that showed up on their post
+  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['viewedByCount']).toBe(1)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(theirUserId)
+
+  // verify that also showed up on our post
+  resp = await ourClient.query({query: schema.post, variables: {postId: ourPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(ourPostId)
+  expect(resp['data']['post']['viewedByCount']).toBe(1)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(theirUserId)
+
+  // verify both of our users also recored a view
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['postViewedByCount']).toBe(1)
+  resp = await theirClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['postViewedByCount']).toBe(1)
+
+  // check trending posts - only our post should show up there
+  resp = await theirClient.query({query: schema.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(1)
+  expect(resp['data']['trendingPosts']['items'][0]['postId']).toBe(ourPostId)
+
+  // check trending users - only we should show up there
+  resp = await theirClient.query({query: schema.trendingUsers})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingUsers']['items']).toHaveLength(1)
+  expect(resp['data']['trendingUsers']['items'][0]['userId']).toBe(ourUserId)
+
+  // we record a post view on our post
+  resp = await ourClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [ourPostId]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // verify that showed up on our post
+  resp = await ourClient.query({query: schema.post, variables: {postId: ourPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(ourPostId)
+  expect(resp['data']['post']['viewedByCount']).toBe(2)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(2)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(theirUserId)
+
+  // verify it did not show up on their post
+  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(theirPostId)
+  expect(resp['data']['post']['viewedByCount']).toBe(1)
+  expect(resp['data']['post']['viewedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(theirUserId)
 })

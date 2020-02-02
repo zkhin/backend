@@ -60,6 +60,7 @@ def uploads_object_created(event, context):
         media.set_is_verified()
         media.set_height_and_width()
         media.set_thumbnails()
+        media.set_checksum()
 
     media.set_status(MediaStatus.UPLOADED)
 

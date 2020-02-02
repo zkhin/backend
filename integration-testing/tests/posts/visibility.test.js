@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -8,7 +9,7 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
-const filePath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -54,7 +55,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a public user',
   expect(resp['data']['user']['mediaObjects']['items'][0]['uploadUrl']).not.toBeNull()
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we should see the post
@@ -118,7 +119,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a private user'
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we should see the post
@@ -168,7 +169,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for the follow stag
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(filePath, contentType, uploadUrl)
+  await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // request to follow, should *not* be able to see post or mediaObject
@@ -283,7 +284,7 @@ test('Post.viewedBy only visible to post owner', async () => {
 
   // verify they cannot see the viewedBy list
   resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
-  expect(resp['errors'].length).toBe(1)
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 
   // they follow us
@@ -293,6 +294,6 @@ test('Post.viewedBy only visible to post owner', async () => {
 
   // verify they cannot see the viewedBy list
   resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
-  expect(resp['errors'].length).toBe(1)
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 })

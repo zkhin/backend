@@ -4,6 +4,8 @@ from unittest.mock import Mock, call
 
 import pytest
 
+from app.models.post.enums import PostStatus
+
 
 @pytest.fixture
 def posts(post_manager, user_manager):
@@ -130,4 +132,88 @@ def test_record_view(post_view_manager, dynamo_client, posts):
     assert post_view_manager.post_dynamo.get_post(post_id).get('viewedByCount', 0) == 1
     assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 1
     assert post_view_manager.trending_manager.dynamo.get_trending(post_id).get('gsiK3SortKey', 0) == 1
+    assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1
+
+
+def test_record_view_for_non_original_post(post_view_manager, dynamo_client, posts):
+    post_dynamo = post_view_manager.post_dynamo
+    org_post, non_org_post = posts
+
+    # hack to get these text-only posts to have an original. Set it back to pending and then completed
+    dynamo_client.transact_write_items([
+        post_dynamo.transact_set_post_status(non_org_post.item, PostStatus.PENDING),
+    ])
+    dynamo_client.transact_write_items([
+        post_dynamo.transact_set_post_status(non_org_post.item, PostStatus.COMPLETED, original_post_id=org_post.id),
+    ])
+    non_org_post.refresh_item()
+
+    viewed_by_user_id = 'vuid'
+    posted_by_user_id = org_post.item['postedByUserId']
+    org_post_id = org_post.id
+    non_org_post_id = non_org_post.id
+    view_count = 3
+    viewed_at = datetime.utcnow()
+    viewed_at_str = viewed_at.isoformat() + 'Z'
+
+    # check there is no post view yet recorded for this user on either post
+    assert post_view_manager.dynamo.get_post_view(org_post_id, viewed_by_user_id) is None
+    assert post_view_manager.dynamo.get_post_view(non_org_post_id, viewed_by_user_id) is None
+    assert post_view_manager.post_dynamo.get_post(org_post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.post_dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
+    assert post_view_manager.trending_manager.dynamo.get_trending(org_post_id) is None
+    assert post_view_manager.trending_manager.dynamo.get_trending(non_org_post_id) is None
+    assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id) is None
+
+    # record a first post view on the non-original post
+    post_view_manager.record_view(viewed_by_user_id, non_org_post_id, view_count, viewed_at)
+
+    # check two post view items were created, one for each post
+    item = post_view_manager.dynamo.get_post_view(org_post_id, viewed_by_user_id)
+    assert item['postId'] == org_post_id
+    assert item['viewedByUserId'] == viewed_by_user_id
+    assert item['viewCount'] == view_count
+    assert item['firstViewedAt'] == viewed_at_str
+    assert item['lastViewedAt'] == viewed_at_str
+    non_org_item = post_view_manager.dynamo.get_post_view(non_org_post_id, viewed_by_user_id)
+    assert non_org_item['postId'] == non_org_post_id
+    assert non_org_item['viewedByUserId'] == viewed_by_user_id
+    assert non_org_item['viewCount'] == view_count
+    assert non_org_item['firstViewedAt'] == viewed_at_str
+    assert non_org_item['lastViewedAt'] == viewed_at_str
+
+    # check the viewedByCounts
+    assert post_view_manager.post_dynamo.get_post(org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.post_dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 2  # one per post
+
+    # check the original post made it into the trending indexes, and then non-original did not
+    assert post_view_manager.trending_manager.dynamo.get_trending(org_post_id).get('gsiK3SortKey', 0) == 1
+    assert post_view_manager.trending_manager.dynamo.get_trending(non_org_post_id) is None
+    assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1
+
+    # now record a view directly on the original post
+    new_view_count = 5
+    new_viewed_at = datetime.utcnow()
+    new_viewed_at_str = new_viewed_at.isoformat() + 'Z'
+    post_view_manager.record_view(viewed_by_user_id, org_post_id, new_view_count, new_viewed_at)
+
+    # check the post view item for the original post was incremented correctly
+    item = post_view_manager.dynamo.get_post_view(org_post_id, viewed_by_user_id)
+    assert item['postId'] == org_post_id
+    assert item['viewedByUserId'] == viewed_by_user_id
+    assert item['viewCount'] == view_count + new_view_count
+    assert item['firstViewedAt'] == viewed_at_str
+    assert item['lastViewedAt'] == new_viewed_at_str
+
+    # no change for the non-original post
+    assert post_view_manager.dynamo.get_post_view(non_org_post_id, viewed_by_user_id) == non_org_item
+
+    # check no change to viewedByCounts, nor trending indexes
+    assert post_view_manager.post_dynamo.get_post(org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.post_dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 2  # one per post
+    assert post_view_manager.trending_manager.dynamo.get_trending(org_post_id).get('gsiK3SortKey', 0) == 1
+    assert post_view_manager.trending_manager.dynamo.get_trending(non_org_post_id) is None
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1

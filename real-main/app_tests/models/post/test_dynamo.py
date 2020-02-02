@@ -174,17 +174,28 @@ def test_transact_set_post_status(post_dynamo):
     # add a post, verify starts pending
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text='lore ipsum')]
     post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['postStatus'] == PostStatus.PENDING
+    org_post_item = post_dynamo.get_post(post_id)
+    assert org_post_item['postStatus'] == PostStatus.PENDING
 
+    # set post status without specifying an original post id
     new_status = 'yup'
-    transacts = [post_dynamo.transact_set_post_status(post_item, new_status)]
+    transacts = [post_dynamo.transact_set_post_status(org_post_item, new_status)]
     post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['postStatus'] == new_status
-    assert post_item['gsiA2SortKey'].startswith(new_status + '/')
-    assert 'gsiA1SortKey' not in post_item
-    assert 'gsiK2SortKey' not in post_item
+    new_post_item = post_dynamo.get_post(post_id)
+    assert new_post_item.pop('postStatus') == new_status
+    assert new_post_item.pop('gsiA2SortKey').startswith(new_status + '/')
+    assert {**new_post_item, **{k: org_post_item[k] for k in ('gsiA2SortKey', 'postStatus')}} == org_post_item
+
+    # set post status *with* specifying an original post id
+    new_status = 'new new'
+    original_post_id = 'opid'
+    transacts = [post_dynamo.transact_set_post_status(new_post_item, new_status, original_post_id=original_post_id)]
+    post_dynamo.client.transact_write_items(transacts)
+    new_post_item = post_dynamo.get_post(post_id)
+    assert new_post_item.pop('postStatus') == new_status
+    assert new_post_item.pop('gsiA2SortKey').startswith(new_status + '/')
+    assert new_post_item.pop('originalPostId') == original_post_id
+    assert {**new_post_item, **{k: org_post_item[k] for k in ('gsiA2SortKey', 'postStatus')}} == org_post_item
 
 
 def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):

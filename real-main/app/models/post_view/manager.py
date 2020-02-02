@@ -39,35 +39,42 @@ class PostViewManager:
             self.record_view(viewed_by_user_id, post_id, view_count, viewed_at)
 
     def record_view(self, viewed_by_user_id, post_id, view_count, viewed_at):
-        post_view_item = self.dynamo.get_post_view(post_id, viewed_by_user_id)
+        post_item = self.post_dynamo.get_post(post_id)
 
-        # is this the first time this user has viewed this post?
-        if not post_view_item:
-            post_item = self.post_dynamo.get_post(post_id)
+        if not post_item:
+            logger.warning(f'User `{viewed_by_user_id}` tried to record view(s) on non-existent post `{post_id}`')
+            return
 
-            if not post_item:
-                logger.warning(f'User `{viewed_by_user_id}` tried to record view(s) on non-existent post `{post_id}`')
-                return
-            posted_by_user_id = post_item['postedByUserId']
+        post_id = post_item['postId']
+        posted_by_user_id = post_item['postedByUserId']
+        original_post_id = post_item.get('originalPostId', post_id)
 
-            # create the new post view item
-            try:
-                self.dynamo.add_post_view(post_item, viewed_by_user_id, view_count, viewed_at)
-            except exceptions.PostViewAlreadyExists:
-                # another thread added the post view in between our last read and this write
-                post_view_item = self.dynamo.get_post_view(post_id, viewed_by_user_id, strongly_consistent=True)
-                if not post_view_item:
-                    msg = f'Post view for post `{post_id}` and user `{viewed_by_user_id}` should exist but does not?'
-                    logger.warning(msg)
-            else:
-                # record the viewedBy on the post and user
-                self.post_dynamo.increment_viewed_by_count(post_id)
-                self.user_dynamo.increment_post_viewed_by_count(posted_by_user_id)
-
-                # update the trending indexes
-                self.trending_manager.record_view_count(TrendingItemType.POST, post_id, 1)
-                self.trending_manager.record_view_count(TrendingItemType.USER, posted_by_user_id, 1)
-
-        # is this _not_ the first this user has viewed this post?
-        if post_view_item:
+        # common case first: try to update an existing post_view_item
+        try:
             self.dynamo.add_views_to_post_view(post_id, viewed_by_user_id, view_count, viewed_at)
+            return
+        except exceptions.PostViewDoesNotExist:
+            pass
+
+        # try to add this as a new post view
+        try:
+            self.dynamo.add_post_view(post_item, viewed_by_user_id, view_count, viewed_at)
+        except exceptions.PostViewAlreadyExists:
+            # we lost race condition: someone else added post view after our update attempt, so try again to update
+            try:
+                self.dynamo.add_views_to_post_view(post_id, viewed_by_user_id, view_count, viewed_at)
+            except exceptions.PostViewDoesNotExist:
+                msg = f'Excpected post view for post `{post_id}` and user `{viewed_by_user_id}` to exist but does not'
+                logger.error(msg)
+            return
+
+        # record the viewedBy on the post and user
+        self.post_dynamo.increment_viewed_by_count(post_id)
+        self.user_dynamo.increment_post_viewed_by_count(posted_by_user_id)
+
+        # if this is an original post, the trending indexes. If not, then record a view on the original
+        if original_post_id == post_id:
+            self.trending_manager.record_view_count(TrendingItemType.POST, post_id, 1)
+            self.trending_manager.record_view_count(TrendingItemType.USER, posted_by_user_id, 1)
+        else:
+            self.record_view(viewed_by_user_id, original_post_id, view_count, viewed_at)

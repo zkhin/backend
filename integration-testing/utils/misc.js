@@ -1,23 +1,36 @@
 /* Misc utils functions for use in tests */
 
-const fs = require('fs')
+const jpeg = require('jpeg-js')
 const gql = require('graphql-tag')
 const rp = require('request-promise-native')
-
 
 const shortRandomString = () => Math.random().toString(36).substring(7)
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const uploadMedia = async (filename, contentType, url) => {
-  const obj = fs.readFileSync(filename)
+const uploadMedia = async (data, contentType, url) => {
   const options = {
     method: 'PUT',
     url: url,
     headers: {'Content-Type': contentType},
-    body: obj,
+    body: data,
   }
   return rp.put(options)
+}
+
+const generateRandomJpeg = (width, height) => {
+  const buf = Buffer.alloc(width * height * 4)
+  let i = 0
+  while (i < buf.length) {
+    buf[i++] = Math.floor(Math.random() * 256)
+  }
+  const imgData = {
+    data: buf,
+    width: width,
+    height: height
+  }
+  const quality = 50
+  return jpeg.encode(imgData, quality).data
 }
 
 // would be nice to query the media object directly but theres currently
@@ -43,6 +56,7 @@ const sleepUntilPostCompleted = async (gqlClient, postId) => {
 }
 
 module.exports = {
+  generateRandomJpeg,
   uploadMedia,
   shortRandomString,
   sleep,

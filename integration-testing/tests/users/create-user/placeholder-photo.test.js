@@ -1,4 +1,6 @@
 /* eslint-env jest */
+
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -6,7 +8,7 @@ const cognito = require('../../../utils/cognito.js')
 const misc = require('../../../utils/misc.js')
 const schema = require('../../../utils/schema.js')
 
-const grantPath = path.join(__dirname, '..', '..', '..', 'fixtures', 'grant.jpg')
+const grantData = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'fixtures', 'grant.jpg'))
 const grantContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -89,7 +91,7 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
 
   // upload the image, give the s3 trigger a second to fire
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(client, postId)
 
   // get our uploaded/completed media, we should have just that one media object

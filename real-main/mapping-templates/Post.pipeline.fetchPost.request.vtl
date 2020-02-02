@@ -1,8 +1,10 @@
+#set ($postId = $ctx.prev.result.postId)
+
 {
   "version": "2018-05-29",
   "operation": "GetItem",
   "key": {
-    "partitionKey": { "S": "post/$ctx.args.postId" },
+    "partitionKey": { "S": "post/$postId" },
     "sortKey": { "S": "-" }
   }
 }

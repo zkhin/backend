@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
@@ -7,7 +8,7 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const grantPath = path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg')
+const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantContentType = 'image/jpeg'
 
 const AuthFlow = cognito.AuthFlow
@@ -109,7 +110,7 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
   const mediaId = resp['data']['addPost']['mediaObjects'][0]['mediaId']
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantPath, grantContentType, uploadUrl)
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify they see our user directly
