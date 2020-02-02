@@ -1,7 +1,4 @@
 from datetime import datetime
-import logging
-import random
-import string
 from unittest.mock import call, Mock
 
 from isodate.duration import Duration

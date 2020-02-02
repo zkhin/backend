@@ -1,5 +1,4 @@
 import logging
-import os
 
 from app.models.album.dynamo import AlbumDynamo
 from app.models.media.dynamo import MediaDynamo
