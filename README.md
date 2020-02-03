@@ -26,18 +26,22 @@ To deploy each serverless stack, run `sls deploy` in that stack's root directory
 ### A brand-new deployment
 
 Before first deployment in a new AWS account, there is some one-time set-up to do with [SES](https://console.aws.amazon.com/ses/home) so it can send transactional emails from Cognito:
+
 - add and verify the domain `real.app`
 - add and verify the email address `no-reply@real.app`.
 - optionally set up spf, dkim, dmarc and a MAIL FROM domain of `mail.real.app`
 
-Because there are resource dependencies between some of the stacks, they must be deployed in this order.
+Resource dependencies between the stacks make initial deployment tricky. Stacks must be deployed in this order:
 
 - `real-lambda-layers`
-- `real-main`
+- `real-main`, with resources that depend on `real-cloudfront` commented out in serverless.yml
 - `real-cloudfront`
-- `real-main` again
+- `real-main` again, with nothing commented out
 
-A CloudFront Key Pair will also need to be generated and stored in the AWS Secrets Manager. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
+In the AWS SecretsManager:
+
+- A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
+- Credentials to access the post vericiation API must be added. Note these are stage-specific. Reference the environment variable in serverless.yml for required format.
 
 Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
 

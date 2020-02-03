@@ -30,7 +30,9 @@ provider:
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1  # choosen manually when creating a key pair in the console
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     ES_SEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
-    FLAGGED_ALERT_THRESHOLD: ${self:custom.envvars.FLAGGED_ALERT_THRESHOLD.${self:provider.stage}}
+
+    # avoid alerts when running integration test suite in dev env
+    FLAGGED_ALERT_THRESHOLD: ${self:custom.envvars.FLAGGED_ALERT_THRESHOLD.${self:provider.stage}, '3'}
 
   iamRoleStatements:
     - Effect: Allow
@@ -65,7 +67,6 @@ provider:
 custom:
   envvars:
     FLAGGED_ALERT_THRESHOLD:
-      dev: 3  # avoid alerts when running integration test suite
       production: 1
 
   splitStacks:
