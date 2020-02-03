@@ -3,6 +3,7 @@ import os
 import urllib
 
 from app.clients import CloudFrontClient, DynamoClient, S3Client, SecretsManagerClient
+from app.logging import LogLevelContext
 from app.models.media import MediaManager
 from app.models.media.enums import MediaStatus, MediaType, MediaSize
 from app.models.post import PostManager
@@ -28,6 +29,11 @@ def uploads_object_created(event, context):
     # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
     # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
     path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
+
+    # we suppress INFO logging, except this message
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'BEGIN: Handling object created event for key `{path}`')
+
     try:
         user_id, post_id, media_id, media_size, media_ext = media_manager.parse_s3_path(path)
     except ValueError:

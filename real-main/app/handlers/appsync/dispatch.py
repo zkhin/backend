@@ -2,8 +2,9 @@
 import logging
 import os
 
+from app.logging import LogLevelContext, register_gql_details
+
 from . import routes
-from .logging import register_gql_details
 from .exceptions import ClientException
 
 logger = logging.getLogger()
@@ -32,6 +33,10 @@ def dispatch(event, context):
         return {'error': f'No handler for field `{field}` found'}
 
     register_gql_details(req_id, field, caller_user_id, arguments, source)
+
+    # we suppress INFO logging, except this message
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('BEGIN: Resolving graphql field')
 
     try:
         resp = handler(caller_user_id, arguments, source, context)

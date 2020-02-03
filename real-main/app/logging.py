@@ -13,6 +13,20 @@ def register_gql_details(request_id, field, caller_user_id, arguments, source):
     threadLocal.gql_source = source
 
 
+# https://docs.python.org/3/howto/logging-cookbook.html#using-a-context-manager-for-selective-logging
+class LogLevelContext:
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+
+    def __enter__(self):
+        self.old_level = self.logger.level
+        self.logger.setLevel(self.level)
+
+    def __exit__(self, et, ev, tb):
+        self.logger.setLevel(self.old_level)
+
+
 class AddRequestInfoFilter(logging.Formatter):
     "Logging filter that does not filter, but rather adds the graphql request info to the logging record"
 
