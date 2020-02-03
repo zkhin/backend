@@ -248,3 +248,38 @@ test.skip('Post that expires is removed from feed', async () => {
   //expect(resp['data']['getFeed']['items']).toHaveLength(0)
 
 })
+
+
+test('Feed Post.postedBy.blockerAt and followedStatus are filled in correctly', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we follow them
+  let resp = await ourClient.mutate({mutation: schema.followUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
+
+  // they add a post
+  const postId = uuidv4()
+  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // see how that looks in our feed
+  resp = await ourClient.query({query: schema.getFeed})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['getFeed']['items']).toHaveLength(1)
+  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['getFeed']['items'][0]['postedBy']['userId']).toBe(theirUserId)
+  expect(resp['data']['getFeed']['items'][0]['postedBy']['blockerStatus']).toBe('NOT_BLOCKING')
+  expect(resp['data']['getFeed']['items'][0]['postedBy']['followedStatus']).toBe('FOLLOWING')
+
+  // see how that looks in their feed
+  resp = await theirClient.query({query: schema.getFeed})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['getFeed']['items']).toHaveLength(1)
+  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['getFeed']['items'][0]['postedBy']['userId']).toBe(theirUserId)
+  expect(resp['data']['getFeed']['items'][0]['postedBy']['blockerStatus']).toBe('SELF')
+  expect(resp['data']['getFeed']['items'][0]['postedBy']['followedStatus']).toBe('SELF')
+})

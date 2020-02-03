@@ -950,6 +950,8 @@ module.exports.getFeed = gql(`query GetFeed ($limit: Int) {
       postId
       postedBy {
         userId
+        blockerStatus
+        followedStatus
       }
       text
       mediaObjects {
