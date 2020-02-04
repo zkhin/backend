@@ -61,7 +61,10 @@ def test_build_user_document_maximal(elasticsearch_client):
     assert elasticsearch_client.build_user_doc(dynamo_user_doc) == expected_user_doc
 
 
-def test_add_user(elasticsearch_client):
+def test_add_user(elasticsearch_client, monkeypatch):
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
+
     dynamo_user_doc = {
         'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
         'username': {'S': 'TESTER-gotSOMEcaseotxxie'},
@@ -78,7 +81,10 @@ def test_add_user(elasticsearch_client):
     assert m.request_history[0].json() == doc
 
 
-def test_update_user(elasticsearch_client):
+def test_update_user(elasticsearch_client, monkeypatch):
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
+
     old_dynamo_user_doc = {
         'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
         'username': {'S': 'something-else'},
@@ -99,7 +105,10 @@ def test_update_user(elasticsearch_client):
     assert m.request_history[0].json() == new_doc
 
 
-def test_delete_user(elasticsearch_client):
+def test_delete_user(elasticsearch_client, monkeypatch):
+    monkeypatch.setenv('AWS_ACCESS_KEY_ID', 'foo')
+    monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
+
     dynamo_user_doc = {
         'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
         'username': {'S': 'meh'},

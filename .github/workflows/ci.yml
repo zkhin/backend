@@ -17,15 +17,14 @@ jobs:
       with:
         python-version: 3.8
 
+    - name: Install Poetry
+      uses: dschep/install-poetry-action@v1.3
+
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pipenv
-        pipenv install --dev
+      run: cd real-main && poetry install
 
     - name: Test with pytest
-      run: |
-        pipenv run pytest real-main/app_tests
+      run: cd real-main && poetry run pytest app_tests
 
   real-main-flake8:
     runs-on: ubuntu-latest
