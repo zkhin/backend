@@ -12,7 +12,7 @@ The backend is organized as a series of cloudformation stacks to speed up the st
 
 ## Getting started
 
-Installed on your system you will need `npm`, `nodejs12`, `serverless`, `python3.7`, `pipenv`, `docker`.
+Installed on your system you will need `npm`, `nodejs12`, `serverless`, `python3.7`, `poetry`, `docker`.
 
 In each of the stack root directories, run `npm install` to install serverless and required plugins.
 
@@ -80,7 +80,7 @@ The unit tests of the python lambda handlers in the primary stack use [pytest](h
 
 ```sh
 cd real-main
-pipenv shell
+poetry shell
 pytest app_tests/
 ```
 
@@ -92,11 +92,20 @@ pytest app_tests/
 
 This is the primary stack, it holds everything not explicitly relegated to one of the other stacks.
 
-Most development takes place here. To initialize the development environment, run `pipenv install --dev` in the stack root directory.
+Most development takes place here. To initialize the development environment, run `poetry install` in the stack root directory.
 
 #### `real-lambda-layers`
 
 Holds the [lambda layers](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html). The python packages which the lambda handlers in the primary stack depend on are stored in a layer. This reduces the size of the deployment package of the primary stack from several megabytes to several kilobytes, making deploys of the primary stack much faster.
+
+Because of [a bug](https://github.com/UnitedIncome/serverless-python-requirements/issues/445), `sls deploy` is unable to currently handle the whole deployment process. As such, deployment is currently (Feb 2020) a two-step process:
+
+```sh
+poetry export --without-hashes -f requirements.txt > requirements.txt
+sls deploy
+```
+
+The `requirements.txt` file should not be commited to the repo, as it duplicates the information stored in `poetry.lock`.
 
 #### `real-cloudfront`
 
@@ -119,8 +128,8 @@ CloudFront is included because:
 
 Note that new python packages dependencies for the lambda handlers in the primary `real-main` stack should be installed in two places:
 
-- in the primary `real-main` stack as a dev dependency: `pipenv install --dev <package name>`
-- in the `real-main-lambda-layers` stack as a runtime dependency: `pipenv install <package name>`
+- in the primary `real-main` stack as a dev dependency: `poetry add --dev <package name>`
+- in the `real-main-lambda-layers` stack as a runtime dependency: `poetry add <package name>`
 
 After adding a new dependency, the `real-main-lambda-layers` stack should be re-deployed first, followed by the `real-main` stack.
 
