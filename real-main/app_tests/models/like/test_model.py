@@ -68,7 +68,6 @@ def test_dislike_fail_unable_to_decrement_like_counter(like_manager, like):
         like.dislike()
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/2410 (fixed in moto 1.3.14)')
 def test_dislike_fail_not_liked_with_status(like_manager, like, other_user, post):
     assert like.item['likeStatus'] == LikeStatus.ANONYMOUSLY_LIKED
 

@@ -58,7 +58,6 @@ def test_cant_transact_add_comment_same_comment_id(comment_dynamo):
         comment_dynamo.client.transact_write_items([transact])
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/1071')
 def test_cant_transact_delete_comment_doesnt_exist(comment_dynamo):
     comment_id = 'dne-cid'
     transact = comment_dynamo.transact_delete_comment(comment_id)

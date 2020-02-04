@@ -116,7 +116,6 @@ def test_unblock(block_manager, blocker_user, blocked_user):
     assert resp is None
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/1071')
 def test_cant_unblock_if_not_blocked(block_manager, blocker_user, blocked_user):
     with pytest.raises(block_manager.exceptions.NotBlocked):
         block_manager.unblock(blocker_user, blocked_user)

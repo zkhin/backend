@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import botocore
 import pytest
 
 from app.models.follow.enums import FollowStatus
@@ -75,7 +74,7 @@ def test_transact_add_following_already_exists(follow_dynamo, user1, user2):
     follow_dynamo.client.transact_write_items([transact])
 
     # try to add it again
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(follow_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         follow_dynamo.client.transact_write_items([transact])
 
 
@@ -111,7 +110,7 @@ def test_transact_update_following_status_doesnt_exist(follow_dynamo, user1, use
         'followedAt': datetime.utcnow().isoformat() + 'Z',
     }
     transact = follow_dynamo.transact_update_following_status(dummy_follow_item, 'status')
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(follow_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         follow_dynamo.client.transact_write_items([transact])
 
 
@@ -131,14 +130,13 @@ def test_transact_delete_following(follow_dynamo, user1, user2):
     assert follow_item is None
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/1071')
 def test_transact_delete_following_doesnt_exist(follow_dynamo, user1, user2):
     dummy_follow_item = {
         'partitionKey': f'following/{user1.id}/{user2.id}',
         'sortKey': '-',
     }
     transact = follow_dynamo.transact_delete_following(dummy_follow_item)
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(follow_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         follow_dynamo.client.transact_write_items([transact])
 
 

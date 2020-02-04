@@ -75,7 +75,6 @@ def test_add_block_already_exists(block_dynamo):
         block_dynamo.add_block(blocker_user_id, blocked_user_id)
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/1071')
 def test_delete_block_doesnt_exist(block_dynamo):
     blocker_user_id = 'blocker-user-id'
     blocked_user_id = 'blocked-used-id'

@@ -1,4 +1,3 @@
-import botocore
 import pytest
 
 
@@ -87,7 +86,7 @@ def test_delete_cant_decrement_album_count_below_zero(user, album):
     assert user.item.get('albumCount', 0) == 0
 
     # verify deletion fails
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(album.exceptions.AlbumException):
         album.delete()
 
     # verify album still exists

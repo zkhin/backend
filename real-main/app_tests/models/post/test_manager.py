@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-import botocore
 import pytest
 from isodate.duration import Duration
 
@@ -228,7 +227,6 @@ def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
     assert post_expired_last_week.refresh_item().item
 
 
-@pytest.mark.xfail(raises=botocore.exceptions.ClientError, reason='Moto cant handle the scan filter expression')
 def test_delete_older_expired_posts(post_manager, user_manager, caplog):
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
     now = datetime.utcnow()

@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import botocore
 import pytest
 
 from app.models.album.dynamo import AlbumDynamo
@@ -82,7 +81,7 @@ def test_cant_transact_add_album_same_album_id(album_dynamo, album_item):
 
     # verify we can't add another album with the same id
     transact = album_dynamo.transact_add_album(album_id, 'uid2', 'n2')
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         album_dynamo.client.transact_write_items([transact])
 
 
@@ -125,7 +124,6 @@ def test_set_errors(album_dynamo, album_item):
         album_dynamo.set(album_id, name='')
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/1071')
 def test_cant_transact_delete_album_doesnt_exist(album_dynamo):
     album_id = 'dne-cid'
     transact = album_dynamo.transact_delete_album(album_id)
@@ -189,7 +187,7 @@ def test_transact_remove_post(album_dynamo, album_item):
 
     # verify we can't remove another post
     transact = album_dynamo.transact_remove_post(album_id)
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(album_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         album_dynamo.client.transact_write_items([transact])
 
 

@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import botocore
 import pytest
 
 from app.models.user.dynamo import UserDynamo
@@ -338,7 +337,7 @@ def test_increment_decrement_post_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_post_count(user_id)]
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -365,7 +364,7 @@ def test_increment_decrement_follower_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_follower_count(user_id)]
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -392,7 +391,7 @@ def test_increment_decrement_followed_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_followed_count(user_id)]
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -419,7 +418,7 @@ def test_increment_decrement_album_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_album_count(user_id)]
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment

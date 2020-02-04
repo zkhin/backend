@@ -48,5 +48,9 @@ class Album:
             self.user_manager.dynamo.transact_decrement_album_count(self.item['ownedByUserId']),
             self.dynamo.transact_delete_album(self.id),
         ]
-        self.dynamo.client.transact_write_items(transacts)
+        transact_exceptions = [
+            exceptions.AlbumException(f'Unable to decrement album count for user `{self.item["ownedByUserId"]}`'),
+            exceptions.AlbumException(f'Album `{self.id}` does not exist'),
+        ]
+        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         return self

@@ -2,7 +2,6 @@ import logging
 import random
 import string
 
-import botocore
 import pytest
 
 from app.models.flag import exceptions
@@ -109,7 +108,6 @@ def test_unflag_post(flag_manager, user, post, user2):
     assert post.item.get('flagCount', 0) == 0
 
 
-@pytest.mark.xfail(reason='https://github.com/spulec/moto/issues/1071')
 def test_unflag_post_not_flagged(flag_manager, post, user2):
     # verify can't unflag post that hasn't been flaged
     # note that moto raises the wrong error here because the first transaction
@@ -121,7 +119,7 @@ def test_unflag_post_not_flagged(flag_manager, post, user2):
 def test_unflag_post_that_doesnt_exist(flag_manager, post, user2):
     # verify can't unflag post that doesn't exist
     # moto raises the wrong error here
-    with pytest.raises(botocore.exceptions.ClientError):
+    with pytest.raises(exceptions.NotFlagged):
         flag_manager.unflag_post(user2.id, 'pid-dne')
 
 

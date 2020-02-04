@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-import botocore
 from isodate import duration
 import pytest
 
@@ -245,13 +244,13 @@ def test_transact_increment_decrement_flag_count(post_dynamo):
 
     # check can't decrement below zero
     transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
-    with pytest.raises(post_dynamo.client.exceptions.ClientError):
+    with pytest.raises(post_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items(transacts)
 
 
 def test_batch_get_posted_by_user_ids_not_found(post_dynamo):
     post_id = 'my-post-id'
-    resp = post_dynamo.batch_get_posted_by_user_ids(post_id)
+    resp = post_dynamo.batch_get_posted_by_user_ids([post_id])
     assert resp == []
 
 
@@ -598,7 +597,6 @@ def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
     assert expired_posts[1]['sortKey'] == post2['sortKey']
 
 
-@pytest.mark.xfail(raises=botocore.exceptions.ClientError, reason='Moto cant handle the scan filter expression')
 def test_generate_expired_post_pks_with_scan(post_dynamo, dynamo_client):
     # add four posts, one that expires a week ago, one that expires yesterday
     # and one that expires today, and one that doesnt expire
@@ -644,7 +642,7 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
 
     # verify we can't decrement count below zero
     transact = post_dynamo.transact_decrement_comment_count(post_id)
-    with pytest.raises(post_dynamo.client.exceptions.ClientError):
+    with pytest.raises(post_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
@@ -719,7 +717,7 @@ def test_transact_set_album_id_fails_wrong_status(post_dynamo):
     # verify transaction fails rather than write conflicting data to db
     post_item['postStatus'] = 'COMPLETED'
     transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
-    with pytest.raises(post_dynamo.client.exceptions.ClientError):
+    with pytest.raises(post_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items([transact])
 
     # verify nothing changed
