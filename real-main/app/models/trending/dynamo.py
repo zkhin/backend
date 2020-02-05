@@ -107,7 +107,7 @@ class TrendingDynamo:
                 ':ppvc': view_count_change_abs,
             },
             'ConditionExpression': (
-                'attribute_exists(partitionKey) and gsiA1SortKey = :oslua and pendingViewCount >= :ppvc'
+                'gsiA1SortKey = :oslua and pendingViewCount >= :ppvc'
             ),
         }
         return self.client.update_item(query_kwargs)
