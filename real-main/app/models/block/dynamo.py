@@ -1,9 +1,7 @@
-from datetime import datetime
 import logging
 
 from boto3.dynamodb.conditions import Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 from . import exceptions
 
@@ -22,8 +20,8 @@ class BlockDynamo:
         })
 
     def add_block(self, blocker_user_id, blocked_user_id, now=None):
-        now = now or datetime.utcnow()
-        blocked_at_str = real_datetime.serialize(now)
+        now = now or pendulum.now('utc')
+        blocked_at_str = now.to_iso8601_string()
         query_kwargs = {
             'Item': {
                 'schemaVersion': 0,

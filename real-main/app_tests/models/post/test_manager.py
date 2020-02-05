@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta
-
+import pendulum
 import pytest
-from isodate.duration import Duration
 
 from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus
@@ -48,16 +46,14 @@ def test_add_post_errors(post_manager):
 
     # try to add a post with a negative lifetime value
     with pytest.raises(post_manager.exceptions.PostException) as error_info:
-        post_manager.add_post('pbuid', 'pid', text='t', lifetime_duration=Duration(hours=-1))
+        post_manager.add_post('pbuid', 'pid', text='t', lifetime_duration=pendulum.duration(hours=-1))
     assert 'pbuid' in str(error_info.value)
     assert 'pid' in str(error_info.value)
     assert 'negative lifetime' in str(error_info.value)
 
     # try to add a post with a zero lifetime value
-    # note that isodate parses a parses the iso duration string P0D to timedelta(0),
-    # not one of their duration objects
     with pytest.raises(post_manager.exceptions.PostException) as error_info:
-        post_manager.add_post('pbuid', 'pid', text='t', lifetime_duration=timedelta(0))
+        post_manager.add_post('pbuid', 'pid', text='t', lifetime_duration=pendulum.duration())
     assert 'pbuid' in str(error_info.value)
     assert 'pid' in str(error_info.value)
     assert 'negative lifetime' in str(error_info.value)
@@ -67,7 +63,7 @@ def test_add_text_only_post(post_manager, user_manager):
     user_id = 'pbuid'
     post_id = 'pid'
     text = 'lore ipsum'
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # add the post
     user_manager.create_cognito_only_user(user_id, 'pbUname')
@@ -77,7 +73,7 @@ def test_add_text_only_post(post_manager, user_manager):
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['postedByUserId'] == user_id
-    assert post.item['postedAt'] == now.isoformat() + 'Z'
+    assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['text'] == 'lore ipsum'
     assert post.item['textTags'] == []
     assert post.item['postStatus'] == PostStatus.COMPLETED
@@ -116,7 +112,7 @@ def test_add_post_album_errors(user_manager, post_manager, user, album):
 def test_add_media_post(post_manager):
     user_id = 'pbuid'
     post_id = 'pid'
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     media_id = 'mid'
     media_type = 'mtype'
     media_upload = {
@@ -131,7 +127,7 @@ def test_add_media_post(post_manager):
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['postedByUserId'] == user_id
-    assert post.item['postedAt'] == now.isoformat() + 'Z'
+    assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['postStatus'] == PostStatus.PENDING
     assert 'text' not in post.item
     assert 'textTags' not in post.item
@@ -141,7 +137,7 @@ def test_add_media_post(post_manager):
     assert len(media_items) == 1
     assert media_items[0]['mediaId'] == media_id
     assert media_items[0]['mediaType'] == media_type
-    assert media_items[0]['postedAt'] == now.isoformat() + 'Z'
+    assert media_items[0]['postedAt'] == now.to_iso8601_string()
     assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
     assert 'expiresAt' not in media_items[0]
 
@@ -150,7 +146,7 @@ def test_add_media_post_with_options(post_manager, album):
     user_id = 'pbuid'
     post_id = 'pid'
     text = 'lore ipsum'
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     media_id = 'mid'
     media_type = 'mtype'
     media_upload = {
@@ -159,7 +155,7 @@ def test_add_media_post_with_options(post_manager, album):
         'takenInReal': False,
         'originalFormat': 'org-format',
     }
-    lifetime_duration = Duration(hours=1)
+    lifetime_duration = pendulum.duration(hours=1)
 
     # add the post (& media)
     post_manager.add_post(
@@ -173,10 +169,10 @@ def test_add_media_post_with_options(post_manager, album):
     assert post.id == post_id
     assert post.item['postedByUserId'] == user_id
     assert post.item['albumId'] == album.id
-    assert post.item['postedAt'] == now.isoformat() + 'Z'
+    assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['text'] == 'lore ipsum'
     assert post.item['postStatus'] == PostStatus.PENDING
-    assert post.item['expiresAt'] == expires_at.isoformat() + 'Z'
+    assert post.item['expiresAt'] == expires_at.to_iso8601_string()
     assert post.item['commentsDisabled'] is False
     assert post.item['likesDisabled'] is True
     assert post.item['verificationHidden'] is False
@@ -185,7 +181,7 @@ def test_add_media_post_with_options(post_manager, album):
     assert len(media_items) == 1
     assert media_items[0]['mediaId'] == media_id
     assert media_items[0]['mediaType'] == media_type
-    assert media_items[0]['postedAt'] == now.isoformat() + 'Z'
+    assert media_items[0]['postedAt'] == now.to_iso8601_string()
     assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
     assert media_items[0]['takenInReal'] is False
     assert media_items[0]['originalFormat'] == 'org-format'
@@ -193,23 +189,25 @@ def test_add_media_post_with_options(post_manager, album):
 
 def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # create four posts with diff. expiration qualities
     post_no_expires = post_manager.add_post(user.id, 'pid1', text='t')
     assert 'expiresAt' not in post_no_expires.item
 
-    post_future_expires = post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=Duration(hours=1))
-    assert post_future_expires.item['expiresAt'] > now.isoformat() + 'Z'
+    post_future_expires = post_manager.add_post(user.id, 'pid2', text='t',
+                                                lifetime_duration=pendulum.duration(hours=1))
+    assert post_future_expires.item['expiresAt'] > now.to_iso8601_string()
 
-    lifetime_duration = Duration(hours=now.hour, minutes=now.minute)
+    lifetime_duration = pendulum.duration(hours=now.hour, minutes=now.minute)
     post_expired_today = post_manager.add_post(user.id, 'pid3', text='t', lifetime_duration=lifetime_duration,
                                                now=(now - lifetime_duration))
-    assert post_expired_today.item['expiresAt'] == now.isoformat() + 'Z'
+    assert post_expired_today.item['expiresAt'] == now.to_iso8601_string()
 
-    post_expired_last_week = post_manager.add_post(user.id, 'pid4', text='t', lifetime_duration=Duration(hours=1),
-                                                   now=(now - Duration(days=7)))
-    assert post_expired_last_week.item['expiresAt'] < (now - Duration(days=6)).isoformat() + 'Z'
+    post_expired_last_week = post_manager.add_post(user.id, 'pid4', text='t',
+                                                   lifetime_duration=pendulum.duration(hours=1),
+                                                   now=(now - pendulum.duration(days=7)))
+    assert post_expired_last_week.item['expiresAt'] < (now - pendulum.duration(days=6)).to_iso8601_string()
 
     # run the deletion run
     post_manager.delete_recently_expired_posts()
@@ -229,23 +227,25 @@ def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
 
 def test_delete_older_expired_posts(post_manager, user_manager, caplog):
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # create four posts with diff. expiration qualities
     post_no_expires = post_manager.add_post(user.id, 'pid1', text='t')
     assert 'expiresAt' not in post_no_expires.item
 
-    post_future_expires = post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=Duration(hours=1))
-    assert post_future_expires.item['expiresAt'] > now.isoformat() + 'Z'
+    post_future_expires = post_manager.add_post(user.id, 'pid2', text='t',
+                                                lifetime_duration=pendulum.duration(hours=1))
+    assert post_future_expires.item['expiresAt'] > now.to_iso8601_string()
 
-    lifetime_duration = Duration(hours=now.hour, minutes=now.minute)
+    lifetime_duration = pendulum.duration(hours=now.hour, minutes=now.minute)
     post_expired_today = post_manager.add_post(user.id, 'pid3', text='t', lifetime_duration=lifetime_duration,
                                                now=(now - lifetime_duration))
-    assert post_expired_today.item['expiresAt'] == now.isoformat() + 'Z'
+    assert post_expired_today.item['expiresAt'] == now.to_iso8601_string()
 
-    post_expired_last_week = post_manager.add_post(user.id, 'pid4', text='t', lifetime_duration=Duration(hours=1),
-                                                   now=(now - Duration(days=7)))
-    assert post_expired_last_week.item['expiresAt'] < (now - Duration(days=6)).isoformat() + 'Z'
+    post_expired_last_week = post_manager.add_post(user.id, 'pid4', text='t',
+                                                   lifetime_duration=pendulum.duration(hours=1),
+                                                   now=(now - pendulum.duration(days=7)))
+    assert post_expired_last_week.item['expiresAt'] < (now - pendulum.duration(days=6)).to_iso8601_string()
 
     # run the deletion run
     post_manager.delete_older_expired_posts()

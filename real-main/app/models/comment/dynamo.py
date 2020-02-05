@@ -1,9 +1,7 @@
-from datetime import datetime
 import logging
 
 from boto3.dynamodb.conditions import Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 logger = logging.getLogger()
 
@@ -20,8 +18,8 @@ class CommentDynamo:
         }, strongly_consistent=strongly_consistent)
 
     def transact_add_comment(self, comment_id, post_id, user_id, text, text_tags, commented_at=None):
-        commented_at = commented_at or datetime.utcnow()
-        commented_at_str = real_datetime.serialize(commented_at)
+        commented_at = commented_at or pendulum.now('utc')
+        commented_at_str = commented_at.to_iso8601_string()
         return {'Put': {
             'Item': {
                 'schemaVersion': {'N': '0'},

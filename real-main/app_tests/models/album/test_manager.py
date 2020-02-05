@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 
@@ -15,17 +14,17 @@ def test_add_album_minimal(album_manager, user):
     assert user.item.get('albumCount', 0) == 0
 
     # add the album
-    before = datetime.utcnow()
+    before = pendulum.now('utc')
     album = album_manager.add_album(user.id, album_id, 'album name')
-    after = datetime.utcnow()
+    after = pendulum.now('utc')
 
     # verify the album looks correct
     assert album.id == album_id
     assert album.item['ownedByUserId'] == user.id
     assert album.item['name'] == 'album name'
     assert 'description' not in album.item
-    assert album.item['createdAt'] >= before.isoformat()
-    assert album.item['createdAt'] <= after.isoformat()
+    assert album.item['createdAt'] >= before.to_iso8601_string()
+    assert album.item['createdAt'] <= after.to_iso8601_string()
     assert album.item.get('postCount', 0) == 0
     assert 'postsLastUpdatedAt' not in album.item
 
@@ -41,7 +40,7 @@ def test_add_album_maximal(album_manager, user):
     assert user.item.get('albumCount', 0) == 0
 
     # add the album
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     album = album_manager.add_album(user.id, album_id, 'album name', description='a desc', now=now)
 
     # verify the album looks correct
@@ -49,7 +48,7 @@ def test_add_album_maximal(album_manager, user):
     assert album.item['ownedByUserId'] == user.id
     assert album.item['name'] == 'album name'
     assert album.item['description'] == 'a desc'
-    assert album.item['createdAt'] == now.isoformat() + 'Z'
+    assert album.item['createdAt'] == now.to_iso8601_string()
     assert album.item.get('postCount', 0) == 0
     assert 'postsLastUpdatedAt' not in album.item
 

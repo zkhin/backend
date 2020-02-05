@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 import math
 
-from app.lib import datetime as real_datetime
+import pendulum
 
 from . import dynamo, enums, exceptions
 
@@ -15,7 +14,7 @@ class TrendingManager:
     enums = enums
     exceptions = exceptions
 
-    average_lifetime = timedelta(days=1)
+    average_lifetime = pendulum.duration(days=1)
     min_score_cutoff = 0.37  # ~ 1/e
 
     def __init__(self, clients, managers=None):
@@ -27,7 +26,7 @@ class TrendingManager:
             self.dynamo = dynamo.TrendingDynamo(clients['dynamo'])
 
     def record_view_count(self, item_type, item_id, view_count, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         # first try to add it to an existing item
         try:
             return self.dynamo.increment_trending_pending_view_count(item_id, view_count, now=now)
@@ -53,11 +52,11 @@ class TrendingManager:
 
     def reindex(self, item_type, cutoff=None):
         "Do a pass over all trending items of `item_type` and update their score"
-        cutoff = cutoff or datetime.utcnow()
+        cutoff = cutoff or pendulum.now('utc')
         for item in self.dynamo.generate_trendings(item_type, max_last_indexed_at=cutoff):
             item_id = item['partitionKey'][9:]
             old_score = item['gsiK3SortKey']
-            last_indexed_at = real_datetime.parse(item['gsiA1SortKey'])
+            last_indexed_at = pendulum.parse(item['gsiA1SortKey']).in_tz('utc')
             pending_view_count = item['pendingViewCount']
             new_score = self.calculate_new_score(old_score, last_indexed_at, pending_view_count, cutoff)
 

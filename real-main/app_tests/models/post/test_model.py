@@ -1,7 +1,6 @@
-from datetime import datetime
 from unittest.mock import call, Mock
 
-from isodate.duration import Duration
+import pendulum
 import pytest
 
 from app.models.followed_first_story import FollowedFirstStoryManager
@@ -27,7 +26,7 @@ def albums(album_manager, user):
 @pytest.fixture
 def post_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=Duration(hours=1))
+    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
 
 
 @pytest.fixture
@@ -51,14 +50,14 @@ def test_set_expires_at(post):
     assert 'expiresAt' not in post.item
 
     # set the expires at to something
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.set_expires_at(now)
-    assert post.item['expiresAt'] == now.isoformat() + 'Z'
+    assert post.item['expiresAt'] == now.to_iso8601_string()
 
     # make sure that stuck in db
     post.refresh_item()
-    assert post.item['expiresAt'] == now.isoformat() + 'Z'
+    assert post.item['expiresAt'] == now.to_iso8601_string()
 
     # check that the followed_first_story_manager was called correctly
     assert post.followed_first_story_manager.mock_calls == [
@@ -67,14 +66,14 @@ def test_set_expires_at(post):
 
     # set the expires at to something else
     post.followed_first_story_manager.reset_mock()
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     post_org_item = post.item.copy()
     post.set_expires_at(now)
-    assert post.item['expiresAt'] == now.isoformat() + 'Z'
+    assert post.item['expiresAt'] == now.to_iso8601_string()
 
     # make sure that stuck in db
     post.refresh_item()
-    assert post.item['expiresAt'] == now.isoformat() + 'Z'
+    assert post.item['expiresAt'] == now.to_iso8601_string()
 
     # check that the followed_first_story_manager was called correctly
     assert post.followed_first_story_manager.mock_calls == [

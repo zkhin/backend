@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.flag.dynamo import FlagDynamo
@@ -13,8 +12,8 @@ def flag_dynamo(dynamo_client):
 def test_transact_add_flag(flag_dynamo):
     post_id = 'pid'
     user_id = 'uid'
-    now = datetime.utcnow()
-    flagged_at_str = now.isoformat() + 'Z'
+    now = pendulum.now('utc')
+    flagged_at_str = now.to_iso8601_string()
 
     # add a flag
     transacts = [flag_dynamo.transact_add_flag(post_id, user_id, now=now)]

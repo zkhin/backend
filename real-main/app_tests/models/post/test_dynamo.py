@@ -1,6 +1,4 @@
-from datetime import datetime, timedelta
-
-from isodate import duration
+import pendulum
 import pytest
 
 from app.models.post import exceptions
@@ -39,14 +37,14 @@ def test_post_exists(post_dynamo):
 def test_transact_add_pending_post_sans_options(post_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
-    posted_at = datetime.utcnow()
+    posted_at = pendulum.now('utc')
 
     # add the post
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, posted_at=posted_at)]
     post_dynamo.client.transact_write_items(transacts)
 
     # retrieve post, check format
-    posted_at_str = posted_at.isoformat() + 'Z'
+    posted_at_str = posted_at.to_iso8601_string()
     post_item = post_dynamo.get_post(post_id)
     assert post_item == {
         'schemaVersion': 1,
@@ -65,8 +63,8 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
     album_id = 'aid'
-    posted_at = datetime.utcnow()
-    expires_at = datetime.utcnow()
+    posted_at = pendulum.now('utc')
+    expires_at = pendulum.now('utc')
     text = 'lore @ipsum'
     text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
 
@@ -78,8 +76,8 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     post_dynamo.client.transact_write_items(transacts)
 
     # retrieve post, check format
-    posted_at_str = posted_at.isoformat() + 'Z'
-    expires_at_str = expires_at.isoformat() + 'Z'
+    posted_at_str = posted_at.to_iso8601_string()
+    expires_at_str = expires_at.to_iso8601_string()
     post_item = post_dynamo.get_post(post_id)
     assert post_item == {
         'schemaVersion': 1,
@@ -202,7 +200,7 @@ def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     user_id = 'my-user-id'
 
     # add a post, verify starts pending
-    expires_at = datetime.utcnow() + duration.Duration(days=1)
+    expires_at = pendulum.now('utc') + pendulum.duration(days=1)
     post_dynamo.client.transact_write_items([
         post_dynamo.transact_add_pending_post(user_id, post_id, text='l', expires_at=expires_at, album_id='aid'),
     ])
@@ -316,13 +314,13 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     user_id = 'uid'
     post_id = 'post-id'
     text = 'lore ipsum'
-    expires_at = datetime.utcnow() + duration.Duration(hours=1)
+    expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text=text, expires_at=expires_at)]
     post_dynamo.client.transact_write_items(transacts)
 
     org_post_item = post_dynamo.get_post(post_id)
     assert org_post_item['postId'] == post_id
-    assert org_post_item['expiresAt'] == expires_at.isoformat() + 'Z'
+    assert org_post_item['expiresAt'] == expires_at.to_iso8601_string()
 
     # delete it from the DB
     post_dynamo.client.delete_item({'Key': {
@@ -362,12 +360,12 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
     }})
 
     # now add it to the DB, with a lifetime
-    expires_at = datetime.utcnow() + duration.Duration(hours=1)
+    expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text=text, expires_at=expires_at)]
     post_dynamo.client.transact_write_items(transacts)
     new_post_item = post_dynamo.get_post(post_id)
     assert new_post_item['postId'] == post_id
-    assert new_post_item['expiresAt'] == expires_at.isoformat() + 'Z'
+    assert new_post_item['expiresAt'] == expires_at.to_iso8601_string()
 
     # remove the expires at, now the post items should match
     new_post_item = post_dynamo.remove_expires_at(post_id)
@@ -385,7 +383,7 @@ def test_get_next_completed_post_to_expire_no_posts(post_dynamo):
 def test_get_next_completed_post_to_expire_one_post(dynamo_client, post_dynamo):
     user_id = 'user-id'
     post_id_1 = 'post-id-1'
-    expires_at = datetime.utcnow() + duration.Duration(hours=1)
+    expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
 
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id_1, text='t', expires_at=expires_at)]
     post_dynamo.client.transact_write_items(transacts)
@@ -398,8 +396,8 @@ def test_get_next_completed_post_to_expire_one_post(dynamo_client, post_dynamo):
 def test_get_next_completed_post_to_expire_two_posts(dynamo_client, post_dynamo):
     user_id = 'user-id'
     post_id_1, post_id_2 = 'post-id-1', 'post-id-2'
-    now = datetime.utcnow()
-    expires_at_1, expires_at_2 = now + duration.Duration(days=1), now + duration.Duration(hours=12)
+    now = pendulum.now('utc')
+    expires_at_1, expires_at_2 = now + pendulum.duration(days=1), now + pendulum.duration(hours=12)
 
     # add those posts
     transacts = [
@@ -543,10 +541,10 @@ def test_set_verification_hidden(post_dynamo, dynamo_client):
 
 def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
     # add three posts, two that expire on the same day, and one that never expires, and complete them all
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     approx_hours_till_noon_tomorrow = 36 - now.time().hour
-    lifetime_1 = duration.Duration(hours=approx_hours_till_noon_tomorrow)
-    lifetime_2 = duration.Duration(hours=(approx_hours_till_noon_tomorrow + 6))
+    lifetime_1 = pendulum.duration(hours=approx_hours_till_noon_tomorrow)
+    lifetime_2 = pendulum.duration(hours=(approx_hours_till_noon_tomorrow + 6))
     expires_at_1 = now + lifetime_1
     expires_at_2 = now + lifetime_2
 
@@ -564,7 +562,7 @@ def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
     post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post2, PostStatus.COMPLETED)])
     post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post3, PostStatus.COMPLETED)])
 
-    expires_at_1 = datetime.fromisoformat(post1['expiresAt'][:-1])
+    expires_at_1 = pendulum.parse(post1['expiresAt']).in_tz('utc')
     expires_at_date = expires_at_1.date()
     cut_off_time = expires_at_1.time()
 
@@ -573,14 +571,14 @@ def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
     assert expired_posts == []
 
     # one of the posts has expired
-    cut_off_time = (expires_at_1 + duration.Duration(hours=1)).time()
+    cut_off_time = (expires_at_1 + pendulum.duration(hours=1)).time()
     expired_posts = list(post_dynamo.generate_expired_post_pks_by_day(expires_at_date, cut_off_time))
     assert len(expired_posts) == 1
     assert expired_posts[0]['partitionKey'] == post1['partitionKey']
     assert expired_posts[0]['sortKey'] == post1['sortKey']
 
     # both of posts have expired
-    cut_off_time = (expires_at_1 + duration.Duration(hours=7)).time()
+    cut_off_time = (expires_at_1 + pendulum.duration(hours=7)).time()
     expired_posts = list(post_dynamo.generate_expired_post_pks_by_day(expires_at_date, cut_off_time))
     assert len(expired_posts) == 2
     assert expired_posts[0]['partitionKey'] == post1['partitionKey']
@@ -600,10 +598,10 @@ def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
 def test_generate_expired_post_pks_with_scan(post_dynamo, dynamo_client):
     # add four posts, one that expires a week ago, one that expires yesterday
     # and one that expires today, and one that doesnt expire
-    now = datetime.utcnow()
-    week_ago = now - timedelta(days=7)
-    yesterday = now - timedelta(days=1)
-    lifetime = duration.Duration(seconds=1)
+    now = pendulum.now('utc')
+    week_ago = now - pendulum.duration(days=7)
+    yesterday = now - pendulum.duration(days=1)
+    lifetime = pendulum.duration(seconds=1)
 
     gen_transact = post_dynamo.transact_add_pending_post
     transacts = [

@@ -1,6 +1,6 @@
 from unittest.mock import call, Mock
 
-from isodate.duration import Duration
+import pendulum
 import pytest
 
 from app.models.feed import FeedManager
@@ -33,7 +33,7 @@ def post_with_media_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     post = post_manager.add_post(
         user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], text='t',
-        lifetime_duration=Duration(hours=1),
+        lifetime_duration=pendulum.duration(hours=1),
     )
     post_manager.media_dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum2')
     yield post

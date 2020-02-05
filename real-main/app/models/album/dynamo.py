@@ -1,10 +1,8 @@
 from collections import defaultdict
-from datetime import datetime
 import logging
 
 from boto3.dynamodb.conditions import Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 logger = logging.getLogger()
 
@@ -21,8 +19,8 @@ class AlbumDynamo:
         }, strongly_consistent=strongly_consistent)
 
     def transact_add_album(self, album_id, user_id, name, description=None, created_at=None):
-        created_at = created_at or datetime.utcnow()
-        created_at_str = real_datetime.serialize(created_at)
+        created_at = created_at or pendulum.now('utc')
+        created_at_str = created_at.to_iso8601_string()
         query_kwargs = {'Put': {
             'Item': {
                 'schemaVersion': {'N': '0'},
@@ -86,7 +84,7 @@ class AlbumDynamo:
 
     def transact_add_post(self, album_id, now=None):
         "Transaction to change album properties to reflect adding a post to the album"
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         return {'Update': {
             'Key': {
                 'partitionKey': {'S': f'album/{album_id}'},
@@ -95,14 +93,14 @@ class AlbumDynamo:
             'UpdateExpression': 'ADD postCount :one SET postsLastUpdatedAt = :now',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},
-                ':now': {'S': real_datetime.serialize(now)},
+                ':now': {'S': now.to_iso8601_string()},
             },
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
     def transact_remove_post(self, album_id, now=None):
         "Transaction to change album properties to reflect removing a post from the album"
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         return {'Update': {
             'Key': {
                 'partitionKey': {'S': f'album/{album_id}'},
@@ -111,7 +109,7 @@ class AlbumDynamo:
             'UpdateExpression': 'ADD postCount :negative_one SET postsLastUpdatedAt = :now',
             'ExpressionAttributeValues': {
                 ':negative_one': {'N': '-1'},
-                ':now': {'S': real_datetime.serialize(now)},
+                ':now': {'S': now.to_iso8601_string()},
                 ':zero': {'N': '0'},
             },
             'ConditionExpression': 'attribute_exists(partitionKey) and postCount > :zero',

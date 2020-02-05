@@ -1,10 +1,8 @@
-from datetime import datetime
 from functools import reduce
 import logging
 
 from boto3.dynamodb.conditions import Attr, Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 from .enums import MediaStatus
 
@@ -24,7 +22,8 @@ class MediaDynamo:
 
     def transact_add_media(self, posted_by_user_id, post_id, media_id, media_type, posted_at=None,
                            taken_in_real=None, original_format=None):
-        posted_at_str = real_datetime.serialize(posted_at or datetime.utcnow())
+        posted_at = posted_at or pendulum.now('utc')
+        posted_at_str = posted_at.to_iso8601_string()
         media_item = {
             'schemaVersion': {'N': '0'},
             'partitionKey': {'S': f'media/{media_id}'},

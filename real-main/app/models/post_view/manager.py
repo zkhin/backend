@@ -1,6 +1,7 @@
 from collections import Counter
-from datetime import datetime
 import logging
+
+import pendulum
 
 from app.models import trending
 from app.models.post.dynamo import PostDynamo
@@ -33,7 +34,7 @@ class PostViewManager:
         self.dynamo.delete_post_views(post_view_item_generator)
 
     def record_views(self, viewed_by_user_id, post_ids, viewed_at=None):
-        viewed_at = viewed_at or datetime.utcnow()
+        viewed_at = viewed_at or pendulum.now('utc')
         grouped_post_ids = dict(Counter(post_ids))
         for post_id, view_count in grouped_post_ids.items():
             self.record_view(viewed_by_user_id, post_id, view_count, viewed_at)

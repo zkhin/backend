@@ -1,8 +1,8 @@
-from datetime import datetime
 from functools import reduce
 import logging
 
 from boto3.dynamodb.conditions import Key
+import pendulum
 
 logger = logging.getLogger()
 
@@ -23,8 +23,8 @@ class LikeDynamo:
         })
 
     def transact_add_like(self, liked_by_user_id, post_item, like_status, now=None):
-        now = now or datetime.utcnow()
-        liked_at_str = now.isoformat() + 'Z'
+        now = now or pendulum.now('utc')
+        liked_at_str = now.to_iso8601_string()
         post_id = post_item['postId']
         posted_by_user_id = post_item['postedByUserId']
 

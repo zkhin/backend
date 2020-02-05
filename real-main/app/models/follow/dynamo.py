@@ -1,10 +1,9 @@
-from datetime import datetime
 from functools import reduce
 import logging
 
-from boto3.dynamodb.conditions import Key
+import pendulum
 
-from app.lib import datetime as real_datetime
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -21,7 +20,7 @@ class FollowDynamo:
         })
 
     def transact_add_following(self, follower_user_id, followed_user_id, follow_status):
-        followed_at = real_datetime.serialize(datetime.utcnow())
+        followed_at_str = pendulum.now('utc').to_iso8601_string()
         transact = {
             'Put': {
                 'Item': {
@@ -29,10 +28,10 @@ class FollowDynamo:
                     'partitionKey': {'S': f'following/{follower_user_id}/{followed_user_id}'},
                     'sortKey': {'S': '-'},
                     'gsiA1PartitionKey': {'S': f'follower/{follower_user_id}'},
-                    'gsiA1SortKey': {'S': f'{follow_status}/{followed_at}'},
+                    'gsiA1SortKey': {'S': f'{follow_status}/{followed_at_str}'},
                     'gsiA2PartitionKey': {'S': f'followed/{followed_user_id}'},
-                    'gsiA2SortKey': {'S': f'{follow_status}/{followed_at}'},
-                    'followedAt': {'S': followed_at},
+                    'gsiA2SortKey': {'S': f'{follow_status}/{followed_at_str}'},
+                    'followedAt': {'S': followed_at_str},
                     'followStatus': {'S': follow_status},
                     'followerUserId': {'S': follower_user_id},
                     'followedUserId': {'S': followed_user_id},

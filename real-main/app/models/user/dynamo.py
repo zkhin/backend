@@ -1,10 +1,8 @@
 from collections import defaultdict
-from datetime import datetime
 import logging
 
 from boto3.dynamodb.conditions import Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 from .enums import UserPrivacyStatus
 from .exceptions import UserDoesNotExist
@@ -19,7 +17,7 @@ class UserDynamo:
 
     def add_user(self, user_id, username, full_name=None, email=None, phone=None, placeholder_photo_code=None,
                  now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
                 'schemaVersion': 5,
@@ -30,7 +28,7 @@ class UserDynamo:
                 'userId': user_id,
                 'username': username,
                 'privacyStatus': UserPrivacyStatus.PUBLIC,
-                'signedUpAt': real_datetime.serialize(now),
+                'signedUpAt': now.to_iso8601_string(),
             },
         }
         if full_name:
@@ -64,7 +62,7 @@ class UserDynamo:
         return self.client.delete_item(query_kwargs)
 
     def update_user_username(self, user_id, username, old_username, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
@@ -79,7 +77,7 @@ class UserDynamo:
             'ExpressionAttributeValues': {
                 ':un': username,
                 ':oldun': old_username,
-                ':ulca': real_datetime.serialize(now),
+                ':ulca': now.to_iso8601_string(),
                 ':gsia1pk': f'username/{username}',
             },
             'ConditionExpression': 'username = :oldun',

@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 
@@ -23,14 +22,14 @@ def test_add_comment(comment_manager, user, post):
     # add the comment, verify
     username = user.item['username']
     text = f'hey @{username}'
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     comment = comment_manager.add_comment(comment_id, post.id, user.id, text, now=now)
     assert comment.id == comment_id
     assert comment.item['postId'] == post.id
     assert comment.item['userId'] == user.id
     assert comment.item['text'] == text
     assert comment.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
-    assert comment.item['commentedAt'] == now.isoformat() + 'Z'
+    assert comment.item['commentedAt'] == now.to_iso8601_string()
 
     # check the post counter incremented
     post.refresh_item()

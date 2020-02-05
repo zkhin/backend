@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.comment.dynamo import CommentDynamo
@@ -16,7 +15,7 @@ def test_transact_add_comment(comment_dynamo):
     user_id = 'uid'
     text = 'text @dog'
     text_tags = [{'tag': '@dog', 'userId': 'duid'}]
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # add the comment to the DB
     transact = comment_dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, now)
@@ -24,7 +23,7 @@ def test_transact_add_comment(comment_dynamo):
 
     # retrieve the comment and verify the format is as we expect
     comment_item = comment_dynamo.get_comment(comment_id)
-    commented_at_str = now.isoformat() + 'Z'
+    commented_at_str = now.to_iso8601_string()
     assert comment_item == {
         'partitionKey': 'comment/cid',
         'sortKey': '-',

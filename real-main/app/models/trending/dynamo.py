@@ -1,10 +1,8 @@
-from datetime import datetime
 from functools import reduce
 import logging
 
 from boto3.dynamodb.conditions import Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 from . import exceptions
 
@@ -32,13 +30,13 @@ class TrendingDynamo:
         })
 
     def create_trending(self, item_type, item_id, view_count, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
                 'partitionKey': f'trending/{item_id}',
                 'sortKey': '-',
                 'gsiA1PartitionKey': f'trending/{item_type}',
-                'gsiA1SortKey': real_datetime.serialize(now),
+                'gsiA1SortKey': now.to_iso8601_string(),
                 'gsiK3PartitionKey': f'trending/{item_type}',
                 'gsiK3SortKey': view_count,
                 'schemaVersion': 0,
@@ -51,7 +49,7 @@ class TrendingDynamo:
             raise exceptions.TrendingAlreadyExists(item_id)
 
     def increment_trending_view_count(self, item_id, view_count, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': {
                 'partitionKey': f'trending/{item_id}',
@@ -61,7 +59,7 @@ class TrendingDynamo:
             'ConditionExpression': 'gsiA1SortKey = :gsia1sk',
             'ExpressionAttributeValues': {
                 ':cnt': view_count,
-                ':gsia1sk': real_datetime.serialize(now),
+                ':gsia1sk': now.to_iso8601_string(),
             },
         }
         try:
@@ -71,7 +69,7 @@ class TrendingDynamo:
             raise exceptions.TrendingException(msg)
 
     def increment_trending_pending_view_count(self, item_id, view_count, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': {
                 'partitionKey': f'trending/{item_id}',
@@ -81,7 +79,7 @@ class TrendingDynamo:
             'ConditionExpression': 'gsiA1SortKey < :gsia1sk',
             'ExpressionAttributeValues': {
                 ':cnt': view_count,
-                ':gsia1sk': real_datetime.serialize(now),
+                ':gsia1sk': now.to_iso8601_string(),
             },
         }
         try:
@@ -100,8 +98,8 @@ class TrendingDynamo:
                 'SET gsiA1SortKey = :nslua, gsiK3SortKey = :score ADD pendingViewCount :npvc'
             ),
             'ExpressionAttributeValues': {
-                ':nslua': real_datetime.serialize(new_last_indexed_at),
-                ':oslua': real_datetime.serialize(old_last_indexed_at),
+                ':nslua': new_last_indexed_at.to_iso8601_string(),
+                ':oslua': old_last_indexed_at.to_iso8601_string(),
                 ':score': score,
                 ':npvc': -view_count_change_abs,
                 ':ppvc': view_count_change_abs,
@@ -116,7 +114,7 @@ class TrendingDynamo:
         "Generator of trendings. max_last_index_at is exclusive"
         key_conditions = [Key('gsiA1PartitionKey').eq(f'trending/{item_type}')]
         if max_last_indexed_at is not None:
-            key_conditions.append(Key('gsiA1SortKey').lt(real_datetime.serialize(max_last_indexed_at)))
+            key_conditions.append(Key('gsiA1SortKey').lt(max_last_indexed_at.to_iso8601_string()))
         query_kwargs = {
             'KeyConditionExpression': reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-A1',

@@ -1,4 +1,4 @@
-from datetime import datetime
+import pendulum
 
 
 def test_add_users_posts_to_feed(feed_manager, post_manager, user_manager):
@@ -27,7 +27,7 @@ def test_delete_users_posts_from_feed(feed_manager):
     feed_user_id = 'fuid'
 
     # add two posts by pbuid1 to the feed, and one by pbuid2
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter([{
         'postId': 'pid1',
         'postedByUserId': posted_by_uid1,
@@ -79,7 +79,7 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
     assert list(feed_manager.dynamo.generate_feed(another_user.id)) == []
 
     # add a post to all our followers (none) and us
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid1',
         'postedByUserId': our_user.id,
@@ -97,7 +97,7 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
     feed_manager.dynamo.client.transact_write_items(transacts)
 
     # add a post to all our followers and us
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid2',
         'postedByUserId': our_user.id,
@@ -121,7 +121,7 @@ def test_delete_post_from_followers_feeds(feed_manager, user_manager):
     feed_manager.dynamo.client.transact_write_items(transacts)
 
     # add a post to all our followers and us
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid2',
         'postedByUserId': our_user.id,

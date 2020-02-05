@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.album.dynamo import AlbumDynamo
@@ -24,9 +23,9 @@ def test_transact_add_album_minimal(album_dynamo):
     name = 'aname'
 
     # add the album to the DB
-    before_str = datetime.utcnow().isoformat()
+    before_str = pendulum.now('utc').to_iso8601_string()
     transact = album_dynamo.transact_add_album(album_id, user_id, name)
-    after_str = datetime.utcnow().isoformat()
+    after_str = pendulum.now('utc').to_iso8601_string()
     album_dynamo.client.transact_write_items([transact])
 
     # retrieve the album and verify the format is as we expect
@@ -54,14 +53,14 @@ def test_transact_add_album_maximal(album_dynamo):
     description = 'adesc'
 
     # add the album to the DB
-    created_at = datetime.utcnow()
+    created_at = pendulum.now('utc')
     album_dynamo.client.transact_write_items([
         album_dynamo.transact_add_album(album_id, user_id, name, description=description, created_at=created_at),
     ])
 
     # retrieve the album and verify the format is as we expect
     album_item = album_dynamo.get_album(album_id)
-    created_at_str = created_at.isoformat() + 'Z'
+    created_at_str = created_at.to_iso8601_string()
     assert album_item == {
         'partitionKey': 'album/aid',
         'sortKey': '-',
@@ -152,19 +151,19 @@ def test_transact_add_post(album_dynamo, album_item):
     assert 'postsLastUpdatedAt' not in album_item
 
     # add a post, check the new state
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     transact = album_dynamo.transact_add_post(album_id, now=now)
     album_dynamo.client.transact_write_items([transact])
     album_item = album_dynamo.get_album(album_id)
     assert album_item.get('postCount', 0) == 1
-    assert album_item['postsLastUpdatedAt'] == now.isoformat() + 'Z'
+    assert album_item['postsLastUpdatedAt'] == now.to_iso8601_string()
 
     # add another post, check the new state
     transact = album_dynamo.transact_add_post(album_id)
     album_dynamo.client.transact_write_items([transact])
     album_item = album_dynamo.get_album(album_id)
     assert album_item.get('postCount', 0) == 2
-    assert album_item['postsLastUpdatedAt'] > now.isoformat()
+    assert album_item['postsLastUpdatedAt'] > now.to_iso8601_string()
 
 
 def test_transact_remove_post(album_dynamo, album_item):
@@ -178,12 +177,12 @@ def test_transact_remove_post(album_dynamo, album_item):
     assert album_item['postsLastUpdatedAt']
 
     # remove that post, check state
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     transact = album_dynamo.transact_remove_post(album_id, now=now)
     album_dynamo.client.transact_write_items([transact])
     album_item = album_dynamo.get_album(album_id)
     assert album_item.get('postCount', 0) == 0
-    assert album_item['postsLastUpdatedAt'] == now.isoformat() + 'Z'
+    assert album_item['postsLastUpdatedAt'] == now.to_iso8601_string()
 
     # verify we can't remove another post
     transact = album_dynamo.transact_remove_post(album_id)

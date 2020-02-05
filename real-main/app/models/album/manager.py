@@ -1,5 +1,6 @@
-from datetime import datetime
 import logging
+
+import pendulum
 
 from app.models import post, user
 from app.models.user.dynamo import UserDynamo
@@ -34,7 +35,7 @@ class AlbumManager:
         return Album(album_item, self.clients, user_manager=self.user_manager, post_manager=self.post_manager)
 
     def add_album(self, caller_user_id, album_id, name, description=None, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
 
         # test suite cares about order here, but it doesn't actually matter
         transacts = [

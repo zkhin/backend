@@ -1,5 +1,6 @@
-from datetime import datetime
 import logging
+
+import pendulum
 
 from app.models import block, follow, post, user
 
@@ -34,7 +35,7 @@ class CommentManager:
         return Comment(comment_item, self.clients, user_manager=self.user_manager)
 
     def add_comment(self, comment_id, post_id, user_id, text, now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
 
         post_item = self.post_dynamo.get_post(post_id)
         if not post_item:

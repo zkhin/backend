@@ -2,8 +2,6 @@ import logging
 
 from boto3.dynamodb.conditions import Key
 
-from app.lib import datetime as real_datetime
-
 from app.models.post_view import exceptions
 
 logger = logging.getLogger()
@@ -39,7 +37,7 @@ class PostViewDynamo:
     def add_post_view(self, post_item, viewed_by_user_id, view_count, viewed_at):
         post_id = post_item['postId']
         posted_by_user_id = post_item['postedByUserId']
-        viewed_at_str = real_datetime.serialize(viewed_at)
+        viewed_at_str = viewed_at.to_iso8601_string()
         query_kwargs = {
             'Item': {
                 'partitionKey': f'postView/{post_id}/{viewed_by_user_id}',
@@ -69,7 +67,7 @@ class PostViewDynamo:
             'UpdateExpression': 'ADD viewCount :vc SET lastViewedAt = :lva',
             'ExpressionAttributeValues': {
                 ':vc': view_count,
-                ':lva': real_datetime.serialize(viewed_at),
+                ':lva': viewed_at.to_iso8601_string(),
             },
         }
         try:

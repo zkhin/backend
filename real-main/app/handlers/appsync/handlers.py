@@ -1,12 +1,10 @@
-import datetime
 import logging
 import os
 
-import isodate
+import pendulum
 
 from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
                          SecretsManagerClient, S3Client)
-from app.lib import datetime as real_datetime
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.comment import CommentManager
@@ -461,9 +459,11 @@ def add_post(caller_user_id, arguments, source, context):
     lifetime_iso = arguments.get('lifetime')
     if lifetime_iso:
         try:
-            lifetime_duration = isodate.parse_duration(lifetime_iso)
-        except isodate.ISO8601Error:
+            lifetime_duration = pendulum.parse(lifetime_iso)
+        except pendulum.exceptions.ParserError:
             raise ClientException(f'Unable to parse lifetime `{lifetime_iso}`')
+        if not isinstance(lifetime_duration, pendulum.Duration):
+            raise ClientException(f'Unable to parse lifetime `{lifetime_iso}` as duration')
     else:
         lifetime_duration = None
 
@@ -535,7 +535,8 @@ def edit_post_album(caller_user_id, arguments, source, context):
 @routes.register('Mutation.editPostExpiresAt')
 def edit_post_expires_at(caller_user_id, arguments, source, context):
     post_id = arguments['postId']
-    expires_at = real_datetime.parse(arguments.get('expiresAt'))
+    expires_at_str = arguments.get('expiresAt')
+    expires_at = pendulum.parse(expires_at_str).in_tz('utc') if expires_at_str else None
 
     post = post_manager.get_post(post_id)
     if not post:
@@ -544,8 +545,8 @@ def edit_post_expires_at(caller_user_id, arguments, source, context):
     if caller_user_id != post.item['postedByUserId']:
         raise ClientException("Cannot edit another User's post")
 
-    if expires_at and expires_at < datetime.datetime.utcnow():
-        raise ClientException("Cannot set expiresAt to datetime in the past: `{expires_at}`")
+    if expires_at and expires_at < pendulum.now('utc'):
+        raise ClientException("Cannot set expiresAt to date time in the past: `{expires_at}`")
 
     post.set_expires_at(expires_at)
     return post.serialize(caller_user_id)

@@ -1,11 +1,10 @@
 from collections import defaultdict
-from datetime import datetime
 from functools import reduce
 import logging
 
 from boto3.dynamodb.conditions import Attr, Key
+import pendulum
 
-from app.lib import datetime as real_datetime
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostStatus
 
@@ -59,9 +58,9 @@ class PostDynamo:
         return self.client.generate_all_query(query_kwargs)
 
     def generate_expired_post_pks_by_day(self, date, cut_off_time=None):
-        key_conditions = [Key('gsiK1PartitionKey').eq(f'post/{date.isoformat()}')]
+        key_conditions = [Key('gsiK1PartitionKey').eq(f'post/{date}')]
         if cut_off_time:
-            key_conditions.append(Key('gsiK1SortKey').lt(cut_off_time.isoformat()))
+            key_conditions.append(Key('gsiK1SortKey').lt(str(cut_off_time)))
         query_kwargs = {
             'KeyConditionExpression': reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-K1',
@@ -74,7 +73,7 @@ class PostDynamo:
         query_kwargs = {
             'FilterExpression': (
                 Attr('partitionKey').begins_with('post/')
-                & Attr('expiresAt').lt(cut_off_date.isoformat())
+                & Attr('expiresAt').lt(str(cut_off_date))
             ),
             'ProjectionExpression': 'partitionKey, sortKey',
         }
@@ -83,7 +82,8 @@ class PostDynamo:
     def transact_add_pending_post(self, posted_by_user_id, post_id, posted_at=None, expires_at=None, album_id=None,
                                   text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
                                   sharing_disabled=None, verification_hidden=None):
-        posted_at_str = real_datetime.serialize(posted_at or datetime.utcnow())
+        posted_at = posted_at or pendulum.now('utc')
+        posted_at_str = posted_at.to_iso8601_string()
         post_status = enums.PostStatus.PENDING
         post_item = {
             'schemaVersion': {'N': '1'},
@@ -97,14 +97,13 @@ class PostDynamo:
             'postStatus': {'S': post_status},
         }
         if expires_at:
-            expires_at_str = real_datetime.serialize(expires_at)
-            expires_at_date_str, expires_at_time_str = real_datetime.split(expires_at_str)
+            expires_at_str = expires_at.to_iso8601_string()
             post_item.update({
                 'expiresAt': {'S': expires_at_str},
                 'gsiA1PartitionKey': {'S': f'post/{posted_by_user_id}'},
                 'gsiA1SortKey': {'S': f'{post_status}/{expires_at_str}'},
-                'gsiK1PartitionKey': {'S': f'post/{expires_at_date_str}'},
-                'gsiK1SortKey': {'S': expires_at_time_str},
+                'gsiK1PartitionKey': {'S': f'post/{expires_at.date()}'},
+                'gsiK1SortKey': {'S': str(expires_at.time())},
             })
         if album_id:
             post_item.update({
@@ -268,7 +267,7 @@ class PostDynamo:
         return self.client.update_item(update_query_kwargs)
 
     def set_expires_at(self, post_item, expires_at):
-        expires_at_str = real_datetime.serialize(expires_at)
+        expires_at_str = expires_at.to_iso8601_string()
         update_query_kwargs = {
             'Key': {
                 'partitionKey': f'post/{post_item["postId"]}',
@@ -285,8 +284,8 @@ class PostDynamo:
                 ':ea': expires_at_str,
                 ':ga1pk': 'post/' + post_item['postedByUserId'],
                 ':ga1sk': post_item['postStatus'] + '/' + expires_at_str,
-                ':gk1pk': 'post/' + expires_at_str[:10],
-                ':gk1sk': expires_at_str[11:-1],
+                ':gk1pk': f'post/{expires_at.date()}',
+                ':gk1sk': str(expires_at.time()),
                 ':ps': post_item['postStatus'],
             },
             'ConditionExpression': 'postStatus = :ps',

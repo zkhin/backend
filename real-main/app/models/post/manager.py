@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
 import itertools
 import logging
+
+import pendulum
 
 from app.models import comment, feed, flag, followed_first_story, like, media, post_view, trending, user
 from app.models.album.dynamo import AlbumDynamo
@@ -63,7 +64,7 @@ class PostManager:
     def add_post(self, posted_by_user_id, post_id, media_uploads=[], text=None, lifetime_duration=None, album_id=None,
                  comments_disabled=None, likes_disabled=None, sharing_disabled=None, verification_hidden=None,
                  now=None):
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
 
         if not text and not media_uploads:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` without text or media'
@@ -114,8 +115,8 @@ class PostManager:
 
     def delete_recently_expired_posts(self, now=None):
         "Delete posts that expired yesterday or today"
-        now = now or datetime.utcnow()
-        yesterday = now - timedelta(days=1)
+        now = now or pendulum.now('utc')
+        yesterday = now - pendulum.duration(days=1)
 
         # Every run we operate on all posts that expired yesterday, and any that have expired so far today.
         # Techinically we only need to operate on yesterday's posts on today's first run,
@@ -140,7 +141,7 @@ class PostManager:
 
     def delete_older_expired_posts(self, now=None):
         "Delete posts that expired yesterday or earlier, via full table scan"
-        now = now or datetime.utcnow()
+        now = now or pendulum.now('utc')
         today = now.date()
 
         # scan for expired posts

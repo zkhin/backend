@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.media.dynamo import MediaDynamo
@@ -194,14 +193,14 @@ def test_transact_add_media_sans_options(media_dynamo):
     post_id = 'pid'
     media_id = 'mid'
     media_type = 'mtype'
-    posted_at = datetime.utcnow()
+    posted_at = pendulum.now('utc')
 
     # add the media
     transacts = [media_dynamo.transact_add_media(user_id, post_id, media_id, media_type, posted_at=posted_at)]
     media_dynamo.client.transact_write_items(transacts)
 
     # retrieve media, check format
-    posted_at_str = posted_at.isoformat() + 'Z'
+    posted_at_str = posted_at.to_iso8601_string()
     media_item = media_dynamo.get_media(media_id)
     assert media_item == {
         'schemaVersion': 0,
@@ -225,7 +224,7 @@ def test_transact_add_media_with_options(media_dynamo):
     post_id = 'pid'
     media_id = 'mid'
     media_type = 'mtype'
-    posted_at = datetime.utcnow()
+    posted_at = pendulum.now('utc')
 
     # add the media
     transacts = [media_dynamo.transact_add_media(
@@ -235,7 +234,7 @@ def test_transact_add_media_with_options(media_dynamo):
     media_dynamo.client.transact_write_items(transacts)
 
     # retrieve media, check format
-    posted_at_str = posted_at.isoformat() + 'Z'
+    posted_at_str = posted_at.to_iso8601_string()
     media_item = media_dynamo.get_media(media_id)
     assert media_item == {
         'schemaVersion': 0,

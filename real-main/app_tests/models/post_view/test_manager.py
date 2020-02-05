@@ -1,7 +1,7 @@
-from datetime import datetime
 import logging
 from unittest.mock import Mock, call
 
+import pendulum
 import pytest
 
 from app.models.post.enums import PostStatus
@@ -57,7 +57,7 @@ def test_record_views(post_view_manager):
     assert post_view_manager.record_view.mock_calls == []
 
     # call with some post ids
-    viewed_at = datetime.utcnow()
+    viewed_at = pendulum.now('utc')
     post_view_manager.record_views('vuid', ['pid1', 'pid2', 'pid1'], viewed_at)
     assert post_view_manager.record_view.mock_calls == [
         call('vuid', 'pid1', 2, viewed_at),
@@ -71,7 +71,7 @@ def test_record_view_post_does_not_exist(post_view_manager, caplog):
 
     with caplog.at_level(logging.WARNING):
         # fails with logged warning
-        post_view_manager.record_view(user_id, post_id, 3, datetime.utcnow())
+        post_view_manager.record_view(user_id, post_id, 3, pendulum.now('utc'))
 
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
@@ -85,8 +85,8 @@ def test_record_view(post_view_manager, dynamo_client, posts):
     posted_by_user_id = post.item['postedByUserId']
     post_id = post.id
     view_count = 3
-    viewed_at = datetime.utcnow()
-    viewed_at_str = viewed_at.isoformat() + 'Z'
+    viewed_at = pendulum.now('utc')
+    viewed_at_str = viewed_at.to_iso8601_string()
 
     # check there is no post view yet recorded for this user on this post
     assert post_view_manager.dynamo.get_post_view(post_id, viewed_by_user_id) is None
@@ -115,8 +115,8 @@ def test_record_view(post_view_manager, dynamo_client, posts):
 
     # record a second post view for this user on this post
     new_view_count = 5
-    new_viewed_at = datetime.utcnow()
-    new_viewed_at_str = new_viewed_at.isoformat() + 'Z'
+    new_viewed_at = pendulum.now('utc')
+    new_viewed_at_str = new_viewed_at.to_iso8601_string()
     post_view_manager.record_view(viewed_by_user_id, post_id, new_view_count, new_viewed_at)
 
     # check the post view item exists and has the right deets
@@ -153,8 +153,8 @@ def test_record_view_for_non_original_post(post_view_manager, dynamo_client, pos
     org_post_id = org_post.id
     non_org_post_id = non_org_post.id
     view_count = 3
-    viewed_at = datetime.utcnow()
-    viewed_at_str = viewed_at.isoformat() + 'Z'
+    viewed_at = pendulum.now('utc')
+    viewed_at_str = viewed_at.to_iso8601_string()
 
     # check there is no post view yet recorded for this user on either post
     assert post_view_manager.dynamo.get_post_view(org_post_id, viewed_by_user_id) is None
@@ -195,8 +195,8 @@ def test_record_view_for_non_original_post(post_view_manager, dynamo_client, pos
 
     # now record a view directly on the original post
     new_view_count = 5
-    new_viewed_at = datetime.utcnow()
-    new_viewed_at_str = new_viewed_at.isoformat() + 'Z'
+    new_viewed_at = pendulum.now('utc')
+    new_viewed_at_str = new_viewed_at.to_iso8601_string()
     post_view_manager.record_view(viewed_by_user_id, org_post_id, new_view_count, new_viewed_at)
 
     # check the post view item for the original post was incremented correctly

@@ -1,5 +1,3 @@
-# from datetime import datetime
-
 import pytest
 
 from app.models.like.enums import LikeStatus

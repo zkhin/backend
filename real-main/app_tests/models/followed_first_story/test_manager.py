@@ -1,7 +1,6 @@
-from datetime import datetime
 from uuid import uuid4
 
-import isodate
+import pendulum
 import pytest
 
 from app.models.follow.enums import FollowStatus
@@ -114,7 +113,7 @@ def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_user_id
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
     # make that post into a story, but don't write that to the DB
-    post['expiresAt'] = datetime.utcnow().isoformat() + 'Z'
+    post['expiresAt'] = pendulum.now('utc').to_iso8601_string()
 
     # refresh as if after remove, story isn't in the DB
     ffs_manager.refresh_after_story_change(story_prev=post)
@@ -132,7 +131,7 @@ def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_user_ids, 
     post = followed_posts[0]
 
     # make that post into a story, but don't write that to the DB
-    post['expiresAt'] = datetime.utcnow().isoformat() + 'Z'
+    post['expiresAt'] = pendulum.now('utc').to_iso8601_string()
 
     # check no ffs in the DB
     followed_first_story_pk = {
@@ -159,7 +158,7 @@ def test_refresh_after_add_story_in_db(ffs_manager, following_user_ids, followed
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
     # add story to DB, refresh, check ffs now in db
-    post = post_manager.dynamo.set_expires_at(post, datetime.utcnow())
+    post = post_manager.dynamo.set_expires_at(post, pendulum.now('utc'))
     ffs_manager.refresh_after_story_change(story_now=post)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post['postId']
@@ -169,10 +168,10 @@ def test_refresh_after_add_story_order(ffs_manager, following_user_ids, followed
     follower_user_id, followed_user_id = following_user_ids
     post1, post2, post3 = followed_posts[:3]
 
-    now = datetime.utcnow()
-    in_one_hour = now + isodate.duration.Duration(hours=1)
-    in_two_hours = now + isodate.duration.Duration(hours=2)
-    in_three_hours = now + isodate.duration.Duration(hours=3)
+    now = pendulum.now('utc')
+    in_one_hour = now + pendulum.duration(hours=1)
+    in_two_hours = now + pendulum.duration(hours=2)
+    in_three_hours = now + pendulum.duration(hours=3)
 
     # change the middle post to a story, save to db
     post2 = post_manager.dynamo.set_expires_at(post2, in_two_hours)
@@ -203,12 +202,12 @@ def test_refresh_remove_story_order(ffs_manager, following_user_ids, followed_po
     follower_user_id, followed_user_id = following_user_ids
     post1, post2, post3, post4, post5 = followed_posts
 
-    now = datetime.utcnow()
-    in_one_hour = now + isodate.duration.Duration(hours=1)
-    in_two_hours = now + isodate.duration.Duration(hours=2)
-    in_three_hours = now + isodate.duration.Duration(hours=3)
-    in_four_hours = now + isodate.duration.Duration(hours=4)
-    in_five_hours = now + isodate.duration.Duration(hours=5)
+    now = pendulum.now('utc')
+    in_one_hour = now + pendulum.duration(hours=1)
+    in_two_hours = now + pendulum.duration(hours=2)
+    in_three_hours = now + pendulum.duration(hours=3)
+    in_four_hours = now + pendulum.duration(hours=4)
+    in_five_hours = now + pendulum.duration(hours=5)
 
     # make all of those stories
     post1 = post_manager.dynamo.set_expires_at(post1, in_one_hour)
@@ -259,12 +258,12 @@ def test_refresh_change_story_order(ffs_manager, following_user_ids, followed_po
     follower_user_id, followed_user_id = following_user_ids
     post1, post2 = followed_posts[:2]
 
-    now = datetime.utcnow()
-    in_one_hour = now + isodate.duration.Duration(hours=1)
-    in_two_hours = now + isodate.duration.Duration(hours=2)
-    in_three_hours = now + isodate.duration.Duration(hours=3)
-    in_four_hours = now + isodate.duration.Duration(hours=4)
-    in_five_hours = now + isodate.duration.Duration(hours=5)
+    now = pendulum.now('utc')
+    in_one_hour = now + pendulum.duration(hours=1)
+    in_two_hours = now + pendulum.duration(hours=2)
+    in_three_hours = now + pendulum.duration(hours=3)
+    in_four_hours = now + pendulum.duration(hours=4)
+    in_five_hours = now + pendulum.duration(hours=5)
 
     # make all of those stories
     post1 = post_manager.dynamo.set_expires_at(post1, in_two_hours)

@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from isodate.duration import Duration
+import pendulum
 import pytest
 
 from app.models.follow.enums import FollowStatus
@@ -19,7 +19,7 @@ def users(user_manager):
 @pytest.fixture
 def their_post(follow_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
-    post = post_manager.add_post(users[1].id, str(uuid4()), lifetime_duration=Duration(hours=12), text='t')
+    post = post_manager.add_post(users[1].id, str(uuid4()), lifetime_duration=pendulum.duration(hours=12), text='t')
     yield post
 
 

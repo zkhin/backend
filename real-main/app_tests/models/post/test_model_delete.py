@@ -1,6 +1,6 @@
 from unittest.mock import call, Mock
 
-from isodate.duration import Duration
+import pendulum
 import pytest
 
 from app.models.comment import CommentManager
@@ -17,7 +17,7 @@ from app.models.trending import TrendingManager
 @pytest.fixture
 def post_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=Duration(hours=1))
+    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
 
 
 @pytest.fixture

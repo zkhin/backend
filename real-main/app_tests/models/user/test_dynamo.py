@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.user.dynamo import UserDynamo
@@ -16,11 +15,11 @@ def test_add_user_minimal(user_dynamo):
     user_id = 'my-user-id'
     username = 'my-USername'
 
-    before = datetime.utcnow()
+    before = pendulum.now('utc')
     item = user_dynamo.add_user(user_id, username)
-    after = datetime.utcnow()
+    after = pendulum.now('utc')
 
-    now = datetime.fromisoformat(item['signedUpAt'][:-1])
+    now = pendulum.parse(item['signedUpAt']).in_tz('utc')
     assert before < now
     assert after > now
 
@@ -33,7 +32,7 @@ def test_add_user_minimal(user_dynamo):
         'userId': user_id,
         'username': username,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
-        'signedUpAt': now.isoformat() + 'Z',
+        'signedUpAt': now.to_iso8601_string()
     }
 
 
@@ -45,12 +44,15 @@ def test_add_user_maximal(user_dynamo):
     phone = 'my-phone'
     photo_code = 'red-cat'
 
-    before = datetime.utcnow()
+    before = pendulum.now('utc')
     item = user_dynamo.add_user(user_id, username, full_name=full_name, email=email, phone=phone,
                                 placeholder_photo_code=photo_code)
-    after = datetime.utcnow()
+    after = pendulum.now('utc')
 
-    now = datetime.fromisoformat(item['signedUpAt'][:-1])
+    now = pendulum.parse(item['signedUpAt']).in_tz('utc')
+    print(item['signedUpAt'])
+    print(now)
+    print(now.to_iso8601_string())
     assert before < now
     assert after > now
 
@@ -63,7 +65,7 @@ def test_add_user_maximal(user_dynamo):
         'userId': user_id,
         'username': username,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
-        'signedUpAt': now.isoformat() + 'Z',
+        'signedUpAt': now.to_iso8601_string(),
         'fullName': full_name,
         'email': email,
         'phoneNumber': phone,
@@ -72,7 +74,7 @@ def test_add_user_maximal(user_dynamo):
 
 
 def test_add_user_at_specific_time(user_dynamo):
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     user_id = 'my-user-id'
     username = 'my-USername'
 
@@ -86,7 +88,7 @@ def test_add_user_at_specific_time(user_dynamo):
         'userId': user_id,
         'username': username,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
-        'signedUpAt': now.isoformat() + 'Z',
+        'signedUpAt': now.to_iso8601_string(),
     }
 
 
@@ -138,11 +140,11 @@ def test_update_user_username(user_dynamo):
     assert old_item['username'] == old_username
 
     # change their username
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     new_item = user_dynamo.update_user_username(user_id, new_username, old_username, now=now)
     assert new_item['username'] == new_username
     assert new_item['usernameLastValue'] == old_username
-    assert datetime.fromisoformat(new_item['usernameLastChangedAt'][:-1]) == now
+    assert pendulum.parse(new_item['usernameLastChangedAt']).in_tz('utc') == now
     assert new_item['gsiA1PartitionKey'] == f'username/{new_username}'
     assert new_item['gsiA1SortKey'] == '-'
 

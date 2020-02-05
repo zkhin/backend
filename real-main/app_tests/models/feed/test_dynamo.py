@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.feed.dynamo import FeedDynamo
@@ -29,7 +28,7 @@ def test_parse_pk(feed_dynamo):
 
 def test_build_item(feed_dynamo):
     feed_user_id = 'fuid'
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid',
         'postedByUserId': 'pbuid',
@@ -65,7 +64,7 @@ def test_add_posts_to_feed(feed_dynamo):
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
     # add two posts to the feed
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter([{
         'postId': 'pid1',
         'postedByUserId': 'pbuid',
@@ -82,7 +81,7 @@ def test_add_posts_to_feed(feed_dynamo):
     assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2']
 
     # add another post to the feed
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter([{
         'postId': 'pid3',
         'postedByUserId': 'pbuid',
@@ -109,7 +108,7 @@ def test_delete_posts_from_feed(feed_dynamo):
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
     # add three posts to the feed
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter([{
         'postId': 'pid1',
         'postedByUserId': 'pbuid',
@@ -161,7 +160,7 @@ def test_add_post_to_feeds(feed_dynamo):
     assert list(feed_dynamo.generate_feed(feed_uids[1])) == []
 
     # add post to no feeds - verify no error
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid3',
         'postedByUserId': 'pbuid',
@@ -177,7 +176,7 @@ def test_add_post_to_feeds(feed_dynamo):
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['pid3']
 
     # add noather post to the feeds
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid2',
         'postedByUserId': 'pbuid',
@@ -200,7 +199,7 @@ def test_delete_post_from_feeds(feed_dynamo):
     feed_dynamo.delete_post_from_feeds(iter(['fuid']), 'pid')
 
     # add a post to two feeds
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid3',
         'postedByUserId': 'pbuid',
@@ -241,7 +240,7 @@ def test_generate_feed_pks_by_posted_by_user(feed_dynamo):
     pb_user_id_2 = 'pbuid2'
 
     # add three posts by different users to the feed
-    posted_at = datetime.utcnow().isoformat() + 'Z'
+    posted_at = pendulum.now('utc').to_iso8601_string()
     post_items = [{
         'postId': 'pid1',
         'postedByUserId': pb_user_id_1,

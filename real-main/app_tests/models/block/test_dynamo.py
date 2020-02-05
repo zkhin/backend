@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.block import exceptions
@@ -14,19 +13,19 @@ def block_dynamo(dynamo_client):
 def test_add_block(block_dynamo):
     blocker_user_id = 'blocker-user-id'
     blocked_user_id = 'blocked-used-id'
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     resp = block_dynamo.add_block(blocker_user_id, blocked_user_id, now=now)
     assert resp == {
         'schemaVersion': 0,
         'partitionKey': f'block/{blocker_user_id}/{blocked_user_id}',
         'sortKey': '-',
         'gsiA1PartitionKey': f'block/{blocker_user_id}',
-        'gsiA1SortKey': now.isoformat() + 'Z',
+        'gsiA1SortKey': now.to_iso8601_string(),
         'gsiA2PartitionKey': f'block/{blocked_user_id}',
-        'gsiA2SortKey': now.isoformat() + 'Z',
+        'gsiA2SortKey': now.to_iso8601_string(),
         'blockerUserId': blocker_user_id,
         'blockedUserId': blocked_user_id,
-        'blockedAt': now.isoformat() + 'Z',
+        'blockedAt': now.to_iso8601_string(),
     }
 
 

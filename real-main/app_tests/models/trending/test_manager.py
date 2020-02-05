@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta
 import math
 
+import pendulum
 import pytest
 
 from app.models.trending.enums import TrendingItemType
@@ -38,7 +38,7 @@ def test_record_view_count_multiple_records_with_same_timestamp(trending_manager
     item_id = 'user-id'
     org_view_count = 4
     update_view_count = 5
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # create a trending item
     item = trending_manager.record_view_count(item_type, item_id, org_view_count, now=now)
@@ -51,40 +51,40 @@ def test_record_view_count_multiple_records_with_same_timestamp(trending_manager
 
 
 def test_calculate_new_score_decay(trending_manager):
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     old_score = 10
 
     # one full day
-    new_score = trending_manager.calculate_new_score(old_score, now - timedelta(days=1), 0, now)
+    new_score = trending_manager.calculate_new_score(old_score, now - pendulum.duration(days=1), 0, now)
     assert float(new_score) == pytest.approx(10 / math.e)
 
     # half life
-    new_score = trending_manager.calculate_new_score(old_score, now - math.log(2) * timedelta(days=1), 0, now)
+    new_score = trending_manager.calculate_new_score(old_score, now - math.log(2) * pendulum.duration(days=1), 0, now)
     assert float(new_score) == pytest.approx(5)
 
     # a minute
-    new_score = trending_manager.calculate_new_score(old_score, now - timedelta(minutes=1), 0, now)
+    new_score = trending_manager.calculate_new_score(old_score, now - pendulum.duration(minutes=1), 0, now)
     assert float(new_score) == pytest.approx(10 / math.exp(1.0 / 24 / 60))
 
 
 def test_calculate_new_score_pending_views(trending_manager):
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     old_score = 10
     pending_views = 10
 
     # one full day
-    last_indexed_at = now - timedelta(days=1)
+    last_indexed_at = now - pendulum.duration(days=1)
     new_score = trending_manager.calculate_new_score(old_score, last_indexed_at, pending_views, now)
     assert float(new_score) == pytest.approx(10 / math.e + pending_views)
 
     # half life
-    last_indexed_at = now - math.log(2) * timedelta(days=1)
+    last_indexed_at = now - math.log(2) * pendulum.duration(days=1)
     new_score = trending_manager.calculate_new_score(old_score, last_indexed_at, pending_views, now)
     assert float(new_score) == pytest.approx(15)
 
 
 def test_reindex_all_operates_on_correct_items(trending_manager):
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # add one user item now
     user_id = 'user-id'
@@ -92,11 +92,11 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
 
     # add one post item in the future a second
     post_id_1 = 'post-id-1'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 12, now=(now + timedelta(seconds=1)))
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 12, now=(now + pendulum.duration(seconds=1)))
 
     # add one post item a day ago, give it some pending views
     post_id_2 = 'post-id-2'
-    post_at_2 = now - timedelta(days=1)
+    post_at_2 = now - pendulum.duration(days=1)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 10, now=post_at_2)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 5)
 
@@ -123,7 +123,7 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
     assert new_post_items[1] == org_post_items[1]
     assert new_post_items[0]['partitionKey'] == f'trending/{post_id_2}'
     assert new_post_items[0]['pendingViewCount'] == 0
-    assert new_post_items[0]['gsiA1SortKey'] == now.isoformat() + 'Z'
+    assert new_post_items[0]['gsiA1SortKey'] == now.to_iso8601_string()
     assert float(new_post_items[0]['gsiK3SortKey']) == pytest.approx(10 / math.e + 5)
 
     # reindex again at the same values
@@ -135,15 +135,15 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
 
 
 def test_reindex_deletes_as_needed(trending_manager):
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
 
     # add one post item just over a day ago
     post_id_1 = 'post-id-over'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 1, now=(now - timedelta(hours=25)))
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 1, now=(now - pendulum.duration(hours=25)))
 
     # add another post item just under a day ago
     post_id_2 = 'post-id-under'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 1, now=(now - timedelta(hours=23)))
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 1, now=(now - pendulum.duration(hours=23)))
 
     # check we can see those post items
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))

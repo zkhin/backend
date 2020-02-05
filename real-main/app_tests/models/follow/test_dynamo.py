@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.follow.enums import FollowStatus
@@ -56,13 +55,13 @@ def test_transact_add_following(follow_dynamo, user1, user2):
 
 def test_transact_add_following_timestamp(follow_dynamo, user1, user2):
     # timestamp is set when the query is compiled, not executed
-    before = datetime.utcnow()
+    before = pendulum.now('utc')
     transact = follow_dynamo.transact_add_following(user1.id, user2.id, FollowStatus.FOLLOWING)
-    after = datetime.utcnow()
+    after = pendulum.now('utc')
 
     follow_dynamo.client.transact_write_items([transact])
     follow_item = follow_dynamo.get_following(user1.id, user2.id)
-    followed_at = datetime.fromisoformat(follow_item['followedAt'][:-1])
+    followed_at = pendulum.parse(follow_item['followedAt']).in_tz('utc')
 
     assert followed_at > before
     assert followed_at < after
@@ -107,7 +106,7 @@ def test_transact_update_following_status_doesnt_exist(follow_dynamo, user1, use
     dummy_follow_item = {
         'partitionKey': f'following/{user1.id}/{user2.id}',
         'sortKey': '-',
-        'followedAt': datetime.utcnow().isoformat() + 'Z',
+        'followedAt': pendulum.now('utc').to_iso8601_string()
     }
     transact = follow_dynamo.transact_update_following_status(dummy_follow_item, 'status')
     with pytest.raises(follow_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):

@@ -1,9 +1,7 @@
-from datetime import datetime
 import logging
 
 from boto3.dynamodb.conditions import Key
-
-from app.lib import datetime as real_datetime
+import pendulum
 
 logger = logging.getLogger()
 
@@ -20,8 +18,8 @@ class FlagDynamo:
         })
 
     def transact_add_flag(self, post_id, user_id, now=None):
-        now = now or datetime.utcnow()
-        flagged_at_str = real_datetime.serialize(now)
+        now = now or pendulum.now('utc')
+        flagged_at_str = now.to_iso8601_string()
         return {
             'Put': {
                 'Item': {

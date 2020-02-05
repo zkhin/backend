@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pendulum
 import pytest
 
 from app.models.like.dynamo import LikeDynamo
@@ -34,13 +33,13 @@ def test_transact_add_like(like_dynamo):
     assert like_dynamo.get_like(liked_by_user_id, post_id) is None
 
     # add the like to the DB
-    now = datetime.utcnow()
+    now = pendulum.now('utc')
     transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, like_status, now=now)
     like_dynamo.client.transact_write_items([transact])
 
     # verify it exists and has the correct format
     like_item = like_dynamo.get_like(liked_by_user_id, post_id)
-    liked_at_str = now.isoformat() + 'Z'
+    liked_at_str = now.to_iso8601_string()
     assert like_item == {
         'schemaVersion': 1,
         'partitionKey': 'like/luid/pid',
