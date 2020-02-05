@@ -202,17 +202,17 @@ def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
     post_future_expires = post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=Duration(hours=1))
     assert post_future_expires.item['expiresAt'] > now.isoformat() + 'Z'
 
-    post_expired_today = post_manager.add_post(user.id, 'pid3', text='t', lifetime_duration=Duration(hours=1),
-                                               now=(now - Duration(hours=2)))
-    assert post_expired_today.item['expiresAt'] < now.isoformat() + 'Z'
-    assert post_expired_today.item['expiresAt'] > (now - Duration(hours=24)).isoformat() + 'Z'
+    lifetime_duration = Duration(hours=now.hour, minutes=now.minute)
+    post_expired_today = post_manager.add_post(user.id, 'pid3', text='t', lifetime_duration=lifetime_duration,
+                                               now=(now - lifetime_duration))
+    assert post_expired_today.item['expiresAt'] == now.isoformat() + 'Z'
 
     post_expired_last_week = post_manager.add_post(user.id, 'pid4', text='t', lifetime_duration=Duration(hours=1),
                                                    now=(now - Duration(days=7)))
     assert post_expired_last_week.item['expiresAt'] < (now - Duration(days=6)).isoformat() + 'Z'
 
     # run the deletion run
-    post_manager.delete_recently_expired_posts(now=now)
+    post_manager.delete_recently_expired_posts()
 
     # check we logged one delete
     assert len(caplog.records) == 1
@@ -238,17 +238,17 @@ def test_delete_older_expired_posts(post_manager, user_manager, caplog):
     post_future_expires = post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=Duration(hours=1))
     assert post_future_expires.item['expiresAt'] > now.isoformat() + 'Z'
 
-    post_expired_today = post_manager.add_post(user.id, 'pid3', text='t', lifetime_duration=Duration(hours=1),
-                                               now=(now - Duration(hours=2)))
-    assert post_expired_today.item['expiresAt'] < now.isoformat() + 'Z'
-    assert post_expired_today.item['expiresAt'] > (now - Duration(hours=24)).isoformat() + 'Z'
+    lifetime_duration = Duration(hours=now.hour, minutes=now.minute)
+    post_expired_today = post_manager.add_post(user.id, 'pid3', text='t', lifetime_duration=lifetime_duration,
+                                               now=(now - lifetime_duration))
+    assert post_expired_today.item['expiresAt'] == now.isoformat() + 'Z'
 
     post_expired_last_week = post_manager.add_post(user.id, 'pid4', text='t', lifetime_duration=Duration(hours=1),
                                                    now=(now - Duration(days=7)))
     assert post_expired_last_week.item['expiresAt'] < (now - Duration(days=6)).isoformat() + 'Z'
 
     # run the deletion run
-    post_manager.delete_older_expired_posts(now=now)
+    post_manager.delete_older_expired_posts()
 
     # check we logged one delete
     assert len(caplog.records) == 1
