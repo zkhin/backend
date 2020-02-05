@@ -66,9 +66,9 @@ def test_create_trending(trending_dynamo):
         trending_dynamo.create_trending(item_type, item_id, view_count, now=now)
 
 
-def increment_trending_pending_view_count(trending_dynamo):
+def test_increment_trending_pending_view_count(trending_dynamo):
     # doesn't exist
-    with pytest.raises(exceptions.TrendingDoesNotExist):
+    with pytest.raises(exceptions.TrendingException):
         trending_dynamo.increment_trending_pending_view_count('doesnt-exist', 42)
 
     # create a trending
@@ -86,6 +86,44 @@ def increment_trending_pending_view_count(trending_dynamo):
     # update its pending view count
     resp = trending_dynamo.increment_trending_pending_view_count(item_id, view_count_increment)
     assert resp['pendingViewCount'] == view_count_increment * 2
+
+
+def test_cant_increment_trending_pending_view_count_at_or_before_last_indexed_at(trending_dynamo):
+    # create a trending
+    now = datetime.utcnow()
+    item_type = enums.TrendingItemType.POST
+    item_id = 'item-id'
+    view_count = 54
+    resp = trending_dynamo.create_trending(item_type, item_id, view_count, now=now)
+    assert resp['pendingViewCount'] == 0
+
+    # can't update pendingViewCount at the same timestamp as was created at
+    # should update viewCount directly
+    with pytest.raises(exceptions.TrendingException):
+        trending_dynamo.increment_trending_pending_view_count(item_id, 10, now=now)
+
+    before = now - timedelta(minutes=1)
+    with pytest.raises(exceptions.TrendingException):
+        trending_dynamo.increment_trending_pending_view_count(item_id, 10, now=before)
+
+
+def test_increment_trending_view_count(trending_dynamo):
+    # create a trending
+    now = datetime.utcnow()
+    item_type = enums.TrendingItemType.POST
+    item_id = 'item-id'
+    view_count = 54
+    resp = trending_dynamo.create_trending(item_type, item_id, view_count, now=now)
+    assert resp['pendingViewCount'] == 0
+
+    # can't update it with a timestamp in the future
+    future = datetime.utcnow()
+    with pytest.raises(exceptions.TrendingException):
+        trending_dynamo.increment_trending_view_count(item_id, 10, now=future)
+
+    # can update it with a timestamp at the lastIndexedAt time
+    resp = trending_dynamo.increment_trending_view_count(item_id, 10, now=now)
+    assert resp['gsiK3SortKey'] == 64
 
 
 def test_update_trending_score_success(trending_dynamo):

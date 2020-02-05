@@ -30,8 +30,8 @@ class TrendingManager:
         now = now or datetime.utcnow()
         # first try to add it to an existing item
         try:
-            return self.dynamo.increment_trending_pending_view_count(item_id, view_count)
-        except self.exceptions.TrendingDoesNotExist:
+            return self.dynamo.increment_trending_pending_view_count(item_id, view_count, now=now)
+        except self.exceptions.TrendingException:
             pass
 
         # try to add a new item
@@ -40,9 +40,16 @@ class TrendingManager:
         except self.exceptions.TrendingAlreadyExists:
             pass
 
+        # try to add it to an existing item with the same 'now' as this view
+        # this happens when a user views multiple posts by the same user for the first time
+        try:
+            return self.dynamo.increment_trending_view_count(item_id, view_count, now=now)
+        except self.exceptions.TrendingException:
+            pass
+
         # we should get here in the case of a race condition which we lost.
         # as such, we should now be able to add it to an existing item
-        return self.dynamo.increment_trending_pending_view_count(item_id, view_count)
+        return self.dynamo.increment_trending_pending_view_count(item_id, view_count, now=now)
 
     def reindex(self, item_type, cutoff=None):
         "Do a pass over all trending items of `item_type` and update their score"

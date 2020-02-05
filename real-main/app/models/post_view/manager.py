@@ -74,7 +74,7 @@ class PostViewManager:
 
         # if this is an original post, the trending indexes. If not, then record a view on the original
         if original_post_id == post_id:
-            self.trending_manager.record_view_count(TrendingItemType.POST, post_id, 1)
-            self.trending_manager.record_view_count(TrendingItemType.USER, posted_by_user_id, 1)
+            self.trending_manager.record_view_count(TrendingItemType.POST, post_id, 1, now=viewed_at)
+            self.trending_manager.record_view_count(TrendingItemType.USER, posted_by_user_id, 1, now=viewed_at)
         else:
             self.record_view(viewed_by_user_id, original_post_id, view_count, viewed_at)

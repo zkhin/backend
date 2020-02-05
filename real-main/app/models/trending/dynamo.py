@@ -50,19 +50,45 @@ class TrendingDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             raise exceptions.TrendingAlreadyExists(item_id)
 
-    def increment_trending_pending_view_count(self, item_id, view_count):
+    def increment_trending_view_count(self, item_id, view_count, now=None):
+        now = now or datetime.utcnow()
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'trending/{item_id}',
+                'sortKey': '-',
+            },
+            'UpdateExpression': 'ADD gsiK3SortKey :cnt',
+            'ConditionExpression': 'gsiA1SortKey = :gsia1sk',
+            'ExpressionAttributeValues': {
+                ':cnt': view_count,
+                ':gsia1sk': real_datetime.serialize(now),
+            },
+        }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            msg = 'Trending does not exist or exists with a lastIndexedAt that is not exactly now'
+            raise exceptions.TrendingException(msg)
+
+    def increment_trending_pending_view_count(self, item_id, view_count, now=None):
+        now = now or datetime.utcnow()
         query_kwargs = {
             'Key': {
                 'partitionKey': f'trending/{item_id}',
                 'sortKey': '-',
             },
             'UpdateExpression': 'ADD pendingViewCount :cnt',
-            'ExpressionAttributeValues': {':cnt': view_count},
+            'ConditionExpression': 'gsiA1SortKey < :gsia1sk',
+            'ExpressionAttributeValues': {
+                ':cnt': view_count,
+                ':gsia1sk': real_datetime.serialize(now),
+            },
         }
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDoesNotExist(item_id)
+            msg = 'Trending does not exist or exists with a lastIndexedAt in now or in the future'
+            raise exceptions.TrendingException(msg)
 
     def update_trending_score(self, item_id, score, new_last_indexed_at, old_last_indexed_at, view_count_change_abs):
         query_kwargs = {

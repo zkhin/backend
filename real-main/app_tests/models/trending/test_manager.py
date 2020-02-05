@@ -33,6 +33,23 @@ def test_record_view_count_existing_trending(trending_manager):
     assert updated_trending_item['gsiA1SortKey'] == org_trending_item['gsiA1SortKey']
 
 
+def test_record_view_count_multiple_records_with_same_timestamp(trending_manager):
+    item_type = trending_manager.enums.TrendingItemType.POST
+    item_id = 'user-id'
+    org_view_count = 4
+    update_view_count = 5
+    now = datetime.utcnow()
+
+    # create a trending item
+    item = trending_manager.record_view_count(item_type, item_id, org_view_count, now=now)
+    assert item['pendingViewCount'] == 0
+
+    # update the trending item
+    item = trending_manager.record_view_count(item_type, item_id, update_view_count, now=now)
+    assert item['pendingViewCount'] == 0
+    assert item['gsiK3SortKey'] == org_view_count + update_view_count
+
+
 def test_calculate_new_score_decay(trending_manager):
     now = datetime.utcnow()
     old_score = 10
