@@ -242,7 +242,7 @@ def test_transact_increment_decrement_flag_count(post_dynamo):
 
     # check can't decrement below zero
     transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
-    with pytest.raises(post_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items(transacts)
 
 
@@ -426,7 +426,7 @@ def test_get_next_completed_post_to_expire_two_posts(dynamo_client, post_dynamo)
 
 
 def test_set_no_values(post_dynamo):
-    with pytest.raises(Exception, match='edit'):
+    with pytest.raises(AssertionError, match='edit'):
         post_dynamo.set('post-id')
 
 
@@ -640,7 +640,7 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
 
     # verify we can't decrement count below zero
     transact = post_dynamo.transact_decrement_comment_count(post_id)
-    with pytest.raises(post_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
@@ -715,7 +715,7 @@ def test_transact_set_album_id_fails_wrong_status(post_dynamo):
     # verify transaction fails rather than write conflicting data to db
     post_item['postStatus'] = 'COMPLETED'
     transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
-    with pytest.raises(post_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items([transact])
 
     # verify nothing changed

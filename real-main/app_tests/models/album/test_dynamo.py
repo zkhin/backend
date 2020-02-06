@@ -80,7 +80,7 @@ def test_cant_transact_add_album_same_album_id(album_dynamo, album_item):
 
     # verify we can't add another album with the same id
     transact = album_dynamo.transact_add_album(album_id, 'uid2', 'n2')
-    with pytest.raises(album_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
         album_dynamo.client.transact_write_items([transact])
 
 
@@ -186,7 +186,7 @@ def test_transact_remove_post(album_dynamo, album_item):
 
     # verify we can't remove another post
     transact = album_dynamo.transact_remove_post(album_id)
-    with pytest.raises(album_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
         album_dynamo.client.transact_write_items([transact])
 
 

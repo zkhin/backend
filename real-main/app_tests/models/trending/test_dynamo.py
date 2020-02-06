@@ -153,7 +153,7 @@ def test_update_trending_score_success(trending_dynamo):
 
 def test_update_trending_score_error_conditions(trending_dynamo):
     # doesn't exist
-    with pytest.raises(Exception):
+    with pytest.raises(trending_dynamo.client.exceptions.ConditionalCheckFailedException):
         trending_dynamo.update_trending_score('doesnt-exist', 42, pendulum.now('utc'), pendulum.now('utc'), 24)
 
     # create a trending
@@ -165,11 +165,11 @@ def test_update_trending_score_error_conditions(trending_dynamo):
     assert resp['partitionKey'] == f'trending/{item_id}'
 
     # change in pending view count to big
-    with pytest.raises(Exception):
+    with pytest.raises(trending_dynamo.client.exceptions.ConditionalCheckFailedException):
         trending_dynamo.update_trending_score(item_id, 42, pendulum.now('utc'), now, 1)
 
     # score last updated at is wrong
-    with pytest.raises(Exception):
+    with pytest.raises(trending_dynamo.client.exceptions.ConditionalCheckFailedException):
         trending_dynamo.update_trending_score(item_id, 42, pendulum.now('utc'), pendulum.now('utc'), 0)
 
 

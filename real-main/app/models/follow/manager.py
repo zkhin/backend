@@ -134,10 +134,12 @@ class FollowManager:
 
     def accept_all_requested_follow_requests(self, followed_user_id):
         for item in self.dynamo.generate_follower_items(followed_user_id, enums.FollowStatus.REQUESTED):
+            follower_user_id = item['followerUserId']
             try:
-                self.accept_follow_request(item['followerUserId'], item['followedUserId'], follow_item=item)
+                self.accept_follow_request(follower_user_id, followed_user_id, follow_item=item)
             except Exception:
-                logging.exception('Error accepting follow request, continuing')
+                msg = f'Error accepting follow request from user `{follower_user_id}` to `{followed_user_id}`'
+                logging.exception(msg)
 
     def deny_follow_request(self, follower_user_id, followed_user_id):
         "Returns the status of the follow request"

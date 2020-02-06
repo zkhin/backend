@@ -28,7 +28,7 @@ def test_retrieve_cloudfront_key_pair(client):
     client.boto_client.delete_secret(SecretId=cloudfront_key_pair_name)
 
     # secret is not in there - test we cannot retrieve it
-    with pytest.raises(Exception):
+    with pytest.raises(client.exceptions.InvalidRequestException):
         client.get_cloudfront_key_pair()
 
     # restore the value in there, test we can retrieve it
@@ -51,7 +51,7 @@ def test_retrieve_post_verification_api_creds(client):
     client.boto_client.delete_secret(SecretId=post_verification_api_creds_name)
 
     # secret is not in there - test we cannot retrieve it
-    with pytest.raises(Exception):
+    with pytest.raises(client.exceptions.InvalidRequestException):
         client.get_post_verification_api_creds()
 
     # restore the value in there, test we can retrieve it

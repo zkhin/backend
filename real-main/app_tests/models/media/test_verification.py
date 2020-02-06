@@ -5,6 +5,7 @@ import pytest
 
 from app.clients import SecretsManagerClient
 from app.models.media import Media
+from app.models.media.exceptions import MediaException
 
 mock_api_key = 'the-api-key'
 mock_root_api_url = 'https://mockmock.mock'
@@ -153,7 +154,7 @@ def test_response_handle_400_error(cloudfront_client, media_no_meta, requests_mo
 
     try:
         media_no_meta.set_is_verified()
-    except Exception as err:
+    except MediaException as err:
         assert error_msg in str(err)
         assert '400' in str(err)
 
@@ -177,7 +178,7 @@ def test_response_handle_wrong_response_format(cloudfront_client, media_no_meta,
 
     try:
         media_no_meta.set_is_verified()
-    except Exception as err:
+    except MediaException as err:
         assert 'errors' in str(err)
         assert 'parse' in str(err)
 

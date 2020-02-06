@@ -35,7 +35,7 @@ def test_transact_add_flag(flag_dynamo):
     }
 
     # check we can't re-add same flag item
-    with pytest.raises(flag_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(flag_dynamo.client.exceptions.ConditionalCheckFailedException):
         flag_dynamo.client.transact_write_items(transacts)
 
 
@@ -57,7 +57,7 @@ def test_transact_delete_flag(flag_dynamo):
 def test_transact_delete_flag_doesnt_exist(flag_dynamo):
     # check we can't delete the flag now that it doesn't exist
     transacts = [flag_dynamo.transact_delete_flag('pid', 'uid')]
-    with pytest.raises(flag_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(flag_dynamo.client.exceptions.ConditionalCheckFailedException):
         flag_dynamo.client.transact_write_items(transacts)
 
 

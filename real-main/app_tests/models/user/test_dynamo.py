@@ -200,7 +200,7 @@ def test_set_user_photo_path_delete_it(user_dynamo):
 
 
 def test_set_user_details_doesnt_exist(user_dynamo):
-    with pytest.raises(Exception):
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.set_user_details('user-id', full_name='my-full-name')
 
 
@@ -282,8 +282,8 @@ def test_set_user_details_delete_all_optional(user_dynamo):
 
 
 def test_cant_set_privacy_status_to_random_string(user_dynamo):
-    with pytest.raises(Exception, match='privacy_status'):
-        user_dynamo.set_user_details('user-id', privacy_status='invalid')
+    with pytest.raises(AssertionError, match='privacy_status'):
+        user_dynamo.set_user_privacy_status('user-id', privacy_status='invalid')
 
 
 def test_set_user_accepted_eula_version(user_dynamo):
@@ -339,7 +339,7 @@ def test_increment_decrement_post_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_post_count(user_id)]
-    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -366,7 +366,7 @@ def test_increment_decrement_follower_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_follower_count(user_id)]
-    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -393,7 +393,7 @@ def test_increment_decrement_followed_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_followed_count(user_id)]
-    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -420,7 +420,7 @@ def test_increment_decrement_album_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_album_count(user_id)]
-    with pytest.raises(user_dynamo.client.boto3_client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment

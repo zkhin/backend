@@ -12,7 +12,7 @@ The backend is organized as a series of cloudformation stacks to speed up the st
 
 ## Getting started
 
-Installed on your system you will need `npm`, `nodejs12`, `serverless`, `python3.7`, `poetry`, `docker`.
+Installed on your system you will need `npm`, `nodejs12`, `serverless`, `python3.8`, `poetry`, `docker`.
 
 In each of the stack root directories, run `npm install` to install serverless and required plugins.
 

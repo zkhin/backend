@@ -50,7 +50,7 @@ class Media:
             return enums.MediaExt.JPG
         if mediaType == enums.MediaType.VIDEO:
             return enums.MediaExt.MP4
-        raise Exception(f'No file extension yet defined for media type `{mediaType}`')
+        raise ValueError(f'Unknown media tyep `{mediaType}`')
 
     @property
     def original_image_data_stream(self):
@@ -98,7 +98,7 @@ class Media:
             path = self.get_s3_path(enums.MediaSize.NATIVE)
             return self.s3_uploads_client.exists(path)
 
-        raise Exception(f'Unknown media tyep `{mediaType}`')
+        raise ValueError(f'Unknown media tyep `{mediaType}`')
 
     def delete_all_s3_objects(self):
         for media_size in enums.MediaSize._ALL:
@@ -123,12 +123,12 @@ class Media:
         resp = requests.post(url, headers=headers, json=data)
         if resp.status_code != 200:
             msg = f'Received error from post verification service: `{resp.status_code}` with body: `{resp.text}`'
-            raise Exception(msg)
+            raise exceptions.MediaException(msg)
         try:
             is_verified = resp.json()['data']['isVerified']
         except Exception:
             msg = f'Unable to parse reponse from post verification service with body: `{resp.text}`'
-            raise Exception(msg)
+            raise exceptions.MediaException(msg)
 
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self

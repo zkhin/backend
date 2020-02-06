@@ -27,7 +27,7 @@ class S3Client:
         # Not all S3 etags are md5 checksums
         # https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
         if '-' in checksum:
-            raise Exception(f'S3 object at `{path}` does not have md5 etag')
+            raise ValueError(f'S3 object at `{path}` does not have md5 etag')
         return checksum
 
     def list_common_prefixes(self, path_prefix):

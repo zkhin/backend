@@ -199,11 +199,11 @@ class DynamoClient:
                 elif key == 'ConditionCheck':
                     pass
                 else:
-                    raise Exception(f"Unrecognized transaction key '{key}'")
+                    raise ValueError(f"Unrecognized transaction key '{key}'")
 
                 try:
                     operation(**kwargs)
-                except self.boto3_client.exceptions.ConditionalCheckFailedException as err:
+                except self.exceptions.ConditionalCheckFailedException as err:
                     if transact_exception is not None:
                         raise transact_exception
                     raise err

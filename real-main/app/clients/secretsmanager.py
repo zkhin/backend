@@ -12,6 +12,7 @@ class SecretsManagerClient:
     def __init__(self, cloudfront_key_pair_name=CLOUDFRONT_KEY_PAIR_NAME,
                  post_verification_api_creds_name=POST_VERIFICATION_API_CREDS_NAME):
         self.boto_client = boto3.client('secretsmanager')
+        self.exceptions = self.boto_client.exceptions
         self.cloudfront_key_pair_name = cloudfront_key_pair_name
         self.post_verification_api_creds_name = post_verification_api_creds_name
 
