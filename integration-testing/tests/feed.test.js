@@ -26,9 +26,9 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // our feed starts empty
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // they add two posts, verify they shows up in our feed in order
   const postId1 = uuidv4()
@@ -41,9 +41,9 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: postText2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  let items = resp['data']['getFeed']['items']
+  let items = resp['data']['self']['feed']['items']
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
@@ -55,9 +55,9 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['archivePost']['postId']).toBe(postId1)
   expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  items = resp['data']['getFeed']['items']
+  items = resp['data']['self']['feed']['items']
   expect(items).toHaveLength(1)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
@@ -84,18 +84,18 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   // our feed starts empty
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  let items = resp['data']['getFeed']['items']
+  let items = resp['data']['self']['feed']['items']
   expect(items).toHaveLength(0)
 
   // we follow them, and those two posts show up in our feed
   resp = await ourClient.mutate({mutation: schema.followUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus'] == 'FOLLOWING')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  items = resp['data']['getFeed']['items']
+  items = resp['data']['self']['feed']['items']
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
@@ -106,9 +106,9 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   resp = await ourClient.mutate({mutation: schema.unfollowUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['unfollowUser']['followedStatus'] == 'NOT_FOLLOWING')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  items = resp['data']['getFeed']['items']
+  items = resp['data']['self']['feed']['items']
   expect(items).toHaveLength(0)
 })
 
@@ -135,25 +135,25 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   // our feed starts empty
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // we request to follow them, our feed does not react
   resp = await ourClient.mutate({mutation: schema.followUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus'] == 'REQUESTED')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // they accept our follow request, and those two posts show up in our feed
   resp = await theirClient.mutate({mutation: schema.acceptFollowerUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['acceptFollowerUser']['followerStatus'] == 'FOLLOWING')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  const items = resp['data']['getFeed']['items']
+  const items = resp['data']['self']['feed']['items']
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
@@ -164,9 +164,9 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   resp = await theirClient.mutate({mutation: schema.denyFollowerUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['denyFollowerUser']['followerStatus'] == 'DENIED')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 })
 
 
@@ -192,17 +192,17 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   // our feed starts empty
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // we request to follow them, our feed does not react
   resp = await ourClient.mutate({mutation: schema.followUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus'] == 'REQUESTED')
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // they change from private to public
   resp = await theirClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PUBLIC'}})
@@ -210,9 +210,9 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PUBLIC')
 
   // our follow request should have gone though, so their two posts should now be in our feed
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(2)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(2)
 })
 
 
@@ -236,16 +236,16 @@ test.skip('Post that expires is removed from feed', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // since cron job hasn't yet run, that post should be in our feed
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
 
   // TODO trigger the cron job
 
   // that post should now have disappeared from our feed
-  //resp = await ourClient.query({query: schema.getFeed})
-  //expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  //resp = await ourClient.query({query: schema.selfFeed})
+  //expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
 })
 
@@ -266,20 +266,39 @@ test('Feed Post.postedBy.blockerAt and followedStatus are filled in correctly', 
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // see how that looks in our feed
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['userId']).toBe(theirUserId)
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['blockerStatus']).toBe('NOT_BLOCKING')
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['followedStatus']).toBe('FOLLOWING')
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['blockerStatus']).toBe('NOT_BLOCKING')
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['followedStatus']).toBe('FOLLOWING')
 
   // see how that looks in their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['userId']).toBe(theirUserId)
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['blockerStatus']).toBe('SELF')
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['followedStatus']).toBe('SELF')
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['blockerStatus']).toBe('SELF')
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['followedStatus']).toBe('SELF')
+})
+
+
+test('Feed privacy', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // verify we can see our feed, via self and user queries
+  let resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
+  resp = await ourClient.query({query: schema.user, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['feed']['items']).toHaveLength(0)
+
+  // verify they can *not* see our feed
+  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['feed']).toBeNull()
 })

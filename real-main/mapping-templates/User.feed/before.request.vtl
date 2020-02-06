@@ -1,0 +1,6 @@
+## private to the user themselves
+#if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
+  #return
+#end
+
+{}

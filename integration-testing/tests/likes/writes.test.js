@@ -380,12 +380,12 @@ test('Like counts show up for posts in feed', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // get that post from our feed, check its like counts
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['onymousLikeCount']).toBe(0)
-  expect(resp['data']['getFeed']['items'][0]['anonymousLikeCount']).toBe(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['onymousLikeCount']).toBe(0)
+  expect(resp['data']['self']['feed']['items'][0]['anonymousLikeCount']).toBe(0)
 
   // we like it onymously, they like it anonymously
   resp = await ourClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
@@ -394,10 +394,10 @@ test('Like counts show up for posts in feed', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // get that post from our feed again, check its like counts
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['onymousLikeCount']).toBe(1)
-  expect(resp['data']['getFeed']['items'][0]['anonymousLikeCount']).toBe(1)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['onymousLikeCount']).toBe(1)
+  expect(resp['data']['self']['feed']['items'][0]['anonymousLikeCount']).toBe(1)
 })

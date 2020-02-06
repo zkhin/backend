@@ -297,26 +297,28 @@ const getMediaObjects = gql(`{
   }
 }`)
 
-const getFeed = gql(`{
-  getFeed (limit: 3) {
-    items {
-      postId
-      postedAt
-      postedBy {
-        userId
-        username
+const selfFeed = gql(`{
+  self {
+    feed (limit: 3) {
+      items {
+        postId
+        postedAt
+        postedBy {
+          userId
+          username
+        }
+        postStatus
+        text
+        mediaObjects {
+          mediaId
+          mediaType
+          mediaStatus
+          url
+          uploadUrl
+        }
       }
-      postStatus
-      text
-      mediaObjects {
-        mediaId
-        mediaType
-        mediaStatus
-        url
-        uploadUrl
-      }
+      nextToken
     }
-    nextToken
   }
 }`)
 

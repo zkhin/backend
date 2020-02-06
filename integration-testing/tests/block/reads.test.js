@@ -64,14 +64,18 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['userId']).toBe(ourUserId)
   expect(ourUserFull['username']).not.toBeNull()
   expect(ourUserFull['acceptedEULAVersion']).not.toBeNull()
+  expect(ourUserFull['albumCount']).toBe(0)
+  expect(ourUserFull['albums']['items']).toHaveLength(0)
   expect(ourUserFull['anonymouslyLikedPosts']['items']).toHaveLength(0)
   expect(ourUserFull['bio']).not.toBeNull()
   expect(ourUserFull['blockedAt']).toBeNull()
   expect(ourUserFull['blockerAt']).toBeNull()
   expect(ourUserFull['blockedStatus']).toBe('SELF')
   expect(ourUserFull['blockerStatus']).toBe('SELF')
+  expect(ourUserFull['blockedUsers']['items']).toHaveLength(1)
   expect(ourUserFull['commentsDisabled']).toBe(false)
   expect(ourUserFull['email']).not.toBeNull()
+  expect(ourUserFull['feed']['items']).toHaveLength(1)
   expect(ourUserFull['followCountsHidden']).toBe(false)
   expect(ourUserFull['followerCount']).toBe(0)
   expect(ourUserFull['followedCount']).toBe(0)
@@ -82,6 +86,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['fullName']).not.toBeNull()
   expect(ourUserFull['languageCode']).not.toBeNull()
   expect(ourUserFull['likesDisabled']).toBe(false)
+  expect(ourUserFull['mediaObjects']['items']).toHaveLength(1)
   expect(ourUserFull['onymouslyLikedPosts']['items']).toHaveLength(0)
   // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
   // expect(ourUserFull['phoneNumber']).not.toBeNull()
@@ -91,8 +96,10 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['photoUrl4k']).not.toBeNull()
   expect(ourUserFull['photoUrl64p']).not.toBeNull()
   expect(ourUserFull['postCount']).toBe(1)
+  expect(ourUserFull['posts']['items']).toHaveLength(1)
   expect(ourUserFull['postViewedByCount']).toBe(0)
   expect(ourUserFull['privacyStatus']).toBe('PUBLIC')
+  expect(ourUserFull['sharingDisabled']).not.toBeNull()
   expect(ourUserFull['signedUpAt']).not.toBeNull()
   expect(ourUserFull['themeCode']).not.toBeNull()
   expect(ourUserFull['verificationHidden']).toBe(false)
@@ -109,9 +116,9 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // adjust everything nulled out or changed, then compare
   ourUserLimited['blockerAt'] = null
+  ourUserFull['acceptedEULAVersion'] = null
   ourUserFull['albumCount'] = null
   ourUserFull['albums'] = null
-  ourUserFull['acceptedEULAVersion'] = null
   ourUserFull['anonymouslyLikedPosts'] = null
   ourUserFull['bio'] = null
   ourUserFull['blockerStatus'] = 'BLOCKING'
@@ -119,6 +126,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['blockedUsers'] = null
   ourUserFull['commentsDisabled'] = null
   ourUserFull['email'] = null
+  ourUserFull['feed'] = null
   ourUserFull['followCountsHidden'] = null
   ourUserFull['followedCount'] = null
   ourUserFull['followerCount'] = null
@@ -139,6 +147,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['photoUrl64p'] = null
   ourUserFull['postCount'] = null
   ourUserFull['posts'] = null
+  ourUserFull['postViewedByCount'] = null
   ourUserFull['privacyStatus'] = null
   ourUserFull['sharingDisabled'] = null
   ourUserFull['signedUpAt'] = null

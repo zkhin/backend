@@ -15,32 +15,34 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
-// Use of getFeed is arbitrary, could use any paginated list query
+// Use of selfFeed is arbitrary, could use any paginated list query
 test('Paginated list limits', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // verify requesting limit of -1, 0, 101 are errors
-  let resp = await ourClient.query({query: schema.getFeed, variables: {limit: -1}})
+  let resp = await ourClient.query({query: schema.selfFeed, variables: {limit: -1}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']).toBeNull()
+  expect(resp['data']['self']['feed']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getFeed, variables: {limit: 0}})
+  resp = await ourClient.query({query: schema.selfFeed, variables: {limit: 0}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']).toBeNull()
+  expect(resp['data']['self']['feed']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getFeed, variables: {limit: 101}})
+  resp = await ourClient.query({query: schema.selfFeed, variables: {limit: 101}})
   expect(resp['errors']).toHaveLength(1)
-  expect(resp['data']).toBeNull()
+  expect(resp['data']['self']['feed']).toBeNull()
 
   // verify requesting limit of 1, 100 are ok
-  resp = await ourClient.query({query: schema.getFeed, variables: {limit: 1}})
+  resp = await ourClient.query({query: schema.selfFeed, variables: {limit: 1}})
   expect(resp['errors']).toBeUndefined()
-  resp = await ourClient.query({query: schema.getFeed, variables: {limit: 100}})
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
+  resp = await ourClient.query({query: schema.selfFeed, variables: {limit: 100}})
   expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 })
 
 
-// Use of getFeed is arbitrary, could use any paginated list query
+// Use of selfFeed is arbitrary, could use any paginated list query
 test('Paginated list default', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -53,7 +55,7 @@ test('Paginated list default', async () => {
   }
 
   // verify not specifying a limit results in a default of 20
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(20)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(20)
 })

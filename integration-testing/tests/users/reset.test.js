@@ -152,12 +152,12 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['user']['stories']['items'][1]['postedBy']['userId']).toBe(ourUserId)
 
   // verify our posts show up in their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(3)
-  expect(resp['data']['getFeed']['items'][0]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['getFeed']['items'][1]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['getFeed']['items'][2]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(3)
+  expect(resp['data']['self']['feed']['items'][0]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['feed']['items'][1]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['feed']['items'][2]['postedBy']['userId']).toBe(ourUserId)
 
   // we reset our account
   resp = await ourClient.mutate({mutation: schema.resetUser})
@@ -186,9 +186,9 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
 
   // verify our posts do not show up in their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 })
 
 

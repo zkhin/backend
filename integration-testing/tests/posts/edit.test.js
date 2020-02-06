@@ -122,10 +122,10 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check that post text in their feed
-  resp = await theirClient.query({query: schema.getFeed})
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['text']).toBe(postText)
+  resp = await theirClient.query({query: schema.selfFeed})
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['text']).toBe(postText)
 
   // edit the post
   const newText = 'no, vous est le fromage!'
@@ -134,10 +134,10 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   expect(resp['data']['editPost']['text']).toBe(newText)
 
   // check that post text in their feed was edited
-  resp = await theirClient.query({query: schema.getFeed})
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['text']).toBe(newText)
+  resp = await theirClient.query({query: schema.selfFeed})
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['text']).toBe(newText)
 })
 
 

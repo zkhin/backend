@@ -266,6 +266,16 @@ custom:
         response: Generic.passThru.response.vtl
 
       - type: User
+        field: feed
+        request: User.feed/before.request.vtl
+        response: User.feed/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - User.feed.fetchPostIds
+          - Generic.batchGetPosts
+          - Generic.batchGetPostsPostedBy
+
+      - type: User
         field: stories
         dataSource: DynamodbDataSource
 
@@ -924,6 +934,11 @@ custom:
       - dataSource: DynamodbDataSource
         name: Query.album.fetchAlbum
         request: Query.album/Pipeline.fetchAlbum.request.vtl
+        response: Generic.passThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: User.feed.fetchPostIds
+        request: User.feed/Pipeline.fetchPostIds.request.vtl
         response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource

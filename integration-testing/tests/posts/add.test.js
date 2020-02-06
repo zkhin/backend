@@ -52,10 +52,10 @@ test('Add text-only post no expiration', async () => {
   expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
 
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toEqual(postId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toEqual(postId)
 })
 
 

@@ -167,10 +167,10 @@ test('Blocking a follower causes unfollowing, our posts in their feed and first 
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // verify that post shows up in their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
 
   // verify we show up in their followed users with stories
   resp = await theirClient.query({query: schema.getFollowedUsersWithStories})
@@ -183,9 +183,9 @@ test('Blocking a follower causes unfollowing, our posts in their feed and first 
   expect(resp['errors']).toBeUndefined()
 
   // verify that post does not show up in their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // verify we do not show up in their followed users with stories
   resp = await theirClient.query({query: schema.getFollowedUsersWithStories})
@@ -282,10 +282,10 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // verify that post shows up in our feed
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
 
   // verify they show up in our followed users with stories
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
@@ -298,9 +298,9 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   expect(resp['errors']).toBeUndefined()
 
   // verify that post does not show up in our feed
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // verify they do not show up in our followed users with stories
   resp = await ourClient.query({query: schema.getFollowedUsersWithStories})

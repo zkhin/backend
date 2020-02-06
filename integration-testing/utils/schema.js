@@ -45,6 +45,11 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     postViewedByCount
     viewCountsHidden
     signedUpAt
+    feed {
+      items {
+        postId
+      }
+    }
     stories {
       items {
         postId
@@ -156,6 +161,11 @@ module.exports.user = gql(`query User ($userId: ID!) {
     postViewedByCount
     viewCountsHidden
     signedUpAt
+    feed {
+      items {
+        postId
+      }
+    }
     stories {
       items {
         postId
@@ -944,23 +954,25 @@ module.exports.userStories = gql(`query UserStories ($userId: ID!) {
   }
 }`)
 
-module.exports.getFeed = gql(`query GetFeed ($limit: Int) {
-  getFeed (limit: $limit) {
-    items {
-      postId
-      postedBy {
-        userId
-        blockerStatus
-        followedStatus
+module.exports.selfFeed = gql(`query SelfFeed ($limit: Int) {
+  self {
+    feed (limit: $limit) {
+      items {
+        postId
+        postedBy {
+          userId
+          blockerStatus
+          followedStatus
+        }
+        text
+        mediaObjects {
+          mediaId
+          url
+          uploadUrl
+        }
+        onymousLikeCount
+        anonymousLikeCount
       }
-      text
-      mediaObjects {
-        mediaId
-        url
-        uploadUrl
-      }
-      onymousLikeCount
-      anonymousLikeCount
     }
   }
 }`)

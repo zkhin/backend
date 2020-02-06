@@ -32,7 +32,7 @@ type Query {
   # Globally trending users
   trendingUsers(limit: Int, nextToken: String): PaginatedUsers!
 
-  # Get caller's feed
+  # DEPRECATED: use User.feed instead
   getFeed(limit: Int, nextToken: String): PaginatedPosts!
 
   # Get a list of Users we follow that currently have stories
@@ -255,9 +255,14 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
 
+  # User's feed
+  #   - private to the user themselves only
+  #   - ordered by postedAt, most recently posted first
+  feed(limit: Int, nextToken: String): PaginatedPosts
+
   # User's stories
   #   - stories of a private user are private to only themselves and their followers
-  #   - ordered by expiration date, with the next to expire first
+  #   - ordered by expiresAt, with the next to expire first
   stories(limit: Int, nextToken: String): PaginatedPosts
 
   # User's posts

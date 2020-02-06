@@ -51,10 +51,10 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp['data']['self']['postCount']).toBe(1)
 
   // verify it showed up in their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
 
   // verify we show up in the first followed users list
   resp = await theirClient.query({query: schema.getFollowedUsersWithStories})
@@ -86,9 +86,9 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp['data']['self']['postCount']).toBe(0)
 
   // verify it disappeared from their feed
-  resp = await theirClient.query({query: schema.getFeed})
+  resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // verify we do not show up in the first followed users list
   resp = await theirClient.query({query: schema.getFollowedUsersWithStories})

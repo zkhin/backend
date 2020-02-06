@@ -40,14 +40,14 @@ test('Archiving an image post', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check we see that post in the feed, in the posts, and in the mediaObjects
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
@@ -67,9 +67,9 @@ test('Archiving an image post', async () => {
   expect(resp['data']['archivePost']['mediaObjects'][0]['mediaStatus']).toBe('ARCHIVED')
 
   // post and media should be gone from the normal queries - feed, posts, mediaObjects
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(0)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
@@ -189,14 +189,14 @@ test('Restoring an archived image post', async () => {
   expect(resp['data']['restoreArchivedPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // check we see that post in the feed, in the posts, and in the mediaObjects
-  resp = await ourClient.query({query: schema.getFeed})
+  resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFeed']['items']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
-  expect(resp['data']['getFeed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
+  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
+  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
