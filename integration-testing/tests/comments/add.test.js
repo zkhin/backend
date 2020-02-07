@@ -169,6 +169,13 @@ test('Cant add comments to a post of a private user unless were following them',
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
+  // check they can comment on their own post
+  let commentId = uuidv4()
+  variables = {commentId: commentId, postId, text: 'no way'}
+  resp = await theirClient.mutate({mutation: schema.addComment, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addComment']['commentId']).toBe(commentId)
+
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
   await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
@@ -188,7 +195,7 @@ test('Cant add comments to a post of a private user unless were following them',
   expect(resp['errors']).toBeUndefined()
 
   // check we _can_ comment on the post
-  const commentId = uuidv4()
+  commentId = uuidv4()
   variables = {commentId, postId, text: 'nice lore'}
   resp = await ourClient.mutate({mutation: schema.addComment, variables})
   expect(resp['errors']).toBeUndefined()

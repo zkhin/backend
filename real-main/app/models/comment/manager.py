@@ -45,19 +45,22 @@ class CommentManager:
             raise exceptions.CommentException(f'Comments are disabled on post `{post_id}`')
 
         posted_by_user_id = post_item['postedByUserId']
-        if self.block_manager.is_blocked(posted_by_user_id, user_id):
-            raise exceptions.CommentException(f'Post owner `{posted_by_user_id}` has blocked user `{user_id}`')
-        if self.block_manager.is_blocked(user_id, posted_by_user_id):
-            raise exceptions.CommentException(f'User `{user_id}` has blocked post owner `{posted_by_user_id}`')
+        if user_id != posted_by_user_id:
 
-        # if post owner is private, must be a follower to comment
-        poster = self.user_manager.get_user(posted_by_user_id)
-        if poster.item['privacyStatus'] == user.enums.UserPrivacyStatus.PRIVATE:
-            follow_item = self.follow_dynamo.get_following(user_id, posted_by_user_id)
-            follow_status = follow_item['followStatus'] if follow_item else None
-            if follow_status != follow.enums.FollowStatus.FOLLOWING:
-                msg = f'Post owner `{posted_by_user_id}` is private and user `{user_id}` is not a follower'
-                raise exceptions.CommentException(msg)
+            # can't comment if there's a blocking relationship, either direction
+            if self.block_manager.is_blocked(posted_by_user_id, user_id):
+                raise exceptions.CommentException(f'Post owner `{posted_by_user_id}` has blocked user `{user_id}`')
+            if self.block_manager.is_blocked(user_id, posted_by_user_id):
+                raise exceptions.CommentException(f'User `{user_id}` has blocked post owner `{posted_by_user_id}`')
+
+            # if post owner is private, must be a follower to comment
+            poster = self.user_manager.get_user(posted_by_user_id)
+            if poster.item['privacyStatus'] == user.enums.UserPrivacyStatus.PRIVATE:
+                follow_item = self.follow_dynamo.get_following(user_id, posted_by_user_id)
+                follow_status = follow_item['followStatus'] if follow_item else None
+                if follow_status != follow.enums.FollowStatus.FOLLOWING:
+                    msg = f'Post owner `{posted_by_user_id}` is private and user `{user_id}` is not a follower'
+                    raise exceptions.CommentException(msg)
 
         text_tags = self.user_manager.get_text_tags(text)
         transacts = [
