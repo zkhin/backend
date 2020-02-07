@@ -123,6 +123,16 @@ def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, 
     assert comment.id == comment_id
 
 
+def test_private_user_can_comment_on_own_post(comment_manager, user, post):
+    comment_id = 'cid'
+
+    # post owner goes private
+    user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
+
+    comment = comment_manager.add_comment(comment_id, post.id, user.id, 't')
+    assert comment.id == comment_id
+
+
 def test_owner_of_comment_can_delete_it(comment_manager, user, post):
     comment_id = 'cid'
     comment_manager.add_comment(comment_id, post.id, user.id, text='t')
