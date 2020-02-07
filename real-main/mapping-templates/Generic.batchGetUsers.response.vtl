@@ -2,23 +2,16 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-## BatchGetItem does not preserve order
-#set ($userIdToItem = {})
-#foreach ($user in $ctx.result.data.${table})
-  #if (! $util.isNull($user))
-    $util.qr($userIdToItem.put($user.userId, $user))
+#set ($result = $ctx.prev.result)
+#set ($result.items = $result.userIds)
+
+#foreach ($item in $ctx.result.data.${table})
+  #if (! $util.isNull($item))
+    #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])
+    #foreach ($index in $indexes)
+      #set ($result.items[$index] = $item)
+    #end
   #end
 #end
 
-#set ($users = [])
-#foreach ($userId in $ctx.prev.result.userIds)
-  #set ($userItem = $userIdToItem[$userId])
-  #if (! $util.isNull($userItem))
-    $util.qr($users.add($userItem))
-  #end
-#end
-
-$util.toJson({
-  'nextToken': $ctx.prev.result.nextToken,
-  'items': $users
-})
+$util.toJson($result)

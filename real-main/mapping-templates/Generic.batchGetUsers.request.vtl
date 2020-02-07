@@ -1,6 +1,6 @@
 ## Expects a $ctx.prev.result with two keys:
 ##  - nextToken (nullable string)
-##  - userIds (list of strings)
+##  - userIds (list of strings, may have duplicates)
 
 #if ($ctx.prev.result.userIds.isEmpty())
   #return ({
@@ -9,12 +9,23 @@
   })
 #end
 
+## BatchGetItem does not preserve order, can't handle duplicates
 #set ($keys = [])
+$util.qr($ctx.stash.put('pkToIndex', {}))
+
 #foreach ($userId in $ctx.prev.result.userIds)
-  $util.qr($keys.add({
-    "partitionKey": {"S": "user/$userId"},
-    "sortKey": {"S": "profile"}
-  }))
+  #set ($pk = "user/$userId")
+
+  #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
+    $util.qr($ctx.stash.pkToIndex.put($pk, []))
+    $util.qr($keys.add({
+      "partitionKey": {"S": "$pk"},
+      "sortKey": {"S": "profile"}
+    }))
+  #end
+
+  #set ($index = $velocityCount - 1)
+  $util.qr($ctx.stash.pkToIndex[$pk].add($index))
 #end
 
 {
