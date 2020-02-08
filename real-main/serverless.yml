@@ -186,6 +186,15 @@ custom:
           - Generic.batchGetUsersFollowedStatus
 
       - type: User
+        field: followedUsersWithStories
+        request: User.followedUsersWithStories/before.request.vtl
+        response: User.followedUsersWithStories/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - User.followedUsersWithStories.fetchUserIds
+          - Generic.batchGetUsers
+
+      - type: User
         field: followerUsers
         request: User.followerUsers/User.followerUsers.request.vtl
         response: Generic.passThru.response.vtl
@@ -388,6 +397,7 @@ custom:
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
 
+      # DEPRECATED: use User.followedUsersWithStories instead
       - type: Query
         field: getFollowedUsersWithStories
         request: Generic.passThru.request.vtl
@@ -930,6 +940,11 @@ custom:
         name: Query.getFollowedUsersWithStories.fetchUserIds
         request: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.request.vtl
         response: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: User.followedUsersWithStories.fetchUserIds
+        request: User.followedUsersWithStories/Pipeline.fetchUserIds.request.vtl
+        response: User.followedUsersWithStories/Pipeline.fetchUserIds.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.album.fetchAlbum

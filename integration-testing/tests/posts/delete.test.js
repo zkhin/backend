@@ -57,10 +57,10 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
 
   // verify we show up in the first followed users list
-  resp = await theirClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await theirClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(1)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(ourUserId)
 
   // delete the post
   resp = await ourClient.mutate({mutation: schema.deletePost, variables: {postId}})
@@ -91,9 +91,9 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // verify we do not show up in the first followed users list
-  resp = await theirClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await theirClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(0)
 })
 
 

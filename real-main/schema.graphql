@@ -35,8 +35,7 @@ type Query {
   # DEPRECATED: use User.feed instead
   getFeed(limit: Int, nextToken: String): PaginatedPosts!
 
-  # Get a list of Users we follow that currently have stories
-  #  - ordered by user-with-story-closest-to-expiring-first
+  # DEPRECATED: use User.followedUsersWithStories instead
   getFollowedUsersWithStories(limit: Int, nextToken: String): PaginatedUsers!
 
   # DEPRECATED: use User.stories instead
@@ -298,6 +297,11 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followedUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
+
+  # Users the user follows that have stories
+  #   - private to user themselves only
+  #   - ordered by user-with-story-closest-to-expiring-first
+  followedUsersWithStories(limit: Int, nextToken: String): PaginatedUsers
 
   # Users that follow the user
   #   - null for users with followCountsHidden set, or if user has blocked caller

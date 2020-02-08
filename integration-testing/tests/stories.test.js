@@ -54,14 +54,14 @@ test('Posts that are not within a day of expiring do not show up as a stories', 
   expect(resp['data']['user']['stories']['items']).toHaveLength(0)
 
   // verify we don't see them as having stories
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(0)
 })
 
 
 test('Add a post that shows up as story', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we follow them
@@ -85,10 +85,17 @@ test('Add a post that shows up as story', async () => {
   expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
 
   // they should show up as having a story to us
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(1)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['blockerStatus']).toBe('NOT_BLOCKING')
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['followedStatus']).toBe('FOLLOWING')
+
+  // verify they cannot see our followedUsersWithStories
+  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['user']['followedUsersWithStories']).toBeNull()
 })
 
 
@@ -202,11 +209,11 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // verify those show up in the right order
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(2)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(other2UserId)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][1]['userId']).toBe(other1UserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(2)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(other2UserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(other1UserId)
 
   // another story is added that's about to expire
   resp = await other1Client.mutate({
@@ -217,11 +224,11 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // verify that reversed the order
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(2)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(other1UserId)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][1]['userId']).toBe(other2UserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(2)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(other1UserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(other2UserId)
 
   // another story is added that doesn't change the order
   resp = await other2Client.mutate({
@@ -232,11 +239,11 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // verify order has not changed
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(2)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(other1UserId)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][1]['userId']).toBe(other2UserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(2)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(other1UserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(other2UserId)
 })
 
 
@@ -329,10 +336,10 @@ test.skip('Post that expires is removed from stories', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(1)
   expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(1)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
 
   // TODO trigger the cron job
 
@@ -340,9 +347,9 @@ test.skip('Post that expires is removed from stories', async () => {
   resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(0)
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(0)
 })
 
 
@@ -369,10 +376,10 @@ test('Post that is archived is removed from stories', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(1)
   expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId)
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(1)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
 
   // they archive that post
   resp = await theirClient.mutate({mutation: schema.archivePost, variables: {postId}})
@@ -383,7 +390,7 @@ test('Post that is archived is removed from stories', async () => {
   resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(0)
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(0)
 })

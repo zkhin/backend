@@ -245,10 +245,10 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
   expect(resp['data']['addPost']['expiresAt']).not.toBeNull()
 
   // check we see them in our first followed stories
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(1)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(1)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
 
   // they edit that post so it is no longer a story
   variables = {postId, expiresAt: null}
@@ -258,9 +258,9 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
   expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeNull()
 
   // check that is reflected in our first followed stories
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(0)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(0)
 })
 
 
@@ -297,11 +297,11 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   expect(resp['data']['addPost']['expiresAt']).not.toBeNull()
 
   // check we see them as expected in our first followed stories
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(2)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][1]['userId']).toBe(otherUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(2)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(otherUserId)
 
   // edit their post's expiration date to a date further in the future
   at.add(moment.duration('PT2H'))
@@ -312,11 +312,11 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
 
   // check we see them as expected in our first followed stories (order reversed from earlier)
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(2)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(otherUserId)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][1]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(2)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(otherUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(theirUserId)
 
   // edit their post's expiration date to a date closer in the future
   at.subtract(moment.duration('PT2H'))
@@ -327,9 +327,9 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
 
   // check we see them as expected in our first followed stories (order back to original)
-  resp = await ourClient.query({query: schema.getFollowedUsersWithStories})
+  resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getFollowedUsersWithStories']['items']).toHaveLength(2)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
-  expect(resp['data']['getFollowedUsersWithStories']['items'][1]['userId']).toBe(otherUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items']).toHaveLength(2)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(theirUserId)
+  expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(otherUserId)
 })
