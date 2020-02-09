@@ -406,6 +406,9 @@ custom:
         functions:
           - Query.getFollowedUsersWithStories.fetchUserIds
           - Generic.batchGetUsers
+          - Generic.batchGetUsersBlockerStatus
+          - Generic.filterUsersBlockerStatus
+          - Generic.batchGetUsersFollowedStatus
 
       - type: Mutation
         field: followUser
