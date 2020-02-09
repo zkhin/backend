@@ -663,6 +663,8 @@ custom:
           - Generic.checkAccess.checkIfFollower
           - Query.getStories.fetchPosts
           - Generic.batchGetPostsPostedBy
+          - Generic.batchGetPostsPostedByBlockerStatus
+          - Generic.batchGetPostsPostedByFollowedStatus
 
       - type: Query
         field: post
@@ -722,6 +724,8 @@ custom:
           - Generic.checkAccess.checkIfFollower
           - Query.getPosts.fetchPosts
           - Generic.batchGetPostsPostedBy
+          - Generic.batchGetPostsPostedByBlockerStatus
+          - Generic.batchGetPostsPostedByFollowedStatus
 
       # DEPRECATED: use User.mediaObjects instead
       - type: Query
