@@ -203,6 +203,7 @@ type Mutation {
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
   lambdaServerError(arg1: String, arg2: String): String
+  dynamoServerError(arg1: String, arg2: String): String
 }
 
 type User {

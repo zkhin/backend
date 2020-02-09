@@ -831,6 +831,11 @@ custom:
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
 
+      - type: Mutation
+        field: dynamoServerError
+        dataSource: DynamodbDataSource
+        response: Generic.passThru.response.vtl
+
     functionConfigurations:
 
       - dataSource: DynamodbDataSource
@@ -1462,6 +1467,42 @@ resources:
         Principal: s3.amazonaws.com
         SourceAccount: '#{AWS::AccountId}'
         SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+
+    # Based off the cloudformation template output of serverless-plugin-aws-alerts
+    AppSyncServerErrorAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: real-dev-main
+        MetricName: AppSyncServerErrors
+        Threshold: 1
+        Period: 300
+        EvaluationPeriods: 1
+        DatapointsToAlarm: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        AlarmActions:
+          - Ref: AwsAlertsAlarm
+        TreatMissingData: missing
+        Statistic: Sum
+
+    AppSyncServerErrorLogMetricFilterALERT:
+      Type: AWS::Logs::MetricFilter
+      Properties:
+        FilterPattern: '{ $.fieldInError IS TRUE && $.errors[0] != "* errorType=ClientError, *" }'
+        LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
+        MetricTransformations:
+          - MetricValue: 1
+            MetricNamespace: real-dev-main
+            MetricName: AppSyncServerErrors
+
+    AppSyncServerErrorLogMetricFilterOK:
+      Type: AWS::Logs::MetricFilter
+      Properties:
+        FilterPattern: ''
+        LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
+        MetricTransformations:
+          - MetricValue: 0
+            MetricNamespace: real-dev-main
+            MetricName: AppSyncServerErrors
 
     FrontendLogGroup:
       Type: AWS::Logs::LogGroup

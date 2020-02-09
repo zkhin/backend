@@ -2,16 +2,16 @@
 
 ## can't request NOT_FOLLOWING
 #if ($followStatus == 'NOT_FOLLOWING')
-  $util.error('Cannot request followStatus of NOT_FOLLOWING')
+  $util.error('Cannot request followStatus of NOT_FOLLOWING', 'ClientError')
 #end
 
 ## we are only allowed to acces FOLLOWING followings of others
 #if ($ctx.source.userId != $ctx.identity.cognitoIdentityId and $followStatus != 'FOLLOWING')
-  $util.error("Access denied - may only retrieve other users FOLLOWING relationships")
+  $util.error('Access denied - may only retrieve other users FOLLOWING relationships', 'ClientError')
 #end
 
 #if ($ctx.args.limit < 1 or $ctx.args.limit > 100)
-  $util.error('Limit cannot be less than 1 or greater than 100')
+  $util.error('Limit cannot be less than 1 or greater than 100', 'ClientError')
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 

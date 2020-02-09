@@ -1,10 +1,10 @@
 ## if no earlier stage set the userId in the context, then we have not been granted access
 #if (! $ctx.stash.accessGranted)
-  $util.error('Access denied')
+  $util.error('Access denied', 'ClientError')
 #end
 
 #if ($ctx.args.limit < 1 or $ctx.args.limit > 100)
-  $util.error('Limit cannot be less than 1 or greater than 100')
+  $util.error('Limit cannot be less than 1 or greater than 100', 'ClientError')
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 

@@ -1,5 +1,5 @@
 #if ($ctx.args.limit < 1 or $ctx.args.limit > 100)
-  $util.error('Limit cannot be less than 1 or greater than 100')
+  $util.error('Limit cannot be less than 1 or greater than 100', 'ClientError')
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 
@@ -10,7 +10,7 @@
 
 ## we are only allowed to request UPLOADED media objects of others
 #if ($user.userId != $callerUserId and $mediaStatus != 'UPLOADED')
-  $util.error("Access denied - may only retrieve other users UPLOADED media objects")
+  $util.error('Access denied - may only retrieve other users UPLOADED media objects', 'ClientError')
 #end
 
 ## Hide if target is blocking caller

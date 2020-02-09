@@ -6,7 +6,7 @@
 
 ## raises an error if error self does not exist
 #if ($util.isNull($user))
-  $util.error('User does not exist')
+  $util.error('User does not exist', 'ClientError')
 #end
 
 $util.qr($user.put('blockedStatus', 'SELF'))

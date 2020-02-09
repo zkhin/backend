@@ -3,7 +3,7 @@
 #end
 
 #if (! $util.isNull($ctx.result.nextToken))
-  $util.error('Failed to retrieve all of the posts mediaObjects')
+  $util.error('Failed to retrieve all of the posts mediaObjects', 'ClientError')
 #end
 
 $util.toJson($ctx.result.items)

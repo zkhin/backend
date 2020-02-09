@@ -45,9 +45,9 @@ def dispatch(event, context):
         logger.warning(msg)
         return {'error': {
             'message': msg,
-            'type': err.error_type,
-            'data': err.error_data,
-            'info': err.error_info,
+            'type': 'ClientError',
+            'data': err.data,
+            'info': err.info,
         }}
     except Exception as err:
         # By logging the exception and then raising the error here, we:

@@ -362,6 +362,10 @@ const lambdaServerError = gql(`mutation LambdaServerError {
   lambdaServerError (arg1: "test-arg1", arg2: "test-arg2")
 }`)
 
+const dynamoServerError = gql(`mutation DynamoServerError {
+  dynamoServerError (arg1: "test-arg1", arg2: "test-arg2")
+}`)
+
 async function main() {
   const resp = await appsyncClient.mutate({
     mutation: createCognitoOnlyUser,
