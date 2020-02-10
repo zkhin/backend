@@ -12,18 +12,18 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "aws-appsync": "^2.0.0",
-    "aws-sdk": "^2.524.0",
+    "aws-appsync": "^3.0.2",
+    "aws-sdk": "^2.614.0",
     "caller-id": "^0.1.0",
     "dotenv": "^8.1.0",
-    "elasticsearch": "^16.4.0",
+    "elasticsearch": "^16.6.0",
     "es6-promise": "^4.2.8",
-    "eslint": "^6.4.0",
-    "generate-password": "^1.4.2",
-    "graphql-tag": "^2.10.1",
+    "eslint": "^6.8.0",
+    "generate-password": "^1.5.0",
+    "graphql-tag": "^2.10.3",
     "http-aws-es": "^6.0.0",
     "isomorphic-fetch": "^2.2.1",
-    "jest": "^24.9.0",
+    "jest": "^25.1.0",
     "jpeg-js": "^0.3.6",
     "jwt-decode": "^2.2.0",
     "md5": "^2.2.1",
@@ -32,6 +32,6 @@
     "request": "^2.88.0",
     "request-image-size": "^2.1.0",
     "request-promise-native": "^1.0.7",
-    "uuid": "^3.3.3"
+    "uuid": "^3.4.0"
   }
 }

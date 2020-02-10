@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "dependencies": {},
   "devDependencies": {
-    "serverless": "^1.51.0",
-    "serverless-plugin-git-variables": "^3.3.3",
+    "serverless": "^1.63.0",
+    "serverless-plugin-git-variables": "^3.4.0",
     "serverless-python-requirements": "^5.0.0"
   }
 }
