@@ -1,4 +1,3 @@
-__all__ = ['CommentManager', 'Comment']
+__all__ = ['CommentManager']
 
 from .manager import CommentManager
-from .model import Comment

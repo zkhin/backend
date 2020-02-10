@@ -1,4 +1,3 @@
-__all__ = ['LikeManager', 'Like']
+__all__ = ['LikeManager']
 
 from .manager import LikeManager
-from .model import Like

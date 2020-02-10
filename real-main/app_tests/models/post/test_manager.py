@@ -78,7 +78,7 @@ def test_add_text_only_post(post_manager, user_manager):
     assert post.item['textTags'] == []
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert 'expiresAt' not in post.item
-    assert list(post_manager.media_dynamo.generate_by_post(post_id)) == []
+    assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
 
 
 def test_add_text_with_tags_post(post_manager, user_manager):
@@ -133,7 +133,7 @@ def test_add_media_post(post_manager):
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
 
-    media_items = list(post_manager.media_dynamo.generate_by_post(post_id))
+    media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
     assert len(media_items) == 1
     assert media_items[0]['mediaId'] == media_id
     assert media_items[0]['mediaType'] == media_type
@@ -177,7 +177,7 @@ def test_add_media_post_with_options(post_manager, album):
     assert post.item['likesDisabled'] is True
     assert post.item['verificationHidden'] is False
 
-    media_items = list(post_manager.media_dynamo.generate_by_post(post_id))
+    media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
     assert len(media_items) == 1
     assert media_items[0]['mediaId'] == media_id
     assert media_items[0]['mediaType'] == media_type

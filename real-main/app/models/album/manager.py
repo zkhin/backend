@@ -3,7 +3,6 @@ import logging
 import pendulum
 
 from app.models import post, user
-from app.models.user.dynamo import UserDynamo
 
 from . import exceptions
 from .dynamo import AlbumDynamo
@@ -25,21 +24,20 @@ class AlbumManager:
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = AlbumDynamo(clients['dynamo'])
-            self.user_dynamo = UserDynamo(clients['dynamo'])
 
     def get_album(self, album_id):
         album_item = self.dynamo.get_album(album_id)
         return self.init_album(album_item) if album_item else None
 
     def init_album(self, album_item):
-        return Album(album_item, self.clients, user_manager=self.user_manager, post_manager=self.post_manager)
+        return Album(album_item, self.dynamo, user_manager=self.user_manager, post_manager=self.post_manager)
 
     def add_album(self, caller_user_id, album_id, name, description=None, now=None):
         now = now or pendulum.now('utc')
 
         # test suite cares about order here, but it doesn't actually matter
         transacts = [
-            self.user_dynamo.transact_increment_album_count(caller_user_id),
+            self.user_manager.dynamo.transact_increment_album_count(caller_user_id),
             self.dynamo.transact_add_album(album_id, caller_user_id, name, description, created_at=now),
         ]
         transact_exceptions = [

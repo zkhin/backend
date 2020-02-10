@@ -1,9 +1,6 @@
 import logging
 
-from app.models import feed, like
-from app.models.followed_first_story.dynamo import FollowedFirstStoryDynamo
-from app.models.post.dynamo import PostDynamo
-from app.models.user.dynamo import UserDynamo
+from app.models import feed, followed_first_story, like, post, user
 from app.models.user.enums import UserPrivacyStatus
 
 from . import enums, exceptions
@@ -22,14 +19,17 @@ class FollowManager:
         managers = managers or {}
         managers['follow'] = self
         self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
+        self.ffs_manager = (
+            managers.get('followed_first_story')
+            or followed_first_story.FollowedFirstStoryManager(clients, managers=managers)
+        )
         self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = FollowDynamo(clients['dynamo'])
-            self.user_dynamo = UserDynamo(clients['dynamo'])
-            self.ffs_dynamo = FollowedFirstStoryDynamo(clients['dynamo'])
-            self.post_dynamo = PostDynamo(clients['dynamo'])
 
     def get_follow_status(self, follower_user_id, followed_user_id):
         if follower_user_id == followed_user_id:
@@ -64,17 +64,17 @@ class FollowManager:
         transacts = [self.dynamo.transact_add_following(follower_user.id, followed_user.id, follow_status)]
         if follow_status == enums.FollowStatus.FOLLOWING:
             transacts.extend([
-                self.user_dynamo.transact_increment_followed_count(follower_user.id),
-                self.user_dynamo.transact_increment_follower_count(followed_user.id),
+                self.user_manager.dynamo.transact_increment_followed_count(follower_user.id),
+                self.user_manager.dynamo.transact_increment_follower_count(followed_user.id),
             ])
         self.dynamo.client.transact_write_items(transacts)
 
         if follow_status == enums.FollowStatus.FOLLOWING:
             # async with sns?
             self.feed_manager.add_users_posts_to_feed(follower_user.id, followed_user.id)
-            post = self.post_dynamo.get_next_completed_post_to_expire(followed_user.id)
+            post = self.post_manager.dynamo.get_next_completed_post_to_expire(followed_user.id)
             if post:
-                self.ffs_dynamo.set_all([follower_user.id], post)
+                self.ffs_manager.dynamo.set_all([follower_user.id], post)
 
         return follow_status
 
@@ -90,18 +90,18 @@ class FollowManager:
         transacts = [self.dynamo.transact_delete_following(follow_item)]
         if follow_item['followStatus'] == enums.FollowStatus.FOLLOWING:
             transacts.extend([
-                self.user_dynamo.transact_decrement_followed_count(follower_user_id),
-                self.user_dynamo.transact_decrement_follower_count(followed_user_id),
+                self.user_manager.dynamo.transact_decrement_followed_count(follower_user_id),
+                self.user_manager.dynamo.transact_decrement_follower_count(followed_user_id),
             ])
         self.dynamo.client.transact_write_items(transacts)
 
         if follow_item['followStatus'] == enums.FollowStatus.FOLLOWING:
             # async with sns?
             self.feed_manager.delete_users_posts_from_feed(follower_user_id, followed_user_id)
-            self.ffs_dynamo.delete_all([follower_user_id], followed_user_id)
+            self.ffs_manager.dynamo.delete_all([follower_user_id], followed_user_id)
 
             # if the user is a private user, then we no longer have access to their posts thus we clear our likes
-            followed_user_item = self.user_dynamo.get_user(followed_user_id)
+            followed_user_item = self.user_manager.dynamo.get_user(followed_user_id)
             if followed_user_item['privacyStatus'] == UserPrivacyStatus.PRIVATE:
                 self.like_manager.dislike_all_by_user_from_user(follower_user_id, followed_user_id)
 
@@ -118,17 +118,17 @@ class FollowManager:
 
         transacts = [
             self.dynamo.transact_update_following_status(follow_item, enums.FollowStatus.FOLLOWING),
-            self.user_dynamo.transact_increment_followed_count(follower_user_id),
-            self.user_dynamo.transact_increment_follower_count(followed_user_id),
+            self.user_manager.dynamo.transact_increment_followed_count(follower_user_id),
+            self.user_manager.dynamo.transact_increment_follower_count(followed_user_id),
         ]
         self.dynamo.client.transact_write_items(transacts)
 
         # async with sns?
         self.feed_manager.add_users_posts_to_feed(follower_user_id, followed_user_id)
 
-        post = self.post_dynamo.get_next_completed_post_to_expire(followed_user_id)
+        post = self.post_manager.dynamo.get_next_completed_post_to_expire(followed_user_id)
         if post:
-            self.ffs_dynamo.set_all([follower_user_id], post)
+            self.ffs_manager.dynamo.set_all([follower_user_id], post)
 
         return enums.FollowStatus.FOLLOWING
 
@@ -153,15 +153,15 @@ class FollowManager:
         transacts = [self.dynamo.transact_update_following_status(follow_item, enums.FollowStatus.DENIED)]
         if follow_item['followStatus'] == enums.FollowStatus.FOLLOWING:
             transacts.extend([
-                self.user_dynamo.transact_decrement_followed_count(follower_user_id),
-                self.user_dynamo.transact_decrement_follower_count(followed_user_id),
+                self.user_manager.dynamo.transact_decrement_followed_count(follower_user_id),
+                self.user_manager.dynamo.transact_decrement_follower_count(followed_user_id),
             ])
         self.dynamo.client.transact_write_items(transacts)
 
         if follow_item['followStatus'] == enums.FollowStatus.FOLLOWING:
             # async with sns?
             self.feed_manager.delete_users_posts_from_feed(follower_user_id, followed_user_id)
-            self.ffs_dynamo.delete_all([follower_user_id], followed_user_id)
+            self.ffs_manager.dynamo.delete_all([follower_user_id], followed_user_id)
 
             # clear any likes that were droped on the followed's posts by the follower
             self.like_manager.dislike_all_by_user_from_user(follower_user_id, followed_user_id)

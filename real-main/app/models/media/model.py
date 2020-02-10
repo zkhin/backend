@@ -5,7 +5,6 @@ from PIL import Image, ImageOps
 import requests
 
 from . import enums, exceptions
-from .dynamo import MediaDynamo
 
 logger = logging.getLogger()
 
@@ -15,7 +14,6 @@ class Media:
     enums = enums
     exceptions = exceptions
 
-    client_names = ['cloudfront', 'dynamo', 's3_uploads']
     jpeg_content_type = 'image/jpeg'
     sizes = {
         enums.MediaSize.K4: [3840, 2160],
@@ -24,16 +22,16 @@ class Media:
         enums.MediaSize.P64: [114, 64],
     }
 
-    def __init__(self, item, clients):
-        self.clients = clients
-        for client_name in self.client_names:
-            if client_name in clients:
-                setattr(self, f'{client_name}_client', clients[client_name])
+    def __init__(self, item, media_dynamo, cloudfront_client=None, secrets_manager_client=None,
+                 s3_uploads_client=None):
+        self.dynamo = media_dynamo
 
-        if 'dynamo' in clients:
-            self.dynamo = MediaDynamo(clients['dynamo'])
-        if 'secrets_manager' in clients:
-            self.post_verification_api_creds_getter = clients['secrets_manager'].get_post_verification_api_creds
+        if cloudfront_client:
+            self.cloudfront_client = cloudfront_client
+        if s3_uploads_client:
+            self.s3_uploads_client = s3_uploads_client
+        if secrets_manager_client:
+            self.post_verification_api_creds_getter = secrets_manager_client.get_post_verification_api_creds
 
         self.item = item
         self.id = item['mediaId']

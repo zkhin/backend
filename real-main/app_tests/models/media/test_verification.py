@@ -4,7 +4,8 @@ from moto import mock_secretsmanager
 import pytest
 
 from app.clients import SecretsManagerClient
-from app.models.media import Media
+from app.models.media.dynamo import MediaDynamo
+from app.models.media.model import Media
 from app.models.media.exceptions import MediaException
 
 mock_api_key = 'the-api-key'
@@ -25,16 +26,20 @@ def secrets_manager_client():
 
 
 @pytest.fixture
-def clients(dynamo_client, secrets_manager_client, cloudfront_client):
+def clients(secrets_manager_client, cloudfront_client):
     yield {
-        'dynamo': dynamo_client,
-        'secrets_manager': secrets_manager_client,
-        'cloudfront': cloudfront_client,
+        'secrets_manager_client': secrets_manager_client,
+        'cloudfront_client': cloudfront_client,
     }
 
 
 @pytest.fixture
-def media_no_meta(clients):
+def media_dynamo(dynamo_client):
+    yield MediaDynamo(dynamo_client)
+
+
+@pytest.fixture
+def media_no_meta(media_dynamo, clients):
     media_id = 'media-id-1'
     kwargs = {
         'Item': {
@@ -46,12 +51,12 @@ def media_no_meta(clients):
             'mediaType': 'IMAGE',
         },
     }
-    media_item = clients['dynamo'].add_item(kwargs)
-    yield Media(media_item, clients)
+    media_item = media_dynamo.client.add_item(kwargs)
+    yield Media(media_item, media_dynamo, **clients)
 
 
 @pytest.fixture
-def media_all_meta(clients):
+def media_all_meta(media_dynamo, clients):
     media_id = 'media-id-2'
     kwargs = {
         'Item': {
@@ -65,8 +70,8 @@ def media_all_meta(clients):
             'originalFormat': 'HEIC',
         },
     }
-    media_item = clients['dynamo'].add_item(kwargs)
-    yield Media(media_item, clients)
+    media_item = media_dynamo.client.add_item(kwargs)
+    yield Media(media_item, media_dynamo, **clients)
 
 
 def test_request_format_no_meta(cloudfront_client, media_no_meta, requests_mock):

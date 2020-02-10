@@ -19,25 +19,25 @@ class CommentManager:
         managers = managers or {}
         managers['comment'] = self
         self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
-            self.follow_dynamo = follow.dynamo.FollowDynamo(clients['dynamo'])
-            self.post_dynamo = post.dynamo.PostDynamo(clients['dynamo'])
 
     def get_comment(self, comment_id):
         comment_item = self.dynamo.get_comment(comment_id)
         return self.init_comment(comment_item) if comment_item else None
 
     def init_comment(self, comment_item):
-        return Comment(comment_item, self.clients, user_manager=self.user_manager)
+        return Comment(comment_item, self.dynamo, post_manager=self.post_manager, user_manager=self.user_manager)
 
     def add_comment(self, comment_id, post_id, user_id, text, now=None):
         now = now or pendulum.now('utc')
 
-        post_item = self.post_dynamo.get_post(post_id)
+        post_item = self.post_manager.dynamo.get_post(post_id)
         if not post_item:
             raise exceptions.CommentException(f'Post `{post_id}` does not exist')
 
@@ -56,7 +56,7 @@ class CommentManager:
             # if post owner is private, must be a follower to comment
             poster = self.user_manager.get_user(posted_by_user_id)
             if poster.item['privacyStatus'] == user.enums.UserPrivacyStatus.PRIVATE:
-                follow_item = self.follow_dynamo.get_following(user_id, posted_by_user_id)
+                follow_item = self.follow_manager.dynamo.get_following(user_id, posted_by_user_id)
                 follow_status = follow_item['followStatus'] if follow_item else None
                 if follow_status != follow.enums.FollowStatus.FOLLOWING:
                     msg = f'Post owner `{posted_by_user_id}` is private and user `{user_id}` is not a follower'
@@ -65,7 +65,7 @@ class CommentManager:
         text_tags = self.user_manager.get_text_tags(text)
         transacts = [
             self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
-            self.post_dynamo.transact_increment_comment_count(post_id),
+            self.post_manager.dynamo.transact_increment_comment_count(post_id),
         ]
         transact_exceptions = [
             exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
@@ -83,7 +83,7 @@ class CommentManager:
 
         # users may only delete their own comments or comments on their posts
         if comment.item['userId'] != deleter_user_id:
-            post_item = self.post_dynamo.get_post(comment.item['postId'])
+            post_item = self.post_manager.dynamo.get_post(comment.item['postId'])
             if post_item['postedByUserId'] != deleter_user_id:
                 raise exceptions.CommentException(f'User is not authorized to delete comment `{comment_id}`')
 

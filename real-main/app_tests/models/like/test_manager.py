@@ -102,7 +102,7 @@ def test_cant_like_post_of_private_user_without_following(like_manager, follow_m
 def test_cant_like_incomplete_post(like_manager, post_manager, user1, user2):
     # add a media post which will be left in a pending state
     post = post_manager.add_post(user1.id, 'pid1', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}])
-    post_manager.media_dynamo.set_checksum({'mediaId': 'mid', 'postedAt': post.item['postedAt']}, 'c-sum')
+    post_manager.media_manager.dynamo.set_checksum({'mediaId': 'mid', 'postedAt': post.item['postedAt']}, 'c-sum')
 
     # verify we can't like it
     with pytest.raises(LikeException):

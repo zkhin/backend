@@ -1,4 +1,3 @@
-__all__ = ['Post', 'PostManager']
+__all__ = ['PostManager']
 
-from .model import Post
 from .manager import PostManager

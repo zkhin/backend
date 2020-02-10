@@ -32,8 +32,13 @@ class MediaManager:
         media_item = self.dynamo.get_media(media_id)
         if not media_item:
             return None
-        return Media(media_item, self.clients)
+        return self.init_media(media_item)
 
     def init_media(self, media_item):
         "Use the provided media item to initialize a new Media instance"
-        return Media(media_item, self.clients)
+        kwargs = {
+            'cloudfront_client': self.clients.get('cloudfront'),
+            's3_uploads_client': self.clients.get('s3_uploads'),
+            'secrets_manager_client': self.clients.get('secrets_manager'),
+        }
+        return Media(media_item, self.dynamo, **kwargs)

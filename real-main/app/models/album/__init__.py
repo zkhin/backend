@@ -1,4 +1,3 @@
-__all__ = ['Album', 'AlbumManager']
+__all__ = ['AlbumManager']
 
-from .model import Album
 from .manager import AlbumManager

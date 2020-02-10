@@ -1,8 +1,7 @@
 import itertools
 import logging
 
-from app.models import follow
-from app.models.post.dynamo import PostDynamo
+from app.models import follow, post
 
 from .dynamo import FeedDynamo
 
@@ -15,14 +14,14 @@ class FeedManager:
         managers = managers or {}
         managers['feed'] = self
         self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = FeedDynamo(clients['dynamo'])
-            self.post_dynamo = PostDynamo(clients['dynamo'])
 
     def add_users_posts_to_feed(self, feed_user_id, posted_by_user_id):
-        post_item_generator = self.post_dynamo.generate_posts_by_user(posted_by_user_id, completed=True)
+        post_item_generator = self.post_manager.dynamo.generate_posts_by_user(posted_by_user_id, completed=True)
         self.dynamo.add_posts_to_feed(feed_user_id, post_item_generator)
 
     def delete_users_posts_from_feed(self, feed_user_id, posted_by_user_id):

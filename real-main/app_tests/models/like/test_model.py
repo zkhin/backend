@@ -33,8 +33,8 @@ def test_dislike(like_manager, like):
     assert like.item['likeStatus'] == LikeStatus.ANONYMOUSLY_LIKED
 
     # verify our initial like counter
-    post_item = like_manager.post_dynamo.get_post(post_id)
-    assert post_item['anonymousLikeCount'] == 1
+    post = like_manager.post_manager.get_post(post_id)
+    assert post.item['anonymousLikeCount'] == 1
 
     like.dislike()
 
@@ -42,8 +42,8 @@ def test_dislike(like_manager, like):
     assert like_manager.get_like(liked_by_user_id, post_id) is None
 
     # verify the like counter on the post has decremented
-    post_item = like_manager.post_dynamo.get_post(post_id)
-    assert post_item['anonymousLikeCount'] == 0
+    post.refresh_item()
+    assert post.item['anonymousLikeCount'] == 0
 
 
 def test_dislike_fail_unable_to_decrement_like_counter(like_manager, like):
@@ -52,16 +52,16 @@ def test_dislike_fail_unable_to_decrement_like_counter(like_manager, like):
     like_status == LikeStatus.ANONYMOUSLY_LIKED
 
     # verify our initial like counter
-    post_item = like_manager.post_dynamo.get_post(post_id)
-    assert post_item['anonymousLikeCount'] == 1
+    post = like_manager.post_manager.get_post(post_id)
+    assert post.item['anonymousLikeCount'] == 1
 
     # sneak behind the machinery being testy and lower the like count for the post
-    transact = like_manager.post_dynamo.transact_decrement_like_count(post_id, like_status)
+    transact = like_manager.post_manager.dynamo.transact_decrement_like_count(post_id, like_status)
     like_manager.dynamo.client.transact_write_items([transact])
 
     # verify the like counter has decreased
-    post_item = like_manager.post_dynamo.get_post(post_id)
-    assert post_item['anonymousLikeCount'] == 0
+    post.refresh_item()
+    assert post.item['anonymousLikeCount'] == 0
 
     # verify fails because can't lower count below 0
     with pytest.raises(UnableToDecrementPostLikeCounter):

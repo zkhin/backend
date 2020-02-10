@@ -1,12 +1,8 @@
 import logging
 
-from app.models.album.dynamo import AlbumDynamo
-from app.models.media.dynamo import MediaDynamo
 from app.models.media.enums import MediaType, MediaStatus
-from app.models.user.dynamo import UserDynamo
 
 from . import enums, exceptions
-from .dynamo import PostDynamo
 from .enums import FlagStatus, PostStatus
 
 logger = logging.getLogger()
@@ -18,16 +14,13 @@ class Post:
     exceptions = exceptions
     FlagStatus = FlagStatus
 
-    def __init__(self, item, clients, trending_manager=None, feed_manager=None, followed_first_story_manager=None,
+    def __init__(self, item, post_dynamo, trending_manager=None, feed_manager=None, followed_first_story_manager=None,
                  like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
-                 comment_manager=None, flag_manager=None):
+                 comment_manager=None, flag_manager=None, album_manager=None):
+        self.dynamo = post_dynamo
 
-        if 'dynamo' in clients:
-            self.dynamo = PostDynamo(clients['dynamo'])
-            self.album_dynamo = AlbumDynamo(clients['dynamo'])
-            self.media_dynamo = MediaDynamo(clients['dynamo'])
-            self.user_dynamo = UserDynamo(clients['dynamo'])
-
+        if album_manager:
+            self.album_manager = album_manager
         if comment_manager:
             self.comment_manager = comment_manager
         if feed_manager:
@@ -76,21 +69,21 @@ class Post:
         # we declare that only posts with exactly one media item of type IMAGE may be non-original.
         # That is to say, text-only posts or multiple-media posts will never have originalPostId set.
         original_post_id = None
-        media_items = list(self.media_dynamo.generate_by_post(self.id))
+        media_items = list(self.media_manager.dynamo.generate_by_post(self.id))
         media_item = media_items[0] if media_items else None
         if media_item and media_item['mediaType'] == MediaType.IMAGE:
-            first_media_id = self.media_dynamo.get_first_media_id_with_checksum(media_item['checksum'])
+            first_media_id = self.media_manager.dynamo.get_first_media_id_with_checksum(media_item['checksum'])
             if first_media_id and first_media_id != media_item['mediaId']:
-                first_media_item = self.media_dynamo.get_media(first_media_id)
+                first_media_item = self.media_manager.dynamo.get_media(first_media_id)
                 original_post_id = first_media_item['postId'] if first_media_item else None
 
         # complete the post
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, original_post_id=original_post_id),
-            self.user_dynamo.transact_increment_post_count(self.posted_by_user_id),
+            self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id),
         ]
         if album_id := self.item.get('albumId'):
-            transacts.append(self.album_dynamo.transact_add_post(album_id))
+            transacts.append(self.album_manager.dynamo.transact_add_post(album_id))
 
         self.dynamo.client.transact_write_items(transacts)
         self.item = self.dynamo.get_post(self.id, strongly_consistent=True)
@@ -113,12 +106,12 @@ class Post:
         self.item['mediaObjects'] = []
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED)]
         if self.post_status == PostStatus.COMPLETED:
-            transacts.append(self.user_dynamo.transact_decrement_post_count(self.posted_by_user_id))
+            transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id))
             if album_id := self.item.get('albumId'):
-                transacts.append(self.album_dynamo.transact_remove_post(album_id))
+                transacts.append(self.album_manager.dynamo.transact_remove_post(album_id))
 
-        for media_item in self.media_dynamo.generate_by_post(self.id):
-            transacts.append(self.media_dynamo.transact_set_status(media_item, MediaStatus.ARCHIVED))
+        for media_item in self.media_manager.dynamo.generate_by_post(self.id):
+            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.ARCHIVED))
             self.item['mediaObjects'].append(media_item)
 
         self.dynamo.client.transact_write_items(transacts)
@@ -151,7 +144,7 @@ class Post:
         post_status = PostStatus.COMPLETED
         media_statuses = []
         media_items = []
-        for media_item in self.media_dynamo.generate_by_post(self.id):
+        for media_item in self.media_manager.dynamo.generate_by_post(self.id):
             media = self.media_manager.init_media(media_item)
             media_status = (
                 MediaStatus.UPLOADED if media.has_all_s3_objects()
@@ -165,19 +158,19 @@ class Post:
         # restore the post
         transacts = [self.dynamo.transact_set_post_status(self.item, post_status)]
         if post_status == PostStatus.COMPLETED:
-            transacts.append(self.user_dynamo.transact_increment_post_count(self.posted_by_user_id))
+            transacts.append(self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id))
             if album_id := self.item.get('albumId'):
-                transacts.append(self.album_dynamo.transact_add_post(album_id))
+                transacts.append(self.album_manager.dynamo.transact_add_post(album_id))
 
         for media_item, media_status in zip(media_items, media_statuses):
-            transacts.append(self.media_dynamo.transact_set_status(media_item, media_status))
+            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, media_status))
 
         self.dynamo.client.transact_write_items(transacts)
 
         # update in-memory copy of dynamo state
         self.refresh_item(strongly_consistent=True)
         self.item['mediaObjects'] = [
-            self.media_dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
+            self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
             for media_item in media_items
         ]
 
@@ -196,12 +189,12 @@ class Post:
         self.item['mediaObjects'] = []
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING)]
         if self.post_status == PostStatus.COMPLETED:
-            transacts.append(self.user_dynamo.transact_decrement_post_count(self.posted_by_user_id))
+            transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id))
             if album_id := self.item.get('albumId'):
-                transacts.append(self.album_dynamo.transact_remove_post(album_id))
+                transacts.append(self.album_manager.dynamo.transact_remove_post(album_id))
 
-        for media_item in self.media_dynamo.generate_by_post(self.id):
-            transacts.append(self.media_dynamo.transact_set_status(media_item, MediaStatus.DELETING))
+        for media_item in self.media_manager.dynamo.generate_by_post(self.id):
+            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.DELETING))
             self.item['mediaObjects'].append(media_item)
 
         self.dynamo.client.transact_write_items(transacts)
@@ -250,7 +243,7 @@ class Post:
         if all(v is None for v in args):
             raise exceptions.PostException('Empty edit requested')
 
-        post_media = list(self.media_dynamo.generate_by_post(self.id))
+        post_media = list(self.media_manager.dynamo.generate_by_post(self.id))
         if text == '' and not post_media:
             raise exceptions.PostException('Cannot set text to null on text-only post')
 
@@ -282,7 +275,7 @@ class Post:
 
         # if an album is specified, verify it exists and is ours
         if album_id:
-            album_item = self.album_dynamo.get_album(album_id)
+            album_item = self.album_manager.dynamo.get_album(album_id)
             if not album_item:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
             if album_item['ownedByUserId'] != self.posted_by_user_id:
@@ -292,9 +285,9 @@ class Post:
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id)]
         if self.item['postStatus'] == PostStatus.COMPLETED:
             if prev_album_id:
-                transacts.append(self.album_dynamo.transact_remove_post(prev_album_id))
+                transacts.append(self.album_manager.dynamo.transact_remove_post(prev_album_id))
             if album_id:
-                transacts.append(self.album_dynamo.transact_add_post(album_id))
+                transacts.append(self.album_manager.dynamo.transact_add_post(album_id))
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)

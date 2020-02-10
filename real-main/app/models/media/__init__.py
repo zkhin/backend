@@ -1,4 +1,3 @@
-__all__ = ['Media', 'MediaManager']
+__all__ = ['MediaManager']
 
-from .model import Media
 from .manager import MediaManager

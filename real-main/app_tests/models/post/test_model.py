@@ -144,7 +144,7 @@ def test_set_cant_create_contentless_post(post_manager, post):
 
     # verify the post is text-only
     assert org_text
-    assert list(post_manager.media_dynamo.generate_by_post(post.id)) == []
+    assert list(post_manager.media_manager.dynamo.generate_by_post(post.id)) == []
 
     # verify we can't set the text to null on that post
     with pytest.raises(post_manager.exceptions.PostException):
@@ -162,7 +162,7 @@ def test_set_text_to_null_media_post(post_manager, post_with_media):
 
     # verify the post has media and text
     assert org_text
-    assert list(post_manager.media_dynamo.generate_by_post(post.id))
+    assert list(post_manager.media_manager.dynamo.generate_by_post(post.id))
 
     # verify we can null out the text on that post if we want
     post.set(text='')

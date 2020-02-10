@@ -1,6 +1,7 @@
 from unittest.mock import call
 
-from app.models.media import Media, MediaManager
+from app.models.media import MediaManager
+from app.models.media.model import Media
 from app.models.media.enums import MediaType, MediaSize, MediaStatus
 
 
@@ -12,7 +13,7 @@ def test_get_s3_path():
         'mediaType': MediaType.IMAGE,
     }
 
-    media = Media(item, {})
+    media = Media(item, None)
     path = media.get_s3_path(MediaSize.NATIVE)
     assert path == 'us-east-1:user-id/post/post-id/media/media-id/native.jpg'
 
@@ -39,7 +40,7 @@ def test_get_readonly_url(cloudfront_client):
         'generate_presigned_url.return_value': expected_url,
     })
 
-    media = Media(item, {'cloudfront': cloudfront_client})
+    media = Media(item, None, cloudfront_client=cloudfront_client)
     url = media.get_readonly_url(MediaSize.NATIVE)
     assert url == expected_url
 
@@ -49,7 +50,7 @@ def test_get_readonly_url(cloudfront_client):
 
 def test_get_readonly_url_not_uploaded():
     source = {'mediaId': 'mid', 'path': 'path', 'mediaStatus': MediaStatus.AWAITING_UPLOAD}
-    media = Media(source, {})
+    media = Media(source, None)
     url = media.get_readonly_url('really-big')
     assert url is None
 
@@ -67,7 +68,7 @@ def test_get_writeonly_url(cloudfront_client):
         'generate_presigned_url.return_value': expected_url,
     })
 
-    media = Media(item, {'cloudfront': cloudfront_client})
+    media = Media(item, None, cloudfront_client=cloudfront_client)
     url = media.get_writeonly_url()
     assert url == expected_url
 
@@ -77,7 +78,7 @@ def test_get_writeonly_url(cloudfront_client):
 
 def test_get_writeonly_url_already_uploaded():
     source = {'mediaId': 'mid', 'path': 'path', 'mediaStatus': MediaStatus.UPLOADED}
-    media = Media(source, {})
+    media = Media(source, None)
     url = media.get_writeonly_url()
     assert url is None
 
@@ -90,7 +91,7 @@ def test_image_has_all_s3_objects(s3_client):
         'mediaId': 'mid',
         'mediaType': MediaType.IMAGE
     }
-    media = Media(media_item, {'s3_uploads': s3_client})
+    media = Media(media_item, None, s3_uploads_client=s3_client)
     assert media.has_all_s3_objects() is False
 
     # media with just native resolution
@@ -118,7 +119,7 @@ def test_video_has_all_s3_objects(s3_client):
         'mediaId': 'mid',
         'mediaType': MediaType.VIDEO
     }
-    media = Media(media_item, {'s3_uploads': s3_client})
+    media = Media(media_item, None, s3_uploads_client=s3_client)
     assert media.has_all_s3_objects() is False
 
     # video with just native resolution
@@ -134,7 +135,7 @@ def test_delete_all_s3_objects(s3_client):
         'mediaId': 'mid',
         'mediaType': MediaType.IMAGE
     }
-    media = Media(media_item, {'s3_uploads': s3_client})
+    media = Media(media_item, None, s3_uploads_client=s3_client)
 
     # upload native and the three thumbnails
     path = media.get_s3_path(MediaSize.NATIVE)
@@ -161,7 +162,7 @@ def test_delete_all_s3_objects_no_objects(s3_client):
         'mediaId': 'mid',
         'mediaType': MediaType.IMAGE
     }
-    media = Media(media_item, {'s3_uploads': s3_client})
+    media = Media(media_item, None, s3_uploads_client=s3_client)
     assert media.has_all_s3_objects() is False
 
     # should not error out

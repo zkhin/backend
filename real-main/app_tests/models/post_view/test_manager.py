@@ -90,8 +90,8 @@ def test_record_view(post_view_manager, dynamo_client, posts):
 
     # check there is no post view yet recorded for this user on this post
     assert post_view_manager.dynamo.get_post_view(post_id, viewed_by_user_id) is None
-    assert post_view_manager.post_dynamo.get_post(post_id).get('viewedByCount', 0) == 0
-    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
+    assert post_view_manager.post_manager.dynamo.get_post(post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
     assert post_view_manager.trending_manager.dynamo.get_trending(post_id) is None
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id) is None
 
@@ -108,8 +108,8 @@ def test_record_view(post_view_manager, dynamo_client, posts):
     assert item['lastViewedAt'] == viewed_at_str
 
     # check the viewedByCounts and the trending indexes all incremented
-    assert post_view_manager.post_dynamo.get_post(post_id).get('viewedByCount', 0) == 1
-    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 1
+    assert post_view_manager.post_manager.dynamo.get_post(post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 1
     assert post_view_manager.trending_manager.dynamo.get_trending(post_id).get('gsiK3SortKey', 0) == 1
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1
 
@@ -129,14 +129,14 @@ def test_record_view(post_view_manager, dynamo_client, posts):
     assert item['lastViewedAt'] == new_viewed_at_str
 
     # check the viewedByCounts and the trending indexes all did not change
-    assert post_view_manager.post_dynamo.get_post(post_id).get('viewedByCount', 0) == 1
-    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 1
+    assert post_view_manager.post_manager.dynamo.get_post(post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 1
     assert post_view_manager.trending_manager.dynamo.get_trending(post_id).get('gsiK3SortKey', 0) == 1
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1
 
 
 def test_record_view_for_non_original_post(post_view_manager, dynamo_client, posts):
-    post_dynamo = post_view_manager.post_dynamo
+    post_dynamo = post_view_manager.post_manager.dynamo
     org_post, non_org_post = posts
 
     # hack to get these text-only posts to have an original. Set it back to pending and then completed
@@ -159,9 +159,9 @@ def test_record_view_for_non_original_post(post_view_manager, dynamo_client, pos
     # check there is no post view yet recorded for this user on either post
     assert post_view_manager.dynamo.get_post_view(org_post_id, viewed_by_user_id) is None
     assert post_view_manager.dynamo.get_post_view(non_org_post_id, viewed_by_user_id) is None
-    assert post_view_manager.post_dynamo.get_post(org_post_id).get('viewedByCount', 0) == 0
-    assert post_view_manager.post_dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 0
-    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
+    assert post_view_manager.post_manager.dynamo.get_post(org_post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.post_manager.dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
     assert post_view_manager.trending_manager.dynamo.get_trending(org_post_id) is None
     assert post_view_manager.trending_manager.dynamo.get_trending(non_org_post_id) is None
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id) is None
@@ -184,9 +184,9 @@ def test_record_view_for_non_original_post(post_view_manager, dynamo_client, pos
     assert non_org_item['lastViewedAt'] == viewed_at_str
 
     # check the viewedByCounts
-    assert post_view_manager.post_dynamo.get_post(org_post_id).get('viewedByCount', 0) == 1
-    assert post_view_manager.post_dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 1
-    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 2  # one per post
+    assert post_view_manager.post_manager.dynamo.get_post(org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.post_manager.dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 2
 
     # check the original post made it into the trending indexes, and then non-original did not
     assert post_view_manager.trending_manager.dynamo.get_trending(org_post_id).get('gsiK3SortKey', 0) == 1
@@ -211,9 +211,9 @@ def test_record_view_for_non_original_post(post_view_manager, dynamo_client, pos
     assert post_view_manager.dynamo.get_post_view(non_org_post_id, viewed_by_user_id) == non_org_item
 
     # check no change to viewedByCounts, nor trending indexes
-    assert post_view_manager.post_dynamo.get_post(org_post_id).get('viewedByCount', 0) == 1
-    assert post_view_manager.post_dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 1
-    assert post_view_manager.user_dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 2  # one per post
+    assert post_view_manager.post_manager.dynamo.get_post(org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.post_manager.dynamo.get_post(non_org_post_id).get('viewedByCount', 0) == 1
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 2
     assert post_view_manager.trending_manager.dynamo.get_trending(org_post_id).get('gsiK3SortKey', 0) == 1
     assert post_view_manager.trending_manager.dynamo.get_trending(non_org_post_id) is None
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1

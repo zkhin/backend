@@ -95,7 +95,7 @@ def test_restore_pending_media_post(post_manager, post_with_media, user_manager)
     # check the DB again
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.PENDING
-    post_media_items = list(post_manager.media_dynamo.generate_by_post(post.id))
+    post_media_items = list(post_manager.media_manager.dynamo.generate_by_post(post.id))
     assert len(post_media_items) == 1
     assert post_media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
 

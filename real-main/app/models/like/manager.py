@@ -25,14 +25,13 @@ class LikeManager:
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = LikeDynamo(clients['dynamo'])
-            self.post_dynamo = post.dynamo.PostDynamo(clients['dynamo'])
 
     def get_like(self, user_id, post_id):
         like_item = self.dynamo.get_like(user_id, post_id)
         return self.init_like(like_item) if like_item else None
 
     def init_like(self, like_item):
-        return Like(like_item, self.clients)
+        return Like(like_item, self.dynamo, post_manager=self.post_manager)
 
     def like_post(self, user, post, like_status, now=None):
         posted_by_user = self.user_manager.get_user(post.posted_by_user_id)
@@ -68,7 +67,7 @@ class LikeManager:
 
         transacts = [
             self.dynamo.transact_add_like(user.id, post.item, like_status),
-            self.post_dynamo.transact_increment_like_count(post.id, like_status),
+            self.post_manager.dynamo.transact_increment_like_count(post.id, like_status),
         ]
         transact_exceptions = [
             self.exceptions.AlreadyLiked(user.id, post.id),

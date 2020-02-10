@@ -2,9 +2,8 @@ import logging
 
 import more_itertools
 
-from app.models.follow.dynamo import FollowDynamo
+from app.models import follow, post
 from app.models.follow.enums import FollowStatus
-from app.models.post.dynamo import PostDynamo
 
 from .dynamo import FollowedFirstStoryDynamo
 
@@ -16,12 +15,12 @@ class FollowedFirstStoryManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['followed_first_story'] = self
+        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = FollowedFirstStoryDynamo(clients['dynamo'])
-            self.follow_dynamo = FollowDynamo(clients['dynamo'])
-            self.post_dynamo = PostDynamo(clients['dynamo'])
 
     def generate_batched_follower_user_ids(self, followed_user_id):
         """
@@ -29,7 +28,7 @@ class FollowedFirstStoryManager:
         The lists are of length 25 or less, so they can be used with the dynamo batch writer.
         """
         # functional programming in python feels... clumsy
-        iterator = self.follow_dynamo.generate_follower_items(followed_user_id)
+        iterator = self.follow_manager.dynamo.generate_follower_items(followed_user_id)
         iterator = filter(lambda item: item['followStatus'] == FollowStatus.FOLLOWING, iterator)
         iterator = map(lambda item: item['followerUserId'], iterator)
         iterator = more_itertools.chunked(iterator, 25)
@@ -49,7 +48,7 @@ class FollowedFirstStoryManager:
 
         # dynamo query ordering not guaranteed,
         # so to make sure things are consistent we exclude the post we just operated on from this query
-        db_story = self.post_dynamo.get_next_completed_post_to_expire(user_id, exclude_post_id=post_id)
+        db_story = self.post_manager.dynamo.get_next_completed_post_to_expire(user_id, exclude_post_id=post_id)
 
         # figgure out what the followed first story was prev, and is now, the operation we're refreshing for
         ffs_prev = next(iter(sorted(

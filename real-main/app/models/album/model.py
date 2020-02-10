@@ -1,7 +1,6 @@
 import logging
 
 from . import exceptions
-from .dynamo import AlbumDynamo
 
 logger = logging.getLogger()
 
@@ -10,10 +9,8 @@ class Album:
 
     exceptions = exceptions
 
-    def __init__(self, album_item, clients, user_manager=None, post_manager=None):
-        self.clients = clients
-        if 'dynamo' in clients:
-            self.dynamo = AlbumDynamo(clients['dynamo'])
+    def __init__(self, album_item, album_dynamo, user_manager=None, post_manager=None):
+        self.dynamo = album_dynamo
         if post_manager:
             self.post_manager = post_manager
         if user_manager:

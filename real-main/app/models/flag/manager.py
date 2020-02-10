@@ -1,9 +1,8 @@
 import os
 import logging
 
-from app.models import block, follow, user
+from app.models import block, follow, post, user
 from app.models.follow.enums import FollowStatus
-from app.models.post.dynamo import PostDynamo
 from app.models.post.exceptions import PostException, PostDoesNotExist
 from app.models.user.enums import UserPrivacyStatus
 
@@ -24,14 +23,14 @@ class FlagManager:
     def __init__(self, clients, managers=None, flagged_alert_threshold=FLAGGED_ALERT_THRESHOLD):
         self.flagged_alert_threshold = flagged_alert_threshold
         managers = managers or {}
-        managers['post'] = self
+        managers['flag'] = self
         self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
 
         if 'dynamo' in clients:
             self.dynamo = FlagDynamo(clients['dynamo'])
-            self.post_dynamo = PostDynamo(clients['dynamo'])
 
     def flag_post(self, user_id, post):
         # can't flag a post of a user that has blocked us
@@ -53,7 +52,7 @@ class FlagManager:
         flag_count = post.item.get('flagCount', 0)
         transacts = [
             self.dynamo.transact_add_flag(post.id, user_id),
-            self.post_dynamo.transact_increment_flag_count(post.id),
+            self.post_manager.dynamo.transact_increment_flag_count(post.id),
         ]
         transact_exceptions = [exceptions.AlreadyFlagged(post.id, user_id), PostDoesNotExist(post.id)]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
@@ -67,7 +66,7 @@ class FlagManager:
     def unflag_post(self, user_id, post_id):
         transacts = [
             self.dynamo.transact_delete_flag(post_id, user_id),
-            self.post_dynamo.transact_decrement_flag_count(post_id),
+            self.post_manager.dynamo.transact_decrement_flag_count(post_id),
         ]
         transact_exceptions = [
             exceptions.NotFlagged(post_id, user_id),

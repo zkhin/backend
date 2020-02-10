@@ -3,10 +3,7 @@ import logging
 
 import pendulum
 
-from app.models import comment, feed, flag, followed_first_story, like, media, post_view, trending, user
-from app.models.album.dynamo import AlbumDynamo
-from app.models.media.dynamo import MediaDynamo
-from app.models.user.dynamo import UserDynamo
+from app.models import album, comment, feed, flag, followed_first_story, like, media, post_view, trending, user
 
 from . import enums, exceptions
 from .dynamo import PostDynamo
@@ -23,6 +20,7 @@ class PostManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['post'] = self
+        self.album_manager = managers.get('album') or album.AlbumManager(clients, managers=managers)
         self.comment_manager = managers.get('comment') or comment.CommentManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
         self.flag_manager = managers.get('flag') or flag.FlagManager(clients, managers=managers)
@@ -39,9 +37,6 @@ class PostManager:
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
-            self.album_dynamo = AlbumDynamo(clients['dynamo'])
-            self.media_dynamo = MediaDynamo(clients['dynamo'])
-            self.user_dynamo = UserDynamo(clients['dynamo'])
 
     def get_post(self, post_id):
         post_item = self.dynamo.get_post(post_id)
@@ -49,6 +44,7 @@ class PostManager:
 
     def init_post(self, post_item):
         kwargs = {
+            'album_manager': self.album_manager,
             'comment_manager': self.comment_manager,
             'feed_manager': self.feed_manager,
             'flag_manager': self.flag_manager,
@@ -59,7 +55,7 @@ class PostManager:
             'trending_manager': self.trending_manager,
             'user_manager': self.user_manager,
         }
-        return Post(post_item, self.clients, **kwargs) if post_item else None
+        return Post(post_item, self.dynamo, **kwargs) if post_item else None
 
     def add_post(self, posted_by_user_id, post_id, media_uploads=[], text=None, lifetime_duration=None, album_id=None,
                  comments_disabled=None, likes_disabled=None, sharing_disabled=None, verification_hidden=None,
@@ -79,7 +75,7 @@ class PostManager:
 
         # if an album is specified, verify it exists and is ours
         if album_id:
-            album_item = self.album_dynamo.get_album(album_id)
+            album_item = self.album_manager.dynamo.get_album(album_id)
             if not album_item:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
             if album_item['ownedByUserId'] != posted_by_user_id:
@@ -94,7 +90,7 @@ class PostManager:
         )]
         for mu in media_uploads:
             # 'media_upload' is straight from graphql, format dictated by schema
-            transacts.append(self.media_dynamo.transact_add_media(
+            transacts.append(self.media_manager.dynamo.transact_add_media(
                 posted_by_user_id, post_id, mu['mediaId'], mu['mediaType'], posted_at=now,
                 taken_in_real=mu.get('takenInReal'), original_format=mu.get('originalFormat'),
             ))
@@ -108,7 +104,7 @@ class PostManager:
             post.complete()
 
         post.item['mediaObjects'] = [
-            self.media_dynamo.get_media(mu['mediaId'], strongly_consistent=True)
+            self.media_manager.dynamo.get_media(mu['mediaId'], strongly_consistent=True)
             for mu in media_uploads
         ]
         return post
@@ -128,7 +124,7 @@ class PostManager:
         # scan for expired posts
         for post_pk in itertools.chain(yesterdays_post_pks, todays_post_pks):
             post_item = self.dynamo.client.get_item(post_pk)
-            user_item = self.user_dynamo.get_user(post_item['postedByUserId'])
+            user_item = self.user_manager.dynamo.get_user(post_item['postedByUserId'])
             logger.warning(
                 f'Deleting expired post with pk ({post_pk["partitionKey"]}, {post_pk["sortKey"]}):'
                 + f', posted by `{user_item["username"]}`'
