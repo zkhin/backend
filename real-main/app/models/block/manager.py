@@ -57,15 +57,10 @@ class BlockManager:
     def unblock(self, blocker_user, blocked_user):
         return self.dynamo.delete_block(blocker_user.id, blocked_user.id)
 
-    def unblock_all_blocks_by_user(self, user_id):
-        "Unblock everyone who the user has blocked"
-        for block_item in self.dynamo.generate_blocks_by_blocker(user_id):
-            self.dynamo.delete_block(block_item['blockerUserId'], block_item['blockedUserId'])
-
-    def unblock_all_blocks_of_user(self, user_id):
+    def unblock_all_blocks(self, user_id):
         """
-        Unblock user from everyone who has blocked the user.
+        Unblock everyone who the user has blocked, or has blocked the user.
         Intended to be called with admin-level authentication (not authenticated as the user themselves).
         """
-        for block_item in self.dynamo.generate_blocks_by_blocked(user_id):
-            self.dynamo.delete_block(block_item['blockerUserId'], block_item['blockedUserId'])
+        self.dynamo.delete_all_blocks_by_user(user_id)
+        self.dynamo.delete_all_blocks_of_user(user_id)

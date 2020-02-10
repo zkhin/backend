@@ -121,35 +121,26 @@ def test_cant_unblock_if_not_blocked(block_manager, blocker_user, blocked_user):
         block_manager.unblock(blocker_user, blocked_user)
 
 
-def test_unblock_all_blocks_by_user(block_manager, blocker_user, blocked_user, blocked_user_2):
+def test_unblock_all_blocks(block_manager, blocker_user, blocked_user, blocked_user_2):
     # blocker blocks both the blocked
     block_manager.block(blocker_user, blocked_user)
     block_manager.block(blocker_user, blocked_user_2)
 
+    # blocked both block the blocker
+    block_manager.block(blocked_user, blocker_user)
+    block_manager.block(blocked_user_2, blocker_user)
+
     # check they really are in the DB
     assert block_manager.dynamo.get_block(blocker_user.id, blocked_user.id) is not None
     assert block_manager.dynamo.get_block(blocker_user.id, blocked_user_2.id) is not None
+    assert block_manager.dynamo.get_block(blocked_user.id, blocker_user.id) is not None
+    assert block_manager.dynamo.get_block(blocked_user_2.id, blocker_user.id) is not None
 
     # clear all our blocks
-    block_manager.unblock_all_blocks_by_user(blocker_user.id)
+    block_manager.unblock_all_blocks(blocker_user.id)
 
     # check they are no longer in the db
     assert block_manager.dynamo.get_block(blocker_user.id, blocked_user.id) is None
     assert block_manager.dynamo.get_block(blocker_user.id, blocked_user_2.id) is None
-
-
-def test_unblock_all_blocks_of_user(block_manager, blocker_user, blocker_user_2, blocked_user):
-    # blocked gets blocked both the blockers
-    block_manager.block(blocker_user, blocked_user)
-    block_manager.block(blocker_user_2, blocked_user)
-
-    # check they really are in the DB
-    assert block_manager.dynamo.get_block(blocker_user.id, blocked_user.id) is not None
-    assert block_manager.dynamo.get_block(blocker_user_2.id, blocked_user.id) is not None
-
-    # clear all our blocks
-    block_manager.unblock_all_blocks_of_user(blocked_user.id)
-
-    # check they are no longer in the db
-    assert block_manager.dynamo.get_block(blocker_user.id, blocked_user.id) is None
-    assert block_manager.dynamo.get_block(blocker_user_2.id, blocked_user.id) is None
+    assert block_manager.dynamo.get_block(blocked_user.id, blocker_user.id) is None
+    assert block_manager.dynamo.get_block(blocked_user_2.id, blocker_user.id) is None

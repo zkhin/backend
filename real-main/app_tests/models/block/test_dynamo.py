@@ -120,3 +120,43 @@ def test_generate_blocks_by_blocked(block_dynamo):
     assert len(blocks) == 2
     assert blocks[0]['blockerUserId'] == blocker1_user_id
     assert blocks[1]['blockerUserId'] == blocker2_user_id
+
+
+def test_delete_all_blocks_by_user(block_dynamo):
+    blocker_user_id = 'blocker-user-id'
+    blocked1_user_id = 'b1-user-id'
+    blocked2_user_id = 'b2-user-id'
+
+    # block them both
+    block_dynamo.add_block(blocker_user_id, blocked1_user_id)
+    block_dynamo.add_block(blocker_user_id, blocked2_user_id)
+
+    # check blocks exist
+    blocks = list(block_dynamo.generate_blocks_by_blocker(blocker_user_id))
+    assert len(blocks) == 2
+    assert blocks[0]['blockedUserId'] == blocked1_user_id
+    assert blocks[1]['blockedUserId'] == blocked2_user_id
+
+    # unblock, check they disappeared
+    block_dynamo.delete_all_blocks_by_user(blocker_user_id)
+    assert list(block_dynamo.generate_blocks_by_blocker(blocker_user_id)) == []
+
+
+def test_delete_all_blocks_of_user(block_dynamo):
+    blocked_user_id = 'blocked-user-id'
+    blocker1_user_id = 'b1-user-id'
+    blocker2_user_id = 'b2-user-id'
+
+    # they both block
+    block_dynamo.add_block(blocker1_user_id, blocked_user_id)
+    block_dynamo.add_block(blocker2_user_id, blocked_user_id)
+
+    # check blocks exist
+    blocks = list(block_dynamo.generate_blocks_by_blocked(blocked_user_id))
+    assert len(blocks) == 2
+    assert blocks[0]['blockerUserId'] == blocker1_user_id
+    assert blocks[1]['blockerUserId'] == blocker2_user_id
+
+    # unblock, check they disappeared
+    block_dynamo.delete_all_blocks_of_user(blocked_user_id)
+    assert list(block_dynamo.generate_blocks_by_blocked(blocked_user_id)) == []

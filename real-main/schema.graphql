@@ -221,11 +221,8 @@ type User {
   privacyStatus: PrivacyStatus
   followedStatus: FollowStatus!  # is the caller following them?
   followerStatus: FollowStatus!  # are they following the caller?
-  postCount: Int  # only posts with COMPLETED status
   fullName: String
   themeCode: String
-  followedCount: Int  # null when looking at someone else's profile who is hidding follow counts
-  followerCount: Int  # null when looking at someone else's profile who is hidding follow counts
   signedUpAt: AWSDateTime
 
   # DEPRECATED (in v2020-01-29.1): use User.blockedStatus and User.blockerStatus instead
@@ -270,6 +267,7 @@ type User {
   #   - when looking at another user's posts, postStatus may only be set to COMPLETED
   #   - posts of a private user are private to only themselves and their followers
   posts(postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts
+  postCount: Int  # only posts with COMPLETED status
 
   # User's media objects
   #   - mediaStatus defaults to UPLOADED if unset
@@ -298,6 +296,7 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followedUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
+  followedCount: Int # only counts users with followStatus = FOLLOWING
 
   # Users the user follows that have stories
   #   - private to user themselves only
@@ -309,6 +308,7 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followerUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
+  followerCount: Int # only counts users with followStatus = FOLLOWING
 
   # Users the user has blocked
   #   - private to user themselves only

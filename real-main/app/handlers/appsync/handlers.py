@@ -17,7 +17,6 @@ from app.models.like.enums import LikeStatus
 from app.models.media import MediaManager
 from app.models.post import PostManager
 from app.models.post_view import PostViewManager
-from app.models.trending import TrendingManager
 from app.models.user import UserManager
 
 from . import routes
@@ -51,7 +50,6 @@ like_manager = managers.get('like') or LikeManager(clients, managers=managers)
 media_manager = managers.get('media') or MediaManager(clients, managers=managers)
 post_manager = managers.get('post') or PostManager(clients, managers=managers)
 post_view_manager = managers.get('post_view') or PostViewManager(clients, managers=managers)
-trending_manager = managers.get('trending') or TrendingManager(clients, managers=managers)
 user_manager = managers.get('user') or UserManager(clients, managers=managers)
 
 
@@ -245,9 +243,8 @@ def reset_user(caller_user_id, arguments, source, context):
     comment_manager.delete_all_by_user(caller_user_id)
     album_manager.delete_all_by_user(caller_user_id)
 
-    # remove all our blocks and all blocks of us
-    block_manager.unblock_all_blocks_by_user(caller_user_id)
-    block_manager.unblock_all_blocks_of_user(caller_user_id)
+    # remove all blocks of and by us
+    block_manager.unblock_all_blocks(caller_user_id)
 
     # finally, delete our own profile
     user = user_manager.get_user(caller_user_id)
