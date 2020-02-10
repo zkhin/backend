@@ -81,7 +81,7 @@ The unit tests of the python lambda handlers in the primary stack use [pytest](h
 ```sh
 cd real-main
 poetry shell
-pytest app_tests/
+pytest --cov=app app_tests/
 ```
 
 ## Development

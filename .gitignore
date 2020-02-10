@@ -18,6 +18,7 @@ var/
 __pycache__
 node_modules
 .env
+.coverage
 
 # Serverless directories
 .serverless
