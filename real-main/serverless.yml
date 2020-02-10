@@ -840,43 +840,27 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Generic.getUser
-        request: Generic.getUser.request.vtl
-        response: Generic.getUser.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.pipeline.fetchPost
-        request: Post.pipeline.fetchPost.request.vtl
-        response: Post.pipeline.fetchPost.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.pipeline.postedBy
-        request: Post.pipeline.postedBy.request.vtl
-        response: Post.pipeline.postedBy.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.pipeline.postedByBlockerStatus
-        request: Post.pipeline.postedByBlockerStatus.request.vtl
-        response: Post.pipeline.postedByBlockerStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.pipeline.postedByFollowedStatus
-        request: Post.pipeline.postedByFollowedStatus.request.vtl
-        response: Post.pipeline.postedByFollowedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Album.pipeline.ownedBy
-        request: Album.pipeline.ownedBy.request.vtl
-        response: Album.pipeline.ownedBy.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Album.pipeline.ownedByBlockerStatus
-        request: Album.pipeline.ownedByBlockerStatus.request.vtl
-        response: Album.pipeline.ownedByBlockerStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Album.pipeline.ownedByFollowedStatus
-        request: Album.pipeline.ownedByFollowedStatus.request.vtl
-        response: Album.pipeline.ownedByFollowedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Album.posts.fetchPostIds
@@ -885,38 +869,26 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Query.pipeline.user
-        request: Query.pipeline.user.request.vtl
         response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.pipeline.userBlockerStatus
-        request: Query.pipeline.userBlockerStatus.request.vtl
-        response: Query.pipeline.userBlockerStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.pipeline.userFollowedStatus
-        request: Query.pipeline.userFollowedStatus.request.vtl
-        response: Query.pipeline.userFollowedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetUsers
-        request: Generic.batchGetUsers.request.vtl
-        response: Generic.batchGetUsers.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetUsersBlockerStatus
-        request: Generic.batchGetUsersBlockerStatus.request.vtl
-        response: Generic.batchGetUsersBlockerStatus.response.vtl
 
       - dataSource: NoneDataSource
         name: Generic.filterUsersBlockerStatus
-        request: Generic.filterUsersBlockerStatus.request.vtl
         response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetUsersFollowedStatus
-        request: Generic.batchGetUsersFollowedStatus.request.vtl
-        response: Generic.batchGetUsersFollowedStatus.response.vtl
 
       - dataSource: ElasticSearchDataSource
         name: Query.searchUsers.searchUsers
@@ -985,28 +957,19 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Generic.fetchLikesByUser
-        request: Generic.fetchLikesByUser.request.vtl
         response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetPosts
-        request: Generic.batchGetPosts.request.vtl
-        response: Generic.batchGetPosts.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetPostsPostedBy
-        request: Generic.batchGetPostsPostedBy.request.vtl
-        response: Generic.batchGetPostsPostedBy.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetPostsPostedByBlockerStatus
-        request: Generic.batchGetPostsPostedByBlockerStatus.request.vtl
-        response: Generic.batchGetPostsPostedByBlockerStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetPostsPostedByFollowedStatus
-        request: Generic.batchGetPostsPostedByFollowedStatus.request.vtl
-        response: Generic.batchGetPostsPostedByFollowedStatus.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.getStories.fetchPosts

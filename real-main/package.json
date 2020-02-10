@@ -5,7 +5,7 @@
   "dependencies": {},
   "devDependencies": {
     "serverless": "^1.63.0",
-    "serverless-appsync-plugin": "^1.2.0",
+    "serverless-appsync-plugin": "git+https://github.com/sid88in/serverless-appsync-plugin.git#67fb9d2",
     "serverless-plugin-aws-alerts": "^1.4.0",
     "serverless-plugin-git-variables": "^3.4.0",
     "serverless-plugin-split-stacks": "^1.9.3",
