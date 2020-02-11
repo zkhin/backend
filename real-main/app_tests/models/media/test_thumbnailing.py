@@ -1,5 +1,6 @@
-from os import path
 from io import BytesIO
+import logging
+from os import path
 
 from PIL import Image
 import pytest
@@ -13,6 +14,14 @@ grant_rotated_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', '
 blank_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'big-blank.jpg')
 squirrel_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'squirrel.png')
 
+grant_colors = [
+    {'r': 52, 'g': 58, 'b': 46},
+    {'r': 186, 'g': 206, 'b': 228},
+    {'r': 144, 'g': 154, 'b': 170},
+    {'r': 158, 'g': 180, 'b': 205},
+    {'r': 131, 'g': 125, 'b': 125},
+]
+
 
 @pytest.fixture
 def media_awaiting_upload(media_manager, post_manager):
@@ -24,6 +33,8 @@ def media_awaiting_upload(media_manager, post_manager):
 
 def test_set_height_and_width(dynamo_client, s3_client, media_awaiting_upload):
     media = media_awaiting_upload
+    assert 'height' not in media.item
+    assert 'width' not in media.item
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
@@ -32,6 +43,37 @@ def test_set_height_and_width(dynamo_client, s3_client, media_awaiting_upload):
     media.set_height_and_width()
     assert media.item['height'] == grant_height
     assert media.item['width'] == grant_width
+
+
+def test_set_colors(dynamo_client, s3_client, media_awaiting_upload):
+    media = media_awaiting_upload
+    assert 'colors' not in media.item
+
+    # put an image in the bucket
+    media_path = media.get_s3_path(MediaSize.NATIVE)
+    s3_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
+
+    media.set_colors()
+    assert media.item['colors'] == grant_colors
+
+
+def test_set_colors_colortheif_fails(dynamo_client, s3_client, media_awaiting_upload, caplog):
+    media = media_awaiting_upload
+    assert 'colors' not in media.item
+
+    # put an image in the bucket
+    media_path = media.get_s3_path(MediaSize.NATIVE)
+    s3_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
+
+    assert len(caplog.records) == 0
+    with caplog.at_level(logging.WARNING):
+        media.set_colors()
+        assert 'colors' not in media.item
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert 'ColorTheif' in caplog.records[0].msg
+    assert f'`{media.id}`' in caplog.records[0].msg
 
 
 def test_set_thumbnails_wide_image(s3_client, media_awaiting_upload):

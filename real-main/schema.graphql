@@ -392,6 +392,12 @@ input MediaObjectUpload {
   originalFormat: String
 }
 
+type Color {
+  r: Int
+  g: Int
+  b: Int
+}
+
 type MediaObject {
   mediaId: ID!
   mediaType: MediaObjectType!
@@ -405,6 +411,7 @@ type MediaObject {
   uploadUrl: AWSURL
   width: Int
   height: Int
+  colors: [Color!]
 }
 
 type PaginatedMediaObjects {

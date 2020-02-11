@@ -291,3 +291,36 @@ def test_get_first_media_id_with_checksum(media_dynamo, media_item, media_item_2
     # two media, we should get the one with earliest postedAt
     media_dynamo.set_checksum(media_item, checksum)
     assert media_dynamo.get_first_media_id_with_checksum(checksum) == media_item['mediaId']
+
+
+def test_set_colors(media_dynamo, media_item):
+    media_id = media_item['mediaId']
+    assert 'colors' not in media_item
+
+    # no support for deleting colors
+    with pytest.raises(AssertionError):
+        media_dynamo.set_colors(media_id, None)
+    with pytest.raises(AssertionError):
+        media_dynamo.set_colors(media_id, ())
+    assert media_dynamo.get_media(media_id) == media_item
+
+    # sample output from ColorTheif
+    colors = [
+        (52, 58, 46),
+        (186, 206, 228),
+        (144, 154, 170),
+        (158, 180, 205),
+        (131, 125, 125),
+    ]
+
+    new_media_item = media_dynamo.set_colors(media_id, colors)
+    assert media_dynamo.get_media(media_id) == new_media_item
+    assert new_media_item['colors'] == [
+        {'r': 52, 'g': 58, 'b': 46},
+        {'r': 186, 'g': 206, 'b': 228},
+        {'r': 144, 'g': 154, 'b': 170},
+        {'r': 158, 'g': 180, 'b': 205},
+        {'r': 131, 'g': 125, 'b': 125},
+    ]
+    del new_media_item['colors']
+    assert new_media_item == media_item

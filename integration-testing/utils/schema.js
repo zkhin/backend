@@ -597,6 +597,11 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
       url
       height
       width
+      colors {
+        r
+        g
+        b
+      }
     }
     postedBy {
       userId
@@ -748,6 +753,11 @@ module.exports.userMediaObjects = gql(`query UserMediaObjects ($userId: ID!, $me
         uploadUrl
         height
         width
+        colors {
+          r
+          g
+          b
+        }
         url
         url64p
         url480p

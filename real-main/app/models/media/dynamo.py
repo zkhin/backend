@@ -73,6 +73,26 @@ class MediaDynamo:
         }
         return self.client.update_item(query_kwargs)
 
+    def set_colors(self, media_id, color_tuples):
+        assert color_tuples, 'No support for deleting colors, yet'
+
+        # transform to map before saving
+        color_maps = [{
+            'r': ct[0],
+            'g': ct[1],
+            'b': ct[2],
+        } for ct in color_tuples]
+
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'media/{media_id}',
+                'sortKey': '-',
+            },
+            'UpdateExpression': 'SET colors = :colors',
+            'ExpressionAttributeValues': {':colors': color_maps},
+        }
+        return self.client.update_item(query_kwargs)
+
     def set_checksum(self, media_item, checksum):
         assert checksum  # no deletes
         media_id = media_item['mediaId']

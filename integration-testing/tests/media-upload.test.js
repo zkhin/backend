@@ -167,7 +167,7 @@ test('Add post with one video', async () => {
 })
 
 
-test('Uploading image sets width and height', async () => {
+test('Uploading image sets width, height and colors', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({
@@ -179,9 +179,10 @@ test('Uploading image sets width and height', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['addPost']['mediaObjects'][0]['height']).toBeNull()
   expect(resp['data']['addPost']['mediaObjects'][0]['width']).toBeNull()
+  expect(resp['data']['addPost']['mediaObjects'][0]['colors']).toBeNull()
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
 
-  // double check width and height are not yet set
+  // double check width, height and colors are not yet set
   resp = await ourClient.query({
     query: schema.userMediaObjects,
     variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
@@ -191,18 +192,23 @@ test('Uploading image sets width and height', async () => {
   expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['user']['mediaObjects']['items'][0]['height']).toBeNull()
   expect(resp['data']['user']['mediaObjects']['items'][0]['width']).toBeNull()
+  expect(resp['data']['user']['mediaObjects']['items'][0]['colors']).toBeNull()
 
   // upload the first of those images, give the s3 trigger a second to fire
   await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
-  // check width and height are now set
+  // check width, height and colors are now set
   resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
   expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['user']['mediaObjects']['items'][0]['height']).toBe(imageHeight)
   expect(resp['data']['user']['mediaObjects']['items'][0]['width']).toBe(imageWidth)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['colors']).toHaveLength(5)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['colors'][0]['r']).not.toBeNull()
+  expect(resp['data']['user']['mediaObjects']['items'][0]['colors'][0]['g']).not.toBeNull()
+  expect(resp['data']['user']['mediaObjects']['items'][0]['colors'][0]['b']).not.toBeNull()
 })
 
 

@@ -145,6 +145,17 @@ version = "0.4.3"
 
 [[package]]
 category = "dev"
+description = "A module for grabbing the color palette from an image."
+name = "colorthief"
+optional = false
+python-versions = "*"
+version = "0.2.1"
+
+[package.dependencies]
+Pillow = "*"
+
+[[package]]
+category = "dev"
 description = "Code coverage measurement for Python"
 name = "coverage"
 optional = false
@@ -757,7 +768,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.12.0"
 
 [metadata]
-content-hash = "a4ca4bbb77244e5eee11001d8f1435d770f25d3f593d68064dae6b60b0d05345"
+content-hash = "a3b3128d1d652a49dde036522c0dc9606dfb7cd9596f219ec43ca8cb0a26df21"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -838,6 +849,10 @@ chardet = [
 colorama = [
     {file = "colorama-0.4.3-py2.py3-none-any.whl", hash = "sha256:7d73d2a99753107a36ac6b455ee49046802e59d9d076ef8e47b61499fa29afff"},
     {file = "colorama-0.4.3.tar.gz", hash = "sha256:e96da0d330793e2cb9485e9ddfd918d456036c7149416295932478192f4436a1"},
+]
+colorthief = [
+    {file = "colorthief-0.2.1-py2.py3-none-any.whl", hash = "sha256:b04fc8ce5cf9c888768745e29cb19b7b688d5711af6fba26e8057debabec56b9"},
+    {file = "colorthief-0.2.1.tar.gz", hash = "sha256:079cb0c95bdd669c4643e2f7494de13b0b6029d5cdbe2d74d5d3c3386bd57221"},
 ]
 coverage = [
     {file = "coverage-5.0.3-cp27-cp27m-macosx_10_12_x86_64.whl", hash = "sha256:cc1109f54a14d940b8512ee9f1c3975c181bbb200306c6d8b87d93376538782f"},

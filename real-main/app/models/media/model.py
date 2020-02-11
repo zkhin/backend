@@ -1,6 +1,7 @@
 import logging
 from io import BytesIO
 
+from colorthief import ColorThief
 from PIL import Image, ImageOps
 import requests
 
@@ -135,6 +136,15 @@ class Media:
         image = Image.open(self.original_image_data_stream)
         width, height = image.size
         self.item = self.dynamo.set_height_and_width(self.id, height, width)
+        return self
+
+    def set_colors(self):
+        try:
+            colors = ColorThief(self.original_image_data_stream).get_palette(color_count=5, quality=1)
+        except Exception as err:
+            logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for media `{self.id}`')
+        else:
+            self.item = self.dynamo.set_colors(self.id, colors)
         return self
 
     def set_thumbnails(self):
