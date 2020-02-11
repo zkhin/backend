@@ -626,7 +626,7 @@ module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost (
   }
 }`)
 
-module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int) {
+module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
   post (postId: $postId) {
     postId
     postStatus
@@ -662,7 +662,7 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
     likeStatus
     commentsDisabled
     commentCount
-    comments {
+    comments (reverse: $commentsReverse) {
       items {
         commentId
         commentedAt

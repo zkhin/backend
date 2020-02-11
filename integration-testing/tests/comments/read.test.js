@@ -44,11 +44,28 @@ test('One user adds multiple comments, ordering', async () => {
   // check we see both comments, in order, on the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
+  const post = resp['data']['post']
+  expect(post['postId']).toBe(postId)
+  expect(post['commentCount']).toBe(2)
+  expect(post['comments']['items']).toHaveLength(2)
+  expect(post['comments']['items'][0]['commentId']).toBe(commentId1)
+  expect(post['comments']['items'][0]['commentedBy']['userId']).toBe(ourUserId)
+  expect(post['comments']['items'][1]['commentId']).toBe(commentId2)
+  expect(post['comments']['items'][1]['commentedBy']['userId']).toBe(ourUserId)
+
+  // verify we can supply the default value of reverse and get the same thing
+  resp = await ourClient.query({query: schema.post, variables: {postId, commentsReverse: false}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']).toEqual(post)
+
+  // check we can reverse the order of those comments
+  resp = await ourClient.query({query: schema.post, variables: {postId, commentsReverse: true}})
+  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentCount']).toBe(2)
   expect(resp['data']['post']['comments']['items']).toHaveLength(2)
-  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(commentId1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(commentId2)
   expect(resp['data']['post']['comments']['items'][0]['commentedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['post']['comments']['items'][1]['commentId']).toBe(commentId2)
+  expect(resp['data']['post']['comments']['items'][1]['commentId']).toBe(commentId1)
   expect(resp['data']['post']['comments']['items'][1]['commentedBy']['userId']).toBe(ourUserId)
 })

@@ -5,7 +5,7 @@ schema {
 
 type Query {
   ####
-  # For all queries that return Paginated lists of items:
+  # For queries that return paginated lists of items:
   #
   # The 'limit' argument:
   #   - may be set to values from 1 to 100, inclusive
@@ -18,6 +18,10 @@ type Query {
   #   - if set to a non-null value (ie an opaque string), then that string can be passed as the `nextToken`
   #     argument in a subsequent call of the same query to retrieve more items starting from where the last
   #     result set ended
+  #
+  # The 'reverse' argument:
+  #   - defaults to False if left unset
+  #   - not present on all queries that return paginated lists
   ####
 
   # The caller's user object, or throw an error
@@ -450,7 +454,7 @@ type Post {
   # Comments on the post
   #   - null if comments are disabled
   #   - ordered by commentedAt, oldest comment first
-  comments(limit: Int, nextToken: String): PaginatedComments
+  comments(limit: Int, nextToken: String, reverse: Boolean): PaginatedComments
   commentCount: Int
   commentsDisabled: Boolean
 }
