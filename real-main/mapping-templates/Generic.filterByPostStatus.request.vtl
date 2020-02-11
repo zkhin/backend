@@ -1,0 +1,18 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($posts = [])
+
+#foreach ($post in $ctx.stash.posts.items)
+  #if ($post.postStatus == 'COMPLETED')
+    $util.qr($posts.add($post))
+  #end
+#end
+
+#set ($ctx.stash.posts.items = $posts)
+
+{
+  "version": "2018-05-29",
+  "payload": {}
+}

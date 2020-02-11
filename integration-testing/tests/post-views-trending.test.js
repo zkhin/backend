@@ -334,7 +334,6 @@ test('We see our own trending posts correctly', async () => {
   expect(post2['postedBy']['blockerStatus']).toBe('SELF')
   expect(post2['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(post2['postedBy']['followedStatus']).toBe('SELF')
-
 })
 
 
@@ -597,4 +596,35 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp['data']['post']['viewedByCount']).toBe(1)
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(1)
   expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(theirUserId)
+})
+
+
+test('Archived posts do not show up as trending', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 't'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // view the post
+  resp = await ourClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // verify it shows up as trending
+  resp = await ourClient.query({query: schema.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(1)
+  expect(resp['data']['trendingPosts']['items'][0]['postId']).toBe(postId)
+
+  // archive the post
+  resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
+
+  // verify the post no longer shows up as trending
+  resp = await ourClient.query({query: schema.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(0)
 })

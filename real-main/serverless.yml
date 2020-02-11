@@ -110,7 +110,7 @@ custom:
           - Query.searchUsers.searchUsers
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Query
@@ -122,7 +122,7 @@ custom:
           - Query.trendingUsers.fetchUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: User
@@ -182,7 +182,7 @@ custom:
           - User.followedUsers.fetchFollowedUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: User
@@ -203,7 +203,7 @@ custom:
           - User.followerUsers.fetchFollowerUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: User
@@ -305,7 +305,7 @@ custom:
       - type: User
         field: onymouslyLikedPosts
         request: User.onymouslyLikedPosts.request.vtl
-        response: Generic.paginatedPosts.response.vtl
+        response: Generic.passThru.response.vtl
         kind: PIPELINE
         functions:
           - Generic.fetchLikesByUser
@@ -313,11 +313,12 @@ custom:
           - Generic.batchGetPostsPostedBy
           - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
+          - Generic.filterByPostedByFollowedAndBlockerStatus
 
       - type: User
         field: anonymouslyLikedPosts
         request: User.anonymouslyLikedPosts.request.vtl
-        response: Generic.paginatedPosts.response.vtl
+        response: Generic.passThru.response.vtl
         kind: PIPELINE
         functions:
           - Generic.fetchLikesByUser
@@ -325,6 +326,7 @@ custom:
           - Generic.batchGetPostsPostedBy
           - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
+          - Generic.filterByPostedByFollowedAndBlockerStatus
 
       - type: User
         field: blockedUsers
@@ -335,7 +337,7 @@ custom:
             - User.blockedUsers.fetchUserIds
             - Generic.batchGetUsers
             - Generic.batchGetUsersBlockerStatus
-            - Generic.filterUsersBlockerStatus
+            - Generic.filterByBlockerStatus
             - Generic.batchGetUsersFollowedStatus
 
       - type: User
@@ -407,7 +409,7 @@ custom:
           - Query.getFollowedUsersWithStories.fetchUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Mutation
@@ -513,7 +515,7 @@ custom:
           - Post.viewedBy.fetchUserIds
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Post
@@ -555,7 +557,7 @@ custom:
           - Post.onymouslyLikedBy.fetchLikes
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Post
@@ -570,7 +572,7 @@ custom:
         functions:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Post
@@ -587,7 +589,7 @@ custom:
           - Post.comments.fetchComments
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Post
@@ -641,7 +643,7 @@ custom:
         functions:
           - Generic.batchGetUsers
           - Generic.batchGetUsersBlockerStatus
-          - Generic.filterUsersBlockerStatus
+          - Generic.filterByBlockerStatus
           - Generic.batchGetUsersFollowedStatus
 
       - type: Query
@@ -683,14 +685,16 @@ custom:
       - type: Query
         field: trendingPosts
         request: Generic.passThru.request.vtl
-        response: Generic.paginatedPosts.response.vtl
+        response: Generic.passThru.response.vtl
         kind: PIPELINE
         functions:
           - Query.trendingPosts.fetchPostIds
           - Generic.batchGetPosts
+          - Generic.filterByPostStatus
           - Generic.batchGetPostsPostedBy
           - Generic.batchGetPostsPostedByBlockerStatus
           - Generic.batchGetPostsPostedByFollowedStatus
+          - Generic.filterByPostedByFollowedAndBlockerStatus
 
       - type: Query
         field: album
@@ -884,7 +888,15 @@ custom:
         name: Generic.batchGetUsersBlockerStatus
 
       - dataSource: NoneDataSource
-        name: Generic.filterUsersBlockerStatus
+        name: Generic.filterByBlockerStatus
+        response: Generic.passThru.response.vtl
+
+      - dataSource: NoneDataSource
+        name: Generic.filterByPostStatus
+        response: Generic.passThru.response.vtl
+
+      - dataSource: NoneDataSource
+        name: Generic.filterByPostedByFollowedAndBlockerStatus
         response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
