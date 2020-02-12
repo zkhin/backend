@@ -140,7 +140,7 @@ class Media:
 
     def set_colors(self):
         try:
-            colors = ColorThief(self.original_image_data_stream).get_palette(color_count=5, quality=1)
+            colors = ColorThief(self.original_image_data_stream).get_palette(color_count=5)
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for media `{self.id}`')
         else:

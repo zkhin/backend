@@ -24,6 +24,7 @@ def generate_all_media_objects_uploaded_or_archived(version):
     scan_kwargs = {
         'FilterExpression': (
             'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv and (mediaStatus = :u or mediaStatus = :a)'
+            + ' and attribute_not_exists(colors)'
         ),
         'ExpressionAttributeValues': {
             ':pk_prefix': 'media/',
@@ -63,7 +64,7 @@ def get_data(path):
 
 def get_colors(data):
     try:
-        return ColorThief(data).get_palette(color_count=5, quality=1)
+        return ColorThief(data).get_palette(color_count=5)
     except Exception:
         return None
 
@@ -90,15 +91,18 @@ def save_colors(media_item, colors):
 
 
 def update_media(item):
-    native_path = get_path(item, 'native')
+    media_id = item['mediaId']
+    path = get_path(item, '480p')
 
-    if object_exists(native_path) and 'colors' not in item:
-        native_data = get_data(native_path)
-        colors = get_colors(native_data)
+    if object_exists(path):
+        data = get_data(path)
+        colors = get_colors(data)
         if colors:
             save_colors(item, colors)
         else:
-            print(f'Unable to derive colors for media `{item["mediaId"]}`')
+            print(f'Unable to derive colors for media `{media_id}`')
+    else:
+        print(f'No s3 object found for media `{media_id}`')
 
 
 def main():

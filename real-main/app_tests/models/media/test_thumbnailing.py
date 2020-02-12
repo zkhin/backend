@@ -15,11 +15,11 @@ blank_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'big-blan
 squirrel_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'squirrel.png')
 
 grant_colors = [
-    {'r': 52, 'g': 58, 'b': 46},
+    {'r': 51, 'g': 58, 'b': 45},
     {'r': 186, 'g': 206, 'b': 228},
-    {'r': 144, 'g': 154, 'b': 170},
+    {'r': 145, 'g': 154, 'b': 169},
     {'r': 158, 'g': 180, 'b': 205},
-    {'r': 131, 'g': 125, 'b': 125},
+    {'r': 130, 'g': 123, 'b': 125},
 ]
 
 
