@@ -73,8 +73,8 @@ def s3_client_2(s3_clients):
 
 
 @pytest.fixture
-def album_manager(dynamo_client):
-    yield AlbumManager({'dynamo': dynamo_client})
+def album_manager(dynamo_client, s3_client, cloudfront_client):
+    yield AlbumManager({'dynamo': dynamo_client, 's3_uploads': s3_client, 'cloudfront': cloudfront_client})
 
 
 @pytest.fixture

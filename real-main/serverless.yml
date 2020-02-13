@@ -598,28 +598,28 @@ custom:
 
       - type: Album
         field: url
-        dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
 
       - type: Album
         field: url4k
-        dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
 
       - type: Album
         field: url1080p
-        dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
 
       - type: Album
         field: url480p
-        dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
 
       - type: Album
         field: url64p
-        dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
 
       - type: Album
         field: postCount

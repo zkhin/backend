@@ -1,11 +1,17 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const moment = require('moment')
+const path = require('path')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
+const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
+
+const grantData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
+const grantContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -47,13 +53,6 @@ test('Add, read, and delete an album', async () => {
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toEqual(album)
-
-  // check we can access the art urls. these will throw an error if response code is not 2XX
-  await rp.head({uri: album['url'], simple: true})
-  await rp.head({uri: album['url4k'], simple: true})
-  await rp.head({uri: album['url1080p'], simple: true})
-  await rp.head({uri: album['url480p'], simple: true})
-  await rp.head({uri: album['url64p'], simple: true})
 
   // delete the album
   resp = await ourClient.mutate({mutation: schema.deleteAlbum, variables: {albumId}})
@@ -357,4 +356,158 @@ test('User.albums matches direct access, ordering', async () => {
   expect(resp['data']['self']['albums']['items']).toHaveLength(2)
   expect(resp['data']['self']['albums']['items'][0]).toEqual(album1)
   expect(resp['data']['self']['albums']['items'][1]).toEqual(album2)
+})
+
+
+test('Album art generated for 0, 1 and 4 posts in album', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // we an album
+  const albumId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n1'}})
+  expect(resp['errors']).toBeUndefined()
+  const album = resp['data']['addAlbum']
+  expect(album['albumId']).toBe(albumId)
+  expect(album['url']).not.toBeNull()
+  expect(album['url4k']).not.toBeNull()
+  expect(album['url1080p']).not.toBeNull()
+  expect(album['url480p']).not.toBeNull()
+  expect(album['url64p']).not.toBeNull()
+
+  // check we can access the art urls. these will throw an error if response code is not 2XX
+  await rp.head({uri: album['url'], simple: true})
+  await rp.head({uri: album['url4k'], simple: true})
+  await rp.head({uri: album['url1080p'], simple: true})
+  await rp.head({uri: album['url480p'], simple: true})
+  await rp.head({uri: album['url64p'], simple: true})
+
+  // add a post to that album
+  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
+  resp = await ourClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: postId1, mediaId: mediaId1, albumId, mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
+  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, postId1)
+  await misc.sleep(1000)  // let dynamo reach consistency
+
+  // check album has art urls and they have changed root
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  const albumOnePost = resp['data']['album']
+  expect(albumOnePost['albumId']).toBe(albumId)
+  expect(albumOnePost['url']).not.toBeNull()
+  expect(albumOnePost['url4k']).not.toBeNull()
+  expect(albumOnePost['url1080p']).not.toBeNull()
+  expect(albumOnePost['url480p']).not.toBeNull()
+  expect(albumOnePost['url64p']).not.toBeNull()
+  expect(albumOnePost['url'].split('?')[0]).not.toBe(album['url'].split('?')[0])
+  expect(albumOnePost['url4k'].split('?')[0]).not.toBe(album['url4k'].split('?')[0])
+  expect(albumOnePost['url1080p'].split('?')[0]).not.toBe(album['url1080p'].split('?')[0])
+  expect(albumOnePost['url480p'].split('?')[0]).not.toBe(album['url480p'].split('?')[0])
+  expect(albumOnePost['url64p'].split('?')[0]).not.toBe(album['url64p'].split('?')[0])
+
+  // check we can access those urls
+  await rp.head({uri: albumOnePost['url'], simple: true})
+  await rp.head({uri: albumOnePost['url4k'], simple: true})
+  await rp.head({uri: albumOnePost['url1080p'], simple: true})
+  await rp.head({uri: albumOnePost['url480p'], simple: true})
+  await rp.head({uri: albumOnePost['url64p'], simple: true})
+
+  // add a second post to that album
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  resp = await ourClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: postId2, mediaId: mediaId2, albumId, mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleep(1000)  // let dynamo reach consistency
+
+  // check album has art urls that have not changed root
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  const albumTwoPosts = resp['data']['album']
+  expect(albumTwoPosts['albumId']).toBe(albumId)
+  expect(albumTwoPosts['url']).not.toBeNull()
+  expect(albumTwoPosts['url4k']).not.toBeNull()
+  expect(albumTwoPosts['url1080p']).not.toBeNull()
+  expect(albumTwoPosts['url480p']).not.toBeNull()
+  expect(albumTwoPosts['url64p']).not.toBeNull()
+  expect(albumTwoPosts['url'].split('?')[0]).toBe(albumOnePost['url'].split('?')[0])
+  expect(albumTwoPosts['url4k'].split('?')[0]).toBe(albumOnePost['url4k'].split('?')[0])
+  expect(albumTwoPosts['url1080p'].split('?')[0]).toBe(albumOnePost['url1080p'].split('?')[0])
+  expect(albumTwoPosts['url480p'].split('?')[0]).toBe(albumOnePost['url480p'].split('?')[0])
+  expect(albumTwoPosts['url64p'].split('?')[0]).toBe(albumOnePost['url64p'].split('?')[0])
+
+  // add a third post to that album
+  const [postId3, mediaId3] = [uuidv4(), uuidv4()]
+  resp = await ourClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: postId3, mediaId: mediaId3, albumId, mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId3)
+  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, postId3)
+  await misc.sleep(1000)  // let dynamo reach consistency
+
+  // check album has art urls that have not changed root
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  const albumThreePosts = resp['data']['album']
+  expect(albumThreePosts['albumId']).toBe(albumId)
+  expect(albumThreePosts['url']).not.toBeNull()
+  expect(albumThreePosts['url4k']).not.toBeNull()
+  expect(albumThreePosts['url1080p']).not.toBeNull()
+  expect(albumThreePosts['url480p']).not.toBeNull()
+  expect(albumThreePosts['url64p']).not.toBeNull()
+  expect(albumThreePosts['url'].split('?')[0]).toBe(albumTwoPosts['url'].split('?')[0])
+  expect(albumThreePosts['url4k'].split('?')[0]).toBe(albumTwoPosts['url4k'].split('?')[0])
+  expect(albumThreePosts['url1080p'].split('?')[0]).toBe(albumTwoPosts['url1080p'].split('?')[0])
+  expect(albumThreePosts['url480p'].split('?')[0]).toBe(albumTwoPosts['url480p'].split('?')[0])
+  expect(albumThreePosts['url64p'].split('?')[0]).toBe(albumTwoPosts['url64p'].split('?')[0])
+
+  // add a fourth post to that album
+  const [postId4, mediaId4] = [uuidv4(), uuidv4()]
+  resp = await ourClient.mutate({
+    mutation: schema.addOneMediaPost,
+    variables: {postId: postId4, mediaId: mediaId4, albumId, mediaType: 'IMAGE'},
+  })
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId4)
+  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.sleepUntilPostCompleted(ourClient, postId4)
+  await misc.sleep(1000)  // let dynamo reach consistency
+
+  // check album has art urls that have changed root
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  const albumFourPosts = resp['data']['album']
+  expect(albumFourPosts['albumId']).toBe(albumId)
+  expect(albumFourPosts['url']).not.toBeNull()
+  expect(albumFourPosts['url4k']).not.toBeNull()
+  expect(albumFourPosts['url1080p']).not.toBeNull()
+  expect(albumFourPosts['url480p']).not.toBeNull()
+  expect(albumFourPosts['url64p']).not.toBeNull()
+  expect(albumFourPosts['url'].split('?')[0]).not.toBe(albumThreePosts['url'].split('?')[0])
+  expect(albumFourPosts['url4k'].split('?')[0]).not.toBe(albumThreePosts['url4k'].split('?')[0])
+  expect(albumFourPosts['url1080p'].split('?')[0]).not.toBe(albumThreePosts['url1080p'].split('?')[0])
+  expect(albumFourPosts['url480p'].split('?')[0]).not.toBe(albumThreePosts['url480p'].split('?')[0])
+  expect(albumFourPosts['url64p'].split('?')[0]).not.toBe(albumThreePosts['url64p'].split('?')[0])
+
+  // check we can access those urls
+  await rp.head({uri: albumFourPosts['url'], simple: true})
+  await rp.head({uri: albumFourPosts['url4k'], simple: true})
+  await rp.head({uri: albumFourPosts['url1080p'], simple: true})
+  await rp.head({uri: albumFourPosts['url480p'], simple: true})
+  await rp.head({uri: albumFourPosts['url64p'], simple: true})
 })

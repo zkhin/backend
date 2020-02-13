@@ -87,6 +87,7 @@ def test_complete(post_manager, post_with_media, user_manager):
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
+    post.album_manager.update_album_art_if_needed = Mock()
 
     # check starting state
     assert posted_by_user.item.get('postCount', 0) == 0
@@ -104,6 +105,7 @@ def test_complete(post_manager, post_with_media, user_manager):
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
+    assert post.album_manager.update_album_art_if_needed.mock_calls == []
 
 
 def test_complete_with_expiration(post_manager, post_with_media_with_expiration, user_manager):
@@ -143,6 +145,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
+    post.album_manager.update_album_art_if_needed = Mock()
 
     # check starting state
     assert album.item.get('postCount', 0) == 0
@@ -162,6 +165,9 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [
+        call(post.item['albumId']),
+    ]
 
 
 def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_album):
@@ -180,8 +186,10 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     # mock out some calls to far-flung other managers
     post1.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post1.feed_manager = Mock(FeedManager({}))
+    post1.album_manager.update_album_art_if_needed = Mock()
     post2.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post2.feed_manager = Mock(FeedManager({}))
+    post2.album_manager.update_album_art_if_needed = Mock()
 
     # complete the post that has the earlier postedAt, should not get an originalPostId
     media1.set_checksum()

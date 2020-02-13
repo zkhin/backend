@@ -70,7 +70,11 @@ class Post:
         # That is to say, text-only posts or multiple-media posts will never have originalPostId set.
         original_post_id = None
         media_items = list(self.media_manager.dynamo.generate_by_post(self.id))
-        media_item = media_items[0] if media_items else None
+        media_item = (
+            # need strongly consistent because checksum was potentially just set
+            self.media_manager.dynamo.get_media(media_items[0]['mediaId'], strongly_consistent=True)
+            if media_items else None
+        )
         if media_item and media_item['mediaType'] == MediaType.IMAGE:
             first_media_id = self.media_manager.dynamo.get_first_media_id_with_checksum(media_item['checksum'])
             if first_media_id and first_media_id != media_item['mediaId']:
@@ -94,6 +98,11 @@ class Post:
 
         # add post to feeds
         self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
+
+        # update album art if needed
+        if album_id := self.item.get('albumId'):
+            self.album_manager.update_album_art_if_needed(album_id)
+
         return self
 
     def archive(self):
@@ -132,6 +141,11 @@ class Post:
         # update feeds if needed
         if prev_post_status == PostStatus.COMPLETED:
             self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
+
+        # update album art if needed
+        if album_id := self.item.get('albumId'):
+            self.album_manager.update_album_art_if_needed(album_id)
+
         return self
 
     def restore(self):
@@ -180,6 +194,9 @@ class Post:
                 self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
             # update feeds
             self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
+            # update album art if needed
+            if album_id := self.item.get('albumId'):
+                self.album_manager.update_album_art_if_needed(album_id)
 
         return self
 
@@ -227,6 +244,10 @@ class Post:
 
         # delete the trending index, if it exists
         self.trending_manager.dynamo.delete_trending(self.id)
+
+        # update album art, if needed
+        if album_id := self.item.get('albumId'):
+            self.album_manager.update_album_art_if_needed(album_id)
 
         # do the deletes for real
         for media_item in self.item['mediaObjects']:
@@ -281,6 +302,9 @@ class Post:
             if album_item['ownedByUserId'] != self.posted_by_user_id:
                 msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
                 raise exceptions.PostException(msg)
+            post_media = list(self.media_manager.dynamo.generate_by_post(self.id))
+            if not post_media:
+                raise exceptions.PostException('Text-only posts may not be placed in albums')
 
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id)]
         if self.item['postStatus'] == PostStatus.COMPLETED:
@@ -291,4 +315,11 @@ class Post:
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
+
+        # update album art, if needed
+        if prev_album_id:
+            self.album_manager.update_album_art_if_needed(prev_album_id)
+        if album_id:
+            self.album_manager.update_album_art_if_needed(album_id)
+
         return self

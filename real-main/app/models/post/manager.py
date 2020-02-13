@@ -79,8 +79,10 @@ class PostManager:
             if not album_item:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
             if album_item['ownedByUserId'] != posted_by_user_id:
-                msg = f'Album `{album_id}` does not not belong to caller user `{posted_by_user_id}`'
+                msg = f'Album `{album_id}` does not belong to caller user `{posted_by_user_id}`'
                 raise exceptions.PostException(msg)
+            if not media_uploads:
+                raise exceptions.PostException('Text-only posts may not be placed in albums')
 
         # add the pending post & media to dynamo in a transaction
         transacts = [self.dynamo.transact_add_pending_post(

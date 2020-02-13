@@ -12,27 +12,40 @@ def user(user_manager):
 
 
 @pytest.fixture
+def user2(user_manager):
+    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+
+
+@pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user.id, 'pid1', text='t')
 
 
 @pytest.fixture
-def albums(album_manager, user):
-    album1 = album_manager.add_album(user.id, 'aid-1', 'album name')
-    album2 = album_manager.add_album(user.id, 'aid-2', 'album name')
+def albums(album_manager, user2):
+    album1 = album_manager.add_album(user2.id, 'aid-1', 'album name')
+    album2 = album_manager.add_album(user2.id, 'aid-2', 'album name')
     yield [album1, album2]
 
 
 @pytest.fixture
-def post_with_expiration(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
+def post_with_expiration(post_manager, user2):
+    yield post_manager.add_post(user2.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
 
 
 @pytest.fixture
-def post_with_media(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t')
+def post_with_media(post_manager, user2):
+    post = post_manager.add_post(user2.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t')
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
+    # to look like a COMPLETED media post during the restore process,
+    # we need to put objects in the mock s3 for all image sizes
+    for size in media.enums.MediaSize._ALL:
+        path = media.get_s3_path(size)
+        post_manager.clients['s3_uploads'].put_object(path, b'anything', 'application/octet-stream')
+    media.set_status(media.enums.MediaStatus.UPLOADED)
+    media.set_checksum()
+    post.complete()
+    yield post
 
 
 def test_refresh_item(post):
@@ -179,54 +192,73 @@ def test_serailize(user, post, user_manager):
     assert resp == post.item
 
 
-def test_set_album_errors(album_manager, post_manager, user_manager, post):
+def test_set_album_errors(album_manager, post_manager, user_manager, post, post_with_media, user):
     # album doesn't exist
-    with pytest.raises(post_manager.exceptions.PostException):
-        post.set_album('aid-dne')
+    with pytest.raises(post_manager.exceptions.PostException) as err:
+        post_with_media.set_album('aid-dne')
+    assert 'does not exist' in str(err)
 
     # album is owned by a different user
     user2 = user_manager.create_cognito_only_user('ouid', 'oUname')
     album = album_manager.add_album(user2.id, 'aid-2', 'album name')
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(post_manager.exceptions.PostException) as err:
+        post_with_media.set_album(album.id)
+    assert 'belong to different users' in str(err)
+
+    # cant put text-only posts in albums
+    album = album_manager.add_album(user.id, 'aid-22', 'album name')
+    with pytest.raises(post_manager.exceptions.PostException) as err:
         post.set_album(album.id)
+    assert 'Text-only' in str(err)
 
 
-def test_set_album(albums, post):
+def test_set_album(albums, post_with_media):
+    post = post_with_media
     album1, album2 = albums
+    post.album_manager.update_album_art_if_needed = Mock()
 
     # verify starting state
     assert 'albumId' not in post.item
-    album1.item.get('postCount', 0) == 0
-    album2.item.get('postCount', 0) == 0
+    assert album1.item.get('postCount', 0) == 0
+    assert album2.item.get('postCount', 0) == 0
+    assert post.album_manager.update_album_art_if_needed.mock_calls == []
 
     # go from no album to an album
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
     album1.refresh_item()
-    album1.item.get('postCount', 0) == 1
+    assert album1.item.get('postCount', 0) == 1
     album2.refresh_item()
-    album2.item.get('postCount', 0) == 0
+    assert album2.item.get('postCount', 0) == 0
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [call(album1.id)]
+    post.album_manager.update_album_art_if_needed.reset_mock()
 
     # change the album
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
     album1.refresh_item()
-    album1.item.get('postCount', 0) == 0
+    assert album1.item.get('postCount', 0) == 0
     album2.refresh_item()
-    album2.item.get('postCount', 0) == 1
+    assert album2.item.get('postCount', 0) == 1
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [call(album1.id), call(album2.id)]
+    post.album_manager.update_album_art_if_needed.reset_mock()
 
     # no-op
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
     album1.refresh_item()
-    album1.item.get('postCount', 0) == 0
+    assert album1.item.get('postCount', 0) == 0
     album2.refresh_item()
-    album2.item.get('postCount', 0) == 1
+    assert album2.item.get('postCount', 0) == 1
+    assert post.album_manager.update_album_art_if_needed.mock_calls == []
+    post.album_manager.update_album_art_if_needed.reset_mock()
 
     # remove post from all albums
     post.set_album(None)
     assert 'albumId' not in post.item
     album1.refresh_item()
-    album1.item.get('postCount', 0) == 0
+    assert album1.item.get('postCount', 0) == 0
     album2.refresh_item()
-    album2.item.get('postCount', 0) == 0
+    assert album2.item.get('postCount', 0) == 0
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [call(album2.id)]
+    post.album_manager.update_album_art_if_needed.reset_mock()

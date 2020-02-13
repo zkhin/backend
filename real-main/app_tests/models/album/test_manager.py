@@ -1,6 +1,8 @@
 import pendulum
 import pytest
 
+from app.models.album.exceptions import AlbumDoesNotExist
+
 
 @pytest.fixture
 def user(user_manager):
@@ -94,3 +96,17 @@ def test_delete_all_by_user(album_manager, user):
     assert list(album_manager.dynamo.generate_by_user(user.id)) == []
     user.refresh_item()
     assert user.item.get('albumCount', 0) == 0
+
+
+def test_update_album_art_if_needed(album_manager, user):
+    # verify error if album doesn't exist
+    with pytest.raises(AlbumDoesNotExist):
+        album_manager.update_album_art_if_needed('aid-dne')
+
+    # success case, but no updates needed
+    album_id = 'aid1'
+    album = album_manager.add_album(user.id, album_id, 'album name')
+    assert 'artHash' not in album.item
+    album_manager.update_album_art_if_needed(album_id)
+    album.refresh_item()
+    assert 'artHash' not in album.item

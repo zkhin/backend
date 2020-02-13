@@ -100,13 +100,29 @@ def test_add_text_with_tags_post(post_manager, user_manager):
 
 def test_add_post_album_errors(user_manager, post_manager, user, album):
     # can't create post with album that doesn't exist
-    with pytest.raises(post_manager.exceptions.PostException):
-        post_manager.add_post(user.id, 'pid-42', text='t', album_id='aid-dne')
+    with pytest.raises(post_manager.exceptions.PostException) as err:
+        post_manager.add_post(
+            user.id, 'pid-42', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], album_id='aid-dne',
+        )
+    assert 'does not exist' in str(err)
 
     # can't create post in somebody else's album
     user2 = user_manager.create_cognito_only_user('uid-2', 'uname2')
-    with pytest.raises(post_manager.exceptions.PostException):
-        post_manager.add_post(user2.id, 'pid-42', text='t', album_id=album.id)
+    with pytest.raises(post_manager.exceptions.PostException) as err:
+        post_manager.add_post(
+            user2.id, 'pid-42', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], album_id=album.id,
+        )
+    assert 'does not belong to' in str(err)
+
+    # can't create a text-only post in an album
+    with pytest.raises(post_manager.exceptions.PostException) as err:
+        post_manager.add_post(user.id, 'pid-42', text='t', album_id=album.id)
+    assert 'Text-only' in str(err)
+
+    # verify we can add without error
+    post_manager.add_post(
+        user.id, 'pid-42', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], album_id=album.id,
+    )
 
 
 def test_add_media_post(post_manager):

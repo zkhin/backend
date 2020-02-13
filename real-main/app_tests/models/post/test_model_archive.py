@@ -30,7 +30,21 @@ def post_with_expiration(post_manager, user_manager):
 def post_with_album(album_manager, post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
-    yield post_manager.add_post(user.id, 'pid2', text='t', album_id=album.id)
+    post = post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], album_id=album.id
+    )
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
+    # to look like a COMPLETED media post during the restore process,
+    # we need to put objects in the mock s3 for all image sizes
+    for size in media.enums.MediaSize._ALL:
+        path = media.get_s3_path(size)
+        post_manager.clients['s3_uploads'].put_object(path, b'anything', 'application/octet-stream')
+    media.set_status(media.enums.MediaStatus.UPLOADED)
+    media.set_checksum()
+    post.album_manager.update_album_art_if_needed = Mock()
+    post.complete()
+    post.album_manager.update_album_art_if_needed.reset_mock()
+    yield post
 
 
 @pytest.fixture
@@ -63,6 +77,7 @@ def test_archive_pending_post(post_manager, post_with_media, user_manager):
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
+    post.album_manager.update_album_art_if_needed = Mock()
 
     # archive the post, check it got to media
     post.archive()
@@ -80,6 +95,7 @@ def test_archive_pending_post(post_manager, post_with_media, user_manager):
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
+    assert post.album_manager.update_album_art_if_needed.mock_calls == []
 
 
 def test_archive_expired_completed_post(post_manager, post_with_expiration, user_manager):
@@ -137,7 +153,8 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     # archive the post
     post.archive()
     assert post.item['postStatus'] == PostStatus.ARCHIVED
-    assert len(post.item['mediaObjects']) == 0
+    assert len(post.item['mediaObjects']) == 1
+    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.ARCHIVED
 
     # check the post is still in the album, but since it's no longer completed, it doesn't show in the count
     assert post.item['albumId'] == album.id
@@ -155,4 +172,7 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+    ]
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [
+        call(post.item['albumId']),
     ]

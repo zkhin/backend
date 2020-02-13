@@ -809,6 +809,36 @@ def delete_album(caller_user_id, arguments, source, context):
     return album.serialize(caller_user_id)
 
 
+@routes.register('Album.url')
+def album_url(caller_user_id, arguments, source, context):
+    album = album_manager.init_album(source)
+    return album.get_art_image_url(media_manager.enums.MediaSize.NATIVE)
+
+
+@routes.register('Album.url64p')
+def album_url_64p(caller_user_id, arguments, source, context):
+    album = album_manager.init_album(source)
+    return album.get_art_image_url(media_manager.enums.MediaSize.P64)
+
+
+@routes.register('Album.url480p')
+def album_url_480p(caller_user_id, arguments, source, context):
+    album = album_manager.init_album(source)
+    return album.get_art_image_url(media_manager.enums.MediaSize.P480)
+
+
+@routes.register('Album.url1080p')
+def album_url_1080p(caller_user_id, arguments, source, context):
+    album = album_manager.init_album(source)
+    return album.get_art_image_url(media_manager.enums.MediaSize.P1080)
+
+
+@routes.register('Album.url4k')
+def album_url_4k(caller_user_id, arguments, source, context):
+    album = album_manager.init_album(source)
+    return album.get_art_image_url(media_manager.enums.MediaSize.K4)
+
+
 @routes.register('Mutation.lambdaClientError')
 def lambda_client_error(caller_user_id, arguments, source, context):
     request_id = getattr(context, 'aws_request_id', None)

@@ -73,6 +73,22 @@ class AlbumDynamo:
             update_query_kwargs['ExpressionAttributeValues'] = exp_values
         return self.client.update_item(update_query_kwargs)
 
+    def set_album_art_hash(self, album_id, art_hash):
+        update_query_kwargs = {
+            'Key': {
+                'partitionKey': f'album/{album_id}',
+                'sortKey': '-',
+            },
+        }
+
+        if art_hash:
+            update_query_kwargs['UpdateExpression'] = 'SET artHash = :ah'
+            update_query_kwargs['ExpressionAttributeValues'] = {':ah': art_hash}
+        else:
+            update_query_kwargs['UpdateExpression'] = 'REMOVE artHash'
+
+        return self.client.update_item(update_query_kwargs)
+
     def transact_delete_album(self, album_id):
         return {'Delete': {
             'Key': {

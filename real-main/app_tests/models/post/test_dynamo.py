@@ -743,3 +743,27 @@ def test_generate_post_ids_in_album(post_dynamo):
     assert len(post_ids) == 2
     assert post_id_1 in post_ids
     assert post_id_2 in post_ids
+
+    # verify those posts don't show up if we only want completed posts
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, completed=True))
+    assert len(post_ids) == 0
+
+    # mark one post completed, another archived
+    post_item_1 = post_dynamo.get_post(post_id_1)
+    post_item_2 = post_dynamo.get_post(post_id_2)
+    transacts = [
+        post_dynamo.transact_set_post_status(post_item_1, PostStatus.ARCHIVED),
+        post_dynamo.transact_set_post_status(post_item_2, PostStatus.COMPLETED),
+    ]
+    post_dynamo.client.transact_write_items(transacts)
+
+    # verify both posts show up if we don't care about status
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id))
+    assert len(post_ids) == 2
+    assert post_id_1 in post_ids
+    assert post_id_2 in post_ids
+
+    # verify only completed post shows up if we ask for only completed posts
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, completed=True))
+    assert len(post_ids) == 1
+    assert post_id_2 in post_ids

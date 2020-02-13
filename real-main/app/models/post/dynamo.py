@@ -414,9 +414,12 @@ class PostDynamo:
             transact_item['Update']['UpdateExpression'] = 'REMOVE albumId, gsiK2PartitionKey, gsiK2SortKey'
         return transact_item
 
-    def generate_post_ids_in_album(self, album_id):
+    def generate_post_ids_in_album(self, album_id, completed=False):
+        key_exps = [Key('gsiK2PartitionKey').eq(f'post/{album_id}')]
+        if completed:
+            key_exps.append(Key('gsiK2SortKey').begins_with(PostStatus.COMPLETED + '/'))
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiK2PartitionKey').eq(f'post/{album_id}'),
+            'KeyConditionExpression': reduce(lambda a, b: a & b, key_exps),
             'IndexName': 'GSI-K2',
             'ProjectionExpression': 'partitionKey',
         }

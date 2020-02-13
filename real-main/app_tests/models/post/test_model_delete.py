@@ -24,7 +24,21 @@ def post_with_expiration(post_manager, user_manager):
 def post_with_album(album_manager, post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
-    yield post_manager.add_post(user.id, 'pid2', text='t', album_id=album.id)
+    post = post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], album_id=album.id
+    )
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
+    # to look like a COMPLETED media post during the restore process,
+    # we need to put objects in the mock s3 for all image sizes
+    for size in media.enums.MediaSize._ALL:
+        path = media.get_s3_path(size)
+        post_manager.clients['s3_uploads'].put_object(path, b'anything', 'application/octet-stream')
+    media.set_status(media.enums.MediaStatus.UPLOADED)
+    media.set_checksum()
+    post.album_manager.update_album_art_if_needed = Mock()
+    post.complete()
+    post.album_manager.update_album_art_if_needed.reset_mock()
+    yield post
 
 
 @pytest.fixture
@@ -233,7 +247,8 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     # delete the post
     post.delete()
     assert post.item['postStatus'] == PostStatus.DELETING
-    assert len(post.item['mediaObjects']) == 0
+    assert len(post.item['mediaObjects']) == 1
+    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
 
     # check the DB again
     post.refresh_item()
@@ -261,4 +276,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
+    ]
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [
+        call(album.id),
     ]

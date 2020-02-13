@@ -19,7 +19,12 @@ def post_with_expiration(post_manager, user_manager):
 def post_with_album(album_manager, post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
-    yield post_manager.add_post(user.id, 'pid2', text='t', album_id=album.id)
+    post_manager.album_manager.update_album_art_if_needed = Mock()
+    post = post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], album_id=album.id
+    )
+    post_manager.album_manager.update_album_art_if_needed.reset_mock()
+    yield post
 
 
 @pytest.fixture
@@ -160,9 +165,16 @@ def test_restore_completed_media_post(post_manager, post_with_media, user_manage
 
 def test_restore_completed_post_in_album(album_manager, post_manager, post_with_album, user_manager):
     post = post_with_album
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
     posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
     posted_by_user = user_manager.get_user(posted_by_user_id)
+
+    # to look like a COMPLETED media post during the restore process,
+    # we need to put objects in the mock s3 for all image sizes
+    for size in MediaSize._ALL:
+        media_path = media.get_s3_path(size)
+        post_manager.clients['s3_uploads'].put_object(media_path, b'anything', 'application/octet-stream')
 
     # archive the post
     post.archive()
@@ -177,6 +189,10 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [
+        call(album.id),
+    ]
+    post.album_manager.update_album_art_if_needed.reset_mock()
 
     # restore the post
     post.restore()
@@ -194,8 +210,12 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # check calls to mocked out managers
-    post.item['mediaObjects'] = []
+    media.refresh_item()
+    post.item['mediaObjects'] = [media.item]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
+    ]
+    assert post.album_manager.update_album_art_if_needed.mock_calls == [
+        call(album.id),
     ]

@@ -175,7 +175,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | `trending/{itemType}` | `{score:Number}` |
 | `postView/{postId}/{viewedByUserId}` | `-` | `0` | `postId`, `postedByUserId`, `viewedByUserId`, `viewCount:Number`, `firstViewedAt`, `lastViewedAt` | `postView/{postId}` | `{lastViewedAt}` |
-| `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `postsLastUpdatedAt` | `album/{userId}` | `{createdAt}` |
+| `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
 
 Note that:
 
@@ -209,3 +209,4 @@ The following objects are stored with the given path structures:
 
 - Post media objects: `{userId}/post/{postId}/media/{mediaId}/***.jpg`.
 - Profile photo: `{userId}/profile-photo/{photoMediaId}/***.jpg`
+- Album art: `{userId}/album/{albumId}/{artHash}/***.jpg`
