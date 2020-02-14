@@ -356,7 +356,6 @@ enum MediaObjectType {
 
 enum MediaObjectStatus {
   AWAITING_UPLOAD
-  UPLOADING
   PROCESSING_UPLOAD
   UPLOADED
   ERROR

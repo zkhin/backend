@@ -70,7 +70,7 @@ class Media:
         return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
 
     def get_writeonly_url(self):
-        have_writeonly_url = (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.UPLOADING, enums.MediaStatus.ERROR)
+        have_writeonly_url = (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
         if self.item['mediaStatus'] not in have_writeonly_url:
             return None
 
@@ -93,6 +93,25 @@ class Media:
         for media_size in enums.MediaSize._ALL:
             path = self.get_s3_path(media_size)
             self.s3_uploads_client.delete_object(path)
+
+    def process_upload(self):
+        assert self.item['mediaStatus'] in (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR), 'Bad status'
+
+        # mark as processing before we start downloading the file from S3
+        self.set_status(enums.MediaStatus.PROCESSING_UPLOAD)
+
+        # only accept jpeg uploads
+        if not self.is_original_jpeg():
+            self.set_status(enums.MediaStatus.ERROR)
+            raise exceptions.MediaException(f'Non-jpeg image uploaded for media `{self.id}`')
+
+        self.set_is_verified()
+        self.set_height_and_width()
+        self.set_colors()
+        self.set_thumbnails()
+        self.set_checksum()
+        self.set_status(enums.MediaStatus.UPLOADED)
+        return self
 
     def set_is_verified(self):
         api_creds = self.post_verification_api_creds_getter()

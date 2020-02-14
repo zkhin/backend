@@ -49,24 +49,14 @@ def uploads_object_created(event, context):
         raise Exception(f'Unable to find media `{media_id}` for post `{post_id}`')
 
     media_status = media.item['mediaStatus']
-    if media_status in (MediaStatus.UPLOADED, MediaStatus.ARCHIVED, MediaStatus.DELETING):
+    if media_status not in (MediaStatus.AWAITING_UPLOAD, MediaStatus.ERROR):
         raise Exception(f'Refusing to process media upload for media `{media_id}` with status `{media_status}`')
 
-    # mark as processing before we start downloading the file from S3
-    media.set_status(MediaStatus.PROCESSING_UPLOAD)
-
-    # only accept jpeg uploads
-    if not media.is_original_jpeg():
-        logger.warning(f'Non-jpeg image uploaded for media `{media_id}`')
-        media.set_status(MediaStatus.ERROR)
+    try:
+        media.process_upload()
+    except media.exceptions.MediaException as err:
+        logger.warning(str(err))
         return
-
-    media.set_is_verified()
-    media.set_height_and_width()
-    media.set_colors()
-    media.set_thumbnails()
-    media.set_checksum()
-    media.set_status(MediaStatus.UPLOADED)
 
     # is there other media left to upload?
     for media in media_manager.dynamo.generate_by_post(post_id, uploaded=False):

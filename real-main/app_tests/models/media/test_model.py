@@ -1,6 +1,8 @@
-from app.models.media.enums import MediaSize, MediaStatus
+from unittest.mock import Mock, call
 
 import pytest
+
+from app.models.media.enums import MediaSize, MediaStatus
 
 
 @pytest.fixture
@@ -30,6 +32,73 @@ def test_refresh_item(dynamo_client, media_awaiting_upload):
 
     media.refresh_item()
     assert media.item[field] == value
+
+
+def test_process_upload_wrong_status(media_awaiting_upload):
+    media_awaiting_upload.item['mediaStatus'] = MediaStatus.UPLOADED
+    with pytest.raises(AssertionError, match='status'):
+        media_awaiting_upload.process_upload()
+
+    media_awaiting_upload.item['mediaStatus'] = MediaStatus.PROCESSING_UPLOAD
+    with pytest.raises(AssertionError, match='status'):
+        media_awaiting_upload.process_upload()
+
+    media_awaiting_upload.item['mediaStatus'] = MediaStatus.ARCHIVED
+    with pytest.raises(AssertionError, match='status'):
+        media_awaiting_upload.process_upload()
+
+    media_awaiting_upload.item['mediaStatus'] = MediaStatus.DELETING
+    with pytest.raises(AssertionError, match='status'):
+        media_awaiting_upload.process_upload()
+
+
+def test_process_upload_failure_non_jpeg(media_awaiting_upload):
+    media = media_awaiting_upload
+    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
+
+    # mock out a bunch of methods
+    media.is_original_jpeg = Mock(return_value=False)
+    media.set_is_verified = Mock()
+    media.set_height_and_width = Mock()
+    media.set_colors = Mock()
+    media.set_thumbnails = Mock()
+    media.set_checksum = Mock()
+
+    # do the call, should update our status
+    with pytest.raises(media.exceptions.MediaException, match='Non-jpeg'):
+        media.process_upload()
+    assert media.item['mediaStatus'] == MediaStatus.ERROR
+
+    # check the mocks were not called
+    assert media.set_is_verified.mock_calls == []
+    assert media.set_height_and_width.mock_calls == []
+    assert media.set_colors.mock_calls == []
+    assert media.set_thumbnails.mock_calls == []
+    assert media.set_checksum.mock_calls == []
+
+
+def test_process_upload_success(media_awaiting_upload):
+    media = media_awaiting_upload
+    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
+
+    # mock out a bunch of methods
+    media.is_original_jpeg = Mock(return_value=True)
+    media.set_is_verified = Mock()
+    media.set_height_and_width = Mock()
+    media.set_colors = Mock()
+    media.set_thumbnails = Mock()
+    media.set_checksum = Mock()
+
+    # do the call, should update our status
+    media.process_upload()
+    assert media.item['mediaStatus'] == MediaStatus.UPLOADED
+
+    # check the mocks were called correctly
+    assert media.set_is_verified.mock_calls == [call()]
+    assert media.set_height_and_width.mock_calls == [call()]
+    assert media.set_colors.mock_calls == [call()]
+    assert media.set_thumbnails.mock_calls == [call()]
+    assert media.set_checksum.mock_calls == [call()]
 
 
 def test_set_status(media_awaiting_upload):
