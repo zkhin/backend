@@ -102,7 +102,7 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   const postId = uuidv4()
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId, mediaId: uuidv4(), mediaType: 'IMAGE', lifetime: 'P1D'},
+    variables: {postId, mediaId: uuidv4(), lifetime: 'P1D'},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')

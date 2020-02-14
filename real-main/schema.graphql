@@ -352,8 +352,6 @@ enum BlockStatus {
 
 enum MediaObjectType {
   IMAGE
-  VIDEO
-  AUDIO
 }
 
 enum MediaObjectStatus {
@@ -387,7 +385,7 @@ enum FlagStatus {
 
 input MediaObjectUpload {
   mediaId: ID!
-  mediaType: MediaObjectType!
+  mediaType: MediaObjectType = IMAGE
   takenInReal: Boolean
   originalFormat: String
 }

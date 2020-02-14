@@ -93,7 +93,7 @@ class PostManager:
         for mu in media_uploads:
             # 'media_upload' is straight from graphql, format dictated by schema
             transacts.append(self.media_manager.dynamo.transact_add_media(
-                posted_by_user_id, post_id, mu['mediaId'], mu['mediaType'], posted_at=now,
+                posted_by_user_id, post_id, mu['mediaId'], posted_at=now,
                 taken_in_real=mu.get('takenInReal'), original_format=mu.get('originalFormat'),
             ))
         self.dynamo.client.transact_write_items(transacts)

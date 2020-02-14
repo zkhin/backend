@@ -15,9 +15,7 @@ def album(album_manager, user):
 
 @pytest.fixture
 def completed_image_post(post_manager, user):
-    post = post_manager.add_post(
-        user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'mediaType': 'IMAGE'}],
-    )
+    post = post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1'}])
     media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
     for size in MediaSize._ALL:
         path = media.get_s3_path(size)
@@ -77,13 +75,9 @@ def test_delete_no_posts(user, album):
 
 def test_delete(user, album, post_manager):
     # create two posts in the album
-    post1 = post_manager.add_post(
-        user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'mediaType': 'IMAGE'}], album_id=album.id,
-    )
+    post1 = post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1'}], album_id=album.id)
     media1 = post_manager.media_manager.init_media(post1.item['mediaObjects'][0])
-    post2 = post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], album_id=album.id,
-    )
+    post2 = post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid2'}], album_id=album.id)
     media2 = post_manager.media_manager.init_media(post2.item['mediaObjects'][0])
 
     # to look like a COMPLETED media post during the restore process,

@@ -16,6 +16,7 @@ class Media:
     exceptions = exceptions
 
     jpeg_content_type = 'image/jpeg'
+    file_ext = 'jpg'
     sizes = {
         enums.MediaSize.K4: [3840, 2160],
         enums.MediaSize.P1080: [1920, 1080],
@@ -41,15 +42,6 @@ class Media:
             # When media objects are stored in feed objects, they are assumed to be
             # in UPLOADED state and it is not explicity saved in dynamo
             self.item['mediaStatus'] = enums.MediaStatus.UPLOADED
-
-    @property
-    def file_ext(self):
-        mediaType = self.item['mediaType']
-        if mediaType == enums.MediaType.IMAGE:
-            return enums.MediaExt.JPG
-        if mediaType == enums.MediaType.VIDEO:
-            return enums.MediaExt.MP4
-        raise ValueError(f'Unknown media tyep `{mediaType}`')
 
     @property
     def native_image_data_stream(self):
@@ -91,20 +83,11 @@ class Media:
         return '/'.join([self.item['userId'], 'post', self.item['postId'], 'media', self.item['mediaId'], filename])
 
     def has_all_s3_objects(self):
-        mediaType = self.item['mediaType']
-
-        if mediaType == enums.MediaType.IMAGE:
-            for media_size in enums.MediaSize._ALL:
-                path = self.get_s3_path(media_size)
-                if not self.s3_uploads_client.exists(path):
-                    return False
-            return True
-
-        if mediaType == enums.MediaType.VIDEO:
-            path = self.get_s3_path(enums.MediaSize.NATIVE)
-            return self.s3_uploads_client.exists(path)
-
-        raise ValueError(f'Unknown media tyep `{mediaType}`')
+        for media_size in enums.MediaSize._ALL:
+            path = self.get_s3_path(media_size)
+            if not self.s3_uploads_client.exists(path):
+                return False
+        return True
 
     def delete_all_s3_objects(self):
         for media_size in enums.MediaSize._ALL:

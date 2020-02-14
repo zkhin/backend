@@ -21,7 +21,7 @@ def post_with_album(album_manager, post_manager, user_manager):
     album = album_manager.add_album(user.id, 'aid', 'album name')
     post_manager.album_manager.update_album_art_if_needed = Mock()
     post = post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'mediaType': 'IMAGE'}], album_id=album.id
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2'}], album_id=album.id
     )
     post_manager.album_manager.update_album_art_if_needed.reset_mock()
     yield post
@@ -30,7 +30,7 @@ def post_with_album(album_manager, post_manager, user_manager):
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t')
+    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid'}], text='t')
 
 
 def test_restore_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):

@@ -20,7 +20,7 @@ class MediaDynamo:
             'sortKey': '-',
         }, strongly_consistent=strongly_consistent)
 
-    def transact_add_media(self, posted_by_user_id, post_id, media_id, media_type, posted_at=None,
+    def transact_add_media(self, posted_by_user_id, post_id, media_id, posted_at=None,
                            taken_in_real=None, original_format=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
@@ -31,12 +31,12 @@ class MediaDynamo:
             'gsiA1PartitionKey': {'S': f'media/{post_id}'},
             'gsiA1SortKey': {'S': MediaStatus.AWAITING_UPLOAD},
             'gsiA2PartitionKey': {'S': f'media/{posted_by_user_id}'},
-            'gsiA2SortKey': {'S': f'{media_type}/{MediaStatus.AWAITING_UPLOAD}/{posted_at_str}'},
+            'gsiA2SortKey': {'S': f'IMAGE/{MediaStatus.AWAITING_UPLOAD}/{posted_at_str}'},
             'userId': {'S': posted_by_user_id},
             'postId': {'S': post_id},
             'postedAt': {'S': posted_at_str},
             'mediaId': {'S': media_id},
-            'mediaType': {'S': media_type},
+            'mediaType': {'S': 'IMAGE'},
             'mediaStatus': {'S': MediaStatus.AWAITING_UPLOAD},
         }
         if taken_in_real is not None:
@@ -130,7 +130,7 @@ class MediaDynamo:
                 'UpdateExpression': 'SET mediaStatus = :status, gsiA1SortKey = :status, gsiA2SortKey = :gsiA2SK',
                 'ExpressionAttributeValues': {
                     ':status': {'S': status},
-                    ':gsiA2SK': {'S': f'{media_item["mediaType"]}/{status}/{media_item["postedAt"]}'},
+                    ':gsiA2SK': {'S': f'IMAGE/{status}/{media_item["postedAt"]}'},
                 },
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             }

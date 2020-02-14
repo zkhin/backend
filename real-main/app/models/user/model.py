@@ -1,7 +1,7 @@
 import logging
 import os
 
-from app.models.media.enums import MediaSize, MediaExt
+from app.models.media.enums import MediaSize
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -32,7 +32,7 @@ class User:
     enums = enums
     exceptions = exceptions
     client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
-    photo_file_ext = MediaExt.JPG
+    photo_file_ext = 'jpg'
 
     def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
                  placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY,

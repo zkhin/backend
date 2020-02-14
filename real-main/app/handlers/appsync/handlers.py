@@ -177,10 +177,6 @@ def set_user_details(caller_user_id, arguments, source, context):
             if not media:
                 raise ClientException(f'No media with media_id `{photo_media_id}` found')
 
-            image_type = media_manager.enums.MediaType.IMAGE
-            if media.item['mediaType'] != image_type:
-                raise ClientException(f'Cannot set profile photo to media that is not {image_type} type')
-
             uploaded_status = media_manager.enums.MediaStatus.UPLOADED
             if media.item['mediaStatus'] != uploaded_status:
                 raise ClientException(f'Cannot set profile photo to media not in {uploaded_status} status')

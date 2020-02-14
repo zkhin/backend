@@ -34,12 +34,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add a media post, complete it
-  const mediaType = 'IMAGE'
   let [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, mediaType},
-  })
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId: postId1, mediaId: mediaId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
@@ -340,12 +336,8 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add a media post, complete it
-  const mediaType = 'IMAGE'
   let [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, mediaType},
-  })
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId: postId1, mediaId: mediaId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
@@ -357,7 +349,7 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   let [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await theirClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, mediaType},
+    variables: {postId: postId2, mediaId: mediaId2},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)

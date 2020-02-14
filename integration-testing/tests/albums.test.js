@@ -385,7 +385,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId1, mediaId: mediaId1, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -421,7 +421,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId2, mediaId: mediaId2, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -450,7 +450,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   const [postId3, mediaId3] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId3, mediaId: mediaId3, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId3, mediaId: mediaId3, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
@@ -479,7 +479,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   const [postId4, mediaId4] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId4, mediaId: mediaId4, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId4, mediaId: mediaId4, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId4)

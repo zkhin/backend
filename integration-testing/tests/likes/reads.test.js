@@ -207,10 +207,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   // add a pending post object with two images
   const postId = uuidv4()
   const mediaId = uuidv4()
-  let resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId, mediaId, mediaType: 'IMAGE'},
-  })
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(imageData, contentType, uploadUrl)

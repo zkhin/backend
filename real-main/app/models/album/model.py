@@ -7,7 +7,7 @@ import os
 
 from PIL import Image
 
-from app.models.media.enums import MediaExt, MediaSize
+from app.models.media.enums import MediaSize
 
 from . import exceptions
 
@@ -19,7 +19,7 @@ FRONTEND_RESOURCES_DOMAIN = os.environ.get('FRONTEND_RESOURCES_DOMAIN')
 class Album:
 
     exceptions = exceptions
-    art_image_file_ext = MediaExt.JPG
+    art_image_file_ext = 'jpg'
     jpeg_content_type = 'image/jpeg'
     sizes = {
         MediaSize.K4: [3840, 2160],

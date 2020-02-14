@@ -8,21 +8,6 @@ class MediaSize:
     _ALL = (NATIVE, K4, P1080, P480, P64)
 
 
-class MediaExt:
-    JPG = 'jpg'
-    MP4 = 'mp4'
-
-    _ALL = (JPG, MP4)
-
-
-class MediaType:
-    IMAGE = 'IMAGE'
-    VIDEO = 'VIDEO'
-    AUDIO = 'AUDIO'
-
-    _ALL = (IMAGE, VIDEO, AUDIO)
-
-
 class MediaStatus:
     AWAITING_UPLOAD = 'AWAITING_UPLOAD'
     UPLOADING = 'UPLOADING'

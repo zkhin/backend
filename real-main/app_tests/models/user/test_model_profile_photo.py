@@ -19,12 +19,7 @@ def uploaded_media(user, post_manager, media_manager):
     media_id = 'media-id'
     photo_data = b'uploaded image'
 
-    media_upload = {
-        'mediaId': media_id,
-        'mediaType': 'IMAGE',
-    }
-
-    post = post_manager.add_post(user.id, post_id, media_uploads=[media_upload])
+    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id}])
     media = media_manager.init_media(post.item['mediaObjects'][0])
     for size in MediaSize._ALL:
         path = media.get_s3_path(size)
@@ -42,12 +37,7 @@ def another_uploaded_media(user, post_manager, media_manager):
     media_id = 'media-id-2'
     photo_data = b'another uploaded image'
 
-    media_upload = {
-        'mediaId': media_id,
-        'mediaType': 'IMAGE',
-    }
-
-    post = post_manager.add_post(user.id, post_id, media_uploads=[media_upload])
+    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id}])
     media = media_manager.init_media(post.item['mediaObjects'][0])
     for size in MediaSize._ALL:
         path = media.get_s3_path(size)

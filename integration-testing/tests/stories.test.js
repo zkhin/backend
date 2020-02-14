@@ -108,7 +108,7 @@ test('Add posts with media show up in stories', async () => {
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, mediaType: 'IMAGE', lifetime: 'PT1M'},
+    variables: {postId: postId1, mediaId: mediaId1, lifetime: 'PT1M'},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -122,7 +122,7 @@ test('Add posts with media show up in stories', async () => {
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, mediaType: 'IMAGE', lifetime: 'PT2H'},
+    variables: {postId: postId2, mediaId: mediaId2, lifetime: 'PT2H'},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)

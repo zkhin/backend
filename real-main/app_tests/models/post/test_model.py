@@ -35,7 +35,7 @@ def post_with_expiration(post_manager, user2):
 
 @pytest.fixture
 def post_with_media(post_manager, user2):
-    post = post_manager.add_post(user2.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], text='t')
+    post = post_manager.add_post(user2.id, 'pid2', media_uploads=[{'mediaId': 'mid'}], text='t')
     media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
     # to look like a COMPLETED media post during the restore process,
     # we need to put objects in the mock s3 for all image sizes

@@ -39,7 +39,7 @@ test('Create a posts in an album, album post ordering', async () => {
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId1, mediaId: mediaId1, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -63,7 +63,7 @@ test('Create a posts in an album, album post ordering', async () => {
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId2, mediaId: mediaId2, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -130,7 +130,7 @@ test('Cant create post in or move post into album that doesnt exist', async () =
 
   // verify we cannot create a post in that album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, mediaType: 'IMAGE'}
+  let variables = {postId, mediaId, albumId}
   await expect(ourClient.mutate({mutation: schema.addOneMediaPost, variables})).rejects.toBeDefined()
 
   // make sure that post did not end making it into the DB
@@ -139,7 +139,7 @@ test('Cant create post in or move post into album that doesnt exist', async () =
   expect(resp['data']['post']).toBeNull()
 
   // we create a post, not in any album
-  variables = {postId, mediaId, mediaType: 'IMAGE'}
+  variables = {postId, mediaId}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -169,7 +169,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
 
   // verify we cannot create a post in their album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, mediaType: 'IMAGE'}
+  let variables = {postId, mediaId, albumId}
   await expect(ourClient.mutate({mutation: schema.addOneMediaPost, variables})).rejects.toBeDefined()
 
   // make sure that post did not end making it into the DB
@@ -178,7 +178,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp['data']['post']).toBeNull()
 
   // we create a post, not in any album
-  variables = {postId, mediaId, mediaType: 'IMAGE'}
+  variables = {postId, mediaId}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -216,7 +216,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId, mediaId, albumId, mediaType: 'IMAGE'},
+    variables: {postId, mediaId, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -267,7 +267,7 @@ test('Add, remove, change albums for an existing post', async () => {
 
   // add a post, not in any album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, mediaType: 'IMAGE'}
+  let variables = {postId, mediaId}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -353,7 +353,7 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
   const [postId1, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId, mediaType: 'IMAGE'},
+    variables: {postId: postId1, mediaId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -363,7 +363,7 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, albumId, mediaType: 'IMAGE'},
+    variables: {postId: postId2, mediaId: mediaId2, albumId},
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -403,7 +403,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring puts it 
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, mediaType: 'IMAGE'}
+  let variables = {postId, mediaId, albumId}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -465,7 +465,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, mediaType: 'IMAGE'}
+  let variables = {postId, mediaId, albumId}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

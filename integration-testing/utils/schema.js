@@ -549,7 +549,6 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
   $postId: ID!,
   $mediaId: ID!,
   $albumId: ID,
-  $mediaType: MediaObjectType!,
   $text: String,
   $lifetime: String
   $takenInReal: Boolean
@@ -563,7 +562,6 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
     verificationHidden: $verificationHidden,
     mediaObjectUploads: [{
       mediaId: $mediaId,
-      mediaType: $mediaType,
       takenInReal: $takenInReal,
       originalFormat: $originalFormat
     }],
@@ -611,12 +609,10 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
   }
 }`)
 
-module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost (
-  $postId: ID!, $mediaId1: ID!, $mediaType1: MediaObjectType!, $mediaId2: ID!, $mediaType2: MediaObjectType!
-) {
+module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost ($postId: ID!, $mediaId1: ID!, $mediaId2: ID!) {
   addPost (
     postId: $postId,
-    mediaObjectUploads: [{mediaId: $mediaId1, mediaType: $mediaType1}, {mediaId: $mediaId2, mediaType: $mediaType2}]
+    mediaObjectUploads: [{mediaId: $mediaId1}, {mediaId: $mediaId2}]
   ) {
     postId
     postedAt

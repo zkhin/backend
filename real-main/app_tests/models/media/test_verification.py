@@ -48,7 +48,6 @@ def media_no_meta(media_dynamo, clients):
             'userId': 'a-user-id',
             'postId': 'a-post-id',
             'mediaId': media_id,
-            'mediaType': 'IMAGE',
         },
     }
     media_item = media_dynamo.client.add_item(kwargs)
@@ -65,7 +64,6 @@ def media_all_meta(media_dynamo, clients):
             'userId': 'a-user-id',
             'postId': 'a-post-id',
             'mediaId': media_id,
-            'mediaType': 'IMAGE',
             'takenInReal': True,
             'originalFormat': 'HEIC',
         },

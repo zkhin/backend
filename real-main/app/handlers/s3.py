@@ -5,7 +5,7 @@ import urllib
 from app.clients import CloudFrontClient, DynamoClient, S3Client, SecretsManagerClient
 from app.logging import LogLevelContext
 from app.models.media import MediaManager
-from app.models.media.enums import MediaStatus, MediaType, MediaSize
+from app.models.media.enums import MediaStatus, MediaSize
 from app.models.post import PostManager
 
 UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
@@ -46,29 +46,26 @@ def uploads_object_created(event, context):
 
     media = media_manager.get_media(media_id)
     if not media:
-        raise Exception(f'Unable to find non-uploaded media `{media_id}` for post `{post_id}`')
+        raise Exception(f'Unable to find media `{media_id}` for post `{post_id}`')
 
     media_status = media.item['mediaStatus']
-    if media_status in (MediaStatus.ARCHIVED, MediaStatus.DELETING):
+    if media_status in (MediaStatus.UPLOADED, MediaStatus.ARCHIVED, MediaStatus.DELETING):
         raise Exception(f'Refusing to process media upload for media `{media_id}` with status `{media_status}`')
 
+    # mark as processing before we start downloading the file from S3
     media.set_status(MediaStatus.PROCESSING_UPLOAD)
 
-    # if this an image, compute and save its dimensions
-    if media.item['mediaType'] == MediaType.IMAGE:
+    # only accept jpeg uploads
+    if not media.is_original_jpeg():
+        logger.warning(f'Non-jpeg image uploaded for media `{media_id}`')
+        media.set_status(MediaStatus.ERROR)
+        return
 
-        # only accept jpeg uploads
-        if not media.is_original_jpeg():
-            logger.warning(f'Non-jpeg image uploaded for media `{media_id}`')
-            media.set_status(MediaStatus.ERROR)
-            return
-
-        media.set_is_verified()
-        media.set_height_and_width()
-        media.set_colors()
-        media.set_thumbnails()
-        media.set_checksum()
-
+    media.set_is_verified()
+    media.set_height_and_width()
+    media.set_colors()
+    media.set_thumbnails()
+    media.set_checksum()
     media.set_status(MediaStatus.UPLOADED)
 
     # is there other media left to upload?

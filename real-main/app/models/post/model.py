@@ -1,6 +1,6 @@
 import logging
 
-from app.models.media.enums import MediaType, MediaStatus
+from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
 from .enums import FlagStatus, PostStatus
@@ -66,7 +66,7 @@ class Post:
 
         # Determine the original_post_id, if this post isn't original
         # Note that in order to simplify the problem and focus on the use case that matters,
-        # we declare that only posts with exactly one media item of type IMAGE may be non-original.
+        # we declare that only posts with exactly one media item may be non-original.
         # That is to say, text-only posts or multiple-media posts will never have originalPostId set.
         original_post_id = None
         media_items = list(self.media_manager.dynamo.generate_by_post(self.id))
@@ -75,7 +75,7 @@ class Post:
             self.media_manager.dynamo.get_media(media_items[0]['mediaId'], strongly_consistent=True)
             if media_items else None
         )
-        if media_item and media_item['mediaType'] == MediaType.IMAGE:
+        if media_item:
             first_media_id = self.media_manager.dynamo.get_first_media_id_with_checksum(media_item['checksum'])
             if first_media_id and first_media_id != media_item['mediaId']:
                 first_media_item = self.media_manager.dynamo.get_media(first_media_id)

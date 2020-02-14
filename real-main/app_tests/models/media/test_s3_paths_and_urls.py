@@ -2,7 +2,7 @@ from unittest.mock import call
 
 from app.models.media import MediaManager
 from app.models.media.model import Media
-from app.models.media.enums import MediaType, MediaSize, MediaStatus
+from app.models.media.enums import MediaSize, MediaStatus
 
 
 def test_get_s3_path():
@@ -10,7 +10,6 @@ def test_get_s3_path():
         'userId': 'us-east-1:user-id',
         'postId': 'post-id',
         'mediaId': 'media-id',
-        'mediaType': MediaType.IMAGE,
     }
 
     media = Media(item, None)
@@ -33,7 +32,6 @@ def test_get_readonly_url(cloudfront_client):
         'userId': 'user-id',
         'postId': 'post-id',
         'mediaId': 'media-id',
-        'mediaType': MediaType.IMAGE,
     }
     expected_url = {}
     cloudfront_client.configure_mock(**{
@@ -60,7 +58,6 @@ def test_get_writeonly_url(cloudfront_client):
         'userId': 'user-id',
         'postId': 'post-id',
         'mediaId': 'media-id',
-        'mediaType': MediaType.IMAGE,
         'mediaStatus': MediaStatus.AWAITING_UPLOAD,
     }
     expected_url = {}
@@ -89,7 +86,6 @@ def test_image_has_all_s3_objects(s3_client):
         'userId': 'uid',
         'postId': 'pid',
         'mediaId': 'mid',
-        'mediaType': MediaType.IMAGE
     }
     media = Media(media_item, None, s3_uploads_client=s3_client)
     assert media.has_all_s3_objects() is False
@@ -111,29 +107,11 @@ def test_image_has_all_s3_objects(s3_client):
     assert media.has_all_s3_objects() is True
 
 
-def test_video_has_all_s3_objects(s3_client):
-    # video with no s3 objects
-    media_item = {
-        'userId': 'uid',
-        'postId': 'pid',
-        'mediaId': 'mid',
-        'mediaType': MediaType.VIDEO
-    }
-    media = Media(media_item, None, s3_uploads_client=s3_client)
-    assert media.has_all_s3_objects() is False
-
-    # video with just native resolution
-    path = media.get_s3_path(MediaSize.NATIVE)
-    media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    assert media.has_all_s3_objects() is True
-
-
 def test_delete_all_s3_objects(s3_client):
     media_item = {
         'userId': 'uid',
         'postId': 'pid',
         'mediaId': 'mid',
-        'mediaType': MediaType.IMAGE
     }
     media = Media(media_item, None, s3_uploads_client=s3_client)
 
@@ -160,7 +138,6 @@ def test_delete_all_s3_objects_no_objects(s3_client):
         'userId': 'uid',
         'postId': 'pid',
         'mediaId': 'mid',
-        'mediaType': MediaType.IMAGE
     }
     media = Media(media_item, None, s3_uploads_client=s3_client)
     assert media.has_all_s3_objects() is False

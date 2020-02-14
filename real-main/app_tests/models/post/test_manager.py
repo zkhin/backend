@@ -101,17 +101,13 @@ def test_add_text_with_tags_post(post_manager, user_manager):
 def test_add_post_album_errors(user_manager, post_manager, user, album):
     # can't create post with album that doesn't exist
     with pytest.raises(post_manager.exceptions.PostException) as err:
-        post_manager.add_post(
-            user.id, 'pid-42', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], album_id='aid-dne',
-        )
+        post_manager.add_post(user.id, 'pid-42', media_uploads=[{'mediaId': 'mid'}], album_id='aid-dne')
     assert 'does not exist' in str(err)
 
     # can't create post in somebody else's album
     user2 = user_manager.create_cognito_only_user('uid-2', 'uname2')
     with pytest.raises(post_manager.exceptions.PostException) as err:
-        post_manager.add_post(
-            user2.id, 'pid-42', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], album_id=album.id,
-        )
+        post_manager.add_post(user2.id, 'pid-42', media_uploads=[{'mediaId': 'mid'}], album_id=album.id)
     assert 'does not belong to' in str(err)
 
     # can't create a text-only post in an album
@@ -120,9 +116,7 @@ def test_add_post_album_errors(user_manager, post_manager, user, album):
     assert 'Text-only' in str(err)
 
     # verify we can add without error
-    post_manager.add_post(
-        user.id, 'pid-42', media_uploads=[{'mediaId': 'mid', 'mediaType': 'IMAGE'}], album_id=album.id,
-    )
+    post_manager.add_post(user.id, 'pid-42', media_uploads=[{'mediaId': 'mid'}], album_id=album.id)
 
 
 def test_add_media_post(post_manager):
@@ -130,11 +124,7 @@ def test_add_media_post(post_manager):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
-    media_type = 'mtype'
-    media_upload = {
-        'mediaId': media_id,
-        'mediaType': media_type,
-    }
+    media_upload = {'mediaId': media_id}
 
     # add the post (& media)
     post_manager.add_post(user_id, post_id, now=now, media_uploads=[media_upload])
@@ -152,7 +142,7 @@ def test_add_media_post(post_manager):
     media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
     assert len(media_items) == 1
     assert media_items[0]['mediaId'] == media_id
-    assert media_items[0]['mediaType'] == media_type
+    assert media_items[0]['mediaType'] == 'IMAGE'
     assert media_items[0]['postedAt'] == now.to_iso8601_string()
     assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
     assert 'expiresAt' not in media_items[0]
@@ -164,10 +154,8 @@ def test_add_media_post_with_options(post_manager, album):
     text = 'lore ipsum'
     now = pendulum.now('utc')
     media_id = 'mid'
-    media_type = 'mtype'
     media_upload = {
         'mediaId': media_id,
-        'mediaType': media_type,
         'takenInReal': False,
         'originalFormat': 'org-format',
     }
@@ -196,7 +184,7 @@ def test_add_media_post_with_options(post_manager, album):
     media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
     assert len(media_items) == 1
     assert media_items[0]['mediaId'] == media_id
-    assert media_items[0]['mediaType'] == media_type
+    assert media_items[0]['mediaType'] == 'IMAGE'
     assert media_items[0]['postedAt'] == now.to_iso8601_string()
     assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
     assert media_items[0]['takenInReal'] is False

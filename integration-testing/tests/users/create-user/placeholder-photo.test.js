@@ -84,7 +84,7 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   // create a post with an image
   const postId = uuidv4()
   const mediaId = uuidv4()
-  resp = await client.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId, mediaType: 'IMAGE'}})
+  resp = await client.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')

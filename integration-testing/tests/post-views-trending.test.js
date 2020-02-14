@@ -504,7 +504,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   const ourPostId = uuidv4()
   let resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: ourPostId, mediaId: uuidv4(), mediaType: 'IMAGE'},
+    variables: {postId: ourPostId, mediaId: uuidv4()},
   })
   expect(resp['errors']).toBeUndefined()
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
@@ -516,7 +516,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   const theirPostId = uuidv4()
   resp = await theirClient.mutate({
     mutation: schema.addOneMediaPost,
-    variables: {postId: theirPostId, mediaId: uuidv4(), mediaType: 'IMAGE'},
+    variables: {postId: theirPostId, mediaId: uuidv4()},
   })
   expect(resp['errors']).toBeUndefined()
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']

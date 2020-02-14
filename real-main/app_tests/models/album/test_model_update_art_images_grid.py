@@ -24,9 +24,7 @@ def album(album_manager, user):
 
 @pytest.fixture
 def post1(post_manager, user):
-    post = post_manager.add_post(
-        user.id, str(uuid4()), media_uploads=[{'mediaId': str(uuid4()), 'mediaType': 'IMAGE'}],
-    )
+    post = post_manager.add_post(user.id, str(uuid4()), media_uploads=[{'mediaId': str(uuid4())}])
     media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
     image_path = random.choice([grant_path, grant_horz_path, grant_vert_path])
     for size in MediaSize._ALL:
