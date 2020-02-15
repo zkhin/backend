@@ -1,6 +1,6 @@
 import pytest
 
-from app.models.media.enums import MediaSize, MediaStatus
+from app.models.media.enums import MediaSize
 
 
 @pytest.fixture
@@ -14,16 +14,8 @@ def album(album_manager, user):
 
 
 @pytest.fixture
-def completed_image_post(post_manager, user):
-    post = post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1'}])
-    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
-    for size in MediaSize._ALL:
-        path = media.get_s3_path(size)
-        post_manager.clients['s3_uploads'].put_object(path, b'anything', 'application/octet-stream')
-    media.set_status(MediaStatus.UPLOADED)
-    media.set_checksum()
-    post.complete()
-    yield post
+def completed_image_post(post_manager, user, image_data_b64, mock_post_verification_api):
+    yield post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}])
 
 
 @pytest.fixture
@@ -73,28 +65,14 @@ def test_delete_no_posts(user, album):
     assert album.item is None
 
 
-def test_delete(user, album, post_manager):
+def test_delete(user, album, post_manager, image_data_b64, mock_post_verification_api):
     # create two posts in the album
-    post1 = post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1'}], album_id=album.id)
-    media1 = post_manager.media_manager.init_media(post1.item['mediaObjects'][0])
-    post2 = post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid2'}], album_id=album.id)
-    media2 = post_manager.media_manager.init_media(post2.item['mediaObjects'][0])
-
-    # to look like a COMPLETED media post during the restore process,
-    # we need to put objects in the mock s3 for all image sizes
-    for size in MediaSize._ALL:
-        media1_path = media1.get_s3_path(size)
-        media2_path = media2.get_s3_path(size)
-        post_manager.clients['s3_uploads'].put_object(media1_path, b'anything', 'application/octet-stream')
-        post_manager.clients['s3_uploads'].put_object(media2_path, b'anything', 'application/octet-stream')
-    media1.set_status(MediaStatus.UPLOADED)
-    media1.set_checksum()
-    media2.set_status(MediaStatus.UPLOADED)
-    media2.set_checksum()
-
-    # complete the posts
-    post1.complete()
-    post2.complete()
+    post1 = post_manager.add_post(
+        user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+    )
+    post2 = post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+    )
 
     # verify starting state: can see album, posts are in it, user's albumCount, album art exists
     assert post1.item['albumId'] == album.id

@@ -5,11 +5,10 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const contentType = 'image/jpeg'
 const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -27,14 +26,14 @@ test('Edit post', async () => {
   // we create an image post
   const [ourClient] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // verify it has no text
   resp = await ourClient.query({query: schema.post, variables: {postId}})

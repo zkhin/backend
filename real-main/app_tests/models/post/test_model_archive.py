@@ -27,24 +27,12 @@ def post_with_expiration(post_manager, user_manager):
 
 
 @pytest.fixture
-def post_with_album(album_manager, post_manager, user_manager):
+def post_with_album(album_manager, post_manager, user_manager, image_data_b64, mock_post_verification_api):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
-    post = post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2'}], album_id=album.id
+    yield post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mide', 'imageData': image_data_b64}], album_id=album.id,
     )
-    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
-    # to look like a COMPLETED media post during the restore process,
-    # we need to put objects in the mock s3 for all image sizes
-    for size in media.enums.MediaSize._ALL:
-        path = media.get_s3_path(size)
-        post_manager.clients['s3_uploads'].put_object(path, b'anything', 'application/octet-stream')
-    media.set_status(media.enums.MediaStatus.UPLOADED)
-    media.set_checksum()
-    post.album_manager.update_album_art_if_needed = Mock()
-    post.complete()
-    post.album_manager.update_album_art_if_needed.reset_mock()
-    yield post
 
 
 @pytest.fixture
@@ -146,6 +134,7 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert posted_by_user.item['postCount'] == 1
 
     # mock out some calls to far-flung other managers
+    post.album_manager.update_album_art_if_needed = Mock()
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))

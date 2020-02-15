@@ -1,8 +1,14 @@
+import base64
+from io import BytesIO
+from os import path
+
 import pendulum
 import pytest
 
 from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus
+
+grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
@@ -145,6 +151,52 @@ def test_add_media_post(post_manager):
     assert media_items[0]['mediaType'] == 'IMAGE'
     assert media_items[0]['postedAt'] == now.to_iso8601_string()
     assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
+    assert 'expiresAt' not in media_items[0]
+
+
+def test_add_media_post_with_image_data(user, post_manager, requests_mock, post_verification_api_creds):
+    post_id = 'pid'
+    now = pendulum.now('utc')
+    media_id = 'mid'
+
+    image_data_b64 = BytesIO()
+    with open(grant_path, 'rb') as fh:
+        base64.encode(fh, image_data_b64)
+    image_data_b64.seek(0)
+    media_upload = {'mediaId': media_id, 'imageData': image_data_b64.read()}
+
+    # mock out the response from the post verification api
+    post_manager.clients['cloudfront'].configure_mock(**{
+        'generate_presigned_url.return_value': 'https://a-url.com',
+    })
+    resp_json = {
+        'errors': [],
+        'data': {
+            'isVerified': True,
+        }
+    }
+    api_url = post_verification_api_creds['root'] + 'verify/image'
+    requests_mock.post(api_url, json=resp_json)
+
+    # add the post (& media)
+    post_manager.add_post(user.id, post_id, now=now, media_uploads=[media_upload])
+
+    # retrieve the post & media, check it
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['postedByUserId'] == user.id
+    assert post.item['postedAt'] == now.to_iso8601_string()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert 'text' not in post.item
+    assert 'textTags' not in post.item
+    assert 'expiresAt' not in post.item
+
+    media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
+    assert len(media_items) == 1
+    assert media_items[0]['mediaId'] == media_id
+    assert media_items[0]['mediaType'] == 'IMAGE'
+    assert media_items[0]['postedAt'] == now.to_iso8601_string()
+    assert media_items[0]['mediaStatus'] == MediaStatus.UPLOADED
     assert 'expiresAt' not in media_items[0]
 
 

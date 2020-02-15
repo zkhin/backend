@@ -10,6 +10,7 @@ const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
 const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -114,13 +115,14 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a private user'
 
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // we should see the post
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
@@ -164,13 +166,14 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for the follow stag
 
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // request to follow, should *not* be able to see post or mediaObject
   resp = await followerClient.mutate({mutation: schema.followUser, variables: {userId: ourUserId}})

@@ -1,28 +1,8 @@
-import json
-
-from moto import mock_secretsmanager
 import pytest
 
-from app.clients import SecretsManagerClient
 from app.models.media.dynamo import MediaDynamo
 from app.models.media.model import Media
 from app.models.media.exceptions import MediaException
-
-mock_api_key = 'the-api-key'
-mock_root_api_url = 'https://mockmock.mock'
-
-
-@pytest.fixture
-def secrets_manager_client():
-    with mock_secretsmanager():
-        post_verification_name = 'KeyForPV'
-        post_verification_secret_string = json.dumps({
-            'key': mock_api_key,
-            'root': mock_root_api_url,
-        })
-        client = SecretsManagerClient(post_verification_api_creds_name=post_verification_name)
-        client.boto_client.create_secret(Name=post_verification_name, SecretString=post_verification_secret_string)
-        yield client
 
 
 @pytest.fixture
@@ -72,8 +52,8 @@ def media_all_meta(media_dynamo, clients):
     yield Media(media_item, media_dynamo, **clients)
 
 
-def test_request_format_no_meta(cloudfront_client, media_no_meta, requests_mock):
-    api_url = mock_root_api_url + 'verify/image'
+def test_request_format_no_meta(cloudfront_client, media_no_meta, requests_mock, post_verification_api_creds):
+    api_url = post_verification_api_creds['root'] + 'verify/image'
     image_url = 'https://the-image.com'
     cloudfront_client.configure_mock(**{
         'generate_presigned_url.return_value': image_url,
@@ -102,11 +82,11 @@ def test_request_format_no_meta(cloudfront_client, media_no_meta, requests_mock)
         'metadata': {},
         'url': image_url,
     }
-    assert req._request.headers['x-api-key'] == mock_api_key
+    assert req._request.headers['x-api-key'] == post_verification_api_creds['key']
 
 
-def test_request_format_all_meta(cloudfront_client, media_all_meta, requests_mock):
-    api_url = mock_root_api_url + 'verify/image'
+def test_request_format_all_meta(cloudfront_client, media_all_meta, requests_mock, post_verification_api_creds):
+    api_url = post_verification_api_creds['root'] + 'verify/image'
     image_url = 'https://the-image.com'
     cloudfront_client.configure_mock(**{
         'generate_presigned_url.return_value': image_url,
@@ -138,11 +118,11 @@ def test_request_format_all_meta(cloudfront_client, media_all_meta, requests_moc
         },
         'url': image_url,
     }
-    assert req._request.headers['x-api-key'] == mock_api_key
+    assert req._request.headers['x-api-key'] == post_verification_api_creds['key']
 
 
-def test_response_handle_400_error(cloudfront_client, media_no_meta, requests_mock):
-    api_url = mock_root_api_url + 'verify/image'
+def test_response_handle_400_error(cloudfront_client, media_no_meta, requests_mock, post_verification_api_creds):
+    api_url = post_verification_api_creds['root'] + 'verify/image'
     image_url = 'https://the-image.com'
     cloudfront_client.configure_mock(**{
         'generate_presigned_url.return_value': image_url,
@@ -167,8 +147,8 @@ def test_response_handle_400_error(cloudfront_client, media_no_meta, requests_mo
     assert 'isVerified' not in media_no_meta.item
 
 
-def test_response_handle_wrong_response_format(cloudfront_client, media_no_meta, requests_mock):
-    api_url = mock_root_api_url + 'verify/image'
+def test_response_handle_wrong_resp_fmt(cloudfront_client, media_no_meta, requests_mock, post_verification_api_creds):
+    api_url = post_verification_api_creds['root'] + 'verify/image'
     image_url = 'https://the-image.com'
     cloudfront_client.configure_mock(**{
         'generate_presigned_url.return_value': image_url,

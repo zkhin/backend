@@ -185,15 +185,18 @@ def test_transact_add_media_sans_options(media_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
     media_id = 'mid'
-    posted_at = pendulum.now('utc')
 
     # add the media
-    transacts = [media_dynamo.transact_add_media(user_id, post_id, media_id, posted_at=posted_at)]
+    before_str = pendulum.now('utc').to_iso8601_string()
+    transacts = [media_dynamo.transact_add_media(user_id, post_id, media_id)]
     media_dynamo.client.transact_write_items(transacts)
+    after_str = pendulum.now('utc').to_iso8601_string()
 
     # retrieve media, check format
-    posted_at_str = posted_at.to_iso8601_string()
     media_item = media_dynamo.get_media(media_id)
+    posted_at_str = media_item['postedAt']
+    assert before_str <= posted_at_str
+    assert after_str >= posted_at_str
     assert media_item == {
         'schemaVersion': 0,
         'partitionKey': 'media/mid',
@@ -215,11 +218,13 @@ def test_transact_add_media_with_options(media_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
     media_id = 'mid'
+    media_status = 'mstatus'
     posted_at = pendulum.now('utc')
 
     # add the media
     transacts = [media_dynamo.transact_add_media(
         user_id, post_id, media_id, posted_at=posted_at, taken_in_real=True, original_format='oformat',
+        media_status=media_status,
     )]
     media_dynamo.client.transact_write_items(transacts)
 
@@ -231,15 +236,15 @@ def test_transact_add_media_with_options(media_dynamo):
         'partitionKey': 'media/mid',
         'sortKey': '-',
         'gsiA1PartitionKey': 'media/pid',
-        'gsiA1SortKey': MediaStatus.AWAITING_UPLOAD,
+        'gsiA1SortKey': media_status,
         'gsiA2PartitionKey': 'media/pbuid',
-        'gsiA2SortKey': 'IMAGE/' + MediaStatus.AWAITING_UPLOAD + '/' + posted_at_str,
+        'gsiA2SortKey': 'IMAGE/' + media_status + '/' + posted_at_str,
         'userId': 'pbuid',
         'postId': 'pid',
         'postedAt': posted_at_str,
         'mediaId': 'mid',
         'mediaType': 'IMAGE',
-        'mediaStatus': MediaStatus.AWAITING_UPLOAD,
+        'mediaStatus': media_status,
         'takenInReal': True,
         'originalFormat': 'oformat',
     }

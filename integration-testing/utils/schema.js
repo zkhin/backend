@@ -548,6 +548,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
 module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
   $postId: ID!,
   $mediaId: ID!,
+  $imageData: String,
   $albumId: ID,
   $text: String,
   $lifetime: String
@@ -563,9 +564,10 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
     mediaObjectUploads: [{
       mediaId: $mediaId,
       takenInReal: $takenInReal,
-      originalFormat: $originalFormat
+      originalFormat: $originalFormat,
+      imageData: $imageData,
     }],
-    lifetime: $lifetime
+    lifetime: $lifetime,
   ) {
     postId
     postedAt
@@ -593,6 +595,10 @@ module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
       isVerified
       uploadUrl
       url
+      url4k
+      url1080p
+      url480p
+      url64p
       height
       width
       colors {
@@ -658,6 +664,10 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
       isVerified
       uploadUrl
       url
+      url4k
+      url1080p
+      url480p
+      url64p
     }
     flagStatus
     likeStatus

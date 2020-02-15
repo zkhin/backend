@@ -10,6 +10,7 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const grantContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -37,29 +38,22 @@ test('Create a posts in an album, album post ordering', async () => {
 
   // we add an image post in that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, albumId},
-  })
+  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  let before = moment().toISOString()
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId1)
-  let after = moment().toISOString()
+  let postedAt = resp['data']['addPost']['postedAt']
 
   // check the album
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
   expect(resp['data']['album']['postCount']).toBe(1)
-  expect(before <= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
-  expect(after >= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
+  expect(resp['data']['album']['postsLastUpdatedAt']).toBe(postedAt)
   expect(resp['data']['album']['posts']['items']).toHaveLength(1)
   expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId1)
 
-  // we add another image post in that album
+  // we add another image post in that album, this one via cloudfront upload
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({
     mutation: schema.addOneMediaPost,
@@ -67,11 +61,11 @@ test('Create a posts in an album, album post ordering', async () => {
   })
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  before = moment().toISOString()
+  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  let before = moment().toISOString()
   await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId2)
-  after = moment().toISOString()
+  let after = moment().toISOString()
 
   // check the album
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -267,14 +261,12 @@ test('Add, remove, change albums for an existing post', async () => {
 
   // add a post, not in any album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId}
+  let variables = {postId, mediaId, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['album']).toBeNull()
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // move that post into one of the albums
   let before = moment().toISOString()
@@ -403,14 +395,12 @@ test('Archiving a post removes it from Album.posts & friends, restoring puts it 
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId}
+  let variables = {postId, mediaId, albumId, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify that's reflected in Album.posts and friends
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -465,14 +455,12 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId}
+  let variables = {postId, mediaId, albumId, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify that's reflected in Album.posts and friends
   resp = await ourClient.query({query: schema.album, variables: {albumId}})

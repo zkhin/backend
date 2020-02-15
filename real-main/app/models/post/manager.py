@@ -4,6 +4,7 @@ import logging
 import pendulum
 
 from app.models import album, comment, feed, flag, followed_first_story, like, media, post_view, trending, user
+from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
 from .dynamo import PostDynamo
@@ -92,8 +93,9 @@ class PostManager:
         )]
         for mu in media_uploads:
             # 'media_upload' is straight from graphql, format dictated by schema
+            media_status = MediaStatus.PROCESSING_UPLOAD if 'imageData' in mu else MediaStatus.AWAITING_UPLOAD
             transacts.append(self.media_manager.dynamo.transact_add_media(
-                posted_by_user_id, post_id, mu['mediaId'], posted_at=now,
+                posted_by_user_id, post_id, mu['mediaId'], media_status=media_status, posted_at=now,
                 taken_in_real=mu.get('takenInReal'), original_format=mu.get('originalFormat'),
             ))
         self.dynamo.client.transact_write_items(transacts)
@@ -101,14 +103,20 @@ class PostManager:
         post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
         post = self.init_post(post_item)
 
-        # text-only posts are completed immmediately
-        if not media_uploads:
-            post.complete()
+        # if image data was directly included for any media objects, process it
+        media_items = []
+        for mu in media_uploads:
+            media = self.media_manager.get_media(mu['mediaId'], strongly_consistent=True)
+            if image_data := mu.get('imageData'):
+                media.upload_native_image_data_base64(image_data)
+                media.process_upload()
+            media_items.append(media.item)
 
-        post.item['mediaObjects'] = [
-            self.media_manager.dynamo.get_media(mu['mediaId'], strongly_consistent=True)
-            for mu in media_uploads
-        ]
+        # if all media has been processed, complete the post
+        if all(media_item['mediaStatus'] == MediaStatus.UPLOADED for media_item in media_items):
+            post.complete(now=now)
+
+        post.item['mediaObjects'] = media_items
         return post
 
     def delete_recently_expired_posts(self, now=None):

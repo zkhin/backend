@@ -20,8 +20,8 @@ class MediaDynamo:
             'sortKey': '-',
         }, strongly_consistent=strongly_consistent)
 
-    def transact_add_media(self, posted_by_user_id, post_id, media_id, posted_at=None,
-                           taken_in_real=None, original_format=None):
+    def transact_add_media(self, posted_by_user_id, post_id, media_id, media_status=MediaStatus.AWAITING_UPLOAD,
+                           posted_at=None, taken_in_real=None, original_format=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         media_item = {
@@ -29,15 +29,15 @@ class MediaDynamo:
             'partitionKey': {'S': f'media/{media_id}'},
             'sortKey': {'S': '-'},
             'gsiA1PartitionKey': {'S': f'media/{post_id}'},
-            'gsiA1SortKey': {'S': MediaStatus.AWAITING_UPLOAD},
+            'gsiA1SortKey': {'S': media_status},
             'gsiA2PartitionKey': {'S': f'media/{posted_by_user_id}'},
-            'gsiA2SortKey': {'S': f'IMAGE/{MediaStatus.AWAITING_UPLOAD}/{posted_at_str}'},
+            'gsiA2SortKey': {'S': f'IMAGE/{media_status}/{posted_at_str}'},
             'userId': {'S': posted_by_user_id},
             'postId': {'S': post_id},
             'postedAt': {'S': posted_at_str},
             'mediaId': {'S': media_id},
             'mediaType': {'S': 'IMAGE'},
-            'mediaStatus': {'S': MediaStatus.AWAITING_UPLOAD},
+            'mediaStatus': {'S': media_status},
         }
         if taken_in_real is not None:
             media_item['takenInReal'] = {'BOOL': taken_in_real}

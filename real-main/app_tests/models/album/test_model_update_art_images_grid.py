@@ -1,10 +1,11 @@
+import base64
 from os import path
 import random
 from uuid import uuid4
 
 import pytest
 
-from app.models.media.enums import MediaSize, MediaStatus
+from app.models.media.enums import MediaSize
 
 # valid jpegs with different aspect ratios
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
@@ -23,17 +24,13 @@ def album(album_manager, user):
 
 
 @pytest.fixture
-def post1(post_manager, user):
-    post = post_manager.add_post(user.id, str(uuid4()), media_uploads=[{'mediaId': str(uuid4())}])
-    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
+def post1(post_manager, user, mock_post_verification_api):
     image_path = random.choice([grant_path, grant_horz_path, grant_vert_path])
-    for size in MediaSize._ALL:
-        path = media.get_s3_path(size)
-        post_manager.clients['s3_uploads'].put_object(path, open(image_path, 'rb'), 'application/octet-stream')
-    media.set_status(MediaStatus.UPLOADED)
-    media.set_checksum()
-    post.complete()
-    yield post
+    with open(image_path, 'rb') as fh:
+        image_data_b64 = base64.b64encode(fh.read())
+    yield post_manager.add_post(
+        user.id, str(uuid4()), media_uploads=[{'mediaId': str(uuid4()), 'imageData': image_data_b64}],
+    )
 
 
 post2 = post1

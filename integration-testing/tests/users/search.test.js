@@ -9,7 +9,7 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
-const grantContentType = 'image/jpeg'
+const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -292,14 +292,14 @@ test('User search returns urls for profile pics', async () => {
 
   // add a post with media, upload that media
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // set our profile photo to that media
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})

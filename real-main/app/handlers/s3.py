@@ -50,7 +50,8 @@ def uploads_object_created(event, context):
 
     media_status = media.item['mediaStatus']
     if media_status not in (MediaStatus.AWAITING_UPLOAD, MediaStatus.ERROR):
-        raise Exception(f'Refusing to process media upload for media `{media_id}` with status `{media_status}`')
+        # this media upload was already processed. Direct image data upload?
+        return
 
     try:
         media.process_upload()

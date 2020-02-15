@@ -13,6 +13,7 @@ class S3Client:
         self.bucket_name = bucket_name
         self.s3 = boto3.resource('s3')
         self.bucket = self.s3.Bucket(bucket_name)
+        self.exceptions = self.boto_client.exceptions
 
         if create_bucket:
             self.s3.create_bucket(Bucket=bucket_name)

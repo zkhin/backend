@@ -1,3 +1,4 @@
+import base64
 from unittest.mock import Mock, call
 
 import pytest
@@ -36,10 +37,6 @@ def test_refresh_item(dynamo_client, media_awaiting_upload):
 
 def test_process_upload_wrong_status(media_awaiting_upload):
     media_awaiting_upload.item['mediaStatus'] = MediaStatus.UPLOADED
-    with pytest.raises(AssertionError, match='status'):
-        media_awaiting_upload.process_upload()
-
-    media_awaiting_upload.item['mediaStatus'] = MediaStatus.PROCESSING_UPLOAD
     with pytest.raises(AssertionError, match='status'):
         media_awaiting_upload.process_upload()
 
@@ -99,6 +96,25 @@ def test_process_upload_success(media_awaiting_upload):
     assert media.set_colors.mock_calls == [call()]
     assert media.set_thumbnails.mock_calls == [call()]
     assert media.set_checksum.mock_calls == [call()]
+
+
+def test_upload_native_image_data_base64(media_awaiting_upload):
+    media = media_awaiting_upload
+    native_path = media.get_s3_path(MediaSize.NATIVE)
+    image_data = b'imagedatahere'
+    image_data_b64 = base64.b64encode(image_data)
+
+    # check no data on media, nor in s3
+    assert not hasattr(media, '_native_image_data')
+    with pytest.raises(media.s3_uploads_client.exceptions.NoSuchKey):
+        assert media.s3_uploads_client.get_object_data_stream(native_path)
+
+    # put data up there
+    media.upload_native_image_data_base64(image_data_b64)
+
+    # check it was placed in mem and in s3
+    assert media.native_image_data_stream.read() == image_data
+    assert media.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
 def test_set_status(media_awaiting_upload):

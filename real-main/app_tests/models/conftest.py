@@ -1,10 +1,14 @@
+import base64
+import json
+from os import path
 from unittest.mock import Mock
 
 import boto3
-from moto import mock_dynamodb2, mock_s3
+from moto import mock_dynamodb2, mock_s3, mock_secretsmanager
 import pytest
 
-from app.clients import CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient, S3Client
+from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient, S3Client,
+                         SecretsManagerClient)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.comment import CommentManager
@@ -20,6 +24,47 @@ from app.models.trending import TrendingManager
 from app.models.user import UserManager
 
 from app_tests.dynamodb.table_schema import table_schema
+
+tiny_path = path.join(path.dirname(__file__), '..', 'fixtures', 'tiny.jpg')
+
+
+@pytest.fixture
+def image_data_b64():
+    with open(tiny_path, 'rb') as fh:
+        yield base64.b64encode(fh.read())
+
+
+@pytest.fixture
+def post_verification_api_creds():
+    yield {
+        'key': 'the-api-key',
+        'root': 'https://mockmock.mock/',
+    }
+
+
+@pytest.fixture
+def mock_post_verification_api(requests_mock, cloudfront_client, post_verification_api_creds):
+    cloudfront_client.configure_mock(**{
+        'generate_presigned_url.return_value': 'https://the-image.com',
+    })
+    api_url = post_verification_api_creds['root'] + 'verify/image'
+    resp_json = {
+        'errors': [],
+        'data': {
+            'isVerified': False,
+        }
+    }
+    requests_mock.post(api_url, json=resp_json)
+
+
+@pytest.fixture
+def secrets_manager_client(post_verification_api_creds):
+    with mock_secretsmanager():
+        post_verification_name = 'KeyForPV'
+        post_verification_secret_string = json.dumps(post_verification_api_creds)
+        client = SecretsManagerClient(post_verification_api_creds_name=post_verification_name)
+        client.boto_client.create_secret(Name=post_verification_name, SecretString=post_verification_secret_string)
+        yield client
 
 
 @pytest.fixture
@@ -118,8 +163,13 @@ def media_manager(dynamo_client, s3_client):
 
 
 @pytest.fixture
-def post_manager(dynamo_client, s3_client):
-    yield PostManager({'dynamo': dynamo_client, 's3_uploads': s3_client})
+def post_manager(dynamo_client, s3_client, cloudfront_client, secrets_manager_client):
+    yield PostManager({
+        'dynamo': dynamo_client,
+        's3_uploads': s3_client,
+        'cloudfront': cloudfront_client,
+        'secrets_manager': secrets_manager_client,
+    })
 
 
 @pytest.fixture

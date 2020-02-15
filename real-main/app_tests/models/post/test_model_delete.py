@@ -21,30 +21,26 @@ def post_with_expiration(post_manager, user_manager):
 
 
 @pytest.fixture
-def post_with_album(album_manager, post_manager, user_manager):
+def post_with_album(album_manager, post_manager, user_manager, image_data_b64, mock_post_verification_api):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
-    post = post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2'}], album_id=album.id
+    yield post_manager.add_post(
+        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
     )
-    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
-    # to look like a COMPLETED media post during the restore process,
-    # we need to put objects in the mock s3 for all image sizes
-    for size in media.enums.MediaSize._ALL:
-        path = media.get_s3_path(size)
-        post_manager.clients['s3_uploads'].put_object(path, b'anything', 'application/octet-stream')
-    media.set_status(media.enums.MediaStatus.UPLOADED)
-    media.set_checksum()
-    post.album_manager.update_album_art_if_needed = Mock()
-    post.complete()
-    post.album_manager.update_album_art_if_needed.reset_mock()
-    yield post
+
+
+@pytest.fixture
+def completed_post_with_media(album_manager, post_manager, user_manager, image_data_b64, mock_post_verification_api):
+    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+    yield post_manager.add_post(
+        user.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
+    )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid'}], text='t')
+    yield post_manager.add_post(user.id, 'pid4', media_uploads=[{'mediaId': 'mid'}], text='t')
 
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
@@ -154,22 +150,11 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     ]
 
 
-def test_delete_completed_media_post(post_manager, post_with_media, user_manager):
-    post = post_with_media
-    media = post_manager.media_manager.init_media(post_with_media.item['mediaObjects'][0])
+def test_delete_completed_media_post(post_manager, completed_post_with_media, user_manager):
+    post = completed_post_with_media
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
-
-    # to look like a COMPLETED media post during the restore process,
-    # we need to put objects in the mock s3 for all image sizes
-    for size in MediaSize._ALL:
-        media_path = media.get_s3_path(size)
-        post_manager.clients['s3_uploads'].put_object(media_path, b'anything', 'application/octet-stream')
-    media.set_checksum()
-
-    # complete the post
-    post.complete()
-    assert post.item['postStatus'] == PostStatus.COMPLETED
 
     # check our starting post count
     posted_by_user.refresh_item()
@@ -237,6 +222,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
+    post.album_manager.update_album_art_if_needed = Mock()
     post.comment_manager = Mock(CommentManager({}))
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))

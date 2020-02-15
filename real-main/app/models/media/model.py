@@ -1,3 +1,4 @@
+import base64
 import logging
 from io import BytesIO
 
@@ -94,11 +95,20 @@ class Media:
             path = self.get_s3_path(media_size)
             self.s3_uploads_client.delete_object(path)
 
+    def upload_native_image_data_base64(self, image_data):
+        "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
+        self._native_image_data = base64.b64decode(image_data)
+        path = self.get_s3_path(enums.MediaSize.NATIVE)
+        self.s3_uploads_client.put_object(path, self.native_image_data_stream, self.jpeg_content_type)
+
     def process_upload(self):
-        assert self.item['mediaStatus'] in (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR), 'Bad status'
+        allowed = (enums.MediaStatus.PROCESSING_UPLOAD, enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
+        media_status = self.item['mediaStatus']
+        assert media_status in allowed, f'Media is in non-processable status: `{media_status}`'
 
         # mark as processing before we start downloading the file from S3
-        self.set_status(enums.MediaStatus.PROCESSING_UPLOAD)
+        if media_status != enums.MediaStatus.PROCESSING_UPLOAD:
+            self.set_status(enums.MediaStatus.PROCESSING_UPLOAD)
 
         # only accept jpeg uploads
         if not self.is_original_jpeg():

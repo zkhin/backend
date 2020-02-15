@@ -27,15 +27,16 @@ PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('PLACEHOLDER_PHOTOS_BUCKET')
 
 logger = logging.getLogger()
 
-cloudfront_keypair_getter = SecretsManagerClient().get_cloudfront_key_pair
+secrets_manager_client = SecretsManagerClient()
 clients = {
-    'cloudfront': CloudFrontClient(cloudfront_keypair_getter),
+    'cloudfront': CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': CognitoClient(),
     'dynamo': DynamoClient(),
     'facebook': FacebookClient(),
     'google': GoogleClient(),
     's3_uploads': S3Client(UPLOADS_BUCKET),
     's3_placeholder_photos': S3Client(PLACEHOLDER_PHOTOS_BUCKET),
+    'secrets_manager': secrets_manager_client,
 }
 
 # shared hash of all managers, allows inter-manager communication

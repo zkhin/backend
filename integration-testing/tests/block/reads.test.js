@@ -9,7 +9,7 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
-const grantContentType = 'image/jpeg'
+const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -35,13 +35,14 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // we add a media post, complete it
   let [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId: postId1, mediaId: mediaId1}})
+  let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId1)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // we set some details on our profile
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {
@@ -336,27 +337,20 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add a media post, complete it
-  let [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId: postId1, mediaId: mediaId1}})
+  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
+  let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId1)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // they add a media post, complete it
-  let [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  resp = await theirClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2},
-  })
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  variables = {postId: postId2, mediaId: mediaId2, imageData: grantDataB64}
+  resp = await theirClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(theirClient, postId2)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // verify they cannot see our post or likers of the post
   resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})

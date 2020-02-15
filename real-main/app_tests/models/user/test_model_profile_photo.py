@@ -1,8 +1,18 @@
+import base64
+from os import path
 from unittest.mock import call
 
 import pytest
 
 from app.models.media.enums import MediaSize
+
+grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
+
+
+@pytest.fixture
+def grant_data_b64():
+    with open(grant_path, 'rb') as fh:
+        yield base64.b64encode(fh.read())
 
 
 @pytest.fixture
@@ -14,39 +24,19 @@ def user(user_manager):
 
 
 @pytest.fixture
-def uploaded_media(user, post_manager, media_manager):
+def uploaded_media(user, post_manager, media_manager, image_data_b64, mock_post_verification_api):
     post_id = 'post-id'
     media_id = 'media-id'
-    photo_data = b'uploaded image'
-
-    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id}])
-    media = media_manager.init_media(post.item['mediaObjects'][0])
-    for size in MediaSize._ALL:
-        path = media.get_s3_path(size)
-        user.s3_uploads_client.put_object(path, photo_data, 'application/octet-stream')
-    media.set_status('UPLOADED')
-    post_manager.dynamo.client.transact_write_items([
-        post_manager.dynamo.transact_set_post_status(post.item, 'COMPLETED'),
-    ])
-    yield media
+    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id, 'imageData': image_data_b64}])
+    yield media_manager.init_media(post.item['mediaObjects'][0])
 
 
 @pytest.fixture
-def another_uploaded_media(user, post_manager, media_manager):
+def another_uploaded_media(user, post_manager, media_manager, grant_data_b64, mock_post_verification_api):
     post_id = 'post-id-2'
     media_id = 'media-id-2'
-    photo_data = b'another uploaded image'
-
-    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id}])
-    media = media_manager.init_media(post.item['mediaObjects'][0])
-    for size in MediaSize._ALL:
-        path = media.get_s3_path(size)
-        user.s3_uploads_client.put_object(path, photo_data, 'application/octet-stream')
-    media.set_status('UPLOADED')
-    post_manager.dynamo.client.transact_write_items([
-        post_manager.dynamo.transact_set_post_status(post.item, 'COMPLETED'),
-    ])
-    yield media
+    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id, 'imageData': grant_data_b64}])
+    yield media_manager.init_media(post.item['mediaObjects'][0])
 
 
 def test_get_photo_path(user, uploaded_media):

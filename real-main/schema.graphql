@@ -387,6 +387,11 @@ input MediaObjectUpload {
   mediaType: MediaObjectType = IMAGE
   takenInReal: Boolean
   originalFormat: String
+
+  # There are two ways to upload image data:
+  #   - by http PUTing image data to MediaObject.uploadUrl, after creating the post OR
+  #   - by including image data here, as a base64-encoded string (intended for small images)
+  imageData: String
 }
 
 type Color {

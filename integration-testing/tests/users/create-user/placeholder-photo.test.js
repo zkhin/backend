@@ -5,11 +5,10 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
-const misc = require('../../../utils/misc.js')
 const schema = require('../../../utils/schema.js')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'fixtures', 'grant.jpg'))
-const grantContentType = 'image/jpeg'
+const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -82,17 +81,15 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   // now set a custom profile photo, and make sure the placeholder urls go away
 
   // create a post with an image
-  const postId = uuidv4()
-  const mediaId = uuidv4()
-  resp = await client.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let variables = {postId, mediaId, imageData: grantDataB64}
+  resp = await client.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
-
-  // upload the image, give the s3 trigger a second to fire
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(client, postId)
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // get our uploaded/completed media, we should have just that one media object
   resp = await client.query({query: schema.userMediaObjects})

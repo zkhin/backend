@@ -5,11 +5,10 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
-const grantContentType = 'image/jpeg'
+const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
 const AuthFlow = cognito.AuthFlow
 
@@ -99,19 +98,15 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // we add a media post that is also a story
-  const postId = uuidv4()
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId, mediaId: uuidv4(), lifetime: 'P1D'},
-  })
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let variables = {postId, mediaId, lifetime: 'P1D', imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
-  const mediaId = resp['data']['addPost']['mediaObjects'][0]['mediaId']
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // verify they see our user directly
   resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})

@@ -1,6 +1,7 @@
 /* eslint-env jest */
 
 const moment = require('moment')
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
@@ -9,6 +10,7 @@ const schema = require('../../utils/schema.js')
 
 const imageContentType = 'image/jpeg'
 const imageData = misc.generateRandomJpeg(300, 200)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const imageData2 = misc.generateRandomJpeg(300, 200)
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -76,6 +78,53 @@ test('Add text-only post with expiration', async () => {
   expected_expires_at.add(moment.duration(lifetime))
   const expires_at = moment(post['expiresAt'])
   expect(expires_at.isSame(expected_expires_at)).toBe(true)
+})
+
+
+test('Add media post with image data directly included', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // add the post with image data included in the gql call
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
+  const media = resp['data']['addPost']['mediaObjects'][0]
+  expect(media['mediaId']).toBe(mediaId)
+  expect(media['mediaStatus']).toBe('UPLOADED')
+  expect(media['uploadUrl']).toBeNull()
+  expect(media['url']).not.toBeNull()
+
+  // verify we can access all of the urls
+  await rp.head({uri: media['url'], simple: true})
+  await rp.head({uri: media['url4k'], simple: true})
+  await rp.head({uri: media['url1080p'], simple: true})
+  await rp.head({uri: media['url480p'], simple: true})
+  await rp.head({uri: media['url64p'], simple: true})
+
+  // check the data in the native image is correct
+  const s3ImageData = await rp.get({uri: media['url'], encoding: null})
+  expect(s3ImageData.equals(imageData)).toBe(true)
+
+  // double check everything saved to db correctly
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['mediaObjects']).toHaveLength(1)
+  const mediaCheck = resp['data']['post']['mediaObjects'][0]
+  expect(mediaCheck['mediaId']).toBe(mediaId)
+  expect(mediaCheck['mediaStatus']).toBe('UPLOADED')
+  expect(mediaCheck['uploadUrl']).toBeNull()
+
+  expect(mediaCheck['url'].split('?')[0]).toBe(media['url'].split('?')[0])
+  expect(mediaCheck['url4k'].split('?')[0]).toBe(media['url4k'].split('?')[0])
+  expect(mediaCheck['url1080p'].split('?')[0]).toBe(media['url1080p'].split('?')[0])
+  expect(mediaCheck['url480p'].split('?')[0]).toBe(media['url480p'].split('?')[0])
+  expect(mediaCheck['url64p'].split('?')[0]).toBe(media['url64p'].split('?')[0])
 })
 
 
@@ -284,24 +333,20 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   const theirPostId = uuidv4()
 
   // we add a media post, complete it, check it's original
-  let variables = {postId: ourPostId, mediaId: uuidv4()}
+  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
   let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
-  expect(resp['data']['addPost']['originalPost']).toBeNull()
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, ourPostId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
 
   // they add another media post with the same media, original should point back to first post
-  variables = {postId: theirPostId, mediaId: uuidv4()}
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
   resp = await theirClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
-  expect(resp['data']['addPost']['originalPost']).toBeNull()
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(theirClient, theirPostId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
 
   // check each others post objects directly
   resp = await theirClient.query({query: schema.post, variables: {postId: ourPostId}})

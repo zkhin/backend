@@ -10,6 +10,7 @@ const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
 const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -27,14 +28,12 @@ test('Archiving an image post', async () => {
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check we see that post in the feed, in the posts, and in the mediaObjects
   resp = await ourClient.query({query: schema.selfFeed})
@@ -97,14 +96,12 @@ test('Archiving an image post does not affect media urls', async () => {
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the urls are as we expect
   resp = await ourClient.query({
@@ -156,14 +153,12 @@ test('Restoring an archived image post', async () => {
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let variables = {postId, mediaId, imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // archive the post
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
@@ -279,7 +274,8 @@ test('Post count reacts to user archiving posts', async () => {
   resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postedBy']['postCount']).toBe(1)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  expect(resp['data']['addPost']['postedBy']['postCount']).toBe(1)  // count has not incremented
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(imageData, contentType, uploadUrl)
@@ -288,7 +284,7 @@ test('Post count reacts to user archiving posts', async () => {
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['post']['postedBy']['postCount']).toBe(2)
+  expect(resp['data']['post']['postedBy']['postCount']).toBe(2) // count has incremented
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postCount']).toBe(2)

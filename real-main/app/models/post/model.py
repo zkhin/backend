@@ -1,5 +1,7 @@
 import logging
 
+import pendulum
+
 from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
@@ -58,8 +60,10 @@ class Post:
         resp['postedBy'] = user.serialize(caller_user_id)
         return resp
 
-    def complete(self):
+    def complete(self, now=None):
         "Transition the post to COMPLETED status"
+        now = now or pendulum.now('utc')
+
         if self.post_status in (PostStatus.COMPLETED, PostStatus.ARCHIVED, PostStatus.DELETING):
             msg = f'Refusing to change post `{self.id}` with status `{self.post_status}` to `{PostStatus.COMPLETED}`'
             raise exceptions.PostException(msg)
@@ -87,7 +91,7 @@ class Post:
             self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id),
         ]
         if album_id := self.item.get('albumId'):
-            transacts.append(self.album_manager.dynamo.transact_add_post(album_id))
+            transacts.append(self.album_manager.dynamo.transact_add_post(album_id, now=now))
 
         self.dynamo.client.transact_write_items(transacts)
         self.item = self.dynamo.get_post(self.id, strongly_consistent=True)

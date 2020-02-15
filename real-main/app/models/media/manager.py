@@ -27,9 +27,9 @@ class MediaManager:
         media_size, media_ext = filename.split('.')
         return user_id, post_id, media_id, media_size, media_ext
 
-    def get_media(self, media_id):
+    def get_media(self, media_id, strongly_consistent=False):
         "Pull media item from dynamo, initialize a new Media instance with it"
-        media_item = self.dynamo.get_media(media_id)
+        media_item = self.dynamo.get_media(media_id, strongly_consistent=strongly_consistent)
         if not media_item:
             return None
         return self.init_media(media_item)

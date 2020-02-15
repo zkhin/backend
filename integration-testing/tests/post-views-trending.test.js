@@ -16,7 +16,7 @@ const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
 const imageData = misc.generateRandomJpeg(300, 200)
-const imageContentType = 'image/jpeg'
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -502,27 +502,21 @@ test('Post views on duplicate posts are viewed post and original post, only orig
 
   // we add a media post
   const ourPostId = uuidv4()
-  let resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: ourPostId, mediaId: uuidv4()},
-  })
+  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  // upload the media, thus completing the post
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, ourPostId)
+  expect(resp['data']['addPost']['postId']).toBe(ourPostId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
 
   // they add a media post that's a duplicate of ours
   const theirPostId = uuidv4()
-  resp = await theirClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: theirPostId, mediaId: uuidv4()},
-  })
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addOneMediaPost, variables})
   expect(resp['errors']).toBeUndefined()
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  // upload the media, thus completing the post
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(theirClient, theirPostId)
+  expect(resp['data']['addPost']['postId']).toBe(theirPostId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
 
   // verify the original post is our post on both posts, and there are no views on either post
   resp = await ourClient.query({query: schema.post, variables: {postId: ourPostId}})
