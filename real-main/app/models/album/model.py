@@ -2,14 +2,13 @@ import hashlib
 from io import BytesIO
 import itertools
 import logging
-import math
 import os
 
 from PIL import Image
 
 from app.models.media.enums import MediaSize
 
-from . import exceptions
+from . import art, exceptions
 
 logger = logging.getLogger()
 
@@ -151,40 +150,25 @@ class Album:
         assert len(post_ids) in (4, 9, 16), f'Unexpected number of post_ids: `{len(post_ids)}`'
 
         # collect all the 1080p thumbs from all the post images
-        images = []
-        max_width, max_height = 0, 0
+        image_data_buffers = []
         for post_id in post_ids:
             media_item = next(self.media_manager.dynamo.generate_by_post(post_id, uploaded=True), None)
             if not media_item:
                 # shouldn't get here, as the post should be in completed state and have media
                 raise Exception(f'Did not find uploaded media for post `{post_id}`')
             media = self.media_manager.init_media(media_item)
-            image = Image.open(media.p1080_image_data_stream)
-            max_width = max(max_width, image.size[0])
-            max_height = max(max_height, image.size[1])
-            images.append(image)
+            image_data_buffers.append(media.p1080_image_data_stream)
 
-        # paste those thumbs together as a grid
-        # Min size will be 4k since max_width and max_height come from 1080p thumbs
-        stride = int(math.sqrt(len(post_ids)))
-        target_image = Image.new('RGB', (max_width * stride, max_height * stride))
-        for row in range(0, stride):
-            for column in range(0, stride):
-                image = images[row * stride + column]
-                width, height = image.size
-                loc = (column * max_width + (max_width - width) // 2, row * max_height + (max_height - height) // 2)
-                target_image.paste(image, loc)
-
-        # convert to jpeg
-        in_mem_file = BytesIO()
-        target_image.save(in_mem_file, format='JPEG')
-        in_mem_file.seek(0)
+        # generate the new native-size image
+        grid_buffer = art.generate_basic_grid(image_data_buffers)
 
         # save the native size to S3
         path = self.get_art_image_path(MediaSize.NATIVE, art_hash=art_hash)
-        self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
+        self.s3_uploads_client.put_object(path, grid_buffer.read(), self.jpeg_content_type)
 
         # generate and save thumbnails
+        grid_buffer.seek(0)
+        target_image = Image.open(grid_buffer)
         for size, dims in self.sizes.items():
             target_image.thumbnail(dims)
             in_mem_file = BytesIO()
