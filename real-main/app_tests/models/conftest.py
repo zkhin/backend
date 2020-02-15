@@ -95,31 +95,30 @@ def google_client():
     yield Mock(GoogleClient())
 
 
-# the two s3 clients need to be generated under the same `mock_s3()` context manager
-# doesn't really matter which one is which, as long as within each test the two of them
-# are kept straight
+# can't nest the moto context managers, it appears. To be able to use two mocked S3 buckets
+# they thus need to be yielded under the same context manager
 @pytest.fixture
 def s3_clients():
     with mock_s3():
         yield {
-            's3_uploads': S3Client(bucket_name='my-bucket', create_bucket=True),
-            's3_placeholder_photos': S3Client(bucket_name='my-bucket-2', create_bucket=True),
+            'uploads': S3Client(bucket_name='uploads-bucket', create_bucket=True),
+            'placeholder-photos': S3Client(bucket_name='placerholder-photos-bucket', create_bucket=True),
         }
 
 
 @pytest.fixture
-def s3_client(s3_clients):
-    yield s3_clients['s3_uploads']
+def s3_uploads_client(s3_clients):
+    yield s3_clients['uploads']
 
 
 @pytest.fixture
-def s3_client_2(s3_clients):
-    yield s3_clients['s3_placeholder_photos']
+def s3_placeholder_photos_client(s3_clients):
+    yield s3_clients['placeholder-photos']
 
 
 @pytest.fixture
-def album_manager(dynamo_client, s3_client, cloudfront_client):
-    yield AlbumManager({'dynamo': dynamo_client, 's3_uploads': s3_client, 'cloudfront': cloudfront_client})
+def album_manager(dynamo_client, s3_uploads_client, cloudfront_client):
+    yield AlbumManager({'dynamo': dynamo_client, 's3_uploads': s3_uploads_client, 'cloudfront': cloudfront_client})
 
 
 @pytest.fixture
@@ -158,15 +157,15 @@ def like_manager(dynamo_client):
 
 
 @pytest.fixture
-def media_manager(dynamo_client, s3_client):
-    yield MediaManager({'dynamo': dynamo_client, 's3_uploads': s3_client})
+def media_manager(dynamo_client, s3_uploads_client):
+    yield MediaManager({'dynamo': dynamo_client, 's3_uploads': s3_uploads_client})
 
 
 @pytest.fixture
-def post_manager(dynamo_client, s3_client, cloudfront_client, secrets_manager_client):
+def post_manager(dynamo_client, s3_uploads_client, cloudfront_client, secrets_manager_client):
     yield PostManager({
         'dynamo': dynamo_client,
-        's3_uploads': s3_client,
+        's3_uploads': s3_uploads_client,
         'cloudfront': cloudfront_client,
         'secrets_manager': secrets_manager_client,
     })
@@ -183,14 +182,14 @@ def trending_manager(dynamo_client):
 
 
 @pytest.fixture
-def user_manager(cloudfront_client, dynamo_client, s3_client, s3_client_2, cognito_client, facebook_client,
-                 google_client):
+def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeholder_photos_client, cognito_client,
+                 facebook_client, google_client):
     cognito_client.configure_mock(**{'get_user_attributes.return_value': {}})
     clients = {
         'cloudfront': cloudfront_client,
         'dynamo': dynamo_client,
-        's3_uploads': s3_client,
-        's3_placeholder_photos': s3_client_2,
+        's3_uploads': s3_uploads_client,
+        's3_placeholder_photos': s3_placeholder_photos_client,
         'cognito': cognito_client,
         'facebook': facebook_client,
         'google': google_client,

@@ -177,7 +177,7 @@ def test_delete_art_images(album):
         assert not album.s3_uploads_client.exists(path)
 
 
-def test_update_art_images_one_post(album, completed_image_post, post_manager, media_manager, s3_client):
+def test_update_art_images_one_post(album, completed_image_post, post_manager, media_manager, s3_uploads_client):
     post = completed_image_post
     media_item = next(media_manager.dynamo.generate_by_post(post.id, uploaded=True), None)
     media = media_manager.init_media(media_item)
@@ -196,9 +196,9 @@ def test_update_art_images_one_post(album, completed_image_post, post_manager, m
         art_path = album.get_art_image_path(size, art_hash=art_hash)
         assert art_hash in art_path
         # verify art matches the post's media
-        art_data = s3_client.get_object_data_stream(art_path).read()
+        art_data = s3_uploads_client.get_object_data_stream(art_path).read()
         image_path = media.get_s3_path(size)
-        image_data = s3_client.get_object_data_stream(image_path).read()
+        image_data = s3_uploads_client.get_object_data_stream(image_path).read()
         assert art_data == image_data
 
 

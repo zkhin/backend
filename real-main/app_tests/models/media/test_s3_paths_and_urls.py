@@ -80,14 +80,14 @@ def test_get_writeonly_url_already_uploaded():
     assert url is None
 
 
-def test_image_has_all_s3_objects(s3_client):
+def test_image_has_all_s3_objects(s3_uploads_client):
     # media with no s3 objects
     media_item = {
         'userId': 'uid',
         'postId': 'pid',
         'mediaId': 'mid',
     }
-    media = Media(media_item, None, s3_uploads_client=s3_client)
+    media = Media(media_item, None, s3_uploads_client=s3_uploads_client)
     assert media.has_all_s3_objects() is False
 
     # media with just native resolution
@@ -107,13 +107,13 @@ def test_image_has_all_s3_objects(s3_client):
     assert media.has_all_s3_objects() is True
 
 
-def test_delete_all_s3_objects(s3_client):
+def test_delete_all_s3_objects(s3_uploads_client):
     media_item = {
         'userId': 'uid',
         'postId': 'pid',
         'mediaId': 'mid',
     }
-    media = Media(media_item, None, s3_uploads_client=s3_client)
+    media = Media(media_item, None, s3_uploads_client=s3_uploads_client)
 
     # upload native and the three thumbnails
     path = media.get_s3_path(MediaSize.NATIVE)
@@ -133,13 +133,13 @@ def test_delete_all_s3_objects(s3_client):
     assert media.has_all_s3_objects() is False
 
 
-def test_delete_all_s3_objects_no_objects(s3_client):
+def test_delete_all_s3_objects_no_objects(s3_uploads_client):
     media_item = {
         'userId': 'uid',
         'postId': 'pid',
         'mediaId': 'mid',
     }
-    media = Media(media_item, None, s3_uploads_client=s3_client)
+    media = Media(media_item, None, s3_uploads_client=s3_uploads_client)
     assert media.has_all_s3_objects() is False
 
     # should not error out

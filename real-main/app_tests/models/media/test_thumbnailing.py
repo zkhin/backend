@@ -30,39 +30,39 @@ def media_awaiting_upload(media_manager, post_manager):
     yield media_manager.init_media(media_item)
 
 
-def test_set_height_and_width(dynamo_client, s3_client, media_awaiting_upload):
+def test_set_height_and_width(dynamo_client, s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
     assert 'height' not in media.item
     assert 'width' not in media.item
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
 
     media.set_height_and_width()
     assert media.item['height'] == grant_height
     assert media.item['width'] == grant_width
 
 
-def test_set_colors(dynamo_client, s3_client, media_awaiting_upload):
+def test_set_colors(dynamo_client, s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
     assert 'colors' not in media.item
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
 
     media.set_colors()
     assert media.item['colors'] == grant_colors
 
 
-def test_set_colors_colortheif_fails(dynamo_client, s3_client, media_awaiting_upload, caplog):
+def test_set_colors_colortheif_fails(dynamo_client, s3_uploads_client, media_awaiting_upload, caplog):
     media = media_awaiting_upload
     assert 'colors' not in media.item
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
 
     assert len(caplog.records) == 0
     with caplog.at_level(logging.WARNING):
@@ -75,49 +75,49 @@ def test_set_colors_colortheif_fails(dynamo_client, s3_client, media_awaiting_up
     assert f'`{media.id}`' in caplog.records[0].msg
 
 
-def test_set_thumbnails_wide_image(s3_client, media_awaiting_upload):
+def test_set_thumbnails_wide_image(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
 
     media.set_thumbnails()
 
     # check the 4k thumbnail is there, and that it is the right size
     path_4k = media.get_s3_path(MediaSize.K4)
-    assert s3_client.exists(path_4k)
-    image = Image.open(s3_client.get_object_data_stream(path_4k))
+    assert s3_uploads_client.exists(path_4k)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_4k))
     width, height = image.size
     assert width == 3840
     assert height < 2160
 
     # check the 1080 thumbnail is there, and that it is the right size
     path_1080 = media.get_s3_path(MediaSize.P1080)
-    assert s3_client.exists(path_1080)
-    image = Image.open(s3_client.get_object_data_stream(path_1080))
+    assert s3_uploads_client.exists(path_1080)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_1080))
     width, height = image.size
     assert width == 1920
     assert height < 1080
 
     # check the 480 thumbnail is there, and that it is the right size
     path_480 = media.get_s3_path(MediaSize.P480)
-    assert s3_client.exists(path_480)
-    image = Image.open(s3_client.get_object_data_stream(path_480))
+    assert s3_uploads_client.exists(path_480)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_480))
     width, height = image.size
     assert width == 854
     assert height < 480
 
     # check the 64 thumbnail is there, and that it is the right size
     path_64 = media.get_s3_path(MediaSize.P64)
-    assert s3_client.exists(path_64)
-    image = Image.open(s3_client.get_object_data_stream(path_64))
+    assert s3_uploads_client.exists(path_64)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_64))
     width, height = image.size
     assert width == 114
     assert height < 64
 
 
-def test_set_thumbnails_tall_image(s3_client, media_awaiting_upload):
+def test_set_thumbnails_tall_image(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # rotate our wide image to make it tall
@@ -128,49 +128,49 @@ def test_set_thumbnails_tall_image(s3_client, media_awaiting_upload):
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, in_mem_file, 'image/jpeg')
+    s3_uploads_client.put_object(media_path, in_mem_file, 'image/jpeg')
 
     media.set_thumbnails()
 
     # check the 4k thumbnail is there, and that it is the right size
     path_4k = media.get_s3_path(MediaSize.K4)
-    assert s3_client.exists(path_4k)
-    image = Image.open(s3_client.get_object_data_stream(path_4k))
+    assert s3_uploads_client.exists(path_4k)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_4k))
     width, height = image.size
     assert width < 3840
     assert height == 2160
 
     # check the 1080 thumbnail is there, and that it is the right size
     path_1080 = media.get_s3_path(MediaSize.P1080)
-    assert s3_client.exists(path_1080)
-    image = Image.open(s3_client.get_object_data_stream(path_1080))
+    assert s3_uploads_client.exists(path_1080)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_1080))
     width, height = image.size
     assert width < 1920
     assert height == 1080
 
     # check the 480 thumbnail is there, and that it is the right size
     path_480 = media.get_s3_path(MediaSize.P480)
-    assert s3_client.exists(path_480)
-    image = Image.open(s3_client.get_object_data_stream(path_480))
+    assert s3_uploads_client.exists(path_480)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_480))
     width, height = image.size
     assert width < 854
     assert height == 480
 
     # check the 64 thumbnail is there, and that it is the right size
     path_64 = media.get_s3_path(MediaSize.P64)
-    assert s3_client.exists(path_64)
-    image = Image.open(s3_client.get_object_data_stream(path_64))
+    assert s3_uploads_client.exists(path_64)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_64))
     width, height = image.size
     assert width < 114
     assert height == 64
 
 
-def test_set_thumbnails_respect_exif_orientation(s3_client, media_awaiting_upload):
+def test_set_thumbnails_respect_exif_orientation(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(grant_rotated_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(grant_rotated_path, 'rb'), 'image/jpeg')
 
     media.set_thumbnails()
 
@@ -179,32 +179,32 @@ def test_set_thumbnails_respect_exif_orientation(s3_client, media_awaiting_uploa
 
     # check 4k
     path_4k = media.get_s3_path(MediaSize.K4)
-    assert s3_client.exists(path_4k)
-    image = Image.open(s3_client.get_object_data_stream(path_4k))
+    assert s3_uploads_client.exists(path_4k)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_4k))
     width, height = image.size
     assert width == grant_rotated_width
     assert height == grant_rotated_height
 
     # check 1080p
     path_1080 = media.get_s3_path(MediaSize.P1080)
-    assert s3_client.exists(path_1080)
-    image = Image.open(s3_client.get_object_data_stream(path_1080))
+    assert s3_uploads_client.exists(path_1080)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_1080))
     width, height = image.size
     assert width == grant_rotated_width
     assert height == grant_rotated_height
 
     # check 480p
     path_480 = media.get_s3_path(MediaSize.P480)
-    assert s3_client.exists(path_480)
-    image = Image.open(s3_client.get_object_data_stream(path_480))
+    assert s3_uploads_client.exists(path_480)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_480))
     width, height = image.size
     assert width == grant_rotated_width
     assert height == grant_rotated_height
 
     # check 64p
     path_64 = media.get_s3_path(MediaSize.P64)
-    assert s3_client.exists(path_64)
-    image = Image.open(s3_client.get_object_data_stream(path_64))
+    assert s3_uploads_client.exists(path_64)
+    image = Image.open(s3_uploads_client.get_object_data_stream(path_64))
     width, height = image.size
     assert width < grant_rotated_width
     assert height < grant_rotated_height
@@ -212,12 +212,12 @@ def test_set_thumbnails_respect_exif_orientation(s3_client, media_awaiting_uploa
     assert height == 64
 
 
-def test_set_thumbnails_content_type(s3_client, media_awaiting_upload):
+def test_set_thumbnails_content_type(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # put an image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(blank_path, 'rb'), 'image/jpeg')
 
     media.set_thumbnails()
 
@@ -226,46 +226,46 @@ def test_set_thumbnails_content_type(s3_client, media_awaiting_upload):
 
     # check 4k content type
     path_4k = media.get_s3_path(MediaSize.K4)
-    assert s3_client.bucket.Object(path_4k).content_type == 'image/jpeg'
+    assert s3_uploads_client.bucket.Object(path_4k).content_type == 'image/jpeg'
 
     # check 1080p content type
     path_1080 = media.get_s3_path(MediaSize.P1080)
-    assert s3_client.bucket.Object(path_1080).content_type == 'image/jpeg'
+    assert s3_uploads_client.bucket.Object(path_1080).content_type == 'image/jpeg'
 
     # check 480p content type
     path_480 = media.get_s3_path(MediaSize.P480)
-    assert s3_client.bucket.Object(path_480).content_type == 'image/jpeg'
+    assert s3_uploads_client.bucket.Object(path_480).content_type == 'image/jpeg'
 
     # check 64p content type
     path_64 = media.get_s3_path(MediaSize.P64)
-    assert s3_client.bucket.Object(path_64).content_type == 'image/jpeg'
+    assert s3_uploads_client.bucket.Object(path_64).content_type == 'image/jpeg'
 
 
-def test_is_original_jpeg_success(s3_client, media_awaiting_upload):
+def test_is_original_jpeg_success(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # put a jpeg image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
 
     assert media.is_original_jpeg()
 
 
-def test_is_original_jpeg_failure(s3_client, media_awaiting_upload):
+def test_is_original_jpeg_failure(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # put a png image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, open(squirrel_path, 'rb'), 'image/png')
+    s3_uploads_client.put_object(media_path, open(squirrel_path, 'rb'), 'image/png')
 
     assert not media.is_original_jpeg()
 
 
-def test_is_original_jpeg_failure_with_exception(s3_client, media_awaiting_upload):
+def test_is_original_jpeg_failure_with_exception(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
     # put a png image in the bucket
     media_path = media.get_s3_path(MediaSize.NATIVE)
-    s3_client.put_object(media_path, b'not an image', 'application/octet-stream')
+    s3_uploads_client.put_object(media_path, b'not an image', 'application/octet-stream')
 
     assert not media.is_original_jpeg()

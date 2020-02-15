@@ -64,7 +64,7 @@ def test_cannot_update_album_art_images_grid_with_one_post(album):
 
 
 def test_update_album_art_images_grid(album, post1, post2, post3, post4, post5, post6, post7, post8, post9, post10,
-                                      post11, post12, post13, post14, post15, post16, s3_client):
+                                      post11, post12, post13, post14, post15, post16, s3_uploads_client):
     # check no no art for album
     assert 'artHash' not in album.item
     for size in MediaSize._ALL:
@@ -81,7 +81,7 @@ def test_update_album_art_images_grid(album, post1, post2, post3, post4, post5, 
         for size in MediaSize._ALL
     }
     art_hash_4_datas = {
-        size: s3_client.get_object_data_stream(art_path).read()
+        size: s3_uploads_client.get_object_data_stream(art_path).read()
         for size, art_path in art_hash_4_paths.items()
     }
     for size in MediaSize._ALL:
@@ -102,7 +102,7 @@ def test_update_album_art_images_grid(album, post1, post2, post3, post4, post5, 
         for size in MediaSize._ALL
     }
     art_hash_9_datas = {
-        size: s3_client.get_object_data_stream(art_path).read()
+        size: s3_uploads_client.get_object_data_stream(art_path).read()
         for size, art_path in art_hash_9_paths.items()
     }
     for size in MediaSize._ALL:
@@ -125,7 +125,7 @@ def test_update_album_art_images_grid(album, post1, post2, post3, post4, post5, 
         for size in MediaSize._ALL
     }
     art_hash_16_datas = {
-        size: s3_client.get_object_data_stream(art_path).read()
+        size: s3_uploads_client.get_object_data_stream(art_path).read()
         for size, art_path in art_hash_16_paths.items()
     }
     for size in MediaSize._ALL:
