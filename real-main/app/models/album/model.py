@@ -160,7 +160,7 @@ class Album:
             image_data_buffers.append(media.p1080_image_data_stream)
 
         # generate the new native-size image
-        grid_buffer = art.generate_basic_grid(image_data_buffers)
+        grid_buffer = art.generate_zoomed_grid(image_data_buffers)
 
         # save the native size to S3
         path = self.get_art_image_path(MediaSize.NATIVE, art_hash=art_hash)

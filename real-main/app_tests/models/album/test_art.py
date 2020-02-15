@@ -11,7 +11,7 @@ import random
 
 import pytest
 
-from app.models.album.art import generate_basic_grid
+from app.models.album import art
 
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 grant_horz_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-horizontal.jpg')
@@ -29,10 +29,22 @@ def image_bufs():
 def test_generate_basic_grid_failures(image_bufs):
     for i in (0, 1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20):
         with pytest.raises(AssertionError):
-            generate_basic_grid(image_bufs[:i])
+            art.generate_basic_grid(image_bufs[:i])
 
 
 def test_genearte_basic_grid_successes(image_bufs):
-    assert generate_basic_grid(image_bufs[:4]).read(1)
-    assert generate_basic_grid(image_bufs[:9]).read(1)
-    assert generate_basic_grid(image_bufs[:16]).read(1)
+    assert art.generate_basic_grid(image_bufs[:4]).read(1)
+    assert art.generate_basic_grid(image_bufs[:9]).read(1)
+    assert art.generate_basic_grid(image_bufs[:16]).read(1)
+
+
+def test_generate_zoomed_grid_failures(image_bufs):
+    for i in (0, 1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20):
+        with pytest.raises(AssertionError):
+            art.generate_zoomed_grid(image_bufs[:i])
+
+
+def test_genearte_zoomed_grid_successes(image_bufs):
+    assert art.generate_zoomed_grid(image_bufs[:4]).read(1)
+    assert art.generate_zoomed_grid(image_bufs[:9]).read(1)
+    assert art.generate_zoomed_grid(image_bufs[:16]).read(1)

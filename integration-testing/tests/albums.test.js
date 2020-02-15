@@ -392,7 +392,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId1)
-  await misc.sleep(1000)  // let dynamo reach consistency
+  await misc.sleep(2000)  // let dynamo reach consistency
 
   // check album has art urls and they have changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -428,7 +428,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId2)
-  await misc.sleep(1000)  // let dynamo reach consistency
+  await misc.sleep(2000)  // let dynamo reach consistency
 
   // check album has art urls that have not changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -457,7 +457,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId3)
-  await misc.sleep(1000)  // let dynamo reach consistency
+  await misc.sleep(2000)  // let dynamo reach consistency
 
   // check album has art urls that have not changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -486,7 +486,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   await misc.uploadMedia(grantData, grantContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId4)
-  await misc.sleep(1000)  // let dynamo reach consistency
+  await misc.sleep(2000)  // let dynamo reach consistency
 
   // check album has art urls that have changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
