@@ -15,8 +15,12 @@ const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(300, 200)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageData1 = misc.generateRandomJpeg(8, 8)
+const imageData2 = misc.generateRandomJpeg(8, 8)
+const imageData3 = misc.generateRandomJpeg(8, 8)
+const imageData1B64 = new Buffer.from(imageData1).toString('base64')
+const imageData2B64 = new Buffer.from(imageData2).toString('base64')
+const imageData3B64 = new Buffer.from(imageData3).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -37,10 +41,12 @@ test('Report post views', async () => {
   // we add two posts
   const postId1 = uuidv4()
   const postId2 = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -105,7 +111,8 @@ test('Post views are de-duplicated by user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'l'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -169,7 +176,8 @@ test('resetUser deletes trending items', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -214,17 +222,20 @@ test('Order of trending users', async () => {
 
   // we add one post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 't'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // they add two posts
   const postId1 = uuidv4()
   const postId2 = uuidv4()
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData3B64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -258,13 +269,15 @@ test('We do not see trending users that have blocked us, but see all others', as
 
   // other1 adds a post
   const postId1 = uuidv4()
-  resp = await other1Client.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData1B64}
+  resp = await other1Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
   // we add a post
   const postId2 = uuidv4()
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -293,10 +306,12 @@ test('We see our own trending posts correctly', async () => {
   // we add two posts
   const postId1 = uuidv4()
   const postId2 = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -349,13 +364,15 @@ test('We see public users trending posts correctly', async () => {
 
   // other 1 adds a post
   const postId1 = uuidv4()
-  resp = await other1Client.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData1B64}
+  resp = await other1Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
   // other 2 adds a post
   const postId2 = uuidv4()
-  resp = await other2Client.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await other2Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -418,13 +435,15 @@ test('We see posts of private users only if we are following them', async () => 
 
   // other 1 adds a post
   const postId1 = uuidv4()
-  resp = await other1Client.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData1B64}
+  resp = await other1Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
   // other 2 adds a post
   const postId2 = uuidv4()
-  resp = await other2Client.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await other2Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -462,13 +481,15 @@ test('We do not see trending posts of users that have blocked us', async () => {
 
   // they add a post
   const postId1 = uuidv4()
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 't'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageData1B64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
   // we add a post
   const postId2 = uuidv4()
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 't'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
@@ -502,7 +523,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
 
   // we add a media post
   const ourPostId = uuidv4()
-  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageData1B64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
@@ -511,7 +532,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
 
   // they add a media post that's a duplicate of ours
   const theirPostId = uuidv4()
-  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageData1B64}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
@@ -598,7 +619,8 @@ test('Archived posts do not show up as trending', async () => {
 
   // add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 't'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 

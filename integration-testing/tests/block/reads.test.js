@@ -165,8 +165,9 @@ test('Blocked cannot see blocker in list that have onymously liked a post, block
   const [otherClient] = await loginCache.getCleanLogin()
 
   // other adds a post
-  let postId = uuidv4()
-  let resp = await otherClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  const postId = uuidv4()
+  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let resp = await otherClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we both like it onymously

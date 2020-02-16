@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -20,8 +24,8 @@ test('One user adds multiple comments, ordering', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
@@ -56,7 +60,7 @@ test('One user adds multiple comments, ordering', async () => {
   // verify we can supply the default value of reverse and get the same thing
   resp = await ourClient.query({query: schema.post, variables: {postId, commentsReverse: false}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toEqual(post)
+  expect(resp['data']['post']['comments']).toEqual(post['comments'])
 
   // check we can reverse the order of those comments
   resp = await ourClient.query({query: schema.post, variables: {postId, commentsReverse: true}})

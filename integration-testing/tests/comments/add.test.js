@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -22,8 +26,8 @@ test('Add a comments', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
@@ -74,8 +78,8 @@ test('Verify commentIds cannot be re-used ', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -105,8 +109,8 @@ test('Cant add comments to post with comments disabled', async () => {
 
   // we add a post with comments disabled
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum', commentsDisabled: true}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, commentsDisabled: true}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
@@ -131,15 +135,15 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
 
   // they add a post
   const theirPostId = uuidv4()
-  variables = {postId: theirPostId, text: 'lore ipsum'}
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
 
   // we add a post
   const ourPostId = uuidv4()
-  variables = {postId: ourPostId, text: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
 
@@ -164,8 +168,8 @@ test('Cant add comments to a post of a private user unless were following them',
 
   // they add a post
   const postId = uuidv4()
-  variables = {postId, text: 'lore ipsum'}
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 

@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -22,8 +26,8 @@ test('Cannot like/dislike posts with likes disabled', async () => {
 
   // we add a post with likes disabled
   const postId = uuidv4()
-  const variables = {postId, text: 'lore ipsum', likesDisabled: true}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  const variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, text: 'lore ipsum', likesDisabled: true}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['likesDisabled']).toBe(true)
@@ -52,8 +56,8 @@ test('Likes preservered through period with posts likes disabled', async () => {
   const postId = uuidv4()
 
   // we add a post with likes enabled
-  const variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  const variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)
@@ -112,15 +116,15 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
 
   // we add a post
   const ourPostId = uuidv4()
-  let variables = {postId: ourPostId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
 
   // they add a post
   const theirPostId = uuidv4()
-  variables = {postId: theirPostId, text: 'lore ipsum'}
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
 
@@ -183,8 +187,8 @@ test('Verify likes preserved through period in which user disables their likes',
   const postId = uuidv4()
 
   // we add a post
-  const variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  const variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)

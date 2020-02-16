@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -22,7 +26,8 @@ test('Anybody can flag post of public user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -39,7 +44,8 @@ test('Follower can flag post of private user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -64,7 +70,8 @@ test('Non-follower cannot flag post of private user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -91,7 +98,8 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -120,7 +128,8 @@ test('Cannot double-flag a post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -140,7 +149,8 @@ test('Cannot flag post of user that has blocked us', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // they block us
@@ -168,7 +178,8 @@ test('Cannot flag post of user we have blocked', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we block them

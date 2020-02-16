@@ -77,44 +77,6 @@ test('Create a posts in an album, album post ordering', async () => {
 })
 
 
-test('Cant create text-only post in album, nor move one in', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  // we add an album
-  const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
-
-  // verify we cannot add a text-only post into that album
-  const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum', albumId}
-  await expect(ourClient.mutate({mutation: schema.addTextOnlyPost, variables})).rejects.toBeDefined()
-
-  // make sure that post did not end making it into the DB
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toBeNull()
-
-  // we create a post, not in any album
-  variables = {postId, text: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['album']).toBeNull()
-
-  // verify we cannot move the post into their album
-  variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toBeDefined()
-
-  // verify the post is unchanged
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['album']).toBeNull()
-})
-
-
 test('Cant create post in or move post into album that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const albumId = uuidv4()  // doesn't exist

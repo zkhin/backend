@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -26,10 +30,8 @@ test('Delete a post that was our next story to expire', async () => {
 
   // we create a post
   const postId = uuidv4()
-  resp = await ourClient.mutate({
-    mutation: schema.addTextOnlyPost,
-    variables: {postId, text: 'expires in an hour', lifetime: 'PT1H'},
-  })
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, lifetime: 'PT1H'}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -158,10 +160,7 @@ test('Invalid attempts to delete posts', async () => {
   await expect(ourClient.mutate({mutation: schema.deletePost, variables: {postId}})).rejects.toThrow('does not exist')
 
   // create a post
-  let resp = await ourClient.mutate({
-    mutation: schema.addTextOnlyPost,
-    variables: {postId, text: 'green grass over there'},
-  })
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -184,7 +183,8 @@ test('When a post is deleted, any likes of it disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we onymously like it

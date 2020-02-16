@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
+const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -42,20 +46,27 @@ test('Paginated list limits', async () => {
 })
 
 
-// Use of selfFeed is arbitrary, could use any paginated list query
+// Use of comments is arbitrary, could use any paginated list query
 test('Paginated list default', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
+  const postId = uuidv4()
 
-  // add 21 text-only posts
-  let resp, postId
+  // add a post
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // add 21 comments to the post
+  let commentId
   for (let i=0; i < 21; i++) {
-    postId = uuidv4()
-    resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 't'}})
+    commentId = uuidv4()
+    resp = await ourClient.mutate({mutation: schema.addComment, variables: {postId, commentId, text: 't'}})
     expect(resp['errors']).toBeUndefined()
   }
 
   // verify not specifying a limit results in a default of 20
-  resp = await ourClient.query({query: schema.selfFeed})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['feed']['items']).toHaveLength(20)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(20)
 })

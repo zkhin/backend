@@ -84,28 +84,26 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
-  // we add a text only post, never expires
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: uuidv4(), text: 'je ne'}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-
-  // we add a text only post that is also a story
-  resp = await ourClient.mutate({
-    mutation: schema.addTextOnlyPost,
-    variables: {postId: uuidv4(), text: 'yo no se', lifetime: 'P1D'}
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-
-  // we add a media post that is also a story
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, lifetime: 'P1D', imageData: grantDataB64}
+  // we add a media post that never expires
+  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
+  let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
+
+  // we add a media post that is also a story
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  variables = {postId: postId2, mediaId: mediaId2, lifetime: 'P1D', imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // verify they see our user directly
@@ -126,14 +124,14 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   // verify they see our posts, media objects
   resp = await theirClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['posts']['items']).toHaveLength(3)
-  expect(resp['data']['user']['posts']['items'][0]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['user']['posts']['items'][1]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['user']['posts']['items'][2]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['user']['posts']['items']).toHaveLength(2)
+  expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId2)
+  expect(resp['data']['user']['posts']['items'][1]['postId']).toBe(postId1)
   resp = await theirClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(2)
+  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId2)
+  expect(resp['data']['user']['mediaObjects']['items'][1]['mediaId']).toBe(mediaId1)
 
   // verify they see our stories
   resp = await theirClient.query({query: schema.self})
@@ -142,17 +140,15 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['self']['followedUsersWithStories']['items'][0]['userId']).toBe(ourUserId)
   resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['stories']['items']).toHaveLength(2)
-  expect(resp['data']['user']['stories']['items'][0]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['user']['stories']['items'][1]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['user']['stories']['items']).toHaveLength(1)
+  expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId2)
 
   // verify our posts show up in their feed
   resp = await theirClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['feed']['items']).toHaveLength(3)
-  expect(resp['data']['self']['feed']['items'][0]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['self']['feed']['items'][1]['postedBy']['userId']).toBe(ourUserId)
-  expect(resp['data']['self']['feed']['items'][2]['postedBy']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['feed']['items']).toHaveLength(2)
+  expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId2)
+  expect(resp['data']['self']['feed']['items'][1]['postId']).toBe(postId1)
 
   // we reset our account
   resp = await ourClient.mutate({mutation: schema.resetUser})
@@ -193,7 +189,8 @@ test('resetUser deletes any likes we have placed', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'je ne sais pas'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
@@ -231,7 +228,8 @@ test('resetUser deletes any likes on our posts', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'je ne sais pas'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
@@ -321,7 +319,8 @@ test('resetUser deletes users flags of posts', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -376,7 +375,8 @@ test('resetUser deletes any comments we have added to posts', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 

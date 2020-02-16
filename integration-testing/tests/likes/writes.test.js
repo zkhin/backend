@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -47,7 +51,8 @@ test('Cannot like/dislike ARCHIVED posts', async () => {
   // we add a post, and archive it
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
@@ -66,9 +71,11 @@ test('Cannot double like a post', async () => {
 
   // add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 'lore'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 'lore ipsum'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // onymously like the first post
@@ -110,7 +117,8 @@ test('Cannot dislike a post we have not liked', async () => {
 
   // add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // verify we can't dislike it, since we haven't already liked it
@@ -125,7 +133,8 @@ test('Cannot like posts of a user that has blocked us', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // they block us
@@ -160,7 +169,8 @@ test('Cannot like posts of a user we have blocked', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we block them
@@ -197,7 +207,8 @@ test('Can only like posts of private users if we are a follower of theirs', asyn
 
   // they add a post
   const postId = uuidv4()
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'l', lifetime: 'P1D'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, lifetime: 'P1D'}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot like that post
@@ -241,7 +252,8 @@ test('Onymously like, then dislike, a post', async () => {
   // we add a post
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // check that post shows no sign of likes
@@ -307,7 +319,8 @@ test('Anonymously like, then dislike, a post', async () => {
   // we add a post
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // check that post shows no sign of likes
@@ -373,7 +386,8 @@ test('Like counts show up for posts in feed', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // get that post from our feed, check its like counts

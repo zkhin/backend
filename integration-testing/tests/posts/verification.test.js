@@ -157,7 +157,8 @@ test('Post verification hidden setting is private to post owner', async () => {
 
   // we add a post without setting verification hidden
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: smallGrantDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)

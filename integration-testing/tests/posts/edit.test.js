@@ -68,10 +68,10 @@ test('Edit post failures for for various scenarios', async () => {
     variables: {postId, text: 'keep calm'},
   })).rejects.toThrow('does not exist')
 
-  // we add a text-only post
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'my wayward son'}})
+  // we add a post
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
 
   // verify we can't give it a content-less edit
   await expect(ourClient.mutate({
@@ -85,12 +85,6 @@ test('Edit post failures for for various scenarios', async () => {
     mutation: schema.editPost,
     variables: {postId, text: 'go'},
   })).rejects.toThrow("another User's post")
-
-  // verify we can't edit it into a content-less post
-  await expect(ourClient.mutate({
-    mutation: schema.editPost,
-    variables: {postId, text: ''},
-  })).rejects.toThrow('post')
 
   // verify we can edit it!
   const text = 'stop'
@@ -112,7 +106,8 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   // we add a text-only post
   const postId = uuidv4()
   const postText = 'je suis le possion?'
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: postText}})
+  let variables = {postId, mediaId: uuidv4(), text: postText, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
@@ -141,14 +136,15 @@ test('Disable comments causes existing comments to disappear, then reappear when
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'my wayward son'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
 
   // we add a comment to that post
   const commentId = uuidv4()
-  let variables = {commentId, postId, text: 'lore'}
+  variables = {commentId, postId, text: 'lore'}
   resp = await ourClient.mutate({mutation: schema.addComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addComment']['commentId']).toBe(commentId)
@@ -193,9 +189,9 @@ test('Edit post set likesDisabled', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'my wayward son'}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)
 
   // edit the likes disabled status
@@ -220,9 +216,9 @@ test('Edit post set sharingDisabled', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'my wayward son'}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
 
   // edit the sharing disabled status
@@ -247,9 +243,9 @@ test('Edit post set verificationHidden', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'my wayward son'}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 
   // edit the verification disabled status
@@ -277,7 +273,7 @@ test('Edit post text ensure textTagged users is rewritten', async () => {
   // we add a post a tag
   let postId = uuidv4()
   let text = `hi @${theirUsername}!`
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4(), text}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
   expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(1)

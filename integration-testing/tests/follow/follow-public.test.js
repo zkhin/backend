@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -120,9 +124,11 @@ test('When we stop following a public user, any likes of ours on their posts are
 
   // they add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 'lore'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 'lore'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we like the first post onymously

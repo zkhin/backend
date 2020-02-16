@@ -217,7 +217,8 @@ test('Attempts to restore invalid posts', async () => {
   })).rejects.toThrow('does not exist')
 
   // create a post
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -243,7 +244,6 @@ test('Attempts to restore invalid posts', async () => {
   resp = await ourClient.mutate({mutation: schema.restoreArchivedPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['restoreArchivedPost']['postStatus']).toBe('COMPLETED')
-
 })
 
 
@@ -255,19 +255,18 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postCount']).toBe(0)
 
-  // add text-only post, verify count goes up immediately
-  const postId1 = uuidv4()
-  const text = 'zeds dead baby, zeds dead'
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text}})
+  // add media post with direct image data upload, verify post count goes up immediately
+  let [postId, mediaId] = [uuidv4(), uuidv4()]
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId1)
+  expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postedBy']['postCount']).toBe(1)
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postCount']).toBe(1)
 
   // add a media post, verify count doesn't go up until the media is uploaded
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  ;[postId, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -308,8 +307,8 @@ test('Cant archive a post that is not ours', async () => {
 
   // they add a post
   const postId = uuidv4()
-  const text = 'zeds dead baby, zeds dead'
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
@@ -326,7 +325,8 @@ test('When a post is archived, any likes of it disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we onymously like it

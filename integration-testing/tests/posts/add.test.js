@@ -24,16 +24,15 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
-test('Add text-only post no expiration', async () => {
+test('Add post no expiration', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  const postId = uuidv4()
-  const text = 'zeds dead baby, zeds dead'
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
-  expect(post['text']).toBe(text)
+  expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(post['expiresAt']).toBeNull()
   expect(post['originalPost']['postId']).toBe(postId)
 
@@ -41,7 +40,6 @@ test('Add text-only post no expiration', async () => {
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['post']
   expect(post['postId']).toBe(postId)
-  expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
   expect(post['originalPost']['postId']).toBe(postId)
 
@@ -51,7 +49,6 @@ test('Add text-only post no expiration', async () => {
   post = resp['data']['user']['posts']['items'][0]
   expect(post['postId']).toBe(postId)
   expect(post['postedBy']['userId']).toBe(ourUserId)
-  expect(post['text']).toBe(text)
   expect(post['expiresAt']).toBeNull()
 
   resp = await ourClient.query({query: schema.selfFeed})
@@ -61,13 +58,13 @@ test('Add text-only post no expiration', async () => {
 })
 
 
-test('Add text-only post with expiration', async () => {
+test('Add post with expiration', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
-  const postId = uuidv4()
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
   const text = 'zeds dead baby, zeds dead'
   const lifetime = 'P7D'
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text, lifetime}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, text, lifetime, mediaId}})
   expect(resp['errors']).toBeUndefined()
   const post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -184,28 +181,26 @@ test('Add media post, check non-duplicates are not marked as such', async () => 
 })
 
 
-test('Cannot add text-only post with invalid lifetime', async () => {
+test('Cannot add post with invalid lifetime', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const postId = uuidv4()
-  const text = 'lore ipsum'
+  const variables = {postId: uuidv4(), mediaId: uuidv4()}
 
   // malformed duration string
-  await expect(ourClient.mutate({
-    mutation: schema.addTextOnlyPost,
-    variables: {postId, text, lifetime: 'invalid'},
-  })).rejects.toThrow()
+  variables.lifetime = 'invalid'
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
 
   // negative value for lifetime
-  await expect(ourClient.mutate({
-    mutation: schema.addTextOnlyPost,
-    variables: {postId, text, lifetime: '-P1D'},
-  })).rejects.toThrow()
+  variables.lifetime = '-P1D'
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
 
   // zero value for lifetime
-  await expect(ourClient.mutate({
-    mutation: schema.addTextOnlyPost,
-    variables: {postId, text, lifetime: 'P0D'},
-  })).rejects.toThrow()
+  variables.lifetime = 'P0D'
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+
+  // success!
+  variables.lifetime = 'P1D'
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
 })
 
 
@@ -213,8 +208,8 @@ test('Mental health settings default values', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // no user-level settings set
-  let variables = {postId: uuidv4(), text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId: uuidv4(), mediaId: uuidv4()}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -233,8 +228,8 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['setUserDetails']['verificationHidden']).toBe(true)
 
   // check those new user-level settings are used as defaults for a new post
-  variables = {postId: uuidv4(), text: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  variables = {postId: uuidv4(), mediaId: uuidv4()}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
@@ -253,8 +248,8 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['setUserDetails']['verificationHidden']).toBe(false)
 
   // check those new user-level settings are used as defaults for a new post
-  variables = {postId: uuidv4(), text: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  variables = {postId: uuidv4(), mediaId: uuidv4()}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -266,19 +261,18 @@ test('Mental health settings default values', async () => {
 
 test('Mental health settings specify values', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const text = 'zeds dead baby, zeds dead'
 
   // create a post, specify both to false
   let postId = uuidv4()
   let variables = {
     postId,
-    text,
+    mediaId: uuidv4(),
     commentsDisabled: false,
     likesDisabled: false,
     sharingDisabled: false,
     verificationHidden: false,
   }
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -299,13 +293,13 @@ test('Mental health settings specify values', async () => {
   postId = uuidv4()
   variables = {
     postId,
-    text,
+    mediaId: uuidv4(),
     commentsDisabled: true,
     likesDisabled: true,
     sharingDisabled: true,
     verificationHidden: true,
   }
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)

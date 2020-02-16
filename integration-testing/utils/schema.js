@@ -475,11 +475,15 @@ module.exports.unblockUser = gql(`mutation UnblockUser ($userId: ID!) {
   }
 }`)
 
-module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
+module.exports.addPost = gql(`mutation AddPost (
   $postId: ID!,
+  $mediaId: ID!,
+  $imageData: String,
   $albumId: ID,
   $text: String,
-  $lifetime: String,
+  $lifetime: String
+  $takenInReal: Boolean
+  $originalFormat: String,
   $commentsDisabled: Boolean,
   $likesDisabled: Boolean,
   $sharingDisabled: Boolean,
@@ -494,80 +498,12 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
     likesDisabled: $likesDisabled,
     sharingDisabled: $sharingDisabled,
     verificationHidden: $verificationHidden,
-  ) {
-    postId
-    postedAt
-    postStatus
-    expiresAt
-    album {
-      albumId
-    }
-    originalPost {
-      postId
-    }
-    text
-    textTaggedUsers {
-      tag
-      user {
-        userId
-        username
-      }
-    }
-    mediaObjects {
-      mediaId
-    }
-    postedBy {
-      userId
-      username
-      postCount
-    }
-    commentsDisabled
-    commentCount
-    comments {
-      items {
-        commentId
-        commentedAt
-        commentedBy {
-          userId
-        }
-        text
-        textTaggedUsers {
-          tag
-          user {
-            userId
-          }
-        }
-      }
-    }
-    likesDisabled
-    sharingDisabled
-    verificationHidden
-  }
-}`)
-
-module.exports.addPost = gql(`mutation AddPost (
-  $postId: ID!,
-  $mediaId: ID!,
-  $imageData: String,
-  $albumId: ID,
-  $text: String,
-  $lifetime: String
-  $takenInReal: Boolean
-  $originalFormat: String,
-  $verificationHidden: Boolean,
-) {
-  addPost (
-    postId: $postId,
-    albumId: $albumId,
-    text: $text,
-    verificationHidden: $verificationHidden,
     mediaObjectUploads: [{
       mediaId: $mediaId,
       takenInReal: $takenInReal,
       originalFormat: $originalFormat,
       imageData: $imageData,
     }],
-    lifetime: $lifetime,
   ) {
     postId
     postedAt
@@ -612,14 +548,38 @@ module.exports.addPost = gql(`mutation AddPost (
       postCount
       photoUrl
     }
+    commentsDisabled
+    commentCount
+    comments {
+      items {
+        commentId
+        commentedAt
+        commentedBy {
+          userId
+        }
+        text
+        textTaggedUsers {
+          tag
+          user {
+            userId
+          }
+        }
+      }
+    }
+    likesDisabled
+    sharingDisabled
+    verificationHidden
+  }
+}`)
+
+module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost ($postId: ID!, $text: String!) {
+  addPost (postId: $postId, text: $text) {
+    postId
   }
 }`)
 
 module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost ($postId: ID!, $mediaId1: ID!, $mediaId2: ID!) {
-  addPost (
-    postId: $postId,
-    mediaObjectUploads: [{mediaId: $mediaId1}, {mediaId: $mediaId2}]
-  ) {
+  addPost (postId: $postId, mediaObjectUploads: [{mediaId: $mediaId1}, {mediaId: $mediaId2}]) {
     postId
   }
 }`)

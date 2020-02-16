@@ -1,7 +1,5 @@
 /* eslint-env jest */
 
-const fs = require('fs')
-const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
@@ -9,7 +7,8 @@ const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const contentType = 'image/jpeg'
-const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -27,7 +26,8 @@ test('Cant request over 100 of any of the like lists', async () => {
   // we add a post
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // verify these queries go through with just under the limit
@@ -56,7 +56,8 @@ test('Order of users that have onymously liked a post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId, text: 'lore ipsum'}})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // all three of us onymously like it
@@ -128,9 +129,11 @@ test('Order of onymously liked posts', async () => {
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 'lore'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 'lore ipsum'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we onymously like both in reverse order
@@ -166,9 +169,11 @@ test('Order of anonymously liked posts', async () => {
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId1, text: 'lore'}})
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables: {postId: postId2, text: 'lore ipsum'}})
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
   // we anonymously like both in reverse order

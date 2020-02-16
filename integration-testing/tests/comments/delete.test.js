@@ -3,7 +3,11 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -22,8 +26,8 @@ test('Delete comments', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
@@ -87,8 +91,8 @@ test('Delete someone elses comment on our post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
@@ -138,8 +142,8 @@ test('Cant delete someone elses comment on someone elses post', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await theirClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
@@ -171,8 +175,8 @@ test('Can delete comments even if we have comments disabled and the post has com
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addTextOnlyPost, variables})
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
