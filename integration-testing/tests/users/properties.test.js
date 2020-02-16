@@ -121,8 +121,7 @@ test('Set and delete our profile photo', async () => {
 
   // create a post with an image
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: grantDataB64}
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

@@ -67,6 +67,10 @@ class PostManager:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` without text or media'
             raise exceptions.PostException(msg)
 
+        if len(media_uploads) > 1:
+            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with more than one media'
+            raise exceptions.PostException(msg)
+
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with negative lifetime'

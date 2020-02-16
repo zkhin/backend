@@ -292,8 +292,7 @@ test('User search returns urls for profile pics', async () => {
 
   // add a post with media, upload that media
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: grantDataB64}
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

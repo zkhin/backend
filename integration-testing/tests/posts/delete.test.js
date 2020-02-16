@@ -102,7 +102,7 @@ test('Deleting post with media', async () => {
 
   // we create an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)

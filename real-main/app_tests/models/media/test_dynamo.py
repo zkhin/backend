@@ -123,17 +123,9 @@ def test_generate_by_post(media_dynamo, post_manager):
 
     post_id_no_media = 'pid0'
     post_id_one_media = 'pid1'
-    post_id_two_media = 'pid2'
 
     # add a post with one media
     post_manager.add_post(user_id, post_id_one_media, media_uploads=[{'mediaId': 'p1-mid'}])
-
-    # add a post with two media
-    media_uploads = [
-        {'mediaId': 'p2-mid1'},
-        {'mediaId': 'p2-mid2'},
-    ]
-    post_manager.add_post(user_id, post_id_two_media, media_uploads=media_uploads)
 
     # check post with no media
     medias = list(media_dynamo.generate_by_post(post_id_no_media))
@@ -143,23 +135,16 @@ def test_generate_by_post(media_dynamo, post_manager):
     medias = list(media_dynamo.generate_by_post(post_id_one_media))
     assert [m['mediaId'] for m in medias] == ['p1-mid']
 
-    # check post with two medias
-    medias = list(media_dynamo.generate_by_post(post_id_two_media))
-    assert [m['mediaId'] for m in medias] == ['p2-mid1', 'p2-mid2']
-
 
 def test_generate_by_post_uploaded_or_not(media_dynamo, post_manager):
-    # add a post with two media
-    media_uploads = [
-        {'mediaId': 'mid1'},
-        {'mediaId': 'mid2'},
-    ]
+    # add a post with one media
+    media_uploads = [{'mediaId': 'mid1'}]
     post_manager.add_post('uid', 'pid', media_uploads=media_uploads)
 
     # check generation
     media_items = list(media_dynamo.generate_by_post('pid'))
-    assert len(media_items) == 2
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=False))) == 2
+    assert len(media_items) == 1
+    assert len(list(media_dynamo.generate_by_post('pid', uploaded=False))) == 1
     assert len(list(media_dynamo.generate_by_post('pid', uploaded=True))) == 0
 
     # mark one media uploaded
@@ -167,18 +152,9 @@ def test_generate_by_post_uploaded_or_not(media_dynamo, post_manager):
     media_dynamo.client.transact_write_items([transact])
 
     # check generation
-    assert len(list(media_dynamo.generate_by_post('pid'))) == 2
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=False))) == 1
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=True))) == 1
-
-    # mark the other media uploaded
-    transact = media_dynamo.transact_set_status(media_items[1], MediaStatus.UPLOADED)
-    media_dynamo.client.transact_write_items([transact])
-
-    # check generation
-    assert len(list(media_dynamo.generate_by_post('pid'))) == 2
+    assert len(list(media_dynamo.generate_by_post('pid'))) == 1
     assert len(list(media_dynamo.generate_by_post('pid', uploaded=False))) == 0
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=True))) == 2
+    assert len(list(media_dynamo.generate_by_post('pid', uploaded=True))) == 1
 
 
 def test_transact_add_media_sans_options(media_dynamo):

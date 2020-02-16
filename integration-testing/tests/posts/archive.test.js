@@ -28,8 +28,7 @@ test('Archiving an image post', async () => {
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: imageDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
@@ -96,8 +95,7 @@ test('Archiving an image post does not affect media urls', async () => {
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: imageDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
@@ -153,8 +151,7 @@ test('Restoring an archived image post', async () => {
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: imageDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
@@ -271,7 +268,7 @@ test('Post count reacts to user archiving posts', async () => {
 
   // add a media post, verify count doesn't go up until the media is uploaded
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')

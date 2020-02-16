@@ -26,8 +26,7 @@ test('Edit post', async () => {
   // we create an image post
   const [ourClient] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: imageDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

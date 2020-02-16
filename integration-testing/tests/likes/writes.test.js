@@ -31,7 +31,7 @@ test('Cannot like/dislike PENDING posts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
   const mediaId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')

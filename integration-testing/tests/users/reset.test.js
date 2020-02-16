@@ -100,7 +100,7 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   // we add a media post that is also a story
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, lifetime: 'P1D', imageData: grantDataB64}
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

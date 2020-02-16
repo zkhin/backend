@@ -503,7 +503,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   // we add a media post
   const ourPostId = uuidv4()
   let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -512,7 +512,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   // they add a media post that's a duplicate of ours
   const theirPostId = uuidv4()
   variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
-  resp = await theirClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

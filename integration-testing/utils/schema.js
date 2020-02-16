@@ -545,7 +545,7 @@ module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost (
   }
 }`)
 
-module.exports.addOneMediaPost = gql(`mutation AddOneMediaPost (
+module.exports.addPost = gql(`mutation AddPost (
   $postId: ID!,
   $mediaId: ID!,
   $imageData: String,
@@ -621,15 +621,6 @@ module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost ($postId: ID!, $m
     mediaObjectUploads: [{mediaId: $mediaId1}, {mediaId: $mediaId2}]
   ) {
     postId
-    postedAt
-    postStatus
-    mediaObjects {
-      mediaId
-      mediaType
-      mediaStatus
-      url
-      uploadUrl
-    }
   }
 }`)
 

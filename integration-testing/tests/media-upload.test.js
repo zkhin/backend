@@ -32,98 +32,25 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
-test('Add post with two images', async () => {
-  const [appsyncClient, userId] = await loginCache.getCleanLogin()
-  // a few consts, variables
-  let resp, post, uploadUrl, media1, media2
+test('Verify cannot add post with more than one image', async () => {
+  const [client] = await loginCache.getCleanLogin()
 
   // add a pending post object with two images
   const postId = uuidv4()
-  const mediaId1 = uuidv4()
-  const mediaId2 = uuidv4()
-  resp = await appsyncClient.mutate({mutation: schema.addTwoMediaPost, variables: {postId, mediaId1, mediaId2}})
+  const variables = {postId, mediaId1: uuidv4(), mediaId2: uuidv4()}
+  await expect(client.mutate({mutation: schema.addTwoMediaPost, variables})).rejects.toBeDefined()
+
+  // verify the post did not get created
+  let resp = await client.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
-  post = resp['data']['addPost']
-  expect(post['postId']).toBe(postId)
-  expect(post['postStatus']).toBe('PENDING')
-  expect(post['mediaObjects']).toHaveLength(2)
-  if (post['mediaObjects'][0]['mediaId'] === mediaId1) [media1, media2] = post['mediaObjects']
-  else [media2, media1] = post['mediaObjects']
-  expect(media1['mediaId']).toBe(mediaId1)
-  expect(media1['mediaStatus']).toBe('AWAITING_UPLOAD')
-  expect(media1['mediaType']).toBe('IMAGE')
-  expect(media1['url']).toBeNull()
-  expect(media1['uploadUrl']).toMatch(/^https:\/\//)
-  expect(media2['mediaId']).toBe(mediaId2)
-  expect(media2['mediaStatus']).toBe('AWAITING_UPLOAD')
-  expect(media2['mediaType']).toBe('IMAGE')
-  expect(media2['url']).toBeNull()
-  expect(media2['uploadUrl']).toMatch(/^https:\/\//)
-
-  // upload the first of those images, give the s3 trigger a second to fire
-  uploadUrl = media1['uploadUrl']
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
-  await misc.sleep(5000)  // no way to check if just this one media object is done uploading
-
-  // get the post and check that everything looks as expected
-  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'PENDING'}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
-  post = resp['data']['user']['posts']['items'][0]
-  expect(post['postId']).toBe(postId)
-  expect(post['postStatus']).toBe('PENDING')
-  expect(post['mediaObjects']).toHaveLength(2)
-  if (post['mediaObjects'][0]['mediaId'] === mediaId1) [media1, media2] = post['mediaObjects']
-  else [media2, media1] = post['mediaObjects']
-  expect(media1['mediaId']).toBe(mediaId1)
-  expect(media1['mediaStatus']).toBe('UPLOADED')
-  expect(media1['url']).toMatch(/^https:\/\//)
-  expect(media1['uploadUrl']).toBeNull()
-  expect(media2['mediaId']).toBe(mediaId2)
-  expect(media2['mediaStatus']).toBe('AWAITING_UPLOAD')
-  expect(media2['url']).toBeNull()
-  expect(media2['uploadUrl']).toMatch(/^https:\/\//)
-
-  // we shouldn't find any completed posts now
-  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'COMPLETED'}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['posts']['items']).toHaveLength(0)
-
-  // upload the second of those images, give the s3 trigger a second to fire
-  uploadUrl = media2['uploadUrl']
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(appsyncClient, postId)
-
-  // get the post and check that everything looks as expected
-  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'COMPLETED'}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
-  post = resp['data']['user']['posts']['items'][0]
-  expect(post['postId']).toBe(postId)
-  expect(post['postStatus']).toBe('COMPLETED')
-  expect(post['mediaObjects']).toHaveLength(2)
-  if (post['mediaObjects'][0]['mediaId'] === mediaId1) [media1, media2] = post['mediaObjects']
-  else [media2, media1] = post['mediaObjects']
-  expect(media1['mediaId']).toBe(mediaId1)
-  expect(media1['mediaStatus']).toBe('UPLOADED')
-  expect(media1['url']).toMatch(/^https:\/\//)
-  expect(media1['uploadUrl']).toBeNull()
-  expect(media2['mediaId']).toBe(mediaId2)
-  expect(media2['mediaStatus']).toBe('UPLOADED')
-  expect(media2['url']).toMatch(/^https:\/\//)
-  expect(media2['uploadUrl']).toBeNull()
-
-  // we shouldn't find any pending posts now
-  resp = await appsyncClient.query({query: schema.userPosts, variables: {userId, postStatus: 'PENDING'}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['posts']['items']).toHaveLength(0)
+  expect(resp['data']['post']).toBeNull()
 })
 
 
 test('Uploading image sets width, height and colors', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
@@ -165,7 +92,7 @@ test('Uploading image sets width, height and colors', async () => {
 test('Uploading png image results in error', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
@@ -189,7 +116,7 @@ test('Uploading png image results in error', async () => {
 test('Thumbnails built on successful upload', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)

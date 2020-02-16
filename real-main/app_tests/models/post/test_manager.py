@@ -50,6 +50,14 @@ def test_add_post_errors(post_manager):
     assert 'pid' in str(error_info.value)
     assert 'without text or media' in str(error_info.value)
 
+    # try to add a post without two media
+    media_uploads = [{'mediaId': 'mid1'}, {'mediaId': 'mid2'}]
+    with pytest.raises(post_manager.exceptions.PostException) as error_info:
+        post_manager.add_post('pbuid', 'pid', media_uploads=media_uploads)
+    assert 'pbuid' in str(error_info.value)
+    assert 'pid' in str(error_info.value)
+    assert 'more than one media' in str(error_info.value)
+
     # try to add a post with a negative lifetime value
     with pytest.raises(post_manager.exceptions.PostException) as error_info:
         post_manager.add_post('pbuid', 'pid', text='t', lifetime_duration=pendulum.duration(hours=-1))

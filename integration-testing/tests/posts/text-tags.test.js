@@ -22,7 +22,7 @@ test('No text tags', async () => {
 
   // post with no text
   let [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBeNull()
   expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(0)

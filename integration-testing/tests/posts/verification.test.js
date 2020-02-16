@@ -29,7 +29,7 @@ test('Add media post passes verification', async () => {
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, takenInReal: true, originalFormat: 'HEIC', imageData: bigGrantDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -62,7 +62,7 @@ test('Add media post fails verification', async () => {
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, imageData: smallGrantDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -95,7 +95,7 @@ test('Add media post verification hidden hides verification state', async () => 
   // we add a media post with verification hidden, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, verificationHidden: true, imageData: smallGrantDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)

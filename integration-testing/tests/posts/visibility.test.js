@@ -38,7 +38,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a public user',
 
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables: {postId, mediaId}})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
@@ -115,8 +115,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a private user'
 
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: imageDataB64}
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -166,8 +165,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for the follow stag
 
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: imageDataB64}
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -230,8 +228,7 @@ test('Post that is not complete', async () => {
 
   // we add a media post, we don't complete it
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4()}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')

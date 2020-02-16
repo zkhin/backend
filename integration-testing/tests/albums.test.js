@@ -383,10 +383,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a post to that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId1, mediaId: mediaId1, albumId},
-  })
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId1, mediaId: mediaId1, albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
@@ -419,10 +416,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a second post to that album
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId2, mediaId: mediaId2, albumId},
-  })
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId2, mediaId: mediaId2, albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
@@ -448,10 +442,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a third post to that album
   const [postId3, mediaId3] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId3, mediaId: mediaId3, albumId},
-  })
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId3, mediaId: mediaId3, albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
@@ -477,10 +468,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a fourth post to that album
   const [postId4, mediaId4] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({
-    mutation: schema.addOneMediaPost,
-    variables: {postId: postId4, mediaId: mediaId4, albumId},
-  })
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId4, mediaId: mediaId4, albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId4)
   uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']

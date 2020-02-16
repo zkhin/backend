@@ -106,7 +106,7 @@ test.only('Add posts with media show up in stories', async () => {
   // we add a media post, give s3 trigger a second to fire
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   let variables = {postId: postId1, mediaId: mediaId1, lifetime: 'PT1M', imageData: imageDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -115,7 +115,7 @@ test.only('Add posts with media show up in stories', async () => {
   // we add a media post, give s3 trigger a second to fire
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   variables = {postId: postId2, mediaId: mediaId2, lifetime: 'PT2H', imageData: imageDataB64}
-  resp = await ourClient.mutate({mutation: schema.addOneMediaPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
