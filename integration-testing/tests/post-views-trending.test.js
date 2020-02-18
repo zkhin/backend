@@ -545,7 +545,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp['data']['post']['postId']).toBe(ourPostId)
   expect(resp['data']['post']['viewedByCount']).toBe(0)
   expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
-  resp = await ourClient.query({query: schema.post, variables: {postId: theirPostId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['viewedByCount']).toBe(0)

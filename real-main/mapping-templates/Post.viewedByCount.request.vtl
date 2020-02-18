@@ -1,7 +1,12 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 #set ($count = $util.defaultIfNull($ctx.source.viewedByCount, 0))
 
+## private to just owner of the post, as speced via slack msg
+#if ($ctx.source.postedBy.userId != $callerUserId)
+  #set ($count = $util.toJson(null))
+#end
+
 ## if postedBy has viewCountsHidden set, hide the viewedByCount
-## note that postedBy is always filled in when the post is resolved
 #if ($util.defaultIfNull($ctx.source.postedBy.viewCountsHidden, false))
   #set ($count = $util.toJson(null))
 #end

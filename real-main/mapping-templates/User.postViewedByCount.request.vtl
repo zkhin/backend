@@ -1,8 +1,9 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 #set ($count = $util.defaultIfNull($ctx.source.postViewedByCount, 0))
 
-## If caller is blocked by target, hide postViewedByCount
-#if ($ctx.source.blockerStatus == 'BLOCKING')
-  #return
+## private to just the user themselves, as speced via slack msg
+#if ($ctx.source.userId != $callerUserId)
+  #set ($count = $util.toJson(null))
 #end
 
 ## if viewCountsHidden is set, hide the postViewedByCount
