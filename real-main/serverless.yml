@@ -1447,7 +1447,7 @@ resources:
     AppSyncServerErrorAlarm:
       Type: AWS::CloudWatch::Alarm
       Properties:
-        Namespace: real-dev-main
+        Namespace: ${self:provider.stackName}
         MetricName: AppSyncServerErrors
         Threshold: 1
         Period: 300
@@ -1466,7 +1466,7 @@ resources:
         LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
         MetricTransformations:
           - MetricValue: 1
-            MetricNamespace: real-dev-main
+            MetricNamespace: ${self:provider.stackName}
             MetricName: AppSyncServerErrors
 
     AppSyncServerErrorLogMetricFilterOK:
@@ -1476,7 +1476,7 @@ resources:
         LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
         MetricTransformations:
           - MetricValue: 0
-            MetricNamespace: real-dev-main
+            MetricNamespace: ${self:provider.stackName}
             MetricName: AppSyncServerErrors
 
     FrontendLogGroup:
