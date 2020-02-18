@@ -115,7 +115,7 @@ test('Delete someone elses comment on our post', async () => {
 
   // we delete their comment
   variables = {commentId: theirCommentId}
-  resp = await theirClient.mutate({mutation: schema.deleteComment, variables})
+  resp = await ourClient.mutate({mutation: schema.deleteComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['deleteComment']['commentId']).toBe(theirCommentId)
 
