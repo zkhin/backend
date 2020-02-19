@@ -762,6 +762,11 @@ custom:
         response: Generic.lambda.response.vtl
 
       - type: Mutation
+        field: editPostAlbumOrder
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Mutation
         field: editPostExpiresAt
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl

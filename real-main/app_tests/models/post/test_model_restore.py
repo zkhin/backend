@@ -163,30 +163,38 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     # archive the post
     post.archive()
     assert post.item['postStatus'] == PostStatus.ARCHIVED
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == -1
 
     # check our starting post count
     album.refresh_item()
     assert album.item.get('postCount', 0) == 0
+    assert album.item.get('rankCount', 0) == 1
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
-    post.album_manager.update_album_art_if_needed = Mock()
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
 
     # restore the post
     post.restore()
     assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.item['albumId'] == album.id
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == 0.5
 
     # check the post straight from the db
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert post.item['albumId'] == album.id
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == 0.5
 
     # check our post count - should have incremented
     album.refresh_item()
     assert album.item.get('postCount', 0) == 1
+    assert album.item.get('rankCount', 0) == 2
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
 
@@ -196,7 +204,4 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user.id, post.item),
-    ]
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [
-        call(album.id),
     ]

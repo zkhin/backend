@@ -98,15 +98,15 @@ class AlbumDynamo:
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
-    def transact_add_post(self, album_id, now=None):
+    def transact_add_post(self, album_id, old_rank_count=None, now=None):
         "Transaction to change album properties to reflect adding a post to the album"
         now = now or pendulum.now('utc')
-        return {'Update': {
+        query_kwargs = {'Update': {
             'Key': {
                 'partitionKey': {'S': f'album/{album_id}'},
                 'sortKey': {'S': '-'},
             },
-            'UpdateExpression': 'ADD postCount :one SET postsLastUpdatedAt = :now',
+            'UpdateExpression': 'ADD postCount :one, rankCount :one SET postsLastUpdatedAt = :now',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},
                 ':now': {'S': now.to_iso8601_string()},
@@ -114,10 +114,18 @@ class AlbumDynamo:
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
+        if old_rank_count is not None:
+            query_kwargs['Update']['ExpressionAttributeValues'][':rc'] = {'N': str(old_rank_count)}
+            query_kwargs['Update']['ConditionExpression'] += ' and rankCount = :rc'
+        else:
+            query_kwargs['Update']['ConditionExpression'] += ' and attribute_not_exists(rankCount)'
+
+        return query_kwargs
+
     def transact_remove_post(self, album_id, now=None):
         "Transaction to change album properties to reflect removing a post from the album"
         now = now or pendulum.now('utc')
-        return {'Update': {
+        query_kwargs = {'Update': {
             'Key': {
                 'partitionKey': {'S': f'album/{album_id}'},
                 'sortKey': {'S': '-'},
@@ -130,6 +138,25 @@ class AlbumDynamo:
             },
             'ConditionExpression': 'attribute_exists(partitionKey) and postCount > :zero',
         }}
+        return query_kwargs
+
+    def transact_increment_rank_count(self, album_id, old_rank_count, now=None):
+        "Transaction to change album properties to reflect adding a post to the album"
+        now = now or pendulum.now('utc')
+        query_kwargs = {'Update': {
+            'Key': {
+                'partitionKey': {'S': f'album/{album_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'UpdateExpression': 'ADD rankCount :one SET postsLastUpdatedAt = :now',
+            'ExpressionAttributeValues': {
+                ':one': {'N': '1'},
+                ':now': {'S': now.to_iso8601_string()},
+                ':rc': {'N': str(old_rank_count)},
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey) and rankCount = :rc',
+        }}
+        return query_kwargs
 
     def generate_by_user(self, user_id):
         query_kwargs = {

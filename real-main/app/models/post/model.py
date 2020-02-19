@@ -16,9 +16,9 @@ class Post:
     exceptions = exceptions
     FlagStatus = FlagStatus
 
-    def __init__(self, item, post_dynamo, trending_manager=None, feed_manager=None, followed_first_story_manager=None,
+    def __init__(self, item, post_dynamo, post_manager=None, trending_manager=None, feed_manager=None,
                  like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
-                 comment_manager=None, flag_manager=None, album_manager=None):
+                 comment_manager=None, flag_manager=None, album_manager=None, followed_first_story_manager=None):
         self.dynamo = post_dynamo
 
         if album_manager:
@@ -35,6 +35,8 @@ class Post:
             self.like_manager = like_manager
         if media_manager:
             self.media_manager = media_manager
+        if post_manager:
+            self.post_manager = post_manager
         if post_view_manager:
             self.post_view_manager = post_view_manager
         if trending_manager:
@@ -85,16 +87,23 @@ class Post:
                 first_media_item = self.media_manager.dynamo.get_media(first_media_id)
                 original_post_id = first_media_item['postId'] if first_media_item else None
 
+        album_id = self.item.get('albumId')
+        album = self.album_manager.get_album(album_id) if album_id else None
+        album_rank = album.get_next_last_rank() if album else None
+
         # complete the post
         transacts = [
-            self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, original_post_id=original_post_id),
+            self.dynamo.transact_set_post_status(
+                self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
+            ),
             self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id),
         ]
-        if album_id := self.item.get('albumId'):
-            transacts.append(self.album_manager.dynamo.transact_add_post(album_id, now=now))
+        if album:
+            old_rank_count = album.item.get('rankCount')
+            transacts.append(album.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count, now=now))
 
         self.dynamo.client.transact_write_items(transacts)
-        self.item = self.dynamo.get_post(self.id, strongly_consistent=True)
+        self.refresh_item(strongly_consistent=True)
 
         # update the first story if needed
         if self.item.get('expiresAt'):
@@ -104,8 +113,8 @@ class Post:
         self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
 
         # update album art if needed
-        if album_id := self.item.get('albumId'):
-            self.album_manager.update_album_art_if_needed(album_id)
+        if album:
+            album.update_art_if_needed()
 
         return self
 
@@ -115,25 +124,33 @@ class Post:
             msg = f'Refusing to change post `{self.id}` with status `{self.post_status}` to `{PostStatus.ARCHIVED}`'
             raise exceptions.PostException(msg)
 
+        # we only have to operate on the album if the previous status was COMPLETED
+        album = None
+        if self.post_status == PostStatus.COMPLETED:
+            if album_id := self.item.get('albumId'):
+                album = self.album_manager.get_album(album_id)
+
         # archive the post and its media objects
-        self.item['mediaObjects'] = []
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED)]
         if self.post_status == PostStatus.COMPLETED:
             transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id))
-            if album_id := self.item.get('albumId'):
-                transacts.append(self.album_manager.dynamo.transact_remove_post(album_id))
+            if album:
+                transacts.append(album.dynamo.transact_remove_post(album.id))
 
+        media_items = []
         for media_item in self.media_manager.dynamo.generate_by_post(self.id):
             transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.ARCHIVED))
-            self.item['mediaObjects'].append(media_item)
+            media_items.append(media_item)
 
         self.dynamo.client.transact_write_items(transacts)
 
-        # update in-memory copy of dynamo state, don't worry about the gsi's that were updated
+        # update in-memory copy of dynamo state
         prev_post_status = self.post_status
-        self.item['postStatus'] = PostStatus.ARCHIVED
-        for media_item in self.item['mediaObjects']:
-            media_item['mediaStatus'] = MediaStatus.ARCHIVED
+        self.refresh_item(strongly_consistent=True)
+        self.item['mediaObjects'] = [
+            self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
+            for media_item in media_items
+        ]
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
@@ -147,8 +164,8 @@ class Post:
             self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
 
         # update album art if needed
-        if album_id := self.item.get('albumId'):
-            self.album_manager.update_album_art_if_needed(album_id)
+        if album:
+            album.update_art_if_needed()
 
         return self
 
@@ -173,12 +190,21 @@ class Post:
             if media_status != MediaStatus.UPLOADED:
                 post_status = PostStatus.PENDING
 
+        # we only need the album if the new post status is COMPLETED
+        album, album_rank = None, None
+        if post_status == PostStatus.COMPLETED:
+            if album_id := self.item.get('albumId'):
+                album = self.album_manager.get_album(album_id)
+                album_rank = album.get_next_last_rank()
+
         # restore the post
-        transacts = [self.dynamo.transact_set_post_status(self.item, post_status)]
+        transacts = [self.dynamo.transact_set_post_status(self.item, post_status, album_rank=album_rank)]
+
         if post_status == PostStatus.COMPLETED:
             transacts.append(self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id))
-            if album_id := self.item.get('albumId'):
-                transacts.append(self.album_manager.dynamo.transact_add_post(album_id))
+            if album:
+                old_rank_count = album.item.get('rankCount')
+                transacts.append(self.album_manager.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
 
         for media_item, media_status in zip(media_items, media_statuses):
             transacts.append(self.media_manager.dynamo.transact_set_status(media_item, media_status))
@@ -199,32 +225,41 @@ class Post:
             # update feeds
             self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
             # update album art if needed
-            if album_id := self.item.get('albumId'):
-                self.album_manager.update_album_art_if_needed(album_id)
+            if album:
+                album.update_art_if_needed()
 
         return self
 
     def delete(self):
         "Delete the post and all its media"
-        # marke the post and the media as in the deleting process
-        self.item['mediaObjects'] = []
+
+        # we only have to the album if the previous status was COMPLETED
+        album = None
+        if self.post_status == PostStatus.COMPLETED:
+            if album_id := self.item.get('albumId'):
+                album = self.album_manager.get_album(album_id)
+
+        # mark the post and the media as in the deleting process
+        media_items = []
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING)]
         if self.post_status == PostStatus.COMPLETED:
             transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id))
-            if album_id := self.item.get('albumId'):
-                transacts.append(self.album_manager.dynamo.transact_remove_post(album_id))
+            if album:
+                transacts.append(album.dynamo.transact_remove_post(album.id))
 
         for media_item in self.media_manager.dynamo.generate_by_post(self.id):
             transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.DELETING))
-            self.item['mediaObjects'].append(media_item)
+            media_items.append(media_item)
 
         self.dynamo.client.transact_write_items(transacts)
 
-        # update in-memory copy of dynamo state, don't worry about the gsi's that were updated
+        # update in-memory copy of dynamo state
         prev_post_status = self.post_status
-        self.item['postStatus'] = PostStatus.DELETING
-        for media_item in self.item['mediaObjects']:
-            media_item['mediaStatus'] = MediaStatus.DELETING
+        self.refresh_item(strongly_consistent=True)
+        self.item['mediaObjects'] = [
+            self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
+            for media_item in media_items
+        ]
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
@@ -250,8 +285,8 @@ class Post:
         self.trending_manager.dynamo.delete_trending(self.id)
 
         # update album art, if needed
-        if album_id := self.item.get('albumId'):
-            self.album_manager.update_album_art_if_needed(album_id)
+        if album:
+            album.update_art_if_needed()
 
         # do the deletes for real
         for media_item in self.item['mediaObjects']:
@@ -299,31 +334,80 @@ class Post:
             return self
 
         # if an album is specified, verify it exists and is ours
+        album = self.album_manager.get_album(album_id) if album_id else None
+        album_rank = album.get_next_last_rank() if album and self.item['postStatus'] == PostStatus.COMPLETED else None
         if album_id:
-            album_item = self.album_manager.dynamo.get_album(album_id)
-            if not album_item:
+            if not album:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
-            if album_item['ownedByUserId'] != self.posted_by_user_id:
+            if album.item['ownedByUserId'] != self.posted_by_user_id:
                 msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
                 raise exceptions.PostException(msg)
             post_media = list(self.media_manager.dynamo.generate_by_post(self.id))
             if not post_media:
                 raise exceptions.PostException('Text-only posts may not be placed in albums')
 
-        transacts = [self.dynamo.transact_set_album_id(self.item, album_id)]
+        transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
         if self.item['postStatus'] == PostStatus.COMPLETED:
             if prev_album_id:
                 transacts.append(self.album_manager.dynamo.transact_remove_post(prev_album_id))
-            if album_id:
-                transacts.append(self.album_manager.dynamo.transact_add_post(album_id))
+            if album:
+                old_rank_count = album.item.get('rankCount')
+                transacts.append(album.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
         # update album art, if needed
         if prev_album_id:
-            self.album_manager.update_album_art_if_needed(prev_album_id)
-        if album_id:
-            self.album_manager.update_album_art_if_needed(album_id)
+            prev_album = self.album_manager.get_album(prev_album_id)
+            if prev_album:
+                prev_album.update_art_if_needed()
+        if album:
+            album.update_art_if_needed()
 
+        return self
+
+    def set_album_order(self, preceding_post_id):
+        album_id = self.item.get('albumId')
+        if not album_id:
+            raise exceptions.PostException(f'Post `{self.id}` is not in an album')
+
+        preceding_post = None
+        if preceding_post_id:
+            preceding_post = self.post_manager.get_post(preceding_post_id)
+
+            if not preceding_post:
+                raise exceptions.PostException(f'Preceding post `{preceding_post_id}` does not exist')
+
+            if preceding_post.item['postedByUserId'] != self.item['postedByUserId']:
+                raise exceptions.PostException(f'Preceding post `{preceding_post_id}` does not belong to caller')
+
+            if preceding_post.item.get('albumId') != album_id:
+                raise exceptions.PostException(f'Preceding post `{preceding_post_id}` is not in album post is in')
+
+        # determine the post's new rank
+        album = self.album_manager.get_album(album_id)
+        if preceding_post:
+            before_rank = preceding_post.item['gsiK3SortKey']
+            after_post_id = next(self.dynamo.generate_post_ids_in_album(album_id, after_rank=before_rank), None)
+            if after_post_id:
+                # putting the post in between two posts
+                after_post = self.post_manager.get_post(after_post_id)
+                after_rank = after_post.item['gsiK3SortKey']
+                album_rank = (before_rank + after_rank) / 2
+            else:
+                # putting the post at the back
+                album_rank = album.get_next_last_rank()
+        else:
+            # putting the post at the front
+            album_rank = album.get_next_first_rank()
+
+        transacts = [
+            self.dynamo.transact_set_album_rank(self.id, album_rank),
+            album.dynamo.transact_increment_rank_count(album.id, album.item['rankCount']),
+        ]
+        self.dynamo.client.transact_write_items(transacts)
+        self.item['gsiK3SortKey'] = album_rank
+
+        album.update_art_if_needed()
         return self

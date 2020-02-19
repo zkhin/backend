@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pendulum
 import pytest
 
@@ -95,8 +97,8 @@ def test_transact_add_pending_post_with_options(post_dynamo):
         'gsiA1SortKey': PostStatus.PENDING + '/' + expires_at_str,
         'gsiK1PartitionKey': 'post/' + expires_at_str[:10],
         'gsiK1SortKey': expires_at_str[11:-1],
-        'gsiK2PartitionKey': 'post/aid',
-        'gsiK2SortKey': PostStatus.PENDING + '/' + posted_at_str,
+        'gsiK3PartitionKey': 'post/aid',
+        'gsiK3SortKey': -1,
         'text': text,
         'textTags': text_tags,
         'commentsDisabled': True,
@@ -194,6 +196,12 @@ def test_transact_set_post_status(post_dynamo):
     assert new_post_item.pop('originalPostId') == original_post_id
     assert {**new_post_item, **{k: org_post_item[k] for k in ('gsiA2SortKey', 'postStatus')}} == org_post_item
 
+    # verify the album_rank cannot be specified since we're not in an album
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_post_status(org_post_item, PostStatus.COMPLETED, album_rank=0.5)
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_post_status(org_post_item, PostStatus.ARCHIVED, album_rank=0.5)
+
 
 def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     post_id = 'my-post-id'
@@ -207,14 +215,50 @@ def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.PENDING
 
-    new_status = 'yup'
+    new_status = PostStatus.DELETING
     transacts = [post_dynamo.transact_set_post_status(post_item, new_status)]
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == new_status
     assert post_item['gsiA2SortKey'].startswith(new_status + '/')
     assert post_item['gsiA1SortKey'].startswith(new_status + '/')
-    assert post_item['gsiK2SortKey'].startswith(new_status + '/')
+
+
+def test_transact_set_post_status_album_rank_handled_correctly_to_and_from_COMPLETED_in_album(post_dynamo):
+    post_id = 'my-post-id'
+    user_id = 'my-user-id'
+
+    # add a post, verify starts pending
+    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, text='l', album_id='aid')]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.PENDING
+    assert post_item['gsiK3PartitionKey'] == 'post/aid'
+    assert post_item['gsiK3SortKey'] == -1
+
+    # verify the album_rank is required when transitioning to COMPLETED
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_post_status(post_item, PostStatus.COMPLETED)
+
+    # successfully transition to COMPLETED
+    transacts = [post_dynamo.transact_set_post_status(post_item, PostStatus.COMPLETED, album_rank=0.5)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.COMPLETED
+    assert post_item['gsiK3PartitionKey'] == 'post/aid'
+    assert post_item['gsiK3SortKey'] == 0.5
+
+    # verify the album_rank is required to not be present when transitioning out of COMPLETED
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_post_status(post_item, PostStatus.ARCHIVED, album_rank=0.33)
+
+    # successfully transition out of COMPLETED
+    transacts = [post_dynamo.transact_set_post_status(post_item, PostStatus.ARCHIVED)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.ARCHIVED
+    assert post_item['gsiK3PartitionKey'] == 'post/aid'
+    assert post_item['gsiK3SortKey'] == -1
 
 
 def test_transact_increment_decrement_flag_count(post_dynamo):
@@ -664,7 +708,7 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
     assert post_item.get('commentCount', 0) == 1
 
 
-def test_transact_set_album_id(post_dynamo):
+def test_transact_set_album_id_pending_post(post_dynamo):
     post_id = 'pid'
 
     # add a post without an album_id
@@ -672,32 +716,96 @@ def test_transact_set_album_id(post_dynamo):
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert 'albumId' not in post_item
-    assert 'gsiK2PartitionKey' not in post_item
-    assert 'gsiK2SortKey' not in post_item
+    assert 'gsiK3PartitionKey' not in post_item
+    assert 'gsiK3SortKey' not in post_item
+
+    # verify can't specify album rank when setting the album id, since this is a pending post
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_album_id(post_item, 'aid', album_rank=0.5)
 
     # set the album_id, verify that worked
     transact = post_dynamo.transact_set_album_id(post_item, 'aid')
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item['albumId'] == 'aid'
-    assert post_item['gsiK2PartitionKey'] == 'post/aid'
-    assert post_item['gsiK2SortKey'] == 'PENDING/' + post_item['postedAt']
+    assert post_item['gsiK3PartitionKey'] == 'post/aid'
+    assert post_item['gsiK3SortKey'] == -1
+
+    # verify again can't specify album rank when setting the album id, since this is a pending post
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_album_id(post_item, 'aid2', album_rank=0.5)
 
     # change the album id, verify that worked
     transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item['albumId'] == 'aid2'
-    assert post_item['gsiK2PartitionKey'] == 'post/aid2'
-    assert post_item['gsiK2SortKey'] == 'PENDING/' + post_item['postedAt']
+    assert post_item['gsiK3PartitionKey'] == 'post/aid2'
+    assert post_item['gsiK3SortKey'] == -1
+
+    # verify can't specify album rank when removing the album id
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_album_id(post_item, None, album_rank=0.2)
 
     # remove the album id, verify that worked
     transact = post_dynamo.transact_set_album_id(post_item, None)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert 'albumId' not in post_item
-    assert 'gsiK2PartitionKey' not in post_item
-    assert 'gsiK2SortKey' not in post_item
+    assert 'gsiK3PartitionKey' not in post_item
+    assert 'gsiK3SortKey' not in post_item
+
+
+def test_transact_set_album_id_completed_post(post_dynamo):
+    post_id = 'pid'
+
+    # add a post without an album_id
+    transact = post_dynamo.transact_add_pending_post('uid', post_id, text='lore ipsum')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    transact = post_dynamo.transact_set_post_status(post_item, PostStatus.COMPLETED)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.COMPLETED
+    assert 'albumId' not in post_item
+    assert 'gsiK3PartitionKey' not in post_item
+    assert 'gsiK3SortKey' not in post_item
+
+    # verify t must specify album rank when setting the album id, since this is a completed post
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_album_id(post_item, 'aid')
+
+    # set the album_id, verify that worked
+    transact = post_dynamo.transact_set_album_id(post_item, 'aid', album_rank=-0.5)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['albumId'] == 'aid'
+    assert post_item['gsiK3PartitionKey'] == 'post/aid'
+    assert post_item['gsiK3SortKey'] == Decimal('-0.5')
+
+    # verify again must specify album rank when setting the album id, since this is a completed post
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_album_id(post_item, 'aid2')
+
+    # change the album id, verify that worked
+    transact = post_dynamo.transact_set_album_id(post_item, 'aid2', album_rank=0.8)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['albumId'] == 'aid2'
+    assert post_item['gsiK3PartitionKey'] == 'post/aid2'
+    assert post_item['gsiK3SortKey'] == Decimal('0.8')
+
+    # verify can't specify album rank when removing the album id
+    with pytest.raises(AssertionError):
+        post_dynamo.transact_set_album_id(post_item, None, album_rank=0.2)
+
+    # remove the album id, verify that worked
+    transact = post_dynamo.transact_set_album_id(post_item, None)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert 'albumId' not in post_item
+    assert 'gsiK3PartitionKey' not in post_item
+    assert 'gsiK3SortKey' not in post_item
 
 
 def test_transact_set_album_id_fails_wrong_status(post_dynamo):
@@ -708,12 +816,12 @@ def test_transact_set_album_id_fails_wrong_status(post_dynamo):
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert 'albumId' not in post_item
-    assert 'gsiK2PartitionKey' not in post_item
-    assert 'gsiK2SortKey' not in post_item
+    assert 'gsiK3PartitionKey' not in post_item
+    assert 'gsiK3SortKey' not in post_item
 
     # change the in-mem status so it doesn't match dynamo
     # verify transaction fails rather than write conflicting data to db
-    post_item['postStatus'] = 'COMPLETED'
+    post_item['postStatus'] = 'ERROR'
     transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
     with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items([transact])
@@ -721,8 +829,8 @@ def test_transact_set_album_id_fails_wrong_status(post_dynamo):
     # verify nothing changed
     post_item = post_dynamo.get_post(post_id)
     assert 'albumId' not in post_item
-    assert 'gsiK2PartitionKey' not in post_item
-    assert 'gsiK2SortKey' not in post_item
+    assert 'gsiK3PartitionKey' not in post_item
+    assert 'gsiK3SortKey' not in post_item
 
 
 def test_generate_post_ids_in_album(post_dynamo):
@@ -738,23 +846,25 @@ def test_generate_post_ids_in_album(post_dynamo):
     ]
     post_dynamo.client.transact_write_items(transacts)
 
-    # verify we can generate the post_ids of those posts
+    # verify those posts do show up if we query all posts
     post_ids = list(post_dynamo.generate_post_ids_in_album(album_id))
     assert len(post_ids) == 2
     assert post_id_1 in post_ids
     assert post_id_2 in post_ids
 
-    # verify those posts don't show up if we only want completed posts
+    # verify those posts don't show up if we query COMPLETED posts
     post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, completed=True))
     assert len(post_ids) == 0
 
+    # verify those posts do show up if we query non-COMPLETED posts
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, completed=False))
+    assert len(post_ids) == 2
+    assert post_id_1 in post_ids
+    assert post_id_2 in post_ids
+
     # mark one post completed, another archived
-    post_item_1 = post_dynamo.get_post(post_id_1)
     post_item_2 = post_dynamo.get_post(post_id_2)
-    transacts = [
-        post_dynamo.transact_set_post_status(post_item_1, PostStatus.ARCHIVED),
-        post_dynamo.transact_set_post_status(post_item_2, PostStatus.COMPLETED),
-    ]
+    transacts = [post_dynamo.transact_set_post_status(post_item_2, PostStatus.COMPLETED, album_rank=0.5)]
     post_dynamo.client.transact_write_items(transacts)
 
     # verify both posts show up if we don't care about status
@@ -763,7 +873,64 @@ def test_generate_post_ids_in_album(post_dynamo):
     assert post_id_1 in post_ids
     assert post_id_2 in post_ids
 
-    # verify only completed post shows up if we ask for only completed posts
+    # verify only completed post shows up if we query COMPLETED posts
     post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, completed=True))
     assert len(post_ids) == 1
     assert post_id_2 in post_ids
+
+    # verify only non-completed post shows up if we query non-COMPLETED posts
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, completed=False))
+    assert len(post_ids) == 1
+    assert post_id_1 in post_ids
+
+    # verify we can't combine both completed and after_rank kwargs
+    with pytest.raises(AssertionError):
+        post_dynamo.generate_post_ids_in_album(album_id, completed=True, after_rank=Decimal(0))
+
+    # mark the other post completed
+    post_item_1 = post_dynamo.get_post(post_id_1)
+    transacts = [post_dynamo.transact_set_post_status(post_item_1, PostStatus.COMPLETED, album_rank=-0.5)]
+    post_dynamo.client.transact_write_items(transacts)
+
+    # test generating with after_rank before both
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(-0.625)))
+    assert len(post_ids) == 2
+    assert post_id_1 in post_ids
+    assert post_id_2 in post_ids
+
+    # test generating with after_rank is exclusive first one
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(-0.5)))
+    assert len(post_ids) == 1
+    assert post_id_2 in post_ids
+
+    # test generating with after_rank between
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(0)))
+    assert len(post_ids) == 1
+    assert post_id_2 in post_ids
+
+    # test generating with after_rank exclusive 2nd one
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(0.5)))
+    assert len(post_ids) == 0
+
+
+def test_transact_set_album_rank(post_dynamo):
+    # add a posts in an album
+    album_id, post_id = 'aid', 'pid'
+    transacts = [
+        post_dynamo.transact_add_pending_post('uid', post_id, text='lore', album_id=album_id),
+    ]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['gsiK3SortKey'] == -1
+
+    # change the album rank
+    transacts = [post_dynamo.transact_set_album_rank(post_id, album_rank=0)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['gsiK3SortKey'] == 0
+
+    # change the album rank
+    transacts = [post_dynamo.transact_set_album_rank(post_id, album_rank=0.5)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['gsiK3SortKey'] == 0.5

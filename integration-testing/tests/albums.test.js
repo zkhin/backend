@@ -1,8 +1,6 @@
 /* eslint-env jest */
 
-const fs = require('fs')
 const moment = require('moment')
-const path = require('path')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
@@ -10,8 +8,8 @@ const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
-const grantData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
-const grantContentType = 'image/jpeg'
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -383,13 +381,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a post to that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId1, mediaId: mediaId1, albumId}})
+  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId1)
-  await misc.sleep(2000)  // let dynamo reach consistency
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls and they have changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -416,13 +412,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a second post to that album
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId2, mediaId: mediaId2, albumId}})
+  variables = {postId: postId2, mediaId: mediaId2, albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId2)
-  await misc.sleep(2000)  // let dynamo reach consistency
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls that have not changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -442,13 +436,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a third post to that album
   const [postId3, mediaId3] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId3, mediaId: mediaId3, albumId}})
+  variables = {postId: postId3, mediaId: mediaId3, albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId3)
-  await misc.sleep(2000)  // let dynamo reach consistency
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls that have not changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -468,13 +460,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a fourth post to that album
   const [postId4, mediaId4] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId4, mediaId: mediaId4, albumId}})
+  variables = {postId: postId4, mediaId: mediaId4, albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId4)
-  uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
-  await misc.sleepUntilPostCompleted(ourClient, postId4)
-  await misc.sleep(2000)  // let dynamo reach consistency
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls that have changed root
   resp = await ourClient.query({query: schema.album, variables: {albumId}})

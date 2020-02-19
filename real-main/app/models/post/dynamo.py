@@ -108,8 +108,8 @@ class PostDynamo:
         if album_id:
             post_item.update({
                 'albumId': {'S': album_id},
-                'gsiK2PartitionKey': {'S': f'post/{album_id}'},
-                'gsiK2SortKey': {'S': f'{post_status}/{posted_at_str}'},
+                'gsiK3PartitionKey': {'S': f'post/{album_id}'},
+                'gsiK3SortKey': {'N': '-1'},  # all non-completed posts have a rank of -1
             })
         if text:
             post_item['text'] = {'S': text}
@@ -166,7 +166,13 @@ class PostDynamo:
             }
         }
 
-    def transact_set_post_status(self, post_item, status, original_post_id=None):
+    def transact_set_post_status(self, post_item, status, original_post_id=None, album_rank=None):
+        album_id = post_item.get('albumId')
+
+        assert (album_rank is not None) is bool(album_id and status == PostStatus.COMPLETED), \
+            'album_rank must be specified only when completing a post in an album'
+        album_rank = album_rank if album_rank is not None else -1
+
         exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :skPostedAt']
         exp_values = {
             ':postStatus': {'S': status},
@@ -177,8 +183,11 @@ class PostDynamo:
             exp_sets.append('originalPostId = :opi')
             exp_values[':opi'] = {'S': original_post_id}
 
-        if 'albumId' in post_item:
-            exp_sets.append('gsiK2SortKey = :skPostedAt')
+        if album_id:
+            exp_sets.append('gsiK3PartionKey = :gsik3pk')
+            exp_sets.append('gsiK3SortKey = :ar')
+            exp_values[':gsik3pk'] = {'S': f'post/{album_id}'}
+            exp_values[':ar'] = {'N': str(album_rank)}
 
         if 'expiresAt' in post_item:
             exp_sets.append('gsiA1SortKey = :gsiA1SortKey')
@@ -386,10 +395,14 @@ class PostDynamo:
             },
         }
 
-    def transact_set_album_id(self, post_item, album_id):
+    def transact_set_album_id(self, post_item, album_id, album_rank=None):
         post_id = post_item['postId']
         post_status = post_item['postStatus']
-        posted_at = post_item['postedAt']
+
+        assert (album_rank is not None) is bool(album_id and post_status == PostStatus.COMPLETED), \
+            'album_rank must be specified only when setting album_id for a completed post'
+        album_rank = album_rank if album_rank is not None else -1
+
         transact_item = {
             'Update': {
                 'Key': {
@@ -401,26 +414,46 @@ class PostDynamo:
         }
         if album_id:
             transact_item['Update']['UpdateExpression'] = (
-                'SET albumId = :aid, gsiK2PartitionKey = :pk, gsiK2SortKey = :sk'
+                'SET albumId = :aid, gsiK3PartitionKey = :pk, gsiK3SortKey = :ar'
             )
             transact_item['Update']['ExpressionAttributeValues'] = {
                 ':aid': {'S': album_id},
                 ':pk': {'S': f'post/{album_id}'},
-                ':sk': {'S': f'{post_status}/{posted_at}'},
+                ':ar': {'N': str(album_rank)},
                 ':ps': {'S': post_status},
             }
             transact_item['Update']['ConditionExpression'] += ' and postStatus = :ps'
         else:
-            transact_item['Update']['UpdateExpression'] = 'REMOVE albumId, gsiK2PartitionKey, gsiK2SortKey'
+            transact_item['Update']['UpdateExpression'] = 'REMOVE albumId, gsiK3PartitionKey, gsiK3SortKey'
         return transact_item
 
-    def generate_post_ids_in_album(self, album_id, completed=False):
-        key_exps = [Key('gsiK2PartitionKey').eq(f'post/{album_id}')]
-        if completed:
-            key_exps.append(Key('gsiK2SortKey').begins_with(PostStatus.COMPLETED + '/'))
+    def transact_set_album_rank(self, post_id, album_rank):
+        return {
+            'Update': {
+                'Key': {
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': '-'},
+                },
+                'UpdateExpression': 'SET gsiK3SortKey = :ar',
+                'ExpressionAttributeValues': {':ar': {'N': str(album_rank)}},
+                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
+            }
+        }
+
+    def generate_post_ids_in_album(self, album_id, completed=None, after_rank=None):
+        assert completed is None or after_rank is None, 'Cant specify both completed and after_rank kwargs'
+
+        key_exps = [Key('gsiK3PartitionKey').eq(f'post/{album_id}')]
+        if completed is True:
+            key_exps.append(Key('gsiK3SortKey').gt(-1))
+        if completed is False:
+            key_exps.append(Key('gsiK3SortKey').eq(-1))
+        if after_rank is not None:
+            key_exps.append(Key('gsiK3SortKey').gt(after_rank))
+
         query_kwargs = {
             'KeyConditionExpression': reduce(lambda a, b: a & b, key_exps),
-            'IndexName': 'GSI-K2',
+            'IndexName': 'GSI-K3',
             'ProjectionExpression': 'partitionKey',
         }
         return map(

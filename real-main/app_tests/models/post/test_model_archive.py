@@ -65,7 +65,6 @@ def test_archive_pending_post(post_manager, post_with_media, user_manager):
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.album_manager.update_album_art_if_needed = Mock()
 
     # archive the post, check it got to media
     post.archive()
@@ -83,7 +82,6 @@ def test_archive_pending_post(post_manager, post_with_media, user_manager):
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
-    assert post.album_manager.update_album_art_if_needed.mock_calls == []
 
 
 def test_archive_expired_completed_post(post_manager, post_with_expiration, user_manager):
@@ -126,15 +124,18 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
     posted_by_user = user_manager.get_user(posted_by_user_id)
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == 0
 
     # check our starting post count
     album.refresh_item()
     assert album.item['postCount'] == 1
+    assert album.item['rankCount'] == 1
+    assert album.item['artHash']
     posted_by_user.refresh_item()
     assert posted_by_user.item['postCount'] == 1
 
     # mock out some calls to far-flung other managers
-    post.album_manager.update_album_art_if_needed = Mock()
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
@@ -147,8 +148,12 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
 
     # check the post is still in the album, but since it's no longer completed, it doesn't show in the count
     assert post.item['albumId'] == album.id
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == -1
     album.refresh_item()
     assert album.item.get('postCount', 0) == 0
+    assert album.item['rankCount'] == 1
+    assert 'artHash' not in album.item
 
     # check the user post count decremented
     posted_by_user.refresh_item()
@@ -161,7 +166,4 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
-    ]
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [
-        call(post.item['albumId']),
     ]

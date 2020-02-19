@@ -1,17 +1,15 @@
 /* eslint-env jest */
 
-const fs = require('fs')
 const moment = require('moment')
-const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
-const grantDataB64 = new Buffer.from(grantData).toString('base64')
-const grantContentType = 'image/jpeg'
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageContentType = 'image/jpeg'
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -38,7 +36,7 @@ test('Create a posts in an album, album post ordering', async () => {
 
   // we add an image post in that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData: grantDataB64}
+  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData: imageDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -60,7 +58,7 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
   let before = moment().toISOString()
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId2)
   let after = moment().toISOString()
 
@@ -72,8 +70,25 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(before <= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
   expect(after >= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
   expect(resp['data']['album']['posts']['items']).toHaveLength(2)
-  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId2)
-  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId1)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId1)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId2)
+
+  // we another image post in that album
+  const [postId3, mediaId3] = [uuidv4(), uuidv4()]
+  variables = {postId: postId3, mediaId: mediaId3, albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId3)
+
+  // check the album
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['album']['albumId']).toBe(albumId)
+  expect(resp['data']['album']['postCount']).toBe(3)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(3)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId1)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId2)
+  expect(resp['data']['album']['posts']['items'][2]['postId']).toBe(postId3)
 })
 
 
@@ -135,7 +150,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['album']).toBeNull()
   let uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify neither we or them cannot move the post into their album
@@ -181,7 +196,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['data']['album']['posts']['items']).toHaveLength(0)
 
   // upload the media, thus completing the post
-  await misc.uploadMedia(grantData, grantContentType, uploadUrl)
+  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify the post is now COMPLETED
@@ -215,13 +230,13 @@ test('Add, remove, change albums for an existing post', async () => {
 
   // add a post, not in any album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['album']).toBeNull()
 
-  // move that post into one of the albums
+  // move that post into the 2nd album
   let before = moment().toISOString()
   resp = await ourClient.mutate({mutation: schema.editPostAlbum, variables: {postId, albumId: albumId2}})
   let after = moment().toISOString()
@@ -229,7 +244,7 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp['data']['editPostAlbum']['postId']).toBe(postId)
   expect(resp['data']['editPostAlbum']['album']['albumId']).toBe(albumId2)
 
-  // check the album it was added to
+  // check the second album
   resp = await ourClient.query({query: schema.album, variables: {albumId: albumId2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId2)
@@ -239,7 +254,16 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(before <= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
   expect(after >= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
 
-  // move that post out of that album and into another
+  // add an unrelated post to the first album
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  let variables = {postId: postId2, mediaId: mediaId2, imageData: imageDataB64, albumId: albumId1}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['album']['albumId']).toBe(albumId1)
+
+  // move the original post out of the 2nd album and into the first
   before = moment().toISOString()
   resp = await ourClient.mutate({mutation: schema.editPostAlbum, variables: {postId, albumId: albumId1}})
   after = moment().toISOString()
@@ -247,7 +271,7 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp['data']['editPostAlbum']['postId']).toBe(postId)
   expect(resp['data']['editPostAlbum']['album']['albumId']).toBe(albumId1)
 
-  // check the album it was removed from
+  // check the 2nd album
   resp = await ourClient.query({query: schema.album, variables: {albumId: albumId2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId2)
@@ -256,13 +280,14 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(before <= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
   expect(after >= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
 
-  // check the album it was added to
+  // check the first album, including post order - new post should be at the back
   resp = await ourClient.query({query: schema.album, variables: {albumId: albumId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId1)
-  expect(resp['data']['album']['postCount']).toBe(1)
-  expect(resp['data']['album']['posts']['items']).toHaveLength(1)
-  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['album']['postCount']).toBe(2)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(2)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId2)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId)
   expect(before <= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
   expect(after >= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
 
@@ -274,12 +299,13 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp['data']['editPostAlbum']['postId']).toBe(postId)
   expect(resp['data']['editPostAlbum']['album']).toBeNull()
 
-  // check the album it was removed from
+  // check the first album
   resp = await ourClient.query({query: schema.album, variables: {albumId: albumId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId1)
-  expect(resp['data']['album']['postCount']).toBe(0)
-  expect(resp['data']['album']['posts']['items']).toHaveLength(0)
+  expect(resp['data']['album']['postCount']).toBe(1)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(1)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId2)
   expect(before <= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
   expect(after >= resp['data']['album']['postsLastUpdatedAt']).toBe(true)
 })
@@ -331,7 +357,7 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
 })
 
 
-test('Archiving a post removes it from Album.posts & friends, restoring puts it back', async () => {
+test('Archiving a post removes it from Album.posts & friends, restoring it does not maintain rank', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // add an album
@@ -342,10 +368,19 @@ test('Archiving a post removes it from Album.posts & friends, restoring puts it 
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, imageData: grantDataB64}
+  let variables = {postId, mediaId, albumId, imageData: imageDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
+
+  // add another media post in the album
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  variables = {postId: postId2, mediaId: mediaId2, albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
 
@@ -353,9 +388,10 @@ test('Archiving a post removes it from Album.posts & friends, restoring puts it 
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
-  expect(resp['data']['album']['postCount']).toBe(1)
-  expect(resp['data']['album']['posts']['items']).toHaveLength(1)
+  expect(resp['data']['album']['postCount']).toBe(2)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(2)
   expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId2)
   let postsLastUpdatedAt = resp['data']['album']['postsLastUpdatedAt']
   expect(postsLastUpdatedAt).not.toBeNull()
 
@@ -369,8 +405,9 @@ test('Archiving a post removes it from Album.posts & friends, restoring puts it 
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
-  expect(resp['data']['album']['postCount']).toBe(0)
-  expect(resp['data']['album']['posts']['items']).toHaveLength(0)
+  expect(resp['data']['album']['postCount']).toBe(1)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(1)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId2)
   expect(resp['data']['album']['postsLastUpdatedAt'] > postsLastUpdatedAt).toBe(true)
   postsLastUpdatedAt = resp['data']['album']['postsLastUpdatedAt']
 
@@ -380,13 +417,14 @@ test('Archiving a post removes it from Album.posts & friends, restoring puts it 
   expect(resp['data']['restoreArchivedPost']['postId']).toBe(postId)
   expect(resp['data']['restoreArchivedPost']['postStatus']).toBe('COMPLETED')
 
-  // verify its now back in Album.posts and friends
+  // verify its now back in Album.posts and friends, in the back
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
-  expect(resp['data']['album']['postCount']).toBe(1)
-  expect(resp['data']['album']['posts']['items']).toHaveLength(1)
-  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['album']['postCount']).toBe(2)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(2)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId2)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId)
   expect(resp['data']['album']['postsLastUpdatedAt'] > postsLastUpdatedAt).toBe(true)
 })
 
@@ -402,7 +440,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, imageData: grantDataB64}
+  let variables = {postId, mediaId, albumId, imageData: imageDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -432,4 +470,210 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
   expect(resp['data']['album']['postCount']).toBe(0)
   expect(resp['data']['album']['posts']['items']).toHaveLength(0)
   expect(postsLastUpdatedAt < resp['data']['album']['postsLastUpdatedAt']).toBe(true)
+})
+
+
+test('Edit album post order failures', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+  const [albumId, postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
+
+  // we add an album
+  let variables = {albumId, name: 'n1'}
+  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
+
+  // we add two posts to the album
+  variables = {postId: postId1, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
+
+  variables = {postId: postId2, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+
+  // they add a post, not in any album
+  variables = {postId: postId3, mediaId: uuidv4(), imageData: imageDataB64}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId3)
+
+  // check album post order
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['album']['albumId']).toBe(albumId)
+  expect(resp['data']['album']['postCount']).toBe(2)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(2)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId1)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId2)
+
+  // verify they cannot change our album's post order
+  variables = {postId: postId1, precedingPostId: postId2}
+  await expect(theirClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toBeDefined()
+
+  // verify they cannot use their post to change our order
+  variables = {postId: postId3, precedingPostId: postId2}
+  await expect(theirClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toBeDefined()
+
+  // verify we cannot use their post to change our order
+  variables = {postId: postId1, precedingPostId: postId3}
+  await expect(ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toBeDefined()
+
+  // check album post order has not changed
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['album']['albumId']).toBe(albumId)
+  expect(resp['data']['album']['postCount']).toBe(2)
+  expect(resp['data']['album']['posts']['items']).toHaveLength(2)
+  expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId1)
+  expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId2)
+
+  // make sure post change order can actually complete without error
+  variables = {postId: postId1, precedingPostId: postId2}
+  resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId1)
+  expect(resp['data']['editPostAlbumOrder']['album']['albumId']).toBe(albumId)
+})
+
+
+test('Edit album post order', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [albumId, postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
+
+  // we add an album
+  let variables = {albumId, name: 'n1'}
+  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
+
+  // we add three posts to the album
+  variables = {postId: postId1, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
+
+  variables = {postId: postId2, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+
+  variables = {postId: postId3, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId3)
+
+  // check album post order
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  let album = resp['data']['album']
+  expect(album['albumId']).toBe(albumId)
+  expect(album['postCount']).toBe(3)
+  expect(album['posts']['items']).toHaveLength(3)
+  expect(album['posts']['items'][0]['postId']).toBe(postId1)
+  expect(album['posts']['items'][1]['postId']).toBe(postId2)
+  expect(album['posts']['items'][2]['postId']).toBe(postId3)
+  let prevAlbum = album
+
+  // move the posts around a bit
+  variables = {postId: postId3, precedingPostId: null}
+  resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId3)
+
+  // check album post order
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  album = resp['data']['album']
+  expect(album['albumId']).toBe(albumId)
+  expect(album['postCount']).toBe(3)
+  expect(album['posts']['items']).toHaveLength(3)
+  expect(album['posts']['items'][0]['postId']).toBe(postId3)
+  expect(album['posts']['items'][1]['postId']).toBe(postId1)
+  expect(album['posts']['items'][2]['postId']).toBe(postId2)
+
+  // verify the art urls changed
+  expect(prevAlbum['url'].split('?')[0]).not.toBe(album['url'].split('?')[0])
+  expect(prevAlbum['url4k'].split('?')[0]).not.toBe(album['url4k'].split('?')[0])
+  expect(prevAlbum['url1080p'].split('?')[0]).not.toBe(album['url1080p'].split('?')[0])
+  expect(prevAlbum['url480p'].split('?')[0]).not.toBe(album['url480p'].split('?')[0])
+  expect(prevAlbum['url64p'].split('?')[0]).not.toBe(album['url64p'].split('?')[0])
+  prevAlbum = album
+
+  // move the posts around a bit
+  variables = {postId: postId2, precedingPostId: postId3}
+  resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId2)
+
+  // check album post order
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  album = resp['data']['album']
+  expect(album['albumId']).toBe(albumId)
+  expect(album['postCount']).toBe(3)
+  expect(album['posts']['items']).toHaveLength(3)
+  expect(album['posts']['items'][0]['postId']).toBe(postId3)
+  expect(album['posts']['items'][1]['postId']).toBe(postId2)
+  expect(album['posts']['items'][2]['postId']).toBe(postId1)
+
+  // verify the art url have *not* changed - as first post didn't change
+  expect(prevAlbum['url'].split('?')[0]).toBe(album['url'].split('?')[0])
+  expect(prevAlbum['url4k'].split('?')[0]).toBe(album['url4k'].split('?')[0])
+  expect(prevAlbum['url1080p'].split('?')[0]).toBe(album['url1080p'].split('?')[0])
+  expect(prevAlbum['url480p'].split('?')[0]).toBe(album['url480p'].split('?')[0])
+  expect(prevAlbum['url64p'].split('?')[0]).toBe(album['url64p'].split('?')[0])
+  prevAlbum = album
+
+  // move the posts around a bit
+  variables = {postId: postId1}
+  resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId1)
+
+  // check album post order
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  album = resp['data']['album']
+  expect(album['albumId']).toBe(albumId)
+  expect(album['postCount']).toBe(3)
+  expect(album['posts']['items']).toHaveLength(3)
+  expect(album['posts']['items'][0]['postId']).toBe(postId1)
+  expect(album['posts']['items'][1]['postId']).toBe(postId3)
+  expect(album['posts']['items'][2]['postId']).toBe(postId2)
+
+  // verify the art urls changed again
+  expect(prevAlbum['url'].split('?')[0]).not.toBe(album['url'].split('?')[0])
+  expect(prevAlbum['url4k'].split('?')[0]).not.toBe(album['url4k'].split('?')[0])
+  expect(prevAlbum['url1080p'].split('?')[0]).not.toBe(album['url1080p'].split('?')[0])
+  expect(prevAlbum['url480p'].split('?')[0]).not.toBe(album['url480p'].split('?')[0])
+  expect(prevAlbum['url64p'].split('?')[0]).not.toBe(album['url64p'].split('?')[0])
+  prevAlbum = album
+
+  // try a no-op
+  variables = {postId: postId3, precedingPostId: postId1}
+  resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId3)
+
+  // check album again directly, make sure nothing changed
+  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  expect(resp['errors']).toBeUndefined()
+  album = resp['data']['album']
+  expect(album['albumId']).toBe(albumId)
+  expect(album['postCount']).toBe(3)
+  expect(album['posts']['items']).toHaveLength(3)
+  expect(album['posts']['items'][0]['postId']).toBe(postId1)
+  expect(album['posts']['items'][1]['postId']).toBe(postId3)
+  expect(album['posts']['items'][2]['postId']).toBe(postId2)
+
+  // verify the art urls have *not* changed
+  expect(prevAlbum['url'].split('?')[0]).toBe(album['url'].split('?')[0])
+  expect(prevAlbum['url4k'].split('?')[0]).toBe(album['url4k'].split('?')[0])
+  expect(prevAlbum['url1080p'].split('?')[0]).toBe(album['url1080p'].split('?')[0])
+  expect(prevAlbum['url480p'].split('?')[0]).toBe(album['url480p'].split('?')[0])
+  expect(prevAlbum['url64p'].split('?')[0]).toBe(album['url64p'].split('?')[0])
 })

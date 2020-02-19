@@ -30,7 +30,7 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64, m
 
 
 @pytest.fixture
-def completed_post_with_media(album_manager, post_manager, user_manager, image_data_b64, mock_post_verification_api):
+def completed_post_with_media(post_manager, user_manager, image_data_b64, mock_post_verification_api):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     yield post_manager.add_post(
         user.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
@@ -213,16 +213,19 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
     posted_by_user = user_manager.get_user(posted_by_user_id)
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == 0
 
     # check our starting point
     assert post.item['postStatus'] == PostStatus.COMPLETED
     album.refresh_item()
     assert album.item.get('postCount', 0) == 1
+    assert album.item.get('rankCount', 0) == 1
+    assert album.item['artHash']
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
-    post.album_manager.update_album_art_if_needed = Mock()
     post.comment_manager = Mock(CommentManager({}))
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
@@ -235,6 +238,8 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert post.item['postStatus'] == PostStatus.DELETING
     assert len(post.item['mediaObjects']) == 1
     assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == -1
 
     # check the DB again
     post.refresh_item()
@@ -243,6 +248,8 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     # check our post count - should have decremented
     album.refresh_item()
     assert album.item.get('postCount', 0) == 0
+    assert album.item.get('rankCount', 0) == 1
+    assert 'artHash' not in album.item
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 0
 
@@ -262,7 +269,4 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
-    ]
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [
-        call(album.id),
     ]

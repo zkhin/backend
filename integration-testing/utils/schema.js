@@ -780,6 +780,17 @@ module.exports.editPostAlbum = gql(
   }`
 )
 
+module.exports.editPostAlbumOrder = gql(
+  `mutation EditPostAlbumOrder ($postId: ID!, $precedingPostId: ID) {
+    editPostAlbumOrder(postId: $postId, precedingPostId: $precedingPostId) {
+      postId
+      album {
+        albumId
+      }
+    }
+  }`
+)
+
 module.exports.editPostExpiresAt = gql(
   `mutation EditPostExpiresAt ($postId: ID!, $expiresAt: AWSDateTime) {
     editPostExpiresAt(postId: $postId, expiresAt: $expiresAt) {

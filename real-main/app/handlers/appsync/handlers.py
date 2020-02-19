@@ -526,6 +526,26 @@ def edit_post_album(caller_user_id, arguments, source, context):
     return post.serialize(caller_user_id)
 
 
+@routes.register('Mutation.editPostAlbumOrder')
+def edit_post_album_order(caller_user_id, arguments, source, context):
+    post_id = arguments['postId']
+    preceding_post_id = arguments.get('precedingPostId')
+
+    post = post_manager.get_post(post_id)
+    if not post:
+        raise ClientException(f'Post `{post_id}` does not exist')
+
+    if caller_user_id != post.item['postedByUserId']:
+        raise ClientException("Cannot edit another user's post")
+
+    try:
+        post.set_album_order(preceding_post_id)
+    except post_manager.exceptions.PostException as err:
+        raise ClientException(str(err))
+
+    return post.serialize(caller_user_id)
+
+
 @routes.register('Mutation.editPostExpiresAt')
 def edit_post_expires_at(caller_user_id, arguments, source, context):
     post_id = arguments['postId']

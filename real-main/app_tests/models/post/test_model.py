@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import call, Mock
 
 import pendulum
@@ -204,53 +205,234 @@ def test_set_album_errors(album_manager, post_manager, user_manager, post, post_
     assert 'Text-only' in str(err)
 
 
-def test_set_album(albums, post_with_media):
+def test_set_album_completed_post(albums, post_with_media):
     post = post_with_media
     album1, album2 = albums
-    post.album_manager.update_album_art_if_needed = Mock()
 
     # verify starting state
     assert 'albumId' not in post.item
     assert album1.item.get('postCount', 0) == 0
     assert album2.item.get('postCount', 0) == 0
-    assert post.album_manager.update_album_art_if_needed.mock_calls == []
+    assert album1.item.get('rankCount', 0) == 0
+    assert album2.item.get('rankCount', 0) == 0
+    assert 'artHash' not in album1.item
+    assert 'artHash' not in album2.item
 
     # go from no album to an album
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 1
+    assert album1.item.get('rankCount', 0) == 1
+    assert album1.item['artHash']
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 0
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [call(album1.id)]
-    post.album_manager.update_album_art_if_needed.reset_mock()
+    assert album2.item.get('rankCount', 0) == 0
+    assert 'artHash' not in album2.item
 
     # change the album
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
+    assert album1.item.get('rankCount', 0) == 1
+    assert 'artHash' not in album1.item
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 1
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [call(album1.id), call(album2.id)]
-    post.album_manager.update_album_art_if_needed.reset_mock()
+    assert album2.item.get('rankCount', 0) == 1
+    assert album2.item['artHash']
 
     # no-op
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
+    assert album1.item.get('rankCount', 0) == 1
+    assert 'artHash' not in album1.item
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 1
-    assert post.album_manager.update_album_art_if_needed.mock_calls == []
-    post.album_manager.update_album_art_if_needed.reset_mock()
+    assert album2.item.get('rankCount', 0) == 1
+    assert album2.item['artHash']
 
     # remove post from all albums
     post.set_album(None)
     assert 'albumId' not in post.item
+    assert 'gsiK3SortKey' not in post.item
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
+    assert album1.item.get('rankCount', 0) == 1
+    assert 'artHash' not in album1.item
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 0
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [call(album2.id)]
-    post.album_manager.update_album_art_if_needed.reset_mock()
+    assert album2.item.get('rankCount', 0) == 1
+    assert 'artHash' not in album2.item
+
+    # archive the post
+    post.archive()
+
+    # add it back to an album, should not increment counts
+    post.set_album(album1.id)
+    assert post.item['albumId'] == album1.id
+    assert post.item['gsiK3SortKey'] == -1   # album rank
+    album1.refresh_item()
+    assert album1.item.get('postCount', 0) == 0
+    assert album1.item.get('rankCount', 0) == 1
+    assert 'artHash' not in album1.item
+
+
+def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+    post1 = post_manager.add_post(
+        user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
+    )
+    post2 = post_manager.add_post(
+        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+    )
+    post3 = post_manager.add_post(
+        user2.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
+    )
+    post4 = post_manager.add_post(
+        user2.id, 'pid4', media_uploads=[{'mediaId': 'mid4', 'imageData': image_data_b64}],
+    )
+    album1, album2 = albums
+
+    # put post2 & post3 in first album
+    post2.set_album(album1.id)
+    assert post2.item['albumId'] == album1.id
+    assert post2.item['gsiK3SortKey'] == 0
+
+    post3.set_album(album1.id)
+    assert post3.item['albumId'] == album1.id
+    assert post3.item['gsiK3SortKey'] == 0.5
+
+    # put post4 in second album
+    post4.set_album(album2.id)
+    assert post4.item['albumId'] == album2.id
+    assert post4.item['gsiK3SortKey'] == 0
+
+    # verify can't change order with post that DNE
+    with pytest.raises(post_manager.exceptions.PostException):
+        post2.set_album_order('pid-dne')
+
+    # verify can't change order using post from diff users
+    with pytest.raises(post_manager.exceptions.PostException):
+        post1.set_album_order(post2.id)
+    with pytest.raises(post_manager.exceptions.PostException):
+        post2.set_album_order(post1.id)
+
+    # verify can't change order with posts in diff albums
+    with pytest.raises(post_manager.exceptions.PostException):
+        post4.set_album_order(post2.id)
+    with pytest.raises(post_manager.exceptions.PostException):
+        post2.set_album_order(post4.id)
+
+    # verify *can* change order if everything correct
+    post2.set_album_order(post3.id)
+    assert post2.item['albumId'] == album1.id
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 3))
+
+
+def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+    # album with three posts in it
+    album, _ = albums
+    post1 = post_manager.add_post(
+        user2.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+    )
+    post2 = post_manager.add_post(
+        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+    )
+    post3 = post_manager.add_post(
+        user2.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}], album_id=album.id,
+    )
+
+    # check starting state
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
+    assert post1.item['gsiK3SortKey'] == 0
+    assert post2.item['gsiK3SortKey'] == 0.5
+    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 3))
+
+    # change middle post, check order
+    post3.set_album_order(post1.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post3.id, post2.id]
+    assert post3.item['gsiK3SortKey'] == 0.25
+
+    # change middle post, check order
+    post2.set_album_order(post1.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
+    assert post2.item['gsiK3SortKey'] == 0.125
+
+    # change middle post, check order
+    post3.set_album_order(post1.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post3.id, post2.id]
+    assert post3.item['gsiK3SortKey'] == 0.0625
+
+    # change middle post, check order
+    post2.set_album_order(post1.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
+    assert post2.item['gsiK3SortKey'] == 0.03125
+
+
+def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+    # album with two posts in it
+    album, _ = albums
+    post1 = post_manager.add_post(
+        user2.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+    )
+    post2 = post_manager.add_post(
+        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+    )
+
+    # check starting state
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post1.item['gsiK3SortKey'] == 0
+    assert post2.item['gsiK3SortKey'] == 0.5
+
+    # change first post, check order
+    post2.set_album_order(None)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-2 / 3))
+
+    # change first post, check order
+    post1.set_album_order(None)
+    with pytest.raises(AssertionError):  # https://github.com/spulec/moto/issues/2760
+        assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post1.item['gsiK3SortKey'] == -0.75
+
+    # change first post, check order
+    post2.set_album_order(None)
+    with pytest.raises(AssertionError):  # https://github.com/spulec/moto/issues/2760
+        assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-0.8))
+
+
+def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+    # album with two posts in it
+    album, _ = albums
+    post1 = post_manager.add_post(
+        user2.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+    )
+    post2 = post_manager.add_post(
+        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+    )
+
+    # check starting state
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post1.item['gsiK3SortKey'] == 0
+    assert post2.item['gsiK3SortKey'] == 0.5
+
+    # change last post, check order
+    post1.set_album_order(post2.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
+    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 3))
+
+    # change last post, check order
+    post2.set_album_order(post1.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post2.item['gsiK3SortKey'] == 0.75
+
+    # change last post, check order
+    post1.set_album_order(post2.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
+    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(0.8))

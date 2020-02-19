@@ -7,14 +7,14 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiK2PartitionKey = :pk and begins_with(gsiK2SortKey, :skPrefix)",
+    "expression": "gsiK3PartitionKey = :pk and gsiK3SortKey > :skMin",
     "expressionValues": {
       ":pk": { "S": "post/$ctx.source.albumId" },
-      ":skPrefix": { "S": "COMPLETED/" }
+      ":skMin": { "N": "-1" }
     }
   },
-  "index": "GSI-K2",
-  "scanIndexForward": false,
+  "index": "GSI-K3",
+  "scanIndexForward": true,
   "limit": $limit
   #if ($ctx.args.nextToken)
   , "nextToken": "$ctx.args.nextToken"

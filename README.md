@@ -167,7 +167,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `following/{followerUserId}/{followedUserId}` | `-`| `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `followedFirstStory/{followerUserId}/{postedByUserId}` | `-`| `1` | `postId`, `postedAt`, `postedByUserId`, `expiresAt` | `followedFirstStory/{followerUserId}` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
-| `post/{postId}` | `-` | `1` | `postId`, `postedAt`, `postedByUserId`, `postStatus`, `albumId`, `originalPostId`, `expiresAt`, `text`, `textTags:[{tag, userId}]`, `viewedByCount:Number`, `onymousLikeCount:Number`, `anonymousLikeCount:Number`, `flagCount:Number`, `commentCount:Number`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` |  `post/{albumId}` | `{postStatus}/{postedAt}` |
+| `post/{postId}` | `-` | `1` | `postId`, `postedAt`, `postedByUserId`, `postStatus`, `albumId`, `originalPostId`, `expiresAt`, `text`, `textTags:[{tag, userId}]`, `viewedByCount:Number`, `onymousLikeCount:Number`, `anonymousLikeCount:Number`, `flagCount:Number`, `commentCount:Number`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` | | | `post/{albumId}` | `{albumRank:Number}` |
 | `flag/{flaggerUserId}/{postId}` | `-`| `1` | `flaggerUserId`, `postId`, `flaggedAt` | `flag/{flaggerUserId}` | `{flaggedAt}` | `flag/{postId}` | `{flaggedAt}` |
 | `media/{mediaId}` | `-` | `0` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `checksum`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` | `media/{checksum}` | `{postedAt}` |
 | `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
@@ -175,7 +175,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | `trending/{itemType}` | `{score:Number}` |
 | `postView/{postId}/{viewedByUserId}` | `-` | `0` | `postId`, `postedByUserId`, `viewedByUserId`, `viewCount:Number`, `firstViewedAt`, `lastViewedAt` | `postView/{postId}` | `{lastViewedAt}` |
-| `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
+| `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `rankCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
 
 Note that:
 
@@ -187,6 +187,8 @@ Note that:
  - keys that depend on optional attributes (ex: for posts, the GSI-A1 and GSI-K1 keys depend on `expiresAt`) will not be set if the optional attribute is not present
  - `textTags` is a list of maps, each map having two keys `tag` and `userId` both with string values
  - `colors` is a list of maps, each map having three numeric keys: `r`, `g`, and `b`
+ - `Post.albumRank` is -1 for non-COMPLETED posts in albums, and exclusively between -1 and 1 for COMPLETED posts in albums
+ - `Album.rankCount` is a count of the number of times rank of posts has been changed because of adding posts or editing existing post rank
 
 #### Global Secondary Indexes
 
@@ -194,6 +196,7 @@ Note that:
 - GSI-A2: (`gsiA2PartitionKey`, `gsiA2SortKey`) with keys and all attributes.
 - GSI-K1: (`gsiK1PartitionKey`, `gsiK1SortKey`) with keys only.
 - GSI-K2: (`gsiK2PartitionKey`, `gsiK2SortKey`) with keys only.
+- GSI-K3: (`gsiK3PartitionKey`, `gsiK3SortKey:Number`) with keys only.
 
 #### Data Migrations
 

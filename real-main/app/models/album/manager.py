@@ -52,12 +52,6 @@ class AlbumManager:
         album_item = self.dynamo.get_album(album_id, strongly_consistent=True)
         return self.init_album(album_item)
 
-    def update_album_art_if_needed(self, album_id):
-        album = self.get_album(album_id)
-        if not album:
-            raise exceptions.AlbumDoesNotExist(album_id)
-        album.update_art_if_needed()
-
     def delete_all_by_user(self, user_id):
         for album_item in self.dynamo.generate_by_user(user_id):
             self.init_album(album_item).delete()

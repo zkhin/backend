@@ -52,6 +52,7 @@ class PostManager:
             'followed_first_story_manager': self.followed_first_story_manager,
             'like_manager': self.like_manager,
             'media_manager': self.media_manager,
+            'post_manager': self,
             'post_view_manager': self.post_view_manager,
             'trending_manager': self.trending_manager,
             'user_manager': self.user_manager,

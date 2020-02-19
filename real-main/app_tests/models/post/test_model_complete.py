@@ -85,7 +85,6 @@ def test_complete(post_manager, post_with_media, user_manager):
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.album_manager.update_album_art_if_needed = Mock()
 
     # check starting state
     assert posted_by_user.item.get('postCount', 0) == 0
@@ -103,7 +102,6 @@ def test_complete(post_manager, post_with_media, user_manager):
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
-    assert post.album_manager.update_album_art_if_needed.mock_calls == []
 
 
 def test_complete_with_expiration(post_manager, post_with_media_with_expiration, user_manager):
@@ -134,27 +132,39 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
     ]
 
 
-def test_complete_with_album(album_manager, post_manager, post_with_media_with_album, user_manager):
+def test_complete_with_album(album_manager, post_manager, post_with_media_with_album, user_manager, image_data,
+                             mock_post_verification_api):
     post = post_with_media_with_album
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
     album = album_manager.get_album(post.item['albumId'])
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == -1
+
+    # put media out in mocked s3 for the post, so album art can be generated
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
+    path = media.get_s3_path(MediaSize.NATIVE)
+    post_manager.clients['s3_uploads'].put_object(path, image_data, 'application/octet-stream')
+    media.process_upload()
 
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.album_manager.update_album_art_if_needed = Mock()
 
     # check starting state
     assert album.item.get('postCount', 0) == 0
+    assert album.item.get('rankCount', 0) == 0
     assert posted_by_user.item.get('postCount', 0) == 0
     assert post.item['postStatus'] == PostStatus.PENDING
 
     # complete the post, check state
     post.complete()
     assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
+    assert post.item['gsiK3SortKey'] == 0
     album.refresh_item()
     assert album.item.get('postCount', 0) == 1
+    assert album.item.get('rankCount', 0) == 1
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
 
@@ -163,13 +173,10 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
-    assert post.album_manager.update_album_art_if_needed.mock_calls == [
-        call(post.item['albumId']),
-    ]
 
 
-def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_album):
-    post1, post2 = post_with_media, post_with_media_with_album
+def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_expiration):
+    post1, post2 = post_with_media, post_with_media_with_expiration
 
     # set the checksum on the media of both posts to the same thing
     media1 = post_manager.media_manager.init_media(post1.item['mediaObjects'][0])
@@ -184,10 +191,8 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     # mock out some calls to far-flung other managers
     post1.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post1.feed_manager = Mock(FeedManager({}))
-    post1.album_manager.update_album_art_if_needed = Mock()
     post2.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post2.feed_manager = Mock(FeedManager({}))
-    post2.album_manager.update_album_art_if_needed = Mock()
 
     # complete the post that has the earlier postedAt, should not get an originalPostId
     media1.set_checksum()

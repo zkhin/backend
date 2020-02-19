@@ -208,3 +208,25 @@ def test_cannot_update_album_art_with_text_only_post(album, text_only_post):
     with pytest.raises(Exception) as err:
         album.update_art_images_one_post(art_hash, text_only_post.id)
     assert 'uploaded media' in str(err)
+
+
+def test_rank_count(album):
+    assert 'rank' not in album.item
+    assert album.get_next_first_rank() == 0
+    assert album.get_next_last_rank() == 0
+
+    album.item['rankCount'] = 0
+    assert album.get_next_first_rank() == 0
+    assert album.get_next_last_rank() == 0
+
+    album.item['rankCount'] = 1
+    assert album.get_next_first_rank() == -0.5
+    assert album.get_next_last_rank() == 0.5
+
+    album.item['rankCount'] = 3
+    assert album.get_next_first_rank() == -0.75
+    assert album.get_next_last_rank() == 0.75
+
+    album.item['rankCount'] = 4
+    assert album.get_next_first_rank() == -0.8
+    assert album.get_next_last_rank() == 0.8

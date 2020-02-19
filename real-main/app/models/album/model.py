@@ -83,6 +83,16 @@ class Album:
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         return self
 
+    def get_next_first_rank(self):
+        "Return the next rank to be used for a post to appear as first in the album"
+        rank_count = self.item.get('rankCount', 0) + 1
+        return (1 - rank_count) / rank_count
+
+    def get_next_last_rank(self):
+        "Return the next rank to be used for a post to appear as last in the album"
+        rank_count = self.item.get('rankCount', 0) + 1
+        return (rank_count - 1) / rank_count
+
     def get_art_image_url(self, size):
         art_image_path = self.get_art_image_path(size)
         if art_image_path:

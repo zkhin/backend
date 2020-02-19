@@ -154,6 +154,12 @@ type Mutation {
   #   - to change which album the post is in, set albumId to the id of the new album
   editPostAlbum(postId: ID!, albumId: ID): Post
 
+  # Edit the order in which a Post appears in an Album
+  #   - the Posts identified by postId and precedingPostId must be in the same Album
+  #   - if precedingPostId is non-null, postId will be placed directly after it
+  #   - if precedingPostId is null, postId will be placed at the front
+  editPostAlbumOrder(postId: ID!, precedingPostId: ID): Post
+
   # Edit Post.expiresAt
   #   - leave expiresAt unset, or set it to null to make the post last forever
   #   - setting expiresAt to a value in the past is an error

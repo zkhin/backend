@@ -29,9 +29,14 @@ tiny_path = path.join(path.dirname(__file__), '..', 'fixtures', 'tiny.jpg')
 
 
 @pytest.fixture
-def image_data_b64():
+def image_data():
     with open(tiny_path, 'rb') as fh:
-        yield base64.b64encode(fh.read())
+        yield fh.read()
+
+
+@pytest.fixture
+def image_data_b64(image_data):
+    yield base64.b64encode(image_data)
 
 
 @pytest.fixture
