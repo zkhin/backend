@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import call, Mock
 
 import pendulum
@@ -182,14 +183,14 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
-    assert post.item['gsiK3SortKey'] == 0.5
+    assert post.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
 
     # check the post straight from the db
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
-    assert post.item['gsiK3SortKey'] == 0.5
+    assert post.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
 
     # check our post count - should have incremented
     album.refresh_item()

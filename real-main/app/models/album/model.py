@@ -85,13 +85,13 @@ class Album:
 
     def get_next_first_rank(self):
         "Return the next rank to be used for a post to appear as first in the album"
-        rank_count = self.item.get('rankCount', 0) + 1
-        return (1 - rank_count) / rank_count
+        rank_spaces = self.item.get('rankCount', 0) + 2
+        return 2 / rank_spaces - 1
 
     def get_next_last_rank(self):
         "Return the next rank to be used for a post to appear as last in the album"
-        rank_count = self.item.get('rankCount', 0) + 1
-        return (rank_count - 1) / rank_count
+        rank_spaces = self.item.get('rankCount', 0) + 2
+        return 1 - 2 / rank_spaces
 
     def get_art_image_url(self, size):
         art_image_path = self.get_art_image_path(size)

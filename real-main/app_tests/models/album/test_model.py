@@ -220,13 +220,21 @@ def test_rank_count(album):
     assert album.get_next_last_rank() == 0
 
     album.item['rankCount'] = 1
-    assert album.get_next_first_rank() == -0.5
-    assert album.get_next_last_rank() == 0.5
+    assert album.get_next_first_rank() == pytest.approx(-1 / 3)
+    assert album.get_next_last_rank() == pytest.approx(1 / 3)
+
+    album.item['rankCount'] = 2
+    assert album.get_next_first_rank() == pytest.approx(-2 / 4)
+    assert album.get_next_last_rank() == pytest.approx(2 / 4)
 
     album.item['rankCount'] = 3
-    assert album.get_next_first_rank() == -0.75
-    assert album.get_next_last_rank() == 0.75
+    assert album.get_next_first_rank() == pytest.approx(-3 / 5)
+    assert album.get_next_last_rank() == pytest.approx(3 / 5)
 
     album.item['rankCount'] = 4
-    assert album.get_next_first_rank() == -0.8
-    assert album.get_next_last_rank() == 0.8
+    assert album.get_next_first_rank() == pytest.approx(-4 / 6)
+    assert album.get_next_last_rank() == pytest.approx(4 / 6)
+
+    album.item['rankCount'] = 5
+    assert album.get_next_first_rank() == pytest.approx(-5 / 7)
+    assert album.get_next_last_rank() == pytest.approx(5 / 7)

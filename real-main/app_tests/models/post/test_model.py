@@ -305,7 +305,7 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
 
     post3.set_album(album1.id)
     assert post3.item['albumId'] == album1.id
-    assert post3.item['gsiK3SortKey'] == 0.5
+    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
 
     # put post4 in second album
     post4.set_album(album2.id)
@@ -331,7 +331,7 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
     # verify *can* change order if everything correct
     post2.set_album_order(post3.id)
     assert post2.item['albumId'] == album1.id
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 3))
+    assert post2.item['gsiK3SortKey'] == Decimal(0.5)
 
 
 def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
@@ -350,28 +350,28 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     # check starting state
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
     assert post1.item['gsiK3SortKey'] == 0
-    assert post2.item['gsiK3SortKey'] == 0.5
-    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 3))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
+    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 2))
 
     # change middle post, check order
     post3.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post3.id, post2.id]
-    assert post3.item['gsiK3SortKey'] == 0.25
+    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 6))
 
     # change middle post, check order
     post2.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
-    assert post2.item['gsiK3SortKey'] == 0.125
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 12))
 
     # change middle post, check order
     post3.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post3.id, post2.id]
-    assert post3.item['gsiK3SortKey'] == 0.0625
+    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 24))
 
     # change middle post, check order
     post2.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
-    assert post2.item['gsiK3SortKey'] == 0.03125
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 48))
 
 
 def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
@@ -387,24 +387,24 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     # check starting state
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
     assert post1.item['gsiK3SortKey'] == 0
-    assert post2.item['gsiK3SortKey'] == 0.5
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
 
     # change first post, check order
     post2.set_album_order(None)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-2 / 3))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-2 / 4))
 
     # change first post, check order
     post1.set_album_order(None)
     with pytest.raises(AssertionError):  # https://github.com/spulec/moto/issues/2760
         assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
-    assert post1.item['gsiK3SortKey'] == -0.75
+    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(-3 / 5))
 
     # change first post, check order
     post2.set_album_order(None)
     with pytest.raises(AssertionError):  # https://github.com/spulec/moto/issues/2760
         assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-0.8))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-4 / 6))
 
 
 def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
@@ -420,19 +420,19 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     # check starting state
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
     assert post1.item['gsiK3SortKey'] == 0
-    assert post2.item['gsiK3SortKey'] == 0.5
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
 
     # change last post, check order
     post1.set_album_order(post2.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 3))
+    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 4))
 
     # change last post, check order
     post2.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
-    assert post2.item['gsiK3SortKey'] == 0.75
+    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(3 / 5))
 
     # change last post, check order
     post1.set_album_order(post2.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(0.8))
+    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(4 / 6))
