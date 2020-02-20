@@ -38,6 +38,9 @@ class AlbumManager:
     def add_album(self, caller_user_id, album_id, name, description=None, now=None):
         now = now or pendulum.now('utc')
 
+        if description == '':
+            raise exceptions.AlbumException('Cannot set album description to empty string')
+
         # test suite cares about order here, but it doesn't actually matter
         transacts = [
             self.user_manager.dynamo.transact_increment_album_count(caller_user_id),

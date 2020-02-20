@@ -103,7 +103,7 @@ test('Edit an album', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toEqual(editedAlbum)
 
-  // delete the options which we can on that album
+  // delete the options which we can on that album, using empty string
   resp = await ourClient.mutate({mutation: schema.editAlbum, variables: {albumId, description: ''}})
   expect(resp['errors']).toBeUndefined()
   const clearedAlbum = resp['data']['editAlbum']
@@ -139,6 +139,14 @@ test('Cant create two albums with same id', async () => {
   await expect(ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'r'}})).rejects.toBeDefined()
   await expect(theirClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'r'}})).rejects.toBeDefined()
 })
+
+
+test('Cant create album with empty string description', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  let variables = {albumId: uuidv4(), name: 'r', description: ''}
+  await expect(ourClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
+})
+
 
 test('Cant edit or delete somebody elses album', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

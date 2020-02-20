@@ -41,7 +41,7 @@ def dispatch(event, context):
     try:
         resp = handler(caller_user_id, arguments, source, context)
     except ClientException as err:
-        msg = 'Client Error: ' + str(err)
+        msg = 'ClientError: ' + str(err)
         logger.warning(msg)
         return {'error': {
             'message': msg,
