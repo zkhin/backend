@@ -80,7 +80,7 @@ test('Non-follower cannot flag post of private user', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // they try to flag that post
-  await expect(theirClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toBeDefined()
+  await expect(theirClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
 })
 
 
@@ -89,7 +89,7 @@ test('Cannot flag post that does not exist', async () => {
 
   // try to flag a non-existent post
   const postId = uuidv4()
-  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
 })
 
 
@@ -138,7 +138,7 @@ test('Cannot double-flag a post', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // try to flag it a second time
-  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
 })
 
 
@@ -158,7 +158,7 @@ test('Cannot flag post of user that has blocked us', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot flag their post
-  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
 
   // they unblock us
   resp = await theirClient.mutate({mutation: schema.unblockUser, variables: {userId: ourUserId}})
@@ -187,7 +187,7 @@ test('Cannot flag post of user we have blocked', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot flag their post
-  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
 
   // we unblock them
   resp = await ourClient.mutate({mutation: schema.unblockUser, variables: {userId: theirUserId}})

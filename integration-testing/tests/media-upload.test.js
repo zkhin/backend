@@ -38,7 +38,7 @@ test('Verify cannot add post with more than one image', async () => {
   // add a pending post object with two images
   const postId = uuidv4()
   const variables = {postId, mediaId1: uuidv4(), mediaId2: uuidv4()}
-  await expect(client.mutate({mutation: schema.addTwoMediaPost, variables})).rejects.toBeDefined()
+  await expect(client.mutate({mutation: schema.addTwoMediaPost, variables})).rejects.toThrow('ClientError')
 
   // verify the post did not get created
   let resp = await client.query({query: schema.post, variables: {postId}})

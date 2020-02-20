@@ -76,7 +76,7 @@ test('Unblocking a user we have not blocked is an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
   let opts = {mutation: schema.unblockUser, variables: {userId: theirUserId}}
-  await expect(ourClient.mutate(opts)).rejects.toBeDefined()
+  await expect(ourClient.mutate(opts)).rejects.toThrow('ClientError')
 })
 
 
@@ -90,14 +90,16 @@ test('Double blocking a user is an error', async () => {
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // try to block them again
-  await expect(ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})).rejects.toBeDefined()
+  let variables = {userId: theirUserId}
+  await expect(ourClient.mutate({mutation: schema.blockUser, variables})).rejects.toThrow('ClientError')
 })
 
 
 test('Trying to block or unblock yourself is an error', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: schema.blockUser, variables: {userId: ourUserId}})).rejects.toBeDefined()
-  await expect(ourClient.mutate({mutation: schema.unblockUser, variables: {userId: ourUserId}})).rejects.toBeDefined()
+  let variables = {userId: ourUserId}
+  await expect(ourClient.mutate({mutation: schema.blockUser, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.unblockUser, variables})).rejects.toThrow('ClientError')
 })
 
 

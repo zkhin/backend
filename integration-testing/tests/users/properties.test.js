@@ -93,7 +93,7 @@ describe('Read and write properties our our own profile', () => {
 
 test('setUserDetails without any arguments returns an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: schema.setUserDetails})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.setUserDetails})).rejects.toThrow('ClientError')
 })
 
 

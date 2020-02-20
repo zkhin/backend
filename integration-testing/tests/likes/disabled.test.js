@@ -26,19 +26,21 @@ test('Cannot like/dislike posts with likes disabled', async () => {
 
   // we add a post with likes disabled
   const postId = uuidv4()
-  const variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, text: 'lore ipsum', likesDisabled: true}
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, text: 'lore ipsum', likesDisabled: true}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['likesDisabled']).toBe(true)
 
   // verify we can't like the post
-  await expect(ourClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})).rejects.toBeDefined()
-  await expect(ourClient.mutate({mutation: schema.anonymouslyLikePost, variables: {postId}})).rejects.toBeDefined()
+  variables = {postId}
+  await expect(ourClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
 
   // verify they can't like the post
-  await expect(theirClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})).rejects.toBeDefined()
-  await expect(theirClient.mutate({mutation: schema.anonymouslyLikePost, variables: {postId}})).rejects.toBeDefined()
+  variables = {postId}
+  await expect(theirClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
 
   // verify no likes show up on the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -56,7 +58,7 @@ test('Likes preservered through period with posts likes disabled', async () => {
   const postId = uuidv4()
 
   // we add a post with likes enabled
-  const variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -83,8 +85,9 @@ test('Likes preservered through period with posts likes disabled', async () => {
   expect(resp['data']['editPost']['likesDisabled']).toBe(true)
 
   // verify we can't like the post
-  await expect(ourClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})).rejects.toBeDefined()
-  await expect(ourClient.mutate({mutation: schema.anonymouslyLikePost, variables: {postId}})).rejects.toBeDefined()
+  variables = {postId}
+  await expect(ourClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
 
   // verify no likes show up on the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -135,13 +138,13 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
 
   // verify we can't like their post
   variables = {postId: theirPostId}
-  await expect(ourClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toBeDefined()
-  await expect(ourClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
 
   // verify they can't like our post
   variables = {postId: ourPostId}
-  await expect(theirClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toBeDefined()
-  await expect(theirClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toBeDefined()
+  await expect(theirClient.mutate({mutation: schema.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: schema.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
 
   // verify we *can't* see like counts on our own post
   variables = {postId: ourPostId}

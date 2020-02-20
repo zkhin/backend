@@ -88,7 +88,7 @@ test('Cant request to follow a user that has blocked us', async () => {
   await expect(ourClient.mutate({
     mutation: schema.followUser,
     variables: {userId: theirUserId},
-  })).rejects.toBeDefined()
+  })).rejects.toThrow('ClientError')
 
   // they unblock us
   resp = await theirClient.mutate({mutation: schema.unblockUser, variables: {userId: ourUserId}})
@@ -112,7 +112,7 @@ test('Cant request to follow a user that we have blocked', async () => {
 
   // verify we cannot request to follow them
   let [mutation, variables] = [schema.followUser, {userId: theirUserId}]
-  await expect(ourClient.mutate({mutation, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation, variables})).rejects.toThrow('ClientError')
 
   // we unblock them
   resp = await ourClient.mutate({mutation: schema.unblockUser, variables: {userId: theirUserId}})

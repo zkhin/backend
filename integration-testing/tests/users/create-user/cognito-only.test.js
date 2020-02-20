@@ -60,8 +60,8 @@ describe('cognito-only user', () => {
     client = await cognito.getAppSyncClient(resp['Credentials'])
 
     // try to pick random username, register it - should fail
-    const username = cognito.generateUsername()
-    await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})).rejects.toBeDefined()
+    let variables = {username: cognito.generateUsername()}
+    await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
   })
 
   test('Mutation.createCognitoOnlyUser succeds if identity pool id and user pool "username" match', async () => {

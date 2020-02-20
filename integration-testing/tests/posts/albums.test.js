@@ -99,7 +99,7 @@ test('Cant create post in or move post into album that doesnt exist', async () =
   // verify we cannot create a post in that album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, albumId}
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow('ClientError')
 
   // make sure that post did not end making it into the DB
   let resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -114,7 +114,7 @@ test('Cant create post in or move post into album that doesnt exist', async () =
 
   // verify neither we or them cannot move into no album
   variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toThrow('ClientError')
 
   // verify the post is unchanged
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -137,7 +137,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   // verify we cannot create a post in their album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, albumId}
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow('ClientError')
 
   // make sure that post did not end making it into the DB
   resp = await theirClient.query({query: schema.post, variables: {postId}})
@@ -155,8 +155,8 @@ test('Cant create post in or move post into an album thats not ours', async () =
 
   // verify neither we or them cannot move the post into their album
   variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toBeDefined()
-  await expect(theirClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: schema.editPostAlbum, variables})).rejects.toThrow('ClientError')
 
   // verify the post is unchanged
   resp = await theirClient.query({query: schema.post, variables: {postId}})
@@ -512,15 +512,15 @@ test('Edit album post order failures', async () => {
 
   // verify they cannot change our album's post order
   variables = {postId: postId1, precedingPostId: postId2}
-  await expect(theirClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toBeDefined()
+  await expect(theirClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toThrow('ClientError')
 
   // verify they cannot use their post to change our order
   variables = {postId: postId3, precedingPostId: postId2}
-  await expect(theirClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toBeDefined()
+  await expect(theirClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toThrow('ClientError')
 
   // verify we cannot use their post to change our order
   variables = {postId: postId1, precedingPostId: postId3}
-  await expect(ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})).rejects.toThrow('ClientError')
 
   // check album post order has not changed
   resp = await ourClient.query({query: schema.album, variables: {albumId}})

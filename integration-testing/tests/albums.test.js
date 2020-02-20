@@ -121,7 +121,8 @@ test('Edit an album', async () => {
   expect(resp['data']['album']).toEqual(clearedAlbum)
 
   // verify we can't null out the album name
-  await expect(ourClient.mutate({mutation: schema.editAlbum, variables: {albumId, name: ''}})).rejects.toBeDefined()
+  let variables = {albumId, name: ''}
+  await expect(ourClient.mutate({mutation: schema.editAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -136,8 +137,9 @@ test('Cant create two albums with same id', async () => {
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify neither us nor them can add another album with same id
-  await expect(ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'r'}})).rejects.toBeDefined()
-  await expect(theirClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'r'}})).rejects.toBeDefined()
+  let variables = {albumId, name: 'r'}
+  await expect(ourClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -159,9 +161,9 @@ test('Cant edit or delete somebody elses album', async () => {
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify they can't edit it nor delete it
-  const name = 'name'
-  await expect(theirClient.mutate({mutation: schema.editAlbum, variables: {albumId, name}})).rejects.toBeDefined()
-  await expect(theirClient.mutate({mutation: schema.deleteAlbum, variables: {albumId}})).rejects.toBeDefined()
+  let variables = {albumId, name: 'name'}
+  await expect(theirClient.mutate({mutation: schema.editAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: schema.deleteAlbum, variables})).rejects.toThrow('ClientError')
 
   // verify it's still there
   resp = await theirClient.query({query: schema.album, variables: {albumId}})
@@ -181,7 +183,7 @@ test('Empty album edit raises error', async () => {
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify calling edit without specifying anything to edit is an error
-  await expect(theirClient.mutate({mutation: schema.editAlbum, variables: {albumId}})).rejects.toBeDefined()
+  await expect(theirClient.mutate({mutation: schema.editAlbum, variables: {albumId}})).rejects.toThrow('ClientError')
 })
 
 
@@ -190,8 +192,9 @@ test('Cant edit, delete an album that doesnt exist', async () => {
   const albumId = uuidv4()  // doesnt exist
 
   // cant edit or delete the non-existing album
-  await expect(ourClient.mutate({mutation: schema.editAlbum, variables: {albumId, name: 'n'}})).rejects.toBeDefined()
-  await expect(ourClient.mutate({mutation: schema.deleteAlbum, variables: {albumId}})).rejects.toBeDefined()
+  let variables = {albumId, name: 'name'}
+  await expect(ourClient.mutate({mutation: schema.editAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.deleteAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 

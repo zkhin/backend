@@ -28,7 +28,7 @@ test('Cant edit Post.expiresAt for post that do not exist', async () => {
     postId: uuidv4(),
     expiresAt: moment().add(moment.duration('P1D')).toISOString(),
   }
-  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -45,7 +45,7 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
 
   // we try to edit its expiresAt
   variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
-  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -61,7 +61,7 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
 
   // we try to edit its expiresAt to a date in the past
   variables = {postId, expiresAt: moment().subtract(moment.duration('PT1M')).toISOString()}
-  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -75,9 +75,9 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
-  // we try to edit its expiresAt to a date in the past
+  // we try to edit its expiresAt to a date in the past, gql schema catches this error not our server code
   variables = {postId, expiresAt: '2019-01-01T01:01:01'}
-  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toBeDefined()
+  await expect(ourClient.mutate({mutation: schema.editPostExpiresAt, variables})).rejects.toThrow('GraphQL error')
 })
 
 

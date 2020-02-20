@@ -24,9 +24,9 @@ test('setting invalid username fails', async () => {
   const usernameBadChar = 'a!a'
 
   const mutation = schema.setUsername
-  await expect(client.mutate({mutation, variables: {username: usernameTooShort}})).rejects.toBeDefined()
-  await expect(client.mutate({mutation, variables: {username: usernameTooLong}})).rejects.toBeDefined()
-  await expect(client.mutate({mutation, variables: {username: usernameBadChar}})).rejects.toBeDefined()
+  await expect(client.mutate({mutation, variables: {username: usernameTooShort}})).rejects.toThrow('ClientError')
+  await expect(client.mutate({mutation, variables: {username: usernameTooLong}})).rejects.toThrow('ClientError')
+  await expect(client.mutate({mutation, variables: {username: usernameBadChar}})).rejects.toThrow('ClientError')
 })
 
 
@@ -59,7 +59,7 @@ test('collision on changing username fails, login username is not changed', asyn
   await expect(ourClient.mutate({
     mutation: schema.setUsername,
     variables: {username: theirUsername},
-  })).rejects.toBeDefined()
+  })).rejects.toThrow('ClientError')
 
   // verify user1 can still login with their original username
   let AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}

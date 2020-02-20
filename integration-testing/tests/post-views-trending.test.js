@@ -161,12 +161,12 @@ test('Report post views error conditions', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // must report at least one view
-  let postIds = []
-  await expect(ourClient.mutate({mutation: schema.reportPostViews, variables: {postIds}})).rejects.toBeDefined()
+  let variables = {postIds: []}
+  await expect(ourClient.mutate({mutation: schema.reportPostViews, variables})).rejects.toThrow('ClientError')
 
   // can't report more than 100 views
-  postIds = Array(101).map(uuidv4)
-  await expect(ourClient.mutate({mutation: schema.reportPostViews, variables: {postIds}})).rejects.toBeDefined()
+  variables = {postIds: Array(101).fill().map(() => uuidv4())}
+  await expect(ourClient.mutate({mutation: schema.reportPostViews, variables})).rejects.toThrow('ClientError')
 })
 
 

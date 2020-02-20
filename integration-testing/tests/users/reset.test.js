@@ -42,11 +42,11 @@ test("resetUser really releases the user's username", async () => {
   await expect(theirClient.mutate({
     mutation: schema.setUsername,
     variables: {username: ourUsername}
-  })).rejects.toBeDefined()
+  })).rejects.toThrow('ClientError')
   await expect(theirClient.mutate({
     mutation: schema.setUsername,
     variables: {username: ourUsername.toUpperCase()}
-  })).rejects.toBeDefined()
+  })).rejects.toThrow('ClientError')
 
   // reset our account
   resp = await ourClient.mutate({mutation: schema.resetUser})
