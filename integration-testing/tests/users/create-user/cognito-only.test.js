@@ -108,10 +108,62 @@ describe('cognito-only user', () => {
     expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
     expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
     expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
+    expect(resp['data']['createCognitoOnlyUser']['fullName']).toBeNull()
 
     // check the signedUpAt is within our bookends
     const signedUpAt = resp['data']['createCognitoOnlyUser']['signedUpAt']
     expect(before <= signedUpAt).toBe(true)
     expect(after >= signedUpAt).toBe(true)
+  })
+
+  test('Mutation.createCognitoOnlyUser handles fullName correctly', async () => {
+    // get un-authenticated userId
+    const idResp = await cognito.identityPoolClient.getId().promise()
+    const userId = idResp['IdentityId']
+    const password = cognito.generatePassword()
+    const email = cognito.generateEmail()
+
+    // create the user in the user pool, with an email
+    await cognito.userPoolClient.signUp({
+      Username: userId,
+      Password: password,
+      UserAttributes: [{
+        Name: 'family_name',
+        Value: cognito.familyName,
+      }, {
+        Name: 'email',
+        Value: email,
+      }],
+    }).promise()
+
+    // sign the user in
+    let resp = await cognito.userPoolClient.initiateAuth({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      AuthParameters: {USERNAME: userId, PASSWORD: password},
+    }).promise()
+    accessToken = resp['AuthenticationResult']['AccessToken']
+    const idToken = resp['AuthenticationResult']['IdToken']
+
+    // get credentials and link the two entries
+    const logins = {[cognito.userPoolLoginsKey]: idToken}
+    resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins: logins}).promise()
+
+    // get appsync client with those creds
+    client = await cognito.getAppSyncClient(resp['Credentials'])
+
+    // verify we cannot sign up with an empty string fullName
+    const username = cognito.generateUsername()
+    let variables = {username, fullName: ''}
+    await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
+
+    // pick a valid full name, verify we can sign up with it
+    const fullName = 'Hunter S'
+    variables = {username, fullName}
+    resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+    expect(resp['errors']).toBeUndefined()
+    expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
+    expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
+    expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
+    expect(resp['data']['createCognitoOnlyUser']['fullName']).toBe(fullName)
   })
 })

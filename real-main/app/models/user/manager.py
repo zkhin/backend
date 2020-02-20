@@ -68,6 +68,8 @@ class UserManager:
     def create_cognito_only_user(self, user_id, username, full_name=None):
         # try to claim the new username, will raise an validation exception if already taken
         self.validate.username(username)
+        if full_name == '':
+            raise self.exceptions.UserValidationException('Cannot create user with empty string for fullName')
 
         try:
             user_attrs = self.cognito_client.get_user_attributes(user_id)
@@ -98,6 +100,9 @@ class UserManager:
     def create_facebook_user(self, user_id, username, facebook_access_token, full_name=None):
         # do operations that do not alter state first
         self.validate.username(username)
+        if full_name == '':
+            raise self.exceptions.UserValidationException('Cannot create user with empty string for fullName')
+
         email = self.facebook_client.get_verified_email(facebook_access_token).lower()
         if not email:
             raise self.exceptions.UserValidationException('Unable to retrieve email with that token')
@@ -123,6 +128,9 @@ class UserManager:
     def create_google_user(self, user_id, username, google_id_token, full_name=None):
         # do operations that do not alter state first
         self.validate.username(username)
+        if full_name == '':
+            raise self.exceptions.UserValidationException('Cannot create user with empty string for fullName')
+
         email = self.google_client.get_verified_email(google_id_token).lower()
         if not email:
             raise self.exceptions.UserValidationException('Unable to retrieve email with that token')

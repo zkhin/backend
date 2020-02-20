@@ -64,6 +64,10 @@ class PostManager:
                  now=None):
         now = now or pendulum.now('utc')
 
+        if text == '':
+            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with empty string text'
+            raise exceptions.PostException(msg)
+
         if not text and not media_uploads:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` without text or media'
             raise exceptions.PostException(msg)

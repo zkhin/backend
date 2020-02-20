@@ -24,6 +24,13 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
+test('Cant resetUser with empty string username', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  let variables = {newUsername: ''}
+  await expect(ourClient.mutate({mutation: schema.resetUser, variables})).rejects.toThrow('ClientError')
+})
+
+
 test("resetUser really releases the user's username", async () => {
   const [ourClient, ourUserId, ourPassword] = await loginCache.getCleanLogin()
   const [theirClient, , theirPassword] = await loginCache.getCleanLogin()

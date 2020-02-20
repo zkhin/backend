@@ -181,6 +181,13 @@ test('Add media post, check non-duplicates are not marked as such', async () => 
 })
 
 
+test('Cannot add post with empty string text', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const variables = {postId: uuidv4(), mediaId: uuidv4(), text: ''}
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+})
+
+
 test('Cannot add post with invalid lifetime', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const variables = {postId: uuidv4(), mediaId: uuidv4()}

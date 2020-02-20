@@ -43,6 +43,13 @@ def test_get_post_dne(post_manager):
 
 
 def test_add_post_errors(post_manager):
+    # try to add a post with empty string text
+    with pytest.raises(post_manager.exceptions.PostException) as error_info:
+        post_manager.add_post('pbuid', 'pid', text='')
+    assert 'pbuid' in str(error_info.value)
+    assert 'pid' in str(error_info.value)
+    assert 'empty string' in str(error_info.value)
+
     # try to add a post without any content (no text or media)
     with pytest.raises(post_manager.exceptions.PostException) as error_info:
         post_manager.add_post('pbuid', 'pid')

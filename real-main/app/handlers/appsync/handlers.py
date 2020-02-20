@@ -222,6 +222,8 @@ def set_user_accepted_eula_version(caller_user_id, arguments, source, context):
 @routes.register('Mutation.resetUser')
 def reset_user(caller_user_id, arguments, source, context):
     new_username = arguments.get('newUsername')
+    if new_username == '':
+        raise ClientException('Cannot reset user to have empty string username')
 
     # for REQUESTED and DENIED, just delete them
     # for FOLLOWING, unfollow so that the other user's counts remain correct
