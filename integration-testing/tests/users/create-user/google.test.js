@@ -50,42 +50,8 @@ describe.skip('google user', () => {
 
     // pick a random username, register it, check all is good!
     const username = cognito.generateUsername()
-    resp = await client.mutate({mutation: schema.createGoogleUser, variables: {username, googleIdToken}})
-    expect(resp['errors']).toBeUndefined()
-    expect(resp['data']['createGoogleUser']['userId']).toBe(userId)
-    expect(resp['data']['createGoogleUser']['username']).toBe(username)
-    expect(resp['data']['createGoogleUser']['email']).toBe(email)
-    expect(resp['data']['createGoogleUser']['fullName']).toBeNull()
-  })
-
-  test('Mutation.createGoogleUser handles fullName', async () => {
-    // get the email associated with the token from google
-    const tokenInfo = await rp.get({
-      uri: 'https://oauth2.googleapis.com/tokeninfo',
-      qs: {id_token: googleIdToken},
-      json: true,
-    })
-    expect(tokenInfo['email_verified']).toBe('true')  // it's a string... ?
-    const email = tokenInfo['email']
-
-    // get and id and credentials from the identity pool
-    const logins = {[cognito.googleLoginsKey]: googleIdToken}
-    let resp = await cognito.identityPoolClient.getId({Logins: logins}).promise()
-    const userId = resp['IdentityId']
-    resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins: logins}).promise()
-
-    // get appsync client with those creds
-    client = await cognito.getAppSyncClient(resp['Credentials'])
-
-    // verify we can't set fullName to empty string
-    const username = cognito.generateUsername()
-    let variables = {username, googleIdToken, fullName: ''}
-    await expect(client.mutate({mutation: schema.createGoogleUser, variables})).rejects.toThrow('ClientError')
-
-    // verify fullName is saved correctly is we specify it
-    const fullName = 'a name'
-    variables = {username, googleIdToken, fullName}
-    resp = await client.mutate({mutation: schema.createGoogleUser, variables})
+    const fullName = 'a full name'
+    resp = await client.mutate({mutation: schema.createGoogleUser, variables: {username, googleIdToken, fullName}})
     expect(resp['errors']).toBeUndefined()
     expect(resp['data']['createGoogleUser']['userId']).toBe(userId)
     expect(resp['data']['createGoogleUser']['username']).toBe(username)

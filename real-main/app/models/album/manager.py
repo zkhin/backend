@@ -37,9 +37,7 @@ class AlbumManager:
 
     def add_album(self, caller_user_id, album_id, name, description=None, now=None):
         now = now or pendulum.now('utc')
-
-        if description == '':
-            raise exceptions.AlbumException('Cannot set album description to empty string')
+        description = None if description == '' else description  # treat empty string as null
 
         # test suite cares about order here, but it doesn't actually matter
         transacts = [

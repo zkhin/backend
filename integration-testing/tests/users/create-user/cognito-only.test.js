@@ -64,106 +64,87 @@ describe('cognito-only user', () => {
     await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
   })
 
-  test('Mutation.createCognitoOnlyUser succeds if identity pool id and user pool "username" match', async () => {
-    // get un-authenticated userId
-    const idResp = await cognito.identityPoolClient.getId().promise()
-    const userId = idResp['IdentityId']
-    const password = cognito.generatePassword()
-    const email = cognito.generateEmail()
+  describe('success cases', () => {
 
-    // create the user in the user pool, with an email
-    await cognito.userPoolClient.signUp({
-      Username: userId,
-      Password: password,
-      UserAttributes: [{
-        Name: 'family_name',
-        Value: cognito.familyName,
-      }, {
-        Name: 'email',
-        Value: email,
-      }],
-    }).promise()
+    let userId, email
 
-    // sign the user in
-    let resp = await cognito.userPoolClient.initiateAuth({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      AuthParameters: {USERNAME: userId, PASSWORD: password},
-    }).promise()
-    accessToken = resp['AuthenticationResult']['AccessToken']
-    const idToken = resp['AuthenticationResult']['IdToken']
+    beforeEach(async () =>  {
+      // get un-authenticated userId
+      const idResp = await cognito.identityPoolClient.getId().promise()
+      userId = idResp['IdentityId']
+      const password = cognito.generatePassword()
+      email = cognito.generateEmail()
 
-    // get credentials and link the two entries
-    const logins = {[cognito.userPoolLoginsKey]: idToken}
-    resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins: logins}).promise()
+      // create the user in the user pool, with an email
+      await cognito.userPoolClient.signUp({
+        Username: userId,
+        Password: password,
+        UserAttributes: [{
+          Name: 'family_name',
+          Value: cognito.familyName,
+        }, {
+          Name: 'email',
+          Value: email,
+        }],
+      }).promise()
 
-    // get appsync client with those creds
-    client = await cognito.getAppSyncClient(resp['Credentials'])
+      // sign the user in
+      let resp = await cognito.userPoolClient.initiateAuth({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        AuthParameters: {USERNAME: userId, PASSWORD: password},
+      }).promise()
+      accessToken = resp['AuthenticationResult']['AccessToken']
+      const idToken = resp['AuthenticationResult']['IdToken']
 
-    // pick a random username, register it, check all is good!
-    const username = cognito.generateUsername()
-    const before = moment().toISOString()
-    resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})
-    const after = moment().toISOString()
-    expect(resp['errors']).toBeUndefined()
-    expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
-    expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
-    expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
-    expect(resp['data']['createCognitoOnlyUser']['fullName']).toBeNull()
+      // get credentials and link the two entries
+      const Logins = {[cognito.userPoolLoginsKey]: idToken}
+      resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
 
-    // check the signedUpAt is within our bookends
-    const signedUpAt = resp['data']['createCognitoOnlyUser']['signedUpAt']
-    expect(before <= signedUpAt).toBe(true)
-    expect(after >= signedUpAt).toBe(true)
-  })
+      // get appsync client with those creds
+      client = await cognito.getAppSyncClient(resp['Credentials'])
+    })
 
-  test('Mutation.createCognitoOnlyUser handles fullName correctly', async () => {
-    // get un-authenticated userId
-    const idResp = await cognito.identityPoolClient.getId().promise()
-    const userId = idResp['IdentityId']
-    const password = cognito.generatePassword()
-    const email = cognito.generateEmail()
+    test('Mutation.createCognitoOnlyUser succeds if identity pool id and user pool "username" match', async () => {
+      // pick a random username, register it, check all is good!
+      const username = cognito.generateUsername()
+      const before = moment().toISOString()
+      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})
+      const after = moment().toISOString()
+      expect(resp['errors']).toBeUndefined()
+      expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
+      expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
+      expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
+      expect(resp['data']['createCognitoOnlyUser']['fullName']).toBeNull()
 
-    // create the user in the user pool, with an email
-    await cognito.userPoolClient.signUp({
-      Username: userId,
-      Password: password,
-      UserAttributes: [{
-        Name: 'family_name',
-        Value: cognito.familyName,
-      }, {
-        Name: 'email',
-        Value: email,
-      }],
-    }).promise()
+      // check the signedUpAt is within our bookends
+      const signedUpAt = resp['data']['createCognitoOnlyUser']['signedUpAt']
+      expect(before <= signedUpAt).toBe(true)
+      expect(after >= signedUpAt).toBe(true)
+    })
 
-    // sign the user in
-    let resp = await cognito.userPoolClient.initiateAuth({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      AuthParameters: {USERNAME: userId, PASSWORD: password},
-    }).promise()
-    accessToken = resp['AuthenticationResult']['AccessToken']
-    const idToken = resp['AuthenticationResult']['IdToken']
+    test('Mutation.createCognitoOnlyUser handles empty string fullName', async () => {
+      // verify a empty string fullName treated like null
+      const username = cognito.generateUsername()
+      let variables = {username, fullName: ''}
+      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+      expect(resp['errors']).toBeUndefined()
+      expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
+      expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
+      expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
+      expect(resp['data']['createCognitoOnlyUser']['fullName']).toBeNull()
+    })
 
-    // get credentials and link the two entries
-    const logins = {[cognito.userPoolLoginsKey]: idToken}
-    resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins: logins}).promise()
-
-    // get appsync client with those creds
-    client = await cognito.getAppSyncClient(resp['Credentials'])
-
-    // verify we cannot sign up with an empty string fullName
-    const username = cognito.generateUsername()
-    let variables = {username, fullName: ''}
-    await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
-
-    // pick a valid full name, verify we can sign up with it
-    const fullName = 'Hunter S'
-    variables = {username, fullName}
-    resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
-    expect(resp['errors']).toBeUndefined()
-    expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
-    expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
-    expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
-    expect(resp['data']['createCognitoOnlyUser']['fullName']).toBe(fullName)
+    test('Mutation.createCognitoOnlyUser handles empty string fullName', async () => {
+      // pick a valid full name, verify we can sign up with it
+      const username = cognito.generateUsername()
+      const fullName = 'Hunter S'
+      let variables = {username, fullName}
+      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+      expect(resp['errors']).toBeUndefined()
+      expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
+      expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
+      expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
+      expect(resp['data']['createCognitoOnlyUser']['fullName']).toBe(fullName)
+    })
   })
 })

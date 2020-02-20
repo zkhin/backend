@@ -24,16 +24,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
-test('Cant resetUser with empty string username', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  let variables = {newUsername: ''}
-  await expect(ourClient.mutate({mutation: schema.resetUser, variables})).rejects.toThrow('ClientError')
-})
-
-
 test("resetUser really releases the user's username", async () => {
   const [ourClient, ourUserId, ourPassword] = await loginCache.getCleanLogin()
-  const [theirClient, , theirPassword] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId, theirPassword] = await loginCache.getCleanLogin()
 
   // set our username
   const ourUsername = cognito.generateUsername()
@@ -72,6 +65,14 @@ test("resetUser really releases the user's username", async () => {
   AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: theirPassword}
   resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
   expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
+
+  // verify they can release that username by specifying the empty string for newUsername (same as null)
+  resp = await theirClient.mutate({mutation: schema.resetUser, variables: {newUsername: ''}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['resetUser']['userId']).toBe(theirUserId)
+
+  // verify they cannot login with their username anymore
+  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()).rejects.toBeDefined()
 })
 
 

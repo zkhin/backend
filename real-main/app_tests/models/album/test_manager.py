@@ -33,6 +33,16 @@ def test_add_album_minimal(album_manager, user):
     assert user.item.get('albumCount', 0) == 1
 
 
+def test_add_album_empty_string_description(album_manager, user):
+    # add the album
+    album_id = 'aid'
+    album = album_manager.add_album(user.id, album_id, 'album name', description='')
+
+    # verify the album looks correct
+    assert album.id == album_id
+    assert 'description' not in album.item
+
+
 def test_add_album_maximal(album_manager, user):
     album_id = 'aid'
 
@@ -63,10 +73,6 @@ def test_add_album_errors(album_manager, user):
     # user doesn't exist
     with pytest.raises(album_manager.exceptions.AlbumException):
         album_manager.add_album('uid-dne', album_id, 'album name')
-
-    # no empty string description
-    with pytest.raises(album_manager.exceptions.AlbumException, match='empty string'):
-        album_manager.add_album(user.id, album_id, 'album name', description='')
 
     # already used the album_id
     album_manager.add_album(user.id, album_id, 'album name')

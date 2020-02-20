@@ -64,6 +64,16 @@ test('Add, read, and delete an album', async () => {
 })
 
 
+test('Add album with empty string description, treated as null', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const albumId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'r', description: ''}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
+  expect(resp['data']['addAlbum']['description']).toBeNull()
+})
+
+
 test('Edit an album', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -140,13 +150,6 @@ test('Cant create two albums with same id', async () => {
   let variables = {albumId, name: 'r'}
   await expect(ourClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
   await expect(theirClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
-})
-
-
-test('Cant create album with empty string description', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  let variables = {albumId: uuidv4(), name: 'r', description: ''}
-  await expect(ourClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 

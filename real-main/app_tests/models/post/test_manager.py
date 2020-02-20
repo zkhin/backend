@@ -43,13 +43,6 @@ def test_get_post_dne(post_manager):
 
 
 def test_add_post_errors(post_manager):
-    # try to add a post with empty string text
-    with pytest.raises(post_manager.exceptions.PostException) as error_info:
-        post_manager.add_post('pbuid', 'pid', text='')
-    assert 'pbuid' in str(error_info.value)
-    assert 'pid' in str(error_info.value)
-    assert 'empty string' in str(error_info.value)
-
     # try to add a post without any content (no text or media)
     with pytest.raises(post_manager.exceptions.PostException) as error_info:
         post_manager.add_post('pbuid', 'pid')
@@ -167,6 +160,23 @@ def test_add_media_post(post_manager):
     assert media_items[0]['postedAt'] == now.to_iso8601_string()
     assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
     assert 'expiresAt' not in media_items[0]
+
+
+def test_add_media_post_text_empty_string(post_manager):
+    user_id = 'pbuid'
+    post_id = 'pid'
+    now = pendulum.now('utc')
+    media_id = 'mid'
+    media_upload = {'mediaId': media_id}
+
+    # add the post (& media)
+    post_manager.add_post(user_id, post_id, now=now, media_uploads=[media_upload], text='')
+
+    # retrieve the post & media, check it
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert 'text' not in post.item
+    assert 'textTags' not in post.item
 
 
 def test_add_media_post_with_image_data(user, post_manager, requests_mock, post_verification_api_creds):

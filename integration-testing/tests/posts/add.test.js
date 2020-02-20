@@ -181,10 +181,15 @@ test('Add media post, check non-duplicates are not marked as such', async () => 
 })
 
 
-test('Cannot add post with empty string text', async () => {
+test('Add post with text of empty string same as null text', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const variables = {postId: uuidv4(), mediaId: uuidv4(), text: ''}
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4(), text: ''}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  expect(resp['data']['addPost']['text']).toBeNull()
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
 })
 
 
