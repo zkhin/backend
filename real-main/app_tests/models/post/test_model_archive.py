@@ -51,37 +51,14 @@ def test_archive_post_wrong_status(post_manager, post):
     with pytest.raises(post_manager.exceptions.PostException):
         post.archive()
 
+    # change the post to DELETING status
+    transacts = [post_manager.dynamo.transact_set_post_status(post.item, PostStatus.DELETING)]
+    post_manager.dynamo.client.transact_write_items(transacts)
+    post.refresh_item()
 
-def test_archive_pending_post(post_manager, post_with_media, user_manager):
-    post = post_with_media
-    posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
-    # mock out some calls to far-flung other managers
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
-
-    # archive the post, check it got to media
-    post.archive()
-    assert post.item['postStatus'] == PostStatus.ARCHIVED
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.ARCHIVED
-
-    # check the post count was not changed
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
-    # check calls to mocked out managers
-    assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
-    ]
-    assert post.followed_first_story_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == []
+    # verify we can't archive a post if we're in the process of deleting it
+    with pytest.raises(post_manager.exceptions.PostException):
+        post.archive()
 
 
 def test_archive_expired_completed_post(post_manager, post_with_expiration, user_manager):

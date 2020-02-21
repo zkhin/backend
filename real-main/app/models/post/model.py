@@ -120,22 +120,20 @@ class Post:
 
     def archive(self):
         "Transition the post to ARCHIVED status"
-        if self.post_status in (PostStatus.ARCHIVED, PostStatus.DELETING):
-            msg = f'Refusing to change post `{self.id}` with status `{self.post_status}` to `{PostStatus.ARCHIVED}`'
+        if self.post_status != PostStatus.COMPLETED:
+            msg = f'Cannot archive post with status `{self.post_status}`'
             raise exceptions.PostException(msg)
 
-        # we only have to operate on the album if the previous status was COMPLETED
-        album = None
-        if self.post_status == PostStatus.COMPLETED:
-            if album_id := self.item.get('albumId'):
-                album = self.album_manager.get_album(album_id)
+        album_id = self.item.get('albumId')
+        album = self.album_manager.get_album(album_id) if album_id else None
 
         # archive the post and its media objects
-        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED)]
-        if self.post_status == PostStatus.COMPLETED:
-            transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id))
-            if album:
-                transacts.append(album.dynamo.transact_remove_post(album.id))
+        transacts = [
+            self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
+            self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id),
+        ]
+        if album:
+            transacts.append(album.dynamo.transact_remove_post(album.id))
 
         media_items = []
         for media_item in self.media_manager.dynamo.generate_by_post(self.id):
@@ -145,7 +143,6 @@ class Post:
         self.dynamo.client.transact_write_items(transacts)
 
         # update in-memory copy of dynamo state
-        prev_post_status = self.post_status
         self.refresh_item(strongly_consistent=True)
         self.item['mediaObjects'] = [
             self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
@@ -159,9 +156,8 @@ class Post:
         if self.item.get('expiresAt'):
             self.followed_first_story_manager.refresh_after_story_change(story_prev=self.item)
 
-        # update feeds if needed
-        if prev_post_status == PostStatus.COMPLETED:
-            self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
+        # update feeds
+        self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
 
         # update album art if needed
         if album:
@@ -175,39 +171,23 @@ class Post:
             msg = f'Post `{self.id}` is not archived (has status `{self.post_status}`)'
             raise exceptions.PostException(msg)
 
-        # first determine what our target statuses are
-        post_status = PostStatus.COMPLETED
-        media_statuses = []
-        media_items = []
-        for media_item in self.media_manager.dynamo.generate_by_post(self.id):
-            media = self.media_manager.init_media(media_item)
-            media_status = (
-                MediaStatus.UPLOADED if media.has_all_s3_objects()
-                else MediaStatus.AWAITING_UPLOAD
-            )
-            media_statuses.append(media_status)
-            media_items.append(media.item)
-            if media_status != MediaStatus.UPLOADED:
-                post_status = PostStatus.PENDING
-
-        # we only need the album if the new post status is COMPLETED
-        album, album_rank = None, None
-        if post_status == PostStatus.COMPLETED:
-            if album_id := self.item.get('albumId'):
-                album = self.album_manager.get_album(album_id)
-                album_rank = album.get_next_last_rank()
+        album_id = self.item.get('albumId')
+        album = self.album_manager.get_album(album_id) if album_id else None
+        album_rank = album.get_next_last_rank() if album else None
 
         # restore the post
-        transacts = [self.dynamo.transact_set_post_status(self.item, post_status, album_rank=album_rank)]
+        transacts = [
+            self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
+            self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id),
+        ]
 
-        if post_status == PostStatus.COMPLETED:
-            transacts.append(self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id))
-            if album:
-                old_rank_count = album.item.get('rankCount')
-                transacts.append(self.album_manager.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
+        if album:
+            old_rank_count = album.item.get('rankCount')
+            transacts.append(self.album_manager.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
 
-        for media_item, media_status in zip(media_items, media_statuses):
-            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, media_status))
+        media_items = list(self.media_manager.dynamo.generate_by_post(self.id))
+        for media_item in media_items:
+            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.UPLOADED))
 
         self.dynamo.client.transact_write_items(transacts)
 
@@ -218,15 +198,16 @@ class Post:
             for media_item in media_items
         ]
 
-        if post_status == PostStatus.COMPLETED:
-            # refresh the first story if needed
-            if self.item.get('expiresAt'):
-                self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
-            # update feeds
-            self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
-            # update album art if needed
-            if album:
-                album.update_art_if_needed()
+        # refresh the first story if needed
+        if self.item.get('expiresAt'):
+            self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
+
+        # update feeds
+        self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
+
+        # update album art if needed
+        if album:
+            album.update_art_if_needed()
 
         return self
 

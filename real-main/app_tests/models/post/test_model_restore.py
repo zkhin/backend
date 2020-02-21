@@ -69,47 +69,6 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
     ]
 
 
-def test_restore_pending_media_post(post_manager, post_with_media, user_manager):
-    post = post_with_media
-    posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
-
-    # archive the post
-    post.archive()
-    assert post.item['postStatus'] == PostStatus.ARCHIVED
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.ARCHIVED
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
-    # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
-
-    # restore the post
-    post.restore()
-    assert post.item['postStatus'] == PostStatus.PENDING
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-
-    # check the DB again
-    post.refresh_item()
-    assert post.item['postStatus'] == PostStatus.PENDING
-    post_media_items = list(post_manager.media_manager.dynamo.generate_by_post(post.id))
-    assert len(post_media_items) == 1
-    assert post_media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-
-    # check our post count - should not have changed
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
-    # check calls to mocked out managers
-    assert post.followed_first_story_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == []
-
-
 def test_restore_completed_media_post(post_manager, post_with_media_completed, user_manager):
     post = post_with_media_completed
     media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])

@@ -329,7 +329,8 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
 
   // add a media post, and archive it
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId2, mediaId: mediaId2, albumId}})
+  let variables = {postId: postId2, mediaId: mediaId2, imageData: imageDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId: postId2}})

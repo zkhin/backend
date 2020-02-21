@@ -90,6 +90,23 @@ test('Archiving an image post', async () => {
 })
 
 
+test('Cant archive a post in PENDING status', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // we create a post, leave it with pending status
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+
+  // verify we can't archive that post
+  await expect(ourClient.mutate({mutation: schema.archivePost, variables: {postId}})).rejects.toThrow('ClientError')
+})
+
+
 test('Archiving an image post does not affect media urls', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
