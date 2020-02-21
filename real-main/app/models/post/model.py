@@ -62,6 +62,15 @@ class Post:
         resp['postedBy'] = user.serialize(caller_user_id)
         return resp
 
+    def error(self):
+        if self.post_status != PostStatus.PENDING:
+            raise exceptions.PostException('Only posts with status PENDING may transition to ERROR')
+
+        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ERROR)]
+        self.dynamo.client.transact_write_items(transacts)
+        self.refresh_item(strongly_consistent=True)
+        return self
+
     def complete(self, now=None):
         "Transition the post to COMPLETED status"
         now = now or pendulum.now('utc')

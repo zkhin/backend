@@ -115,10 +115,15 @@ class Media:
             self.set_status(enums.MediaStatus.ERROR)
             raise exceptions.MediaException(f'Non-jpeg image uploaded for media `{self.id}`')
 
+        try:
+            self.set_thumbnails()
+        except Exception as err:
+            self.set_status(enums.MediaStatus.ERROR)
+            raise exceptions.MediaException(f'Unable to generate thumbnails for media `{self.id}`: {err}')
+
         self.set_is_verified()
         self.set_height_and_width()
         self.set_colors()
-        self.set_thumbnails()
         self.set_checksum()
         self.set_status(enums.MediaStatus.UPLOADED)
         return self

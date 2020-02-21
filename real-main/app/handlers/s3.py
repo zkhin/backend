@@ -53,16 +53,20 @@ def uploads_object_created(event, context):
         # this media upload was already processed. Direct image data upload?
         return
 
+    post = post_manager.get_post(post_id)
+
     try:
         media.process_upload()
     except media.exceptions.MediaException as err:
         logger.warning(str(err))
+        post.error()
+
+    # if the post in in error state (from this media or other media) then we are done
+    if post.item['postStatus'] == post.enums.PostStatus.ERROR:
         return
 
-    # is there other media left to upload?
+    # is there other media left to upload? if not, complete the post
     for media in media_manager.dynamo.generate_by_post(post_id, uploaded=False):
         if media['mediaId'] != media_id:
             return
-
-    # this was the last media for the post, so mark it complete
-    post_manager.get_post(post_id).complete()
+    post.complete()

@@ -159,18 +159,23 @@ prmt.get(prmtSchema, async (err, result) => {
   process.stdout.write('Waiting for thumbnails to be generated...')
   while (true) {
     resp = await appsyncClient.query({ query: getPost, variables: {postId}})
-    if (resp['data']['post']['postStatus'] == 'COMPLETED') break
+    if (resp['data']['post']['postStatus'] != 'PENDING') break
     await new Promise(resolve => setTimeout(resolve, 1000))  // sleep one second
     process.stdout.write('.')
   }
   process.stdout.write(' done.\n')
 
-  const media = resp['data']['post']['mediaObjects'][0]
-  process.stdout.write('Post successfully added. Image urls:\n')
-  process.stdout.write(`  native: ${media['url']}\n`)
-  process.stdout.write(`  4k: ${media['url4k']}\n`)
-  process.stdout.write(`  1080p: ${media['url1080p']}\n`)
-  process.stdout.write(`  480p: ${media['url480p']}\n`)
+  if (resp['data']['post']['postStatus'] == 'ERROR') {
+    process.stdout.write('Error processing upload. Invalid jpeg?\n')
+  }
+  else {
+    const media = resp['data']['post']['mediaObjects'][0]
+    process.stdout.write('Post successfully added. Image urls:\n')
+    process.stdout.write(`  native: ${media['url']}\n`)
+    process.stdout.write(`  4k: ${media['url4k']}\n`)
+    process.stdout.write(`  1080p: ${media['url1080p']}\n`)
+    process.stdout.write(`  480p: ${media['url480p']}\n`)
+  }
 })
 
 

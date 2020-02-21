@@ -342,3 +342,20 @@ def test_delete_older_expired_posts(post_manager, user_manager, caplog):
     assert post_future_expires.refresh_item().item
     assert post_expired_today.refresh_item().item
     assert post_expired_last_week.refresh_item().item is None
+
+
+def test_set_post_status_to_error(post_manager, user_manager):
+    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+
+    # create a COMPLETED post, verify cannot transition it to ERROR
+    post = post_manager.add_post(user.id, 'pid1', text='t')
+    with pytest.raises(post_manager.exceptions.PostException, match='PENDING'):
+        post.error()
+
+    # add a PENDING post, transition it to ERROR, verify all good
+    media_uploads = [{'mediaId': 'mid1'}]
+    post = post_manager.add_post('pbuid', 'pid', media_uploads=media_uploads)
+    post.error()
+    assert post.item['postStatus'] == PostStatus.ERROR
+    post.refresh_item()
+    assert post.item['postStatus'] == PostStatus.ERROR
