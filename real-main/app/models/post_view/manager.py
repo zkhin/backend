@@ -48,6 +48,10 @@ class PostViewManager:
         posted_by_user_id = post.item['postedByUserId']
         original_post_id = post.item.get('originalPostId', post_id)
 
+        # don't count user's views of their own posts
+        if posted_by_user_id == viewed_by_user_id:
+            return
+
         # common case first: try to update an existing post_view_item
         try:
             self.dynamo.add_views_to_post_view(post_id, viewed_by_user_id, view_count, viewed_at)

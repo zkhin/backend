@@ -135,6 +135,32 @@ def test_record_view(post_view_manager, dynamo_client, posts):
     assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id).get('gsiK3SortKey', 0) == 1
 
 
+def test_record_view_by_post_owner_not_recorded(post_view_manager, dynamo_client, posts):
+    post, _ = posts
+    posted_by_user_id = post.item['postedByUserId']
+    viewed_by_user_id = posted_by_user_id
+    post_id = post.id
+    view_count = 3
+    viewed_at = pendulum.now('utc')
+
+    # check there is no post view yet recorded for this user on this post
+    assert post_view_manager.dynamo.get_post_view(post_id, viewed_by_user_id) is None
+    assert post_view_manager.post_manager.dynamo.get_post(post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
+    assert post_view_manager.trending_manager.dynamo.get_trending(post_id) is None
+    assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id) is None
+
+    # record the first post view
+    post_view_manager.record_view(viewed_by_user_id, post_id, view_count, viewed_at)
+
+    # check nothing changed in the DB
+    assert post_view_manager.dynamo.get_post_view(post_id, viewed_by_user_id) is None
+    assert post_view_manager.post_manager.dynamo.get_post(post_id).get('viewedByCount', 0) == 0
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
+    assert post_view_manager.trending_manager.dynamo.get_trending(post_id) is None
+    assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id) is None
+
+
 def test_record_view_for_non_original_post(post_view_manager, dynamo_client, posts):
     post_dynamo = post_view_manager.post_manager.dynamo
     org_post, non_org_post = posts
