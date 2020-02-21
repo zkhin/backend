@@ -170,7 +170,7 @@ class Media:
         for size, dims in self.sizes.items():
             image = Image.open(self.native_image_data_stream)
             image = ImageOps.exif_transpose(image)
-            image.thumbnail(dims)
+            image.thumbnail(dims, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
             image.save(in_mem_file, format='JPEG')
             in_mem_file.seek(0)

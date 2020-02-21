@@ -75,7 +75,7 @@ def generate_zoomed_grid(image_data_buffers):
             box = None
 
         if image_width != cell_width or image_height != cell_height:
-            image = image.resize((cell_width, cell_height), box=box)
+            image = image.resize((cell_width, cell_height), box=box, resample=Image.LANCZOS)
 
         images.append(image)
 

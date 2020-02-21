@@ -180,7 +180,7 @@ class Album:
         grid_buffer.seek(0)
         target_image = Image.open(grid_buffer)
         for size, dims in self.sizes.items():
-            target_image.thumbnail(dims)
+            target_image.thumbnail(dims, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
             target_image.save(in_mem_file, format='JPEG')
             in_mem_file.seek(0)
