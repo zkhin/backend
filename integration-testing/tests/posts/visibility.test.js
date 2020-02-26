@@ -247,28 +247,6 @@ test('Post that is not complete', async () => {
 })
 
 
-test('Deprecated Query.getPost', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const postId = uuidv4()
-
-  // post that does not exist
-  let resp = await ourClient.query({query: schema.getPost, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']).toBeNull()
-
-  // create the post
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-
-  // get the post
-  resp = await ourClient.query({query: schema.getPost, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['getPost']['postId']).toBe(postId)
-})
-
-
 test('Post.viewedBy only visible to post owner', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

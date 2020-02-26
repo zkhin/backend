@@ -36,15 +36,6 @@ type Query {
   # Globally trending users
   trendingUsers(limit: Int, nextToken: String): PaginatedUsers!
 
-  # DEPRECATED: use User.feed instead
-  getFeed(limit: Int, nextToken: String): PaginatedPosts!
-
-  # DEPRECATED: use User.followedUsersWithStories instead
-  getFollowedUsersWithStories(limit: Int, nextToken: String): PaginatedUsers!
-
-  # DEPRECATED: use User.stories instead
-  getStories(userId: ID, limit: Int, nextToken: String): PaginatedPosts!
-
   # A specific post
   #   - posts that do not have COMPLETED postStatus are private to only the post owner
   #   - posts of private users are private to only themselves and their followers
@@ -56,15 +47,6 @@ type Query {
   # A specific album
   #   - albums of a private user are private to only themselves and their followers
   album(albumId: ID!): Album
-
-  # DEPRECATED: use User.posts instead
-  getPosts(userId: ID, postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts!
-
-  # DEPRECATED (in v2020-01-29.1): use Query.post instead
-  getPost(postId: ID!): Post
-
-  # DEPRECATED: use User.mediaObjects instead
-  getMediaObjects(userId: ID, mediaStatus: MediaObjectStatus, mediaType: MediaObjectType, limit: Int, nextToken: String): PaginatedMediaObjects!
 }
 
 type Mutation {

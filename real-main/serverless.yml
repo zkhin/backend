@@ -404,19 +404,6 @@ custom:
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
 
-      # DEPRECATED: use User.followedUsersWithStories instead
-      - type: Query
-        field: getFollowedUsersWithStories
-        request: Generic.passThru.request.vtl
-        response: Generic.passThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Query.getFollowedUsersWithStories.fetchUserIds
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
-
       - type: Mutation
         field: followUser
         dataSource: LambdaDataSource
@@ -671,31 +658,6 @@ custom:
           - Generic.batchGetUsersFollowedStatus
 
       - type: Query
-        field: getFeed
-        request: Generic.passThru.request.vtl
-        response: Query.getFeed/Query.getFeed.response.vtl
-        kind: PIPELINE
-        functions:
-          - Query.getFeed.fetchFeed
-          - Generic.batchGetPosts
-          - Generic.batchGetPostsPostedBy
-
-      # DEPRECATED: use User.posts instead
-      - type: Query
-        field: getStories
-        request: Query.getStories/Query.getStories.request.vtl
-        response: Query.getStories/Query.getStories.response.vtl
-        kind: PIPELINE
-        functions:
-          - Generic.checkAccess.checkIfBlocked
-          - Generic.checkAccess.checkIfPublic
-          - Generic.checkAccess.checkIfFollower
-          - Query.getStories.fetchPosts
-          - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerStatus
-          - Generic.batchGetPostsPostedByFollowedStatus
-
-      - type: Query
         field: post
         request: Query.post/before.request.vtl
         response: Query.post/after.response.vtl
@@ -730,45 +692,6 @@ custom:
           - Album.pipeline.ownedBy
           - Album.pipeline.ownedByBlockerStatus
           - Album.pipeline.ownedByFollowedStatus
-
-      # DEPRECATED: use Query.post instead
-      - type: Query
-        field: getPost
-        request: Query.post/before.request.vtl
-        response: Query.post/after.response.vtl
-        kind: PIPELINE
-        functions:
-          - Post.pipeline.fetchPost
-          - Post.pipeline.postedBy
-          - Post.pipeline.postedByBlockerStatus
-          - Post.pipeline.postedByFollowedStatus
-
-      # DEPRECATED: use User.posts instead
-      - type: Query
-        field: getPosts
-        request: Query.getPosts/Query.getPosts.request.vtl
-        response: Query.getPosts/Query.getPosts.response.vtl
-        kind: PIPELINE
-        functions:
-          - Generic.checkAccess.checkIfBlocked
-          - Generic.checkAccess.checkIfPublic
-          - Generic.checkAccess.checkIfFollower
-          - Query.getPosts.fetchPosts
-          - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerStatus
-          - Generic.batchGetPostsPostedByFollowedStatus
-
-      # DEPRECATED: use User.mediaObjects instead
-      - type: Query
-        field: getMediaObjects
-        request: Query.getMediaObjects/Query.getMediaObjects.request.vtl
-        response: Generic.passThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Generic.checkAccess.checkIfBlocked
-          - Generic.checkAccess.checkIfPublic
-          - Generic.checkAccess.checkIfFollower
-          - Query.getMediaObjects.fetchMedia
 
       - type: Mutation
         field: addPost
@@ -872,9 +795,6 @@ custom:
     functionConfigurations:
 
       - dataSource: DynamodbDataSource
-        name: Generic.getUser
-
-      - dataSource: DynamodbDataSource
         name: Post.pipeline.fetchPost
 
       - dataSource: DynamodbDataSource
@@ -947,26 +867,6 @@ custom:
         response: User.blockedUsers/Pipeline.fetchUserIds.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.checkAccess.checkIfBlocked
-        request: Generic.checkAccess/Pipeline.checkIfBlocked.request.vtl
-        response: Generic.checkAccess/Pipeline.checkIfBlocked.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Generic.checkAccess.checkIfPublic
-        request: Generic.checkAccess/Pipeline.checkIfPublic.request.vtl
-        response: Generic.checkAccess/Pipeline.checkIfPublic.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Generic.checkAccess.checkIfFollower
-        request: Generic.checkAccess/Pipeline.checkIfFollower.request.vtl
-        response: Generic.checkAccess/Pipeline.checkIfFollower.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.getFollowedUsersWithStories.fetchUserIds
-        request: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.request.vtl
-        response: Query.getFollowedUsersWithStories/Pipeline.fetchUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
         name: User.followedUsersWithStories.fetchUserIds
         request: User.followedUsersWithStories/Pipeline.fetchUserIds.request.vtl
         response: User.followedUsersWithStories/Pipeline.fetchUserIds.response.vtl
@@ -979,11 +879,6 @@ custom:
       - dataSource: DynamodbDataSource
         name: User.feed.fetchPostIds
         request: User.feed/Pipeline.fetchPostIds.request.vtl
-        response: Generic.passThru.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.getFeed.fetchFeed
-        request: Query.getFeed/Pipeline.fetchFeed.request.vtl
         response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
@@ -1011,21 +906,6 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Generic.batchGetPostsPostedByFollowedStatus
-
-      - dataSource: DynamodbDataSource
-        name: Query.getStories.fetchPosts
-        request: Query.getStories/Pipeline.fetchPosts.request.vtl
-        response: Query.getStories/Pipeline.fetchPosts.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.getPosts.fetchPosts
-        request: Query.getPosts/Pipeline.fetchPosts.request.vtl
-        response: Query.getPosts/Pipeline.fetchPosts.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.getMediaObjects.fetchMedia
-        request: Query.getMediaObjects/Pipeline.fetchMedia.request.vtl
-        response: Generic.passThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.trendingPosts.fetchPostIds
