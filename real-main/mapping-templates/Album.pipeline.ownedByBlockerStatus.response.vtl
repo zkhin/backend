@@ -3,13 +3,11 @@
 #end
 
 #set ($album = $ctx.prev.result)
-#set ($blockerAt = $ctx.result.blockedAt)  ## perspectives swap
 #if ($util.isNull($ctx.result))
   #set ($blockerStatus = 'NOT_BLOCKING')
 #else
   #set ($blockerStatus = 'BLOCKING')
 #end
 
-$util.qr($album.ownedBy.put('blockerAt', $blockerAt))
 $util.qr($album.ownedBy.put('blockerStatus', $blockerStatus))
 $util.toJson($album)

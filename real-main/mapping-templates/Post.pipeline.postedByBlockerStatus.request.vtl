@@ -6,7 +6,6 @@
 #end
 
 #if ($callerUserId == $post.postedBy.userId)
-  $util.qr($post.postedBy.put('blockerAt', null))
   $util.qr($post.postedBy.put('blockerStatus', 'SELF'))
   #return ($post)
 #end

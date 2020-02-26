@@ -221,10 +221,6 @@ type User {
   photoUrl1080p: AWSURL
   photoUrl4k: AWSURL
 
-  # DEPRECATED (in v2020-01-29.1): use User.blockedStatus and User.blockerStatus instead
-  blockedAt: AWSDateTime  # has the caller blocked this user, and if so, when?
-  blockerAt: AWSDateTime  # have they blocked the caller, and if so, when?
-
   blockedStatus: BlockStatus!  # is the caller blocking them?
   blockerStatus: BlockStatus!  # are they blocking the caller?
 

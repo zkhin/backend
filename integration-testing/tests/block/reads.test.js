@@ -65,8 +65,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['albums']['items']).toHaveLength(0)
   expect(ourUserFull['anonymouslyLikedPosts']['items']).toHaveLength(0)
   expect(ourUserFull['bio']).not.toBeNull()
-  expect(ourUserFull['blockedAt']).toBeNull()
-  expect(ourUserFull['blockerAt']).toBeNull()
   expect(ourUserFull['blockedStatus']).toBe('SELF')
   expect(ourUserFull['blockerStatus']).toBe('SELF')
   expect(ourUserFull['blockedUsers']['items']).toHaveLength(1)
@@ -110,11 +108,9 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   const ourUserLimited = resp['data']['user']
   expect(ourUserLimited['userId']).toBe(ourUserFull['userId'])
   expect(ourUserLimited['username']).toBe(ourUserFull['username'])
-  expect(ourUserLimited['blockerAt']).toBeTruthy()
   expect(ourUserLimited['blockerStatus']).toBe('BLOCKING')
 
   // adjust everything nulled out or changed, then compare
-  ourUserLimited['blockerAt'] = null
   ourUserFull['acceptedEULAVersion'] = null
   ourUserFull['albumCount'] = null
   ourUserFull['albums'] = null

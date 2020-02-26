@@ -425,12 +425,11 @@ def block_user(caller_user_id, arguments, source, context):
         raise ClientException(f'User `{blocked_user_id}` does not exist')
 
     try:
-        block_item = block_manager.block(blocker_user, blocked_user)
+        block_manager.block(blocker_user, blocked_user)
     except block_manager.exceptions.AlreadyBlocked as err:
         raise ClientException(str(err))
 
     resp = blocked_user.serialize(caller_user_id)
-    resp['blockedAt'] = block_item['blockedAt']
     resp['blockedStatus'] = block_manager.enums.BlockStatus.BLOCKING
     return resp
 
@@ -457,7 +456,6 @@ def unblock_user(caller_user_id, arguments, source, context):
         raise ClientException(str(err))
 
     resp = blocked_user.serialize(caller_user_id)
-    resp['blockedAt'] = None
     resp['blockedStatus'] = block_manager.enums.BlockStatus.NOT_BLOCKING
     return resp
 

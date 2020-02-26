@@ -130,7 +130,6 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
   let resp = await theirClient.mutate({mutation: schema.blockUser, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(ourUserId)
-  expect(resp['data']['blockUser']['blockedAt']).toBeTruthy()
   expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
 
   // they add a post

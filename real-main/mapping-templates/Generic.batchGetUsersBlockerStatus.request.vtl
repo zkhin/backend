@@ -5,7 +5,6 @@
 $util.qr($ctx.stash.put('pkToIndex', {}))
 
 #foreach ($user in $ctx.prev.result.items)
-  $util.qr($user.put('blockerAt', null))
 
   #if ($user.userId == $callerUserId)
     $util.qr($user.put('blockerStatus', 'SELF'))

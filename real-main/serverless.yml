@@ -267,10 +267,6 @@ custom:
         response: Generic.passThru.response.vtl
 
       - type: User
-        field: blockedAt
-        dataSource: DynamodbDataSource
-
-      - type: User
         field: blockedStatus
         dataSource: DynamodbDataSource
 

@@ -270,7 +270,7 @@ test.skip('Post that expires is removed from feed', async () => {
 })
 
 
-test('Feed Post.postedBy.blockerAt and followedStatus are filled in correctly', async () => {
+test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctly', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 

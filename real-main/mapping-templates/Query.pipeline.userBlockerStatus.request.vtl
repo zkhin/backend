@@ -6,7 +6,6 @@
 #end
 
 #if ($callerUserId == $user.userId)
-  $util.qr($user.put('blockerAt', null))
   $util.qr($user.put('blockerStatus', 'SELF'))
   #return ($user)
 #end

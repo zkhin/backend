@@ -294,7 +294,6 @@ test('We do not see trending users that have blocked us, but see all others', as
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['trendingUsers']['items']).toHaveLength(1)
   expect(resp['data']['trendingUsers']['items'][0]['userId']).toBe(ourUserId)
-  expect(resp['data']['trendingUsers']['items'][0]['blockerAt']).toBeNull()
   expect(resp['data']['trendingUsers']['items'][0]['blockerStatus']).toBe('SELF')
 })
 
@@ -338,14 +337,12 @@ test('We see our own trending posts correctly', async () => {
 
   expect(post1['postId']).toBe(postId1)
   expect(post1['postedBy']['userId']).toBe(ourUserId)
-  expect(post1['postedBy']['blockerAt']).toBeNull()
   expect(post1['postedBy']['blockerStatus']).toBe('SELF')
   expect(post1['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(post1['postedBy']['followedStatus']).toBe('SELF')
 
   expect(post2['postId']).toBe(postId2)
   expect(post2['postedBy']['userId']).toBe(ourUserId)
-  expect(post2['postedBy']['blockerAt']).toBeNull()
   expect(post2['postedBy']['blockerStatus']).toBe('SELF')
   expect(post2['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(post2['postedBy']['followedStatus']).toBe('SELF')
@@ -399,14 +396,12 @@ test('We see public users trending posts correctly', async () => {
 
   expect(post1['postId']).toBe(postId1)
   expect(post1['postedBy']['userId']).toBe(other1UserId)
-  expect(post1['postedBy']['blockerAt']).toBeNull()
   expect(post1['postedBy']['blockerStatus']).toBe('NOT_BLOCKING')
   expect(post1['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(post1['postedBy']['followedStatus']).toBe('FOLLOWING')
 
   expect(post2['postId']).toBe(postId2)
   expect(post2['postedBy']['userId']).toBe(other2UserId)
-  expect(post2['postedBy']['blockerAt']).toBeNull()
   expect(post2['postedBy']['blockerStatus']).toBe('NOT_BLOCKING')
   expect(post2['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(post2['postedBy']['followedStatus']).toBe('NOT_FOLLOWING')
@@ -464,7 +459,6 @@ test('We see posts of private users only if we are following them', async () => 
   const firstPost = resp['data']['trendingPosts']['items'][0]
   expect(firstPost['postId']).toBe(postId1)
   expect(firstPost['postedBy']['userId']).toBe(other1UserId)
-  expect(firstPost['postedBy']['blockerAt']).toBeNull()
   expect(firstPost['postedBy']['blockerStatus']).toBe('NOT_BLOCKING')
   expect(firstPost['postedBy']['privacyStatus']).toBe('PRIVATE')
   expect(firstPost['postedBy']['followedStatus']).toBe('FOLLOWING')
@@ -510,7 +504,6 @@ test('We do not see trending posts of users that have blocked us', async () => {
   const firstPost = resp['data']['trendingPosts']['items'][0]
   expect(firstPost['postId']).toBe(postId2)
   expect(firstPost['postedBy']['userId']).toBe(ourUserId)
-  expect(firstPost['postedBy']['blockerAt']).toBeNull()
   expect(firstPost['postedBy']['blockerStatus']).toBe('SELF')
   expect(firstPost['postedBy']['privacyStatus']).toBe('PUBLIC')
   expect(firstPost['postedBy']['followedStatus']).toBe('SELF')

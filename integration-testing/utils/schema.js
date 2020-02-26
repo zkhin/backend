@@ -40,8 +40,6 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     followerCount
     languageCode
     themeCode
-    blockedAt
-    blockerAt
     blockedStatus
     blockerStatus
     acceptedEULAVersion
@@ -116,7 +114,6 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     blockedUsers {
       items {
         userId
-        blockedAt
         blockedStatus
       }
     }
@@ -183,8 +180,6 @@ module.exports.user = gql(`query User ($userId: ID!) {
     followerCount
     languageCode
     themeCode
-    blockedAt
-    blockerAt
     blockedStatus
     blockerStatus
     acceptedEULAVersion
@@ -257,7 +252,6 @@ module.exports.user = gql(`query User ($userId: ID!) {
     blockedUsers {
       items {
         userId
-        blockedAt
         blockedStatus
       }
     }
@@ -479,7 +473,6 @@ module.exports.denyFollowerUser = gql(`mutation DenyFollowerUser ($userId: ID!) 
 module.exports.blockUser = gql(`mutation BlockUser ($userId: ID!) {
   blockUser (userId: $userId) {
     userId
-    blockedAt
     blockedStatus
     username
     privacyStatus
@@ -500,7 +493,6 @@ module.exports.blockUser = gql(`mutation BlockUser ($userId: ID!) {
 module.exports.unblockUser = gql(`mutation UnblockUser ($userId: ID!) {
   unblockUser (userId: $userId) {
     userId
-    blockedAt
     blockedStatus
     username
     privacyStatus
@@ -1181,7 +1173,6 @@ module.exports.trendingUsers = gql(`query TrendingUsers ($limit: Int) {
   trendingUsers (limit: $limit) {
     items {
       userId
-      blockerAt
       blockerStatus
     }
   }
@@ -1193,7 +1184,6 @@ module.exports.trendingPosts = gql(`query TrendingPosts ($limit: Int) {
       postId
       postedBy {
         userId
-        blockerAt
         blockerStatus
         privacyStatus
         followedStatus
