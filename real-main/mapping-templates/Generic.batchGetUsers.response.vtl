@@ -3,8 +3,6 @@
 #end
 
 #set ($result = $ctx.prev.result)
-#set ($result.items = $result.userIds)
-
 #foreach ($item in $ctx.result.data.${table})
   #if (! $util.isNull($item))
     #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])

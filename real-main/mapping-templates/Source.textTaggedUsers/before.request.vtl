@@ -2,12 +2,12 @@
   #return ([])
 #end
 
-#set ($userIds = [])
+#set ($resultItems = [])
 #foreach ($textTag in $ctx.source.textTags)
-  $util.qr($userIds.add($textTag.userId))
+  $util.qr($resultItems.add({'userId': $textTag.userId}))
 #end
 
 $util.toJson({
   'nextToken': null,
-  'userIds': $userIds
+  'items': $resultItems
 })

@@ -2,13 +2,13 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($userIds = [])
+#set ($resultItems = [])
 #foreach ($item in $ctx.result.items)
   #set ($userId = $item.partitionKey.split("/")[1])
-  $util.qr($userIds.add($userId))
+  $util.qr($resultItems.add({'userId': $userId}))
 #end
 
 $util.toJson({
   'nextToken': $ctx.result.nextToken,
-  'userIds': $userIds
+  'items': $resultItems
 })
