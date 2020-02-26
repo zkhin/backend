@@ -1,12 +1,8 @@
-#if ($ctx.stash.posts.items.isEmpty())
-  #return ()
-#end
-
 ## BatchGetItem does not preserve order
 #set ($queryKeys = [])
 $util.qr($ctx.stash.put('pkToIndex', {}))
 
-#foreach ($item in $ctx.stash.posts.items)
+#foreach ($item in $ctx.prev.result.items)
 
   #if ($item.postedByUserId == $ctx.identity.cognitoIdentityId)
     $util.qr($item['postedBy'].put('followedStatus', 'SELF'))
@@ -33,7 +29,7 @@ $util.qr($ctx.stash.put('pkToIndex', {}))
 
 ## If all the trending posts were our own, no query here
 #if ($queryKeys.isEmpty())
-  #return ()
+  #return ($ctx.prev.result)
 #end
 
 {

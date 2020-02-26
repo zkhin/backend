@@ -1,12 +1,12 @@
-#if ($ctx.stash.posts.items.isEmpty())
-  #return ()
+#if ($ctx.prev.result.items.isEmpty())
+  #return ($ctx.prev.result)
 #end
 
 ## BatchGetItem does not preserve order
 #set ($queryKeys = [])
 $util.qr($ctx.stash.put('pkToIndex', {}))
 
-#foreach ($item in $ctx.stash.posts.items)
+#foreach ($item in $ctx.prev.result.items)
 
   #set ($pk = "user/$item.postedByUserId")
   #if ($util.isNull($ctx.stash.pkToIndex[$pk]))

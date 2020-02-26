@@ -1,22 +1,23 @@
-$util.qr($ctx.stash.put('posts', {
-  'items': [],
-  'nextToken': $ctx.prev.result.nextToken
-}))
+## Expects a $ctx.prev.result with two keys:
+##  - nextToken (nullable string)
+##  - items (list of dicts with postId filled in, may *not* have duplicates)
 
 #if ($ctx.prev.result.items.isEmpty())
-  #return ()
+  #return ($ctx.prev.result)
 #end
 
 ## BatchGetItem does not preserve order
 #set ($keys = [])
-$util.qr($ctx.stash.put('postPkToIndex', {}))
+$util.qr($ctx.stash.put('pkToIndex', {}))
 
 #foreach ($item in $ctx.prev.result.items)
   #set ($index = $velocityCount - 1)
-  #set ($postPk = "post/$item.postId")
-  $util.qr($ctx.stash.postPkToIndex.put($postPk, $index))
-  $util.qr($keys.add({"partitionKey": {"S": "$postPk"}, "sortKey": {"S": "-"}}))
-  $util.qr($ctx.stash.posts.items.add(null))
+  #set ($pk = "post/$item.postId")
+  $util.qr($ctx.stash.pkToIndex.put($pk, $index))
+  $util.qr($keys.add({
+    "partitionKey": {"S": "$pk"},
+    "sortKey": {"S": "-"}
+  }))
 #end
 
 {

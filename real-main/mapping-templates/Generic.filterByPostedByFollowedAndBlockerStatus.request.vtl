@@ -4,10 +4,10 @@
 
 #set ($result = {
   'items': [],
-  'nextToken': $ctx.stash.posts.nextToken
+  'nextToken': $ctx.prev.result.nextToken
 })
 
-#foreach ($post in $ctx.stash.posts.items)
+#foreach ($post in $ctx.prev.result.items)
 
   ## Velocity apparently has no 'continue' statement
   #if (!$util.isNull($post.postedBy))

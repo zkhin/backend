@@ -2,8 +2,8 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#foreach ($post in $ctx.stash.posts.items)
+#foreach ($post in $ctx.prev.result.items)
   $util.qr($post.put('postedBy', $ctx.source.ownedBy))
 #end
 
-$util.toJson($ctx.stash.posts)
+$util.toJson($ctx.prev.result)

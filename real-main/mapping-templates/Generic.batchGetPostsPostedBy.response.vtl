@@ -2,13 +2,14 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
+#set ($result = $ctx.prev.result)
 #foreach ($item in $ctx.result.data.${table})
   #if (! $util.isNull($item))
     #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])
     #foreach ($index in $indexes)
-      $util.qr($ctx.stash.posts.items[$index].put('postedBy', $item))
+      $util.qr($result.items[$index].put('postedBy', $item))
     #end
   #end
 #end
 
-{}
+$util.toJson($result)

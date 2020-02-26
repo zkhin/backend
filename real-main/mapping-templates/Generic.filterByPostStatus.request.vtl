@@ -2,17 +2,18 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($posts = [])
+#set ($result = {
+  'items': [],
+  'nextToken': $ctx.prev.result.nextToken
+})
 
-#foreach ($post in $ctx.stash.posts.items)
+#foreach ($post in $ctx.prev.result.items)
   #if ($post.postStatus == 'COMPLETED')
-    $util.qr($posts.add($post))
+    $util.qr($result.items.add($post))
   #end
 #end
 
-#set ($ctx.stash.posts.items = $posts)
-
 {
   "version": "2018-05-29",
-  "payload": {}
+  "payload": $util.toJson($result)
 }

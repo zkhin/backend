@@ -4,7 +4,7 @@
 #set ($queryKeys = [])
 $util.qr($ctx.stash.put('pkToIndex', {}))
 
-#foreach ($post in $ctx.stash.posts.items)
+#foreach ($post in $ctx.prev.result.items)
 
   #if ($post.postedBy.userId == $callerUserId)
     $util.qr($post.postedBy.put('blockerStatus', 'SELF'))
@@ -27,7 +27,7 @@ $util.qr($ctx.stash.put('pkToIndex', {}))
 #end
 
 #if ($queryKeys.isEmpty())
-  #return
+  #return ($ctx.prev.result)
 #end
 
 {
