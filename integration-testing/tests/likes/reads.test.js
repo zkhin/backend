@@ -214,7 +214,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   const mediaId = uuidv4()
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  const uploadUrl = resp['data']['addPost']['imageUploadUrl']
   await misc.uploadMedia(imageData, contentType, uploadUrl)
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
@@ -229,6 +229,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['anonymouslyLikedPosts']['items']).toHaveLength(1)
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['image']['url']).toBeTruthy()
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['mediaObjects']).toHaveLength(1)
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
@@ -238,6 +239,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['onymouslyLikedPosts']['items']).toHaveLength(1)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['postId']).toBe(postId)
+  expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['image']['url']).toBeTruthy()
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects']).toHaveLength(1)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()

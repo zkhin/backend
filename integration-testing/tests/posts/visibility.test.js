@@ -42,7 +42,8 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a public user',
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
+  const uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(uploadUrl.split('?')[0]).toBe(resp['data']['addPost']['mediaObjects'][0]['uploadUrl'].split('?')[0])
 
   // test we can see the uploadUrl if we ask for the incomplete mediaObjects directly
   resp = await ourClient.query({

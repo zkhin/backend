@@ -16,6 +16,13 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     userId
     username
     fullName
+    photo {
+      url
+      url64p
+      url480p
+      url1080p
+      url4k
+    }
     photoUrl
     photoUrl64p
     photoUrl480p
@@ -68,6 +75,9 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     anonymouslyLikedPosts (limit: $anonymouslyLikedPostsLimit) {
       items {
         postId
+        image {
+          url
+        }
         mediaObjects {
           mediaId
           url
@@ -77,6 +87,9 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
     onymouslyLikedPosts (limit: $onymouslyLikedPostsLimit) {
       items {
         postId
+        image {
+          url
+        }
         mediaObjects {
           mediaId
           url
@@ -117,6 +130,13 @@ module.exports.self = gql(`query Self ($anonymouslyLikedPostsLimit: Int, $onymou
         name
         description
         createdAt
+        art {
+          url
+          url4k
+          url1080p
+          url480p
+          url64p
+        }
         url
         url4k
         url1080p
@@ -139,6 +159,13 @@ module.exports.user = gql(`query User ($userId: ID!) {
     userId
     username
     fullName
+    photo {
+      url
+      url64p
+      url480p
+      url1080p
+      url4k
+    }
     photoUrl
     photoUrl64p
     photoUrl480p
@@ -191,6 +218,9 @@ module.exports.user = gql(`query User ($userId: ID!) {
     anonymouslyLikedPosts {
       items {
         postId
+        image {
+          url
+        }
         mediaObjects {
           mediaId
           url
@@ -200,6 +230,9 @@ module.exports.user = gql(`query User ($userId: ID!) {
     onymouslyLikedPosts {
       items {
         postId
+        image {
+          url
+        }
         mediaObjects {
           mediaId
           url
@@ -292,6 +325,9 @@ module.exports.searchUsers = gql(`query SearchUsers ($searchToken: String!) {
       username
       fullName
       photoUrl
+      photo {
+        url
+      }
     }
   }
 }`)
@@ -334,18 +370,27 @@ module.exports.setUserViewCountsHidden = gql(`mutation SetUserViewCountsHidden (
   }
 }`)
 
-module.exports.setUserDetails = gql(`mutation SetUserDetails ($bio: String, $fullName: String, $photoMediaId: ID) {
-  setUserDetails (bio: $bio, fullName: $fullName, photoMediaId: $photoMediaId) {
-    userId
-    bio
-    fullName
-    photoUrl
-    photoUrl64p
-    photoUrl480p
-    photoUrl1080p
-    photoUrl4k
+module.exports.setUserDetails = gql(`
+  mutation SetUserDetails ($bio: String, $fullName: String, $photoMediaId: ID, $photoPostId: ID) {
+    setUserDetails (bio: $bio, fullName: $fullName, photoMediaId: $photoMediaId, photoPostId: $photoPostId) {
+      userId
+      bio
+      fullName
+      photo {
+        url
+        url64p
+        url480p
+        url1080p
+        url4k
+      }
+      photoUrl
+      photoUrl64p
+      photoUrl480p
+      photoUrl1080p
+      photoUrl4k
+    }
   }
-}`)
+`)
 
 module.exports.setUserLanguageCode = gql(`mutation SetUserLanguageCode ($languageCode: String) {
   setUserDetails (languageCode: $languageCode) {
@@ -437,7 +482,6 @@ module.exports.blockUser = gql(`mutation BlockUser ($userId: ID!) {
     blockedAt
     blockedStatus
     username
-    photoUrl
     privacyStatus
     followedStatus
     followerStatus
@@ -459,7 +503,6 @@ module.exports.unblockUser = gql(`mutation UnblockUser ($userId: ID!) {
     blockedAt
     blockedStatus
     username
-    photoUrl
     privacyStatus
     followedStatus
     followerStatus
@@ -507,6 +550,7 @@ module.exports.addPost = gql(`mutation AddPost (
   ) {
     postId
     postedAt
+    postType
     postStatus
     expiresAt
     verificationHidden
@@ -518,6 +562,22 @@ module.exports.addPost = gql(`mutation AddPost (
         username
       }
     }
+    image {
+      url
+      url4k
+      url1080p
+      url480p
+      url64p
+      width
+      height
+      colors {
+        r
+        g
+        b
+      }
+    }
+    imageUploadUrl
+    isVerified
     album {
       albumId
     }
@@ -546,7 +606,6 @@ module.exports.addPost = gql(`mutation AddPost (
     postedBy {
       userId
       postCount
-      photoUrl
     }
     commentsDisabled
     commentCount
@@ -572,13 +631,83 @@ module.exports.addPost = gql(`mutation AddPost (
   }
 }`)
 
-module.exports.addTextOnlyPost = gql(`mutation AddTextOnlyPost ($postId: ID!, $text: String!) {
-  addPost (postId: $postId, text: $text) {
+module.exports.addPostTextOnly = gql(`mutation AddPost (
+  $postId: ID!,
+  $albumId: ID,
+  $text: String,
+  $lifetime: String
+  $commentsDisabled: Boolean,
+  $likesDisabled: Boolean,
+  $sharingDisabled: Boolean,
+  $verificationHidden: Boolean,
+) {
+  addPost (
+    postId: $postId,
+    albumId: $albumId,
+    text: $text,
+    lifetime: $lifetime,
+    commentsDisabled: $commentsDisabled,
+    likesDisabled: $likesDisabled,
+    sharingDisabled: $sharingDisabled,
+    verificationHidden: $verificationHidden,
+  ) {
     postId
+    postedAt
+    postType
+    postStatus
+    expiresAt
+    verificationHidden
+    image {
+      url
+    }
+    imageUploadUrl
+    isVerified
+    text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+        username
+      }
+    }
+    album {
+      albumId
+    }
+    originalPost {
+      postId
+    }
+    mediaObjects {
+      mediaId
+    }
+    postedBy {
+      userId
+      postCount
+    }
+    commentsDisabled
+    commentCount
+    comments {
+      items {
+        commentId
+        commentedAt
+        commentedBy {
+          userId
+        }
+        text
+        textTaggedUsers {
+          tag
+          user {
+            userId
+          }
+        }
+      }
+    }
+    likesDisabled
+    sharingDisabled
+    verificationHidden
   }
 }`)
 
-module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost ($postId: ID!, $mediaId1: ID!, $mediaId2: ID!) {
+module.exports.addPostTwoMedia = gql(`mutation AddPostTwoMedia ($postId: ID!, $mediaId1: ID!, $mediaId2: ID!) {
   addPost (postId: $postId, mediaObjectUploads: [{mediaId: $mediaId1}, {mediaId: $mediaId2}]) {
     postId
   }
@@ -587,6 +716,7 @@ module.exports.addTwoMediaPost = gql(`mutation AddTwoMediaPost ($postId: ID!, $m
 module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
   post (postId: $postId) {
     postId
+    postType
     postStatus
     postedAt
     postedBy {
@@ -608,6 +738,22 @@ module.exports.post = gql(`query Post ($postId: ID!, $onymouslyLikedByLimit: Int
         username
       }
     }
+    image {
+      url
+      url4k
+      url1080p
+      url480p
+      url64p
+      width
+      height
+      colors {
+        r
+        g
+        b
+      }
+    }
+    imageUploadUrl
+    isVerified
     mediaObjects {
       mediaId
       mediaStatus
@@ -677,15 +823,19 @@ module.exports.postViewedBy = gql(`query PostViewedBy ($postId: ID!) {
   }
 }`)
 
-module.exports.userPosts = gql(`query UserPosts ($userId: ID!, $postStatus: PostStatus) {
+module.exports.userPosts = gql(`query UserPosts ($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
   user (userId: $userId) {
-    posts (postStatus: $postStatus) {
+    posts (postStatus: $postStatus, postType: $postType) {
       items {
         postId
         postedAt
+        postType
         postStatus
         expiresAt
         text
+        image {
+          url
+        }
         mediaObjects {
           mediaId
           mediaStatus
@@ -755,6 +905,9 @@ module.exports.editPost = gql(
           userId
           username
         }
+      }
+      image {
+        url
       }
       mediaObjects {
         mediaId
@@ -826,6 +979,14 @@ module.exports.archivePost = gql(`mutation ArchivePost ($postId: ID!) {
       userId
       postCount
     }
+    image {
+      url
+      url64p
+      url480p
+      url1080p
+      url4k
+    }
+    imageUploadUrl
     mediaObjects {
       mediaId
       mediaStatus
@@ -846,6 +1007,9 @@ module.exports.restoreArchivedPost = gql(`mutation RestoreArchivePost ($postId: 
     postedBy {
       userId
       postCount
+    }
+    image {
+      url
     }
     mediaObjects {
       mediaId
@@ -926,6 +1090,9 @@ module.exports.userStories = gql(`query UserStories ($userId: ID!) {
         }
         expiresAt
         text
+        image {
+          url
+        }
         mediaObjects {
           mediaId
           mediaStatus
@@ -941,12 +1108,17 @@ module.exports.selfFeed = gql(`query SelfFeed ($limit: Int) {
     feed (limit: $limit) {
       items {
         postId
+        postType
         postedBy {
           userId
           blockerStatus
           followedStatus
         }
         text
+        image {
+          url
+        }
+        imageUploadUrl
         mediaObjects {
           mediaId
           url
@@ -1078,6 +1250,13 @@ module.exports.addAlbum = gql(`mutation AddAlbum ($albumId: ID!, $name: String!,
     createdAt
     name
     description
+    art {
+      url
+      url4k
+      url1080p
+      url480p
+      url64p
+    }
     url
     url4k
     url1080p
@@ -1103,6 +1282,13 @@ module.exports.editAlbum = gql(`mutation EditAlbum ($albumId: ID!, $name: String
     createdAt
     name
     description
+    art {
+      url
+      url4k
+      url1080p
+      url480p
+      url64p
+    }
     url
     url4k
     url1080p
@@ -1128,6 +1314,13 @@ module.exports.deleteAlbum = gql(`mutation DeleteAlbum ($albumId: ID!) {
     createdAt
     name
     description
+    art {
+      url
+      url4k
+      url1080p
+      url480p
+      url64p
+    }
     url
     url4k
     url1080p
@@ -1153,6 +1346,13 @@ module.exports.album = gql(`query Album ($albumId: ID!) {
     createdAt
     name
     description
+    art {
+      url
+      url4k
+      url1080p
+      url480p
+      url64p
+    }
     url
     url4k
     url1080p

@@ -88,6 +88,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['onymouslyLikedPosts']['items']).toHaveLength(0)
   // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
   // expect(ourUserFull['phoneNumber']).not.toBeNull()
+  expect(ourUserFull['photo']).not.toBeNull()
   expect(ourUserFull['photoUrl']).not.toBeNull()
   expect(ourUserFull['photoUrl1080p']).not.toBeNull()
   expect(ourUserFull['photoUrl480p']).not.toBeNull()
@@ -139,6 +140,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['mediaObjects'] = null
   ourUserFull['onymouslyLikedPosts'] = null
   // ourUserFull['phoneNumber'] is already null
+  ourUserFull['photo'] = null
   ourUserFull['photoUrl'] = null
   ourUserFull['photoUrl1080p'] = null
   ourUserFull['photoUrl480p'] = null

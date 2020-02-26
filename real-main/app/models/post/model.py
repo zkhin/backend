@@ -6,6 +6,7 @@ from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
 from .enums import FlagStatus, PostStatus
+from .text_image import generate_text_image
 
 logger = logging.getLogger()
 
@@ -55,6 +56,42 @@ class Post:
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
+
+    def get_native_image_buffer(self):
+        if (post_status := self.item['postStatus']) not in (enums.PostStatus.COMPLETED, enums.PostStatus.ARCHIVED):
+            raise exceptions.PostException(f'No native image buffer for post `{self.id}` with status `{post_status}`')
+
+        post_type = self.item['postType']
+        if post_type == enums.PostType.TEXT_ONLY:
+            dimensions_4k = (3840, 2160)
+            return generate_text_image(self.item['text'], dimensions_4k)
+
+        if post_type == enums.PostType.IMAGE:
+            media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
+            if not media_item:
+                # shouldn't get here, as the post should be in completed state and have media
+                raise Exception(f'Did not find uploaded media for post `{self.id}`')
+            return self.media_manager.init_media(media_item).get_native_image_buffer()
+
+        raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+
+    def get_1080p_image_buffer(self):
+        if (post_status := self.item['postStatus']) not in (enums.PostStatus.COMPLETED, enums.PostStatus.ARCHIVED):
+            raise exceptions.PostException(f'No native image buffer for post `{self.id}` with status `{post_status}`')
+
+        post_type = self.item['postType']
+        if post_type == enums.PostType.TEXT_ONLY:
+            dimensions_1080p = (1920, 1080)
+            return generate_text_image(self.item['text'], dimensions_1080p)
+
+        if post_type == enums.PostType.IMAGE:
+            media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
+            if not media_item:
+                # shouldn't get here, as the post should be in completed state and have media
+                raise Exception(f'Did not find uploaded media for post `{self.id}`')
+            return self.media_manager.init_media(media_item).get_1080p_image_buffer()
+
+        raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
 
     def serialize(self, caller_user_id):
         resp = self.item.copy()
@@ -332,9 +369,6 @@ class Post:
             if album.item['ownedByUserId'] != self.posted_by_user_id:
                 msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
                 raise exceptions.PostException(msg)
-            post_media = list(self.media_manager.dynamo.generate_by_post(self.id))
-            if not post_media:
-                raise exceptions.PostException('Text-only posts may not be placed in albums')
 
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
         if self.item['postStatus'] == PostStatus.COMPLETED:

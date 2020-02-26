@@ -124,13 +124,26 @@ def test_add_post_album_errors(user_manager, post_manager, user, album):
         post_manager.add_post(user2.id, 'pid-42', media_uploads=[{'mediaId': 'mid'}], album_id=album.id)
     assert 'does not belong to' in str(err)
 
-    # can't create a text-only post in an album
-    with pytest.raises(post_manager.exceptions.PostException) as err:
-        post_manager.add_post(user.id, 'pid-42', text='t', album_id=album.id)
-    assert 'Text-only' in str(err)
-
     # verify we can add without error
     post_manager.add_post(user.id, 'pid-42', media_uploads=[{'mediaId': 'mid'}], album_id=album.id)
+
+
+def test_add_text_only_post_to_album(post_manager, user, album):
+    post_id = 'pid'
+
+    # add the post, check all looks good
+    post = post_manager.add_post(user.id, post_id, text='t', album_id=album.id)
+    assert post.id == post_id
+    assert post.item['albumId'] == album.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+
+    post.refresh_item()
+    assert post.item['albumId'] == album.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+
+    album.refresh_item()
+    assert album.item['postCount'] == 1
+    assert album.item['rankCount'] == 1
 
 
 def test_add_media_post(post_manager):

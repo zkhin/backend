@@ -95,7 +95,8 @@ type Mutation {
     username: String,
     fullName: String,
     bio: String,
-    photoMediaId: ID,
+    photoMediaId: ID,  # DEPRECATED: use photoPostId
+    photoPostId: ID,  # must be refer to a completed image post
     privacyStatus: PrivacyStatus,
     followCountsHidden: Boolean,
     viewCountsHidden: Boolean,
@@ -223,17 +224,20 @@ type User {
   username: String!
 
   # public info, readable by all logged-in non-blocked users
-  photoUrl: AWSURL
-  photoUrl64p: AWSURL
-  photoUrl480p: AWSURL
-  photoUrl1080p: AWSURL
-  photoUrl4k: AWSURL
   privacyStatus: PrivacyStatus
   followedStatus: FollowStatus!  # is the caller following them?
   followerStatus: FollowStatus!  # are they following the caller?
   fullName: String
   themeCode: String
   signedUpAt: AWSDateTime
+  photo: Image
+
+  # DEPRECATED: use User.photo instead
+  photoUrl: AWSURL
+  photoUrl64p: AWSURL
+  photoUrl480p: AWSURL
+  photoUrl1080p: AWSURL
+  photoUrl4k: AWSURL
 
   # DEPRECATED (in v2020-01-29.1): use User.blockedStatus and User.blockerStatus instead
   blockedAt: AWSDateTime  # has the caller blocked this user, and if so, when?
@@ -276,9 +280,10 @@ type User {
   #   - postStatus defaults to COMPLETED if unset
   #   - when looking at another user's posts, postStatus may only be set to COMPLETED
   #   - posts of a private user are private to only themselves and their followers
-  posts(postStatus: PostStatus, limit: Int, nextToken: String): PaginatedPosts
+  posts(postStatus: PostStatus, postType: PostType, limit: Int, nextToken: String): PaginatedPosts
   postCount: Int  # only posts with COMPLETED status
 
+  # DEPRECATED: use User.posts(postType = 'IMAGE') instead
   # User's media objects
   #   - mediaStatus defaults to UPLOADED if unset
   #   - mediaType defaults to IMAGE if unset
@@ -377,6 +382,12 @@ enum PostStatus {
   DELETING
 }
 
+enum PostType {
+  TEXT_ONLY
+  IMAGE
+  # VIDEO
+}
+
 enum LikeStatus {
   ONYMOUSLY_LIKED
   ANONYMOUSLY_LIKED
@@ -406,6 +417,17 @@ type Color {
   b: Int
 }
 
+type Image {
+  url: AWSURL!
+  url64p: AWSURL!
+  url480p: AWSURL!
+  url1080p: AWSURL!
+  url4k: AWSURL!
+  width: Int
+  height: Int
+  colors: [Color!]
+}
+
 type MediaObject {
   mediaId: ID!
   mediaType: MediaObjectType!
@@ -431,11 +453,11 @@ type Post {
   postId: ID!
   postedAt: AWSDateTime!
   postedBy: User!
-  postStatus: PostStatus  # null & 'COMPLETED' are synonymous
+  postType: PostType!
+  postStatus: PostStatus!
   expiresAt: AWSDateTime  # null indicates no expiration
   text: String
   textTaggedUsers: [TextTaggedUser!]!  # max of 100
-  mediaObjects: [MediaObject!]!
   album: Album
   flagStatus: FlagStatus!  # has the caller flagged this post?
   likeStatus: LikeStatus!  # has the caller liked this post?
@@ -444,6 +466,14 @@ type Post {
   verificationHidden: Boolean
   onymousLikeCount: Int  # onymous means non-anonymous, null if likes are disabled
   anonymousLikeCount: Int  # null if likes disabled
+
+  # DEPRECATED: use Post.image, Post.isVerified and Post.imageUploadUrl instead
+  mediaObjects: [MediaObject!]!
+
+  # Replacement for mediaObjects
+  image: Image
+  isVerified: Boolean
+  imageUploadUrl: AWSURL
 
   # The first post with the same media as this post
   #   - null if post has not yet reached COMPLETED stage
@@ -503,8 +533,9 @@ type Album {
   ownedBy: User!
   name: String!
   description: String
+  art: Image!
 
-  # Album art urls
+  # DEPRECATED: use Album.art instead
   url: AWSURL  # native
   url4k: AWSURL
   url1080p: AWSURL

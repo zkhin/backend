@@ -1,243 +1,243 @@
-from unittest.mock import call, Mock
+import base64
+from decimal import Decimal
+from os import path
+from uuid import uuid4
 
 import pytest
 
+from app.models.media.enums import MediaSize
+
+# valid jpegs with different aspect ratios
+grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
+grant_horz_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-horizontal.jpg')
+grant_vert_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-vertical.jpg')
+
 
 @pytest.fixture
-def album(album_manager, user_manager):
-    user = user_manager.create_cognito_only_user('uid', 'uname')
-    album = album_manager.add_album(user.id, 'aid', 'album name')
+def user(user_manager):
+    yield user_manager.create_cognito_only_user('uid', 'uname')
 
-    # mock out a bunch of stuff, each test will change the configuration
-    album.post_manager.dynamo.generate_post_ids_in_album = Mock()
-    album.update_art_images_one_post = Mock()
-    album.update_art_images_grid = Mock()
-    album.delete_art_images = Mock()
 
-    yield album
+@pytest.fixture
+def album(album_manager, user):
+    yield album_manager.add_album(user.id, 'aid', 'album name')
+
+
+@pytest.fixture
+def post1(post_manager, user, mock_post_verification_api):
+    media_upload = {'mediaId': str(uuid4())}
+    with open(grant_path, 'rb') as fh:
+        media_upload['imageData'] = base64.b64encode(fh.read())
+    yield post_manager.add_post(user.id, str(uuid4()), media_uploads=[media_upload])
+
+
+@pytest.fixture
+def post2(post_manager, user, mock_post_verification_api):
+    media_upload = {'mediaId': str(uuid4())}
+    with open(grant_horz_path, 'rb') as fh:
+        media_upload['imageData'] = base64.b64encode(fh.read())
+    yield post_manager.add_post(user.id, str(uuid4()), media_uploads=[media_upload])
+
+
+@pytest.fixture
+def post3(post_manager, user, mock_post_verification_api):
+    media_upload = {'mediaId': str(uuid4())}
+    with open(grant_vert_path, 'rb') as fh:
+        media_upload['imageData'] = base64.b64encode(fh.read())
+    yield post_manager.add_post(user.id, str(uuid4()), media_uploads=[media_upload])
+
+
+@pytest.fixture
+def post4(post_manager, user, mock_post_verification_api):
+    yield post_manager.add_post(user.id, str(uuid4()), text='lore ipsum')
+
+
+post5 = post1
+post6 = post2
+post7 = post3
+post8 = post4
+post9 = post1
+post10 = post2
+post11 = post3
+post12 = post4
+post13 = post1
+post14 = post2
+post15 = post3
+post16 = post4
 
 
 def test_update_art_if_needed_no_change_no_posts(album):
-    # do the update
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = []
+    assert 'artHash' not in album.item
+
+    # do the update, check nothing changed
     album.update_art_if_needed()
+    assert 'artHash' not in album.item
 
-    # verify calls
-    'artHash' not in album.item
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
+    # double check nothing changed
+    album.refresh_item()
+    assert 'artHash' not in album.item
 
 
-def test_update_art_if_needed_add_first_post(album):
+def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_uploads_client):
+    assert 'artHash' not in album.item
+
+    # put the post in the album directly in dynamo
+    transacts = [post1.dynamo.transact_set_album_id(post1.item, album.id, album_rank=0)]
+    post1.dynamo.client.transact_write_items(transacts)
+
     # update art
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a']
     album.update_art_if_needed()
+    art_hash = album.item['artHash']
+    assert art_hash
 
-    # verify calls
-    assert album.item['artHash']
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == [call(album.item['artHash'], 'a')]
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
+    # check all art sizes are in S3, native image is correct
+    for size in MediaSize._ALL:
+        path = album.get_art_image_path(size)
+        assert album.s3_uploads_client.exists(path)
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
+    # remove the post from the album directly in dynamo
+    transacts = [post1.dynamo.transact_set_album_id(post1.item, None)]
+    post1.dynamo.client.transact_write_items(transacts)
 
-def test_update_art_if_needed_remove_last_post(album):
     # update art
-    art_hash = 'hashhash'
-    album.item['artHash'] = art_hash
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = []
     album.update_art_if_needed()
+    assert 'artHash' not in album.item
 
-    # verify calls
-    'artHash' not in album.item
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == [call(art_hash)]
+    # check all art sizes were removed from S3
+    for size in MediaSize._ALL:
+        path = album.get_art_image_path(size, art_hash=art_hash)
+        assert not album.s3_uploads_client.exists(path)
 
 
-def test_update_art_if_needed_change_first_post(album):
+def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
+    assert 'artHash' not in album.item
+
+    # put the post in the album directly in dynamo
+    transacts = [post1.dynamo.transact_set_album_id(post1.item, album.id, album_rank=0.5)]
+    post1.dynamo.client.transact_write_items(transacts)
+
     # update art
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a']
     album.update_art_if_needed()
+    first_art_hash = album.item['artHash']
+    assert first_art_hash
 
-    # verify calls
-    art_hash_a = album.item['artHash']
-    assert art_hash_a
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == [call(art_hash_a, 'a')]
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
+    # check the native art matches first post
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
+    # put the other post in the album directly, ahead of the firs
+    transacts = [post2.dynamo.transact_set_album_id(post2.item, album.id, album_rank=Decimal('0.2'))]
+    post2.dynamo.client.transact_write_items(transacts)
 
-    # add a post with an earlier posted_at
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['b', 'a']
+    # update art
     album.update_art_if_needed()
+    second_art_hash = album.item['artHash']
+    assert second_art_hash != first_art_hash
 
-    # verify calls
-    art_hash_b = album.item['artHash']
-    assert art_hash_b != art_hash_a
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == [call(art_hash_b, 'b')]
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == [call(art_hash_a)]
+    # check the native art now matches second post
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post2.get_native_image_buffer().read()
 
+    # now switch order, directly in dynsmo
+    transacts = [post1.dynamo.transact_set_album_rank(post1.id, Decimal('0.1'))]
+    post1.dynamo.client.transact_write_items(transacts)
 
-def test_update_art_if_needed_go_1_3_4_3_posts(album):
-    # add one post
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a']
+    # update art
     album.update_art_if_needed()
+    third_art_hash = album.item['artHash']
+    assert third_art_hash != second_art_hash
+    assert third_art_hash == first_art_hash
 
-    # verify calls
-    art_hash_1 = album.item['artHash']
-    assert art_hash_1
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == [call(art_hash_1, 'a')]
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
+    # check the native art now matches first post
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
+    # check the thumbnails are all in S3, and all the old thumbs have been removed
+    for size in MediaSize._ALL:
+        path = album.get_art_image_path(size)
+        old_path = album.get_art_image_path(size, art_hash=second_art_hash)
+        assert s3_uploads_client.exists(path)
+        assert not s3_uploads_client.exists(old_path)
 
-    # add two more posts
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a', 'b', 'c']
+
+def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6, post7, post8, post9, post10,
+                                 post11, post12, post13, post14, post15, post16):
+    assert 'artHash' not in album.item
+    post_dynamo = post1.dynamo
+
+    # put the first post in the album directly in dynamo
+    transacts = [post_dynamo.transact_set_album_id(post1.item, album.id, album_rank=0)]
+    post_dynamo.client.transact_write_items(transacts)
+
+    # update art
     album.update_art_if_needed()
+    first_art_hash = album.item['artHash']
+    assert first_art_hash
 
-    # verify calls
-    assert album.item['artHash'] == art_hash_1
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
+    # check the native art matches first post
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    first_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
+    assert first_native_image_data == post1.get_native_image_buffer().read()
 
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
+    # add three more posts to the album
+    transacts = [
+        post_dynamo.transact_set_album_id(post2.item, album.id, album_rank=Decimal('0.05')),
+        post_dynamo.transact_set_album_id(post3.item, album.id, album_rank=Decimal('0.10')),
+        post_dynamo.transact_set_album_id(post4.item, album.id, album_rank=Decimal('0.15')),
+    ]
+    post_dynamo.client.transact_write_items(transacts)
 
-    # add a fourth post
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a', 'b', 'c', 'd']
+    # update art
     album.update_art_if_needed()
+    fourth_art_hash = album.item['artHash']
+    assert fourth_art_hash != first_art_hash
 
-    # verify calls
-    art_hash_4 = album.item['artHash']
-    assert art_hash_4
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == [call(art_hash_4, ['a', 'b', 'c', 'd'])]
-    assert album.delete_art_images.mock_calls == [call(art_hash_1)]
+    # check the native art has changed
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    fourth_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
+    assert fourth_native_image_data != first_native_image_data
 
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
+    # add 5th thru 9th posts to the album
+    transacts = [
+        post_dynamo.transact_set_album_id(post5.item, album.id, album_rank=Decimal('0.20')),
+        post_dynamo.transact_set_album_id(post6.item, album.id, album_rank=Decimal('0.25')),
+        post_dynamo.transact_set_album_id(post6.item, album.id, album_rank=Decimal('0.30')),
+        post_dynamo.transact_set_album_id(post7.item, album.id, album_rank=Decimal('0.35')),
+        post_dynamo.transact_set_album_id(post8.item, album.id, album_rank=Decimal('0.40')),
+        post_dynamo.transact_set_album_id(post9.item, album.id, album_rank=Decimal('0.45')),
+    ]
+    post_dynamo.client.transact_write_items(transacts)
 
-    # go back to three posts
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a', 'b', 'c']
+    # update art
     album.update_art_if_needed()
+    nineth_art_hash = album.item['artHash']
+    assert nineth_art_hash != fourth_art_hash
 
-    # verify calls
-    assert album.item['artHash'] == art_hash_1
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == [call(album.item['artHash'], 'a')]
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == [call(art_hash_4)]
+    # check the native art has changed
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    nineth_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
+    assert nineth_native_image_data != fourth_native_image_data
 
+    # add 10th thru 16th posts to the album
+    transacts = [
+        post_dynamo.transact_set_album_id(post10.item, album.id, album_rank=Decimal('0.50')),
+        post_dynamo.transact_set_album_id(post11.item, album.id, album_rank=Decimal('0.55')),
+        post_dynamo.transact_set_album_id(post12.item, album.id, album_rank=Decimal('0.60')),
+        post_dynamo.transact_set_album_id(post13.item, album.id, album_rank=Decimal('0.65')),
+        post_dynamo.transact_set_album_id(post14.item, album.id, album_rank=Decimal('0.70')),
+        post_dynamo.transact_set_album_id(post15.item, album.id, album_rank=Decimal('0.75')),
+        post_dynamo.transact_set_album_id(post16.item, album.id, album_rank=Decimal('0.80')),
+    ]
+    post_dynamo.client.transact_write_items(transacts)
 
-def test_update_art_if_needed_4_8_9_15_16(album):
-    # add four posts
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a', 'b', 'c', 'd']
+    # update art
     album.update_art_if_needed()
+    sixteenth_art_hash = album.item['artHash']
+    assert sixteenth_art_hash != nineth_art_hash
 
-    # verify calls
-    art_hash_4 = album.item['artHash']
-    assert art_hash_4
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == [call(art_hash_4, ['a', 'b', 'c', 'd'])]
-    assert album.delete_art_images.mock_calls == []
-
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
-
-    # jump to 8 posts
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-    album.update_art_if_needed()
-
-    # verify calls
-    assert album.item['artHash'] == art_hash_4
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
-
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
-
-    # climb to 9 posts
-    post_ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = post_ids
-    album.update_art_if_needed()
-
-    # verify calls
-    art_hash_9 = album.item['artHash']
-    assert art_hash_9 != art_hash_4
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == [call(art_hash_9, post_ids)]
-    assert album.delete_art_images.mock_calls == [call(art_hash_4)]
-
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
-
-    # jump to 15 posts
-    post_ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o']
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = post_ids
-    album.update_art_if_needed()
-
-    # verify calls
-    assert album.item['artHash'] == art_hash_9
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == []
-    assert album.delete_art_images.mock_calls == []
-
-    # clear mocks
-    album.post_manager.dynamo.generate_post_ids_in_album.reset_mock()
-    album.update_art_images_one_post.reset_mock()
-    album.update_art_images_grid.reset_mock()
-    album.delete_art_images.reset_mock()
-
-    # climb to 16  posts
-    post_ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p']
-    album.post_manager.dynamo.generate_post_ids_in_album.return_value = post_ids
-    album.update_art_if_needed()
-
-    # verify calls
-    art_hash_16 = album.item['artHash']
-    assert art_hash_16 != art_hash_9
-    assert album.post_manager.dynamo.generate_post_ids_in_album.mock_calls == [call(album.id, completed=True)]
-    assert album.update_art_images_one_post.mock_calls == []
-    assert album.update_art_images_grid.mock_calls == [call(art_hash_16, post_ids)]
-    assert album.delete_art_images.mock_calls == [call(art_hash_9)]
+    # check the native art has changed
+    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    sixteenth_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
+    assert sixteenth_native_image_data != nineth_native_image_data

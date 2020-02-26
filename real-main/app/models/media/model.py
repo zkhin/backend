@@ -44,19 +44,17 @@ class Media:
             # in UPLOADED state and it is not explicity saved in dynamo
             self.item['mediaStatus'] = enums.MediaStatus.UPLOADED
 
-    @property
-    def native_image_data_stream(self):
+    def get_native_image_buffer(self):
         if not hasattr(self, '_native_image_data'):
             path = self.get_s3_path(enums.MediaSize.NATIVE)
             self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
         return BytesIO(self._native_image_data)
 
-    @property
-    def p1080_image_data_stream(self):
-        if not hasattr(self, '_p1080_image_data'):
+    def get_1080p_image_buffer(self):
+        if not hasattr(self, '_1080p_image_data'):
             path = self.get_s3_path(enums.MediaSize.P1080)
-            self._p1080_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-        return BytesIO(self._p1080_image_data)
+            self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+        return BytesIO(self._1080p_image_data)
 
     def refresh_item(self):
         self.item = self.dynamo.get_media(self.id)
@@ -99,7 +97,7 @@ class Media:
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
         self._native_image_data = base64.b64decode(image_data)
         path = self.get_s3_path(enums.MediaSize.NATIVE)
-        self.s3_uploads_client.put_object(path, self.native_image_data_stream, self.jpeg_content_type)
+        self.s3_uploads_client.put_object(path, self.get_native_image_buffer(), self.jpeg_content_type)
 
     def process_upload(self):
         allowed = (enums.MediaStatus.PROCESSING_UPLOAD, enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
@@ -157,14 +155,14 @@ class Media:
         return self
 
     def set_height_and_width(self):
-        image = Image.open(self.native_image_data_stream)
+        image = Image.open(self.get_native_image_buffer())
         width, height = image.size
         self.item = self.dynamo.set_height_and_width(self.id, height, width)
         return self
 
     def set_colors(self):
         try:
-            colors = ColorThief(self.native_image_data_stream).get_palette(color_count=5)
+            colors = ColorThief(self.get_native_image_buffer()).get_palette(color_count=5)
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for media `{self.id}`')
         else:
@@ -173,7 +171,7 @@ class Media:
 
     def set_thumbnails(self):
         for size, dims in self.sizes.items():
-            image = Image.open(self.native_image_data_stream)
+            image = Image.open(self.get_native_image_buffer())
             image = ImageOps.exif_transpose(image)
             image.thumbnail(dims, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
@@ -190,7 +188,7 @@ class Media:
 
     def is_original_jpeg(self):
         try:
-            image = Image.open(self.native_image_data_stream)
+            image = Image.open(self.get_native_image_buffer())
         except Exception:
             return False
         return image.format == 'JPEG'

@@ -113,7 +113,7 @@ def test_upload_native_image_data_base64(media_awaiting_upload):
     media.upload_native_image_data_base64(image_data_b64)
 
     # check it was placed in mem and in s3
-    assert media.native_image_data_stream.read() == image_data
+    assert media.get_native_image_buffer().read() == image_data
     assert media.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 

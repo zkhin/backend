@@ -141,6 +141,7 @@ def set_user_details(caller_user_id, arguments, source, context):
     full_name = arguments.get('fullName')
     bio = arguments.get('bio')
     photo_media_id = arguments.get('photoMediaId')
+    photo_post_id = arguments.get('photoPostId')
     privacy_status = arguments.get('privacyStatus')
     follow_counts_hidden = arguments.get('followCountsHidden')
     view_counts_hidden = arguments.get('viewCountsHidden')
@@ -152,8 +153,9 @@ def set_user_details(caller_user_id, arguments, source, context):
     verification_hidden = arguments.get('verificationHidden')
 
     args = (
-        username, full_name, bio, photo_media_id, privacy_status, follow_counts_hidden, view_counts_hidden,
+        username, full_name, bio, photo_media_id, photo_post_id, privacy_status, follow_counts_hidden,
         language_code, theme_code, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,
+        view_counts_hidden,
     )
     if all(v is None for v in args):
         raise ClientException('Called without any arguments... probably not what you intended?')
@@ -161,6 +163,9 @@ def set_user_details(caller_user_id, arguments, source, context):
     user = user_manager.get_user(caller_user_id)
     if not user:
         raise ClientException(f'User `{caller_user_id}` does not exist')
+
+    if photo_media_id is not None and photo_post_id is not None:
+        raise ClientException('Cannot specify both photoMediaId and photoPostId')
 
     # are we claiming a new username?
     if username is not None:
@@ -170,6 +175,20 @@ def set_user_details(caller_user_id, arguments, source, context):
             raise ClientException(str(err))
 
     # are we setting a new profile picture?
+    if photo_post_id is not None:
+        if photo_post_id == '':
+            photo_media_id = ''
+        else:
+            post = post_manager.get_post(photo_post_id)
+            if not post:
+                raise ClientException(f'No post with post_id `{photo_post_id}` found')
+            if post.item['postType'] != post.enums.PostType.IMAGE:
+                raise ClientException(f'Post `{photo_post_id}` does not have postType IMAGE')
+            if post.item['postStatus'] != post.enums.PostStatus.COMPLETED:
+                raise ClientException(f'Post `{photo_post_id}` does not have postStatus COMPLETED')
+            media_items = list(media_manager.dynamo.generate_by_post(post.id))
+            photo_media_id = media_items[0]['mediaId']
+
     if photo_media_id is not None:
         if photo_media_id == '':
             media = None
@@ -232,14 +251,14 @@ def reset_user(caller_user_id, arguments, source, context):
     # unflag everything we've flagged
     flag_manager.unflag_all_by_user(caller_user_id)
 
-    # delete all our posts, and all likes on those posts
-    for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
-        post_manager.init_post(post_item).delete()
-
     # delete all our likes & comments & albums
     like_manager.dislike_all_by_user(caller_user_id)
     comment_manager.delete_all_by_user(caller_user_id)
     album_manager.delete_all_by_user(caller_user_id)
+
+    # delete all our posts, and all likes on those posts
+    for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
+        post_manager.init_post(post_item).delete()
 
     # remove all blocks of and by us
     block_manager.unblock_all_blocks(caller_user_id)
@@ -260,6 +279,21 @@ def reset_user(caller_user_id, arguments, source, context):
     except user_manager.exceptions.UserValidationException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
+
+
+@routes.register('User.photo')
+def user_photo(caller_user_id, arguments, source, context):
+    user = user_manager.init_user(source)
+    native_url = user.get_photo_url(media_manager.enums.MediaSize.NATIVE)
+    if not native_url:
+        return None
+    return {
+        'url': native_url,
+        'url64p': user.get_photo_url(media_manager.enums.MediaSize.P64),
+        'url480p': user.get_photo_url(media_manager.enums.MediaSize.P480),
+        'url1080p': user.get_photo_url(media_manager.enums.MediaSize.P1080),
+        'url4k': user.get_photo_url(media_manager.enums.MediaSize.K4),
+    }
 
 
 @routes.register('User.photoUrl')
@@ -479,6 +513,42 @@ def add_post(caller_user_id, arguments, source, context):
         resp['postedBy']['postCount'] = org_post_count + 1
 
     return resp
+
+
+@routes.register('Post.image')
+def post_image(caller_user_id, arguments, source, context):
+    allowed_statuses = [media_manager.enums.MediaStatus.UPLOADED, media_manager.enums.MediaStatus.ARCHIVED]
+    media_items = [
+        mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
+        if mi['mediaStatus'] in allowed_statuses
+    ]
+    if not media_items:
+        return None
+    media = media_manager.init_media(media_items[0])
+    return {
+        'url': media.get_readonly_url(media_manager.enums.MediaSize.NATIVE),
+        'url64p': media.get_readonly_url(media_manager.enums.MediaSize.P64),
+        'url480p': media.get_readonly_url(media_manager.enums.MediaSize.P480),
+        'url1080p': media.get_readonly_url(media_manager.enums.MediaSize.P1080),
+        'url4k': media.get_readonly_url(media_manager.enums.MediaSize.K4),
+        'width': media.item.get('width'),
+        'height': media.item.get('height'),
+        'colors': media.item.get('colors'),
+    }
+
+
+@routes.register('Post.imageUploadUrl')
+def post_image_upload_url(caller_user_id, arguments, source, context):
+    # only the owner of the post gets an upload url
+    if caller_user_id != source['postedByUserId']:
+        return None
+    media_items = [
+        mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
+        if mi['mediaStatus'] == media_manager.enums.MediaStatus.AWAITING_UPLOAD
+    ]
+    if not media_items:
+        return None
+    return media_manager.init_media(media_items[0]).get_writeonly_url()
 
 
 @routes.register('Mutation.editPost')
@@ -825,6 +895,18 @@ def delete_album(caller_user_id, arguments, source, context):
         raise ClientException(str(err))
 
     return album.serialize(caller_user_id)
+
+
+@routes.register('Album.art')
+def album_art(caller_user_id, arguments, source, context):
+    album = album_manager.init_album(source)
+    return {
+        'url': album.get_art_image_url(media_manager.enums.MediaSize.NATIVE),
+        'url64p': album.get_art_image_url(media_manager.enums.MediaSize.P64),
+        'url480p': album.get_art_image_url(media_manager.enums.MediaSize.P480),
+        'url1080p': album.get_art_image_url(media_manager.enums.MediaSize.P1080),
+        'url4k': album.get_art_image_url(media_manager.enums.MediaSize.K4),
+    }
 
 
 @routes.register('Album.url')

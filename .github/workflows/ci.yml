@@ -24,7 +24,7 @@ jobs:
       run: cd real-main && poetry install
 
     - name: Test with pytest
-      run: cd real-main && poetry run pytest app_tests
+      run: cd real-main && poetry run pytest app_tests migrations_tests
 
   real-main-flake8:
     runs-on: ubuntu-latest
@@ -46,7 +46,7 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        flake8 real-main/app real-main/app_tests real-main/migrations
+        flake8 real-main/app real-main/app_tests real-main/migrations real-main/migrations_tests
 
   real-cloudfront-flake8:
     runs-on: ubuntu-latest

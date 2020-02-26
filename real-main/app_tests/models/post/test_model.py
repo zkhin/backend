@@ -1,4 +1,5 @@
 from decimal import Decimal
+from io import BytesIO
 from unittest.mock import call, Mock
 
 import pendulum
@@ -49,6 +50,40 @@ def test_refresh_item(post):
     # now refresh the item, and check they now do match
     post.refresh_item()
     assert new_post_item == post.item
+
+
+def test_get_native_image_buffer(post, post_with_media):
+    # verify works for text post
+    buf = post.get_native_image_buffer()
+    assert isinstance(buf, BytesIO)
+    assert buf.read()
+
+    # verify works for completed image post
+    buf = post_with_media.get_native_image_buffer()
+    assert isinstance(buf, BytesIO)
+    assert buf.read()
+
+    # verify raises exception for non-completed image post
+    post_with_media.item['postStatus'] = post.enums.PostStatus.PENDING  # in mem is sufficient
+    with pytest.raises(post.exceptions.PostException, match='PENDING'):
+        post_with_media.get_native_image_buffer()
+
+
+def test_get_1080p_image_buffer(post, post_with_media):
+    # verify works for text post
+    buf = post.get_1080p_image_buffer()
+    assert isinstance(buf, BytesIO)
+    assert buf.read()
+
+    # verify works for completed image post
+    buf = post_with_media.get_1080p_image_buffer()
+    assert isinstance(buf, BytesIO)
+    assert buf.read()
+
+    # verify raises exception for non-completed image post
+    post_with_media.item['postStatus'] = post.enums.PostStatus.PENDING  # in mem is sufficient
+    with pytest.raises(post.exceptions.PostException, match='PENDING'):
+        post_with_media.get_1080p_image_buffer()
 
 
 def test_set_expires_at(post):
@@ -198,12 +233,6 @@ def test_set_album_errors(album_manager, post_manager, user_manager, post, post_
         post_with_media.set_album(album.id)
     assert 'belong to different users' in str(err)
 
-    # cant put text-only posts in albums
-    album = album_manager.add_album(user.id, 'aid-22', 'album name')
-    with pytest.raises(post_manager.exceptions.PostException) as err:
-        post.set_album(album.id)
-    assert 'Text-only' in str(err)
-
 
 def test_set_album_completed_post(albums, post_with_media):
     post = post_with_media
@@ -281,6 +310,43 @@ def test_set_album_completed_post(albums, post_with_media):
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
     assert 'artHash' not in album1.item
+
+
+def test_set_album_text_post(post_manager, albums, user2):
+    album1, album2 = albums
+    post = post_manager.add_post(user2.id, 'pid', text='lore ipsum')
+
+    # verify starting state
+    assert 'albumId' not in post.item
+    assert 'artHash' not in album1.item
+    assert 'artHash' not in album2.item
+
+    # go from no album to an album
+    post.set_album(album1.id)
+    assert post.item['albumId'] == album1.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+    album1.refresh_item()
+    assert album1.item['artHash']
+    album2.refresh_item()
+    assert 'artHash' not in album2.item
+
+    # change the album
+    post.set_album(album2.id)
+    assert post.item['albumId'] == album2.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+    album1.refresh_item()
+    assert 'artHash' not in album1.item
+    album2.refresh_item()
+    assert album2.item['artHash']
+
+    # remove post from all albums
+    post.set_album(None)
+    assert 'albumId' not in post.item
+    assert 'gsiK3SortKey' not in post.item
+    album1.refresh_item()
+    assert 'artHash' not in album1.item
+    album2.refresh_item()
+    assert 'artHash' not in album2.item
 
 
 def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64, mock_post_verification_api):

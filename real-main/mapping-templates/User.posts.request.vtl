@@ -24,17 +24,34 @@
   #end
 #end
 
+## if the post type has been specified, we need to use GSI-A3. Else, we use GSI-A2
+#if ($util.isNull($ctx.args.postType))
+  #set ($indexName = 'GSI-A2')
+  #set ($pkName = 'gsiA2PartitionKey')
+  #set ($skName = 'gsiA2SortKey')
+  #set ($skPrefix = "$postStatus/")
+#else
+  #set ($indexName = 'GSI-A3')
+  #set ($pkName = 'gsiA3PartitionKey')
+  #set ($skName = 'gsiA3SortKey')
+  #set ($skPrefix = "$postStatus/$ctx.args.postType/")
+#end
+
 {
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiA2PartitionKey = :pk and begins_with(gsiA2SortKey, :skPrefix)",
+    "expression": "#pk = :pk and begins_with(#sk, :skPrefix)",
+    "expressionNames": {
+      "#pk": "$pkName",
+      "#sk": "$skName"
+    },
     "expressionValues": {
       ":pk": { "S": "post/$user.userId" },
-      ":skPrefix": { "S": "$postStatus/" }
+      ":skPrefix": { "S": "$skPrefix" }
     }
   },
-  "index": "GSI-A2",
+  "index": "$indexName",
   "scanIndexForward": false,
   "limit": $limit
   #if ($ctx.args.nextToken)

@@ -126,6 +126,11 @@ custom:
           - Generic.batchGetUsersFollowedStatus
 
       - type: User
+        field: photo
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: User
         field: photoUrl
         dataSource: LambdaDataSource
         response: Generic.lambda.response.vtl
@@ -595,6 +600,25 @@ custom:
       - type: Post
         field: album
         dataSource: DynamodbDataSource
+
+      - type: Post
+        field: image
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Post
+        field: imageUploadUrl
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
+
+      - type: Post
+        field: isVerified
+        dataSource: DynamodbDataSource
+
+      - type: Album
+        field: art
+        dataSource: LambdaDataSource
+        response: Generic.lambda.response.vtl
 
       - type: Album
         field: url
@@ -1119,6 +1143,10 @@ resources:
             AttributeType: S
           - AttributeName: gsiA2SortKey
             AttributeType: S
+          - AttributeName: gsiA3PartitionKey
+            AttributeType: S
+          - AttributeName: gsiA3SortKey
+            AttributeType: S
           - AttributeName: gsiK1PartitionKey
             AttributeType: S
           - AttributeName: gsiK1SortKey
@@ -1150,6 +1178,14 @@ resources:
             - AttributeName: gsiA2PartitionKey
               KeyType: HASH
             - AttributeName: gsiA2SortKey
+              KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI-A3
+            KeySchema:
+            - AttributeName: gsiA3PartitionKey
+              KeyType: HASH
+            - AttributeName: gsiA3SortKey
               KeyType: RANGE
             Projection:
               ProjectionType: ALL
@@ -1699,6 +1735,7 @@ package:
   include:
     - app/**/*.py
     - mapping-templates/**
+    - fonts/*.ttf
     - requirements.txt
     - schema.graphql
 

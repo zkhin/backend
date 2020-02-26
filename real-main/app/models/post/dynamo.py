@@ -79,21 +79,24 @@ class PostDynamo:
         }
         return self.client.generate_all_scan(query_kwargs)
 
-    def transact_add_pending_post(self, posted_by_user_id, post_id, posted_at=None, expires_at=None, album_id=None,
-                                  text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
-                                  sharing_disabled=None, verification_hidden=None):
+    def transact_add_pending_post(self, posted_by_user_id, post_id, post_type, posted_at=None, expires_at=None,
+                                  album_id=None, text=None, text_tags=None, comments_disabled=None,
+                                  likes_disabled=None, sharing_disabled=None, verification_hidden=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         post_status = enums.PostStatus.PENDING
         post_item = {
-            'schemaVersion': {'N': '1'},
+            'schemaVersion': {'N': '2'},
             'partitionKey': {'S': f'post/{post_id}'},
             'sortKey': {'S': '-'},
             'gsiA2PartitionKey': {'S': f'post/{posted_by_user_id}'},
             'gsiA2SortKey': {'S': f'{post_status}/{posted_at_str}'},
+            'gsiA3PartitionKey': {'S': f'post/{posted_by_user_id}'},
+            'gsiA3SortKey': {'S': f'{post_status}/{post_type}/{posted_at_str}'},
             'postId': {'S': post_id},
             'postedAt': {'S': posted_at_str},
             'postedByUserId': {'S': posted_by_user_id},
+            'postType': {'S': post_type},
             'postStatus': {'S': post_status},
         }
         if expires_at:
@@ -173,10 +176,11 @@ class PostDynamo:
             'album_rank must be specified only when completing a post in an album'
         album_rank = album_rank if album_rank is not None else -1
 
-        exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :skPostedAt']
+        exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsia2sk', 'gsiA3SortKey = :gsia3sk']
         exp_values = {
             ':postStatus': {'S': status},
-            ':skPostedAt': {'S': f'{status}/{post_item["postedAt"]}'},
+            ':gsia2sk': {'S': f'{status}/{post_item["postedAt"]}'},
+            ':gsia3sk': {'S': f'{status}/{post_item["postType"]}/{post_item["postedAt"]}'},
         }
 
         if original_post_id:

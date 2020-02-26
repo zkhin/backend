@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models import media, post, user
+from app.models import post, user
 
 from . import exceptions
 from .dynamo import AlbumDynamo
@@ -18,7 +18,6 @@ class AlbumManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['album'] = self
-        self.media_manager = managers.get('media') or media.MediaManager(clients, managers=managers)
         self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
 
@@ -33,7 +32,7 @@ class AlbumManager:
     def init_album(self, album_item):
         return Album(album_item, self.dynamo, s3_uploads_client=self.clients.get('s3_uploads'),
                      cloudfront_client=self.clients.get('cloudfront'), user_manager=self.user_manager,
-                     post_manager=self.post_manager, media_manager=self.media_manager)
+                     post_manager=self.post_manager)
 
     def add_album(self, caller_user_id, album_id, name, description=None, now=None):
         now = now or pendulum.now('utc')

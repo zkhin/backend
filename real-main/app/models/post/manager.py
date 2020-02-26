@@ -73,6 +73,8 @@ class PostManager:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with more than one media'
             raise exceptions.PostException(msg)
 
+        post_type = enums.PostType.TEXT_ONLY if not media_uploads else enums.PostType.IMAGE
+
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with negative lifetime'
@@ -88,14 +90,12 @@ class PostManager:
             if album_item['ownedByUserId'] != posted_by_user_id:
                 msg = f'Album `{album_id}` does not belong to caller user `{posted_by_user_id}`'
                 raise exceptions.PostException(msg)
-            if not media_uploads:
-                raise exceptions.PostException('Text-only posts may not be placed in albums')
 
         # add the pending post & media to dynamo in a transaction
         transacts = [self.dynamo.transact_add_pending_post(
-            posted_by_user_id, post_id, posted_at=now, expires_at=expires_at, text=text, text_tags=text_tags,
-            comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
-            verification_hidden=verification_hidden, album_id=album_id,
+            posted_by_user_id, post_id, post_type, posted_at=now, expires_at=expires_at, text=text,
+            text_tags=text_tags, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
+            sharing_disabled=sharing_disabled, verification_hidden=verification_hidden, album_id=album_id,
         )]
         for mu in media_uploads:
             # 'media_upload' is straight from graphql, format dictated by schema

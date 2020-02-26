@@ -28,15 +28,12 @@ class Album:
     }
 
     def __init__(self, album_item, album_dynamo, cloudfront_client=None, s3_uploads_client=None,
-                 user_manager=None, post_manager=None, media_manager=None,
-                 frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
+                 user_manager=None, post_manager=None, frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
         self.dynamo = album_dynamo
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client
         if s3_uploads_client:
             self.s3_uploads_client = s3_uploads_client
-        if media_manager:
-            self.media_manager = media_manager
         if post_manager:
             self.post_manager = post_manager
         if user_manager:
@@ -106,7 +103,7 @@ class Album:
         filename = f'{size}.{self.art_image_file_ext}'
         return '/'.join([self.item['ownedByUserId'], 'album', self.id, art_hash, filename])
 
-    def update_art_if_needed(self):
+    def get_post_ids_for_art(self):
         # we only want a square number of post ids, max of 4x4
         post_ids_gen = self.post_manager.dynamo.generate_post_ids_in_album(self.id, completed=True)
         post_ids = list(itertools.islice(post_ids_gen, 16))
@@ -116,7 +113,10 @@ class Album:
             post_ids = post_ids[:4]
         if len(post_ids) < 4:
             post_ids = post_ids[:1]
+        return post_ids
 
+    def update_art_if_needed(self):
+        post_ids = self.get_post_ids_for_art()
         if post_ids:
             new_art_hash = hashlib.md5(''.join(post_ids).encode('utf-8')).hexdigest()
         else:
@@ -126,10 +126,17 @@ class Album:
         if new_art_hash == old_art_hash:
             return self  # no changes
 
-        if len(post_ids) == 1:
-            self.update_art_images_one_post(new_art_hash, post_ids[0])
-        elif len(post_ids) > 1:
-            self.update_art_images_grid(new_art_hash, post_ids)
+        posts = [self.post_manager.get_post(post_id) for post_id in post_ids]
+        if len(posts) == 0:
+            new_native_buf = None
+        elif len(posts) == 1:
+            new_native_buf = posts[0].get_native_image_buffer()
+        else:
+            image_data_buffers = [post.get_1080p_image_buffer() for post in posts]
+            new_native_buf = art.generate_zoomed_grid(image_data_buffers)
+
+        if new_native_buf:
+            self.save_art_images(new_art_hash, new_native_buf)
 
         self.item = self.dynamo.set_album_art_hash(self.id, new_art_hash)
 
@@ -144,41 +151,14 @@ class Album:
             path = self.get_art_image_path(size, art_hash=art_hash)
             self.s3_uploads_client.delete_object(path)
 
-    def update_art_images_one_post(self, art_hash, post_id):
-        # copy the images from the post to the album
-        media_item = next(self.media_manager.dynamo.generate_by_post(post_id, uploaded=True), None)
-        if not media_item:
-            # shouldn't get here, as the post should be in completed state and have media
-            raise Exception(f'Did not find uploaded media for post `{post_id}`')
-        media = self.media_manager.init_media(media_item)
-        for size in MediaSize._ALL:
-            source_path = media.get_s3_path(size)
-            dest_path = self.get_art_image_path(size, art_hash=art_hash)
-            self.s3_uploads_client.copy_object(source_path, dest_path)
-
-    def update_art_images_grid(self, art_hash, post_ids):
-        assert len(post_ids) in (4, 9, 16), f'Unexpected number of post_ids: `{len(post_ids)}`'
-
-        # collect all the 1080p thumbs from all the post images
-        image_data_buffers = []
-        for post_id in post_ids:
-            media_item = next(self.media_manager.dynamo.generate_by_post(post_id, uploaded=True), None)
-            if not media_item:
-                # shouldn't get here, as the post should be in completed state and have media
-                raise Exception(f'Did not find uploaded media for post `{post_id}`')
-            media = self.media_manager.init_media(media_item)
-            image_data_buffers.append(media.p1080_image_data_stream)
-
-        # generate the new native-size image
-        grid_buffer = art.generate_zoomed_grid(image_data_buffers)
-
+    def save_art_images(self, art_hash, native_image_buf):
         # save the native size to S3
         path = self.get_art_image_path(MediaSize.NATIVE, art_hash=art_hash)
-        self.s3_uploads_client.put_object(path, grid_buffer.read(), self.jpeg_content_type)
+        self.s3_uploads_client.put_object(path, native_image_buf.read(), self.jpeg_content_type)
 
         # generate and save thumbnails
-        grid_buffer.seek(0)
-        target_image = Image.open(grid_buffer)
+        native_image_buf.seek(0)
+        target_image = Image.open(native_image_buf)
         for size, dims in self.sizes.items():
             target_image.thumbnail(dims, resample=Image.LANCZOS)
             in_mem_file = BytesIO()

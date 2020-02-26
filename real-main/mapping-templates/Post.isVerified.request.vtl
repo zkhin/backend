@@ -1,0 +1,16 @@
+## if verification is hidden, isVerified is always true
+#if ($ctx.source.verificationHidden)
+  #return (true)
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query": {
+    "expression": "gsiA1PartitionKey = :pk",
+    "expressionValues": {
+      ":pk": { "S": "media/$ctx.source.postId" }
+    }
+  },
+  "index": "GSI-A1"
+}

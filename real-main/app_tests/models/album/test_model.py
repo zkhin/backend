@@ -1,6 +1,13 @@
+from io import BytesIO
+from os import path
+from unittest.mock import Mock
+
 import pytest
 
 from app.models.media.enums import MediaSize
+
+grant_horz_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-horizontal.jpg')
+grant_vert_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-vertical.jpg')
 
 
 @pytest.fixture
@@ -177,37 +184,42 @@ def test_delete_art_images(album):
         assert not album.s3_uploads_client.exists(path)
 
 
-def test_update_art_images_one_post(album, completed_image_post, post_manager, media_manager, s3_uploads_client):
-    post = completed_image_post
-    media_item = next(media_manager.dynamo.generate_by_post(post.id, uploaded=True), None)
-    media = media_manager.init_media(media_item)
-
-    # check no no art for album
+def test_save_art_images(album):
     assert 'artHash' not in album.item
-    for size in MediaSize._ALL:
-        assert album.get_art_image_path(size) is None
-
-    # update the album art with that post
-    art_hash = 'the-hash'
-    album.update_art_images_one_post(art_hash, post.id)
-
-    # check art was updated correctly
-    for size in MediaSize._ALL:
-        art_path = album.get_art_image_path(size, art_hash=art_hash)
-        assert art_hash in art_path
-        # verify art matches the post's media
-        art_data = s3_uploads_client.get_object_data_stream(art_path).read()
-        image_path = media.get_s3_path(size)
-        image_data = s3_uploads_client.get_object_data_stream(image_path).read()
-        assert art_data == image_data
-
-
-def test_cannot_update_album_art_with_text_only_post(album, text_only_post):
-    # update the album art with that post
     art_hash = 'the hash'
-    with pytest.raises(Exception) as err:
-        album.update_art_images_one_post(art_hash, text_only_post.id)
-    assert 'uploaded media' in str(err)
+
+    # check nothing in S3
+    for size in MediaSize._ALL:
+        path = album.get_art_image_path(size, art_hash)
+        assert not album.s3_uploads_client.exists(path)
+
+    # save an image as the art
+    with open(grant_horz_path, 'rb') as fh:
+        image_data = fh.read()
+    album.save_art_images(art_hash, BytesIO(image_data))
+
+    # check all sizes are in S3
+    for size in MediaSize._ALL:
+        path = album.get_art_image_path(size, art_hash)
+        assert album.s3_uploads_client.exists(path)
+
+    # check the value of the native image
+    native_path = album.get_art_image_path(MediaSize.NATIVE, art_hash)
+    assert album.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
+
+    # save an new image as the art
+    with open(grant_vert_path, 'rb') as fh:
+        image_data = fh.read()
+    album.save_art_images(art_hash, BytesIO(image_data))
+
+    # check all sizes are in S3
+    for size in MediaSize._ALL:
+        path = album.get_art_image_path(size, art_hash)
+        assert album.s3_uploads_client.exists(path)
+
+    # check the value of the native image
+    native_path = album.get_art_image_path(MediaSize.NATIVE, art_hash)
+    assert album.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
 def test_rank_count(album):
@@ -238,3 +250,39 @@ def test_rank_count(album):
     album.item['rankCount'] = 5
     assert album.get_next_first_rank() == pytest.approx(-5 / 7)
     assert album.get_next_last_rank() == pytest.approx(5 / 7)
+
+
+def test_get_post_ids_for_art(album):
+    album.post_manager.dynamo.generate_post_ids_in_album = Mock()
+
+    # no post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = []
+    assert album.get_post_ids_for_art() == []
+
+    # one post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(1))
+    assert album.get_post_ids_for_art() == [0]
+
+    # three post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(3))
+    assert album.get_post_ids_for_art() == [0]
+
+    # four post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(4))
+    assert album.get_post_ids_for_art() == [0, 1, 2, 3]
+
+    # eigth post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(8))
+    assert album.get_post_ids_for_art() == [0, 1, 2, 3]
+
+    # nine post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(9))
+    assert album.get_post_ids_for_art() == [0, 1, 2, 3, 4, 5, 6, 7, 8]
+
+    # 15 post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(15))
+    assert album.get_post_ids_for_art() == [0, 1, 2, 3, 4, 5, 6, 7, 8]
+
+    # 16 post ids
+    album.post_manager.dynamo.generate_post_ids_in_album.return_value = list(range(16))
+    assert album.get_post_ids_for_art() == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]

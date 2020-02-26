@@ -288,6 +288,7 @@ test('User search returns urls for profile pics', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
+  expect(resp['data']['searchUsers']['items'][0]['photo']).toBeNull()
   expect(resp['data']['searchUsers']['items'][0]['photoUrl']).toBeNull()
 
   // add a post with media, upload that media
@@ -303,6 +304,7 @@ test('User search returns urls for profile pics', async () => {
   // set our profile photo to that media
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})
   expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['photo']['url']).toBeTruthy()
   expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
 
   // do a search, and check that we see a photoUrl
@@ -311,4 +313,5 @@ test('User search returns urls for profile pics', async () => {
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
   expect(resp['data']['searchUsers']['items'][0]['photoUrl']).toBeTruthy()
+  expect(resp['data']['searchUsers']['items'][0]['photo']['url']).toBeTruthy()
 })

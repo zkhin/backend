@@ -165,6 +165,7 @@ def test_set_thumbnails_tall_image(s3_uploads_client, media_awaiting_upload):
     assert height == 64
 
 
+@pytest.mark.filterwarnings("ignore:Metadata Warning, tag .* had too many entries.*:UserWarning")
 def test_set_thumbnails_respect_exif_orientation(s3_uploads_client, media_awaiting_upload):
     media = media_awaiting_upload
 
