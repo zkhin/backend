@@ -75,7 +75,7 @@ test('Create a posts in an album, album post ordering', async () => {
 
   // we a text-only post in that album
   const postId3 = uuidv4()
-  variables = {postId: postId3, albumId, text: 'lore ipsum'}
+  variables = {postId: postId3, albumId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
   resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
@@ -256,7 +256,7 @@ test('Add, remove, change albums for an existing post', async () => {
 
   // add an unrelated text-only post to the first album
   const postId2 = uuidv4()
-  let variables = {postId: postId2, albumId: albumId1, text: 'lore ipsum'}
+  let variables = {postId: postId2, albumId: albumId1, text: 'lore ipsum', postType: 'TEXT_ONLY'}
   resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -552,7 +552,7 @@ test('Edit album post order', async () => {
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // we add three posts to the album
-  variables = {postId: postId1, albumId, text: 'lore'}
+  variables = {postId: postId1, albumId, text: 'lore', postType: 'TEXT_ONLY'}
   resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -562,7 +562,7 @@ test('Edit album post order', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
-  variables = {postId: postId3, albumId, text: 'ipsum'}
+  variables = {postId: postId3, albumId, text: 'ipsum', postType: 'TEXT_ONLY'}
   resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)

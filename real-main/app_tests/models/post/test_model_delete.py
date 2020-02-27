@@ -9,7 +9,7 @@ from app.models.flag import FlagManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
 from app.models.media.enums import MediaStatus
-from app.models.post.enums import PostStatus
+from app.models.post.enums import PostStatus, PostType
 from app.models.post_view import PostViewManager
 from app.models.trending import TrendingManager
 from app.utils import image_size
@@ -18,7 +18,9 @@ from app.utils import image_size
 @pytest.fixture
 def post_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
+    yield post_manager.add_post(
+        user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+    )
 
 
 @pytest.fixture
@@ -26,7 +28,8 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64, m
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
 
 
@@ -34,14 +37,14 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64, m
 def completed_post_with_media(post_manager, user_manager, image_data_b64, mock_post_verification_api):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     yield post_manager.add_post(
-        user.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
+        user.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
     )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid4', media_uploads=[{'mediaId': 'mid'}], text='t')
+    yield post_manager.add_post(user.id, 'pid4', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}], text='t')
 
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):

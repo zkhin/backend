@@ -92,7 +92,13 @@ test('Add text-only post', async () => {
 
   const postId = uuidv4()
   const text = 'zeds dead baby, zeds dead'
-  let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables: {postId, text}})
+
+  // check can't add it without specifying postType
+  let variables = {postId, text}
+  await expect(ourClient.mutate({mutation: schema.addPostTextOnly, variables})).rejects.toThrow('ClientError')
+
+  variables = {postId, text, postType: 'TEXT_ONLY'}
+  let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
@@ -168,12 +174,12 @@ test('Add media post with image data directly included', async () => {
 })
 
 
-test('Add media post, check non-duplicates are not marked as such', async () => {
+test('Add media post (with postType specified), check non-duplicates are not marked as such', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a media post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, postType: 'IMAGE'}})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)

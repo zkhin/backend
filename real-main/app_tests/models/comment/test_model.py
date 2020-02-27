@@ -1,5 +1,7 @@
 import pytest
 
+from app.models.post.enums import PostType
+
 
 @pytest.fixture
 def user(user_manager):
@@ -8,7 +10,7 @@ def user(user_manager):
 
 @pytest.fixture
 def comment(user, post_manager, comment_manager):
-    post = post_manager.add_post(user.id, 'pid', text='go go')
+    post = post_manager.add_post(user.id, 'pid', PostType.TEXT_ONLY, text='go go')
     yield comment_manager.add_comment('cid', post.id, user.id, 'run far')
 
 

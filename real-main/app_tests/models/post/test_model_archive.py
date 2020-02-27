@@ -7,7 +7,7 @@ from app.models.feed import FeedManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
 from app.models.media.enums import MediaStatus
-from app.models.post.enums import PostStatus
+from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
@@ -17,13 +17,15 @@ def user(user_manager):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', text='t')
+    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def post_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
+    yield post_manager.add_post(
+        user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+    )
 
 
 @pytest.fixture
@@ -31,7 +33,8 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64, m
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mide', 'imageData': image_data_b64}], album_id=album.id,
+        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mide', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
 
 

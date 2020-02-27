@@ -1,5 +1,7 @@
 import pendulum
 
+from app.models.post.enums import PostType
+
 
 def test_add_users_posts_to_feed(feed_manager, post_manager, user_manager):
     posted_by_user = user_manager.create_cognito_only_user('pb-uid', 'pbUname')
@@ -8,8 +10,8 @@ def test_add_users_posts_to_feed(feed_manager, post_manager, user_manager):
     # user has two posts
     post_id_1 = 'pid1'
     post_id_2 = 'pid2'
-    post_manager.add_post(posted_by_user.id, post_id_1, text='t')
-    post_manager.add_post(posted_by_user.id, post_id_2, text='t')
+    post_manager.add_post(posted_by_user.id, post_id_1, PostType.TEXT_ONLY, text='t')
+    post_manager.add_post(posted_by_user.id, post_id_2, PostType.TEXT_ONLY, text='t')
 
     # verify no posts in feed
     assert list(feed_manager.dynamo.generate_feed(feed_user_id)) == []

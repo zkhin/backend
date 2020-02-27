@@ -4,14 +4,14 @@ from unittest.mock import Mock, call
 import pendulum
 import pytest
 
-from app.models.post.enums import PostStatus
+from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
 def posts(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
-    post1 = post_manager.add_post(user.id, 'pid1', text='t')
-    post2 = post_manager.add_post(user.id, 'pid2', text='t')
+    post1 = post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    post2 = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t')
     yield (post1, post2)
 
 

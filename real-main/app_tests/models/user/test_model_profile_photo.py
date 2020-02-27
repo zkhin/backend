@@ -4,6 +4,7 @@ from unittest.mock import call
 
 import pytest
 
+from app.models.post.enums import PostType
 from app.utils import image_size
 
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
@@ -27,7 +28,9 @@ def user(user_manager):
 def uploaded_media(user, post_manager, media_manager, image_data_b64, mock_post_verification_api):
     post_id = 'post-id'
     media_id = 'media-id'
-    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id, 'imageData': image_data_b64}])
+    post = post_manager.add_post(
+        user.id, post_id, PostType.IMAGE, media_uploads=[{'mediaId': media_id, 'imageData': image_data_b64}],
+    )
     yield media_manager.init_media(post.item['mediaObjects'][0])
 
 
@@ -35,7 +38,9 @@ def uploaded_media(user, post_manager, media_manager, image_data_b64, mock_post_
 def another_uploaded_media(user, post_manager, media_manager, grant_data_b64, mock_post_verification_api):
     post_id = 'post-id-2'
     media_id = 'media-id-2'
-    post = post_manager.add_post(user.id, post_id, media_uploads=[{'mediaId': media_id, 'imageData': grant_data_b64}])
+    post = post_manager.add_post(
+        user.id, post_id, PostType.IMAGE, media_uploads=[{'mediaId': media_id, 'imageData': grant_data_b64}],
+    )
     yield media_manager.init_media(post.item['mediaObjects'][0])
 
 

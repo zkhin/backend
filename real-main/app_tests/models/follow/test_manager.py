@@ -5,6 +5,7 @@ import pytest
 
 from app.models.follow.enums import FollowStatus
 from app.models.like.enums import LikeStatus
+from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
 
 
@@ -19,7 +20,9 @@ def users(user_manager):
 @pytest.fixture
 def their_post(follow_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
-    post = post_manager.add_post(users[1].id, str(uuid4()), lifetime_duration=pendulum.duration(hours=12), text='t')
+    post = post_manager.add_post(
+        users[1].id, str(uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
+    )
     yield post
 
 

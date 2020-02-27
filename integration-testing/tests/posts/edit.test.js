@@ -103,7 +103,7 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
-  // we add a text-only post
+  // we add a post
   const postId = uuidv4()
   const postText = 'je suis le possion?'
   let variables = {postId, mediaId: uuidv4(), text: postText, imageData: imageDataB64}

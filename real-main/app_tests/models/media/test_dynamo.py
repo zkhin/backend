@@ -1,6 +1,7 @@
 import pendulum
 import pytest
 
+from app.models.post.enums import PostType
 from app.models.media.dynamo import MediaDynamo
 from app.models.media.enums import MediaStatus
 
@@ -16,7 +17,7 @@ def media_item(media_dynamo, post_manager):
     user_id = 'my-user-id'
 
     # add a post with media
-    post = post_manager.add_post(user_id, 'pid', media_uploads=[{'mediaId': media_id}])
+    post = post_manager.add_post(user_id, 'pid', PostType.IMAGE, media_uploads=[{'mediaId': media_id}])
     yield post.item['mediaObjects'][0]
 
 
@@ -26,7 +27,7 @@ def media_item_2(media_dynamo, post_manager):
     user_id = 'my-user-id-2'
 
     # add a post with media
-    post = post_manager.add_post(user_id, 'pid-2', media_uploads=[{'mediaId': media_id}])
+    post = post_manager.add_post(user_id, 'pid-2', PostType.IMAGE, media_uploads=[{'mediaId': media_id}])
     yield post.item['mediaObjects'][0]
 
 
@@ -41,7 +42,7 @@ def test_media_exists(media_dynamo, post_manager):
     user_id = 'my-user-id'
 
     # add a post with media
-    post_manager.add_post(user_id, 'pid', media_uploads=[{'mediaId': media_id}])
+    post_manager.add_post(user_id, 'pid', PostType.IMAGE, media_uploads=[{'mediaId': media_id}])
 
     # media exists now
     resp = media_dynamo.get_media(media_id)
@@ -97,21 +98,21 @@ def test_generate_by_user(media_dynamo, post_manager):
     assert medias == []
 
     # add a post with media
-    post_manager.add_post(user_id, 'pid', media_uploads=[{'mediaId': 'mid'}])
+    post_manager.add_post(user_id, 'pid', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
 
     # list media again, check correct
     medias = list(media_dynamo.generate_by_user(user_id))
     assert [m['mediaId'] for m in medias] == ['mid']
 
     # add another post with media
-    post_manager.add_post(user_id, 'pid2', media_uploads=[{'mediaId': 'mid2'}])
+    post_manager.add_post(user_id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2'}])
 
     # list media again, check correct
     medias = list(media_dynamo.generate_by_user(user_id))
     assert [m['mediaId'] for m in medias] == ['mid', 'mid2']
 
     # now a different user adds a post with
-    post_manager.add_post('otherid', 'pid3', media_uploads=[{'mediaId': 'mid3'}])
+    post_manager.add_post('otherid', 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3'}])
 
     # list media again, check hasn't changed
     medias = list(media_dynamo.generate_by_user(user_id))
@@ -125,7 +126,7 @@ def test_generate_by_post(media_dynamo, post_manager):
     post_id_one_media = 'pid1'
 
     # add a post with one media
-    post_manager.add_post(user_id, post_id_one_media, media_uploads=[{'mediaId': 'p1-mid'}])
+    post_manager.add_post(user_id, post_id_one_media, PostType.IMAGE, media_uploads=[{'mediaId': 'p1-mid'}])
 
     # check post with no media
     medias = list(media_dynamo.generate_by_post(post_id_no_media))
@@ -139,7 +140,7 @@ def test_generate_by_post(media_dynamo, post_manager):
 def test_generate_by_post_uploaded_or_not(media_dynamo, post_manager):
     # add a post with one media
     media_uploads = [{'mediaId': 'mid1'}]
-    post_manager.add_post('uid', 'pid', media_uploads=media_uploads)
+    post_manager.add_post('uid', 'pid', PostType.IMAGE, media_uploads=media_uploads)
 
     # check generation
     media_items = list(media_dynamo.generate_by_post('pid'))

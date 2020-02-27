@@ -425,6 +425,7 @@ module.exports.unblockUser = gql`
 module.exports.addPost = gql`
   mutation AddPost (
     $postId: ID!,
+    $postType: PostType,
     $mediaId: ID!,
     $imageData: String,
     $albumId: ID,
@@ -439,6 +440,7 @@ module.exports.addPost = gql`
   ) {
     addPost (
       postId: $postId,
+      postType: $postType,
       albumId: $albumId,
       text: $text,
       lifetime: $lifetime,
@@ -503,6 +505,7 @@ module.exports.addPost = gql`
 module.exports.addPostTextOnly = gql`
   mutation AddPost (
     $postId: ID!,
+    $postType: PostType,
     $albumId: ID,
     $text: String,
     $lifetime: String
@@ -513,6 +516,7 @@ module.exports.addPostTextOnly = gql`
   ) {
     addPost (
       postId: $postId,
+      postType: $postType,
       albumId: $albumId,
       text: $text,
       lifetime: $lifetime,

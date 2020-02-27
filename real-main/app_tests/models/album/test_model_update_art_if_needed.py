@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.models.post.enums import PostType
 from app.utils import image_size
 
 # valid jpegs with different aspect ratios
@@ -28,7 +29,7 @@ def post1(post_manager, user, mock_post_verification_api):
     media_upload = {'mediaId': str(uuid4())}
     with open(grant_path, 'rb') as fh:
         media_upload['imageData'] = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid4()), media_uploads=[media_upload])
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, media_uploads=[media_upload])
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def post2(post_manager, user, mock_post_verification_api):
     media_upload = {'mediaId': str(uuid4())}
     with open(grant_horz_path, 'rb') as fh:
         media_upload['imageData'] = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid4()), media_uploads=[media_upload])
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, media_uploads=[media_upload])
 
 
 @pytest.fixture
@@ -44,12 +45,12 @@ def post3(post_manager, user, mock_post_verification_api):
     media_upload = {'mediaId': str(uuid4())}
     with open(grant_vert_path, 'rb') as fh:
         media_upload['imageData'] = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid4()), media_uploads=[media_upload])
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, media_uploads=[media_upload])
 
 
 @pytest.fixture
 def post4(post_manager, user, mock_post_verification_api):
-    yield post_manager.add_post(user.id, str(uuid4()), text='lore ipsum')
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum')
 
 
 post5 = post1

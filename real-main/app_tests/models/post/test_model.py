@@ -5,6 +5,7 @@ from unittest.mock import call, Mock
 import pendulum
 import pytest
 
+from app.models.post.enums import PostType
 from app.models.followed_first_story import FollowedFirstStoryManager
 
 
@@ -20,7 +21,7 @@ def user2(user_manager):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', text='t')
+    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
@@ -32,13 +33,15 @@ def albums(album_manager, user2):
 
 @pytest.fixture
 def post_with_expiration(post_manager, user2):
-    yield post_manager.add_post(user2.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
+    yield post_manager.add_post(
+        user2.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+    )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user2, image_data_b64, mock_post_verification_api):
     yield post_manager.add_post(
-        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
+        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
     )
 
 
@@ -314,7 +317,7 @@ def test_set_album_completed_post(albums, post_with_media):
 
 def test_set_album_text_post(post_manager, albums, user2):
     album1, album2 = albums
-    post = post_manager.add_post(user2.id, 'pid', text='lore ipsum')
+    post = post_manager.add_post(user2.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
 
     # verify starting state
     assert 'albumId' not in post.item
@@ -351,16 +354,16 @@ def test_set_album_text_post(post_manager, albums, user2):
 
 def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64, mock_post_verification_api):
     post1 = post_manager.add_post(
-        user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
+        user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
     )
     post3 = post_manager.add_post(
-        user2.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
+        user2.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
     )
     post4 = post_manager.add_post(
-        user2.id, 'pid4', media_uploads=[{'mediaId': 'mid4', 'imageData': image_data_b64}],
+        user2.id, 'pid4', PostType.IMAGE, media_uploads=[{'mediaId': 'mid4', 'imageData': image_data_b64}],
     )
     album1, album2 = albums
 
@@ -404,13 +407,16 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     # album with three posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
     post3 = post_manager.add_post(
-        user2.id, 'pid3', media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
 
     # check starting state
@@ -444,10 +450,12 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
 
     # check starting state
@@ -477,10 +485,12 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
 
     # check starting state

@@ -2,13 +2,14 @@ import pytest
 
 from app.models.like.enums import LikeStatus
 from app.models.like.exceptions import NotLikedWithStatus
+from app.models.post.enums import PostType
 from app.models.post.exceptions import UnableToDecrementPostLikeCounter
 
 
 @pytest.fixture
 def post(dynamo_client, like_manager, user_manager, post_manager):
     posted_by_user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
-    yield post_manager.add_post(posted_by_user.id, 'pid', text='lore ipsum')
+    yield post_manager.add_post(posted_by_user.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
 
 
 @pytest.fixture

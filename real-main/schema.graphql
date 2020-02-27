@@ -112,6 +112,7 @@ type Mutation {
   #   - if lifetime is unset, defaults to infinite
   addPost(
     postId: ID!,
+    postType: PostType,  # defaults to IMAGE if not supplied
     albumId: ID,
     lifetime: String,
     text: String,

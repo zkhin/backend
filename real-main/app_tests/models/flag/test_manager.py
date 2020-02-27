@@ -5,6 +5,7 @@ import string
 import pytest
 
 from app.models.flag import exceptions
+from app.models.post.enums import PostType
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def user(user_manager):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', text='t')
+    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def user2(user_manager):
 
 @pytest.fixture
 def post2(post_manager, user2):
-    yield post_manager.add_post(user2.id, 'pid2', text='t')
+    yield post_manager.add_post(user2.id, 'pid2', PostType.TEXT_ONLY, text='t')
 
 
 def test_flag_post_blocked(flag_manager, block_manager, user, post, user2):

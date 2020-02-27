@@ -3,6 +3,7 @@ from unittest.mock import call, Mock
 import pytest
 
 from app.models.like.enums import LikeStatus
+from app.models.post.enums import PostType
 
 
 @pytest.fixture
@@ -50,8 +51,8 @@ def test_block_clears_likes(block_manager, blocker_user, blocked_user, post_mana
     blocked_post_id = 'blocked-post-id'
 
     # we each add a post
-    blocker_post = post_manager.add_post(blocker_user.id, blocker_post_id, text='t')
-    blocked_post = post_manager.add_post(blocked_user.id, blocked_post_id, text='t')
+    blocker_post = post_manager.add_post(blocker_user.id, blocker_post_id, PostType.TEXT_ONLY, text='t')
+    blocked_post = post_manager.add_post(blocked_user.id, blocked_post_id, PostType.TEXT_ONLY, text='t')
 
     # we each like each other's posts
     block_manager.like_manager.like_post(blocker_user, blocked_post, LikeStatus.ONYMOUSLY_LIKED)

@@ -1,6 +1,8 @@
 import pendulum
 import pytest
 
+from app.models.post.enums import PostType
+
 
 @pytest.fixture
 def user(user_manager):
@@ -9,7 +11,7 @@ def user(user_manager):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid', text='go go')
+    yield post_manager.add_post(user.id, 'pid', PostType.TEXT_ONLY, text='go go')
 
 
 def test_add_comment(comment_manager, user, post):
@@ -217,7 +219,7 @@ def test_delete_all_by_user(comment_manager, user, post):
 
 def test_delete_all_on_post(comment_manager, user, post, post_manager):
     # add another post, add a comment on it for distraction
-    post_other = post_manager.add_post(user.id, 'pid-other', text='go go')
+    post_other = post_manager.add_post(user.id, 'pid-other', PostType.TEXT_ONLY, text='go go')
     comment_other = comment_manager.add_comment('coid', post_other.id, user.id, 'lore')
 
     # add two comments on the target post

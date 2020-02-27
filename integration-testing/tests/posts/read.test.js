@@ -44,7 +44,7 @@ test('Filter User.posts by variour criteria', async () => {
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
 
   // add completed text-only post
-  variables = {postId: completedTextOnlyPostId, text: 't'}
+  variables = {postId: completedTextOnlyPostId, postType: 'TEXT_ONLY', text: 't'}
   resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(completedTextOnlyPostId)
@@ -52,7 +52,7 @@ test('Filter User.posts by variour criteria', async () => {
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
 
   // add archived text-only post
-  variables = {postId: archivedTextOnlyPostId, text: 't'}
+  variables = {postId: archivedTextOnlyPostId, postType: 'TEXT_ONLY', text: 't'}
   resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(archivedTextOnlyPostId)

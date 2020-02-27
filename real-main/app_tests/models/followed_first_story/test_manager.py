@@ -4,6 +4,7 @@ import pendulum
 import pytest
 
 from app.models.follow.enums import FollowStatus
+from app.models.post.enums import PostType
 
 
 @pytest.fixture
@@ -22,11 +23,11 @@ def followed_posts(post_manager, dynamo_client, following_user_ids):
     "A quintet of completed posts by the followed user in the DB, none of them with expiresAt"
     user_id = following_user_ids[1]
     posts = [
-        post_manager.add_post(user_id, str(uuid4()), text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
     ]
     yield [post.item for post in posts]
 

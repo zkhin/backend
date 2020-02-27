@@ -7,26 +7,30 @@ import pytest
 from app.models.feed import FeedManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.media.enums import MediaStatus
-from app.models.post.enums import PostStatus
+from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
 def post_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', text='t', lifetime_duration=pendulum.duration(hours=1))
+    yield post_manager.add_post(
+        user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+    )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid'}], text='t')
+    yield post_manager.add_post(
+        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}], text='t',
+    )
 
 
 @pytest.fixture
 def post_with_media_completed(post_manager, user_manager, image_data_b64, mock_post_verification_api):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     yield post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
+        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
     )
 
 

@@ -59,11 +59,20 @@ class PostManager:
         }
         return Post(post_item, self.dynamo, **kwargs) if post_item else None
 
-    def add_post(self, posted_by_user_id, post_id, media_uploads=[], text=None, lifetime_duration=None, album_id=None,
-                 comments_disabled=None, likes_disabled=None, sharing_disabled=None, verification_hidden=None,
-                 now=None):
+    def add_post(self, posted_by_user_id, post_id, post_type, media_uploads=[], text=None, lifetime_duration=None,
+                 album_id=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
+                 verification_hidden=None, now=None):
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
+
+        if post_type == enums.PostType.IMAGE:
+            if not media_uploads:
+                raise exceptions.PostException('To add an IMAGE post mediaObjectUploads must be supplied')
+        elif post_type == enums.PostType.TEXT_ONLY:
+            if media_uploads:
+                raise exceptions.PostException('To add an TEXT_ONLY post mediaObjectUploads may not be supplied')
+        else:
+            raise exceptions.PostException('Invalid postType `{post_type}`')
 
         if not text and not media_uploads:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` without text or media'
@@ -72,8 +81,6 @@ class PostManager:
         if len(media_uploads) > 1:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with more than one media'
             raise exceptions.PostException(msg)
-
-        post_type = enums.PostType.TEXT_ONLY if not media_uploads else enums.PostType.IMAGE
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:

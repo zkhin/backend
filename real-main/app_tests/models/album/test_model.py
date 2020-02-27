@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.models.post.enums import PostType
 from app.utils import image_size
 
 grant_horz_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-horizontal.jpg')
@@ -27,7 +28,7 @@ def completed_image_post(post_manager, user, image_data_b64, mock_post_verificat
 
 @pytest.fixture
 def text_only_post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', text='t')
+    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 def test_serialize(user, album):
@@ -75,10 +76,12 @@ def test_delete_no_posts(user, album):
 def test_delete(user, album, post_manager, image_data_b64, mock_post_verification_api):
     # create two posts in the album
     post1 = post_manager.add_post(
-        user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}], album_id=album.id,
+        user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user.id, 'pid2', media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}], album_id=album.id,
+        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
+        album_id=album.id,
     )
 
     # verify starting state: can see album, posts are in it, user's albumCount, album art exists

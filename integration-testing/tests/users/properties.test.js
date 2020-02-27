@@ -138,7 +138,7 @@ test('Various photoPostId failures', async () => {
   await expect(ourClient.mutate({mutation: schema.setUserDetails, variables})).rejects.toThrow('ClientError')
 
   // create a text-only post
-  variables = {postId: textOnlyPostId, text: 'lore ipsum'}
+  variables = {postId: textOnlyPostId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
   let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(textOnlyPostId)
