@@ -103,57 +103,57 @@ custom:
 
       - type: Query
         field: searchUsers
-        request: Generic.passThru.request.vtl
-        response: Generic.passThru.response.vtl
+        request: PassThru.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - Query.searchUsers.searchUsers
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Query
         field: trendingUsers
-        request: Generic.passThru.request.vtl
-        response: Generic.passThru.response.vtl
+        request: PassThru.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - Query.trendingUsers.fetchUserIds
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: User
         field: photo
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: User
         field: photoUrl
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: User
         field: photoUrl64p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: User
         field: photoUrl480p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: User
         field: photoUrl1080p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: User
         field: photoUrl4k
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: User
         field: followedStatus
@@ -166,29 +166,29 @@ custom:
       - type: User
         field: followCountsHidden
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: followedCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: followerCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: followedUsers
-        request: User.followedUsers/User.followedUsers.request.vtl
-        response: Generic.passThru.response.vtl
+        request: User.followedUsers/before.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - User.followedUsers.fetchFollowedUserIds
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: User
         field: followedUsersWithStories
@@ -197,74 +197,74 @@ custom:
         kind: PIPELINE
         functions:
           - User.followedUsersWithStories.fetchUserIds
-          - Generic.batchGetUsers
+          - Users.batchGet
 
       - type: User
         field: followerUsers
-        request: User.followerUsers/User.followerUsers.request.vtl
-        response: Generic.passThru.response.vtl
+        request: User.followerUsers/before.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - User.followerUsers.fetchFollowerUserIds
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: User
         field: postCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: languageCode
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: themeCode
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: bio
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: email
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: phoneNumber
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: acceptedEULAVersion
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: commentsDisabled
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: likesDisabled
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: sharingDisabled
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: verificationHidden
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: blockedStatus
@@ -273,7 +273,7 @@ custom:
       - type: User
         field: viewCountsHidden
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: feed
@@ -282,8 +282,8 @@ custom:
         kind: PIPELINE
         functions:
           - User.feed.fetchPostIds
-          - Generic.batchGetPosts
-          - Generic.batchGetPostsPostedBy
+          - Posts.batchGet
+          - Posts.batchGet.postedBy
 
       - type: User
         field: stories
@@ -296,55 +296,55 @@ custom:
       - type: User
         field: mediaObjects
         dataSource: DynamodbDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: postViewedByCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: onymouslyLikedPosts
-        request: User.onymouslyLikedPosts.request.vtl
-        response: Generic.passThru.response.vtl
+        request: User.onymouslyLikedPosts/before.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.fetchLikesByUser
-          - Generic.batchGetPosts
-          - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerStatus
-          - Generic.batchGetPostsPostedByFollowedStatus
-          - Generic.filterByPostedByFollowedAndBlockerStatus
+          - User.likedPosts.fetchLikes
+          - Posts.batchGet
+          - Posts.batchGet.postedBy
+          - Posts.batchGet.postedBy.blockerStatus
+          - Posts.batchGet.postedBy.followedStatus
+          - Posts.filterBy.postedBy.followedAndBlockerStatus
 
       - type: User
         field: anonymouslyLikedPosts
-        request: User.anonymouslyLikedPosts.request.vtl
-        response: Generic.passThru.response.vtl
+        request: User.anonymouslyLikedPosts/before.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.fetchLikesByUser
-          - Generic.batchGetPosts
-          - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerStatus
-          - Generic.batchGetPostsPostedByFollowedStatus
-          - Generic.filterByPostedByFollowedAndBlockerStatus
+          - User.likedPosts.fetchLikes
+          - Posts.batchGet
+          - Posts.batchGet.postedBy
+          - Posts.batchGet.postedBy.blockerStatus
+          - Posts.batchGet.postedBy.followedStatus
+          - Posts.filterBy.postedBy.followedAndBlockerStatus
 
       - type: User
         field: blockedUsers
         request: User.blockedUsers/before.request.vtl
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
             - User.blockedUsers.fetchUserIds
-            - Generic.batchGetUsers
-            - Generic.batchGetUsersBlockerStatus
-            - Generic.filterByBlockerStatus
-            - Generic.batchGetUsersFollowedStatus
+            - Users.batchGet
+            - Users.batchGet.blockerStatus
+            - Users.filterBy.blockerStatus
+            - Users.batchGet.followedStatus
 
       - type: User
         field: albumCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: User
         field: albums
@@ -353,122 +353,122 @@ custom:
       - type: Mutation
         field: createCognitoOnlyUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: createFacebookUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: createGoogleUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: startChangeUserEmail
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: finishChangeUserEmail
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: startChangeUserPhoneNumber
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: finishChangeUserPhoneNumber
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: resetUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: setUserDetails
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: setUserAcceptedEULAVersion
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: followUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: unfollowUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: acceptFollowerUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: denyFollowerUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: blockUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: unblockUser
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: onymouslyLikePost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: anonymouslyLikePost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: dislikePost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: addComment
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: deleteComment
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: addAlbum
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: editAlbum
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: deleteAlbum
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Post
         field: flagStatus
@@ -492,61 +492,61 @@ custom:
       - type: Post
         field: viewedByCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: viewedBy
         request: Post.viewedBy/before.request.vtl
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - Post.viewedBy.fetchUserIds
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Post
         field: commentsDisabled
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: likesDisabled
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: sharingDisabled
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: verificationHidden
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: onymousLikeCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: anonymousLikeCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: onymouslyLikedBy
-        request: Post.onymouslyLikedBy/Post.onymouslyLikedBy.request.vtl
-        response: Generic.passThru.response.vtl
+        request: Post.onymouslyLikedBy/before.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - Post.onymouslyLikedBy.fetchLikes
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Post
         field: mediaObjects
@@ -558,27 +558,27 @@ custom:
         response: Source.textTaggedUsers/after.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Post
         field: commentCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Post
         field: comments
-        request: Post.comments/Post.comments.request.vtl
-        response: Post.comments/Post.comments.response.vtl
+        request: Post.comments/before.request.vtl
+        response: Post.comments/after.response.vtl
         kind: PIPELINE
         functions:
           - Post.comments.fetchComments
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Post
         field: album
@@ -587,12 +587,12 @@ custom:
       - type: Post
         field: image
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Post
         field: imageUploadUrl
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Post
         field: isVerified
@@ -601,46 +601,46 @@ custom:
       - type: Album
         field: art
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Album
         field: url
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Album
         field: url4k
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Album
         field: url1080p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Album
         field: url480p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Album
         field: url64p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Album
         field: postCount
         dataSource: NoneDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - type: Album
         field: posts
-        request: Generic.passThru.request.vtl
+        request: PassThru.request.vtl
         response: Album.posts/after.response.vtl
         kind: PIPELINE
         functions:
           - Album.posts.fetchPostIds
-          - Generic.batchGetPosts
+          - Posts.batchGet
 
       - type: Comment
         field: textTaggedUsers
@@ -648,10 +648,10 @@ custom:
         response: Source.textTaggedUsers/after.response.vtl
         kind: PIPELINE
         functions:
-          - Generic.batchGetUsers
-          - Generic.batchGetUsersBlockerStatus
-          - Generic.filterByBlockerStatus
-          - Generic.batchGetUsersFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Query
         field: post
@@ -666,21 +666,21 @@ custom:
 
       - type: Query
         field: trendingPosts
-        request: Generic.passThru.request.vtl
-        response: Generic.passThru.response.vtl
+        request: PassThru.request.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - Query.trendingPosts.fetchPostIds
-          - Generic.batchGetPosts
-          - Generic.filterByPostStatus
-          - Generic.batchGetPostsPostedBy
-          - Generic.batchGetPostsPostedByBlockerStatus
-          - Generic.batchGetPostsPostedByFollowedStatus
-          - Generic.filterByPostedByFollowedAndBlockerStatus
+          - Posts.batchGet
+          - Posts.filterBy.postStatus
+          - Posts.batchGet.postedBy
+          - Posts.batchGet.postedBy.blockerStatus
+          - Posts.batchGet.postedBy.followedStatus
+          - Posts.filterBy.postedBy.followedAndBlockerStatus
 
       - type: Query
         field: album
-        request: Generic.passThru.request.vtl
+        request: PassThru.request.vtl
         response: Query.album/after.response.vtl
         kind: PIPELINE
         functions:
@@ -692,52 +692,52 @@ custom:
       - type: Mutation
         field: addPost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: editPost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: editPostAlbum
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: editPostAlbumOrder
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: editPostExpiresAt
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: flagPost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: deletePost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: archivePost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: restoreArchivedPost
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: reportPostViews
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: MediaObject
         field: isVerified
@@ -746,47 +746,47 @@ custom:
       - type: MediaObject
         field: url
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: MediaObject
         field: url64p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: MediaObject
         field: url480p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: MediaObject
         field: url1080p
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: MediaObject
         field: url4k
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: MediaObject
         field: uploadUrl
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: lambdaClientError
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: lambdaServerError
         dataSource: LambdaDataSource
-        response: Generic.lambda.response.vtl
+        response: Lambda.response.vtl
 
       - type: Mutation
         field: dynamoServerError
         dataSource: DynamodbDataSource
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
     functionConfigurations:
 
@@ -818,7 +818,7 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Query.pipeline.user
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Query.pipeline.userBlockerStatus
@@ -827,25 +827,25 @@ custom:
         name: Query.pipeline.userFollowedStatus
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetUsers
+        name: Users.batchGet
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetUsersBlockerStatus
+        name: Users.batchGet.blockerStatus
 
       - dataSource: NoneDataSource
-        name: Generic.filterByBlockerStatus
-        response: Generic.passThru.response.vtl
+        name: Users.filterBy.blockerStatus
+        response: PassThru.response.vtl
 
       - dataSource: NoneDataSource
-        name: Generic.filterByPostStatus
-        response: Generic.passThru.response.vtl
+        name: Posts.filterBy.postStatus
+        response: PassThru.response.vtl
 
       - dataSource: NoneDataSource
-        name: Generic.filterByPostedByFollowedAndBlockerStatus
-        response: Generic.passThru.response.vtl
+        name: Posts.filterBy.postedBy.followedAndBlockerStatus
+        response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetUsersFollowedStatus
+        name: Users.batchGet.followedStatus
 
       - dataSource: ElasticSearchDataSource
         name: Query.searchUsers.searchUsers
@@ -870,12 +870,12 @@ custom:
       - dataSource: DynamodbDataSource
         name: Query.album.fetchAlbum
         request: Query.album/Pipeline.fetchAlbum.request.vtl
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: User.feed.fetchPostIds
         request: User.feed/Pipeline.fetchPostIds.request.vtl
-        response: Generic.passThru.response.vtl
+        response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.onymouslyLikedBy.fetchLikes
@@ -888,20 +888,20 @@ custom:
         response: Post.comments/Pipeline.fetchComments.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.fetchLikesByUser
-        response: Generic.passThru.response.vtl
+        name: User.likedPosts.fetchLikes
+        response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetPosts
+        name: Posts.batchGet
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetPostsPostedBy
+        name: Posts.batchGet.postedBy
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetPostsPostedByBlockerStatus
+        name: Posts.batchGet.postedBy.blockerStatus
 
       - dataSource: DynamodbDataSource
-        name: Generic.batchGetPostsPostedByFollowedStatus
+        name: Posts.batchGet.postedBy.followedStatus
 
       - dataSource: DynamodbDataSource
         name: Query.trendingPosts.fetchPostIds
