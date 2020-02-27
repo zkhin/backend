@@ -3,7 +3,8 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from app.models.media.enums import MediaSize, MediaStatus
+from app.models.media.enums import MediaStatus
+from app.utils import image_size
 
 
 @pytest.fixture
@@ -100,7 +101,7 @@ def test_process_upload_success(media_awaiting_upload):
 
 def test_upload_native_image_data_base64(media_awaiting_upload):
     media = media_awaiting_upload
-    native_path = media.get_s3_path(MediaSize.NATIVE)
+    native_path = media.get_s3_path(image_size.NATIVE)
     image_data = b'imagedatahere'
     image_data_b64 = base64.b64encode(image_data)
 
@@ -134,7 +135,7 @@ def test_set_checksum(media_manager, media_awaiting_upload):
     # put some content with a known md5 up in s3
     content = b'anything'
     md5 = 'f0e166dc34d14d6c228ffac576c9a43c'
-    media_path = media.get_s3_path(MediaSize.NATIVE)
+    media_path = media.get_s3_path(image_size.NATIVE)
     media_manager.clients['s3_uploads'].put_object(media_path, content, 'application/octet-stream')
 
     # set the checksum, check what was saved to the DB

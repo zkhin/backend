@@ -5,9 +5,9 @@ import pytest
 
 from app.models.feed import FeedManager
 from app.models.followed_first_story import FollowedFirstStoryManager
-from app.models.media.enums import MediaSize
 from app.models.post.enums import PostStatus
 from app.models.post.exceptions import PostException
+from app.utils import image_size
 
 
 @pytest.fixture
@@ -143,7 +143,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
 
     # put media out in mocked s3 for the post, so album art can be generated
     media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
-    path = media.get_s3_path(MediaSize.NATIVE)
+    path = media.get_s3_path(image_size.NATIVE)
     post_manager.clients['s3_uploads'].put_object(path, image_data, 'application/octet-stream')
     media.process_upload()
 
@@ -183,8 +183,8 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     media2 = post_manager.media_manager.init_media(post2.item['mediaObjects'][0])
 
     # put some native-size media up in the mock s3, same content
-    media_path1 = media1.get_s3_path(MediaSize.NATIVE)
-    media_path2 = media2.get_s3_path(MediaSize.NATIVE)
+    media_path1 = media1.get_s3_path(image_size.NATIVE)
+    media_path2 = media2.get_s3_path(image_size.NATIVE)
     post_manager.clients['s3_uploads'].put_object(media_path1, b'anything', 'application/octet-stream')
     post_manager.clients['s3_uploads'].put_object(media_path2, b'anything', 'application/octet-stream')
 

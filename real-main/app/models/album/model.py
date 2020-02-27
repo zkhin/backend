@@ -6,7 +6,7 @@ import os
 
 from PIL import Image
 
-from app.models.media.enums import MediaSize
+from app.utils import image_size
 
 from . import art, exceptions
 
@@ -18,14 +18,7 @@ FRONTEND_RESOURCES_DOMAIN = os.environ.get('FRONTEND_RESOURCES_DOMAIN')
 class Album:
 
     exceptions = exceptions
-    art_image_file_ext = 'jpg'
     jpeg_content_type = 'image/jpeg'
-    sizes = {
-        MediaSize.K4: [3840, 2160],
-        MediaSize.P1080: [1920, 1080],
-        MediaSize.P480: [854, 480],
-        MediaSize.P64: [114, 64],
-    }
 
     def __init__(self, album_item, album_dynamo, cloudfront_client=None, s3_uploads_client=None,
                  user_manager=None, post_manager=None, frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
@@ -94,14 +87,13 @@ class Album:
         art_image_path = self.get_art_image_path(size)
         if art_image_path:
             return self.cloudfront_client.generate_presigned_url(art_image_path, ['GET', 'HEAD'])
-        return f'https://{self.frontend_resources_domain}/default-album-art/{size}.{self.art_image_file_ext}'
+        return f'https://{self.frontend_resources_domain}/default-album-art/{size.filename}'
 
     def get_art_image_path(self, size, art_hash=None):
         art_hash = art_hash or self.item.get('artHash')
         if not art_hash:
             return None
-        filename = f'{size}.{self.art_image_file_ext}'
-        return '/'.join([self.item['ownedByUserId'], 'album', self.id, art_hash, filename])
+        return '/'.join([self.item['ownedByUserId'], 'album', self.id, art_hash, size.filename])
 
     def get_post_ids_for_art(self):
         # we only want a square number of post ids, max of 4x4
@@ -147,20 +139,20 @@ class Album:
 
     def delete_art_images(self, art_hash):
         # remove the images from s3
-        for size in MediaSize._ALL:
+        for size in image_size.ALL:
             path = self.get_art_image_path(size, art_hash=art_hash)
             self.s3_uploads_client.delete_object(path)
 
     def save_art_images(self, art_hash, native_image_buf):
         # save the native size to S3
-        path = self.get_art_image_path(MediaSize.NATIVE, art_hash=art_hash)
+        path = self.get_art_image_path(image_size.NATIVE, art_hash=art_hash)
         self.s3_uploads_client.put_object(path, native_image_buf.read(), self.jpeg_content_type)
 
         # generate and save thumbnails
         native_image_buf.seek(0)
         target_image = Image.open(native_image_buf)
-        for size, dims in self.sizes.items():
-            target_image.thumbnail(dims, resample=Image.LANCZOS)
+        for size in image_size.THUMBNAILS:  # ordered by decreasing size
+            target_image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
             target_image.save(in_mem_file, format='JPEG')
             in_mem_file.seek(0)

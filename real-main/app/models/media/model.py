@@ -6,6 +6,8 @@ from colorthief import ColorThief
 from PIL import Image, ImageOps
 import requests
 
+from app.utils import image_size
+
 from . import enums, exceptions
 
 logger = logging.getLogger()
@@ -17,13 +19,6 @@ class Media:
     exceptions = exceptions
 
     jpeg_content_type = 'image/jpeg'
-    file_ext = 'jpg'
-    sizes = {
-        enums.MediaSize.K4: [3840, 2160],
-        enums.MediaSize.P1080: [1920, 1080],
-        enums.MediaSize.P480: [854, 480],
-        enums.MediaSize.P64: [114, 64],
-    }
 
     def __init__(self, item, media_dynamo, cloudfront_client=None, secrets_manager_client=None,
                  s3_uploads_client=None):
@@ -46,13 +41,13 @@ class Media:
 
     def get_native_image_buffer(self):
         if not hasattr(self, '_native_image_data'):
-            path = self.get_s3_path(enums.MediaSize.NATIVE)
+            path = self.get_s3_path(image_size.NATIVE)
             self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
         return BytesIO(self._native_image_data)
 
     def get_1080p_image_buffer(self):
         if not hasattr(self, '_1080p_image_data'):
-            path = self.get_s3_path(enums.MediaSize.P1080)
+            path = self.get_s3_path(image_size.P1080)
             self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
         return BytesIO(self._1080p_image_data)
 
@@ -73,30 +68,31 @@ class Media:
         if self.item['mediaStatus'] not in have_writeonly_url:
             return None
 
-        path = self.get_s3_path(enums.MediaSize.NATIVE)
+        path = self.get_s3_path(image_size.NATIVE)
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
     def get_s3_path(self, size):
         "From within the user's directory, return the path to the s3 object of the requested size"
-        filename = f'{size}.{self.file_ext}'
-        return '/'.join([self.item['userId'], 'post', self.item['postId'], 'media', self.item['mediaId'], filename])
+        return '/'.join([
+            self.item['userId'], 'post', self.item['postId'], 'media', self.item['mediaId'], size.filename,
+        ])
 
     def has_all_s3_objects(self):
-        for media_size in enums.MediaSize._ALL:
-            path = self.get_s3_path(media_size)
+        for size in image_size.ALL:
+            path = self.get_s3_path(size)
             if not self.s3_uploads_client.exists(path):
                 return False
         return True
 
     def delete_all_s3_objects(self):
-        for media_size in enums.MediaSize._ALL:
-            path = self.get_s3_path(media_size)
+        for size in image_size.ALL:
+            path = self.get_s3_path(size)
             self.s3_uploads_client.delete_object(path)
 
     def upload_native_image_data_base64(self, image_data):
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
         self._native_image_data = base64.b64decode(image_data)
-        path = self.get_s3_path(enums.MediaSize.NATIVE)
+        path = self.get_s3_path(image_size.NATIVE)
         self.s3_uploads_client.put_object(path, self.get_native_image_buffer(), self.jpeg_content_type)
 
     def process_upload(self):
@@ -132,7 +128,7 @@ class Media:
         url = api_creds['root'] + 'verify/image'
 
         data = {
-            'url': self.get_readonly_url(enums.MediaSize.NATIVE),
+            'url': self.get_readonly_url(image_size.NATIVE),
             'metadata': {},
         }
         if 'takenInReal' in self.item:
@@ -170,10 +166,10 @@ class Media:
         return self
 
     def set_thumbnails(self):
-        for size, dims in self.sizes.items():
-            image = Image.open(self.get_native_image_buffer())
-            image = ImageOps.exif_transpose(image)
-            image.thumbnail(dims, resample=Image.LANCZOS)
+        image = Image.open(self.get_native_image_buffer())
+        image = ImageOps.exif_transpose(image)
+        for size in image_size.THUMBNAILS:  # ordered by decreasing size
+            image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
             image.save(in_mem_file, format='JPEG')
             in_mem_file.seek(0)
@@ -181,7 +177,7 @@ class Media:
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
 
     def set_checksum(self):
-        path = self.get_s3_path(enums.MediaSize.NATIVE)
+        path = self.get_s3_path(image_size.NATIVE)
         checksum = self.s3_uploads_client.get_object_checksum(path)
         self.item = self.dynamo.set_checksum(self.item, checksum)
         return self

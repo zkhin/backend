@@ -18,6 +18,7 @@ from app.models.media import MediaManager
 from app.models.post import PostManager
 from app.models.post_view import PostViewManager
 from app.models.user import UserManager
+from app.utils import image_size
 
 from . import routes
 from .exceptions import ClientException
@@ -284,46 +285,46 @@ def reset_user(caller_user_id, arguments, source, context):
 @routes.register('User.photo')
 def user_photo(caller_user_id, arguments, source, context):
     user = user_manager.init_user(source)
-    native_url = user.get_photo_url(media_manager.enums.MediaSize.NATIVE)
+    native_url = user.get_photo_url(image_size.NATIVE)
     if not native_url:
         return None
     return {
         'url': native_url,
-        'url64p': user.get_photo_url(media_manager.enums.MediaSize.P64),
-        'url480p': user.get_photo_url(media_manager.enums.MediaSize.P480),
-        'url1080p': user.get_photo_url(media_manager.enums.MediaSize.P1080),
-        'url4k': user.get_photo_url(media_manager.enums.MediaSize.K4),
+        'url64p': user.get_photo_url(image_size.P64),
+        'url480p': user.get_photo_url(image_size.P480),
+        'url1080p': user.get_photo_url(image_size.P1080),
+        'url4k': user.get_photo_url(image_size.K4),
     }
 
 
 @routes.register('User.photoUrl')
 def user_photo_url(caller_user_id, arguments, source, context):
     user = user_manager.init_user(source)
-    return user.get_photo_url(media_manager.enums.MediaSize.NATIVE)
+    return user.get_photo_url(image_size.NATIVE)
 
 
 @routes.register('User.photoUrl64p')
 def user_photo_url_64p(caller_user_id, arguments, source, context):
     user = user_manager.init_user(source)
-    return user.get_photo_url(media_manager.enums.MediaSize.P64)
+    return user.get_photo_url(image_size.P64)
 
 
 @routes.register('User.photoUrl480p')
 def user_photo_url_480p(caller_user_id, arguments, source, context):
     user = user_manager.init_user(source)
-    return user.get_photo_url(media_manager.enums.MediaSize.P480)
+    return user.get_photo_url(image_size.P480)
 
 
 @routes.register('User.photoUrl1080p')
 def user_photo_url_1080p(caller_user_id, arguments, source, context):
     user = user_manager.init_user(source)
-    return user.get_photo_url(media_manager.enums.MediaSize.P1080)
+    return user.get_photo_url(image_size.P1080)
 
 
 @routes.register('User.photoUrl4k')
 def user_photo_url_4k(caller_user_id, arguments, source, context):
     user = user_manager.init_user(source)
-    return user.get_photo_url(media_manager.enums.MediaSize.K4)
+    return user.get_photo_url(image_size.K4)
 
 
 @routes.register('Mutation.followUser')
@@ -524,11 +525,11 @@ def post_image(caller_user_id, arguments, source, context):
         return None
     media = media_manager.init_media(media_items[0])
     return {
-        'url': media.get_readonly_url(media_manager.enums.MediaSize.NATIVE),
-        'url64p': media.get_readonly_url(media_manager.enums.MediaSize.P64),
-        'url480p': media.get_readonly_url(media_manager.enums.MediaSize.P480),
-        'url1080p': media.get_readonly_url(media_manager.enums.MediaSize.P1080),
-        'url4k': media.get_readonly_url(media_manager.enums.MediaSize.K4),
+        'url': media.get_readonly_url(image_size.NATIVE),
+        'url64p': media.get_readonly_url(image_size.P64),
+        'url480p': media.get_readonly_url(image_size.P480),
+        'url1080p': media.get_readonly_url(image_size.P1080),
+        'url4k': media.get_readonly_url(image_size.K4),
         'width': media.item.get('width'),
         'height': media.item.get('height'),
         'colors': media.item.get('colors'),
@@ -772,27 +773,27 @@ def dislike_post(caller_user_id, arguments, source, context):
 
 @routes.register('MediaObject.url')
 def media_objects_url(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(media_manager.enums.MediaSize.NATIVE)
+    return media_manager.init_media(source).get_readonly_url(image_size.NATIVE)
 
 
 @routes.register('MediaObject.url64p')
 def media_objects_url_64p(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(media_manager.enums.MediaSize.P64)
+    return media_manager.init_media(source).get_readonly_url(image_size.P64)
 
 
 @routes.register('MediaObject.url480p')
 def media_objects_url_480p(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(media_manager.enums.MediaSize.P480)
+    return media_manager.init_media(source).get_readonly_url(image_size.P480)
 
 
 @routes.register('MediaObject.url1080p')
 def media_objects_url_1080p(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(media_manager.enums.MediaSize.P1080)
+    return media_manager.init_media(source).get_readonly_url(image_size.P1080)
 
 
 @routes.register('MediaObject.url4k')
 def media_objects_url_4k(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(media_manager.enums.MediaSize.K4)
+    return media_manager.init_media(source).get_readonly_url(image_size.K4)
 
 
 @routes.register('MediaObject.uploadUrl')
@@ -899,42 +900,42 @@ def delete_album(caller_user_id, arguments, source, context):
 def album_art(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
     return {
-        'url': album.get_art_image_url(media_manager.enums.MediaSize.NATIVE),
-        'url64p': album.get_art_image_url(media_manager.enums.MediaSize.P64),
-        'url480p': album.get_art_image_url(media_manager.enums.MediaSize.P480),
-        'url1080p': album.get_art_image_url(media_manager.enums.MediaSize.P1080),
-        'url4k': album.get_art_image_url(media_manager.enums.MediaSize.K4),
+        'url': album.get_art_image_url(image_size.NATIVE),
+        'url64p': album.get_art_image_url(image_size.P64),
+        'url480p': album.get_art_image_url(image_size.P480),
+        'url1080p': album.get_art_image_url(image_size.P1080),
+        'url4k': album.get_art_image_url(image_size.K4),
     }
 
 
 @routes.register('Album.url')
 def album_url(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
-    return album.get_art_image_url(media_manager.enums.MediaSize.NATIVE)
+    return album.get_art_image_url(image_size.NATIVE)
 
 
 @routes.register('Album.url64p')
 def album_url_64p(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
-    return album.get_art_image_url(media_manager.enums.MediaSize.P64)
+    return album.get_art_image_url(image_size.P64)
 
 
 @routes.register('Album.url480p')
 def album_url_480p(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
-    return album.get_art_image_url(media_manager.enums.MediaSize.P480)
+    return album.get_art_image_url(image_size.P480)
 
 
 @routes.register('Album.url1080p')
 def album_url_1080p(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
-    return album.get_art_image_url(media_manager.enums.MediaSize.P1080)
+    return album.get_art_image_url(image_size.P1080)
 
 
 @routes.register('Album.url4k')
 def album_url_4k(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
-    return album.get_art_image_url(media_manager.enums.MediaSize.K4)
+    return album.get_art_image_url(image_size.K4)
 
 
 @routes.register('Mutation.lambdaClientError')

@@ -3,7 +3,7 @@ from unittest.mock import call
 import pytest
 
 from app.models.follow.enums import FollowStatus
-from app.models.media.enums import MediaSize
+from app.utils import image_size
 
 
 @pytest.fixture
@@ -378,14 +378,14 @@ def test_delete_user_with_profile_pic(user):
     content_type = 'image/jpeg'
 
     # add a profile pic of all sizes for that user
-    paths = [user.get_photo_path(size, photo_media_id=media_id) for size in MediaSize._ALL]
+    paths = [user.get_photo_path(size, photo_media_id=media_id) for size in image_size.ALL]
     for path in paths:
         user.s3_uploads_client.put_object(path, photo_data, content_type)
     user.dynamo.set_user_photo_media_id(user.id, media_id)
     user.refresh_item()
 
     # verify s3 was populated, dynamo set
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size)
         assert user.s3_uploads_client.exists(path)
     assert 'photoMediaId' in user.item

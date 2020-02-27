@@ -1,7 +1,7 @@
 import logging
 import os
 
-from app.models.media.enums import MediaSize
+from app.utils import image_size
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -32,7 +32,6 @@ class User:
     enums = enums
     exceptions = exceptions
     client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
-    photo_file_ext = 'jpg'
 
     def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
                  placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY,
@@ -59,15 +58,13 @@ class User:
         photo_media_id = photo_media_id or self.item.get('photoMediaId')
         if not photo_media_id:
             return None
-        filename = f'{size}.{self.photo_file_ext}'
-        return '/'.join([self.id, 'profile-photo', photo_media_id, filename])
+        return '/'.join([self.id, 'profile-photo', photo_media_id, size.filename])
 
     def get_placeholder_photo_path(self, size):
         code = self.item.get('placeholderPhotoCode')
         if not code or not self.placeholder_photos_directory:
             return None
-        filename = f'{size}.{self.photo_file_ext}'
-        return '/'.join([self.placeholder_photos_directory, code, filename])
+        return '/'.join([self.placeholder_photos_directory, code, size.filename])
 
     def get_photo_url(self, size):
         photo_path = self.get_photo_path(size)
@@ -145,7 +142,7 @@ class User:
         return self
 
     def add_photo_s3_objects(self, media):
-        for size in MediaSize._ALL:
+        for size in image_size.ALL:
             source_path = media.get_s3_path(size)
             dest_path = self.get_photo_path(size, photo_media_id=media.id)
             self.s3_uploads_client.copy_object(source_path, dest_path)
@@ -191,7 +188,7 @@ class User:
         return self
 
     def delete_photo_s3_objects(self, photo_media_id=None):
-        for size in MediaSize._ALL:
+        for size in image_size.ALL:
             path = self.get_photo_path(size, photo_media_id=photo_media_id)
             self.s3_uploads_client.delete_object(path)
 

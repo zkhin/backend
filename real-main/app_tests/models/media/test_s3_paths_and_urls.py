@@ -2,7 +2,8 @@ from unittest.mock import call
 
 from app.models.media import MediaManager
 from app.models.media.model import Media
-from app.models.media.enums import MediaSize, MediaStatus
+from app.models.media.enums import MediaStatus
+from app.utils import image_size
 
 
 def test_get_s3_path():
@@ -13,7 +14,7 @@ def test_get_s3_path():
     }
 
     media = Media(item, None)
-    path = media.get_s3_path(MediaSize.NATIVE)
+    path = media.get_s3_path(image_size.NATIVE)
     assert path == 'us-east-1:user-id/post/post-id/media/media-id/native.jpg'
 
 
@@ -39,7 +40,7 @@ def test_get_readonly_url(cloudfront_client):
     })
 
     media = Media(item, None, cloudfront_client=cloudfront_client)
-    url = media.get_readonly_url(MediaSize.NATIVE)
+    url = media.get_readonly_url(image_size.NATIVE)
     assert url == expected_url
 
     expected_path = 'user-id/post/post-id/media/media-id/native.jpg'
@@ -91,18 +92,18 @@ def test_image_has_all_s3_objects(s3_uploads_client):
     assert media.has_all_s3_objects() is False
 
     # media with just native resolution
-    path = media.get_s3_path(MediaSize.NATIVE)
+    path = media.get_s3_path(image_size.NATIVE)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
     assert media.has_all_s3_objects() is False
 
     # media with all sizes resolution
-    path = media.get_s3_path(MediaSize.P64)
+    path = media.get_s3_path(image_size.P64)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.P480)
+    path = media.get_s3_path(image_size.P480)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.P1080)
+    path = media.get_s3_path(image_size.P1080)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.K4)
+    path = media.get_s3_path(image_size.K4)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
     assert media.has_all_s3_objects() is True
 
@@ -116,15 +117,15 @@ def test_delete_all_s3_objects(s3_uploads_client):
     media = Media(media_item, None, s3_uploads_client=s3_uploads_client)
 
     # upload native and the three thumbnails
-    path = media.get_s3_path(MediaSize.NATIVE)
+    path = media.get_s3_path(image_size.NATIVE)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.P64)
+    path = media.get_s3_path(image_size.P64)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.P480)
+    path = media.get_s3_path(image_size.P480)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.P1080)
+    path = media.get_s3_path(image_size.P1080)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    path = media.get_s3_path(MediaSize.K4)
+    path = media.get_s3_path(image_size.K4)
     media.s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
     assert media.has_all_s3_objects() is True
 

@@ -5,8 +5,9 @@ import urllib
 from app.clients import CloudFrontClient, DynamoClient, S3Client, SecretsManagerClient
 from app.logging import LogLevelContext
 from app.models.media import MediaManager
-from app.models.media.enums import MediaStatus, MediaSize
+from app.models.media.enums import MediaStatus
 from app.models.post import PostManager
+from app.utils import image_size
 
 UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
 
@@ -40,7 +41,7 @@ def uploads_object_created(event, context):
         # not a media path
         return
 
-    if media_size != MediaSize.NATIVE:
+    if media_size != image_size.NATIVE.name:
         # this was a thumbnail
         return
 

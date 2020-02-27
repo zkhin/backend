@@ -8,10 +8,11 @@ from app.models.feed import FeedManager
 from app.models.flag import FlagManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
-from app.models.media.enums import MediaStatus, MediaSize
+from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus
 from app.models.post_view import PostViewManager
 from app.models.trending import TrendingManager
+from app.utils import image_size
 
 
 @pytest.fixture
@@ -175,7 +176,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
 
     # check the all the media got deleted
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = media.get_s3_path(size)
         assert post_manager.clients['s3_uploads'].exists(path) is False
 

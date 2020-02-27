@@ -4,7 +4,7 @@ from unittest.mock import call
 
 import pytest
 
-from app.models.media.enums import MediaSize
+from app.utils import image_size
 
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
@@ -41,7 +41,7 @@ def another_uploaded_media(user, post_manager, media_manager, grant_data_b64, mo
 
 def test_get_photo_path(user, uploaded_media):
     # without photoMediaId set
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         assert user.get_photo_path(size) is None
 
     # set it
@@ -49,10 +49,10 @@ def test_get_photo_path(user, uploaded_media):
     assert user.item['photoMediaId'] == uploaded_media.id
 
     # should now return the paths
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size)
         assert path is not None
-        assert size in path
+        assert size.name in path
         assert uploaded_media.id in path
 
 
@@ -60,7 +60,7 @@ def test_get_placeholder_photo_path(user, uploaded_media):
     user.placeholder_photos_directory = 'pp-photo-dir'
 
     # without placeholderPhotoCode set
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         assert user.get_placeholder_photo_path(size) is None
 
     # set it, just in memory but that's enough
@@ -68,9 +68,9 @@ def test_get_placeholder_photo_path(user, uploaded_media):
     user.item['placeholderPhotoCode'] = placeholder_photo_code
 
     # should now return the paths
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_placeholder_photo_path(size)
-        assert path == f'{user.placeholder_photos_directory}/{placeholder_photo_code}/{size}.jpg'
+        assert path == f'{user.placeholder_photos_directory}/{placeholder_photo_code}/{size.name}.jpg'
 
 
 def test_get_photo_url(user, uploaded_media, cloudfront_client):
@@ -78,16 +78,16 @@ def test_get_photo_url(user, uploaded_media, cloudfront_client):
     user.frontend_resources_domain = 'pp-photo-domain'
 
     # neither set
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         assert user.get_photo_url(size) is None
 
     # placeholder code set
     placeholder_photo_code = 'pp-code'
     user.item['placeholderPhotoCode'] = placeholder_photo_code
     url_root = f'https://{user.frontend_resources_domain}/{user.placeholder_photos_directory}'
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         url = user.get_photo_url(size)
-        assert url == f'{url_root}/{placeholder_photo_code}/{size}.jpg'
+        assert url == f'{url_root}/{placeholder_photo_code}/{size.name}.jpg'
 
     # photo media set
     user.update_photo(uploaded_media)
@@ -97,7 +97,7 @@ def test_get_photo_url(user, uploaded_media, cloudfront_client):
     cloudfront_client.configure_mock(**{'generate_presigned_url.return_value': presigned_url})
     cloudfront_client.reset_mock()
 
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         url = user.get_photo_url(size)
         assert url is presigned_url
         path = user.get_photo_path(size)
@@ -119,7 +119,7 @@ def test_set_photo_first_time(user, uploaded_media):
     assert user.item['photoMediaId'] == uploaded_media.id
 
     # check it's in s3
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size)
         assert user.s3_uploads_client.exists(path)
 
@@ -131,7 +131,7 @@ def test_change_photo(user, uploaded_media, another_uploaded_media):
 
     # pull the original photo_data
     org_bodies = {}
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size)
         org_bodies[size] = list(user.s3_uploads_client.get_object_data_stream(path))
 
@@ -144,13 +144,13 @@ def test_change_photo(user, uploaded_media, another_uploaded_media):
     assert user.item['photoMediaId'] == another_uploaded_media.id
 
     # pull the new photo_data
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size)
         new_body = list(user.s3_uploads_client.get_object_data_stream(path))
         assert new_body != org_bodies[size]
 
     # check the old photo data was deleted
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size, photo_media_id=uploaded_media.id)
         assert not user.s3_uploads_client.exists(path)
 
@@ -169,6 +169,6 @@ def test_delete_photo(user, uploaded_media):
     assert 'photoMediaId' not in user.item
 
     # check s3 was cleared
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = user.get_photo_path(size, photo_media_id=uploaded_media.id)
         assert not user.s3_uploads_client.exists(path)

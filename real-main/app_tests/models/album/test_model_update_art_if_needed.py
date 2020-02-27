@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.media.enums import MediaSize
+from app.utils import image_size
 
 # valid jpegs with different aspect ratios
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
@@ -91,10 +91,10 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     assert art_hash
 
     # check all art sizes are in S3, native image is correct
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = album.get_art_image_path(size)
         assert album.s3_uploads_client.exists(path)
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
     # remove the post from the album directly in dynamo
@@ -106,7 +106,7 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     assert 'artHash' not in album.item
 
     # check all art sizes were removed from S3
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = album.get_art_image_path(size, art_hash=art_hash)
         assert not album.s3_uploads_client.exists(path)
 
@@ -124,7 +124,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert first_art_hash
 
     # check the native art matches first post
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
     # put the other post in the album directly, ahead of the firs
@@ -137,7 +137,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert second_art_hash != first_art_hash
 
     # check the native art now matches second post
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post2.get_native_image_buffer().read()
 
     # now switch order, directly in dynsmo
@@ -151,11 +151,11 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert third_art_hash == first_art_hash
 
     # check the native art now matches first post
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
     # check the thumbnails are all in S3, and all the old thumbs have been removed
-    for size in MediaSize._ALL:
+    for size in image_size.ALL:
         path = album.get_art_image_path(size)
         old_path = album.get_art_image_path(size, art_hash=second_art_hash)
         assert s3_uploads_client.exists(path)
@@ -177,7 +177,7 @@ def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6
     assert first_art_hash
 
     # check the native art matches first post
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     first_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
     assert first_native_image_data == post1.get_native_image_buffer().read()
 
@@ -195,7 +195,7 @@ def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6
     assert fourth_art_hash != first_art_hash
 
     # check the native art has changed
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     fourth_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
     assert fourth_native_image_data != first_native_image_data
 
@@ -216,7 +216,7 @@ def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6
     assert nineth_art_hash != fourth_art_hash
 
     # check the native art has changed
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     nineth_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
     assert nineth_native_image_data != fourth_native_image_data
 
@@ -238,6 +238,6 @@ def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6
     assert sixteenth_art_hash != nineth_art_hash
 
     # check the native art has changed
-    native_path = album.get_art_image_path(MediaSize.NATIVE)
+    native_path = album.get_art_image_path(image_size.NATIVE)
     sixteenth_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
     assert sixteenth_native_image_data != nineth_native_image_data
