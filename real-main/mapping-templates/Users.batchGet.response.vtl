@@ -2,14 +2,17 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($result = $ctx.prev.result)
-#foreach ($item in $ctx.result.data.${table})
-  #if (! $util.isNull($item))
-    #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])
-    #foreach ($index in $indexes)
-      #set ($result.items[$index] = $item)
-    #end
+## remove missing users from result set (in process of being deleted?)
+#set ($users = [])
+#foreach ($prevUser in $ctx.prev.result.items)
+  #set ($index = $ctx.stash.userIdToIndex[$prevUser.userId])
+  #if (! $util.isNull($ctx.result.data.${table}[$index]))
+    #set ($user = $ctx.result.data.${table}[$index])
+    $util.qr($users.add($user))
   #end
 #end
 
-$util.toJson($result)
+$util.toJson({
+  'nextToken': $ctx.prev.result.nextToken,
+  'items': $users
+})

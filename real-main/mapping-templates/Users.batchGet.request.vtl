@@ -6,23 +6,18 @@
   #return ($ctx.prev.result)
 #end
 
-## BatchGetItem does not preserve order, can't handle duplicates
+## BatchGetItem can't handle duplicates
+#set ($ctx.stash.userIdToIndex = {})
 #set ($keys = [])
-$util.qr($ctx.stash.put('pkToIndex', {}))
 
-#foreach ($item in $ctx.prev.result.items)
-  #set ($pk = "user/$item.userId")
-
-  #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
-    $util.qr($ctx.stash.pkToIndex.put($pk, []))
+#foreach ($user in $ctx.prev.result.items)
+  #if (! $ctx.stash.userIdToIndex.containsKey($user.userId))
+    $util.qr($ctx.stash.userIdToIndex.put($user.userId, $foreach.index))
     $util.qr($keys.add({
-      "partitionKey": {"S": "$pk"},
-      "sortKey": {"S": "profile"}
+      'partitionKey': {'S': "user/$user.userId"},
+      'sortKey': {'S': 'profile'}
     }))
   #end
-
-  #set ($index = $velocityCount - 1)
-  $util.qr($ctx.stash.pkToIndex[$pk].add($index))
 #end
 
 {

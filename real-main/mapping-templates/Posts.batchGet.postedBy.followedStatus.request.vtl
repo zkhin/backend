@@ -1,34 +1,24 @@
-## BatchGetItem does not preserve order
-#set ($queryKeys = [])
-$util.qr($ctx.stash.put('pkToIndex', {}))
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
-#foreach ($item in $ctx.prev.result.items)
+## BatchGetItem can't handle duplicates
+#set ($ctx.stash.userIdToIndex = {})
+#set ($keys = [])
 
-  #if ($item.postedByUserId == $ctx.identity.cognitoIdentityId)
-    $util.qr($item['postedBy'].put('followedStatus', 'SELF'))
-
+#foreach ($post in $ctx.prev.result.items)
+  #if ($post.postedByUserId == $callerUserId)
+    $util.qr($post.postedBy.put('followedStatus', 'SELF'))
   #else
-    ## Set the default. This is overriden in the response template when an
-    ## item is found in dynamo
-    $util.qr($item['postedBy'].put('followedStatus', 'NOT_FOLLOWING'))
-
-    #set ($pk = "following/$ctx.identity.cognitoIdentityId/$item.postedByUserId")
-    #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
-      $util.qr($ctx.stash.pkToIndex.put($pk, []))
-      $util.qr($queryKeys.add({
-        "partitionKey": {"S": "$pk"},
-        "sortKey": {"S": "-"}
+    #if (! $ctx.stash.userIdToIndex.containsKey($post.postedByUserId))
+      $util.qr($ctx.stash.userIdToIndex.put($post.postedByUserId, $keys.size()))
+      $util.qr($keys.add({
+        'partitionKey': {'S': "following/$callerUserId/$post.postedByUserId"},
+        'sortKey': {'S': '-'}
       }))
     #end
-
-    #set ($index = $velocityCount - 1)
-    $util.qr($ctx.stash.pkToIndex[$pk].add($index))
   #end
-
 #end
 
-## If all the trending posts were our own, no query here
-#if ($queryKeys.isEmpty())
+#if ($keys.isEmpty())
   #return ($ctx.prev.result)
 #end
 
@@ -37,7 +27,7 @@ $util.qr($ctx.stash.put('pkToIndex', {}))
   "operation": "BatchGetItem",
   "tables": {
     "${table}": {
-      "keys": $util.toJson($queryKeys)
+      "keys": $util.toJson($keys)
     }
   }
 }

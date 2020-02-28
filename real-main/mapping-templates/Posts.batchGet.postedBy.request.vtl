@@ -2,23 +2,18 @@
   #return ($ctx.prev.result)
 #end
 
-## BatchGetItem does not preserve order
-#set ($queryKeys = [])
-$util.qr($ctx.stash.put('pkToIndex', {}))
+## BatchGetItem can't handle duplicates
+#set ($ctx.stash.userIdToIndex = {})
+#set ($keys = [])
 
-#foreach ($item in $ctx.prev.result.items)
-
-  #set ($pk = "user/$item.postedByUserId")
-  #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
-    $util.qr($ctx.stash.pkToIndex.put($pk, []))
-    $util.qr($queryKeys.add({
-      "partitionKey": {"S": "$pk"},
-      "sortKey": {"S": "profile"}
+#foreach ($post in $ctx.prev.result.items)
+  #if (! $ctx.stash.userIdToIndex.containsKey($post.postedByUserId))
+    $util.qr($ctx.stash.userIdToIndex.put($post.postedByUserId, $foreach.index))
+    $util.qr($keys.add({
+      'partitionKey': {'S': "user/$post.postedByUserId"},
+      'sortKey': {'S': 'profile'}
     }))
   #end
-
-  #set ($index = $velocityCount - 1)
-  $util.qr($ctx.stash.pkToIndex[$pk].add($index))
 #end
 
 {
@@ -26,7 +21,7 @@ $util.qr($ctx.stash.put('pkToIndex', {}))
   "operation": "BatchGetItem",
   "tables": {
     "${table}": {
-      "keys": $util.toJson($queryKeys)
+      "keys": $util.toJson($keys)
     }
   }
 }

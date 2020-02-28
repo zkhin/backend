@@ -2,14 +2,19 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($result = $ctx.prev.result)
-#foreach ($item in $ctx.result.data.${table})
-  #if (! $util.isNull($item))
-    #set ($indexes = $ctx.stash.pkToIndex[$item.partitionKey])
-    #foreach ($index in $indexes)
-      $util.qr($result.items[$index]['postedBy'].put('followedStatus', $item.followStatus))
+## Note: trying to #set() a variable to a computed null value
+##       doesn't work. Avoid: #set($item = arrayWithNulls[$index])
+
+#foreach ($post in $ctx.prev.result.items)
+  #if ($util.isNull($post.postedBy.followedStatus))
+    #set ($index = $ctx.stash.userIdToIndex[$post.postedByUserId])
+    #if ($util.isNull($ctx.result.data.${table}[$index]))
+      $util.qr($post.postedBy.put('followedStatus', 'NOT_FOLLOWING'))
+    #else
+      #set ($item = $ctx.result.data.${table}[$index])
+      $util.qr($post.postedBy.put('followedStatus', $item.followStatus))
     #end
   #end
 #end
 
-$util.toJson($result)
+$util.toJson($ctx.prev.result)

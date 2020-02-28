@@ -1,32 +1,24 @@
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
-## BatchGetItem does not preserve order
-#set ($queryKeys = [])
-$util.qr($ctx.stash.put('pkToIndex', {}))
+## BatchGetItem can't handle duplicates
+#set ($ctx.stash.userIdToIndex = {})
+#set ($keys = [])
 
 #foreach ($user in $ctx.prev.result.items)
-
   #if ($user.userId == $callerUserId)
     $util.qr($user.put('blockerStatus', 'SELF'))
   #else
-    ## Set the default. This is overriden in the response template for found items
-    $util.qr($user.put('blockerStatus', 'NOT_BLOCKING'))
-
-    #set ($pk = "block/$user.userId/$callerUserId")
-    #if ($util.isNull($ctx.stash.pkToIndex[$pk]))
-      $util.qr($ctx.stash.pkToIndex.put($pk, []))
-      $util.qr($queryKeys.add({
-        "partitionKey": {"S": "$pk"},
-        "sortKey": {"S": "-"}
+    #if (! $ctx.stash.userIdToIndex.containsKey($user.userId))
+      $util.qr($ctx.stash.userIdToIndex.put($user.userId, $keys.size()))
+      $util.qr($keys.add({
+        'partitionKey': {'S': "block/$user.userId/$callerUserId"},
+        'sortKey': {'S': '-'}
       }))
     #end
-
-    #set ($index = $velocityCount - 1)
-    $util.qr($ctx.stash.pkToIndex[$pk].add($index))
   #end
 #end
 
-#if ($queryKeys.isEmpty())
+#if ($keys.isEmpty())
   #return ($ctx.prev.result)
 #end
 
@@ -35,7 +27,7 @@ $util.qr($ctx.stash.put('pkToIndex', {}))
   "operation": "BatchGetItem",
   "tables": {
     "${table}": {
-      "keys": $util.toJson($queryKeys)
+      "keys": $util.toJson($keys)
     }
   }
 }
