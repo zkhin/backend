@@ -8,7 +8,7 @@
 
 #foreach ($post in $ctx.prev.result.items)
   #if (! $ctx.stash.userIdToIndex.containsKey($post.postedByUserId))
-    $util.qr($ctx.stash.userIdToIndex.put($post.postedByUserId, $foreach.index))
+    $util.qr($ctx.stash.userIdToIndex.put($post.postedByUserId, $keys.size()))
     $util.qr($keys.add({
       'partitionKey': {'S': "user/$post.postedByUserId"},
       'sortKey': {'S': 'profile'}

@@ -12,7 +12,7 @@
 
 #foreach ($post in $ctx.prev.result.items)
   #if (! $ctx.stash.postIdToIndex.containsKey($post.postId))
-    $util.qr($ctx.stash.postIdToIndex.put($post.postId, $foreach.index))
+    $util.qr($ctx.stash.postIdToIndex.put($post.postId, $keys.size()))
     $util.qr($keys.add({
       'partitionKey': {'S': "post/$post.postId"},
       'sortKey': {'S': '-'}
