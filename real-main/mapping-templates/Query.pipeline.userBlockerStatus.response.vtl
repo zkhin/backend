@@ -2,12 +2,12 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($user = $ctx.prev.result)
 #if ($util.isNull($ctx.result))
-  #set ($blockerStatus = 'NOT_BLOCKING')
+  #set ($status = 'NOT_BLOCKING')
 #else
-  #set ($blockerStatus = 'BLOCKING')
+  #set ($status = 'BLOCKING')
 #end
 
-$util.qr($user.put('blockerStatus', $blockerStatus))
+#set ($user = $ctx.prev.result)
+$util.qr($user.put('blockerStatus', $status))
 $util.toJson($user)

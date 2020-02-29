@@ -156,10 +156,6 @@ custom:
         response: Lambda.response.vtl
 
       - type: User
-        field: followedStatus
-        dataSource: DynamodbDataSource
-
-      - type: User
         field: followerStatus
         dataSource: DynamodbDataSource
 

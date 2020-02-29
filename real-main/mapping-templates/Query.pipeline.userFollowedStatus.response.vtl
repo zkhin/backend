@@ -2,8 +2,12 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($user = $ctx.prev.result)
-#set ($followedStatus = $ctx.result.followStatus)
+#if ($util.isNull($ctx.result))
+  #set ($status = 'NOT_FOLLOWING')
+#else
+  #set ($status = $ctx.result.followStatus)
+#end
 
-$util.qr($user.put('followedStatus', $followedStatus))
+#set ($user = $ctx.prev.result)
+$util.qr($user.put('followedStatus', $status))
 $util.toJson($user)
