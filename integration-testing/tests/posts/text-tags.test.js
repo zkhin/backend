@@ -169,11 +169,9 @@ test('Tagged user blocks caller', async () => {
   expect(resp['data']['blockUser']['userId']).toBe(ourUserId)
   expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
 
-  // we don't seem them in the tag in the post
+  // we don't see the tag anymore
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['text']).toBe(text)
-  expect(resp['data']['post']['textTaggedUsers']).toHaveLength(1)
-  expect(resp['data']['post']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
-  expect(resp['data']['post']['textTaggedUsers'][0]['user']).toBe(null)
+  expect(resp['data']['post']['textTaggedUsers']).toHaveLength(0)
 })

@@ -490,7 +490,7 @@ type PaginatedPosts {
 
 type TextTaggedUser {
   tag: String!  # ex: '@ian'
-  user: User    # null if user has been deleted, or has blocked caller
+  user: User!
 }
 
 type Comment {

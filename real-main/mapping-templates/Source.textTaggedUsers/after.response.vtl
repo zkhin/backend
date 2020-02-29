@@ -8,12 +8,13 @@
   $util.qr($userIdToUser.put($user.userId, $user))
 #end
 
-#set ($result = [])
+## missing users represent users who have blocked caller
+#set ($textTags = [])
 #foreach ($textTag in $ctx.source.textTags)
-  $util.qr($result.add({
-    'tag': $textTag.tag,
-    'user': $userIdToUser[$textTag.userId]
-  }))
+  #if ($userIdToUser.containsKey($textTag.userId))
+    $util.qr($textTag.put('user', $userIdToUser[$textTag.userId]))
+    $util.qr($textTags.add($textTag))
+  #end
 #end
 
-$util.toJson($result)
+$util.toJson($textTags)

@@ -11,9 +11,8 @@
 ## missing users represent users who have blocked caller
 #set ($comments = [])
 #foreach ($comment in $ctx.stash.comments)
-  #set ($user = $userIdToUser[$comment.userId])
-  #if (! $util.isNull($user))
-    $util.qr($comment.put('commentedBy', $user))
+  #if ($userIdToUser.containsKey($comment.userId))
+    $util.qr($comment.put('commentedBy', $userIdToUser[$comment.userId]))
     $util.qr($comments.add($comment))
   #end
 #end
