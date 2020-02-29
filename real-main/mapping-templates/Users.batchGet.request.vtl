@@ -1,8 +1,6 @@
-## Expects a $ctx.prev.result with two keys:
-##  - nextToken (nullable string)
-##  - items (list of dicts with userId filled in, may have duplicates)
+## Expects $ctx.prev.result to be a list of objects with a userId property
 
-#if ($ctx.prev.result.items.isEmpty())
+#if ($ctx.prev.result.isEmpty())
   #return ($ctx.prev.result)
 #end
 
@@ -10,7 +8,7 @@
 #set ($ctx.stash.userIdToIndex = {})
 #set ($keys = [])
 
-#foreach ($user in $ctx.prev.result.items)
+#foreach ($user in $ctx.prev.result)
   #if (! $ctx.stash.userIdToIndex.containsKey($user.userId))
     $util.qr($ctx.stash.userIdToIndex.put($user.userId, $foreach.index))
     $util.qr($keys.add({

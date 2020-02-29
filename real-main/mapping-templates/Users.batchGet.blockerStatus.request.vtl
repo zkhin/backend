@@ -4,7 +4,7 @@
 #set ($ctx.stash.userIdToIndex = {})
 #set ($keys = [])
 
-#foreach ($user in $ctx.prev.result.items)
+#foreach ($user in $ctx.prev.result)
   #if ($user.userId == $callerUserId)
     $util.qr($user.put('blockerStatus', 'SELF'))
   #else

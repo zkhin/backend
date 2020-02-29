@@ -2,18 +2,14 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($result = {
-  'items': [],
-  'nextToken': $ctx.prev.result.nextToken
-})
-
-#foreach ($user in $ctx.prev.result.items)
+#set ($users = [])
+#foreach ($user in $ctx.prev.result)
   #if ($user.blockerStatus != 'BLOCKING')
-    $util.qr($result.items.add($user))
+    $util.qr($users.add($user))
   #end
 #end
 
 {
   "version": "2018-05-29",
-  "payload": $util.toJson($result)
+  "payload": $util.toJson($users)
 }

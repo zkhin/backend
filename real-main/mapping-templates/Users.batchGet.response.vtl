@@ -4,7 +4,7 @@
 
 ## remove missing users from result set (in process of being deleted?)
 #set ($users = [])
-#foreach ($prevUser in $ctx.prev.result.items)
+#foreach ($prevUser in $ctx.prev.result)
   #set ($index = $ctx.stash.userIdToIndex[$prevUser.userId])
   #if (! $util.isNull($ctx.result.data.${table}[$index]))
     #set ($user = $ctx.result.data.${table}[$index])
@@ -12,7 +12,4 @@
   #end
 #end
 
-$util.toJson({
-  'nextToken': $ctx.prev.result.nextToken,
-  'items': $users
-})
+$util.toJson($users)

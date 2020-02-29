@@ -2,12 +2,13 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($resultItems = [])
+#set ($users = [])
 #foreach ($item in $ctx.result.items)
-  $util.qr($resultItems.add({'userId': $item.followerUserId}))
+  #set ($userId = $item.partitionKey.split("/")[1])
+  $util.qr($users.add({'userId': $userId}))
 #end
 
 $util.toJson({
   'nextToken': $ctx.result.nextToken,
-  'items': $resultItems
+  'items': $users
 })

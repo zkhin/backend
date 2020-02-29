@@ -2,14 +2,14 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($resultItems = [])
+#set ($users = [])
 #foreach ($item in $ctx.result.items)
-  $util.qr($resultItems.add({'userId': $item.userId}))
+  $util.qr($users.add({'userId': $item.userId}))
 #end
 
 $util.qr($ctx.stash.put('comments', $ctx.result.items))
+$util.qr($ctx.stash.put('comments', $ctx.result.items))
 
-$util.toJson({
-  'nextToken': $ctx.result.nextToken,
-  'items': $resultItems
-})
+#set ($ctx.stash.nextToken = $ctx.result.nextToken)
+#set ($ctx.stash.comments = $ctx.result.items)
+$util.toJson($users)

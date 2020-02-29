@@ -4,7 +4,7 @@
 
 ## build a map from userId to user object
 #set ($userIdToUser = {})
-#foreach ($user in $ctx.prev.result.items)
+#foreach ($user in $ctx.prev.result)
   $util.qr($userIdToUser.put($user.userId, $user))
 #end
 

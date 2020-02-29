@@ -2,12 +2,12 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($resultItems = [])
+#set ($users = [])
 #foreach ($item in $ctx.result.items)
-  $util.qr($resultItems.add({'userId': $item.postedByUserId}))
+  $util.qr($users.add({'userId': $item.likedByUserId}))
 #end
 
 $util.toJson({
   'nextToken': $ctx.result.nextToken,
-  'items': $resultItems
+  'items': $users
 })

@@ -5,7 +5,7 @@
 ## Note: trying to #set() a variable to a computed null value
 ##       doesn't work. Avoid: #set($item = arrayWithNulls[$index])
 
-#foreach ($user in $ctx.prev.result.items)
+#foreach ($user in $ctx.prev.result)
   #if ($util.isNull($user.followedStatus))
     #set ($index = $ctx.stash.userIdToIndex[$user.userId])
     #if ($util.isNull($ctx.result.data.${table}[$index]))

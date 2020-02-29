@@ -83,6 +83,17 @@ custom:
 
     mappingTemplates:
 
+      - type: PaginatedUsers
+        field: items
+        request: PaginatedUsers.items/before.request.vtl
+        response: PassThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+
       - type: Query
         field: self
         request: Query.self/before.request.vtl
@@ -103,27 +114,11 @@ custom:
 
       - type: Query
         field: searchUsers
-        request: PassThru.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Query.searchUsers.searchUsers
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: ElasticSearchDataSource
 
       - type: Query
         field: trendingUsers
-        request: PassThru.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Query.trendingUsers.fetchUserIds
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
 
       - type: User
         field: photo
@@ -176,36 +171,15 @@ custom:
 
       - type: User
         field: followedUsers
-        request: User.followedUsers/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - User.followedUsers.fetchFollowedUserIds
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
 
       - type: User
         field: followedUsersWithStories
-        request: User.followedUsersWithStories/before.request.vtl
-        response: User.followedUsersWithStories/after.response.vtl
-        kind: PIPELINE
-        functions:
-          - User.followedUsersWithStories.fetchUserIds
-          - Users.batchGet
+        dataSource: DynamodbDataSource
 
       - type: User
         field: followerUsers
-        request: User.followerUsers/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - User.followerUsers.fetchFollowerUserIds
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
 
       - type: User
         field: postCount
@@ -327,15 +301,7 @@ custom:
 
       - type: User
         field: blockedUsers
-        request: User.blockedUsers/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-            - User.blockedUsers.fetchUserIds
-            - Users.batchGet
-            - Users.batchGet.blockerStatus
-            - Users.filterBy.blockerStatus
-            - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
 
       - type: User
         field: albumCount
@@ -492,15 +458,7 @@ custom:
 
       - type: Post
         field: viewedBy
-        request: Post.viewedBy/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Post.viewedBy.fetchUserIds
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
 
       - type: Post
         field: commentsDisabled
@@ -534,15 +492,7 @@ custom:
 
       - type: Post
         field: onymouslyLikedBy
-        request: Post.onymouslyLikedBy/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Post.onymouslyLikedBy.fetchLikes
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
 
       - type: Post
         field: mediaObjects
@@ -828,6 +778,9 @@ custom:
       - dataSource: DynamodbDataSource
         name: Users.batchGet.blockerStatus
 
+      - dataSource: DynamodbDataSource
+        name: Users.batchGet.followedStatus
+
       - dataSource: NoneDataSource
         name: Users.filterBy.blockerStatus
         response: PassThru.response.vtl
@@ -841,29 +794,6 @@ custom:
         response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Users.batchGet.followedStatus
-
-      - dataSource: ElasticSearchDataSource
-        name: Query.searchUsers.searchUsers
-        request: Query.searchUsers/Pipeline.searchUsers.request.vtl
-        response: Query.searchUsers/Pipeline.searchUsers.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.trendingUsers.fetchUserIds
-        request: Query.trendingUsers/Pipeline.fetchUserIds.request.vtl
-        response: Query.trendingUsers/Pipeline.fetchUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: User.blockedUsers.fetchUserIds
-        request: User.blockedUsers/Pipeline.fetchUserIds.request.vtl
-        response: User.blockedUsers/Pipeline.fetchUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: User.followedUsersWithStories.fetchUserIds
-        request: User.followedUsersWithStories/Pipeline.fetchUserIds.request.vtl
-        response: User.followedUsersWithStories/Pipeline.fetchUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
         name: Query.album.fetchAlbum
         request: Query.album/Pipeline.fetchAlbum.request.vtl
         response: PassThru.response.vtl
@@ -872,11 +802,6 @@ custom:
         name: User.feed.fetchPostIds
         request: User.feed/Pipeline.fetchPostIds.request.vtl
         response: PassThru.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Post.onymouslyLikedBy.fetchLikes
-        request: Post.onymouslyLikedBy/Pipeline.fetchLikes.request.vtl
-        response: Post.onymouslyLikedBy/Pipeline.fetchLikes.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.comments.fetchComments
@@ -903,21 +828,6 @@ custom:
         name: Query.trendingPosts.fetchPostIds
         request: Query.trendingPosts/Pipeline.fetchPostIds.request.vtl
         response: Query.trendingPosts/Pipeline.fetchPostIds.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: User.followedUsers.fetchFollowedUserIds
-        request: User.followedUsers/Pipeline.fetchFollowedUserIds.request.vtl
-        response: User.followedUsers/Pipeline.fetchFollowedUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: User.followerUsers.fetchFollowerUserIds
-        request: User.followerUsers/Pipeline.fetchFollowerUserIds.request.vtl
-        response: User.followerUsers/Pipeline.fetchFollowerUserIds.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Post.viewedBy.fetchUserIds
-        request: Post.viewedBy/Pipeline.fetchUserIds.request.vtl
-        response: Post.viewedBy/Pipeline.fetchUserIds.response.vtl
 
     dataSources:
 
