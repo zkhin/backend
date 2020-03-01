@@ -202,6 +202,9 @@ class Post:
         if self.item.get('expiresAt'):
             self.followed_first_story_manager.refresh_after_story_change(story_prev=self.item)
 
+        # delete the trending index, if it exists
+        self.trending_manager.dynamo.delete_trending(self.id)
+
         # update feeds
         self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
 

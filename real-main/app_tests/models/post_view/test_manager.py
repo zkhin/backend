@@ -65,6 +65,32 @@ def test_record_views(post_view_manager):
     ]
 
 
+def test_record_view_post_not_completed(post_view_manager, posts, caplog):
+    user_id = 'vuid'
+
+    # set up an archived post
+    post = posts[0]
+    post.archive()
+
+    # try to record a view on it
+    with caplog.at_level(logging.WARNING):
+        # fails with logged warning
+        post_view_manager.record_view(user_id, post.id, 3, pendulum.now('utc'))
+
+    # check the logging
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert f'`{user_id}`' in caplog.records[0].msg
+    assert f'`{post.id}`' in caplog.records[0].msg
+
+    # check the viewedByCounts and the trending indexes did not change
+    posted_by_user_id = post.item['postedByUserId']
+    assert post_view_manager.post_manager.dynamo.get_post(post.id).get('viewedByCount', 0) == 0
+    assert post_view_manager.user_manager.dynamo.get_user(posted_by_user_id).get('postViewedByCount', 0) == 0
+    assert post_view_manager.trending_manager.dynamo.get_trending(post.id) is None
+    assert post_view_manager.trending_manager.dynamo.get_trending(posted_by_user_id) is None
+
+
 def test_record_view_post_does_not_exist(post_view_manager, caplog):
     user_id = 'vuid'
     post_id = 'pid-dne'

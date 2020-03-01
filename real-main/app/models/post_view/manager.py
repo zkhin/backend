@@ -44,6 +44,10 @@ class PostViewManager:
             logger.warning(f'User `{viewed_by_user_id}` tried to record view(s) on non-existent post `{post_id}`')
             return
 
+        if post.item['postStatus'] != post.enums.PostStatus.COMPLETED:
+            logger.warning(f'User `{viewed_by_user_id}` tried to record view(s) on non-COMPLETED post `{post_id}`')
+            return
+
         post_id = post.id
         posted_by_user_id = post.item['postedByUserId']
         original_post_id = post.item.get('originalPostId', post_id)

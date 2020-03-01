@@ -102,6 +102,57 @@ test('Report post views', async () => {
 })
 
 
+test('Report post views on non-completed posts are ignored', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [other1Client] = await loginCache.getCleanLogin()
+  const [other2Client] = await loginCache.getCleanLogin()
+
+  // add a pending post
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, mediaId: uuidv4()}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+
+  // add an archived post
+  const postId2 = uuidv4()
+  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId: postId2}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['archivePost']['postId']).toBe(postId2)
+  expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
+
+  // other1 reports to have viewed both posts
+  resp = await other1Client.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // other2 reports to have viewed one post
+  resp = await other2Client.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId2]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // we report to have viewed both posts (should not be recorded on our own posts)
+  resp = await other1Client.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // verify the two posts have no viewed by counts
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['viewedByCount']).toBe(0)
+
+  // verify there are no trending posts
+  resp = await ourClient.query({query: schema.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(0)
+})
+
+
 test('Post views are de-duplicated by user', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [other1Client] = await loginCache.getCleanLogin()
