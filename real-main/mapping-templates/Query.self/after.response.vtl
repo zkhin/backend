@@ -2,12 +2,11 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($user = $ctx.prev.result)
-
 ## raises an error if error self does not exist
-#if ($util.isNull($user))
+#if ($ctx.prev.result.isEmpty())
   $util.error('User does not exist', 'ClientError')
 #end
+#set ($user = $ctx.prev.result[0])
 
 $util.qr($user.put('blockedStatus', 'SELF'))
 $util.qr($user.put('blockerStatus', 'SELF'))

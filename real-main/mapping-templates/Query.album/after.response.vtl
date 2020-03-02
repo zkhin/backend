@@ -2,18 +2,13 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($album = $ctx.prev.result)
-
-## hide if album owner is blocking caller
-#if ($album.ownedBy.blockerStatus == 'BLOCKING')
+## if the user was filtered out, hide the album
+#if ($ctx.prev.result.isEmpty())
   #return
 #end
+#set ($user = $ctx.prev.result[0])
 
-## hide if album owner private and caller is not a follower or self
-#if ($album.ownedBy.privacyStatus == 'PRIVATE')
-  #if ($album.ownedBy.followedStatus != 'SELF' and $album.ownedBy.followedStatus != 'FOLLOWING')
-    #return
-  #end
-#end
+#set ($album = $ctx.stash.album)
+$util.qr($album.put('ownedBy', $user))
 
 $util.toJson($album)

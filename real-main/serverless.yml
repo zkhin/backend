@@ -86,7 +86,7 @@ custom:
       - type: PaginatedPosts
         field: items
         request: PaginatedPosts.items/before.request.vtl
-        response: PaginatedPosts.items/after.response.vtl
+        response: PassThru.response.vtl
         kind: PIPELINE
         functions:
           - Posts.batchGet
@@ -95,6 +95,7 @@ custom:
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
+          - Posts.compile
 
       - type: PaginatedUsers
         field: items
@@ -113,7 +114,7 @@ custom:
         response: Query.self/after.response.vtl
         kind: PIPELINE
         functions:
-          - Query.pipeline.user
+          - Users.batchGet
 
       - type: Query
         field: user
@@ -121,9 +122,9 @@ custom:
         response: Query.user/after.response.vtl
         kind: PIPELINE
         functions:
-          - Query.pipeline.user
-          - Query.pipeline.userBlockerStatus
-          - Query.pipeline.userFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.batchGet.followedStatus
 
       - type: Query
         field: searchUsers
@@ -473,10 +474,13 @@ custom:
         response: Post.originalPost/after.response.vtl
         kind: PIPELINE
         functions:
-          - Post.pipeline.fetchPost
-          - Post.pipeline.postedBy
-          - Post.pipeline.postedByBlockerStatus
-          - Post.pipeline.postedByFollowedStatus
+          - Posts.batchGet
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.filterBy.followedStatus
+          - Posts.compile
 
       - type: Post
         field: viewedByCount
@@ -635,10 +639,13 @@ custom:
         response: Query.post/after.response.vtl
         kind: PIPELINE
         functions:
-          - Post.pipeline.fetchPost
-          - Post.pipeline.postedBy
-          - Post.pipeline.postedByBlockerStatus
-          - Post.pipeline.postedByFollowedStatus
+          - Posts.batchGet
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.filterBy.followedStatus
+          - Posts.compile
 
       - type: Query
         field: trendingPosts
@@ -651,9 +658,11 @@ custom:
         kind: PIPELINE
         functions:
           - Query.album.fetchAlbum
-          - Album.pipeline.ownedBy
-          - Album.pipeline.ownedByBlockerStatus
-          - Album.pipeline.ownedByFollowedStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.filterBy.followedStatus
 
       - type: Mutation
         field: addPost
@@ -775,37 +784,6 @@ custom:
     functionConfigurations:
 
       - dataSource: DynamodbDataSource
-        name: Post.pipeline.fetchPost
-
-      - dataSource: DynamodbDataSource
-        name: Post.pipeline.postedBy
-
-      - dataSource: DynamodbDataSource
-        name: Post.pipeline.postedByBlockerStatus
-
-      - dataSource: DynamodbDataSource
-        name: Post.pipeline.postedByFollowedStatus
-
-      - dataSource: DynamodbDataSource
-        name: Album.pipeline.ownedBy
-
-      - dataSource: DynamodbDataSource
-        name: Album.pipeline.ownedByBlockerStatus
-
-      - dataSource: DynamodbDataSource
-        name: Album.pipeline.ownedByFollowedStatus
-
-      - dataSource: DynamodbDataSource
-        name: Query.pipeline.user
-        response: PassThru.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Query.pipeline.userBlockerStatus
-
-      - dataSource: DynamodbDataSource
-        name: Query.pipeline.userFollowedStatus
-
-      - dataSource: DynamodbDataSource
         name: Users.batchGet
 
       - dataSource: DynamodbDataSource
@@ -825,7 +803,7 @@ custom:
       - dataSource: DynamodbDataSource
         name: Query.album.fetchAlbum
         request: Query.album/Pipeline.fetchAlbum.request.vtl
-        response: PassThru.response.vtl
+        response: Query.album/Pipeline.fetchAlbum.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Post.comments.fetchComments
@@ -837,6 +815,10 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Posts.batchGet
+
+      - dataSource: NoneDataSource
+        name: Posts.compile
+        response: PassThru.response.vtl
 
     dataSources:
 

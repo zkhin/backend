@@ -7,9 +7,6 @@
   $util.qr($users.add({'userId': $item.userId}))
 #end
 
-$util.qr($ctx.stash.put('comments', $ctx.result.items))
-$util.qr($ctx.stash.put('comments', $ctx.result.items))
-
 #set ($ctx.stash.nextToken = $ctx.result.nextToken)
 #set ($ctx.stash.comments = $ctx.result.items)
 $util.toJson($users)

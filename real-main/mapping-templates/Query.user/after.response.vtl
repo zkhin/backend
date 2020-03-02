@@ -2,11 +2,10 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($user = $ctx.prev.result)
-
-#if ($util.isNull($user))
+#if ($ctx.prev.result.isEmpty())
   #return
 #end
+#set ($user = $ctx.prev.result[0])
 
 #if ($user.blockerStatus == 'BLOCKING')
   ## we are blocked! we see only an absolute minimum profile
