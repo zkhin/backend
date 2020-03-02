@@ -2,7 +2,7 @@
     "version": "2018-05-29",
     "operation": "Invoke",
     "payload": {
-      "field": "MediaObject.url",
+      "field": "${ctx.info.parentTypeName}.${ctx.info.fieldName}",
       "identity": $util.toJson($ctx.identity),
       "arguments": $util.toJson($ctx.args),
       "source": $util.toJson($ctx.source)
