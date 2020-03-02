@@ -4,12 +4,17 @@
 
 ## remove missing posts from result set (in process of being deleted?)
 #set ($posts = [])
+#set ($users = [])
+
 #foreach ($prevPost in $ctx.prev.result)
   #set ($index = $ctx.stash.postIdToIndex[$prevPost.postId])
   #if (! $util.isNull($ctx.result.data.${table}[$index]))
     #set ($post = $ctx.result.data.${table}[$index])
     $util.qr($posts.add($post))
+    $util.qr($users.add({'userId': $post.postedByUserId}))
   #end
 #end
 
-$util.toJson($posts)
+## next steps of this pipeline fill in Post.postedBy
+#set ($ctx.stash.posts = $posts)
+$util.toJson($users)

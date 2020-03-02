@@ -86,14 +86,15 @@ custom:
       - type: PaginatedPosts
         field: items
         request: PaginatedPosts.items/before.request.vtl
-        response: PassThru.response.vtl
+        response: PaginatedPosts.items/after.response.vtl
         kind: PIPELINE
         functions:
           - Posts.batchGet
-          - Posts.batchGet.postedBy
-          - Posts.batchGet.postedBy.blockerStatus
-          - Posts.batchGet.postedBy.followedStatus
-          - Posts.filterBy.postedBy.followedAndBlockerStatus
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.filterBy.followedStatus
 
       - type: PaginatedUsers
         field: items
@@ -810,11 +811,15 @@ custom:
       - dataSource: DynamodbDataSource
         name: Users.batchGet.blockerStatus
 
+      - dataSource: NoneDataSource
+        name: Users.filterBy.blockerStatus
+        response: PassThru.response.vtl
+
       - dataSource: DynamodbDataSource
         name: Users.batchGet.followedStatus
 
       - dataSource: NoneDataSource
-        name: Users.filterBy.blockerStatus
+        name: Users.filterBy.followedStatus
         response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
@@ -832,19 +837,6 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Posts.batchGet
-
-      - dataSource: DynamodbDataSource
-        name: Posts.batchGet.postedBy
-
-      - dataSource: DynamodbDataSource
-        name: Posts.batchGet.postedBy.blockerStatus
-
-      - dataSource: DynamodbDataSource
-        name: Posts.batchGet.postedBy.followedStatus
-
-      - dataSource: NoneDataSource
-        name: Posts.filterBy.postedBy.followedAndBlockerStatus
-        response: PassThru.response.vtl
 
     dataSources:
 

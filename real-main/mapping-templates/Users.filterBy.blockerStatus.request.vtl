@@ -1,6 +1,4 @@
-#if ($ctx.error)
-  $util.error($ctx.error.message, $ctx.error.type)
-#end
+## Filter out users that are blocking caller
 
 #set ($users = [])
 #foreach ($user in $ctx.prev.result)

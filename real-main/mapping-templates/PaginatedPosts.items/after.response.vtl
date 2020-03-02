@@ -1,0 +1,20 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+## build a map from userId to user object
+#set ($userIdToUser = {})
+#foreach ($user in $ctx.prev.result)
+  $util.qr($userIdToUser.put($user.userId, $user))
+#end
+
+## filter out posts that the user object was filtered out
+#set ($posts = [])
+#foreach ($post in $ctx.stash.posts)
+  #if ($userIdToUser.containsKey($post.postedByUserId))
+    $util.qr($post.put('postedBy', $userIdToUser[$post.postedByUserId]))
+    $util.qr($posts.add($post))
+  #end
+#end
+
+$util.toJson($posts)
