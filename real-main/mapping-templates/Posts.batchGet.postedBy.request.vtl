@@ -1,4 +1,4 @@
-#if ($ctx.prev.result.items.isEmpty())
+#if ($ctx.prev.result.isEmpty())
   #return ($ctx.prev.result)
 #end
 
@@ -6,7 +6,7 @@
 #set ($ctx.stash.userIdToIndex = {})
 #set ($keys = [])
 
-#foreach ($post in $ctx.prev.result.items)
+#foreach ($post in $ctx.prev.result)
   #if (! $ctx.stash.userIdToIndex.containsKey($post.postedByUserId))
     $util.qr($ctx.stash.userIdToIndex.put($post.postedByUserId, $keys.size()))
     $util.qr($keys.add({

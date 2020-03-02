@@ -5,7 +5,7 @@
 ## all posts are required to have postedBy, so if we didn't pull one from DB
 ## (user in process of being deleted?) remove that post from the results
 #set ($posts = [])
-#foreach ($post in $ctx.prev.result.items)
+#foreach ($post in $ctx.prev.result)
   #set ($index = $ctx.stash.userIdToIndex[$post.postedByUserId])
   #if (! $util.isNull($ctx.result.data.${table}[$index]))
     #set ($user = $ctx.result.data.${table}[$index])
@@ -14,7 +14,4 @@
   #end
 #end
 
-$util.toJson({
-  'nextToken': $ctx.prev.result.nextToken,
-  'items': $posts
-})
+$util.toJson($posts)

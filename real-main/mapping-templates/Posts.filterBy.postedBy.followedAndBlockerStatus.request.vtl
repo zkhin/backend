@@ -1,20 +1,16 @@
 #if ($ctx.error)
   $util.error($ctx.error.message, $ctx.error.type)
 #end
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
-#set ($result = {
-  'items': [],
-  'nextToken': $ctx.prev.result.nextToken
-})
+#set ($posts = [])
+#foreach ($post in $ctx.prev.result)
 
-#foreach ($post in $ctx.prev.result.items)
-
-  ## Velocity apparently has no 'continue' statement
-  #if (!$util.isNull($post.postedBy))
-    #if ($post.postedBy.blockerStatus != 'BLOCKING')
-      #if ($post.postedBy.privacyStatus == 'PUBLIC' || $post.postedBy.followedStatus == 'FOLLOWING')
-        $util.qr($result.items.add($post))
-      #end
+  #if ($callerUserId == $post.postedByUserId)
+    $util.qr($posts.add($post))
+  #elseif ($post.postedBy.blockerStatus != 'BLOCKING')
+    #if ($post.postedBy.privacyStatus == 'PUBLIC' || $post.postedBy.followedStatus == 'FOLLOWING')
+      $util.qr($posts.add($post))
     #end
   #end
 
@@ -22,5 +18,5 @@
 
 {
   "version": "2018-05-29",
-  "payload": $util.toJson($result)
+  "payload": $util.toJson($posts)
 }

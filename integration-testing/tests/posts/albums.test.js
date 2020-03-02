@@ -584,6 +584,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId3)
+  await misc.sleep(1000)
 
   // check album post order
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -614,6 +615,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId2)
+  await misc.sleep(1000)
 
   // check album post order
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -644,6 +646,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId1)
+  await misc.sleep(1000)
 
   // check album post order
   resp = await ourClient.query({query: schema.album, variables: {albumId}})
@@ -674,6 +677,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: schema.editPostAlbumOrder, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostAlbumOrder']['postId']).toBe(postId3)
+  await misc.sleep(1000)
 
   // check album again directly, make sure nothing changed
   resp = await ourClient.query({query: schema.album, variables: {albumId}})

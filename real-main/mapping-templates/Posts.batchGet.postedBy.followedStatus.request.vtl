@@ -4,7 +4,7 @@
 #set ($ctx.stash.userIdToIndex = {})
 #set ($keys = [])
 
-#foreach ($post in $ctx.prev.result.items)
+#foreach ($post in $ctx.prev.result)
   #if ($post.postedByUserId == $callerUserId)
     $util.qr($post.postedBy.put('followedStatus', 'SELF'))
   #else

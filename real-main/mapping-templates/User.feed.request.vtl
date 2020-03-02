@@ -3,6 +3,11 @@
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 
+## feed is private to the user themselves
+#if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
+  #return
+#end
+
 #set ($targetUserId = $ctx.source.userId)
 
 {

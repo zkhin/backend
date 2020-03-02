@@ -4,7 +4,7 @@
 
 ## remove missing posts from result set (in process of being deleted?)
 #set ($posts = [])
-#foreach ($prevPost in $ctx.prev.result.items)
+#foreach ($prevPost in $ctx.prev.result)
   #set ($index = $ctx.stash.postIdToIndex[$prevPost.postId])
   #if (! $util.isNull($ctx.result.data.${table}[$index]))
     #set ($post = $ctx.result.data.${table}[$index])
@@ -12,7 +12,4 @@
   #end
 #end
 
-$util.toJson({
-  'nextToken': $ctx.prev.result.nextToken,
-  'items': $posts
-})
+$util.toJson($posts)

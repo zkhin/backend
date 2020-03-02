@@ -1,8 +1,6 @@
-## Expects a $ctx.prev.result with two keys:
-##  - nextToken (nullable string)
-##  - items (list of dicts with postId filled in, may have duplicates)
+## Expects $ctx.prev.result to be a list of objects with a postId property
 
-#if ($ctx.prev.result.items.isEmpty())
+#if ($ctx.prev.result.isEmpty())
   #return ($ctx.prev.result)
 #end
 
@@ -10,7 +8,7 @@
 #set ($ctx.stash.postIdToIndex = {})
 #set ($keys = [])
 
-#foreach ($post in $ctx.prev.result.items)
+#foreach ($post in $ctx.prev.result)
   #if (! $ctx.stash.postIdToIndex.containsKey($post.postId))
     $util.qr($ctx.stash.postIdToIndex.put($post.postId, $keys.size()))
     $util.qr($keys.add({
