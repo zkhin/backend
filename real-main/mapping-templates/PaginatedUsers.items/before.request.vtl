@@ -1,1 +1,14 @@
-$util.toJson($ctx.source.items)
+## Parent resolver is expected to fill in either:
+##  - `items` if it already has the users all ready to go,
+##  - `userIds` otherwise
+
+#if (! $util.isNull($ctx.source.items))
+  #return ($ctx.source.items)
+#end
+
+#set ($users = [])
+#foreach ($userId in $ctx.source.userIds)
+  $util.qr($users.add({'userId': $userId}))
+#end
+
+$util.toJson($users)

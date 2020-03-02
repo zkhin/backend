@@ -1,7 +1,7 @@
-#set ($users = [])
+#set ($userIds = [])
 #foreach($hit in $ctx.result.hits.hits)
   #set ($userId = $hit.get('_source').userId)
-  $util.qr($users.add({'userId': $userId}))
+  $util.qr($userIds.add($userId))
 #end
 
 ## Int parsing in vtl https://stackoverflow.com/a/2156593
@@ -19,5 +19,5 @@
 
 $util.toJson({
   'nextToken': $nextToken,
-  'items': $users
+  'userIds': $userIds
 })

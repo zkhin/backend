@@ -2,12 +2,12 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($users = [])
+#set ($userIds = [])
 #foreach ($item in $ctx.result.items)
-  $util.qr($users.add({'userId': $item.viewedByUserId}))
+  $util.qr($userIds.add($item.viewedByUserId))
 #end
 
 $util.toJson({
   'nextToken': $ctx.result.nextToken,
-  'items': $users
+  'userIds': $userIds
 })
