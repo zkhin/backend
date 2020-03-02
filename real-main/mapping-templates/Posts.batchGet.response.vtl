@@ -5,22 +5,29 @@
 
 ## remove missing posts from result set (in process of being deleted?)
 #set ($posts = [])
-#set ($users = [])
 
-#foreach ($prevPost in $ctx.prev.result)
-  #set ($index = $ctx.stash.postIdToIndex[$prevPost.postId])
-  #if (! $util.isNull($ctx.result.data.${table}[$index]))
-    #set ($post = $ctx.result.data.${table}[$index])
+#foreach ($item in $ctx.prev.result)
 
+  #if (! $util.isString($item))
+    ## item is an already-resolved post object
+    #set ($post = $item)
+  #else
+    ## item is a postId
+    #set ($index = $ctx.stash.postIdToIndex[$item])
+    #if (! $util.isNull($ctx.result.data.${table}[$index]))
+      #set ($post = $ctx.result.data.${table}[$index])
+    #else
+      #set ($post = false)
+    #end
+  #end
+
+  #if ($post)
     ## posts that are not in COMPLETED state are only visible to post owner
     #if ($post.postedByUserId == $callerUserId || $post.postStatus == 'COMPLETED')
       $util.qr($posts.add($post))
-      $util.qr($users.add({'userId': $post.postedByUserId}))
     #end
-
   #end
+
 #end
 
-## next steps of this pipeline fill in Post.postedBy
-#set ($ctx.stash.posts = $posts)
-$util.toJson($users)
+$util.toJson($posts)

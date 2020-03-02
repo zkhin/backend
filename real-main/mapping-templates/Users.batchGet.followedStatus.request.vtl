@@ -5,15 +5,17 @@
 #set ($keys = [])
 
 #foreach ($user in $ctx.prev.result)
-  #if ($user.userId == $callerUserId)
-    $util.qr($user.put('followedStatus', 'SELF'))
-  #else
-    #if (! $ctx.stash.userIdToIndex.containsKey($user.userId))
-      $util.qr($ctx.stash.userIdToIndex.put($user.userId, $keys.size()))
-      $util.qr($keys.add({
-        'partitionKey': {'S': "following/$callerUserId/$user.userId"},
-        'sortKey': {'S': '-'}
-      }))
+  #if ($util.isNull($user.followedStatus))
+    #if ($user.userId == $callerUserId)
+      $util.qr($user.put('followedStatus', 'SELF'))
+    #else
+      #if (! $ctx.stash.userIdToIndex.containsKey($user.userId))
+        $util.qr($ctx.stash.userIdToIndex.put($user.userId, $keys.size()))
+        $util.qr($keys.add({
+          'partitionKey': {'S': "following/$callerUserId/$user.userId"},
+          'sortKey': {'S': '-'}
+        }))
+      #end
     #end
   #end
 #end

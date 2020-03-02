@@ -90,12 +90,13 @@ custom:
         kind: PIPELINE
         functions:
           - Posts.batchGet
+          - Posts.begin.postedBy
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
-          - Posts.compile
+          - Posts.end.postedBy
 
       - type: PaginatedUsers
         field: items
@@ -475,12 +476,13 @@ custom:
         kind: PIPELINE
         functions:
           - Posts.batchGet
+          - Posts.begin.postedBy
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
-          - Posts.compile
+          - Posts.end.postedBy
 
       - type: Post
         field: viewedByCount
@@ -640,12 +642,13 @@ custom:
         kind: PIPELINE
         functions:
           - Posts.batchGet
+          - Posts.begin.postedBy
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
-          - Posts.compile
+          - Posts.end.postedBy
 
       - type: Query
         field: trendingPosts
@@ -817,7 +820,11 @@ custom:
         name: Posts.batchGet
 
       - dataSource: NoneDataSource
-        name: Posts.compile
+        name: Posts.begin.postedBy
+        response: PassThru.response.vtl
+
+      - dataSource: NoneDataSource
+        name: Posts.end.postedBy
         response: PassThru.response.vtl
 
     dataSources:

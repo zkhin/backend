@@ -3,11 +3,11 @@
 #end
 
 #set ($album = $ctx.result)
-#set ($users = [])
+#set ($userIds = [])
 
 #if (! $util.isNull($album))
-  $util.qr($users.add({'userId': $album.ownedByUserId}))
+  $util.qr($userIds.add($album.ownedByUserId))
 #end
 
 #set ($ctx.stash.album = $album)
-$util.toJson($users)
+$util.toJson($userIds)

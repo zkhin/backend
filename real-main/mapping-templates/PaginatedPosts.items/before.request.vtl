@@ -1,14 +1,1 @@
-## Parent resolver is expected to fill in either:
-##  - `items` if it already has the posts all ready to go,
-##  - `postIds` otherwise
-
-#if (! $util.isNull($ctx.source.items))
-  #return ($ctx.source.items)
-#end
-
-#set ($posts = [])
-#foreach ($postId in $ctx.source.postIds)
-  $util.qr($posts.add({'postId': $postId}))
-#end
-
-$util.toJson($posts)
+$util.toJson($ctx.source.items)

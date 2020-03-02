@@ -2,9 +2,9 @@
   #return ([])
 #end
 
-#set ($users = [])
+#set ($userIds = [])
 #foreach ($textTag in $ctx.source.textTags)
-  $util.qr($users.add({'userId': $textTag.userId}))
+  $util.qr($userIds.add($textTag.userId))
 #end
 
-$util.toJson($users)
+$util.toJson($userIds)
