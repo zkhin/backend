@@ -83,32 +83,6 @@ custom:
 
     mappingTemplates:
 
-      - type: PaginatedPosts
-        field: items
-        request: PaginatedPosts.items/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Posts.batchGet
-          - Posts.begin.postedBy
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
-          - Users.filterBy.followedStatus
-          - Posts.end.postedBy
-
-      - type: PaginatedUsers
-        field: items
-        request: PaginatedUsers.items/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
-
       - type: Query
         field: self
         request: Query.self/before.request.vtl
@@ -290,19 +264,15 @@ custom:
 
       - type: User
         field: onymouslyLikedPosts
-        request: User.onymouslyLikedPosts/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - User.likedPosts
+        dataSource: DynamodbDataSource
+        request: User.likedPosts.request.vtl
+        response: User.likedPosts.response.vtl
 
       - type: User
         field: anonymouslyLikedPosts
-        request: User.anonymouslyLikedPosts/before.request.vtl
-        response: PassThru.response.vtl
-        kind: PIPELINE
-        functions:
-          - User.likedPosts
+        dataSource: DynamodbDataSource
+        request: User.likedPosts.request.vtl
+        response: User.likedPosts.response.vtl
 
       - type: User
         field: blockedUsers
@@ -476,13 +446,14 @@ custom:
         kind: PIPELINE
         functions:
           - Posts.batchGet
-          - Posts.begin.postedBy
+          - Posts.filterBy.postStatus
+          - Users.beginPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
-          - Posts.end.postedBy
+          - Users.endPipeline
 
       - type: Post
         field: viewedByCount
@@ -549,15 +520,8 @@ custom:
 
       - type: Post
         field: comments
-        request: Post.comments/before.request.vtl
-        response: Post.comments/after.response.vtl
-        kind: PIPELINE
-        functions:
-          - Post.comments.fetchComments
-          - Users.batchGet
-          - Users.batchGet.blockerStatus
-          - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatus
+        dataSource: DynamodbDataSource
+        response: PassThru.response.vtl
 
       - type: Post
         field: album
@@ -642,13 +606,14 @@ custom:
         kind: PIPELINE
         functions:
           - Posts.batchGet
-          - Posts.begin.postedBy
+          - Posts.filterBy.postStatus
+          - Users.beginPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
-          - Posts.end.postedBy
+          - Users.endPipeline
 
       - type: Query
         field: trendingPosts
@@ -656,16 +621,18 @@ custom:
 
       - type: Query
         field: album
-        request: PassThru.request.vtl
+        request: Query.album/before.request.vtl
         response: Query.album/after.response.vtl
         kind: PIPELINE
         functions:
-          - Query.album.fetchAlbum
+          - Albums.batchGet
+          - Users.beginPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
+          - Users.endPipeline
 
       - type: Mutation
         field: addPost
@@ -784,6 +751,48 @@ custom:
         dataSource: DynamodbDataSource
         response: PassThru.response.vtl
 
+      - type: PaginatedComments
+        field: items
+        request: PaginatedComments.items/before.request.vtl
+        response: PassThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Comments.batchGet
+          - Users.beginPipeline
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.filterBy.followedStatus
+          - Users.endPipeline
+
+      - type: PaginatedPosts
+        field: items
+        request: PaginatedPosts.items/before.request.vtl
+        response: PassThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Posts.batchGet
+          - Posts.filterBy.postStatus
+          - Users.beginPipeline
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.filterBy.followedStatus
+          - Users.endPipeline
+
+      - type: PaginatedUsers
+        field: items
+        request: PaginatedUsers.items/before.request.vtl
+        response: PassThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+
     functionConfigurations:
 
       - dataSource: DynamodbDataSource
@@ -803,29 +812,26 @@ custom:
         name: Users.filterBy.followedStatus
         response: PassThru.response.vtl
 
-      - dataSource: DynamodbDataSource
-        name: Query.album.fetchAlbum
-        request: Query.album/Pipeline.fetchAlbum.request.vtl
-        response: Query.album/Pipeline.fetchAlbum.response.vtl
+      - dataSource: NoneDataSource
+        name: Users.beginPipeline
+        response: PassThru.response.vtl
 
-      - dataSource: DynamodbDataSource
-        name: Post.comments.fetchComments
-        request: Post.comments/Pipeline.fetchComments.request.vtl
-        response: Post.comments/Pipeline.fetchComments.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: User.likedPosts
+      - dataSource: NoneDataSource
+        name: Users.endPipeline
+        response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Posts.batchGet
 
       - dataSource: NoneDataSource
-        name: Posts.begin.postedBy
+        name: Posts.filterBy.postStatus
         response: PassThru.response.vtl
 
-      - dataSource: NoneDataSource
-        name: Posts.end.postedBy
-        response: PassThru.response.vtl
+      - dataSource: DynamodbDataSource
+        name: Albums.batchGet
+
+      - dataSource: DynamodbDataSource
+        name: Comments.batchGet
 
     dataSources:
 

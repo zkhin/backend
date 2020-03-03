@@ -3,6 +3,10 @@
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 
+#if ($ctx.source.commentsDisabled)
+  #return
+#end
+
 {
   "version": "2018-05-29",
   "operation": "Query",

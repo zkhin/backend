@@ -1,29 +1,19 @@
 #if ($ctx.error)
   $util.error($ctx.error.message, $ctx.error.type)
 #end
-#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
 ## remove missing posts from result set (in process of being deleted?)
 #set ($posts = [])
-
 #foreach ($item in $ctx.prev.result)
 
   #if (! $util.isString($item))
     ## item is an already-resolved post object
-    #set ($post = $item)
+    $util.qr($posts.add($item))
   #else
     ## item is a postId
     #set ($index = $ctx.stash.postIdToIndex[$item])
     #if (! $util.isNull($ctx.result.data.${table}[$index]))
       #set ($post = $ctx.result.data.${table}[$index])
-    #else
-      #set ($post = false)
-    #end
-  #end
-
-  #if ($post)
-    ## posts that are not in COMPLETED state are only visible to post owner
-    #if ($post.postedByUserId == $callerUserId || $post.postStatus == 'COMPLETED')
       $util.qr($posts.add($post))
     #end
   #end
