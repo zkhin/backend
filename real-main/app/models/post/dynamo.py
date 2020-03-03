@@ -188,9 +188,7 @@ class PostDynamo:
             exp_values[':opi'] = {'S': original_post_id}
 
         if album_id:
-            exp_sets.append('gsiK3PartionKey = :gsik3pk')
             exp_sets.append('gsiK3SortKey = :ar')
-            exp_values[':gsik3pk'] = {'S': f'post/{album_id}'}
             exp_values[':ar'] = {'N': str(album_rank)}
 
         if 'expiresAt' in post_item:

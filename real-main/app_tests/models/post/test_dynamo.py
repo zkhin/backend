@@ -247,7 +247,6 @@ def test_transact_set_post_status_album_rank_handled_correctly_to_and_from_COMPL
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.PENDING
-    assert post_item['gsiK3PartitionKey'] == 'post/aid'
     assert post_item['gsiK3SortKey'] == -1
 
     # verify the album_rank is required when transitioning to COMPLETED
@@ -259,7 +258,6 @@ def test_transact_set_post_status_album_rank_handled_correctly_to_and_from_COMPL
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.COMPLETED
-    assert post_item['gsiK3PartitionKey'] == 'post/aid'
     assert post_item['gsiK3SortKey'] == 0.5
 
     # verify the album_rank is required to not be present when transitioning out of COMPLETED
@@ -271,7 +269,6 @@ def test_transact_set_post_status_album_rank_handled_correctly_to_and_from_COMPL
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.ARCHIVED
-    assert post_item['gsiK3PartitionKey'] == 'post/aid'
     assert post_item['gsiK3SortKey'] == -1
 
 
