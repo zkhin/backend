@@ -39,8 +39,8 @@ class PostManager:
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
 
-    def get_post(self, post_id):
-        post_item = self.dynamo.get_post(post_id)
+    def get_post(self, post_id, strongly_consistent=False):
+        post_item = self.dynamo.get_post(post_id, strongly_consistent=strongly_consistent)
         return self.init_post(post_item) if post_item else None
 
     def init_post(self, post_item):

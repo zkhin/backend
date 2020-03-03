@@ -45,7 +45,8 @@ def uploads_object_created(event, context):
         # this was a thumbnail
         return
 
-    media = media_manager.get_media(media_id)
+    # strongly consistent because we may have just added the pending post
+    media = media_manager.get_media(media_id, strongly_consistent=True)
     if not media:
         raise Exception(f'Unable to find media `{media_id}` for post `{post_id}`')
 
@@ -54,7 +55,8 @@ def uploads_object_created(event, context):
         # this media upload was already processed. Direct image data upload?
         return
 
-    post = post_manager.get_post(post_id)
+    # strongly consistent because we may have just added the pending post
+    post = post_manager.get_post(post_id, strongly_consistent=True)
 
     try:
         media.process_upload()
