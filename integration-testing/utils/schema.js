@@ -389,7 +389,7 @@ module.exports.acceptFollowerUser = gql`
     acceptFollowerUser (userId: $userId) {
       userId
       followerStatus
-      followerCount
+      followedCount
     }
   }
 `
@@ -399,7 +399,7 @@ module.exports.denyFollowerUser = gql`
     denyFollowerUser (userId: $userId) {
       userId
       followerStatus
-      followerCount
+      followedCount
     }
   }
 `

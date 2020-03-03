@@ -174,8 +174,7 @@ def test_set_privacy_status_from_private_to_public(user_manager, user, user2, us
     follow_manager.request_to_follow(user2, user)
 
     # set up a follow request in DENIED state
-    follow_manager.request_to_follow(user3, user)
-    follow_manager.deny_follow_request(user3.id, user.id)
+    follow_manager.request_to_follow(user3, user).deny()
 
     # check we can see those two request
     resp = list(follow_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.REQUESTED))

@@ -41,11 +41,11 @@ class UserDynamo:
             query_kwargs['Item']['phoneNumber'] = phone
         return self.client.add_item(query_kwargs)
 
-    def get_user(self, user_id):
+    def get_user(self, user_id, strongly_consistent=False):
         return self.client.get_item({
             'partitionKey': f'user/{user_id}',
             'sortKey': 'profile',
-        })
+        }, strongly_consistent=strongly_consistent)
 
     def get_user_by_username(self, username):
         query_kwargs = {

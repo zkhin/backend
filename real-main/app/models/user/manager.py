@@ -38,8 +38,8 @@ class UserManager:
         self.validate = UserValidate()
         self.placeholder_photos_directory = placeholder_photos_directory
 
-    def get_user(self, user_id):
-        user_item = self.dynamo.get_user(user_id)
+    def get_user(self, user_id, strongly_consistent=False):
+        user_item = self.dynamo.get_user(user_id, strongly_consistent=strongly_consistent)
         return self.init_user(user_item) if user_item else None
 
     def get_user_by_username(self, username):

@@ -37,16 +37,14 @@ class BlockManager:
         block_item = self.dynamo.add_block(blocker_user.id, blocked_user.id)
 
         # force-unfollow them if we're following them
-        try:
-            self.follow_manager.unfollow(blocker_user.id, blocked_user.id, force=True)
-        except self.follow_manager.exceptions.FollowException:
-            pass
+        follow = self.follow_manager.get_follow(blocker_user.id, blocked_user.id)
+        if follow:
+            follow.unfollow(force=True)
 
         # force-unfollow us if they're following us
-        try:
-            self.follow_manager.unfollow(blocked_user.id, blocker_user.id, force=True)
-        except self.follow_manager.exceptions.FollowException:
-            pass
+        follow = self.follow_manager.get_follow(blocked_user.id, blocker_user.id)
+        if follow:
+            follow.unfollow(force=True)
 
         # force-dislike any likes of posts between the two of us
         self.like_manager.dislike_all_by_user_from_user(blocker_user.id, blocked_user.id)

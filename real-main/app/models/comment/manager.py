@@ -56,9 +56,8 @@ class CommentManager:
             # if post owner is private, must be a follower to comment
             poster = self.user_manager.get_user(posted_by_user_id)
             if poster.item['privacyStatus'] == user.enums.UserPrivacyStatus.PRIVATE:
-                follow_item = self.follow_manager.dynamo.get_following(user_id, posted_by_user_id)
-                follow_status = follow_item['followStatus'] if follow_item else None
-                if follow_status != follow.enums.FollowStatus.FOLLOWING:
+                follow = self.follow_manager.get_follow(user_id, posted_by_user_id)
+                if not follow or follow.status != follow.enums.FollowStatus.FOLLOWING:
                     msg = f'Post owner `{posted_by_user_id}` is private and user `{user_id}` is not a follower'
                     raise exceptions.CommentException(msg)
 

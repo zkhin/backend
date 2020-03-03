@@ -114,12 +114,12 @@ def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, 
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # deny the follow request, verify can't comment
-    follow_manager.deny_follow_request(commenter.id, user.id)
+    follow_manager.get_follow(commenter.id, user.id).deny()
     with pytest.raises(comment_manager.exceptions.CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # accept the follow request, verify can comment
-    follow_manager.accept_follow_request(commenter.id, user.id)
+    follow_manager.get_follow(commenter.id, user.id).accept()
     comment = comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
     assert comment.id == comment_id
 

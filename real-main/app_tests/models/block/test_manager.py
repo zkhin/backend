@@ -41,8 +41,10 @@ def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_us
 
     # check following manager was called to clear any followings
     assert block_manager.follow_manager.mock_calls == [
-        call.unfollow(blocker_user.id, blocked_user.id, force=True),
-        call.unfollow(blocked_user.id, blocker_user.id, force=True),
+        call.get_follow(blocker_user.id, blocked_user.id),
+        call.get_follow().unfollow(force=True),
+        call.get_follow(blocked_user.id, blocker_user.id),
+        call.get_follow().unfollow(force=True),
     ]
 
 

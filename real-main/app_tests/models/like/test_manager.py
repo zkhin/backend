@@ -85,14 +85,14 @@ def test_cant_like_post_of_private_user_without_following(like_manager, follow_m
         like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)
 
     # user 1 first denies the follow request
-    follow_manager.deny_follow_request(user2.id, user1.id)
+    follow_manager.get_follow(user2.id, user1.id).deny()
 
     # user 2 still can't like their post
     with pytest.raises(LikeException):
         like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)
 
     # user 1 now accepts the follow request
-    follow_manager.accept_follow_request(user2.id, user1.id)
+    follow_manager.get_follow(user2.id, user1.id).accept()
 
     # user 2 can now like the post
     like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)

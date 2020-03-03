@@ -45,8 +45,8 @@ class FlagManager:
         # if the post is from a private user (other than ourselves) then we must be a follower to like the post
         if user_id != posted_by_user.id:
             if posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
-                following = self.follow_manager.dynamo.get_following(user_id, posted_by_user.id)
-                if not following or following['followStatus'] != FollowStatus.FOLLOWING:
+                follow = self.follow_manager.get_follow(user_id, posted_by_user.id)
+                if not follow or follow.status != FollowStatus.FOLLOWING:
                     raise exceptions.FlagException(f'User does not have access to post `{post.id}`')
 
         flag_count = post.item.get('flagCount', 0)

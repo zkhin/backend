@@ -13,11 +13,11 @@ class FollowDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_following(self, follower_user_id, followed_user_id):
+    def get_following(self, follower_user_id, followed_user_id, strongly_consistent=False):
         return self.client.get_item({
             'partitionKey': f'following/{follower_user_id}/{followed_user_id}',
             'sortKey': '-',
-        })
+        }, strongly_consistent=strongly_consistent)
 
     def transact_add_following(self, follower_user_id, followed_user_id, follow_status):
         followed_at_str = pendulum.now('utc').to_iso8601_string()

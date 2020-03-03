@@ -51,8 +51,7 @@ def test_flag_post_private_not_following(flag_manager, follow_manager, user, pos
         flag_manager.flag_post(user2.id, post)
 
     # user2 follows
-    follow_manager.request_to_follow(user2, user)
-    follow_manager.accept_follow_request(user2.id, user.id)
+    follow_manager.request_to_follow(user2, user).accept()
 
     # verify user2 can now flag their posts
     flag_manager.flag_post(user2.id, post)

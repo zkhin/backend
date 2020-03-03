@@ -343,22 +343,14 @@ def follow_user(caller_user_id, arguments, source, context):
     if not followed_user:
         raise ClientException(f'No user profile found for followed `{followed_user_id}`')
 
-    # can't follow a user that has blocked us
-    if block_manager.is_blocked(followed_user_id, follower_user_id):
-        raise ClientException(f'User has been blocked by user `{followed_user_id}`')
-
-    # can't follow a user we have blocked
-    if block_manager.is_blocked(follower_user_id, followed_user_id):
-        raise ClientException(f'User has blocked user `{followed_user_id}`')
-
     try:
-        follow_status = follow_manager.request_to_follow(follower_user, followed_user)
+        follow = follow_manager.request_to_follow(follower_user, followed_user)
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
     resp = followed_user.serialize(caller_user_id)
-    resp['followedStatus'] = follow_status
-    if follow_status == FollowStatus.FOLLOWING:
+    resp['followedStatus'] = follow.status
+    if follow.status == FollowStatus.FOLLOWING:
         resp['followerCount'] = followed_user.item.get('followerCount', 0) + 1
     return resp
 
@@ -368,44 +360,55 @@ def unfollow_user(caller_user_id, arguments, source, context):
     follower_user_id = caller_user_id
     followed_user_id = arguments['userId']
 
+    follow = follow_manager.get_follow(follower_user_id, followed_user_id)
+    if not follow:
+        raise ClientException(f'User `{follower_user_id}` is not folloing `{followed_user_id}`')
+
     try:
-        follow_manager.unfollow(follower_user_id, followed_user_id)
+        follow.unfollow()
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = user_manager.get_user(followed_user_id).serialize(caller_user_id)
-    resp['followedStatus'] = FollowStatus.NOT_FOLLOWING
-    # TODO: decrement followerCount if needed
+    resp = user_manager.get_user(followed_user_id, strongly_consistent=True).serialize(caller_user_id)
+    resp['followedStatus'] = follow.status
     return resp
 
 
 @routes.register('Mutation.acceptFollowerUser')
 def accept_follower_user(caller_user_id, arguments, source, context):
-    user_id = arguments['userId']
+    followed_user_id = caller_user_id
+    follower_user_id = arguments['userId']
+
+    follow = follow_manager.get_follow(follower_user_id, followed_user_id)
+    if not follow:
+        raise ClientException(f'User `{follower_user_id}` has not requested to follow user `{followed_user_id}`')
 
     try:
-        follow_manager.accept_follow_request(user_id, caller_user_id)
+        follow.accept()
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = user_manager.get_user(user_id).serialize(caller_user_id)
-    resp['followerStatus'] = FollowStatus.FOLLOWING
-    # TODO: increment followerCount if needed
+    resp = user_manager.get_user(follower_user_id, strongly_consistent=True).serialize(caller_user_id)
+    resp['followerStatus'] = follow.status
     return resp
 
 
 @routes.register('Mutation.denyFollowerUser')
 def deny_follower_user(caller_user_id, arguments, source, context):
-    user_id = arguments['userId']
+    followed_user_id = caller_user_id
+    follower_user_id = arguments['userId']
+
+    follow = follow_manager.get_follow(follower_user_id, followed_user_id)
+    if not follow:
+        raise ClientException(f'User `{follower_user_id}` has not requested to follow user `{followed_user_id}`')
 
     try:
-        follow_manager.deny_follow_request(user_id, caller_user_id)
+        follow.deny()
     except follow_manager.exceptions.FollowException as err:
         raise ClientException(str(err))
 
-    resp = user_manager.get_user(user_id).serialize(caller_user_id)
-    resp['followerStatus'] = FollowStatus.DENIED
-    # TODO: decrement followerCount if needed
+    resp = user_manager.get_user(follower_user_id, strongly_consistent=True).serialize(caller_user_id)
+    resp['followerStatus'] = follow.status
     return resp
 
 

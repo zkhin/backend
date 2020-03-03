@@ -47,8 +47,8 @@ class LikeManager:
         # if the post is from a private user (other than ourselves) then we must be a follower to like the post
         if user.id != posted_by_user.id:
             if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
-                following = self.follow_manager.dynamo.get_following(user.id, posted_by_user.id)
-                if not following or following['followStatus'] != self.follow_manager.enums.FollowStatus.FOLLOWING:
+                follow = self.follow_manager.get_follow(user.id, posted_by_user.id)
+                if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
                     raise exceptions.LikeException(f'User does not have access to post `{post.id}`')
 
         required_status = self.post_manager.enums.PostStatus.COMPLETED
