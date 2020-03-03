@@ -6,6 +6,6 @@
   "devDependencies": {
     "serverless": "^1.63.0",
     "serverless-plugin-git-variables": "^3.4.0",
-    "serverless-python-requirements": "^5.0.0"
+    "serverless-python-requirements": "^5.1.0"
   }
 }

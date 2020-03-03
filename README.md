@@ -98,15 +98,6 @@ Most development takes place here. To initialize the development environment, ru
 
 Holds the [lambda layers](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html). The python packages which the lambda handlers in the primary stack depend on are stored in a layer. This reduces the size of the deployment package of the primary stack from several megabytes to several kilobytes, making deploys of the primary stack much faster.
 
-Because of [a bug](https://github.com/UnitedIncome/serverless-python-requirements/issues/445), `sls deploy` is unable to currently handle the whole deployment process. As such, deployment is currently (Feb 2020) a two-step process:
-
-```sh
-poetry export --without-hashes -f requirements.txt > requirements.txt
-sls deploy
-```
-
-The `requirements.txt` file should not be commited to the repo, as it duplicates the information stored in `poetry.lock`.
-
 #### `real-cloudfront`
 
 Holds:
