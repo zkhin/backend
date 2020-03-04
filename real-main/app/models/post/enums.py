@@ -7,6 +7,7 @@ class FlagStatus:
 
 class PostStatus:
     PENDING = 'PENDING'
+    PROCESSING = 'PROCESSING'
     COMPLETED = 'COMPLETED'
     ERROR = 'ERROR'
     ARCHIVED = 'ARCHIVED'

@@ -66,7 +66,7 @@ def test_process_upload_failure_non_jpeg(media_awaiting_upload):
     # do the call, should update our status
     with pytest.raises(media.exceptions.MediaException, match='Non-jpeg'):
         media.process_upload()
-    assert media.item['mediaStatus'] == MediaStatus.ERROR
+    assert media.item['mediaStatus'] == MediaStatus.PROCESSING_UPLOAD
 
     # check the mocks were not called
     assert media.set_is_verified.mock_calls == []

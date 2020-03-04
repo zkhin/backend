@@ -37,6 +37,7 @@ test('Add post no expiration', async () => {
   expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(post['expiresAt']).toBeNull()
   expect(post['originalPost']['postId']).toBe(postId)
+  await misc.sleep(1000)  // let dynamo converge
 
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
@@ -399,6 +400,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
+  await misc.sleep(1000)  // let dynamo converge
 
   // they add another media post with the same media, original should point back to first post
   variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
@@ -407,6 +409,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
+  await misc.sleep(1000)  // let dynamo converge
 
   // check each others post objects directly
   resp = await theirClient.query({query: schema.post, variables: {postId: ourPostId}})

@@ -223,6 +223,62 @@ def test_serailize(user, post, user_manager):
     assert resp == post.item
 
 
+def test_error_failure(post_manager, user, post, media_manager):
+    # verify can't change a completed post to error
+    with pytest.raises(post_manager.exceptions.PostException, match='PENDING'):
+        post.error()
+
+
+def test_error_pending_post(post_manager, user, media_manager):
+    # create a pending post
+    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
+    media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
+    media = media_manager.init_media(media_item)
+    assert post.item['postStatus'] == post.enums.PostStatus.PENDING
+    assert media.item['mediaStatus'] == media.enums.MediaStatus.AWAITING_UPLOAD
+
+    # error it out, verify in-mem copy got marked as such
+    post.error(media=media)
+    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
+
+    # verify error state saved to DB
+    post.refresh_item()
+    media.refresh_item()
+    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
+
+
+def test_error_processing_post(post_manager, user, media_manager):
+    # create a pending post
+    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
+    media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
+    media = media_manager.init_media(media_item)
+
+    # manually mark the Post & media as being processed
+    transacts = [
+        post.dynamo.transact_set_post_status(post.item, post.enums.PostStatus.PROCESSING),
+        media.dynamo.transact_set_status(media.item, media.enums.MediaStatus.PROCESSING_UPLOAD),
+    ]
+    post.dynamo.client.transact_write_items(transacts)
+
+    post.refresh_item()
+    media.refresh_item()
+    assert post.item['postStatus'] == post.enums.PostStatus.PROCESSING
+    assert media.item['mediaStatus'] == media.enums.MediaStatus.PROCESSING_UPLOAD
+
+    # error it out, verify in-mem copy got marked as such
+    post.error(media=media)
+    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
+
+    # verify error state saved to DB
+    post.refresh_item()
+    media.refresh_item()
+    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
+
+
 def test_set_album_errors(album_manager, post_manager, user_manager, post, post_with_media, user):
     # album doesn't exist
     with pytest.raises(post_manager.exceptions.PostException) as err:

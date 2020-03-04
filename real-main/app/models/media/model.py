@@ -51,8 +51,8 @@ class Media:
             self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
         return BytesIO(self._1080p_image_data)
 
-    def refresh_item(self):
-        self.item = self.dynamo.get_media(self.id)
+    def refresh_item(self, strongly_consistent=False):
+        self.item = self.dynamo.get_media(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def get_readonly_url(self, size):
@@ -96,7 +96,7 @@ class Media:
         self.s3_uploads_client.put_object(path, self.get_native_image_buffer(), self.jpeg_content_type)
 
     def process_upload(self):
-        allowed = (enums.MediaStatus.PROCESSING_UPLOAD, enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
+        allowed = (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
         media_status = self.item['mediaStatus']
         assert media_status in allowed, f'Media is in non-processable status: `{media_status}`'
 
@@ -106,13 +106,11 @@ class Media:
 
         # only accept jpeg uploads
         if not self.is_original_jpeg():
-            self.set_status(enums.MediaStatus.ERROR)
             raise exceptions.MediaException(f'Non-jpeg image uploaded for media `{self.id}`')
 
         try:
             self.set_thumbnails()
         except Exception as err:
-            self.set_status(enums.MediaStatus.ERROR)
             raise exceptions.MediaException(f'Unable to generate thumbnails for media `{self.id}`: {err}')
 
         self.set_is_verified()

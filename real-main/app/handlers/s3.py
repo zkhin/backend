@@ -5,9 +5,8 @@ import urllib
 from app.clients import CloudFrontClient, DynamoClient, S3Client, SecretsManagerClient
 from app.logging import LogLevelContext
 from app.models.media import MediaManager
-from app.models.media.enums import MediaStatus
 from app.models.post import PostManager
-from app.utils import image_size
+from app.models.post.enums import PostStatus
 
 UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
 
@@ -35,41 +34,31 @@ def uploads_object_created(event, context):
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'BEGIN: Handling object created event for key `{path}`')
 
-    try:
-        user_id, post_id, media_id, media_size, media_ext = media_manager.parse_s3_path(path)
-    except ValueError:
-        # not a media path
+    elems = post_manager.parse_s3_path(path)
+    if not elems:
+        # not a native-size image path
         return
+    post_id = elems['post_id']
+    media_id = elems.get('media_id')
 
-    if media_size != image_size.NATIVE.name:
-        # this was a thumbnail
-        return
-
-    # strongly consistent because we may have just added the pending post
-    media = media_manager.get_media(media_id, strongly_consistent=True)
-    if not media:
-        raise Exception(f'Unable to find media `{media_id}` for post `{post_id}`')
-
-    media_status = media.item['mediaStatus']
-    if media_status not in (MediaStatus.AWAITING_UPLOAD, MediaStatus.ERROR):
-        # this media upload was already processed. Direct image data upload?
-        return
-
-    # strongly consistent because we may have just added the pending post
+    # strongly consistent because we may have just added the post to dynamo
     post = post_manager.get_post(post_id, strongly_consistent=True)
-
-    try:
-        media.process_upload()
-    except media.exceptions.MediaException as err:
-        logger.warning(str(err))
-        post.error()
-
-    # if the post in in error state (from this media or other media) then we are done
-    if post.item['postStatus'] == post.enums.PostStatus.ERROR:
+    if not post:
+        logger.warning(f'Unable to find post `{post_id}`, ignoring upload')
         return
 
-    # is there other media left to upload? if not, complete the post
-    for media in media_manager.dynamo.generate_by_post(post_id, uploaded=False):
-        if media['mediaId'] != media_id:
-            return
-    post.complete()
+    if post.post_status != PostStatus.PENDING:
+        logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.post_status}`, ignoring upload')
+        return
+
+    # strongly consistent because we may have just added the media to dynamo
+    media = media_manager.get_media(media_id, strongly_consistent=True) if media_id else None
+    if media_id and not media:
+        logger.warning(f'Unable to find media `{media_id}`, ignoring upload')
+        return
+
+    try:
+        post.process_image_upload(media=media)
+    except (post.exceptions.PostException, media.exceptions.MediaException) as err:
+        logger.warning(str(err))
+        post.error(media=media)

@@ -55,6 +55,7 @@ test('Cannot like/dislike ARCHIVED posts', async () => {
   let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
+  await misc.sleep(1000)  // let dynamo converge
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['archivePost']['postId']).toBe(postId)

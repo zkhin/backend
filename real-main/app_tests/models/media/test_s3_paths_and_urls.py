@@ -1,6 +1,5 @@
 from unittest.mock import call
 
-from app.models.media import MediaManager
 from app.models.media.model import Media
 from app.models.media.enums import MediaStatus
 from app.utils import image_size
@@ -16,16 +15,6 @@ def test_get_s3_path():
     media = Media(item, None)
     path = media.get_s3_path(image_size.NATIVE)
     assert path == 'us-east-1:user-id/post/post-id/media/media-id/native.jpg'
-
-
-def test_parse_post_media_path():
-    path = 'us-east-1:user-id/post/post-id/media/media-id/native.jpg'
-    user_id, post_id, media_id, media_size, media_ext = MediaManager({}).parse_s3_path(path)
-    assert user_id == 'us-east-1:user-id'
-    assert post_id == 'post-id'
-    assert media_id == 'media-id'
-    assert media_size == 'native'
-    assert media_ext == 'jpg'
 
 
 def test_get_readonly_url(cloudfront_client):

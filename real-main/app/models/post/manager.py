@@ -5,6 +5,7 @@ import pendulum
 
 from app.models import album, comment, feed, flag, followed_first_story, like, media, post_view, trending, user
 from app.models.media.enums import MediaStatus
+from app.utils import image_size
 
 from . import enums, exceptions
 from .dynamo import PostDynamo
@@ -38,6 +39,33 @@ class PostManager:
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
+
+    def parse_s3_path(self, path):
+        "Returns a dict of meaningful parsed out elements, or None if unable to parse"
+        parts = path.split('/')
+        elems = {}
+
+        elems['user_id'] = parts.pop(0) if parts else None
+        sep1 = parts.pop(0) if parts else None
+        if sep1 != 'post':
+            return None
+
+        elems['post_id'] = parts.pop(0) if parts else None
+        sep2 = parts.pop(0) if parts else None
+        filename = None
+
+        # coming soon...
+        # if sep2 == 'image':
+        #     filename = parts.pop(0) if parts else None
+
+        if sep2 == 'media':
+            elems['media_id'] = parts.pop(0) if parts else None
+            filename = parts.pop(0) if parts else None
+
+        if filename != image_size.NATIVE.filename:
+            return None
+
+        return elems
 
     def get_post(self, post_id, strongly_consistent=False):
         post_item = self.dynamo.get_post(post_id, strongly_consistent=strongly_consistent)
@@ -106,9 +134,8 @@ class PostManager:
         )]
         for mu in media_uploads:
             # 'media_upload' is straight from graphql, format dictated by schema
-            media_status = MediaStatus.PROCESSING_UPLOAD if 'imageData' in mu else MediaStatus.AWAITING_UPLOAD
             transacts.append(self.media_manager.dynamo.transact_add_media(
-                posted_by_user_id, post_id, mu['mediaId'], media_status=media_status, posted_at=now,
+                posted_by_user_id, post_id, mu['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD, posted_at=now,
                 taken_in_real=mu.get('takenInReal'), original_format=mu.get('originalFormat'),
             ))
         self.dynamo.client.transact_write_items(transacts)

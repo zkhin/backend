@@ -28,6 +28,23 @@ def album(album_manager, user):
     yield album_manager.add_album(user.id, 'aid', 'album name')
 
 
+def test_parse_s3_path(post_manager):
+    assert post_manager.parse_s3_path('') is None
+    assert post_manager.parse_s3_path('aslkdfj') is None
+    assert post_manager.parse_s3_path('user-id/post') is None
+    assert post_manager.parse_s3_path('usER-id/post/poST-id/') is None
+    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id') is None
+    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/480p.jpg') is None
+    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/.jpg') is None
+    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/native') is None
+
+    elems = post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/native.jpg')
+    assert elems == {'user_id': 'usER-id', 'post_id': 'poST-id', 'media_id': 'medIA-id'}
+
+    # rejected for now
+    assert post_manager.parse_s3_path('usER-id/post/poST-id/image/native.jpg') is None
+
+
 def test_get_post(post_manager, user_manager):
     # create a post behind the scenes
     post_id = 'pid'

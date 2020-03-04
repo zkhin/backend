@@ -355,6 +355,7 @@ enum MediaObjectStatus {
 
 enum PostStatus {
   PENDING
+  PROCESSING
   COMPLETED
   ERROR
   ARCHIVED

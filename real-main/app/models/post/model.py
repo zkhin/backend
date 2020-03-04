@@ -5,7 +5,7 @@ import pendulum
 from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
-from .enums import FlagStatus, PostStatus
+from .enums import FlagStatus, PostStatus, PostType
 from .text_image import generate_text_image
 
 logger = logging.getLogger()
@@ -53,6 +53,10 @@ class Post:
     def post_status(self):
         return self.item['postStatus']
 
+    @property
+    def post_type(self):
+        return self.item['postType']
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -99,13 +103,33 @@ class Post:
         resp['postedBy'] = user.serialize(caller_user_id)
         return resp
 
-    def error(self):
-        if self.post_status != PostStatus.PENDING:
-            raise exceptions.PostException('Only posts with status PENDING may transition to ERROR')
+    def process_image_upload(self, media=None):
+        assert self.post_type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
+        assert self.post_status in (PostStatus.PENDING, PostStatus.ERROR), \
+            'Can only process_image_upload() for PENDING & ERROR posts'
+        assert media, 'For now, Post.process_image_upload() must be called with media'
+
+        # mark ourselves as processing
+        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.PROCESSING)]
+        self.dynamo.client.transact_write_items(transacts)
+        self.item['postStatus'] = PostStatus.PROCESSING
+
+        # let any exceptions flow through up the chain
+        media.process_upload()
+        self.complete()
+
+    def error(self, media=None):
+        if self.post_status not in (PostStatus.PENDING, PostStatus.PROCESSING):
+            raise exceptions.PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
 
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ERROR)]
+        if media:
+            transacts.append(media.dynamo.transact_set_status(media.item, media.enums.MediaStatus.ERROR))
+
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
+        if media:
+            media.refresh_item(strongly_consistent=True)
         return self
 
     def complete(self, now=None):
