@@ -155,14 +155,14 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
   expect(resp['data']['post']['anonymousLikeCount']).toBeNull()
   expect(resp['data']['post']['onymouslyLikedBy']).toBeNull()
 
-  // verify we *can* see like counts on their post
+  // verify we *can't* see like counts on their post
   variables = {postId: theirPostId}
   resp = await ourClient.query({query: schema.post, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
-  expect(resp['data']['post']['onymousLikeCount']).toBe(0)
-  expect(resp['data']['post']['anonymousLikeCount']).toBe(0)
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['onymousLikeCount']).toBeNull()
+  expect(resp['data']['post']['anonymousLikeCount']).toBeNull()
+  expect(resp['data']['post']['onymouslyLikedBy']).toBeNull()
 
   // verify they *cannot* see like counts on our post
   variables = {postId: ourPostId}
@@ -175,7 +175,7 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
 
   // verify they *can* see like counts on their post
   variables = {postId: theirPostId}
-  resp = await ourClient.query({query: schema.post, variables})
+  resp = await theirClient.query({query: schema.post, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['onymousLikeCount']).toBe(0)
@@ -202,16 +202,8 @@ test('Verify likes preserved through period in which user disables their likes',
   resp = await theirClient.mutate({mutation: schema.anonymouslyLikePost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
 
-  // check we both can see all of those likes on the post
+  // check we can see all of those likes on the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
-  expect(resp['data']['post']['anonymousLikeCount']).toBe(1)
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
-
-  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['onymousLikeCount']).toBe(1)
@@ -224,15 +216,8 @@ test('Verify likes preserved through period in which user disables their likes',
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['likesDisabled']).toBe(true)
 
-  // verify nobody sees likes on the post
+  // verify we cant see likes on the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['onymousLikeCount']).toBeNull()
-  expect(resp['data']['post']['anonymousLikeCount']).toBeNull()
-  expect(resp['data']['post']['onymouslyLikedBy']).toBeNull()
-
-  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['onymousLikeCount']).toBeNull()
@@ -246,14 +231,6 @@ test('Verify likes preserved through period in which user disables their likes',
 
   // verify the original likes now show up on the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
-  expect(resp['data']['post']['anonymousLikeCount']).toBe(1)
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
-
-  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['onymousLikeCount']).toBe(1)

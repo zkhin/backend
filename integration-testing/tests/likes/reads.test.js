@@ -109,9 +109,8 @@ test('Order of users that have onymously liked a post', async () => {
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['dislikePost']
   expect(post['likeStatus']).toBe('NOT_LIKED')
-  expect(post['onymousLikeCount']).toBe(1)
-  expect(post['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(post['onymouslyLikedBy']['items'][0]['userId']).toBe(other1UserId)
+  expect(post['onymousLikeCount']).toBeNull()
+  expect(post['onymouslyLikedBy']).toBeNull()
 
   // double check the post
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -243,4 +242,58 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects']).toHaveLength(1)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
+})
+
+
+test('Like lists and counts are private to the owner of the post', async () => {
+  // https://github.com/real-social-media/backend/issues/16
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let variables = {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}
+  let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // verify we can see like counts on the post
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['anonymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
+
+  // verify they cannot see like counts on the post
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['anonymousLikeCount']).toBeNull()
+  expect(resp['data']['post']['onymousLikeCount']).toBeNull()
+  expect(resp['data']['post']['onymouslyLikedBy']).toBeNull()
+
+  // they like the post
+  resp = await theirClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onymouslyLikePost']['postId']).toBe(postId)
+  expect(resp['data']['onymouslyLikePost']['likeStatus']).toBe('ONYMOUSLY_LIKED')
+
+  // verify we can see that like reflected in the totals
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['anonymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
+  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
+
+  // verify they cannot see that like reflected in the totals
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['anonymousLikeCount']).toBeNull()
+  expect(resp['data']['post']['onymousLikeCount']).toBeNull()
+  expect(resp['data']['post']['onymouslyLikedBy']).toBeNull()
 })

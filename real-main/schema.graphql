@@ -444,8 +444,6 @@ type Post {
   likesDisabled: Boolean
   sharingDisabled: Boolean
   verificationHidden: Boolean
-  onymousLikeCount: Int  # onymous means non-anonymous, null if likes are disabled
-  anonymousLikeCount: Int  # null if likes disabled
 
   # DEPRECATED: use Post.image, Post.isVerified and Post.imageUploadUrl instead
   mediaObjects: [MediaObject!]!
@@ -473,8 +471,11 @@ type Post {
 
   # Users that have onymously liked this post
   #   - ordered with first like first
-  #   - null if likes are disabled
+  #   - like lists and counts are private to the post owner themselves
+  #   - onymous means non-anonymous
   onymouslyLikedBy(limit: Int, nextToken: String): PaginatedUsers
+  onymousLikeCount: Int
+  anonymousLikeCount: Int
 
   # Comments on the post
   #   - null if comments are disabled

@@ -574,7 +574,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(2000)  // let dynamo converge
 
   // they add a media post that's a duplicate of ours
   const theirPostId = uuidv4()

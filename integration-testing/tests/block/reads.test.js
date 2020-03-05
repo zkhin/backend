@@ -34,19 +34,20 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add a media post, complete it
-  let [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let variables = {postId, mediaId, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId1)
+  expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
+  await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we set some details on our profile
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {
-    photoMediaId: mediaId1,
+    photoPostId: postId,
     bio: 'testing',
     fullName: 'test test',
   }})
@@ -153,45 +154,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['verificationHidden'] = null
   ourUserFull['viewCountsHidden'] = null
   expect(ourUserFull).toEqual(ourUserLimited)
-})
-
-
-test('Blocked cannot see blocker in list that have onymously liked a post, blocker can see blocked', async () => {
-  // us and them and other
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [otherClient] = await loginCache.getCleanLogin()
-
-  // other adds a post
-  const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
-  let resp = await otherClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-
-  // we both like it onymously
-  resp = await ourClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  misc.sleep(1000)  // make sure ordering is correct
-  resp = await theirClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-
-  // we block them
-  resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
-
-  // verify they do not see us in the list of likers of the post
-  resp = await theirClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
-
-  // verify we see them in the list of likers of the post
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(2)
-  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
-  expect(resp['data']['post']['onymouslyLikedBy']['items'][1]['userId']).toBe(theirUserId)
 })
 
 
@@ -325,7 +287,7 @@ test('Blocked cannot see blockers lists of likes', async () => {
 })
 
 
-test('Blocked cannot see directly see blockers posts or list of likers of posts', async () => {
+test('Blocked cannot see directly see blockers posts', async () => {
   // use and them
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -359,5 +321,5 @@ test('Blocked cannot see directly see blockers posts or list of likers of posts'
   // verify we can see their post and likers of the post
   resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
+  expect(resp['data']['post']['postId']).toBe(postId2)
 })

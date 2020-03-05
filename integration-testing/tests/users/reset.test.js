@@ -230,54 +230,6 @@ test('resetUser deletes any likes we have placed', async () => {
 })
 
 
-test('resetUser deletes any likes on our posts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-
-  // we add a post
-  const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-
-  // they like the post onymouly
-  resp = await theirClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onymouslyLikePost']['postId']).toBe(postId)
-
-  // check the list of onymous likers of the post
-  resp = await theirClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
-  expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(theirUserId)
-
-  // check their list of onymously liked posts
-  resp = await theirClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['onymouslyLikedPosts']['items']).toHaveLength(1)
-  expect(resp['data']['self']['onymouslyLikedPosts']['items'][0]['postId']).toBe(postId)
-
-  // we reset our account
-  resp = await ourClient.mutate({mutation: schema.resetUser})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['resetUser']['userId']).toBe(ourUserId)
-
-  // clear their client's cache
-  await theirClient.resetStore()
-
-  // check post is gone
-  resp = await theirClient.query({query: schema.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toBeNull()
-
-  // check their list of onymously liked posts
-  resp = await theirClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['onymouslyLikedPosts']['items']).toHaveLength(0)
-})
-
-
 test('resetUser deletes all blocks of us and by us', async () => {
   // us and two other users
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()

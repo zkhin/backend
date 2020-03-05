@@ -397,6 +397,7 @@ test('Like counts show up for posts in feed', async () => {
   let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
+  await misc.sleep(1000)  // let dynamo converge
 
   // get that post from our feed, check its like counts
   resp = await ourClient.query({query: schema.selfFeed})

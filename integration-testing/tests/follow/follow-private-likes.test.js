@@ -56,8 +56,9 @@ test('When we stop following a private user, any likes of ours on their posts di
   expect(resp['data']['anonymouslyLikePost']['likeStatus']).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
-  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
+  resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
   expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
   expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
@@ -80,6 +81,11 @@ test('When we stop following a private user, any likes of ours on their posts di
   await ourClient.resetStore()
 
   // check those likes disappeared from the lists
+  resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['onymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
+
   resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']).toBeNull()  // access denied
@@ -130,8 +136,9 @@ test('When a private user decides to deny our following, any likes of ours on th
   expect(resp['data']['anonymouslyLikePost']['likeStatus']).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
-  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
+  resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['onymousLikeCount']).toBe(1)
   expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(1)
   expect(resp['data']['post']['onymouslyLikedBy']['items'][0]['userId']).toBe(ourUserId)
 
@@ -139,9 +146,6 @@ test('When a private user decides to deny our following, any likes of ours on th
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['onymouslyLikedPosts']['items']).toHaveLength(1)
   expect(resp['data']['self']['onymouslyLikedPosts']['items'][0]['postId']).toBe(postId1)
-
-  resp = await ourClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['anonymouslyLikedPosts']['items']).toHaveLength(1)
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['postId']).toBe(postId2)
 
@@ -154,15 +158,13 @@ test('When a private user decides to deny our following, any likes of ours on th
   await ourClient.resetStore()
 
   // check we can no longer see lists of likes
-  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
+  resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toBeNull()  // access denied
+  expect(resp['data']['post']['onymousLikeCount']).toBe(0)
+  expect(resp['data']['post']['onymouslyLikedBy']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['onymouslyLikedPosts']['items']).toHaveLength(0)
-
-  resp = await ourClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['anonymouslyLikedPosts']['items']).toHaveLength(0)
 })

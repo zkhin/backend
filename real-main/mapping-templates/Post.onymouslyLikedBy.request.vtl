@@ -3,7 +3,11 @@
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 
-## postedBy is filed in by the parent
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+#if ($ctx.source.postedByUserId != $callerUserId)
+  #return
+#end
+
 #if ($ctx.source.postedBy.likesDisabled || $ctx.source.likesDisabled)
   #return
 #end
