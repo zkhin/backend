@@ -5,7 +5,6 @@ import pendulum
 
 from app.models import album, comment, feed, flag, followed_first_story, like, media, post_view, trending, user
 from app.models.media.enums import MediaStatus
-from app.utils import image_size
 
 from . import enums, exceptions
 from .dynamo import PostDynamo
@@ -40,39 +39,15 @@ class PostManager:
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
 
-    def parse_s3_path(self, path):
-        "Returns a dict of meaningful parsed out elements, or None if unable to parse"
-        parts = path.split('/')
-        elems = {}
-
-        elems['user_id'] = parts.pop(0) if parts else None
-        sep1 = parts.pop(0) if parts else None
-        if sep1 != 'post':
-            return None
-
-        elems['post_id'] = parts.pop(0) if parts else None
-        sep2 = parts.pop(0) if parts else None
-        filename = None
-
-        # coming soon...
-        # if sep2 == 'image':
-        #     filename = parts.pop(0) if parts else None
-
-        if sep2 == 'media':
-            elems['media_id'] = parts.pop(0) if parts else None
-            filename = parts.pop(0) if parts else None
-
-        if filename != image_size.NATIVE.filename:
-            return None
-
-        return elems
-
     def get_post(self, post_id, strongly_consistent=False):
         post_item = self.dynamo.get_post(post_id, strongly_consistent=strongly_consistent)
         return self.init_post(post_item) if post_item else None
 
     def init_post(self, post_item):
         kwargs = {
+            'cloudfront_client': self.clients.get('cloudfront'),
+            'mediaconvert_client': self.clients.get('mediaconvert'),
+            's3_uploads_client': self.clients.get('s3_uploads'),
             'album_manager': self.album_manager,
             'comment_manager': self.comment_manager,
             'feed_manager': self.feed_manager,
@@ -93,18 +68,17 @@ class PostManager:
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
 
-        if post_type == enums.PostType.IMAGE:
-            if not media_uploads:
-                raise exceptions.PostException('To add an IMAGE post mediaObjectUploads must be supplied')
-        elif post_type == enums.PostType.TEXT_ONLY:
+        if post_type == enums.PostType.TEXT_ONLY:
+            if not text:
+                raise exceptions.PostException('Cannot add text-only post without text')
             if media_uploads:
-                raise exceptions.PostException('To add an TEXT_ONLY post mediaObjectUploads may not be supplied')
-        else:
-            raise exceptions.PostException('Invalid postType `{post_type}`')
+                raise exceptions.PostException('Cannot add text-only post with media uploads')
 
-        if not text and not media_uploads:
-            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` without text or media'
-            raise exceptions.PostException(msg)
+        if post_type == enums.PostType.IMAGE and not media_uploads:
+            raise exceptions.PostException('Cannot add image post without media uploads (for now)')
+
+        if post_type == enums.PostType.VIDEO and media_uploads:
+            raise exceptions.PostException('Cannot add video post with media uploads')
 
         if len(media_uploads) > 1:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with more than one media'
@@ -143,18 +117,23 @@ class PostManager:
         post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
         post = self.init_post(post_item)
 
-        # if image data was directly included for any media objects, process it
-        media_items = []
-        for mu in media_uploads:
-            media = self.media_manager.get_media(mu['mediaId'], strongly_consistent=True)
-            if image_data := mu.get('imageData'):
-                media.upload_native_image_data_base64(image_data)
-                media.process_upload()
-            media_items.append(media.item)
-
-        # if all media has been processed, complete the post
-        if all(media_item['mediaStatus'] == MediaStatus.UPLOADED for media_item in media_items):
+        # text-only posts can be completed immediately
+        if post.item['postType'] == enums.PostType.TEXT_ONLY:
             post.complete(now=now)
+
+        media_items = []
+        if post.item['postType'] == enums.PostType.IMAGE:
+            # if image data was directly included for any media objects, process it
+            for mu in media_uploads:
+                media = self.media_manager.get_media(mu['mediaId'], strongly_consistent=True)
+                if image_data := mu.get('imageData'):
+                    media.upload_native_image_data_base64(image_data)
+                    media.process_upload()
+                media_items.append(media.item)
+
+            # if all media has been processed, complete the post
+            if all(media_item['mediaStatus'] == MediaStatus.UPLOADED for media_item in media_items):
+                post.complete(now=now)
 
         post.item['mediaObjects'] = media_items
         return post

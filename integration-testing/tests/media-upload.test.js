@@ -3,24 +3,25 @@
 const fs = require('fs')
 const path = require('path')
 const requestImageSize = require('request-image-size')
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
+const jpgHeaders = {'Content-Type': 'image/jpeg'}
+const pngHeaders = {'Content-Type': 'image/png'}
+
 const imageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
-const imageContentType = 'image/jpeg'
 const imageHeight = 320
 const imageWidth = 240
 
 const bigImageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'big-blank.jpg'))
-const bigImageContentType = 'image/jpeg'
 const bigImageHeight = 2000
 const bigImageWidth = 4000
 
 const pngData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'squirrel.png'))
-const pngContentType = 'image/png'
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -80,7 +81,7 @@ test('Uploading image sets width, height and colors', async () => {
   expect(resp['data']['post']['image']).toBeNull()
 
   // upload the first of those images, give the s3 trigger a second to fire
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check width, height and colors are now set
@@ -119,7 +120,7 @@ test('Uploading png image results in error', async () => {
   expect(uploadUrl.split('?')[0]).toBe(resp['data']['addPost']['mediaObjects'][0]['uploadUrl'].split('?')[0])
 
   // upload a png, give the s3 trigger a second to fire
-  await misc.uploadMedia(pngData, pngContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: pngHeaders, body: pngData})
   await misc.sleep(5000)
 
   // check that media ended up in an ERROR state
@@ -144,7 +145,7 @@ test('Thumbnails built on successful upload', async () => {
   expect(uploadUrl.split('?')[0]).toBe(resp['data']['addPost']['mediaObjects'][0]['uploadUrl'].split('?')[0])
 
   // upload a big jpeg, give the s3 trigger a second to fire
-  await misc.uploadMedia(bigImageData, bigImageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: jpgHeaders, body: bigImageData})
   await misc.sleep(5000)  // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostCompleted(ourClient, postId)
 

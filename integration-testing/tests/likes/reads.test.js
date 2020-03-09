@@ -1,14 +1,15 @@
 /* eslint-env jest */
 
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const contentType = 'image/jpeg'
 const imageData = misc.generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -59,6 +60,7 @@ test('Order of users that have onymously liked a post', async () => {
   let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
+  await misc.sleep(1000)  // let dynamo converge
 
   // all three of us onymously like it
   resp = await other2Client.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
@@ -214,7 +216,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we anonymously like the post, they onymously like it
@@ -253,7 +255,7 @@ test('Like lists and counts are private to the owner of the post', async () => {
   // we add a post
   const postId = uuidv4()
   let variables = {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

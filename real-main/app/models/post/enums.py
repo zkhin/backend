@@ -1,3 +1,10 @@
+# keep in sync with object created handlers defined serverless.yml
+VIDEO_ORIGINAL_FILENAME = 'video-original.mov'
+VIDEO_HLS_PREFIX = 'video-hls/video'
+VIDEO_POSTER_PREFIX = 'video-poster/poster'
+IMAGE_DIR = 'image'
+
+
 class FlagStatus:
     FLAGGED = 'FLAGGED'
     NOT_FLAGGED = 'NOT_FLAGGED'
@@ -19,6 +26,6 @@ class PostStatus:
 class PostType:
     TEXT_ONLY = 'TEXT_ONLY'
     IMAGE = 'IMAGE'
-    # VIDEO = 'VIDEO'
+    VIDEO = 'VIDEO'
 
-    _ALL = (TEXT_ONLY, IMAGE)
+    _ALL = (TEXT_ONLY, IMAGE, VIDEO)

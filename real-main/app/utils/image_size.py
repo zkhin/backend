@@ -1,3 +1,6 @@
+# keep in sync with object created handlers defined serverless.yml
+
+
 class _ImageSize:
 
     file_ext = 'jpg'

@@ -7,6 +7,7 @@ import pytest
 
 from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus, PostType
+from app.utils import image_size
 
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
@@ -28,23 +29,6 @@ def album(album_manager, user):
     yield album_manager.add_album(user.id, 'aid', 'album name')
 
 
-def test_parse_s3_path(post_manager):
-    assert post_manager.parse_s3_path('') is None
-    assert post_manager.parse_s3_path('aslkdfj') is None
-    assert post_manager.parse_s3_path('user-id/post') is None
-    assert post_manager.parse_s3_path('usER-id/post/poST-id/') is None
-    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id') is None
-    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/480p.jpg') is None
-    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/.jpg') is None
-    assert post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/native') is None
-
-    elems = post_manager.parse_s3_path('usER-id/post/poST-id/media/medIA-id/native.jpg')
-    assert elems == {'user_id': 'usER-id', 'post_id': 'poST-id', 'media_id': 'medIA-id'}
-
-    # rejected for now
-    assert post_manager.parse_s3_path('usER-id/post/poST-id/image/native.jpg') is None
-
-
 def test_get_post(post_manager, user_manager):
     # create a post behind the scenes
     post_id = 'pid'
@@ -61,7 +45,7 @@ def test_get_post_dne(post_manager):
 
 def test_add_post_errors(post_manager):
     # try to add a post without any content (no text or media)
-    with pytest.raises(post_manager.exceptions.PostException, match='without text or media'):
+    with pytest.raises(post_manager.exceptions.PostException, match='without text'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY)
 
     # try to add a post without two media
@@ -80,16 +64,20 @@ def test_add_post_errors(post_manager):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration)
 
     # try to add an image post with no media_uploads
-    with pytest.raises(post_manager.exceptions.PostException, match='mediaObjectUploads must be supplied'):
+    with pytest.raises(post_manager.exceptions.PostException, match='without media uploads'):
         post_manager.add_post('pbuid', 'pid', PostType.IMAGE, text='my text')
 
     # try to add a text-only post with a media_upload
-    with pytest.raises(post_manager.exceptions.PostException, match='mediaObjectUploads may not be supplied'):
-        post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, media_uploads=[{'mediaId': 'mid'}])
+    with pytest.raises(post_manager.exceptions.PostException, match='with media uploads'):
+        post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', media_uploads=[{'mediaId': 'mid'}])
 
-    # try to add an invalid post type
-    with pytest.raises(post_manager.exceptions.PostException, match='Invalid postType'):
-        post_manager.add_post('pbuid', 'pid', 'ptype')
+    # try to add a text-only post with no text
+    with pytest.raises(post_manager.exceptions.PostException, match='without text'):
+        post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY)
+
+    # try to add a video post with a media_upload
+    with pytest.raises(post_manager.exceptions.PostException, match='with media uploads'):
+        post_manager.add_post('pbuid', 'pid', PostType.VIDEO, media_uploads=[{'mediaId': 'mid'}])
 
 
 def test_add_text_only_post(post_manager, user_manager):
@@ -161,6 +149,96 @@ def test_add_text_only_post_to_album(post_manager, user, album):
     album.refresh_item()
     assert album.item['postCount'] == 1
     assert album.item['rankCount'] == 1
+
+
+def test_video_post_to_album(post_manager, user, album, s3_uploads_client):
+    post_id = 'pid'
+
+    # add the post, check all looks good
+    post = post_manager.add_post(user.id, post_id, PostType.VIDEO, album_id=album.id)
+    assert post.id == post_id
+    assert post.item['albumId'] == album.id
+    assert post.item['gsiK3SortKey'] == -1   # album rank
+
+    album.refresh_item()
+    assert 'postCount' not in album.item
+    assert 'rankCount' not in album.item
+
+    # complete the video post
+    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
+    post.dynamo.client.transact_write_items(transacts)
+    post.refresh_item()
+    image_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(image_path, open(grant_path, 'rb'), 'image/jpeg')
+    post.complete()
+    assert post.item['albumId'] == album.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+
+    post.refresh_item()
+    assert post.item['albumId'] == album.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+
+    album.refresh_item()
+    assert album.item['postCount'] == 1
+    assert album.item['rankCount'] == 1
+
+
+def test_add_video_post_minimal(post_manager, user_manager):
+    user_id = 'pbuid'
+    post_id = 'pid'
+
+    # add the post
+    user_manager.create_cognito_only_user(user_id, 'pbUname')
+    post_manager.add_post(user_id, post_id, PostType.VIDEO)
+
+    # retrieve the post & media, check it
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['postType'] == PostType.VIDEO
+    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedAt']
+    assert post.item['postStatus'] == PostStatus.PENDING
+    assert 'text' not in post.item
+    assert 'textTags' not in post.item
+    assert 'expiresAt' not in post.item
+    assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
+
+
+def test_add_video_post_maximal(post_manager, user_manager):
+    user_id = 'pbuid'
+    post_id = 'pid'
+    text = 'from lore to ipsum, right @pbUname?'
+    now = pendulum.now('utc')
+    lifetime_duration = pendulum.duration(hours=1)
+    comments_disabled = True
+    likes_disabled = True
+    sharing_disabled = True
+    verification_hidden = True
+    expires_at = now + lifetime_duration
+
+    # add the post
+    user_manager.create_cognito_only_user(user_id, 'pbUname')
+    post_manager.add_post(
+        user_id, post_id, PostType.VIDEO, text=text, lifetime_duration=lifetime_duration,
+        comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
+        verification_hidden=verification_hidden, now=now,
+    )
+
+    # retrieve the post & media, check it
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['postType'] == PostType.VIDEO
+    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedAt'] == now.to_iso8601_string()
+    assert post.item['postStatus'] == PostStatus.PENDING
+    assert post.item['text'] == text
+    assert len(post.item['textTags']) == 1
+    assert post.item['expiresAt'] == expires_at.to_iso8601_string()
+    assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
+    assert post.item['commentsDisabled'] is True
+    assert post.item['likesDisabled'] is True
+    assert post.item['sharingDisabled'] is True
+    assert post.item['verificationHidden'] is True
 
 
 def test_add_media_post(post_manager):

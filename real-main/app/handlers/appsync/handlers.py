@@ -16,6 +16,7 @@ from app.models.like import LikeManager
 from app.models.like.enums import LikeStatus
 from app.models.media import MediaManager
 from app.models.post import PostManager
+from app.models.post.enums import PostStatus, PostType
 from app.models.post_view import PostViewManager
 from app.models.user import UserManager
 from app.utils import image_size
@@ -520,24 +521,38 @@ def add_post(caller_user_id, arguments, source, context):
 
 @routes.register('Post.image')
 def post_image(caller_user_id, arguments, source, context):
-    allowed_statuses = [media_manager.enums.MediaStatus.UPLOADED, media_manager.enums.MediaStatus.ARCHIVED]
-    media_items = [
-        mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
-        if mi['mediaStatus'] in allowed_statuses
-    ]
-    if not media_items:
-        return None
-    media = media_manager.init_media(media_items[0])
-    return {
-        'url': media.get_readonly_url(image_size.NATIVE),
-        'url64p': media.get_readonly_url(image_size.P64),
-        'url480p': media.get_readonly_url(image_size.P480),
-        'url1080p': media.get_readonly_url(image_size.P1080),
-        'url4k': media.get_readonly_url(image_size.K4),
-        'width': media.item.get('width'),
-        'height': media.item.get('height'),
-        'colors': media.item.get('colors'),
-    }
+    post = post_manager.get_post(source['postId'])
+
+    if post.item['postType'] == PostType.IMAGE:
+        allowed_statuses = [media_manager.enums.MediaStatus.UPLOADED, media_manager.enums.MediaStatus.ARCHIVED]
+        media_items = [
+            mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
+            if mi['mediaStatus'] in allowed_statuses
+        ]
+        if media_items:
+            media = media_manager.init_media(media_items[0])
+            return {
+                'url': media.get_readonly_url(image_size.NATIVE),
+                'url64p': media.get_readonly_url(image_size.P64),
+                'url480p': media.get_readonly_url(image_size.P480),
+                'url1080p': media.get_readonly_url(image_size.P1080),
+                'url4k': media.get_readonly_url(image_size.K4),
+                'width': media.item.get('width'),
+                'height': media.item.get('height'),
+                'colors': media.item.get('colors'),
+            }
+
+    if post.item['postType'] == PostType.VIDEO:
+        if post.item['postStatus'] in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
+            return {
+                'url': post.get_image_readonly_url(image_size.NATIVE),
+                'url64p': post.get_image_readonly_url(image_size.P64),
+                'url480p': post.get_image_readonly_url(image_size.P480),
+                'url1080p': post.get_image_readonly_url(image_size.P1080),
+                'url4k': post.get_image_readonly_url(image_size.K4),
+            }
+
+    return None
 
 
 @routes.register('Post.imageUploadUrl')
@@ -552,6 +567,36 @@ def post_image_upload_url(caller_user_id, arguments, source, context):
     if not media_items:
         return None
     return media_manager.init_media(media_items[0]).get_writeonly_url()
+
+
+@routes.register('Post.video')
+def post_video(caller_user_id, arguments, source, context):
+    post = post_manager.get_post(source['postId'])
+
+    if post.item['postType'] != post.enums.PostType.VIDEO:
+        return None
+
+    if post.item['postStatus'] != post.enums.PostStatus.COMPLETED:
+        return None
+
+    return {
+        'urlMasterM3U8': post.get_hls_master_m3u8_url(),
+        'accessCookies': post.get_hls_access_cookies(),
+    }
+
+
+@routes.register('Post.videoUploadUrl')
+def post_video_upload_url(caller_user_id, arguments, source, context):
+    post_id = source['postId']
+    post = post_manager.get_post(post_id)
+
+    if caller_user_id != post.item['postedByUserId']:
+        return None
+
+    if post.item['postType'] != post.enums.PostType.VIDEO:
+        return None
+
+    return post.get_video_writeonly_url()
 
 
 @routes.register('Mutation.editPost')

@@ -365,7 +365,7 @@ enum PostStatus {
 enum PostType {
   TEXT_ONLY
   IMAGE
-  # VIDEO
+  VIDEO
 }
 
 enum LikeStatus {
@@ -406,6 +406,21 @@ type Image {
   width: Int
   height: Int
   colors: [Color!]
+}
+
+type Video {
+  urlMasterM3U8: AWSURL!
+  accessCookies: CloudFrontAccessCookies!
+}
+
+# https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-setting-signed-cookie-custom-policy.html
+type CloudFrontAccessCookies {
+  domain: String!           # domain the cookies should be set on
+  path: String!             # path the cookies should be set on
+  expiresAt: AWSDateTime!   # when the cookie is good till
+  policy: String!           # value of CloudFront-Policy cookie
+  signature: String!        # value of CloudFront-Signature cookie
+  keyPairId: String!        # value of CloudFront-Key-Pair-Id cookie
 }
 
 type MediaObject {
@@ -452,6 +467,9 @@ type Post {
   image: Image
   isVerified: Boolean
   imageUploadUrl: AWSURL
+
+  video: Video
+  videoUploadUrl: AWSURL
 
   # The first post with the same media as this post
   #   - null if post has not yet reached COMPLETED stage

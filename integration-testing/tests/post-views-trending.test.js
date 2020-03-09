@@ -373,6 +373,7 @@ test('We see our own trending posts correctly', async () => {
   // both posts get viewed
   resp = await theirClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId1, postId2]}})
   expect(resp['errors']).toBeUndefined()
+  await misc.sleep(2000)  // let dynamo converge
 
   // verify trending posts looks correct, including the items that are batch filled in
   resp = await ourClient.query({query: schema.trendingPosts})

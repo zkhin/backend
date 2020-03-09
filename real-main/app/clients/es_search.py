@@ -8,7 +8,7 @@ from requests_aws4auth import AWS4Auth
 
 logger = logging.getLogger()
 
-REGION = os.environ.get('REGION')
+AWS_REGION = os.environ.get('AWS_REGION')
 ES_SEARCH_DOMAIN = os.environ.get('ES_SEARCH_DOMAIN')
 
 
@@ -26,7 +26,7 @@ class ESSearchClient:
         'bio',
     ]
 
-    def __init__(self, region=REGION, domain=ES_SEARCH_DOMAIN):
+    def __init__(self, region=AWS_REGION, domain=ES_SEARCH_DOMAIN):
         assert region, '`region` is required'
         assert domain, '`domain` is required'
         self.region = region

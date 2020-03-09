@@ -1,8 +1,11 @@
+from io import BytesIO
 import logging
 
 import pendulum
+from PIL import Image, ImageOps
 
 from app.models.media.enums import MediaStatus
+from app.utils import image_size
 
 from . import enums, exceptions
 from .enums import FlagStatus, PostStatus, PostType
@@ -13,15 +16,24 @@ logger = logging.getLogger()
 
 class Post:
 
+    jpeg_content_type = 'image/jpeg'
+
     enums = enums
     exceptions = exceptions
     FlagStatus = FlagStatus
 
-    def __init__(self, item, post_dynamo, post_manager=None, trending_manager=None, feed_manager=None,
-                 like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
-                 comment_manager=None, flag_manager=None, album_manager=None, followed_first_story_manager=None):
+    def __init__(self, item, post_dynamo, cloudfront_client=None, mediaconvert_client=None, s3_uploads_client=None,
+                 feed_manager=None, like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
+                 comment_manager=None, flag_manager=None, album_manager=None, followed_first_story_manager=None,
+                 trending_manager=None, post_manager=None):
         self.dynamo = post_dynamo
 
+        if cloudfront_client:
+            self.cloudfront_client = cloudfront_client
+        if mediaconvert_client:
+            self.mediaconvert_client = mediaconvert_client
+        if s3_uploads_client:
+            self.s3_uploads_client = s3_uploads_client
         if album_manager:
             self.album_manager = album_manager
         if comment_manager:
@@ -57,51 +69,141 @@ class Post:
     def post_type(self):
         return self.item['postType']
 
+    @property
+    def s3_prefix(self):
+        return '/'.join([self.item['postedByUserId'], 'post', self.id])
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def get_native_image_buffer(self):
-        if (post_status := self.item['postStatus']) not in (enums.PostStatus.COMPLETED, enums.PostStatus.ARCHIVED):
-            raise exceptions.PostException(f'No native image buffer for post `{self.id}` with status `{post_status}`')
+        if (self.item['postStatus'] == PostStatus.PENDING):
+            raise exceptions.PostException(f'No native image buffer for {PostStatus.PENDING} post `{self.id}``')
 
-        post_type = self.item['postType']
-        if post_type == enums.PostType.TEXT_ONLY:
-            dimensions_4k = (3840, 2160)
-            return generate_text_image(self.item['text'], dimensions_4k)
+        if not hasattr(self, '_native_image_data'):
+            post_type = self.item['postType']
 
-        if post_type == enums.PostType.IMAGE:
-            media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
-            if not media_item:
-                # shouldn't get here, as the post should be in completed state and have media
-                raise Exception(f'Did not find uploaded media for post `{self.id}`')
-            return self.media_manager.init_media(media_item).get_native_image_buffer()
+            if post_type == enums.PostType.TEXT_ONLY:
+                max_dims = image_size.K4.max_dimensions
+                self._native_image_data = generate_text_image(self.item['text'], max_dims).read()
 
-        raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+            elif post_type == enums.PostType.VIDEO:
+                path = self.get_image_path(image_size.NATIVE)
+                self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+
+            elif post_type == enums.PostType.IMAGE:
+                media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
+                if not media_item:
+                    # shouldn't get here, as the post should be in completed state and have media
+                    raise Exception(f'Did not find uploaded media for post `{self.id}`')
+                path = self.media_manager.init_media(media_item).get_s3_path(image_size.NATIVE)
+                self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+
+            else:
+                raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+
+        return BytesIO(self._native_image_data)
 
     def get_1080p_image_buffer(self):
-        if (post_status := self.item['postStatus']) not in (enums.PostStatus.COMPLETED, enums.PostStatus.ARCHIVED):
-            raise exceptions.PostException(f'No native image buffer for post `{self.id}` with status `{post_status}`')
+        if (self.item['postStatus'] == PostStatus.PENDING):
+            raise exceptions.PostException(f'No 1080p image buffer for {PostStatus.PENDING} post `{self.id}``')
 
-        post_type = self.item['postType']
-        if post_type == enums.PostType.TEXT_ONLY:
-            dimensions_1080p = (1920, 1080)
-            return generate_text_image(self.item['text'], dimensions_1080p)
+        if not hasattr(self, '_1080p_image_data'):
+            post_type = self.item['postType']
 
-        if post_type == enums.PostType.IMAGE:
-            media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
-            if not media_item:
-                # shouldn't get here, as the post should be in completed state and have media
-                raise Exception(f'Did not find uploaded media for post `{self.id}`')
-            return self.media_manager.init_media(media_item).get_1080p_image_buffer()
+            if post_type == enums.PostType.TEXT_ONLY:
+                max_dims = image_size.P1080.max_dimensions
+                self._1080p_image_data = generate_text_image(self.item['text'], max_dims).read()
 
-        raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+            elif post_type == enums.PostType.VIDEO:
+                path = self.get_image_path(image_size.P1080)
+                self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+
+            elif post_type == enums.PostType.IMAGE:
+                media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
+                if not media_item:
+                    # shouldn't get here, as the post should be in completed state and have media
+                    raise Exception(f'Did not find uploaded media for post `{self.id}`')
+                path = self.media_manager.init_media(media_item).get_s3_path(image_size.P1080)
+                self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+
+            else:
+                raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+
+        return BytesIO(self._1080p_image_data)
+
+    def get_original_video_path(self):
+        return f'{self.s3_prefix}/{enums.VIDEO_ORIGINAL_FILENAME}'
+
+    def get_poster_video_path_prefix(self):
+        return f'{self.s3_prefix}/{enums.VIDEO_POSTER_PREFIX}'
+
+    def get_poster_path(self):
+        return f'{self.s3_prefix}/{enums.VIDEO_POSTER_PREFIX}.0000000.jpg'
+
+    def get_image_path(self, size):
+        return f'{self.s3_prefix}/{enums.IMAGE_DIR}/{size.filename}'
+
+    def get_hls_video_path_prefix(self):
+        return f'{self.s3_prefix}/{enums.VIDEO_HLS_PREFIX}'
+
+    def get_hls_master_m3u8_url(self):
+        path = f'{self.s3_prefix}/{enums.VIDEO_HLS_PREFIX}.m3u8'
+        return self.cloudfront_client.generate_unsigned_url(path)
+
+    def get_hls_access_cookies(self, expires_at=None):
+        expires_at = expires_at or pendulum.now('utc') + pendulum.duration(hours=1)
+        s3_path = self.get_hls_video_path_prefix()
+        signature_path = s3_path + '*'
+        cookie_path = '/' + '/'.join(s3_path.split('/')[:-1]) + '/'  # remove trailing partial filename
+        cookies = self.cloudfront_client.generate_presigned_cookies(signature_path, expires_at=expires_at)
+        return {
+            'domain': self.cloudfront_client.domain,
+            'path': cookie_path,
+            'expiresAt': expires_at.to_iso8601_string(),
+            'policy': cookies['CloudFront-Policy'],
+            'signature': cookies['CloudFront-Signature'],
+            'keyPairId': cookies['CloudFront-Key-Pair-Id'],
+        }
+
+    def get_video_writeonly_url(self):
+        if self.item['postType'] != enums.PostType.VIDEO:
+            return None
+
+        if self.item['postStatus'] not in (enums.PostStatus.PENDING, enums.PostStatus.ERROR):
+            return None
+
+        path = self.get_original_video_path()
+        return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
+
+    def get_image_readonly_url(self, size):
+        if self.item['postStatus'] not in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
+            return None
+
+        path = self.get_image_path(size)
+        return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
+
+    def delete_s3_video(self):
+        path = self.get_original_video_path()
+        self.s3_uploads_client.delete_object(path)
 
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         user = self.user_manager.get_user(self.posted_by_user_id)
         resp['postedBy'] = user.serialize(caller_user_id)
         return resp
+
+    def build_image_thumbnails(self):
+        image = Image.open(self.get_native_image_buffer())
+        image = ImageOps.exif_transpose(image)
+        for size in image_size.THUMBNAILS:  # ordered by decreasing size
+            image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
+            in_mem_file = BytesIO()
+            image.save(in_mem_file, format='JPEG')
+            in_mem_file.seek(0)
+            path = self.get_image_path(size)
+            self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
 
     def process_image_upload(self, media=None):
         assert self.post_type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
@@ -116,6 +218,34 @@ class Post:
 
         # let any exceptions flow through up the chain
         media.process_upload()
+        self.complete()
+
+    def start_processing_video_upload(self):
+        assert self.post_type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
+        assert self.post_status in (PostStatus.PENDING, PostStatus.ERROR), 'Can only call for PENDING & ERROR posts'
+
+        # mark ourselves as processing
+        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.PROCESSING)]
+        self.dynamo.client.transact_write_items(transacts)
+        self.item['postStatus'] = PostStatus.PROCESSING
+
+        # start the media convert job
+        input_key = self.get_original_video_path()
+        video_output_key_prefix = self.get_hls_video_path_prefix()
+        image_output_key_prefix = self.get_poster_video_path_prefix()
+        self.mediaconvert_client.create_job(input_key, video_output_key_prefix, image_output_key_prefix)
+
+    def finish_processing_video_upload(self):
+        assert self.post_type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
+        assert self.post_status == PostStatus.PROCESSING, 'Can only call for PROCESSING posts'
+
+        # make the poster image our new 'native' image
+        poster_path = self.get_poster_path()
+        native_path = self.get_image_path(image_size.NATIVE)
+        self.s3_uploads_client.copy_object(poster_path, native_path)
+        self.s3_uploads_client.delete_object(poster_path)
+
+        self.build_image_thumbnails()
         self.complete()
 
     def error(self, media=None):
@@ -343,10 +473,9 @@ class Post:
             album.update_art_if_needed()
 
         # do the deletes for real
+        self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
         for media_item in self.item['mediaObjects']:
-            media = self.media_manager.init_media(media_item)
-            media.delete_all_s3_objects()
-            self.dynamo.client.delete_item_by_pk(media.item)
+            self.dynamo.client.delete_item_by_pk(media_item)
         self.dynamo.client.delete_item_by_pk(self.item)
 
         return self

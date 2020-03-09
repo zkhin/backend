@@ -15,7 +15,9 @@ provider:
   timeout: 30
 
   environment:
-    REGION: '#{AWS::Region}'
+    # AWS_REGION is supplied by default by lambda
+    AWS_ACCOUNT_ID: '#{AWS::AccountId}'
+
     # using cloud formation as a buffer here to avoid resource dependency loops. Deploy twice to get correct values.
     COGNITO_USER_POOL_ID: ${cf:${self:provider.stackName}.CognitoUserPoolId, 'placeholder'}
     COGNITO_BACKEND_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoBackendUserPoolClientId, 'placeholder'}
@@ -30,6 +32,7 @@ provider:
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1  # choosen manually when creating a key pair in the console
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     ES_SEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
+    MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
 
     # avoid alerts when running integration test suite in dev env
     FLAGGED_ALERT_THRESHOLD: ${self:custom.envvars.FLAGGED_ALERT_THRESHOLD.${self:provider.stage}, '3'}
@@ -63,6 +66,16 @@ provider:
       Action:
         - s3:ListBucket
       Resource: !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.PLACEHOLDER_PHOTOS_BUCKET}' ] ]
+    - Effect: Allow
+      Action:
+        - mediaconvert:CreateJob
+        - mediaconvert:DescribeEndpoints
+      Resource: arn:aws:mediaconvert:*:*:*
+    - Effect: Allow
+      Action:
+        - iam:GetRole
+        - iam:PassRole
+      Resource: !GetAtt MediaCovertRole.Arn
 
 custom:
   envvars:
@@ -535,6 +548,18 @@ custom:
 
       - type: Post
         field: imageUploadUrl
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Post
+        field: video
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Post
+        field: videoUploadUrl
         dataSource: LambdaDataSource
         request: Lambda.request.vtl
         response: Lambda.response.vtl
@@ -1223,6 +1248,24 @@ resources:
           - email
           - phone_number
 
+    # IAM role for MediaConvert to use to transcode video
+    MediaCovertRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - mediaconvert.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        ManagedPolicyArns:
+          # full S3 and api gateway access are required to run media convert
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonAPIGatewayInvokeFullAccess
+
     S3BucketUploads:
       Type: AWS::S3::Bucket
       DeletionPolicy: Retain
@@ -1261,10 +1304,28 @@ resources:
                 StringEquals:
                   s3:x-amz-acl: bucket-owner-full-control
 
-    S3ObjectCreatedLambdaPermissionUploadsS3:
+    S3ImagePostUploadedLambdaPermissionUploadsS3:
       Type: AWS::Lambda::Permission
       Properties:
-        FunctionName: !GetAtt S3ObjectCreatedLambdaFunction.Arn
+        FunctionName: !GetAtt S3ImagePostUploadedLambdaFunction.Arn
+        Action: lambda:InvokeFunction
+        Principal: s3.amazonaws.com
+        SourceAccount: '#{AWS::AccountId}'
+        SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+
+    S3VideoPostUploadedLambdaPermissionUploadsS3:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !GetAtt S3VideoPostUploadedLambdaFunction.Arn
+        Action: lambda:InvokeFunction
+        Principal: s3.amazonaws.com
+        SourceAccount: '#{AWS::AccountId}'
+        SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+
+    S3VideoPostProcessedLambdaPermissionUploadsS3:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !GetAtt S3VideoPostProcessedLambdaFunction.Arn
         Action: lambda:InvokeFunction
         Principal: s3.amazonaws.com
         SourceAccount: '#{AWS::AccountId}'
@@ -1380,6 +1441,9 @@ resources:
     GitIsDirty:
       Value: ${git:isDirty}
 
+    MediaConvertRoleArn:
+      Value: !GetAtt MediaCovertRole.Arn
+
     UploadsBucketName:
       Value: ${self:provider.environment.UPLOADS_BUCKET}
 
@@ -1399,16 +1463,47 @@ functions:
       - functionErrors
       - functionThrottles
 
-  # https://serverless.com/framework/docs/providers/aws/events/s3#custom-bucket-configuration
-  s3ObjectCreated:
-    name: ${self:provider.stackName}-s3ObjectCreated
-    handler: app.handlers.s3.uploads_object_created
+  s3ImagePostUploaded:
+    name: ${self:provider.stackName}-s3ImagePostUploaded
+    handler: app.handlers.s3.image_post_uploaded
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
       - s3:
           bucket: uploads  # translated to 'S3BucketUploads' by serverless
-          event: s3:ObjectCreated:*
+          event: s3:ObjectCreated:Put
+          rules:
+            - suffix: /native.jpg
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  s3VideoPostUploaded:
+    name: ${self:provider.stackName}-s3VideoPostUploaded
+    handler: app.handlers.s3.video_post_uploaded
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - s3:
+          bucket: uploads  # translated to 'S3BucketUploads' by serverless
+          event: s3:ObjectCreated:Put
+          rules:
+            - suffix: /video-original.mov
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  s3VideoPostProcessed:
+    name: ${self:provider.stackName}-s3VideoPostProcessed
+    handler: app.handlers.s3.video_post_processed
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - s3:
+          bucket: uploads  # translated to 'S3BucketUploads' by serverless
+          event: s3:ObjectCreated:Put
+          rules:
+            - suffix: /video-hls/video.m3u8
     alarms:
       - functionErrors
       - functionThrottles

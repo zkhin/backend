@@ -20,6 +20,20 @@ module.exports.image = gql`
   }
 `
 
+module.exports.video = gql`
+  fragment VideoFragment on Video {
+    urlMasterM3U8
+    accessCookies {
+      domain
+      path
+      expiresAt
+      policy
+      signature
+      keyPairId
+    }
+  }
+`
+
 module.exports.album = gql`
   fragment AlbumFragment on Album {
     albumId

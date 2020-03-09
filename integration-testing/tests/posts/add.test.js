@@ -8,10 +8,10 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const imageContentType = 'image/jpeg'
 const imageData = misc.generateRandomJpeg(300, 200)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const imageData2 = misc.generateRandomJpeg(300, 200)
+const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -37,7 +37,7 @@ test('Add post no expiration', async () => {
   expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(post['expiresAt']).toBeNull()
   expect(post['originalPost']['postId']).toBe(postId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(2000)  // let dynamo converge
 
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
@@ -96,10 +96,10 @@ test('Add text-only post', async () => {
 
   // check can't add it without specifying postType
   let variables = {postId, text}
-  await expect(ourClient.mutate({mutation: schema.addPostTextOnly, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.addPostNoMedia, variables})).rejects.toThrow('ClientError')
 
   variables = {postId, text, postType: 'TEXT_ONLY'}
-  let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
@@ -109,6 +109,70 @@ test('Add text-only post', async () => {
   expect(resp['data']['addPost']['isVerified']).toBeNull()
   expect(resp['data']['addPost']['image']).toBeNull()
   expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
+})
+
+
+test('Add pending video post minimal', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  const postId = uuidv4()
+  let variables = {postId, postType: 'VIDEO'}
+  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postType']).toBe('VIDEO')
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  expect(resp['data']['addPost']['videoUploadUrl']).toBeTruthy()
+  expect(resp['data']['addPost']['text']).toBeNull()
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(0)
+  expect(resp['data']['addPost']['isVerified']).toBeNull()
+  expect(resp['data']['addPost']['image']).toBeNull()
+  expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
+  expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
+  expect(resp['data']['addPost']['likesDisabled']).toBe(false)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
+  expect(resp['data']['addPost']['verificationHidden']).toBe(false)
+})
+
+
+test('Add pending video post maximal', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  const postId = uuidv4()
+  const text = 'lore ipsum'
+  let variables = {
+    postId,
+    postType: 'VIDEO',
+    text,
+    commentsDisabled: true,
+    likesDisabled: true,
+    sharingDisabled: true,
+    verificationHidden: true,
+  }
+  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postType']).toBe('VIDEO')
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  expect(resp['data']['addPost']['videoUploadUrl']).toBeTruthy()
+  expect(resp['data']['addPost']['text']).toBe(text)
+  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(0)
+  expect(resp['data']['addPost']['isVerified']).toBe(true)
+  expect(resp['data']['addPost']['image']).toBeNull()
+  expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
+  expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
+  expect(resp['data']['addPost']['likesDisabled']).toBe(true)
+  expect(resp['data']['addPost']['sharingDisabled']).toBe(true)
+  expect(resp['data']['addPost']['verificationHidden']).toBe(true)
+})
+
+
+test('Cant add video post to album (yet)', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  const postId = uuidv4()
+  let variables = {postId, postType: 'VIDEO', albumId: 'aid'}
+  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
 })
 
 
@@ -196,7 +260,7 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   expect(uploadUrl.split('?')[0]).toBe(post['mediaObjects'][0]['uploadUrl'].split('?')[0])
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // add another media post with a different image
@@ -204,7 +268,7 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId2, mediaId: mediaId2}})
   expect(resp['errors']).toBeUndefined()
   uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  await misc.uploadMedia(imageData2, imageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData2})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // check the post & media have changed status and look good

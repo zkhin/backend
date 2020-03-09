@@ -1,6 +1,7 @@
 /* eslint-env jest */
 
 const moment = require('moment')
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
@@ -9,7 +10,7 @@ const schema = require('../../utils/schema.js')
 
 const imageData = misc.generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
-const imageContentType = 'image/jpeg'
+const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -58,7 +59,7 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   let uploadUrl = resp['data']['addPost']['imageUploadUrl']
   let before = moment().toISOString()
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
   let after = moment().toISOString()
 
@@ -76,7 +77,7 @@ test('Create a posts in an album, album post ordering', async () => {
   // we a text-only post in that album
   const postId3 = uuidv4()
   variables = {postId: postId3, albumId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
-  resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
 
@@ -150,7 +151,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['album']).toBeNull()
   let uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify neither we or them cannot move the post into their album
@@ -196,7 +197,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['data']['album']['posts']['items']).toHaveLength(0)
 
   // upload the media, thus completing the post
-  await misc.uploadMedia(imageData, imageContentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify the post is now COMPLETED
@@ -257,7 +258,7 @@ test('Add, remove, change albums for an existing post', async () => {
   // add an unrelated text-only post to the first album
   const postId2 = uuidv4()
   let variables = {postId: postId2, albumId: albumId1, text: 'lore ipsum', postType: 'TEXT_ONLY'}
-  resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -554,7 +555,7 @@ test('Edit album post order', async () => {
 
   // we add three posts to the album
   variables = {postId: postId1, albumId, text: 'lore', postType: 'TEXT_ONLY'}
-  resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
@@ -564,7 +565,7 @@ test('Edit album post order', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   variables = {postId: postId3, albumId, text: 'ipsum', postType: 'TEXT_ONLY'}
-  resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
 

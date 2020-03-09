@@ -1,12 +1,17 @@
 from decimal import Decimal
+from os import path
 from io import BytesIO
 from unittest.mock import call, Mock
 
 import pendulum
 import pytest
 
-from app.models.post.enums import PostType
+from app.models.post.enums import PostType, PostStatus
+from app.models.post.model import Post
 from app.models.followed_first_story import FollowedFirstStoryManager
+from app.utils import image_size
+
+grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
@@ -22,6 +27,30 @@ def user2(user_manager):
 @pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+
+
+@pytest.fixture
+def pending_video_post(post_manager, user2):
+    yield post_manager.add_post(user2.id, 'pidv1', PostType.VIDEO)
+
+
+@pytest.fixture
+def processing_video_post(pending_video_post, s3_uploads_client):
+    post = pending_video_post
+    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
+    post.dynamo.client.transact_write_items(transacts)
+    post.refresh_item()
+    image_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(image_path, open(grant_path, 'rb'), 'image/jpeg')
+    yield post
+
+
+@pytest.fixture
+def completed_video_post(processing_video_post):
+    # Note: lacks the actual video files
+    post = processing_video_post
+    post.complete()
+    yield post
 
 
 @pytest.fixture
@@ -67,7 +96,7 @@ def test_get_native_image_buffer(post, post_with_media):
     assert buf.read()
 
     # verify raises exception for non-completed image post
-    post_with_media.item['postStatus'] = post.enums.PostStatus.PENDING  # in mem is sufficient
+    post_with_media.item['postStatus'] = PostStatus.PENDING  # in mem is sufficient
     with pytest.raises(post.exceptions.PostException, match='PENDING'):
         post_with_media.get_native_image_buffer()
 
@@ -84,9 +113,112 @@ def test_get_1080p_image_buffer(post, post_with_media):
     assert buf.read()
 
     # verify raises exception for non-completed image post
-    post_with_media.item['postStatus'] = post.enums.PostStatus.PENDING  # in mem is sufficient
+    post_with_media.item['postStatus'] = PostStatus.PENDING  # in mem is sufficient
     with pytest.raises(post.exceptions.PostException, match='PENDING'):
         post_with_media.get_1080p_image_buffer()
+
+
+def test_get_original_video_path(post):
+    user_id = post.item['postedByUserId']
+    post_id = post.id
+
+    video_path = post.get_original_video_path()
+    assert video_path == f'{user_id}/post/{post_id}/video-original.mov'
+
+
+def test_get_video_writeonly_url_failures(post):
+    # wrong post type
+    assert post.item['postType'] == PostType.TEXT_ONLY
+    assert post.get_video_writeonly_url() is None
+
+    # wrong status
+    post.item['postType'] = PostType.VIDEO
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.get_video_writeonly_url() is None
+
+    # success
+    post.item['postStatus'] = PostStatus.PENDING
+    assert post.get_video_writeonly_url() is not None
+
+
+def test_get_video_writeonly_url_success(cloudfront_client):
+    item = {
+        'postedByUserId': 'user-id',
+        'postId': 'post-id',
+        'postType': PostType.VIDEO,
+        'postStatus': PostStatus.PENDING,
+    }
+    expected_url = {}
+    cloudfront_client.configure_mock(**{
+        'generate_presigned_url.return_value': expected_url,
+    })
+
+    post = Post(item, None, cloudfront_client=cloudfront_client)
+    url = post.get_video_writeonly_url()
+    assert url == expected_url
+
+    expected_path = 'user-id/post/post-id/video-original.mov'
+    assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['PUT'])]
+
+
+def test_get_hls_access_cookies(cloudfront_client):
+    user_id = 'uid'
+    post_id = 'pid'
+    item = {
+        'postedByUserId': user_id,
+        'postId': post_id,
+        'postType': PostType.VIDEO,
+        'postStatus': PostStatus.COMPLETED,
+    }
+    domain = 'cf-domain'
+    presigned_cookies = {
+        'CloudFront-Policy': 'cf-policy',
+        'CloudFront-Signature': 'cf-signature',
+        'CloudFront-Key-Pair-Id': 'cf-kpid',
+    }
+    cloudfront_client.configure_mock(**{
+        'generate_presigned_cookies.return_value': presigned_cookies,
+        'domain': domain,
+    })
+
+    post = Post(item, None, cloudfront_client=cloudfront_client)
+    expires_at = pendulum.now('utc')
+    access_cookies = post.get_hls_access_cookies(expires_at=expires_at)
+
+    assert access_cookies == {
+        'domain': domain,
+        'path': f'/{user_id}/post/{post_id}/video-hls/',
+        'expiresAt': expires_at.to_iso8601_string(),
+        'policy': 'cf-policy',
+        'signature': 'cf-signature',
+        'keyPairId': 'cf-kpid',
+    }
+
+    cookie_path = f'{user_id}/post/{post_id}/video-hls/video*'
+    assert cloudfront_client.mock_calls == [call.generate_presigned_cookies(cookie_path, expires_at=expires_at)]
+
+
+def test_delete_s3_video(s3_uploads_client):
+    post_item = {
+        'postedByUserId': 'uid',
+        'postId': 'pid',
+        'postType': PostType.VIDEO,
+    }
+    post = Post(post_item, None, s3_uploads_client=s3_uploads_client)
+    path = post.get_original_video_path()
+    assert s3_uploads_client.exists(path) is False
+
+    # even with video in s3 should not error out
+    post.delete_s3_video()
+    assert s3_uploads_client.exists(path) is False
+
+    # put some data up there
+    s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
+    assert s3_uploads_client.exists(path) is True
+
+    # delete it, verify it's gone
+    post.delete_s3_video()
+    assert s3_uploads_client.exists(path) is False
 
 
 def test_set_expires_at(post):
@@ -234,18 +366,18 @@ def test_error_pending_post(post_manager, user, media_manager):
     post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
     media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
     media = media_manager.init_media(media_item)
-    assert post.item['postStatus'] == post.enums.PostStatus.PENDING
+    assert post.item['postStatus'] == PostStatus.PENDING
     assert media.item['mediaStatus'] == media.enums.MediaStatus.AWAITING_UPLOAD
 
     # error it out, verify in-mem copy got marked as such
     post.error(media=media)
-    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert post.item['postStatus'] == PostStatus.ERROR
     assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
 
     # verify error state saved to DB
     post.refresh_item()
     media.refresh_item()
-    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert post.item['postStatus'] == PostStatus.ERROR
     assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
 
 
@@ -257,40 +389,38 @@ def test_error_processing_post(post_manager, user, media_manager):
 
     # manually mark the Post & media as being processed
     transacts = [
-        post.dynamo.transact_set_post_status(post.item, post.enums.PostStatus.PROCESSING),
+        post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING),
         media.dynamo.transact_set_status(media.item, media.enums.MediaStatus.PROCESSING_UPLOAD),
     ]
     post.dynamo.client.transact_write_items(transacts)
 
     post.refresh_item()
     media.refresh_item()
-    assert post.item['postStatus'] == post.enums.PostStatus.PROCESSING
+    assert post.item['postStatus'] == PostStatus.PROCESSING
     assert media.item['mediaStatus'] == media.enums.MediaStatus.PROCESSING_UPLOAD
 
     # error it out, verify in-mem copy got marked as such
     post.error(media=media)
-    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert post.item['postStatus'] == PostStatus.ERROR
     assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
 
     # verify error state saved to DB
     post.refresh_item()
     media.refresh_item()
-    assert post.item['postStatus'] == post.enums.PostStatus.ERROR
+    assert post.item['postStatus'] == PostStatus.ERROR
     assert media.item['mediaStatus'] == media.enums.MediaStatus.ERROR
 
 
 def test_set_album_errors(album_manager, post_manager, user_manager, post, post_with_media, user):
     # album doesn't exist
-    with pytest.raises(post_manager.exceptions.PostException) as err:
+    with pytest.raises(post_manager.exceptions.PostException, match='does not exist'):
         post_with_media.set_album('aid-dne')
-    assert 'does not exist' in str(err)
 
     # album is owned by a different user
     user2 = user_manager.create_cognito_only_user('ouid', 'oUname')
     album = album_manager.add_album(user2.id, 'aid-2', 'album name')
-    with pytest.raises(post_manager.exceptions.PostException) as err:
+    with pytest.raises(post_manager.exceptions.PostException, match='belong to different users'):
         post_with_media.set_album(album.id)
-    assert 'belong to different users' in str(err)
 
 
 def test_set_album_completed_post(albums, post_with_media):
@@ -374,6 +504,43 @@ def test_set_album_completed_post(albums, post_with_media):
 def test_set_album_text_post(post_manager, albums, user2):
     album1, album2 = albums
     post = post_manager.add_post(user2.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
+
+    # verify starting state
+    assert 'albumId' not in post.item
+    assert 'artHash' not in album1.item
+    assert 'artHash' not in album2.item
+
+    # go from no album to an album
+    post.set_album(album1.id)
+    assert post.item['albumId'] == album1.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+    album1.refresh_item()
+    assert album1.item['artHash']
+    album2.refresh_item()
+    assert 'artHash' not in album2.item
+
+    # change the album
+    post.set_album(album2.id)
+    assert post.item['albumId'] == album2.id
+    assert post.item['gsiK3SortKey'] == 0   # album rank
+    album1.refresh_item()
+    assert 'artHash' not in album1.item
+    album2.refresh_item()
+    assert album2.item['artHash']
+
+    # remove post from all albums
+    post.set_album(None)
+    assert 'albumId' not in post.item
+    assert 'gsiK3SortKey' not in post.item
+    album1.refresh_item()
+    assert 'artHash' not in album1.item
+    album2.refresh_item()
+    assert 'artHash' not in album2.item
+
+
+def test_set_album_video_post(albums, user2, completed_video_post):
+    post = completed_video_post
+    album1, album2 = albums
 
     # verify starting state
     assert 'albumId' not in post.item
@@ -568,3 +735,24 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     post1.set_album_order(post2.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
     assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(4 / 6))
+
+
+def test_build_image_thumbnails(user, processing_video_post, s3_uploads_client):
+    post = processing_video_post
+
+    # check starting state
+    assert s3_uploads_client.exists(post.get_image_path(image_size.NATIVE))
+    assert not s3_uploads_client.exists(post.get_image_path(image_size.K4))
+    assert not s3_uploads_client.exists(post.get_image_path(image_size.P1080))
+    assert not s3_uploads_client.exists(post.get_image_path(image_size.P480))
+    assert not s3_uploads_client.exists(post.get_image_path(image_size.P64))
+
+    # build the thumbnails
+    post.build_image_thumbnails()
+
+    # check final state
+    assert s3_uploads_client.exists(post.get_image_path(image_size.NATIVE))
+    assert s3_uploads_client.exists(post.get_image_path(image_size.K4))
+    assert s3_uploads_client.exists(post.get_image_path(image_size.P1080))
+    assert s3_uploads_client.exists(post.get_image_path(image_size.P480))
+    assert s3_uploads_client.exists(post.get_image_path(image_size.P64))

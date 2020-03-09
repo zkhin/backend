@@ -2,15 +2,16 @@
 
 const fs = require('fs')
 const path = require('path')
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const contentType = 'image/jpeg'
 const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -312,7 +313,7 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
   expect(uploadUrl.split('?')[0]).toBe(resp['data']['addPost']['mediaObjects'][0]['uploadUrl'].split('?')[0])
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   resp = await ourClient.query({query: schema.post, variables: {postId}})

@@ -5,7 +5,11 @@ const AWSAppSyncClient = require('aws-appsync').default
 const dotenv = require('dotenv')
 const fs = require('fs')
 const gql = require('graphql-tag')
+const http  = require('http')
+const moment = require('moment')
+const path = require('path')
 const prmt = require('prompt')
+const request = require('request')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
@@ -71,30 +75,35 @@ const prmtSchema = {
     username: {
       description: 'User\'s email, phone or human-readable username?',
       required: true,
-      ask: () => prmt.history('authSource').value == 'c',
+      ask: () => prmt.history('authSource').value === 'c',
     },
     password: {
       description: 'User\'s password?',
       required: true,
       hidden: true,
-      ask: () => prmt.history('authSource').value == 'c',
+      ask: () => prmt.history('authSource').value === 'c',
     },
     facebookAccessToken: {
       description: `A facebook access token for our app for the User? ${facebookHelp}?`,
       required: true,
-      ask: () => prmt.history('authSource').value == 'f',
+      ask: () => prmt.history('authSource').value === 'f',
     },
     googleIdToken: {
       description: `A google **id** (not access) token for the User? ${googleHelp}?`,
       required: true,
-      ask: () => prmt.history('authSource').value == 'g',
+      ask: () => prmt.history('authSource').value === 'g',
     },
-    path: {
-      description: 'Path to image file to upload? Ex: `./image.jpeg` ',
+    postType: {
+      description: 'Type of post to add? Enter `t` for TEXT_ONLY, `i` for IMAGE, or `v` for VIDEO',
       required: true,
     },
-    caption: {
-      description: 'Optional caption for the post?',
+    path: {
+      description: 'Path to image or video file to upload? Ex: `./image.jpeg` ',
+      required: true,
+      ask: () => prmt.history('postType').value !== 't',
+    },
+    text: {
+      description: 'Text for the post?',
       required: false,
     },
   },
@@ -109,14 +118,14 @@ prmt.get(prmtSchema, async (err, result) => {
   }
 
   const token = await (async () => {
-    if (result.authSource == 'c') {
+    if (result.authSource === 'c') {
       process.stdout.write('Signing cognito user in...')
       const tokens = await generateCognitoTokens(result.username, result.password)
       process.stdout.write(' done.\n')
       return tokens['IdToken']
     }
-    if (result.authSource == 'f') return result.facebookAccessToken
-    if (result.authSource == 'g') return result.googleIdToken
+    if (result.authSource === 'f') return result.facebookAccessToken
+    if (result.authSource === 'g') return result.googleIdToken
     throw `Unrecognized auth source '${result.authSource}'`
   })()
 
@@ -141,52 +150,149 @@ prmt.get(prmtSchema, async (err, result) => {
   })
   process.stdout.write(' done.\n')
 
-  process.stdout.write('Reading image from disk...')
-  const obj = fs.readFileSync(result.path)
-  process.stdout.write(' done.\n')
-
-  process.stdout.write('Adding pending post...')
   const postId = uuidv4()
-  const variables = {postId, mediaId: uuidv4(), text: result.caption}
-  let resp = await appsyncClient.mutate({ mutation: addOneImagePost, variables})
-  const uploadUrl = resp['data']['addPost']['mediaObjects'][0]['uploadUrl']
-  process.stdout.write(' done.\n')
+  let resp
+  if (result.postType === 't') {
 
-  process.stdout.write('Uploading media...')
-  await uploadMedia(obj, uploadUrl)
-  process.stdout.write(' done.\n')
+    if (! result.text) {
+      throw 'TEXT_ONLY posts must have text'
+    }
 
-  process.stdout.write('Waiting for thumbnails to be generated...')
-  while (true) {
+    process.stdout.write('Adding post...')
+    const variables = {postId, text: result.text}
+    await appsyncClient.mutate({ mutation: addTextOnlyPost, variables})
+    process.stdout.write(' done.\n')
     resp = await appsyncClient.query({ query: getPost, variables: {postId}})
-    if (resp['data']['post']['postStatus'] != 'PENDING') break
-    await new Promise(resolve => setTimeout(resolve, 1000))  // sleep one second
-    process.stdout.write('.')
-  }
-  process.stdout.write(' done.\n')
 
-  if (resp['data']['post']['postStatus'] == 'ERROR') {
-    process.stdout.write('Error processing upload. Invalid jpeg?\n')
   }
   else {
-    const media = resp['data']['post']['mediaObjects'][0]
-    process.stdout.write('Post successfully added. Image urls:\n')
-    process.stdout.write(`  native: ${media['url']}\n`)
-    process.stdout.write(`  4k: ${media['url4k']}\n`)
-    process.stdout.write(`  1080p: ${media['url1080p']}\n`)
-    process.stdout.write(`  480p: ${media['url480p']}\n`)
+
+    process.stdout.write('Reading image or video from disk...')
+    const obj = fs.readFileSync(result.path)
+    process.stdout.write(' done.\n')
+
+    let uploadUrl
+    process.stdout.write('Adding pending post...')
+    if (result.postType === 'i') {
+      const variables = {postId, mediaId: uuidv4(), text: result.text}
+      resp = await appsyncClient.mutate({ mutation: addImagePost, variables})
+      uploadUrl = resp['data']['addPost']['imageUploadUrl']
+    }
+    if (result.postType === 'v') {
+      const variables = {postId, text: result.text}
+      resp = await appsyncClient.mutate({ mutation: addVideoPost, variables})
+      uploadUrl = resp['data']['addPost']['videoUploadUrl']
+    }
+    process.stdout.write(' done.\n')
+
+    process.stdout.write('Uploading media...')
+    await uploadMedia(obj, uploadUrl)
+    process.stdout.write(' done.\n')
+
+    process.stdout.write('Waiting for upload to be processed...')
+    while (true) {
+      resp = await appsyncClient.query({ query: getPost, variables: {postId}})
+      if (! ['PENDING', 'PROCESSING'].includes(resp['data']['post']['postStatus'])) break
+      await new Promise(resolve => setTimeout(resolve, 1000))  // sleep one second
+      process.stdout.write('.')
+    }
+    process.stdout.write(' done.\n')
+  }
+
+  if (resp['data']['post']['postStatus'] === 'ERROR') {
+    process.stdout.write('Error processing upload. Invalid upload?\n')
+  }
+  else {
+    const post = resp['data']['post']
+
+    // set up cookie jar if this is a video post
+    const jar = request.jar()
+    if (post['postType'] === 'VIDEO') {
+      const url = post['video']['urlMasterM3U8']
+      const cookies = post['video']['accessCookies']
+      const expires = moment(cookies['expiresAt']).toDate().toUTCString()
+      const cookieProps = `Secure; Domain=${cookies['domain']}; Path=${cookies['path']}; Expires=${expires}`
+      jar.setCookie(`CloudFront-Policy=${cookies['policy']}; ${cookieProps}`, url)
+      jar.setCookie(`CloudFront-Signature=${cookies['signature']}; ${cookieProps}`, url)
+      jar.setCookie(`CloudFront-Key-Pair-Id=${cookies['keyPairId']}; ${cookieProps}`, url)
+    }
+
+    process.stdout.write('Post successfully added.\n')
+    process.stdout.write('Opening http server to display the new post.\n')
+
+    const port = 1337
+    http.createServer(function (req, res) {
+      if (req.url === '/') {
+        process.stdout.write(`Serving url '${req.url}'\n`)
+        res.write('<html><head></head><body>')
+        res.write(`<p>Post: <i>${post['postId']}</i> by user <i>${post['postedBy']['username']}</i></p>`)
+        res.write(`<p>At: ${post['postedAt']}</p>`)
+        res.write(`<p>Type: ${post['postType']}</p>`)
+        res.write(`<p>Text: ${post['text']}</p>`)
+        if (post['postType'] === 'VIDEO') {
+          // https://github.com/video-dev/hls.js/blob/v0.13.2/README.md
+          const videoMasterM3U8 = '/video-hls/video.m3u8'
+          const hlsType = 'application/vnd.apple.mpegurl'
+          const videoId = 'video'
+          res.write(`<p>HLS: <video id="${videoId}" controls></video></p>`)
+          res.write('<script src="https://cdn.jsdelivr.net/npm/hls.js@v0.13.2"></script>')
+          res.write('<script>')
+          res.write(`var video = document.getElementById("${videoId}");`)
+          res.write(`if (video.canPlayType("${hlsType}")) { video.src = "${videoMasterM3U8}" }`)
+          res.write(`else { var hls = new Hls(); hls.loadSource("${videoMasterM3U8}"); hls.attachMedia(video) }`)
+          res.write('</script>')
+        }
+        if (post['postType'] === 'IMAGE' || post['postType'] === 'VIDEO') {
+          res.write('<p>64p: <img src="/image/url64p"></p>')
+          res.write('<p>480p: <img src="/image/url480p"></p>')
+          res.write('<p>1080p: <img src="/image/url1080p"></p>')
+          res.write('<p>4k: <img src="/image/url4k"></p>')
+          res.write('<p>Native: <img src="/image/url"></p>')
+        }
+        res.end('</body></html>')
+      }
+
+      // Proxying images. Not necessary because with signed urls, no same-origin policies to worry about
+      if (req.url.startsWith('/image/')) {
+        process.stdout.write(`Proxing url '${req.url}'\n`)
+        const filename = path.basename(req.url)
+        const cfUrl = post['image'][filename]
+        request.get(cfUrl).pipe(res)
+      }
+
+      // Proxying video files. Allows us to get around browser's same-origin policies as they apply to cookies
+      if (req.url.startsWith('/video-hls/')) {
+        process.stdout.write(`Proxing url '${req.url}'\n`)
+        const videoDir = path.dirname(post['video']['urlMasterM3U8'])
+        const filename = path.basename(req.url)
+        const cfUrl = `${videoDir}/${filename}`
+        request.get({url: cfUrl, jar}).pipe(res)
+      }
+    }).listen(port)
+    process.stdout.write(`Http server open at http://localhost:${port} (ctrl-c to close)\n`)
   }
 })
 
 
-const addOneImagePost = gql(`mutation AddMediaPost ($postId: ID!, $mediaId: ID!, $text: String) {
+const addImagePost = gql(`mutation AddMediaPost ($postId: ID!, $mediaId: ID!, $text: String) {
   addPost (postId: $postId, text: $text, mediaObjectUploads: [{mediaId: $mediaId, mediaType: IMAGE}]) {
     postId
-    postStatus
-    mediaObjects {
-      mediaId
-      uploadUrl
-    }
+    imageUploadUrl
+  }
+}`)
+
+
+const addVideoPost = gql(`mutation AddMediaPost ($postId: ID!, $text: String) {
+  addPost (postId: $postId, text: $text, postType: VIDEO) {
+    postId
+    videoUploadUrl
+  }
+}`)
+
+
+const addTextOnlyPost = gql(`mutation AddTextOnlyPost ($postId: ID!, $text: String!) {
+  addPost (postId: $postId, text: $text, postType: TEXT_ONLY) {
+    postId
   }
 }`)
 
@@ -194,15 +300,31 @@ const addOneImagePost = gql(`mutation AddMediaPost ($postId: ID!, $mediaId: ID!,
 const getPost = gql(`query GetPost ($postId: ID!) {
   post (postId: $postId) {
     postId
+    postType
     postStatus
+    postedBy {
+      userId
+      username
+    }
+    postedAt
     text
-    mediaObjects {
-      mediaId
-      mediaStatus
+    image {
       url
-      url480p
-      url1080p
       url4k
+      url1080p
+      url480p
+      url64p
+    }
+    video {
+      urlMasterM3U8
+      accessCookies {
+        domain
+        path
+        expiresAt
+        policy
+        signature
+        keyPairId
+      }
     }
   }
 }`)
@@ -231,9 +353,9 @@ const generateCognitoTokens = async (username, password) => {
 
 const generateGQLCredentials = async (authSource, token) => {
   const loginsKey = (() => {
-    if (authSource == 'c') return `cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`
-    if (authSource == 'f') return 'graph.facebook.com'
-    if (authSource == 'g') return 'accounts.google.com'
+    if (authSource === 'c') return `cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`
+    if (authSource === 'f') return 'graph.facebook.com'
+    if (authSource === 'g') return 'accounts.google.com'
     throw `Unrecognized auth source '${authSource}'`
   })()
   const Logins = {[loginsKey]: token}

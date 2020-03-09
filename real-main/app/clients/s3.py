@@ -47,6 +47,10 @@ class S3Client:
         kwargs = {'Delete': {'Objects': [{'Key': p} for p in paths]}}
         self.bucket.delete_objects(**kwargs)
 
+    def delete_objects_with_prefix(self, path_prefix):
+        "Delete mutliple objects with the same prefix in one call to S3"
+        self.bucket.objects.filter(Prefix=path_prefix).delete()
+
     def copy_object(self, old_path, new_path):
         new_obj = self.bucket.Object(new_path)
         new_obj.copy({

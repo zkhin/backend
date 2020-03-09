@@ -502,7 +502,7 @@ module.exports.addPost = gql`
 `
 
 // Note: this will be merged with module.exports.addPost when mediaObjects are dropped
-module.exports.addPostTextOnly = gql`
+module.exports.addPostNoMedia = gql`
   mutation AddPost (
     $postId: ID!,
     $postType: PostType,
@@ -535,6 +535,7 @@ module.exports.addPostTextOnly = gql`
         url
       }
       imageUploadUrl
+      videoUploadUrl
       isVerified
       text
       textTaggedUsers {
@@ -603,6 +604,10 @@ module.exports.post = gql`
         ...ImageFragment
       }
       imageUploadUrl
+      video {
+        ...VideoFragment
+      }
+      videoUploadUrl
       isVerified
       mediaObjects {
         ...MediaObjectFragment
@@ -638,6 +643,7 @@ module.exports.post = gql`
   ${fragments.image}
   ${fragments.mediaObject}
   ${fragments.textTaggedUser}
+  ${fragments.video}
 `
 
 module.exports.getPost = gql`
@@ -813,6 +819,7 @@ module.exports.archivePost = gql`
         url
       }
       imageUploadUrl
+      videoUploadUrl
       mediaObjects {
         ...MediaObjectFragment
       }
@@ -946,6 +953,7 @@ module.exports.selfFeed = gql`
             url
           }
           imageUploadUrl
+          videoUploadUrl
           mediaObjects {
             mediaId
             url

@@ -2,15 +2,16 @@
 
 const fs = require('fs')
 const path = require('path')
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const contentType = 'image/jpeg'
 const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -57,7 +58,7 @@ test('Visiblity of post(), user.posts(), user.mediaObjects() for a public user',
   expect(resp['data']['user']['mediaObjects']['items'][0]['uploadUrl']).not.toBeNull()
 
   // upload the media, give S3 trigger a second to fire
-  await misc.uploadMedia(imageData, contentType, uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we should see the post

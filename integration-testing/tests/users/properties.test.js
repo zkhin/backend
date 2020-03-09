@@ -139,7 +139,7 @@ test('Various photoPostId failures', async () => {
 
   // create a text-only post
   variables = {postId: textOnlyPostId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
-  let resp = await ourClient.mutate({mutation: schema.addPostTextOnly, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(textOnlyPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

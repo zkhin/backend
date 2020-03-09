@@ -2,6 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
+const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
@@ -11,6 +12,7 @@ const schema = require('../../utils/schema.js')
 const smallGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const smallGrantDataB64 = new Buffer.from(smallGrantData).toString('base64')
 const bigGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'big-grant.jpg'))
+const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -44,7 +46,7 @@ test('Add media post passes verification', async () => {
   let uploadUrl = post['imageUploadUrl']
   expect(uploadUrl).toBeTruthy()
   expect(uploadUrl.split('?')[0]).toBe(post['mediaObjects'][0]['uploadUrl'].split('?')[0])
-  await misc.uploadMedia(bigGrantData, 'image/jpeg', uploadUrl)
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: bigGrantData})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check the post is now verified

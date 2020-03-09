@@ -31,6 +31,7 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  await misc.sleep(1000)  // let dynamo converge
 
   // they like the post
   resp = await theirClient.mutate({mutation: schema.onymouslyLikePost, variables: {postId}})
@@ -282,6 +283,7 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
+  await misc.sleep(1000)  // let dynamo converge
 
   // verify that post shows up in our feed
   resp = await ourClient.query({query: schema.selfFeed})

@@ -2,21 +2,10 @@
 
 const jpeg = require('jpeg-js')
 const gql = require('graphql-tag')
-const rp = require('request-promise-native')
 
 const shortRandomString = () => Math.random().toString(36).substring(7)
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-
-const uploadMedia = async (data, contentType, url) => {
-  const options = {
-    method: 'PUT',
-    url: url,
-    headers: {'Content-Type': contentType},
-    body: data,
-  }
-  return rp.put(options)
-}
 
 const generateRandomJpeg = (width, height) => {
   const buf = Buffer.alloc(width * height * 4)
@@ -35,9 +24,7 @@ const generateRandomJpeg = (width, height) => {
 
 // would be nice to query the media object directly but theres currently
 // no graphql query field to do so
-const sleepUntilPostCompleted = async (gqlClient, postId) => {
-  const pollingIntervalMs = 1000
-  const maxWaitMs = 10000
+const sleepUntilPostCompleted = async (gqlClient, postId, {maxWaitMs = 10*1000, pollingIntervalMs = 1000} = {}) => {
   const queryPost = gql(`query Post ($postId: ID!) {
     post (postId: $postId) {
       postId
@@ -57,7 +44,6 @@ const sleepUntilPostCompleted = async (gqlClient, postId) => {
 
 module.exports = {
   generateRandomJpeg,
-  uploadMedia,
   shortRandomString,
   sleep,
   sleepUntilPostCompleted,

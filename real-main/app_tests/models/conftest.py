@@ -7,8 +7,8 @@ import boto3
 from moto import mock_dynamodb2, mock_s3, mock_secretsmanager
 import pytest
 
-from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient, S3Client,
-                         SecretsManagerClient)
+from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
+                         MediaConvertClient, S3Client, SecretsManagerClient)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.comment import CommentManager
@@ -75,6 +75,13 @@ def secrets_manager_client(post_verification_api_creds):
 @pytest.fixture
 def cloudfront_client():
     yield Mock(CloudFrontClient(None, 'my-domain'))
+
+
+@pytest.fixture
+def mediaconvert_client():
+    endpoint = 'https://my-media-convert-endpoint.com'
+    yield Mock(MediaConvertClient(endpoint=endpoint, aws_region='aws-region', aws_account_id='aws-aid',
+                                  role_arn='role-arn', uploads_bucket='uploads-bucket'))
 
 
 @pytest.fixture
