@@ -31,17 +31,18 @@ class Album:
             self.post_manager = post_manager
         if user_manager:
             self.user_manager = user_manager
-        self.id = album_item['albumId']
-        self.item = album_item
         self.frontend_resources_domain = frontend_resources_domain
+        self.item = album_item
+        self.id = album_item['albumId']
+        self.user_id = album_item['ownedByUserId']
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_album(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def serialize(self, caller_user_id):
+        user = self.user_manager.get_user(self.user_id)
         resp = self.item.copy()
-        user = self.user_manager.get_user(resp['ownedByUserId'])
         resp['ownedBy'] = user.serialize(caller_user_id)
         return resp
 
@@ -63,11 +64,11 @@ class Album:
 
         # order matters to moto (in test suite), but not on dynamo
         transacts = [
-            self.user_manager.dynamo.transact_decrement_album_count(self.item['ownedByUserId']),
+            self.user_manager.dynamo.transact_decrement_album_count(self.user_id),
             self.dynamo.transact_delete_album(self.id),
         ]
         transact_exceptions = [
-            exceptions.AlbumException(f'Unable to decrement album count for user `{self.item["ownedByUserId"]}`'),
+            exceptions.AlbumException(f'Unable to decrement album count for user `{self.user_id}`'),
             exceptions.AlbumException(f'Album `{self.id}` does not exist'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
@@ -93,7 +94,7 @@ class Album:
         art_hash = art_hash or self.item.get('artHash')
         if not art_hash:
             return None
-        return '/'.join([self.item['ownedByUserId'], 'album', self.id, art_hash, size.filename])
+        return '/'.join([self.user_id, 'album', self.id, art_hash, size.filename])
 
     def get_post_ids_for_art(self):
         # we only want a square number of post ids, max of 4x4

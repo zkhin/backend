@@ -37,28 +37,27 @@ class CommentManager:
     def add_comment(self, comment_id, post_id, user_id, text, now=None):
         now = now or pendulum.now('utc')
 
-        post_item = self.post_manager.dynamo.get_post(post_id)
-        if not post_item:
+        post = self.post_manager.get_post(post_id)
+        if not post:
             raise exceptions.CommentException(f'Post `{post_id}` does not exist')
 
-        if post_item.get('commentsDisabled', False):
+        if post.item.get('commentsDisabled', False):
             raise exceptions.CommentException(f'Comments are disabled on post `{post_id}`')
 
-        posted_by_user_id = post_item['postedByUserId']
-        if user_id != posted_by_user_id:
+        if user_id != post.user_id:
 
             # can't comment if there's a blocking relationship, either direction
-            if self.block_manager.is_blocked(posted_by_user_id, user_id):
-                raise exceptions.CommentException(f'Post owner `{posted_by_user_id}` has blocked user `{user_id}`')
-            if self.block_manager.is_blocked(user_id, posted_by_user_id):
-                raise exceptions.CommentException(f'User `{user_id}` has blocked post owner `{posted_by_user_id}`')
+            if self.block_manager.is_blocked(post.user_id, user_id):
+                raise exceptions.CommentException(f'Post owner `{post.user_id}` has blocked user `{user_id}`')
+            if self.block_manager.is_blocked(user_id, post.user_id):
+                raise exceptions.CommentException(f'User `{user_id}` has blocked post owner `{post.user_id}`')
 
             # if post owner is private, must be a follower to comment
-            poster = self.user_manager.get_user(posted_by_user_id)
+            poster = self.user_manager.get_user(post.user_id)
             if poster.item['privacyStatus'] == user.enums.UserPrivacyStatus.PRIVATE:
-                follow = self.follow_manager.get_follow(user_id, posted_by_user_id)
+                follow = self.follow_manager.get_follow(user_id, post.user_id)
                 if not follow or follow.status != follow.enums.FollowStatus.FOLLOWING:
-                    msg = f'Post owner `{posted_by_user_id}` is private and user `{user_id}` is not a follower'
+                    msg = f'Post owner `{post.user_id}` is private and user `{user_id}` is not a follower'
                     raise exceptions.CommentException(msg)
 
         text_tags = self.user_manager.get_text_tags(text)
@@ -81,9 +80,9 @@ class CommentManager:
             raise exceptions.CommentException(f'No comment with id `{comment_id}` found')
 
         # users may only delete their own comments or comments on their posts
-        if comment.item['userId'] != deleter_user_id:
-            post_item = self.post_manager.dynamo.get_post(comment.item['postId'])
-            if post_item['postedByUserId'] != deleter_user_id:
+        if comment.user_id != deleter_user_id:
+            post = self.post_manager.get_post(comment.post_id)
+            if post.user_id != deleter_user_id:
                 raise exceptions.CommentException(f'User is not authorized to delete comment `{comment_id}`')
 
         comment.delete()

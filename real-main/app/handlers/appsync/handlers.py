@@ -184,10 +184,10 @@ def set_user_details(caller_user_id, arguments, source, context):
             post = post_manager.get_post(photo_post_id)
             if not post:
                 raise ClientException(f'No post with post_id `{photo_post_id}` found')
-            if post.item['postType'] != post.enums.PostType.IMAGE:
-                raise ClientException(f'Post `{photo_post_id}` does not have postType IMAGE')
-            if post.item['postStatus'] != post.enums.PostStatus.COMPLETED:
-                raise ClientException(f'Post `{photo_post_id}` does not have postStatus COMPLETED')
+            if post.type != PostType.IMAGE:
+                raise ClientException(f'Post `{photo_post_id}` does not have type `{PostType.IMAGE}`')
+            if post.status != PostStatus.COMPLETED:
+                raise ClientException(f'Post `{photo_post_id}` does not have status `{PostStatus.COMPLETED}`')
             media_items = list(media_manager.dynamo.generate_by_post(post.id))
             photo_media_id = media_items[0]['mediaId']
 
@@ -472,7 +472,7 @@ def add_post(caller_user_id, arguments, source, context):
         raise ClientException(f'User `{caller_user_id}` does not exist')
 
     post_id = arguments['postId']
-    post_type = arguments.get('postType') or post_manager.enums.PostType.IMAGE
+    post_type = arguments.get('postType') or PostType.IMAGE
     text = arguments.get('text')
     media_uploads = arguments.get('mediaObjectUploads', [])
     album_id = arguments.get('albumId')
@@ -513,7 +513,7 @@ def add_post(caller_user_id, arguments, source, context):
     resp = post.serialize(caller_user_id)
 
     # if the posts was completed right away (ie a text-only post), then the user's postCount was incremented
-    if post.post_status == post_manager.enums.PostStatus.COMPLETED:
+    if post.status == PostStatus.COMPLETED:
         resp['postedBy']['postCount'] = org_post_count + 1
 
     return resp
@@ -523,7 +523,7 @@ def add_post(caller_user_id, arguments, source, context):
 def post_image(caller_user_id, arguments, source, context):
     post = post_manager.get_post(source['postId'])
 
-    if post.item['postType'] == PostType.IMAGE:
+    if post.type == PostType.IMAGE:
         allowed_statuses = [media_manager.enums.MediaStatus.UPLOADED, media_manager.enums.MediaStatus.ARCHIVED]
         media_items = [
             mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
@@ -542,8 +542,8 @@ def post_image(caller_user_id, arguments, source, context):
                 'colors': media.item.get('colors'),
             }
 
-    if post.item['postType'] == PostType.VIDEO:
-        if post.item['postStatus'] in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
+    if post.type == PostType.VIDEO:
+        if post.status in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
             return {
                 'url': post.get_image_readonly_url(image_size.NATIVE),
                 'url64p': post.get_image_readonly_url(image_size.P64),
@@ -573,10 +573,10 @@ def post_image_upload_url(caller_user_id, arguments, source, context):
 def post_video(caller_user_id, arguments, source, context):
     post = post_manager.get_post(source['postId'])
 
-    if post.item['postType'] != post.enums.PostType.VIDEO:
+    if post.type != PostType.VIDEO:
         return None
 
-    if post.item['postStatus'] != post.enums.PostStatus.COMPLETED:
+    if post.status != PostStatus.COMPLETED:
         return None
 
     return {
@@ -590,10 +590,10 @@ def post_video_upload_url(caller_user_id, arguments, source, context):
     post_id = source['postId']
     post = post_manager.get_post(post_id)
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         return None
 
-    if post.item['postType'] != post.enums.PostType.VIDEO:
+    if post.type != PostType.VIDEO:
         return None
 
     return post.get_video_writeonly_url()
@@ -614,7 +614,7 @@ def edit_post(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot edit another User's post")
 
     try:
@@ -634,7 +634,7 @@ def edit_post_album(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot edit another user's post")
 
     try:
@@ -654,7 +654,7 @@ def edit_post_album_order(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot edit another user's post")
 
     try:
@@ -675,7 +675,7 @@ def edit_post_expires_at(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot edit another User's post")
 
     if expires_at and expires_at < pendulum.now('utc'):
@@ -711,7 +711,7 @@ def archive_post(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot archive another User's post")
 
     try:
@@ -730,7 +730,7 @@ def delete_post(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot delete another User's post")
 
     try:
@@ -749,7 +749,7 @@ def restore_archived_post(caller_user_id, arguments, source, context):
     if not post:
         raise ClientException(f'Post `{post_id}` does not exist')
 
-    if caller_user_id != post.item['postedByUserId']:
+    if caller_user_id != post.user_id:
         raise ClientException("Cannot restore another User's post")
 
     try:
@@ -915,7 +915,7 @@ def edit_album(caller_user_id, arguments, source, context):
     if not album:
         raise ClientException(f'Album `{album_id}` does not exist')
 
-    if album.item['ownedByUserId'] != caller_user_id:
+    if album.user_id != caller_user_id:
         raise ClientException(f'Caller `{caller_user_id}` does not own Album `{album_id}`')
 
     try:
@@ -934,7 +934,7 @@ def delete_album(caller_user_id, arguments, source, context):
     if not album:
         raise ClientException(f'Album `{album_id}` does not exist')
 
-    if album.item['ownedByUserId'] != caller_user_id:
+    if album.user_id != caller_user_id:
         raise ClientException(f'Caller `{caller_user_id}` does not own Album `{album_id}`')
 
     try:

@@ -43,8 +43,8 @@ def image_post_uploaded(event, context):
         logger.warning(f'Unable to find post `{post_id}`, ignoring upload')
         return
 
-    if post.post_status != PostStatus.PENDING:
-        logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.post_status}`, ignoring upload')
+    if post.status != PostStatus.PENDING:
+        logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.status}`, ignoring upload')
         return
 
     # strongly consistent because we may have just added the media to dynamo
@@ -78,8 +78,8 @@ def video_post_uploaded(event, context):
         logger.warning(f'Unable to find post `{post_id}`, ignoring upload')
         return
 
-    if post.post_status != PostStatus.PENDING:
-        logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.post_status}`, ignoring upload')
+    if post.status != PostStatus.PENDING:
+        logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.status}`, ignoring upload')
         return
 
     max_size_bytes = 2 * 1024 * 1024 * 1024  # 2GB as speced via chat
@@ -111,8 +111,8 @@ def video_post_processed(event, context):
         logger.warning(f'Unable to find post `{post_id}`, ignoring upload')
         return
 
-    if post.post_status != PostStatus.PROCESSING:
-        logger.warning(f'Post `{post_id}` is not in PROCESSING status: `{post.post_status}`, ignoring')
+    if post.status != PostStatus.PROCESSING:
+        logger.warning(f'Post `{post_id}` is not in PROCESSING status: `{post.status}`, ignoring')
         return
 
     try:

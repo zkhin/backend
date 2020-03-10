@@ -254,7 +254,7 @@ def test_dislike_all_by_user_from_user(like_manager, user1, user2, user1_posts, 
     assert [(li['likedByUserId'], li['postId']) for li in like_items] == [(user1.id, post2.id)]
 
     # clear one users likes of another's post, does nothing
-    like_manager.dislike_all_by_user_from_user(user2.id, post2.posted_by_user_id)
+    like_manager.dislike_all_by_user_from_user(user2.id, post2.user_id)
 
     # check likes
     like_items = like_manager.dynamo.generate_of_post(post1.id)
@@ -263,7 +263,7 @@ def test_dislike_all_by_user_from_user(like_manager, user1, user2, user1_posts, 
     assert [(li['likedByUserId'], li['postId']) for li in like_items] == [(user1.id, post2.id)]
 
     # clear another combo of liked_by and posted_by
-    like_manager.dislike_all_by_user_from_user(user2.id, post1.posted_by_user_id)
+    like_manager.dislike_all_by_user_from_user(user2.id, post1.user_id)
 
     # check likes
     like_items = like_manager.dynamo.generate_of_post(post1.id)
@@ -272,7 +272,7 @@ def test_dislike_all_by_user_from_user(like_manager, user1, user2, user1_posts, 
     assert [(li['likedByUserId'], li['postId']) for li in like_items] == [(user1.id, post2.id)]
 
     # clear another combo of liked_by and posted_by
-    like_manager.dislike_all_by_user_from_user(user1.id, post1.posted_by_user_id)
+    like_manager.dislike_all_by_user_from_user(user1.id, post1.user_id)
 
     # check likes
     assert list(like_manager.dynamo.generate_of_post(post1.id)) == []
@@ -280,7 +280,7 @@ def test_dislike_all_by_user_from_user(like_manager, user1, user2, user1_posts, 
     assert [(li['likedByUserId'], li['postId']) for li in like_items] == [(user1.id, post2.id)]
 
     # clear another combo of liked_by and posted_by
-    like_manager.dislike_all_by_user_from_user(user1.id, post2.posted_by_user_id)
+    like_manager.dislike_all_by_user_from_user(user1.id, post2.user_id)
 
     # check likes
     assert list(like_manager.dynamo.generate_of_post(post1.id)) == []

@@ -34,7 +34,7 @@ class LikeManager:
         return Like(like_item, self.dynamo, post_manager=self.post_manager)
 
     def like_post(self, user, post, like_status, now=None):
-        posted_by_user = self.user_manager.get_user(post.posted_by_user_id)
+        posted_by_user = self.user_manager.get_user(post.user_id)
 
         # can't like a post of a user that has blocked us
         if self.block_manager.is_blocked(posted_by_user.id, user.id):
@@ -52,7 +52,7 @@ class LikeManager:
                     raise exceptions.LikeException(f'User does not have access to post `{post.id}`')
 
         required_status = self.post_manager.enums.PostStatus.COMPLETED
-        if post.post_status != required_status:
+        if post.status != required_status:
             raise exceptions.LikeException(f'Can only like posts with {required_status} status')
 
         if post.item.get('likesDisabled'):

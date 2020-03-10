@@ -34,7 +34,7 @@ class FlagManager:
 
     def flag_post(self, user_id, post):
         # can't flag a post of a user that has blocked us
-        posted_by_user = self.user_manager.get_user(post.item['postedByUserId'])
+        posted_by_user = self.user_manager.get_user(post.user_id)
         if self.block_manager.is_blocked(posted_by_user.id, user_id):
             raise exceptions.FlagException(f'User has been blocked by owner of post `{post.id}`')
 

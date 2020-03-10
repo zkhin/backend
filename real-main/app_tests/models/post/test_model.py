@@ -132,7 +132,7 @@ def test_get_video_writeonly_url_failures(post):
     assert post.get_video_writeonly_url() is None
 
     # wrong status
-    post.item['postType'] = PostType.VIDEO
+    post.type = PostType.VIDEO
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert post.get_video_writeonly_url() is None
 

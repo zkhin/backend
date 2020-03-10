@@ -58,41 +58,37 @@ class Post:
             self.user_manager = user_manager
 
         self.item = item
+        # immutables
         self.id = item['postId']
-        self.posted_by_user_id = item['postedByUserId']
+        self.type = self.item['postType']
+        self.user_id = item['postedByUserId']
 
     @property
-    def post_status(self):
+    def status(self):
         return self.item['postStatus']
 
     @property
-    def post_type(self):
-        return self.item['postType']
-
-    @property
     def s3_prefix(self):
-        return '/'.join([self.item['postedByUserId'], 'post', self.id])
+        return '/'.join([self.user_id, 'post', self.id])
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def get_native_image_buffer(self):
-        if (self.item['postStatus'] == PostStatus.PENDING):
+        if self.status == PostStatus.PENDING:
             raise exceptions.PostException(f'No native image buffer for {PostStatus.PENDING} post `{self.id}``')
 
         if not hasattr(self, '_native_image_data'):
-            post_type = self.item['postType']
-
-            if post_type == enums.PostType.TEXT_ONLY:
+            if self.type == PostType.TEXT_ONLY:
                 max_dims = image_size.K4.max_dimensions
                 self._native_image_data = generate_text_image(self.item['text'], max_dims).read()
 
-            elif post_type == enums.PostType.VIDEO:
+            elif self.type == PostType.VIDEO:
                 path = self.get_image_path(image_size.NATIVE)
                 self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
 
-            elif post_type == enums.PostType.IMAGE:
+            elif self.type == PostType.IMAGE:
                 media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
                 if not media_item:
                     # shouldn't get here, as the post should be in completed state and have media
@@ -101,26 +97,24 @@ class Post:
                 self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
 
             else:
-                raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
 
         return BytesIO(self._native_image_data)
 
     def get_1080p_image_buffer(self):
-        if (self.item['postStatus'] == PostStatus.PENDING):
+        if self.status == PostStatus.PENDING:
             raise exceptions.PostException(f'No 1080p image buffer for {PostStatus.PENDING} post `{self.id}``')
 
         if not hasattr(self, '_1080p_image_data'):
-            post_type = self.item['postType']
-
-            if post_type == enums.PostType.TEXT_ONLY:
+            if self.type == PostType.TEXT_ONLY:
                 max_dims = image_size.P1080.max_dimensions
                 self._1080p_image_data = generate_text_image(self.item['text'], max_dims).read()
 
-            elif post_type == enums.PostType.VIDEO:
+            elif self.type == PostType.VIDEO:
                 path = self.get_image_path(image_size.P1080)
                 self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
 
-            elif post_type == enums.PostType.IMAGE:
+            elif self.type == PostType.IMAGE:
                 media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
                 if not media_item:
                     # shouldn't get here, as the post should be in completed state and have media
@@ -129,7 +123,7 @@ class Post:
                 self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
 
             else:
-                raise Exception(f'Unexpected post type `{post_type}` for post `{self.id}`')
+                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
 
         return BytesIO(self._1080p_image_data)
 
@@ -168,17 +162,17 @@ class Post:
         }
 
     def get_video_writeonly_url(self):
-        if self.item['postType'] != enums.PostType.VIDEO:
+        if self.type != PostType.VIDEO:
             return None
 
-        if self.item['postStatus'] not in (enums.PostStatus.PENDING, enums.PostStatus.ERROR):
+        if self.status not in (PostStatus.PENDING, PostStatus.ERROR):
             return None
 
         path = self.get_original_video_path()
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
     def get_image_readonly_url(self, size):
-        if self.item['postStatus'] not in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
+        if self.status not in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
             return None
 
         path = self.get_image_path(size)
@@ -190,7 +184,7 @@ class Post:
 
     def serialize(self, caller_user_id):
         resp = self.item.copy()
-        user = self.user_manager.get_user(self.posted_by_user_id)
+        user = self.user_manager.get_user(self.user_id)
         resp['postedBy'] = user.serialize(caller_user_id)
         return resp
 
@@ -206,8 +200,8 @@ class Post:
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
 
     def process_image_upload(self, media=None):
-        assert self.post_type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
-        assert self.post_status in (PostStatus.PENDING, PostStatus.ERROR), \
+        assert self.type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
+        assert self.status in (PostStatus.PENDING, PostStatus.ERROR), \
             'Can only process_image_upload() for PENDING & ERROR posts'
         assert media, 'For now, Post.process_image_upload() must be called with media'
 
@@ -221,8 +215,8 @@ class Post:
         self.complete()
 
     def start_processing_video_upload(self):
-        assert self.post_type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
-        assert self.post_status in (PostStatus.PENDING, PostStatus.ERROR), 'Can only call for PENDING & ERROR posts'
+        assert self.type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
+        assert self.status in (PostStatus.PENDING, PostStatus.ERROR), 'Can only call for PENDING & ERROR posts'
 
         # mark ourselves as processing
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.PROCESSING)]
@@ -236,8 +230,8 @@ class Post:
         self.mediaconvert_client.create_job(input_key, video_output_key_prefix, image_output_key_prefix)
 
     def finish_processing_video_upload(self):
-        assert self.post_type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
-        assert self.post_status == PostStatus.PROCESSING, 'Can only call for PROCESSING posts'
+        assert self.type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
+        assert self.status == PostStatus.PROCESSING, 'Can only call for PROCESSING posts'
 
         # make the poster image our new 'native' image
         poster_path = self.get_poster_path()
@@ -249,7 +243,7 @@ class Post:
         self.complete()
 
     def error(self, media=None):
-        if self.post_status not in (PostStatus.PENDING, PostStatus.PROCESSING):
+        if self.status not in (PostStatus.PENDING, PostStatus.PROCESSING):
             raise exceptions.PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
 
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ERROR)]
@@ -266,8 +260,8 @@ class Post:
         "Transition the post to COMPLETED status"
         now = now or pendulum.now('utc')
 
-        if self.post_status in (PostStatus.COMPLETED, PostStatus.ARCHIVED, PostStatus.DELETING):
-            msg = f'Refusing to change post `{self.id}` with status `{self.post_status}` to `{PostStatus.COMPLETED}`'
+        if self.status in (PostStatus.COMPLETED, PostStatus.ARCHIVED, PostStatus.DELETING):
+            msg = f'Refusing to change post `{self.id}` with status `{self.status}` to `{PostStatus.COMPLETED}`'
             raise exceptions.PostException(msg)
 
         # Determine the original_post_id, if this post isn't original
@@ -296,7 +290,7 @@ class Post:
             self.dynamo.transact_set_post_status(
                 self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
             ),
-            self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id),
+            self.user_manager.dynamo.transact_increment_post_count(self.user_id),
         ]
         if album:
             old_rank_count = album.item.get('rankCount')
@@ -310,7 +304,7 @@ class Post:
             self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
 
         # add post to feeds
-        self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
+        self.feed_manager.add_post_to_followers_feeds(self.user_id, self.item)
 
         # update album art if needed
         if album:
@@ -320,9 +314,8 @@ class Post:
 
     def archive(self):
         "Transition the post to ARCHIVED status"
-        if self.post_status != PostStatus.COMPLETED:
-            msg = f'Cannot archive post with status `{self.post_status}`'
-            raise exceptions.PostException(msg)
+        if self.status != PostStatus.COMPLETED:
+            raise exceptions.PostException(f'Cannot archive post with status `{self.status}`')
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
@@ -330,7 +323,7 @@ class Post:
         # archive the post and its media objects
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
-            self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id),
+            self.user_manager.dynamo.transact_decrement_post_count(self.user_id),
         ]
         if album:
             transacts.append(album.dynamo.transact_remove_post(album.id))
@@ -360,7 +353,7 @@ class Post:
         self.trending_manager.dynamo.delete_trending(self.id)
 
         # update feeds
-        self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
+        self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
 
         # update album art if needed
         if album:
@@ -370,9 +363,8 @@ class Post:
 
     def restore(self):
         "Transition the post out of ARCHIVED status"
-        if self.post_status != PostStatus.ARCHIVED:
-            msg = f'Post `{self.id}` is not archived (has status `{self.post_status}`)'
-            raise exceptions.PostException(msg)
+        if self.status != PostStatus.ARCHIVED:
+            raise exceptions.PostException(f'Post `{self.id}` is not archived (has status `{self.status}`)')
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
@@ -381,7 +373,7 @@ class Post:
         # restore the post
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
-            self.user_manager.dynamo.transact_increment_post_count(self.posted_by_user_id),
+            self.user_manager.dynamo.transact_increment_post_count(self.user_id),
         ]
 
         if album:
@@ -406,7 +398,7 @@ class Post:
             self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
 
         # update feeds
-        self.feed_manager.add_post_to_followers_feeds(self.posted_by_user_id, self.item)
+        self.feed_manager.add_post_to_followers_feeds(self.user_id, self.item)
 
         # update album art if needed
         if album:
@@ -419,15 +411,15 @@ class Post:
 
         # we only have to the album if the previous status was COMPLETED
         album = None
-        if self.post_status == PostStatus.COMPLETED:
+        if self.status == PostStatus.COMPLETED:
             if album_id := self.item.get('albumId'):
                 album = self.album_manager.get_album(album_id)
 
         # mark the post and the media as in the deleting process
         media_items = []
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING)]
-        if self.post_status == PostStatus.COMPLETED:
-            transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.posted_by_user_id))
+        if self.status == PostStatus.COMPLETED:
+            transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.user_id))
             if album:
                 transacts.append(album.dynamo.transact_remove_post(album.id))
 
@@ -438,7 +430,7 @@ class Post:
         self.dynamo.client.transact_write_items(transacts)
 
         # update in-memory copy of dynamo state
-        prev_post_status = self.post_status
+        prev_post_status = self.status
         self.refresh_item(strongly_consistent=True)
         self.item['mediaObjects'] = [
             self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
@@ -460,7 +452,7 @@ class Post:
 
         # remove it from feeds, user post count
         if prev_post_status == PostStatus.COMPLETED:
-            self.feed_manager.delete_post_from_followers_feeds(self.posted_by_user_id, self.id)
+            self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
 
         # delete any post views of it
         self.post_view_manager.delete_all_for_post(self.id)
@@ -518,16 +510,16 @@ class Post:
 
         # if an album is specified, verify it exists and is ours
         album = self.album_manager.get_album(album_id) if album_id else None
-        album_rank = album.get_next_last_rank() if album and self.item['postStatus'] == PostStatus.COMPLETED else None
+        album_rank = album.get_next_last_rank() if album and self.status == PostStatus.COMPLETED else None
         if album_id:
             if not album:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
-            if album.item['ownedByUserId'] != self.posted_by_user_id:
+            if album.user_id != self.user_id:
                 msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
                 raise exceptions.PostException(msg)
 
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
-        if self.item['postStatus'] == PostStatus.COMPLETED:
+        if self.status == PostStatus.COMPLETED:
             if prev_album_id:
                 transacts.append(self.album_manager.dynamo.transact_remove_post(prev_album_id))
             if album:
@@ -559,7 +551,7 @@ class Post:
             if not preceding_post:
                 raise exceptions.PostException(f'Preceding post `{preceding_post_id}` does not exist')
 
-            if preceding_post.item['postedByUserId'] != self.item['postedByUserId']:
+            if preceding_post.user_id != self.user_id:
                 raise exceptions.PostException(f'Preceding post `{preceding_post_id}` does not belong to caller')
 
             if preceding_post.item.get('albumId') != album_id:

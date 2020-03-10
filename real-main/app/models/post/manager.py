@@ -93,10 +93,10 @@ class PostManager:
 
         # if an album is specified, verify it exists and is ours
         if album_id:
-            album_item = self.album_manager.dynamo.get_album(album_id)
-            if not album_item:
+            album = self.album_manager.get_album(album_id)
+            if not album:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
-            if album_item['ownedByUserId'] != posted_by_user_id:
+            if album.user_id != posted_by_user_id:
                 msg = f'Album `{album_id}` does not belong to caller user `{posted_by_user_id}`'
                 raise exceptions.PostException(msg)
 
@@ -118,11 +118,11 @@ class PostManager:
         post = self.init_post(post_item)
 
         # text-only posts can be completed immediately
-        if post.item['postType'] == enums.PostType.TEXT_ONLY:
+        if post.type == enums.PostType.TEXT_ONLY:
             post.complete(now=now)
 
         media_items = []
-        if post.item['postType'] == enums.PostType.IMAGE:
+        if post.type == enums.PostType.IMAGE:
             # if image data was directly included for any media objects, process it
             for mu in media_uploads:
                 media = self.media_manager.get_media(mu['mediaId'], strongly_consistent=True)
