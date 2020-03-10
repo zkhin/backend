@@ -61,7 +61,7 @@ def test_transact_add_following_timestamp(follow_dynamo, user1, user2):
 
     follow_dynamo.client.transact_write_items([transact])
     follow_item = follow_dynamo.get_following(user1.id, user2.id)
-    followed_at = pendulum.parse(follow_item['followedAt']).in_tz('utc')
+    followed_at = pendulum.parse(follow_item['followedAt'])
 
     assert followed_at > before
     assert followed_at < after

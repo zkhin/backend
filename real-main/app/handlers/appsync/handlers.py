@@ -669,7 +669,7 @@ def edit_post_album_order(caller_user_id, arguments, source, context):
 def edit_post_expires_at(caller_user_id, arguments, source, context):
     post_id = arguments['postId']
     expires_at_str = arguments.get('expiresAt')
-    expires_at = pendulum.parse(expires_at_str).in_tz('utc') if expires_at_str else None
+    expires_at = pendulum.parse(expires_at_str) if expires_at_str else None
 
     post = post_manager.get_post(post_id)
     if not post:

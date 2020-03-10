@@ -56,7 +56,7 @@ class TrendingManager:
         for item in self.dynamo.generate_trendings(item_type, max_last_indexed_at=cutoff):
             item_id = item['partitionKey'][9:]
             old_score = item['gsiK3SortKey']
-            last_indexed_at = pendulum.parse(item['gsiA1SortKey']).in_tz('utc')
+            last_indexed_at = pendulum.parse(item['gsiA1SortKey'])
             pending_view_count = item['pendingViewCount']
             new_score = self.calculate_new_score(old_score, last_indexed_at, pending_view_count, cutoff)
 

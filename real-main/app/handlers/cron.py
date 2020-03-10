@@ -58,6 +58,7 @@ def delete_unconfirmed_expired_users_in_cognito(event, context):
 
     # iterate over unconfirmed entries in the user pool
     for item in cognito_client.list_unconfirmed_users_pool_entries():
+        # boto returns these datetimes in the machine's local TZ
         last_modified_at = pendulum.instance(item['UserLastModifiedDate']).in_tz('utc')
         if last_modified_at > cutoff:
             continue

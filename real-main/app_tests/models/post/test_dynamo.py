@@ -619,7 +619,7 @@ def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
     post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post2, PostStatus.COMPLETED)])
     post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post3, PostStatus.COMPLETED)])
 
-    expires_at_1 = pendulum.parse(post1['expiresAt']).in_tz('utc')
+    expires_at_1 = pendulum.parse(post1['expiresAt'])
     expires_at_date = expires_at_1.date()
     cut_off_time = expires_at_1.time()
 

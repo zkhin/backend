@@ -137,7 +137,7 @@ def test_update_trending_score_success(trending_dynamo):
     view_count_increment = 12
     resp = trending_dynamo.increment_trending_pending_view_count(item_id, view_count_increment)
     assert resp['pendingViewCount'] == view_count_increment
-    old_last_indexed_at = pendulum.parse(resp['gsiA1SortKey']).in_tz('utc')
+    old_last_indexed_at = pendulum.parse(resp['gsiA1SortKey'])
 
     # now update its score
     new_score = 13

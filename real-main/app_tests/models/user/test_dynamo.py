@@ -19,7 +19,7 @@ def test_add_user_minimal(user_dynamo):
     item = user_dynamo.add_user(user_id, username)
     after = pendulum.now('utc')
 
-    now = pendulum.parse(item['signedUpAt']).in_tz('utc')
+    now = pendulum.parse(item['signedUpAt'])
     assert before < now
     assert after > now
 
@@ -49,7 +49,7 @@ def test_add_user_maximal(user_dynamo):
                                 placeholder_photo_code=photo_code)
     after = pendulum.now('utc')
 
-    now = pendulum.parse(item['signedUpAt']).in_tz('utc')
+    now = pendulum.parse(item['signedUpAt'])
     print(item['signedUpAt'])
     print(now)
     print(now.to_iso8601_string())
@@ -144,7 +144,7 @@ def test_update_user_username(user_dynamo):
     new_item = user_dynamo.update_user_username(user_id, new_username, old_username, now=now)
     assert new_item['username'] == new_username
     assert new_item['usernameLastValue'] == old_username
-    assert pendulum.parse(new_item['usernameLastChangedAt']).in_tz('utc') == now
+    assert pendulum.parse(new_item['usernameLastChangedAt']) == now
     assert new_item['gsiA1PartitionKey'] == f'username/{new_username}'
     assert new_item['gsiA1SortKey'] == '-'
 
