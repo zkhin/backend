@@ -8,8 +8,8 @@ const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(8, 8)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageData = new Buffer.from(imageBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -410,7 +410,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a post to that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData: imageDataB64}
+  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -458,7 +458,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a second post to that album
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  variables = {postId: postId2, mediaId: mediaId2, albumId, imageData: imageDataB64}
+  variables = {postId: postId2, mediaId: mediaId2, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -493,7 +493,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a third post to that album
   const [postId3, mediaId3] = [uuidv4(), uuidv4()]
-  variables = {postId: postId3, mediaId: mediaId3, albumId, imageData: imageDataB64}
+  variables = {postId: postId3, mediaId: mediaId3, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
@@ -528,7 +528,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // add a fourth post to that album
   const [postId4, mediaId4] = [uuidv4(), uuidv4()]
-  variables = {postId: postId4, mediaId: mediaId4, albumId, imageData: imageDataB64}
+  variables = {postId: postId4, mediaId: mediaId4, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId4)

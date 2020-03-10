@@ -8,8 +8,8 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(8, 8)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -37,7 +37,7 @@ test('Create a posts in an album, album post ordering', async () => {
 
   // we add an image post in that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData: imageDataB64}
+  let variables = {postId: postId1, mediaId: mediaId1, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -59,7 +59,7 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   let uploadUrl = resp['data']['addPost']['imageUploadUrl']
   let before = moment().toISOString()
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
   let after = moment().toISOString()
 
@@ -151,7 +151,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['album']).toBeNull()
   let uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify neither we or them cannot move the post into their album
@@ -197,7 +197,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['data']['album']['posts']['items']).toHaveLength(0)
 
   // upload the media, thus completing the post
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // verify the post is now COMPLETED
@@ -231,7 +231,7 @@ test('Add, remove, change albums for an existing post', async () => {
 
   // add a post, not in any album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -330,7 +330,7 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
 
   // add a media post, and archive it
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId2, mediaId: mediaId2, imageData: imageDataB64}
+  let variables = {postId: postId2, mediaId: mediaId2, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -370,7 +370,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, imageData: imageDataB64}
+  let variables = {postId, mediaId, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -380,7 +380,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
 
   // add another media post in the album
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  variables = {postId: postId2, mediaId: mediaId2, albumId, imageData: imageDataB64}
+  variables = {postId: postId2, mediaId: mediaId2, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -443,7 +443,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
 
   // add a media post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, albumId, imageData: imageDataB64}
+  let variables = {postId, mediaId, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -488,18 +488,18 @@ test('Edit album post order failures', async () => {
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // we add two posts to the album
-  variables = {postId: postId1, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  variables = {postId: postId1, mediaId: uuidv4(), albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
-  variables = {postId: postId2, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  variables = {postId: postId2, mediaId: uuidv4(), albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   // they add a post, not in any album
-  variables = {postId: postId3, mediaId: uuidv4(), imageData: imageDataB64}
+  variables = {postId: postId3, mediaId: uuidv4(), imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
@@ -559,7 +559,7 @@ test('Edit album post order', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
-  variables = {postId: postId2, mediaId: uuidv4(), albumId, imageData: imageDataB64}
+  variables = {postId: postId2, mediaId: uuidv4(), albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)

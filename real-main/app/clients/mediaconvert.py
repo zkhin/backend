@@ -18,7 +18,9 @@ class MediaConvertClient:
         assert uploads_bucket, "S3 uploads bucket name is required"
         self.role_arn = role_arn
         self.uploads_bucket = uploads_bucket
-        self.job_template_arn = f'arn:aws:mediaconvert:{aws_region}:{aws_account_id}:jobTemplates/{self.job_template}'
+        self.job_template_arn = (
+            f'arn:aws:mediaconvert:{aws_region}:{aws_account_id}:jobTemplates/{self.job_template}'
+        )
 
         # the endpoint is account-specific and must be provided when initializing the boto client
         if not endpoint:

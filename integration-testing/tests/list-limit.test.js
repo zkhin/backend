@@ -6,8 +6,8 @@ const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
 const schema = require('../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(8, 8)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageData = new Buffer.from(imageBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -52,7 +52,7 @@ test('Paginated list default', async () => {
   const postId = uuidv4()
 
   // add a post
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

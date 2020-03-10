@@ -6,8 +6,8 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(8, 8)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageData = new Buffer.from(imageBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -30,7 +30,7 @@ test('Delete a post that was our next story to expire', async () => {
 
   // we create a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64, lifetime: 'PT1H'}
+  let variables = {postId, mediaId: uuidv4(), imageData, lifetime: 'PT1H'}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -157,7 +157,7 @@ test('Invalid attempts to delete posts', async () => {
   const postId = uuidv4()
 
   // verify can't delete post that doens't exist
-  await expect(ourClient.mutate({mutation: schema.deletePost, variables: {postId}})).rejects.toThrow('does not exist')
+  await expect(ourClient.mutate({mutation: schema.deletePost, variables: {postId}})).rejects.toThrow('not exist')
 
   // create a post
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
@@ -183,7 +183,7 @@ test('When a post is deleted, any likes of it disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 

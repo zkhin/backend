@@ -8,9 +8,9 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(300, 200)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
-const imageData2 = misc.generateRandomJpeg(300, 200)
+const imageBytes = misc.generateRandomJpeg(300, 200)
+const imageData = new Buffer.from(imageBytes).toString('base64')
+const imageBytes2 = misc.generateRandomJpeg(300, 200)
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -28,7 +28,7 @@ test('Add post no expiration', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -181,7 +181,7 @@ test('Add media post with image data directly included', async () => {
 
   // add the post with image data included in the gql call
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
@@ -210,7 +210,7 @@ test('Add media post with image data directly included', async () => {
 
   // check the data in the native image is correct
   const s3ImageData = await rp.get({uri: media['url'], encoding: null})
-  expect(s3ImageData.equals(imageData)).toBe(true)
+  expect(s3ImageData.equals(imageBytes)).toBe(true)
 
   // double check everything saved to db correctly
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -260,7 +260,7 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   expect(uploadUrl.split('?')[0]).toBe(post['mediaObjects'][0]['uploadUrl'].split('?')[0])
 
   // upload the media, give S3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // add another media post with a different image
@@ -268,7 +268,7 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId2, mediaId: mediaId2}})
   expect(resp['errors']).toBeUndefined()
   uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData2})
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // check the post & media have changed status and look good
@@ -458,7 +458,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   const theirPostId = uuidv4()
 
   // we add a media post, complete it, check it's original
-  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
@@ -467,7 +467,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   await misc.sleep(1000)  // let dynamo converge
 
   // they add another media post with the same media, original should point back to first post
-  variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageDataB64}
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)

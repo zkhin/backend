@@ -69,8 +69,7 @@ class PostViewManager:
             try:
                 self.dynamo.add_views_to_post_view(post.id, viewed_by_user_id, view_count, viewed_at)
             except exceptions.PostViewDoesNotExist:
-                msg = f'Excpected post view for post `{post.id}` and user `{viewed_by_user_id}` to exist but does not'
-                logger.error(msg)
+                logger.error(f'Post view for post `{post.id}` and user `{viewed_by_user_id}` does not exist')
             return
 
         # record the viewedBy on the post and user

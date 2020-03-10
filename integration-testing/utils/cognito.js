@@ -105,7 +105,8 @@ const getAppSyncClient = async (creds) => {
   }, {
     defaultOptions: {
       query: {
-        fetchPolicy: 'network-only',  // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
+        // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
+        fetchPolicy: 'network-only',
         errorPolicy: 'all',
       },
     },

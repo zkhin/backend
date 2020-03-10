@@ -14,7 +14,8 @@ logger = logging.getLogger()
 
 class CognitoClient:
 
-    def __init__(self, user_pool_id=COGNITO_USER_POOL_ID, client_id=COGNITO_BACKEND_CLIENT_ID, aws_region=AWS_REGION):
+    def __init__(self, user_pool_id=COGNITO_USER_POOL_ID, client_id=COGNITO_BACKEND_CLIENT_ID,
+                 aws_region=AWS_REGION):
         assert user_pool_id, "Cognito user pool id is required"
         assert client_id, "Cognito user pool client id is required"
 

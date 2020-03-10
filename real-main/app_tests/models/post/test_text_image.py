@@ -41,8 +41,8 @@ def test_rectangle_wrap():
     raw_tokens = ['a', 'b', 'c', 'd', 'e']
     token_widths = [15, 13, 16, 14, 17]
 
-    text, text_width, text_height = rectangle_wrap(raw_tokens, token_widths, token_spacing, line_spacing, line_height,
-                                                   desired_aspect_ratio)
+    text, text_width, text_height = rectangle_wrap(raw_tokens, token_widths, token_spacing, line_spacing,
+                                                   line_height, desired_aspect_ratio)
     assert text == 'a b c\nd e'
     assert text_height == 22
     assert text_width == 48

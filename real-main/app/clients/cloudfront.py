@@ -33,8 +33,8 @@ class CloudFrontClient:
             # the private key format requires newlines after the header and before the footer
             # and the secrets manager doesn't seem to play well with newlines
             pk_string = f"-----BEGIN RSA PRIVATE KEY-----\n{private_key}\n-----END RSA PRIVATE KEY-----"
-            pk_bytes = bytearray(pk_string, 'utf-8')
-            self._private_key = serialization.load_pem_private_key(pk_bytes, password=None, backend=default_backend())
+            pk_raw = bytearray(pk_string, 'utf-8')
+            self._private_key = serialization.load_pem_private_key(pk_raw, password=None, backend=default_backend())
         return self._private_key
 
     def get_cloudfront_signer(self):

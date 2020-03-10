@@ -147,7 +147,7 @@ def test_response_handle_400_error(cloudfront_client, media_no_meta, requests_mo
     assert 'isVerified' not in media_no_meta.item
 
 
-def test_response_handle_wrong_resp_fmt(cloudfront_client, media_no_meta, requests_mock, post_verification_api_creds):
+def test_response_handle_bad_resp_fmt(cloudfront_client, media_no_meta, requests_mock, post_verification_api_creds):
     api_url = post_verification_api_creds['root'] + 'verify/image'
     image_url = 'https://the-image.com'
     cloudfront_client.configure_mock(**{

@@ -485,7 +485,8 @@ class Post:
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
             self.id, text=text, text_tags=text_tags, comments_disabled=comments_disabled,
-            likes_disabled=likes_disabled, sharing_disabled=sharing_disabled, verification_hidden=verification_hidden,
+            likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
+            verification_hidden=verification_hidden,
         )
         self.item['mediaObjects'] = post_media
         return self

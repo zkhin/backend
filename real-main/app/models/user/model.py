@@ -4,6 +4,7 @@ import os
 from app.utils import image_size
 
 from . import enums, exceptions
+from .enums import UserPrivacyStatus
 from .dynamo import UserDynamo
 from .validate import UserValidate
 
@@ -97,7 +98,7 @@ class User:
             return self
 
         # are we changing from private to public?
-        if old_privacy_status == enums.UserPrivacyStatus.PRIVATE and privacy_status == enums.UserPrivacyStatus.PUBLIC:
+        if old_privacy_status == UserPrivacyStatus.PRIVATE and privacy_status == UserPrivacyStatus.PUBLIC:
             self.follow_manager.accept_all_requested_follow_requests(self.id)
             self.follow_manager.delete_all_denied_follow_requests(self.id)
 
@@ -115,9 +116,7 @@ class User:
         try:
             self.cognito_client.set_user_attributes(self.id, {'preferred_username': username.lower()})
         except self.cognito_client.boto_client.exceptions.AliasExistsException:
-            raise self.exceptions.UserValidationException(
-                f'Username `{username}` already taken (case-insensitive comparison)'
-            )
+            raise exceptions.UserValidationException(f'Username `{username}` already taken (case-insensitive cmp)')
 
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
         return self
@@ -223,7 +222,7 @@ class User:
         # verify we actually need to do anything
         old_value = self.item.get(names['dynamo'])
         if old_value == attribute_value:
-            raise exceptions.UserVerificationException(f'User {attribute_name} is already set to `{attribute_value}`')
+            raise exceptions.UserVerificationException(f'User {attribute_name} already set to `{attribute_value}`')
 
         # first we set the users email to the new, unverified one, while also setting it to another property
         # this sends the verification email to the user

@@ -23,8 +23,10 @@ def generate_all_media_objects_uploaded_or_archived(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': (
-            'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv and (mediaStatus = :u or mediaStatus = :a)'
-            + ' and attribute_not_exists(colors)'
+            'begins_with(partitionKey, :pk_prefix)'
+            ' and schemaVersion = :sv'
+            ' and (mediaStatus = :u or mediaStatus = :a)'
+            ' and attribute_not_exists(colors)'
         ),
         'ExpressionAttributeValues': {
             ':pk_prefix': 'media/',

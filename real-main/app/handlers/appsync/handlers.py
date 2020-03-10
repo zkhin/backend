@@ -71,9 +71,9 @@ def create_cognito_only_user(caller_user_id, arguments, source, context):
 def create_facebook_user(caller_user_id, arguments, source, context):
     username = arguments['username']
     full_name = arguments.get('fullName')
-    facebook_access_token = arguments['facebookAccessToken']
+    facebook_token = arguments['facebookAccessToken']
     try:
-        user = user_manager.create_facebook_user(caller_user_id, username, facebook_access_token, full_name=full_name)
+        user = user_manager.create_facebook_user(caller_user_id, username, facebook_token, full_name=full_name)
     except user_manager.exceptions.UserValidationException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)

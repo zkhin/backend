@@ -20,7 +20,7 @@
         ],
         "max-len": [
             "error",
-            { "code": 118 }
+            { "code": 117 }
         ],
         "no-constant-condition": [
             "error",

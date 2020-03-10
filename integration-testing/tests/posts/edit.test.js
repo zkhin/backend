@@ -7,8 +7,8 @@ const uuidv4 = require('uuid/v4')
 const cognito = require('../../utils/cognito.js')
 const schema = require('../../utils/schema.js')
 
-const imageData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const imageData = new Buffer.from(imageBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -26,7 +26,7 @@ test('Edit post', async () => {
   // we create an image post
   const [ourClient] = await loginCache.getCleanLogin()
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: imageDataB64}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -106,7 +106,7 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   // we add a post
   const postId = uuidv4()
   const postText = 'je suis le possion?'
-  let variables = {postId, mediaId: uuidv4(), text: postText, imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), text: postText, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -136,7 +136,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   const postId = uuidv4()
 
   // we add a post
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

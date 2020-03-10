@@ -55,15 +55,18 @@ def test_calculate_new_score_decay(trending_manager):
     old_score = 10
 
     # one full day
-    new_score = trending_manager.calculate_new_score(old_score, now - pendulum.duration(days=1), 0, now)
+    last_indexed_at = now - pendulum.duration(days=1)
+    new_score = trending_manager.calculate_new_score(old_score, last_indexed_at, 0, now)
     assert float(new_score) == pytest.approx(10 / math.e)
 
     # half life
-    new_score = trending_manager.calculate_new_score(old_score, now - math.log(2) * pendulum.duration(days=1), 0, now)
+    last_indexed_at = now - math.log(2) * pendulum.duration(days=1)
+    new_score = trending_manager.calculate_new_score(old_score, last_indexed_at, 0, now)
     assert float(new_score) == pytest.approx(5)
 
     # a minute
-    new_score = trending_manager.calculate_new_score(old_score, now - pendulum.duration(minutes=1), 0, now)
+    last_indexed_at = now - pendulum.duration(minutes=1)
+    new_score = trending_manager.calculate_new_score(old_score, last_indexed_at, 0, now)
     assert float(new_score) == pytest.approx(10 / math.exp(1.0 / 24 / 60))
 
 
@@ -92,7 +95,7 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
 
     # add one post item in the future a second
     post_id_1 = 'post-id-1'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 12, now=(now + pendulum.duration(seconds=1)))
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 9, now=(now + pendulum.duration(seconds=1)))
 
     # add one post item a day ago, give it some pending views
     post_id_2 = 'post-id-2'

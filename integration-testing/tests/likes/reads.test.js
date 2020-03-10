@@ -7,8 +7,8 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(8, 8)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -27,7 +27,7 @@ test('Cant request over 100 of any of the like lists', async () => {
   // we add a post
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -57,7 +57,7 @@ test('Order of users that have onymously liked a post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   await misc.sleep(1000)  // let dynamo converge
@@ -130,10 +130,10 @@ test('Order of onymously liked posts', async () => {
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageDataB64}
+  variables = {postId: postId2, mediaId: uuidv4(), imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -170,10 +170,10 @@ test('Order of anonymously liked posts', async () => {
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData: imageDataB64}
+  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData: imageDataB64}
+  variables = {postId: postId2, mediaId: uuidv4(), imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -216,7 +216,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageData})
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we anonymously like the post, they onymously like it

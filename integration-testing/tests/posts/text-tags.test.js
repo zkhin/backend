@@ -6,8 +6,8 @@ const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
-const imageData = misc.generateRandomJpeg(8, 8)
-const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageData = new Buffer.from(imageBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -145,7 +145,7 @@ test('Tagged user blocks caller', async () => {
   // other adds a post that tags them
   let postId = uuidv4()
   let text = `hi @${theirUsername}`
-  let variables = {postId, mediaId: uuidv4(), text, imageData: imageDataB64}
+  let variables = {postId, mediaId: uuidv4(), text, imageData}
   let resp = await otherClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)

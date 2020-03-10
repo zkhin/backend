@@ -237,7 +237,8 @@ def test_generate_trendings_max_last_indexed_at_cutoff_and_order(trending_dynamo
     assert resp['partitionKey'] == f'trending/{item_id_2}'
 
     # generate no trendings
-    resp = list(trending_dynamo.generate_trendings(item_type, max_last_indexed_at=(now - pendulum.duration(hours=2))))
+    max_last_indexed_at = now - pendulum.duration(hours=2)
+    resp = list(trending_dynamo.generate_trendings(item_type, max_last_indexed_at=max_last_indexed_at))
     assert len(resp) == 0
 
     # generate the first trendings
@@ -246,7 +247,8 @@ def test_generate_trendings_max_last_indexed_at_cutoff_and_order(trending_dynamo
     assert resp[0]['partitionKey'] == f'trending/{item_id_1}'
 
     # generate all the trendings
-    resp = list(trending_dynamo.generate_trendings(item_type, max_last_indexed_at=(now + pendulum.duration(hours=2))))
+    max_last_indexed_at = now + pendulum.duration(hours=2)
+    resp = list(trending_dynamo.generate_trendings(item_type, max_last_indexed_at=max_last_indexed_at))
     assert len(resp) == 2
     assert resp[0]['partitionKey'] == f'trending/{item_id_1}'
     assert resp[1]['partitionKey'] == f'trending/{item_id_2}'

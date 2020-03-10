@@ -3,6 +3,7 @@ import logging
 from app.models.user.enums import UserPrivacyStatus
 
 from . import enums, exceptions
+from .enums import FollowStatus
 
 logger = logging.getLogger()
 
@@ -31,7 +32,7 @@ class Follow:
 
     @property
     def status(self):
-        return self.item['followStatus'] if self.item else enums.FollowStatus.NOT_FOLLOWING
+        return self.item['followStatus'] if self.item else FollowStatus.NOT_FOLLOWING
 
     def refresh_item(self):
         self.item = self.dynamo.get_following(self.follower_user_id, self.followed_user_id)
@@ -39,18 +40,18 @@ class Follow:
 
     def unfollow(self, force=False):
         "Returns the status of the follow request"
-        if not force and self.status == enums.FollowStatus.DENIED:
-            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, enums.FollowStatus.DENIED)
+        if not force and self.status == FollowStatus.DENIED:
+            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
 
         transacts = [self.dynamo.transact_delete_following(self.item)]
-        if self.status == enums.FollowStatus.FOLLOWING:
+        if self.status == FollowStatus.FOLLOWING:
             transacts.extend([
                 self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
                 self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
             ])
         self.dynamo.client.transact_write_items(transacts)
 
-        if self.status == enums.FollowStatus.FOLLOWING:
+        if self.status == FollowStatus.FOLLOWING:
             # async with sns?
             self.feed_manager.delete_users_posts_from_feed(self.follower_user_id, self.followed_user_id)
             self.ffs_manager.dynamo.delete_all([self.follower_user_id], self.followed_user_id)
@@ -60,17 +61,16 @@ class Follow:
             if followed_user_item['privacyStatus'] == UserPrivacyStatus.PRIVATE:
                 self.like_manager.dislike_all_by_user_from_user(self.follower_user_id, self.followed_user_id)
 
-        self.item['followStatus'] = enums.FollowStatus.NOT_FOLLOWING
+        self.item['followStatus'] = FollowStatus.NOT_FOLLOWING
         return self
 
     def accept(self):
         "Returns the status of the follow request"
-        if self.status == enums.FollowStatus.FOLLOWING:
-            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id,
-                                              enums.FollowStatus.FOLLOWING)
+        if self.status == FollowStatus.FOLLOWING:
+            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING)
 
         transacts = [
-            self.dynamo.transact_update_following_status(self.item, enums.FollowStatus.FOLLOWING),
+            self.dynamo.transact_update_following_status(self.item, FollowStatus.FOLLOWING),
             self.user_manager.dynamo.transact_increment_followed_count(self.follower_user_id),
             self.user_manager.dynamo.transact_increment_follower_count(self.followed_user_id),
         ]
@@ -83,23 +83,23 @@ class Follow:
         if post:
             self.ffs_manager.dynamo.set_all([self.follower_user_id], post)
 
-        self.item['followStatus'] = enums.FollowStatus.FOLLOWING
+        self.item['followStatus'] = FollowStatus.FOLLOWING
         return self
 
     def deny(self):
         "Returns the status of the follow request"
-        if self.status == enums.FollowStatus.DENIED:
-            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, enums.FollowStatus.DENIED)
+        if self.status == FollowStatus.DENIED:
+            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
 
-        transacts = [self.dynamo.transact_update_following_status(self.item, enums.FollowStatus.DENIED)]
-        if self.status == enums.FollowStatus.FOLLOWING:
+        transacts = [self.dynamo.transact_update_following_status(self.item, FollowStatus.DENIED)]
+        if self.status == FollowStatus.FOLLOWING:
             transacts.extend([
                 self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
                 self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
             ])
         self.dynamo.client.transact_write_items(transacts)
 
-        if self.status == enums.FollowStatus.FOLLOWING:
+        if self.status == FollowStatus.FOLLOWING:
             # async with sns?
             self.feed_manager.delete_users_posts_from_feed(self.follower_user_id, self.followed_user_id)
             self.ffs_manager.dynamo.delete_all([self.follower_user_id], self.followed_user_id)
@@ -107,5 +107,5 @@ class Follow:
             # clear any likes that were droped on the followed's posts by the follower
             self.like_manager.dislike_all_by_user_from_user(self.follower_user_id, self.followed_user_id)
 
-        self.item['followStatus'] = enums.FollowStatus.DENIED
+        self.item['followStatus'] = FollowStatus.DENIED
         return self
