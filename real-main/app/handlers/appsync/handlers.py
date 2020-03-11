@@ -523,6 +523,9 @@ def add_post(caller_user_id, arguments, source, context):
 def post_image(caller_user_id, arguments, source, context):
     post = post_manager.get_post(source['postId'])
 
+    if not post or post.status == PostStatus.DELETING:
+        return None
+
     if post.type == PostType.IMAGE:
         allowed_statuses = [media_manager.enums.MediaStatus.UPLOADED, media_manager.enums.MediaStatus.ARCHIVED]
         media_items = [
@@ -573,10 +576,8 @@ def post_image_upload_url(caller_user_id, arguments, source, context):
 def post_video(caller_user_id, arguments, source, context):
     post = post_manager.get_post(source['postId'])
 
-    if post.type != PostType.VIDEO:
-        return None
-
-    if post.status != PostStatus.COMPLETED:
+    statuses = (PostStatus.COMPLETED, PostStatus.ARCHIVED)
+    if not post or post.type != PostType.VIDEO or post.status not in statuses:
         return None
 
     return {
@@ -590,10 +591,10 @@ def post_video_upload_url(caller_user_id, arguments, source, context):
     post_id = source['postId']
     post = post_manager.get_post(post_id)
 
-    if caller_user_id != post.user_id:
+    if not post or post.type != PostType.VIDEO or post.status != PostStatus.PENDING:
         return None
 
-    if post.type != PostType.VIDEO:
+    if caller_user_id != post.user_id:
         return None
 
     return post.get_video_writeonly_url()

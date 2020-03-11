@@ -162,19 +162,10 @@ class Post:
         }
 
     def get_video_writeonly_url(self):
-        if self.type != PostType.VIDEO:
-            return None
-
-        if self.status not in (PostStatus.PENDING, PostStatus.ERROR):
-            return None
-
         path = self.get_original_video_path()
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
     def get_image_readonly_url(self, size):
-        if self.status not in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
-            return None
-
         path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
 

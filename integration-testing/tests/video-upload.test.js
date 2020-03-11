@@ -46,6 +46,7 @@ test('Upload video basic success', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['videoUploadUrl']).toBeNull()
 
   // verify the image urls exist, and we can access them
   const image = resp['data']['post']['image']
@@ -130,6 +131,7 @@ test('Create video post in album, move in and out', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['videoUploadUrl']).toBeNull()
   expect(resp['data']['post']['image']['url']).toBeTruthy()
 
   // check the album

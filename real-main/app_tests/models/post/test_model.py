@@ -126,22 +126,7 @@ def test_get_original_video_path(post):
     assert video_path == f'{user_id}/post/{post_id}/video-original.mov'
 
 
-def test_get_video_writeonly_url_failures(post):
-    # wrong post type
-    assert post.item['postType'] == PostType.TEXT_ONLY
-    assert post.get_video_writeonly_url() is None
-
-    # wrong status
-    post.type = PostType.VIDEO
-    assert post.item['postStatus'] == PostStatus.COMPLETED
-    assert post.get_video_writeonly_url() is None
-
-    # success
-    post.item['postStatus'] = PostStatus.PENDING
-    assert post.get_video_writeonly_url() is not None
-
-
-def test_get_video_writeonly_url_success(cloudfront_client):
+def test_get_video_writeonly_url(cloudfront_client):
     item = {
         'postedByUserId': 'user-id',
         'postId': 'post-id',
@@ -159,6 +144,26 @@ def test_get_video_writeonly_url_success(cloudfront_client):
 
     expected_path = 'user-id/post/post-id/video-original.mov'
     assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['PUT'])]
+
+
+def test_get_image_readonly_url(cloudfront_client):
+    item = {
+        'postedByUserId': 'user-id',
+        'postId': 'post-id',
+        'postType': PostType.IMAGE,
+        'postStatus': PostStatus.PENDING,
+    }
+    expected_url = {}
+    cloudfront_client.configure_mock(**{
+        'generate_presigned_url.return_value': expected_url,
+    })
+
+    post = Post(item, None, cloudfront_client=cloudfront_client)
+    url = post.get_image_readonly_url(image_size.NATIVE)
+    assert url == expected_url
+
+    expected_path = f'user-id/post/post-id/image/{image_size.NATIVE.filename}'
+    assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['GET', 'HEAD'])]
 
 
 def test_get_hls_access_cookies(cloudfront_client):
