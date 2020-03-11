@@ -899,15 +899,11 @@ custom:
           - protocol: email
             endpoint: mike+${self:provider.stage}-#{AWS::AccountId}@real.app
     definitions:
-      functionThrottles:
-        period: 300
-      functionErrors:
-        period: 300
       functionFlagged:
         metric: postsFlagged
         threshold: 1
         statistic: Sum
-        period: 300
+        period: 60
         evaluationPeriods: 1
         datapointsToAlarm: 1
         comparisonOperator: GreaterThanOrEqualToThreshold
@@ -917,7 +913,7 @@ custom:
         metric: cognitoServerErrors
         threshold: 1
         statistic: Sum
-        period: 300
+        period: 60
         evaluationPeriods: 1
         datapointsToAlarm: 1
         comparisonOperator: GreaterThanOrEqualToThreshold
@@ -1338,7 +1334,7 @@ resources:
         Namespace: ${self:provider.stackName}
         MetricName: AppSyncServerErrors
         Threshold: 1
-        Period: 300
+        Period: 60
         EvaluationPeriods: 1
         DatapointsToAlarm: 1
         ComparisonOperator: GreaterThanOrEqualToThreshold
