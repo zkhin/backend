@@ -202,6 +202,10 @@ The order of operations to implement a data migration is:
 
 The following objects are stored with the given path structures:
 
-- Post media objects: `{userId}/post/{postId}/media/{mediaId}/***.jpg`.
-- Profile photo: `{userId}/profile-photo/{photoMediaId}/***.jpg`
+- Image posts: `{userId}/post/{postId}/media/{mediaId}/***.jpg`.
+- Video posts:
+  - `{userId}/post/{postId}/video/video-original.mov`.
+  - `{userId}/post/{postId}/video/video-hls/*`
+  - `{userId}/post/{postId}/image/***.jpg`
+- User profile photo: `{userId}/profile-photo/{photoMediaId}/***.jpg`
 - Album art: `{userId}/album/{albumId}/{artHash}/***.jpg`
