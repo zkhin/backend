@@ -76,6 +76,21 @@ def test_block_clears_likes(block_manager, blocker_user, blocked_user, post_mana
     assert block_manager.like_manager.get_like(blocked_user.id, blocker_post_id) is None
 
 
+def test_block_deletes_direct_chat(block_manager, blocker_user, blocked_user, chat_manager):
+    # add a direct chat between the two users
+    chat_id = 'cid'
+    chat_manager.add_direct_chat(chat_id, blocker_user.id, blocked_user.id)
+    assert chat_manager.get_direct_chat(blocker_user.id, blocked_user.id)
+
+    # do the blocking
+    block_item = block_manager.block(blocker_user, blocked_user)
+    assert block_item['blockerUserId'] == blocker_user.id
+    assert block_item['blockedUserId'] == blocked_user.id
+
+    # verify the direct chat has disappeared
+    assert chat_manager.get_direct_chat(blocker_user.id, blocked_user.id) is None
+
+
 def test_is_blocked(block_manager, blocker_user, blocked_user):
     # block then unblock, testing block state at every step
     assert block_manager.is_blocked(blocker_user.id, blocked_user.id) is False

@@ -213,6 +213,12 @@ class UserDynamo:
     def transact_decrement_album_count(self, user_id):
         return self._transact_decrement_count(user_id, 'albumCount')
 
+    def transact_increment_chat_count(self, user_id):
+        return self._transact_increment_count(user_id, 'chatCount')
+
+    def transact_decrement_chat_count(self, user_id):
+        return self._transact_decrement_count(user_id, 'chatCount')
+
     def transact_increment_followed_count(self, user_id):
         return self._transact_increment_count(user_id, 'followedCount')
 

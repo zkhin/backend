@@ -300,6 +300,61 @@ custom:
         field: albums
         dataSource: DynamodbDataSource
 
+      - type: User
+        field: chatCount
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: User
+        field: chats
+        dataSource: DynamodbDataSource
+
+      - type: User
+        field: directChat
+        dataSource: DynamodbDataSource
+
+      - type: Chat
+        field: users
+        dataSource: DynamodbDataSource
+
+      - type: Chat
+        field: userCount
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: Chat
+        field: messages
+        dataSource: DynamodbDataSource
+        response: PassThru.response.vtl
+
+      - type: Chat
+        field: messageCount
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: ChatMessage
+        field: chat
+        request: ChatMessage.chat/before.request.vtl
+        response: ChatMessage.chat/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Chats.batchGet
+
+      - type: ChatMessage
+        field: textTaggedUsers
+        request: Source.textTaggedUsers/before.request.vtl
+        response: Source.textTaggedUsers/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+
+      - type: ChatMessage
+        field: viewedStatus
+        dataSource: DynamodbDataSource
+
       - type: Mutation
         field: createCognitoOnlyUser
         dataSource: LambdaDataSource
@@ -659,6 +714,16 @@ custom:
           - Users.filterBy.followedStatus
           - Users.endPipeline
 
+      - type: Query
+        field: chat
+        request: Query.chat/before.request.vtl
+        response: Query.chat/after.response.vtl
+        kind: PIPELINE
+        functions:
+          - ChatMemberships.batchGet
+          - Query.chat.transform
+          - Chats.batchGet
+
       - type: Mutation
         field: addPost
         dataSource: LambdaDataSource
@@ -760,6 +825,24 @@ custom:
         response: Lambda.response.vtl
 
       - type: Mutation
+        field: createDirectChat
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: addChatMessage
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: reportChatMessageViews
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
         field: lambdaClientError
         dataSource: LambdaDataSource
         request: Lambda.request.vtl
@@ -775,6 +858,30 @@ custom:
         field: dynamoServerError
         dataSource: DynamodbDataSource
         response: PassThru.response.vtl
+
+      - type: PaginatedChats
+        field: items
+        request: PaginatedChats.items/before.request.vtl
+        response: PassThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - Chats.batchGet
+
+      - type: PaginatedChatMessages
+        field: items
+        request: PaginatedChatMessages.items/before.request.vtl
+        response: PassThru.response.vtl
+        kind: PIPELINE
+        functions:
+          - ChatMessages.batchGet
+          - PaginatedChatMessages.items.hideSystemMessages
+          - Users.beginPipeline
+          - Users.batchGet
+          - Users.batchGet.blockerStatus
+          - Users.filterBy.blockerStatus
+          - Users.batchGet.followedStatus
+          - Users.endPipeline
+          - PaginatedChatMessages.items.unhideSystemMessages
 
       - type: PaginatedComments
         field: items
@@ -857,6 +964,30 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Comments.batchGet
+
+      - dataSource: DynamodbDataSource
+        name: Chats.batchGet
+
+      - dataSource: DynamodbDataSource
+        name: ChatMemberships.batchGet
+
+      - dataSource: DynamodbDataSource
+        name: ChatMessages.batchGet
+
+      - dataSource: NoneDataSource
+        name: Query.chat.transform
+        request: Query.chat/transform.request.vtl
+        response: PassThru.response.vtl
+
+      - dataSource: NoneDataSource
+        name: PaginatedChatMessages.items.hideSystemMessages
+        request: PaginatedChatMessages.items/hideSystemMessages.request.vtl
+        response: PassThru.response.vtl
+
+      - dataSource: NoneDataSource
+        name: PaginatedChatMessages.items.unhideSystemMessages
+        request: PaginatedChatMessages.items/unhideSystemMessages.request.vtl
+        response: PassThru.response.vtl
 
     dataSources:
 

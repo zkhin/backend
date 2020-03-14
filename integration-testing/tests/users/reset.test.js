@@ -387,3 +387,46 @@ test('resetUser deletes any albums we have added', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toBeNull()
 })
+
+
+test('resetUser deletes all of our direct chats', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
+  const [other2Client] = await loginCache.getCleanLogin()
+  const [chatId1, chatId2] = [uuidv4(), uuidv4()]
+
+  // we open up a direct chat with other1
+  let variables = {userId: other1UserId, chatId: chatId1, messageId: uuidv4(), messageText: 'lore'}
+  let resp = await ourClient.mutate({mutation: schema.createDirectChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createDirectChat']['chatId']).toBe(chatId1)
+
+  // other2 opens up a direct chat with us
+  variables = {userId: ourUserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore'}
+  resp = await other2Client.mutate({mutation: schema.createDirectChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createDirectChat']['chatId']).toBe(chatId2)
+
+  // check other1 can see their chat with us
+  resp = await other1Client.query({query: schema.chat, variables: {chatId: chatId1}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId1)
+
+  // check other2 can see their chat with us
+  resp = await other2Client.query({query: schema.chat, variables: {chatId: chatId2}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId2)
+
+  // reset our user
+  await ourClient.mutate({mutation: schema.resetUser})
+
+  // check other1's chat with us has disappeared
+  resp = await other1Client.query({query: schema.chat, variables: {chatId: chatId1}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']).toBeNull()
+
+  // check other2's chat with us has disappeared
+  resp = await other2Client.query({query: schema.chat, variables: {chatId: chatId2}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']).toBeNull()
+})

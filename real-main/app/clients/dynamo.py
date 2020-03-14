@@ -197,7 +197,9 @@ class DynamoClient:
                 elif key == 'Update':
                     operation = self.boto3_client.update_item
                 elif key == 'ConditionCheck':
-                    pass
+                    # There is no corresponding operation we can do here, AFAIK
+                    # Thus we can't test write failures due to ConditionChecks in test suite
+                    continue
                 else:
                     raise ValueError(f"Unrecognized transaction key '{key}'")
 

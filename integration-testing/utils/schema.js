@@ -94,9 +94,19 @@ module.exports.self = gql`
           ...AlbumFragment
         }
       }
+      chatCount
+      chats {
+        items {
+          ...ChatFragment
+        }
+      }
+      directChat {
+        ...ChatFragment
+      }
     }
   }
   ${fragments.album}
+  ${fragments.chat}
   ${fragments.image}
   ${fragments.simpleUserFields}
 `
@@ -180,9 +190,19 @@ module.exports.user = gql`
           ...AlbumFragment
         }
       }
+      chatCount
+      chats {
+        items {
+          ...ChatFragment
+        }
+      }
+      directChat {
+        ...ChatFragment
+      }
     }
   }
   ${fragments.album}
+  ${fragments.chat}
   ${fragments.image}
   ${fragments.simpleUserFields}
 `
@@ -1100,4 +1120,51 @@ module.exports.album = gql`
     }
   }
   ${fragments.album}
+`
+
+module.exports.chat = gql`
+  query Chat ($chatId: ID!, $reverse: Boolean) {
+    chat (chatId: $chatId) {
+      ...ChatFragment
+      messageCount
+      messages (reverse: $reverse) {
+        items {
+          ...ChatMessageFragment
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
+module.exports.createDirectChat = gql`
+  mutation CreateDirectChat ($chatId: ID!, $userId: ID!, $messageId: ID! $messageText: String!) {
+    createDirectChat (chatId: $chatId, userId: $userId, messageId: $messageId, messageText: $messageText) {
+      ...ChatFragment
+      messageCount
+      messages {
+        items {
+          ...ChatMessageFragment
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
+module.exports.addChatMessage = gql`
+  mutation AddChatMessage ($chatId: ID!, $messageId: ID! $text: String!) {
+    addChatMessage (chatId: $chatId, messageId: $messageId, text: $text) {
+      ...ChatMessageFragment
+    }
+  }
+  ${fragments.chatMessage}
+`
+
+module.exports.reportChatMessageViews = gql`
+  mutation ReportChatMessageViews ($messageIds: [ID!]!) {
+    reportChatMessageViews (messageIds: $messageIds)
+  }
 `

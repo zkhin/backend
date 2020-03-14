@@ -47,6 +47,10 @@ type Query {
   # A specific album
   #   - albums of a private user are private to only themselves and their followers
   album(albumId: ID!): Album
+
+  # A specific chat
+  #   - chats are private to just the users within them
+  chat(chatId: ID!): Chat
 }
 
 type Mutation {
@@ -194,10 +198,39 @@ type Mutation {
   editAlbum(albumId: ID!, name: String, description: String): Album
   deleteAlbum(albumId: ID!): Album
 
+  # Chats
+  #   - there may exist at most one direct chat between two users
+  #   - it is an error to try to add someone to or leave from a direct chat
+  #   - when creating a chat, the first message must be included
+  createDirectChat(chatId: ID!, userId: ID!, messageId: ID! messageText: String!): Chat
+  #createGroupChat(chatId: ID!, name: String, userIds: [ID!]!, messageId: ID! messageText: String!): Chat
+  #editGroupChat(chatId: ID!, name: String!): Chat
+  #addToGroupChat(chatId: ID!, userIds: [ID!]!): Chat
+  #leaveGroupChat(chatId: ID!): Chat
+
+  # Chat messages
+  addChatMessage(chatId: ID!, messageId: ID!, text: String!): ChatMessage
+  #editChatMessage(messageId: ID!, text: String!): ChatMessage
+  #deleteChatMessage(messageId: ID!): ChatMessage
+  reportChatMessageViews(messageIds: [ID!]!): Boolean
+
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
   lambdaServerError(arg1: String, arg2: String): String
   dynamoServerError(arg1: String, arg2: String): String
+
+  # These are used internally to fire subscription events. Calling them externally is an error.
+  triggerChatMessageAdded(userId: ID!): ChatMessage
+  #triggerChatMessageEdited(userId: ID!): ChatMessage
+  #triggerChatMessageDeleted(userId: ID!): ChatMessage
+}
+
+type Subscription {
+  # Subscribe to changes to chat messages sent to a given user
+  #   - may only be called with the caller's own userId
+  onChatMessageAdded(userId: ID!): ChatMessage @aws_subscribe(mutations: ["triggerChatMessageAdded"])
+  #onChatMessageEdited(userId: ID!): ChatMessage @aws_subscribe(mutations: ["triggerChatMessageEdited"])
+  #onChatMessageDeleted(userId: ID!): ChatMessage @aws_subscribe(mutations: ["triggerChatMessageDeleted"])
 }
 
 type User {
@@ -314,6 +347,18 @@ type User {
   #   - ordered with most recently created album first
   albums(limit: Int, nextToken: String): PaginatedAlbums
   albumCount: Int
+
+  # Chats the user is in
+  #   - private to the user themselves
+  #   - ordered by Chat.lastMessageAt, most recent first
+  chats(limit: Int, nextToken: String): PaginatedChats
+  chatCount: Int
+
+  # Direct-message chat between caller and user. Null when looking at:
+  #   - self
+  #   - a user that has blocked caller or that caller has blocked
+  #   - a user with whom caller has not exchanged direct messages
+  directChat: Chat
 }
 
 type PaginatedUsers {
@@ -321,9 +366,55 @@ type PaginatedUsers {
   nextToken: String
 }
 
+type Chat {
+  chatId: ID!
+  chatType: ChatType!
+  name: String
+  createdAt: AWSDateTime!
+  lastMessageAt: AWSDateTime
+  # Users: ordered by joinedAt, earliest first
+  users(limit: Int, nextToken: String): PaginatedUsers!
+  userCount: Int!
+  # Messages: ordered by createdAt, earliest first by default
+  messages(limit: Int, nextToken: String, reverse: Boolean): PaginatedChatMessages!
+  messageCount: Int!
+}
+
+type PaginatedChats {
+  items: [Chat!]!
+  nextToken: String
+}
+
+type ChatMessage {
+  messageId: ID!
+  text: String
+  textTaggedUsers: [TextTaggedUser!]!  # max of 100
+  createdAt: AWSDateTime!
+  lastEditedAt: AWSDateTime
+  chat: Chat!
+  author: User  # null indicates this is a system message (ex: 'user X left the group')
+  viewedStatus: ViewedStatus!  # has the caller viewed this message?
+}
+
+type PaginatedChatMessages {
+  items: [ChatMessage!]!
+  nextToken: String
+}
+
 enum PrivacyStatus {
   PUBLIC
   PRIVATE
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+enum ViewedStatus {
+  NOT_VIEWED
+  NOT_VIEWED_SINCE_LAST_EDIT
+  VIEWED
 }
 
 enum FollowStatus {

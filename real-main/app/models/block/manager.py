@@ -1,6 +1,6 @@
 import logging
 
-from app.models import follow, like
+from app.models import chat, follow, like
 
 from . import enums, exceptions
 from .dynamo import BlockDynamo
@@ -16,6 +16,7 @@ class BlockManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['block'] = self
+        self.chat_manager = managers.get('chat') or chat.ChatManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
         self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
 
@@ -49,6 +50,11 @@ class BlockManager:
         # force-dislike any likes of posts between the two of us
         self.like_manager.dislike_all_by_user_from_user(blocker_user.id, blocked_user.id)
         self.like_manager.dislike_all_by_user_from_user(blocked_user.id, blocker_user.id)
+
+        # if a direct chat between the user exists, delete it
+        chat = self.chat_manager.get_direct_chat(blocked_user.id, blocker_user.id)
+        if chat:
+            chat.delete_direct_chat()
 
         return block_item
 

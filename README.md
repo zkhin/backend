@@ -154,7 +154,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 
 | Table Partition Key `partitionKey` | Table Sort Key `sortKey` | Schema Version `schemaVersion` | Attributes | GSI-A1 Partition Key `gsiA1PartitionKey` | GSI-A1 Sort Key `gsiA1SortKey` | GSI-A2 Partition Key `gsiA2PartitionKey` | GSI-A2 Sort Key `gsiA2SortKey` | GSI-A3 Partition Key `gsiA3PartitionKey` | GSI-A3 Sort Key `gsiA3SortKey` | GSI-K1 Partition Key `gsiK1PartitionKey` | GSI-K1 Sort Key `gsiK1SortKey` | GSI-K2 Partition Key `gsiK2PartitionKey` | GSI-K2 Sort Key `gsiK2SortKey` | GSI-K3 Partition Key `gsiK3PartitionKey` | GSI-K3 Sort Key `gsiK3SortKey:Number` |
 | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
-| `user/{userId}` | `profile` | `5` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `bio`, `photoMediaId`, `privacyStatus`, `followerCount:Number`, `followedCount:Number`, `postCount:Number`, `lastManuallyReindexedAt`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `acceptedEULAVersion`, `postViewedByCount:Number`, `usernameLastValue`, `usernameLastChangedAt`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean` | `username/{username}` | `-` |
+| `user/{userId}` | `profile` | `5` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `bio`, `photoMediaId`, `privacyStatus`, `followerCount:Number`, `followedCount:Number`, `postCount:Number`, `albumCount:Number`, `chatCount:Number`, `lastManuallyReindexedAt`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `acceptedEULAVersion`, `postViewedByCount:Number`, `usernameLastValue`, `usernameLastChangedAt`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean` | `username/{username}` | `-` |
 | `following/{followerUserId}/{followedUserId}` | `-`| `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `followedFirstStory/{followerUserId}/{postedByUserId}` | `-`| `1` | `postId`, `postedAt`, `postedByUserId`, `expiresAt` | `followedFirstStory/{followerUserId}` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
@@ -167,6 +167,10 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
 | `postView/{postId}/{viewedByUserId}` | `-` | `0` | `postId`, `postedByUserId`, `viewedByUserId`, `viewCount:Number`, `firstViewedAt`, `lastViewedAt` | `postView/{postId}` | `{lastViewedAt}` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `rankCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
+| `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdAt`, `lastMessageAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |
+| `chatMembership/{chatId}/{userId}` | `-` | `0` | `chatId`, `userId`, `joinedAt`, | | | | | | | `chatMembership/{chatId}` | `{joinedAt}` | `chatMembership/{userId}` | `{lastMessageAt}` |
+| `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `lastEditedAt`, `text`, `textTags:[{tag, userID}]` | `chatMessage/{chatId}` | `{createdAt}` |
+| `chatMessageView/{messageId}/{userId}` | `-` | `0` | `messageId`, `userId`, `viewedAt` | | | | | | | `chatMessageView/{messageId}` | {viewedAt}` |
 
 Note that:
 
@@ -180,6 +184,9 @@ Note that:
  - `colors` is a list of maps, each map having three numeric keys: `r`, `g`, and `b`
  - `Post.albumRank` is -1 for non-COMPLETED posts in albums, and exclusively between -1 and 1 for COMPLETED posts in albums
  - `Album.rankCount` is a count of the number of times rank of posts has been changed because of adding posts or editing existing post rank
+ - `Chat.gsiA1PartitionKey`:
+    - is to be filled in if and only if `chatType == DIRECT`
+    - `userId`` and `userId2` in the field are the two users in the chat, their id's in alphanumeric sorted order
 
 #### Global Secondary Indexes
 

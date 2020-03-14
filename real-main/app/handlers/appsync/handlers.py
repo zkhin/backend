@@ -7,6 +7,8 @@ from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, Facebook
                          SecretsManagerClient, S3Client)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
+from app.models.chat import ChatManager
+from app.models.chat_message import ChatMessageManager
 from app.models.comment import CommentManager
 from app.models.flag import FlagManager
 from app.models.follow import FollowManager
@@ -45,6 +47,8 @@ clients = {
 managers = {}
 album_manager = managers.get('album') or AlbumManager(clients, managers=managers)
 block_manager = managers.get('block') or BlockManager(clients, managers=managers)
+chat_manager = managers.get('chat') or ChatManager(clients, managers=managers)
+chat_message_manager = managers.get('chat_message') or ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or CommentManager(clients, managers=managers)
 ffs_manager = managers.get('followed_first_story') or FollowedFirstStoryManager(clients, managers=managers)
 flag_manager = managers.get('flag') or FlagManager(clients, managers=managers)
@@ -264,6 +268,9 @@ def reset_user(caller_user_id, arguments, source, context):
 
     # remove all blocks of and by us
     block_manager.unblock_all_blocks(caller_user_id)
+
+    # leave all chats we are part of (auto-deletes direct & solo chats)
+    chat_manager.leave_all_chats(caller_user_id)
 
     # finally, delete our own profile
     user = user_manager.get_user(caller_user_id)
@@ -986,6 +993,54 @@ def album_url_1080p(caller_user_id, arguments, source, context):
 def album_url_4k(caller_user_id, arguments, source, context):
     album = album_manager.init_album(source)
     return album.get_art_image_url(image_size.K4)
+
+
+@routes.register('Mutation.createDirectChat')
+def create_direct_chat(caller_user_id, arguments, source, context):
+    user_id = arguments['userId']
+    chat_id, message_id, message_text = arguments['chatId'], arguments['messageId'], arguments['messageText']
+
+    user = user_manager.get_user(user_id)
+    if not user:
+        raise ClientException(f'User `{user_id}` does not exist')
+
+    now = pendulum.now('utc')
+    try:
+        chat = chat_manager.add_direct_chat(chat_id, caller_user_id, user_id, now=now)
+        chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id, now=now)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    chat.refresh_item(strongly_consistent=True)
+    return chat.item
+
+
+@routes.register('Mutation.addChatMessage')
+def add_chat_message(caller_user_id, arguments, source, context):
+    chat_id, message_id, text = arguments['chatId'], arguments['messageId'], arguments['text']
+
+    item = chat_manager.dynamo.get_chat_membership(chat_id, caller_user_id)
+    if not item:
+        raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
+
+    try:
+        message = chat_message_manager.add_chat_message(message_id, text, chat_id, caller_user_id)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    return message.serialize(caller_user_id)
+
+
+@routes.register('Mutation.reportChatMessageViews')
+def report_chat_message_views(caller_user_id, arguments, source, context):
+    message_ids = arguments['messageIds']
+    if len(message_ids) == 0:
+        raise ClientException('A minimum of 1 message id must be reported')
+    if len(message_ids) > 100:
+        raise ClientException('A max of 100 message ids may be reported at a time')
+
+    chat_message_manager.record_views(caller_user_id, message_ids)
+    return True
 
 
 @routes.register('Mutation.lambdaClientError')

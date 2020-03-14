@@ -3,6 +3,44 @@
 const gql = require('graphql-tag')
 
 
+module.exports.chat = gql`
+  fragment ChatFragment on Chat {
+    chatId
+    chatType
+    name
+    createdAt
+    lastMessageAt
+    userCount
+    users {
+      items {
+        userId
+      }
+    }
+  }
+`
+
+module.exports.chatMessage = gql`
+  fragment ChatMessageFragment on ChatMessage {
+    messageId
+    text
+    textTaggedUsers {
+      tag
+      user {
+        userId
+      }
+    }
+    createdAt
+    lastEditedAt
+    chat {
+      chatId
+    }
+    author {
+      userId
+    }
+    viewedStatus
+  }
+`
+
 module.exports.image = gql`
   fragment ImageFragment on Image {
     url

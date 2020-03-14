@@ -11,6 +11,8 @@ from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, Facebook
                          MediaConvertClient, S3Client, SecretsManagerClient)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
+from app.models.chat import ChatManager
+from app.models.chat_message import ChatMessageManager
 from app.models.comment import CommentManager
 from app.models.feed import FeedManager
 from app.models.flag import FlagManager
@@ -136,6 +138,16 @@ def album_manager(dynamo_client, s3_uploads_client, cloudfront_client):
 @pytest.fixture
 def block_manager(dynamo_client):
     yield BlockManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def chat_manager(dynamo_client):
+    yield ChatManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
+def chat_message_manager(dynamo_client):
+    yield ChatMessageManager({'dynamo': dynamo_client})
 
 
 @pytest.fixture
