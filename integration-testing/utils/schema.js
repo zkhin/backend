@@ -502,6 +502,8 @@ module.exports.addPost = gql`
       postedBy {
         userId
         postCount
+        blockerStatus
+        followedStatus
       }
       commentsDisabled
       commentCount
@@ -573,6 +575,8 @@ module.exports.addPostNoMedia = gql`
       postedBy {
         userId
         postCount
+        blockerStatus
+        followedStatus
       }
       commentsDisabled
       commentCount
@@ -608,6 +612,8 @@ module.exports.post = gql`
       postedBy {
         userId
         postCount
+        blockerStatus
+        followedStatus
       }
       expiresAt
       album {
@@ -708,6 +714,8 @@ module.exports.userPosts = gql`
           postedBy {
             userId
             postCount
+            blockerStatus
+            followedStatus
           }
         }
       }
@@ -751,6 +759,8 @@ module.exports.editPost = gql`
       postedBy {
         userId
         postCount
+        blockerStatus
+        followedStatus
       }
       text
       textTaggedUsers {
@@ -834,6 +844,8 @@ module.exports.archivePost = gql`
       postedBy {
         userId
         postCount
+        blockerStatus
+        followedStatus
       }
       image {
         url
@@ -856,6 +868,8 @@ module.exports.restoreArchivedPost = gql`
       postedBy {
         userId
         postCount
+        blockerStatus
+        followedStatus
       }
       image {
         url
@@ -939,6 +953,8 @@ module.exports.userStories = gql`
           postedAt
           postedBy {
             userId
+            blockerStatus
+            followedStatus
           }
           expiresAt
           text
@@ -1059,8 +1075,8 @@ module.exports.trendingPosts = gql`
         postId
         postedBy {
           userId
-          blockerStatus
           privacyStatus
+          blockerStatus
           followedStatus
         }
       }
