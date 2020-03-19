@@ -1,13 +1,14 @@
 import logging
 
-from . import enums, exceptions
+from app.utils import ViewedStatus
+
+from . import exceptions
 
 logger = logging.getLogger()
 
 
 class ChatMessage:
 
-    enums = enums
     exceptions = exceptions
 
     def __init__(self, item, chat_message_dynamo):
@@ -25,9 +26,9 @@ class ChatMessage:
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         if resp['userId'] == caller_user_id:  # author of the message
-            resp['viewedStatus'] = enums.ViewedStatus.VIEWED
+            resp['viewedStatus'] = ViewedStatus.VIEWED
         elif self.dynamo.get_chat_view_message(self.id, caller_user_id):
-            resp['viewedStatus'] = enums.ViewedStatus.VIEWED
+            resp['viewedStatus'] = ViewedStatus.VIEWED
         else:
-            resp['viewedStatus'] = enums.ViewedStatus.NOT_VIEWED
+            resp['viewedStatus'] = ViewedStatus.NOT_VIEWED
         return resp

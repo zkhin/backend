@@ -1,7 +1,7 @@
 import pendulum
 import pytest
 
-from app.models.chat_message.enums import ViewedStatus
+from app.utils import ViewedStatus
 
 
 @pytest.fixture

@@ -115,6 +115,7 @@ module.exports.comment = gql`
         username
       }
     }
+    viewedStatus
   }
 `
 

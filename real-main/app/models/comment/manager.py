@@ -74,6 +74,18 @@ class CommentManager:
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)
 
+    def record_views(self, viewed_by_user_id, comment_ids, viewed_at=None):
+        viewed_at = viewed_at or pendulum.now('utc')
+        for comment_id in set(comment_ids):
+            self.record_view(viewed_by_user_id, comment_id, viewed_at)
+
+    def record_view(self, viewed_by_user_id, comment_id, viewed_at):
+        try:
+            self.dynamo.add_comment_view(comment_id, viewed_by_user_id, viewed_at)
+        except exceptions.CommentException as err:
+            logger.warning(f'Record view of comment `{comment_id}` by user `{viewed_by_user_id}` failed: {err}')
+            return
+
     def delete_comment(self, comment_id, deleter_user_id):
         comment = self.get_comment(comment_id)
         if not comment:

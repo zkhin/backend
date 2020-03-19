@@ -190,6 +190,9 @@ type Mutation {
   #   - deleting a comment that is neither ours nor on a post of ours is an error
   deleteComment(commentId: ID!): Comment
 
+  # Report comment views
+  reportCommentViews(commentIds: [ID!]!): Boolean
+
   addAlbum(albumId: ID!, name: String!, description: String): Album
   # Edit an Album
   #   - attributes to be left unchanged should be left undefined or set to null
@@ -413,7 +416,7 @@ enum ChatType {
 
 enum ViewedStatus {
   NOT_VIEWED
-  NOT_VIEWED_SINCE_LAST_EDIT
+  # NOT_VIEWED_SINCE_LAST_EDIT
   VIEWED
 }
 
@@ -610,6 +613,7 @@ type Comment {
   commentedBy: User!
   text: String!
   textTaggedUsers: [TextTaggedUser!]!  # max of 100
+  viewedStatus: ViewedStatus!  # has the caller viewed this comment?
 }
 
 type PaginatedComments {

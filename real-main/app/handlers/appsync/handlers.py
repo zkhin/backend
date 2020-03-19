@@ -899,6 +899,18 @@ def delete_comment(caller_user_id, arguments, source, context):
     return comment.serialize(caller_user_id)
 
 
+@routes.register('Mutation.reportCommentViews')
+def report_comment_views(caller_user_id, arguments, source, context):
+    comment_ids = arguments['commentIds']
+    if len(comment_ids) == 0:
+        raise ClientException('A minimum of 1 comment id must be reported')
+    if len(comment_ids) > 100:
+        raise ClientException('A max of 100 comment ids may be reported at a time')
+
+    comment_manager.record_views(caller_user_id, comment_ids)
+    return True
+
+
 @routes.register('Mutation.addAlbum')
 def add_album(caller_user_id, arguments, source, context):
     album_id = arguments['albumId']

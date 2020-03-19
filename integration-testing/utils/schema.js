@@ -1102,6 +1102,12 @@ module.exports.deleteComment = gql`
   ${fragments.comment}
 `
 
+module.exports.reportCommentViews = gql`
+  mutation ReportCommentViews ($commentIds: [ID!]!) {
+    reportCommentViews (commentIds: $commentIds)
+  }
+`
+
 module.exports.addAlbum = gql`
   mutation AddAlbum ($albumId: ID!, $name: String!, $description: String) {
     addAlbum (albumId: $albumId, name: $name, description: $description) {
