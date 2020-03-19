@@ -21,12 +21,14 @@ class MediaConvertClient:
         self.job_template_arn = (
             f'arn:aws:mediaconvert:{aws_region}:{aws_account_id}:jobTemplates/{self.job_template}'
         )
+        self.endpoint = endpoint
 
-        # the endpoint is account-specific and must be provided when initializing the boto client
-        if not endpoint:
-            endpoint = self.get_endpoint()
-
-        self.boto_client = boto3.client('mediaconvert', endpoint_url=endpoint)
+    @property
+    def boto_client(self):
+        if not hasattr(self, '_boto_client'):
+            self.endpoint = self.endpoint or self.get_endpoint()
+            self._boto_client = boto3.client('mediaconvert', endpoint_url=self.endpoint)
+        return self._boto_client
 
     def get_endpoint(self):
         resp = boto3.client('mediaconvert').describe_endpoints(MaxResults=1)
