@@ -49,7 +49,6 @@ test('Report post views', async () => {
   variables = {postId: postId2, mediaId: uuidv4(), imageData: imageData2B64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId2)
 
   // verify we have no post views
   resp = await ourClient.query({query: schema.self})
@@ -99,6 +98,36 @@ test('Report post views', async () => {
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(2)
   expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(other2UserId)
   expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(other1UserId)
+})
+
+
+test('Post.viewedStatus', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // we a posts
+  const postId = uuidv4()
+  let variables = {postId, mediaId: uuidv4(), imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['viewedStatus']).toBe('VIEWED')
+
+  // verify they haven't viewed the post
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['viewedStatus']).toBe('NOT_VIEWED')
+
+  // they report to have viewed the post
+  resp = await theirClient.mutate({mutation: schema.reportPostViews, variables: {postIds: [postId]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // verify that's reflected in the viewedStatus
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['viewedStatus']).toBe('VIEWED')
 })
 
 

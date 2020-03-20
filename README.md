@@ -162,7 +162,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `flag/{flaggerUserId}/{postId}` | `-`| `1` | `flaggerUserId`, `postId`, `flaggedAt` | `flag/{flaggerUserId}` | `{flaggedAt}` | `flag/{postId}` | `{flaggedAt}` |
 | `media/{mediaId}` | `-` | `0` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `checksum`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` | | | `media/{checksum}` | `{postedAt}` |
 | `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
-| `commentView/{commentId}/{userId}` | `-` | `0` | `commentId`, `userId`, `viewedAt` | | | | | | | `commentView/{commentId}` | {viewedAt}` |
+| `commentView/{commentId}/{userId}` | `-` | `0` | `commentId`, `userId`, `viewedAt` | | | | | | | `commentView/{commentId}` | `{viewedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
@@ -171,7 +171,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdAt`, `lastMessageAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |
 | `chatMembership/{chatId}/{userId}` | `-` | `0` | `chatId`, `userId`, `joinedAt`, | | | | | | | `chatMembership/{chatId}` | `{joinedAt}` | `chatMembership/{userId}` | `{lastMessageAt}` |
 | `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `lastEditedAt`, `text`, `textTags:[{tag, userID}]` | `chatMessage/{chatId}` | `{createdAt}` |
-| `chatMessageView/{messageId}/{userId}` | `-` | `0` | `messageId`, `userId`, `viewedAt` | | | | | | | `chatMessageView/{messageId}` | {viewedAt}` |
+| `chatMessageView/{messageId}/{userId}` | `-` | `0` | `messageId`, `userId`, `viewedAt` | | | | | | | `chatMessageView/{messageId}` | `{viewedAt}` |
 
 Note that:
 

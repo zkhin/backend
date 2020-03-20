@@ -514,6 +514,10 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: Post
+        field: viewedStatus
+        dataSource: DynamodbDataSource
+
+      - type: Post
         field: originalPost
         request: Post.originalPost/before.request.vtl
         response: Post.originalPost/after.response.vtl

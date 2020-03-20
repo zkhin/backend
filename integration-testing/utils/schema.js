@@ -490,6 +490,7 @@ module.exports.addPost = gql`
       }
       imageUploadUrl
       isVerified
+      viewedStatus
       album {
         albumId
       }
@@ -640,6 +641,7 @@ module.exports.post = gql`
       }
       flagStatus
       likeStatus
+      viewedStatus
       commentsDisabled
       commentCount
       comments (reverse: $commentsReverse) {

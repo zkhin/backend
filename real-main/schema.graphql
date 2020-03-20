@@ -550,6 +550,7 @@ type Post {
   album: Album
   flagStatus: FlagStatus!  # has the caller flagged this post?
   likeStatus: LikeStatus!  # has the caller liked this post?
+  viewedStatus: ViewedStatus!  # has the caller viewed this post?
   likesDisabled: Boolean
   sharingDisabled: Boolean
   verificationHidden: Boolean
