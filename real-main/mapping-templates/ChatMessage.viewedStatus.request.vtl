@@ -15,7 +15,7 @@
     "version": "2018-05-29",
     "operation": "GetItem",
     "key": {
-        "partitionKey": { "S": "chatMessageView/$messageId/$callerUserId" },
-        "sortKey": { "S": "-" }
+        "partitionKey": { "S": "chatMessage/$messageId" },
+        "sortKey": { "S": "view/$callerUserId" }
     }
 }

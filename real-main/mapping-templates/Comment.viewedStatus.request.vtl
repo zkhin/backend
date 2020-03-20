@@ -15,7 +15,7 @@
     "version": "2018-05-29",
     "operation": "GetItem",
     "key": {
-        "partitionKey": { "S": "commentView/$commentId/$callerUserId" },
-        "sortKey": { "S": "-" }
+        "partitionKey": { "S": "comment/$commentId" },
+        "sortKey": { "S": "view/$callerUserId" }
     }
 }

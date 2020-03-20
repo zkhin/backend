@@ -1,7 +1,5 @@
 import logging
 
-from app.utils import ViewedStatus
-
 from . import exceptions
 
 logger = logging.getLogger()
@@ -11,9 +9,10 @@ class ChatMessage:
 
     exceptions = exceptions
 
-    def __init__(self, item, chat_message_dynamo):
+    def __init__(self, item, chat_message_dynamo, view_manager=None):
         self.dynamo = chat_message_dynamo
         self.item = item
+        self.view_manager = view_manager
         # immutables
         self.id = item['messageId']
         self.chat_id = self.item['chatId']
@@ -25,10 +24,5 @@ class ChatMessage:
 
     def serialize(self, caller_user_id):
         resp = self.item.copy()
-        if resp['userId'] == caller_user_id:  # author of the message
-            resp['viewedStatus'] = ViewedStatus.VIEWED
-        elif self.dynamo.get_chat_view_message(self.id, caller_user_id):
-            resp['viewedStatus'] = ViewedStatus.VIEWED
-        else:
-            resp['viewedStatus'] = ViewedStatus.NOT_VIEWED
+        resp['viewedStatus'] = self.view_manager.get_viewed_status(self, caller_user_id)
         return resp

@@ -21,9 +21,9 @@ from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
 from app.models.media import MediaManager
 from app.models.post import PostManager
-from app.models.post_view import PostViewManager
 from app.models.trending import TrendingManager
 from app.models.user import UserManager
+from app.models.view import ViewManager
 
 from app_tests.dynamodb.table_schema import table_schema
 
@@ -196,11 +196,6 @@ def post_manager(dynamo_client, s3_uploads_client, cloudfront_client, secrets_ma
 
 
 @pytest.fixture
-def post_view_manager(dynamo_client):
-    yield PostViewManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
 def trending_manager(dynamo_client):
     yield TrendingManager({'dynamo': dynamo_client})
 
@@ -219,3 +214,8 @@ def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeho
         'google': google_client,
     }
     yield UserManager(clients)
+
+
+@pytest.fixture
+def view_manager(dynamo_client):
+    yield ViewManager({'dynamo': dynamo_client})

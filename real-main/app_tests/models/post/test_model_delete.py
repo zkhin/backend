@@ -10,8 +10,8 @@ from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
 from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus, PostType
-from app.models.post_view import PostViewManager
 from app.models.trending import TrendingManager
+from app.models.view import ViewManager
 from app.utils import image_size
 
 
@@ -62,8 +62,8 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     post.flag_manager = Mock(FlagManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.like_manager = Mock(LikeManager({}))
-    post.post_view_manager = Mock(PostViewManager({}))
     post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
+    post.view_manager = Mock(ViewManager({}))
 
     # delete the post
     post.delete()
@@ -95,8 +95,8 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert post.like_manager.mock_calls == [
         call.dislike_all_of_post(post.id),
     ]
-    assert post.post_view_manager.mock_calls == [
-        call.delete_all_for_post(post.id),
+    assert post.view_manager.mock_calls == [
+        call.delete_views(post_item['partitionKey']),
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
@@ -118,7 +118,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.post_view_manager = Mock(PostViewManager({}))
+    post.view_manager = Mock(ViewManager({}))
     post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
@@ -128,6 +128,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
 
     # check the db again
+    post_item = post.item
     post.refresh_item()
     assert post.item is None
     media.refresh_item()
@@ -146,8 +147,8 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
-    assert post.post_view_manager.mock_calls == [
-        call.delete_all_for_post(post.id),
+    assert post.view_manager.mock_calls == [
+        call.delete_views(post_item['partitionKey']),
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
@@ -169,7 +170,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.post_view_manager = Mock(PostViewManager({}))
+    post.view_manager = Mock(ViewManager({}))
     post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
@@ -184,6 +185,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
         assert post_manager.clients['s3_uploads'].exists(path) is False
 
     # check the DB again
+    post_item = post.item
     post.refresh_item()
     assert post.item is None
     media.refresh_item()
@@ -204,8 +206,8 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert post.feed_manager.mock_calls == [
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
-    assert post.post_view_manager.mock_calls == [
-        call.delete_all_for_post(post.id),
+    assert post.view_manager.mock_calls == [
+        call.delete_views(post_item['partitionKey']),
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
@@ -234,7 +236,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     post.like_manager = Mock(LikeManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.post_view_manager = Mock(PostViewManager({}))
+    post.view_manager = Mock(ViewManager({}))
     post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
@@ -246,6 +248,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert post.item['gsiK3SortKey'] == -1
 
     # check the DB again
+    post_item = post.item
     post.refresh_item()
     assert post.item is None
 
@@ -268,8 +271,8 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert post.feed_manager.mock_calls == [
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
-    assert post.post_view_manager.mock_calls == [
-        call.delete_all_for_post(post.id),
+    assert post.view_manager.mock_calls == [
+        call.delete_views(post_item['partitionKey']),
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),

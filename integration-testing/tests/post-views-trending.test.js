@@ -89,15 +89,15 @@ test('Report post views', async () => {
   expect(resp['data']['post']['viewedByCount']).toBe(2)
 
   // verify the two posts have the right viewedBy lists
-  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId: postId1}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(1)
   expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(other1UserId)
-  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId: postId2}})
+  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(2)
-  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(other2UserId)
-  expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(other1UserId)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(other1UserId)
+  expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(other2UserId)
 })
 
 
@@ -697,8 +697,8 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['viewedByCount']).toBe(2)
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(2)
-  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(ourUserId)
-  expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(otherUserId)
+  expect(resp['data']['post']['viewedBy']['items'][0]['userId']).toBe(otherUserId)
+  expect(resp['data']['post']['viewedBy']['items'][1]['userId']).toBe(ourUserId)
 
   // verify that did not get recorded as a view on our post
   resp = await ourClient.query({query: schema.post, variables: {postId: ourPostId}})

@@ -3,7 +3,7 @@ import logging
 
 import pendulum
 
-from app.models import album, comment, feed, flag, followed_first_story, like, media, post_view, trending, user
+from app.models import album, comment, feed, flag, followed_first_story, like, media, trending, user, view
 from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
@@ -31,9 +31,9 @@ class PostManager:
         )
         self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
         self.media_manager = managers.get('media') or media.MediaManager(clients, managers=managers)
-        self.post_view_manager = managers.get('post_view') or post_view.PostViewManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
@@ -56,9 +56,9 @@ class PostManager:
             'like_manager': self.like_manager,
             'media_manager': self.media_manager,
             'post_manager': self,
-            'post_view_manager': self.post_view_manager,
             'trending_manager': self.trending_manager,
             'user_manager': self.user_manager,
+            'view_manager': self.view_manager,
         }
         return Post(post_item, self.dynamo, **kwargs) if post_item else None
 

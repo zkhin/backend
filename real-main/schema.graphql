@@ -577,7 +577,7 @@ type Post {
   viewedByCount: Int
 
   # Unique users who have viewed this post
-  #   - ordered by when post was last viewed by user, most recent first
+  #   - ordered by when post was first viewed at
   #   - visible only to owner of the post
   #   - null if user has viewCountsHidden set
   viewedBy(limit: Int, nextToken: String): PaginatedUsers

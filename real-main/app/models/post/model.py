@@ -23,7 +23,7 @@ class Post:
     FlagStatus = FlagStatus
 
     def __init__(self, item, post_dynamo, cloudfront_client=None, mediaconvert_client=None, s3_uploads_client=None,
-                 feed_manager=None, like_manager=None, media_manager=None, post_view_manager=None, user_manager=None,
+                 feed_manager=None, like_manager=None, media_manager=None, view_manager=None, user_manager=None,
                  comment_manager=None, flag_manager=None, album_manager=None, followed_first_story_manager=None,
                  trending_manager=None, post_manager=None):
         self.dynamo = post_dynamo
@@ -50,12 +50,12 @@ class Post:
             self.media_manager = media_manager
         if post_manager:
             self.post_manager = post_manager
-        if post_view_manager:
-            self.post_view_manager = post_view_manager
         if trending_manager:
             self.trending_manager = trending_manager
         if user_manager:
             self.user_manager = user_manager
+        if view_manager:
+            self.view_manager = view_manager
 
         self.item = item
         # immutables
@@ -446,7 +446,7 @@ class Post:
             self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
 
         # delete any post views of it
-        self.post_view_manager.delete_all_for_post(self.id)
+        self.view_manager.delete_views(self.item['partitionKey'])
 
         # delete the trending index, if it exists
         self.trending_manager.dynamo.delete_trending(self.id)

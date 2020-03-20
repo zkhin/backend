@@ -19,8 +19,8 @@ from app.models.like.enums import LikeStatus
 from app.models.media import MediaManager
 from app.models.post import PostManager
 from app.models.post.enums import PostStatus, PostType
-from app.models.post_view import PostViewManager
 from app.models.user import UserManager
+from app.models.view import ViewManager
 from app.utils import image_size
 
 from . import routes
@@ -56,8 +56,8 @@ follow_manager = managers.get('follow') or FollowManager(clients, managers=manag
 like_manager = managers.get('like') or LikeManager(clients, managers=managers)
 media_manager = managers.get('media') or MediaManager(clients, managers=managers)
 post_manager = managers.get('post') or PostManager(clients, managers=managers)
-post_view_manager = managers.get('post_view') or PostViewManager(clients, managers=managers)
 user_manager = managers.get('user') or UserManager(clients, managers=managers)
+view_manager = managers.get('view') or ViewManager(clients, managers=managers)
 
 
 @routes.register('Mutation.createCognitoOnlyUser')
@@ -869,7 +869,7 @@ def report_post_views(caller_user_id, arguments, source, context):
     if len(post_ids) > 100:
         raise ClientException('A max of 100 post ids may be reported at a time')
 
-    post_view_manager.record_views(caller_user_id, post_ids)
+    view_manager.record_views('post', post_ids, caller_user_id)
     return True
 
 
@@ -907,7 +907,7 @@ def report_comment_views(caller_user_id, arguments, source, context):
     if len(comment_ids) > 100:
         raise ClientException('A max of 100 comment ids may be reported at a time')
 
-    comment_manager.record_views(caller_user_id, comment_ids)
+    view_manager.record_views('comment', comment_ids, caller_user_id)
     return True
 
 
@@ -1051,7 +1051,7 @@ def report_chat_message_views(caller_user_id, arguments, source, context):
     if len(message_ids) > 100:
         raise ClientException('A max of 100 message ids may be reported at a time')
 
-    chat_message_manager.record_views(caller_user_id, message_ids)
+    view_manager.record_views('chat_message', message_ids, caller_user_id)
     return True
 
 

@@ -1,7 +1,6 @@
 import pendulum
 import pytest
 
-from app.utils import ViewedStatus
 from app.models.post.enums import PostType
 
 
@@ -247,25 +246,3 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager):
     # check post comment count
     post.refresh_item()
     assert post.item['commentCount'] == 0
-
-
-def test_record_views(comment_manager, user, post, user2):
-    # add two comments
-    comment_id_1, comment_id_2 = 'cid1', 'cid2'
-
-    comment_1 = comment_manager.add_comment(comment_id_1, post.id, user.id, 'lore')
-    assert comment_1.id == comment_id_1
-
-    comment_2 = comment_manager.add_comment(comment_id_2, post.id, user.id, 'ipsum')
-    assert comment_2.id == comment_id_2
-
-    # check user2 has not viewed either
-    comment_2.serialize(user2.id)['viewedStatus'] == ViewedStatus.NOT_VIEWED
-    comment_2.serialize(user2.id)['viewedStatus'] == ViewedStatus.NOT_VIEWED
-
-    # user2 reprots to have viewed both messages
-    comment_manager.record_views(user2.id, [comment_id_1, comment_id_2])
-
-    # check user2 has now viewed both
-    comment_1.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED
-    comment_2.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED

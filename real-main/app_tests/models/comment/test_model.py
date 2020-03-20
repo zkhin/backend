@@ -1,6 +1,7 @@
 import pytest
 
 from app.models.post.enums import PostType
+from app.models.view.enums import ViewedStatus
 
 
 @pytest.fixture
@@ -24,32 +25,32 @@ def user3(user_manager):
     yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
 
 
-def test_serialize(comment_manager, comment, user):
+def test_serialize(comment_manager, comment, user, view_manager):
     # serialize as the comment's author
     resp = comment.serialize(user.id)
     assert resp.pop('commentedBy')['userId'] == user.id
-    assert resp.pop('viewedStatus') == 'VIEWED'
+    assert resp.pop('viewedStatus') == ViewedStatus.VIEWED
     assert resp == comment.item
 
     # serialize as another user that has not viewed the comment
     other_user_id = 'ouid'
     resp = comment.serialize(other_user_id)
     assert resp.pop('commentedBy')['userId'] == user.id
-    assert resp.pop('viewedStatus') == 'NOT_VIEWED'
+    assert resp.pop('viewedStatus') == ViewedStatus.NOT_VIEWED
     assert resp == comment.item
 
     # the other user views the comment
-    comment_manager.record_views(other_user_id, [comment.id])
+    view_manager.record_views('comment', [comment.id], other_user_id)
 
     # serialize as another user that *has* viewed the comment
     other_user_id = 'ouid'
     resp = comment.serialize(other_user_id)
     assert resp.pop('commentedBy')['userId'] == user.id
-    assert resp.pop('viewedStatus') == 'VIEWED'
+    assert resp.pop('viewedStatus') == ViewedStatus.VIEWED
     assert resp == comment.item
 
 
-def test_delete(comment, post_manager, comment_manager, user2, user3):
+def test_delete(comment, post_manager, comment_manager, user2, user3, view_manager):
     # verify it's visible in the DB
     comment_item = comment.dynamo.get_comment(comment.id)
     assert comment_item['commentId'] == comment.id
@@ -59,9 +60,9 @@ def test_delete(comment, post_manager, comment_manager, user2, user3):
     assert post.item['commentCount'] == 1
 
     # add two views to the comment, verify we see them
-    comment_manager.record_views(user2.id, [comment.id])
-    comment_manager.record_views(user3.id, [comment.id])
-    assert len(list(comment_manager.dynamo.generate_comment_view_keys_by_comment(comment.id))) == 2
+    view_manager.record_views('comment', [comment.id], user2.id)
+    view_manager.record_views('comment', [comment.id], user3.id)
+    assert len(list(view_manager.dynamo.generate_views(comment.item['partitionKey']))) == 2
 
     # delete the comment
     comment.delete()
@@ -75,7 +76,7 @@ def test_delete(comment, post_manager, comment_manager, user2, user3):
     assert post.item['commentCount'] == 0
 
     # check the two comment views have also been deleted
-    assert list(comment_manager.dynamo.generate_comment_view_keys_by_comment(comment.id)) == []
+    assert list(view_manager.dynamo.generate_views(comment.item['partitionKey'])) == []
 
 
 def test_delete_cant_decrement_post_comment_count_below_zero(comment, post_manager):

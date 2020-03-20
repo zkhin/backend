@@ -18,13 +18,13 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiA1PartitionKey = :pk",
+    "expression": "gsiK1PartitionKey = :pk and begins_with(gsiK1SortKey, :skPrefix)",
     "expressionValues": {
-      ":pk": { "S": "postView/$ctx.source.postId" }
+      ":pk": { "S": "post/$ctx.source.postId" },
+      ":skPrefix": { "S": "view/" }
     }
   },
-  "index": "GSI-A1",
-  "scanIndexForward": false,
+  "index": "GSI-K1",
   "limit": $limit
   #if ($ctx.args.nextToken)
   , "nextToken": "$ctx.args.nextToken"

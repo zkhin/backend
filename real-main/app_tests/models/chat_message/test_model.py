@@ -1,6 +1,6 @@
 import pytest
 
-from app.utils import ViewedStatus
+from app.models.view.enums import ViewedStatus
 
 
 @pytest.fixture
@@ -18,7 +18,7 @@ def chat(chat_manager, user1, user2):
     yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
 
 
-def test_chat_message_serialize(chat_message_manager, user1, user2, chat):
+def test_chat_message_serialize(chat_message_manager, user1, user2, chat, view_manager):
     # user1 adds a message
     message_id = 'mid'
     text = 'lore ipsum'
@@ -30,5 +30,5 @@ def test_chat_message_serialize(chat_message_manager, user1, user2, chat):
     message.serialize(user2.id)['viewedStatus'] == ViewedStatus.NOT_VIEWED
 
     # user2 reports to ahve viewed it, check that reflects in the viewedStatus
-    chat_message_manager.record_views(user2.id, [message_id])
+    view_manager.record_views('chat_message', [message.id], user2.id)
     message.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED

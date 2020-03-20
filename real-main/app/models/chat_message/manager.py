@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models import chat, user
+from app.models import chat, user, view
 
 from . import exceptions
 from .dynamo import ChatMessageDynamo
@@ -20,6 +20,7 @@ class ChatMessageManager:
         managers['chat_message'] = self
         self.chat_manager = managers.get('chat') or chat.ChatManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
@@ -30,7 +31,7 @@ class ChatMessageManager:
         return self.init_chat_message(item) if item else None
 
     def init_chat_message(self, item):
-        return ChatMessage(item, self.dynamo) if item else None
+        return ChatMessage(item, self.dynamo, view_manager=self.view_manager)
 
     def add_chat_message(self, message_id, text, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')
@@ -43,18 +44,6 @@ class ChatMessageManager:
         self.dynamo.client.transact_write_items(transacts)
 
         return self.get_chat_message(message_id, strongly_consistent=True)
-
-    def record_views(self, viewed_by_user_id, message_ids, viewed_at=None):
-        viewed_at = viewed_at or pendulum.now('utc')
-        for message_id in set(message_ids):
-            self.record_view(viewed_by_user_id, message_id, viewed_at)
-
-    def record_view(self, viewed_by_user_id, message_id, viewed_at):
-        try:
-            self.dynamo.add_chat_message_view(message_id, viewed_by_user_id, viewed_at)
-        except exceptions.ChatMessageException as err:
-            logger.warning(f'Record view of chat message `{message_id}` by user `{viewed_by_user_id}` failed: {err}')
-            return
 
     def truncate_chat_messages(self, chat_id):
         # delete all chat messages for the chat without bothering to adjust Chat.messageCount

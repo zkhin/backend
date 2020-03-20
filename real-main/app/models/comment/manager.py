@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models import block, follow, post, user
+from app.models import block, follow, post, user, view
 
 from . import exceptions
 from .dynamo import CommentDynamo
@@ -22,6 +22,7 @@ class CommentManager:
         self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
         self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
@@ -32,7 +33,12 @@ class CommentManager:
         return self.init_comment(comment_item) if comment_item else None
 
     def init_comment(self, comment_item):
-        return Comment(comment_item, self.dynamo, post_manager=self.post_manager, user_manager=self.user_manager)
+        kwargs = {
+            'post_manager': self.post_manager,
+            'user_manager': self.user_manager,
+            'view_manager': self.view_manager,
+        }
+        return Comment(comment_item, self.dynamo, **kwargs)
 
     def add_comment(self, comment_id, post_id, user_id, text, now=None):
         now = now or pendulum.now('utc')
@@ -73,18 +79,6 @@ class CommentManager:
 
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)
-
-    def record_views(self, viewed_by_user_id, comment_ids, viewed_at=None):
-        viewed_at = viewed_at or pendulum.now('utc')
-        for comment_id in set(comment_ids):
-            self.record_view(viewed_by_user_id, comment_id, viewed_at)
-
-    def record_view(self, viewed_by_user_id, comment_id, viewed_at):
-        try:
-            self.dynamo.add_comment_view(comment_id, viewed_by_user_id, viewed_at)
-        except exceptions.CommentException as err:
-            logger.warning(f'Record view of comment `{comment_id}` by user `{viewed_by_user_id}` failed: {err}')
-            return
 
     def delete_comment(self, comment_id, deleter_user_id):
         comment = self.get_comment(comment_id)

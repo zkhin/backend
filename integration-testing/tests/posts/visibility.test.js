@@ -254,12 +254,12 @@ test('Post.viewedBy only visible to post owner', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // verify we can see the viewedBy list (and it's empty)
-  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
   // verify they cannot see the viewedBy list
-  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 
@@ -269,7 +269,7 @@ test('Post.viewedBy only visible to post owner', async () => {
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // verify they cannot see the viewedBy list
-  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 })

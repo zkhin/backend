@@ -1,8 +1,6 @@
 import pendulum
 import pytest
 
-from app.utils import ViewedStatus
-
 
 @pytest.fixture
 def user(user_manager):
@@ -47,30 +45,6 @@ def test_add_chat_message(chat_message_manager, user, chat):
     chat.refresh_item()
     assert chat.item['messageCount'] == 1
     assert chat.item['lastMessageAt'] == now.to_iso8601_string()
-
-
-def test_record_views(chat_message_manager, user, chat, user2):
-    # add two messsages
-    message_id_1, message_id_2 = 'mid1', 'mid2'
-
-    message_1 = chat_message_manager.add_chat_message(message_id_1, 'lore', chat.id, user.id)
-    assert message_1.id == message_id_1
-
-    message_2 = chat_message_manager.add_chat_message(message_id_2, 'ipsum', chat.id, user.id)
-    assert message_2.id == message_id_2
-
-    # check user2 has not viewed either
-    message_1.serialize(user2.id)['viewedStatus'] == ViewedStatus.NOT_VIEWED
-    message_2.serialize(user2.id)['viewedStatus'] == ViewedStatus.NOT_VIEWED
-
-    # user2 reprots to have viewed both messages
-    chat_message_manager.record_views(user2.id, [message_id_1, message_id_2])
-
-    # check user2 has now viewed both
-    message_1.refresh_item()
-    message_2.refresh_item()
-    message_1.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED
-    message_2.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED
 
 
 def test_truncate_chat_messages(chat_message_manager, user, chat):

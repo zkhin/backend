@@ -3,8 +3,6 @@ import logging
 from boto3.dynamodb.conditions import Key
 import pendulum
 
-from . import exceptions
-
 logger = logging.getLogger()
 
 
@@ -19,18 +17,8 @@ class CommentDynamo:
             'sortKey': '-',
         }
 
-    def get_comment_view_pk(self, comment_id, viewed_by_user_id):
-        return {
-            'partitionKey': f'commentView/{comment_id}/{viewed_by_user_id}',
-            'sortKey': '-',
-        }
-
     def get_comment(self, comment_id, strongly_consistent=False):
         pk = self.get_comment_pk(comment_id)
-        return self.client.get_item(pk, strongly_consistent=strongly_consistent)
-
-    def get_comment_view(self, comment_id, viewed_by_user_id, strongly_consistent=False):
-        pk = self.get_comment_view_pk(comment_id, viewed_by_user_id)
         return self.client.get_item(pk, strongly_consistent=strongly_consistent)
 
     def transact_add_comment(self, comment_id, post_id, user_id, text, text_tags, commented_at=None):
@@ -60,51 +48,6 @@ class CommentDynamo:
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
-
-    def add_comment_view(self, comment_id, viewed_by_user_id, viewed_at):
-        viewed_at_str = viewed_at.to_iso8601_string()
-        transacts = [{
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '0'},
-                    'partitionKey': {'S': f'commentView/{comment_id}/{viewed_by_user_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiK1PartitionKey': {'S': f'commentView/{comment_id}'},
-                    'gsiK1SortKey': {'S': viewed_at_str},
-                    'commentId': {'S': comment_id},
-                    'userId': {'S': viewed_by_user_id},
-                    'viewedAt': {'S': viewed_at_str},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            },
-        }, {
-            'ConditionCheck': {
-                'Key': {
-                    'partitionKey': {'S': f'comment/{comment_id}'},
-                    'sortKey': {'S': '-'},
-                },
-                'ExpressionAttributeValues': {
-                    ':uid': {'S': viewed_by_user_id},
-                },
-                # check comment exists, and that the viewer is not the comment author
-                'ConditionExpression': 'attribute_exists(partitionKey) and userId <> :uid',
-            },
-        }]
-        transact_exceptions = [
-            exceptions.CommentException('Comment view already exists'),
-            exceptions.CommentException('Comment does not exist or exists but viewer is author'),
-        ]
-        self.client.transact_write_items(transacts, transact_exceptions)
-
-    def generate_comment_view_keys_by_comment(self, comment_id):
-        query_kwargs = {
-            'KeyConditionExpression': Key('gsiK1PartitionKey').eq(f'commentView/{comment_id}'),
-            'IndexName': 'GSI-K1',
-        }
-        return map(
-            lambda item: {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']},
-            self.client.generate_all_query(query_kwargs),
-        )
 
     def transact_delete_comment(self, comment_id):
         return {'Delete': {

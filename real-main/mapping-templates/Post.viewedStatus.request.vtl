@@ -15,7 +15,7 @@
     "version": "2018-05-29",
     "operation": "GetItem",
     "key": {
-        "partitionKey": { "S": "postView/$postId/$callerUserId" },
-        "sortKey": { "S": "-" }
+        "partitionKey": { "S": "post/$postId" },
+        "sortKey": { "S": "view/$callerUserId" }
     }
 }

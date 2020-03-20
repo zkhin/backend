@@ -682,20 +682,6 @@ module.exports.getPost = gql`
   }
 `
 
-module.exports.postViewedBy = gql`
-  query PostViewedBy ($postId: ID!) {
-    post (postId: $postId) {
-      postId
-      viewedByCount
-      viewedBy {
-        items {
-          userId
-        }
-      }
-    }
-  }
-`
-
 module.exports.userPosts = gql`
   query UserPosts ($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
     user (userId: $userId) {

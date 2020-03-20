@@ -68,13 +68,13 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['user']['postViewedByCount']).toBeNull()
 
   // check we can see view counts and list of viewedBy on the post
-  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBe(0)
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
   // check they cannot see view counts and list of viewedBy on the post
-  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBeNull()
   expect(resp['data']['post']['viewedBy']).toBeNull()
@@ -94,12 +94,12 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['user']['postViewedByCount']).toBeNull()
 
   // check neither of us can see view counts on the post, or the viewedBy list
-  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBeNull()
   expect(resp['data']['post']['viewedBy']).toBeNull()
 
-  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBeNull()
   expect(resp['data']['post']['viewedBy']).toBeNull()
@@ -120,13 +120,13 @@ test('Verify it really hides view counts on user and post', async () => {
   expect(resp['data']['user']['postViewedByCount']).toBeNull()
 
   // check we can view counts on it and viewedBy list
-  resp = await ourClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBe(0)
   expect(resp['data']['post']['viewedBy']['items']).toHaveLength(0)
 
   // check they cannot see view counts on it and viewedBy list
-  resp = await theirClient.query({query: schema.postViewedBy, variables: {postId}})
+  resp = await theirClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['viewedByCount']).toBeNull()
   expect(resp['data']['post']['viewedBy']).toBeNull()
