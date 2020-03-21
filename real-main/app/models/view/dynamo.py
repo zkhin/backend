@@ -18,12 +18,15 @@ class ViewDynamo:
             'sortKey': f'view/{user_id}',
         }, strongly_consistent=strongly_consistent)
 
-    def generate_views(self, partition_key):
+    def generate_views(self, partition_key, pks_only=False):
         # no ordering guarantees
         query_kwargs = {
             'KeyConditionExpression': Key('partitionKey').eq(partition_key) & Key('sortKey').begins_with('view/'),
         }
-        return self.client.generate_all_query(query_kwargs)
+        gen = self.client.generate_all_query(query_kwargs)
+        if pks_only:
+            gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
+        return gen
 
     def delete_views(self, view_item_generator):
         with self.client.table.batch_writer() as batch:

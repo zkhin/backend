@@ -54,6 +54,7 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
 
     # verify with no chat messages / chat doesn't exist
     assert list(chat_message_dynamo.generate_chat_messages_by_chat(chat_id)) == []
+    assert list(chat_message_dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True)) == []
 
     # add a chat message
     message_id_1 = 'mid1'
@@ -65,6 +66,10 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
     assert len(items) == 1
     assert items[0]['messageId'] == message_id_1
 
+    pks = list(chat_message_dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True))
+    assert len(pks) == 1
+    assert pks[0] == {'partitionKey': 'chatMessage/mid1', 'sortKey': '-'}
+
     # add another chat message
     message_id_2 = 'mid2'
     transact = chat_message_dynamo.transact_add_chat_message(message_id_2, chat_id, 'uid', 'ipsum', [])
@@ -75,3 +80,8 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
     assert len(items) == 2
     assert items[0]['messageId'] == message_id_1
     assert items[1]['messageId'] == message_id_2
+
+    pks = list(chat_message_dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True))
+    assert len(pks) == 2
+    assert pks[0] == {'partitionKey': 'chatMessage/mid1', 'sortKey': '-'}
+    assert pks[1] == {'partitionKey': 'chatMessage/mid2', 'sortKey': '-'}

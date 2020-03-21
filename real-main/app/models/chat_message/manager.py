@@ -48,6 +48,8 @@ class ChatMessageManager:
     def truncate_chat_messages(self, chat_id):
         # delete all chat messages for the chat without bothering to adjust Chat.messageCount
         with self.dynamo.client.table.batch_writer() as batch:
-            for item in self.dynamo.generate_chat_messages_by_chat(chat_id):
-                key = {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']}
-                batch.delete_item(Key=key)
+            for chat_message_pk in self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True):
+                partition_key = chat_message_pk['partitionKey']
+                for view_pk in self.view_manager.dynamo.generate_views(partition_key, pks_only=True):
+                    batch.delete_item(Key=view_pk)
+                batch.delete_item(Key=chat_message_pk)

@@ -43,9 +43,12 @@ class ChatMessageDynamo:
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 
-    def generate_chat_messages_by_chat(self, chat_id):
+    def generate_chat_messages_by_chat(self, chat_id, pks_only=False):
         query_kwargs = {
             'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'chatMessage/{chat_id}'),
             'IndexName': 'GSI-A1',
         }
-        return self.client.generate_all_query(query_kwargs)
+        gen = self.client.generate_all_query(query_kwargs)
+        if pks_only:
+            gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
+        return gen

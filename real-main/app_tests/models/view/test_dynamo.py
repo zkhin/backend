@@ -70,24 +70,39 @@ def test_generate_views(view_dynamo):
 
     # test generating no views
     assert list(view_dynamo.generate_views(partition_key)) == []
+    assert list(view_dynamo.generate_views(partition_key, pks_only=True)) == []
 
     # add a view, test we generate it
     user_id_1 = 'uid1'
     view_dynamo.add_view(partition_key, user_id_1, 1, pendulum.now('utc'))
+
     views = list(view_dynamo.generate_views(partition_key))
     assert len(views) == 1
     assert views[0]['partitionKey'] == partition_key
     assert views[0]['sortKey'] == 'view/uid1'
+    assert views[0]['viewCount'] == 1
+
+    pks = list(view_dynamo.generate_views(partition_key, pks_only=True))
+    assert len(pks) == 1
+    assert pks[0] == {'partitionKey': partition_key, 'sortKey': 'view/uid1'}
 
     # add another view, test they both generate
     user_id_0 = 'uid0'
-    view_dynamo.add_view(partition_key, user_id_0, 1, pendulum.now('utc'))
+    view_dynamo.add_view(partition_key, user_id_0, 2, pendulum.now('utc'))
+
     views = list(view_dynamo.generate_views(partition_key))
     assert len(views) == 2
     assert views[0]['partitionKey'] == partition_key
     assert views[0]['sortKey'] == 'view/uid0'
+    assert views[0]['viewCount'] == 2
     assert views[1]['partitionKey'] == partition_key
     assert views[1]['sortKey'] == 'view/uid1'
+    assert views[1]['viewCount'] == 1
+
+    pks = list(view_dynamo.generate_views(partition_key, pks_only=True))
+    assert len(pks) == 2
+    assert pks[0] == {'partitionKey': partition_key, 'sortKey': 'view/uid0'}
+    assert pks[1] == {'partitionKey': partition_key, 'sortKey': 'view/uid1'}
 
 
 def test_delete_views(view_dynamo):

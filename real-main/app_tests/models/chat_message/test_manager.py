@@ -47,7 +47,7 @@ def test_add_chat_message(chat_message_manager, user, chat):
     assert chat.item['lastMessageAt'] == now.to_iso8601_string()
 
 
-def test_truncate_chat_messages(chat_message_manager, user, chat):
+def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):
     # add two messsages
     message_id_1, message_id_2 = 'mid1', 'mid2'
 
@@ -56,6 +56,11 @@ def test_truncate_chat_messages(chat_message_manager, user, chat):
 
     message_2 = chat_message_manager.add_chat_message(message_id_2, 'ipsum', chat.id, user.id)
     assert message_2.id == message_id_2
+
+    # add some views to the messsages, verify we see them in the db
+    view_manager.record_views('chat_message', ['mid1', 'mid2', 'mid1'], 'uid')
+    assert view_manager.dynamo.get_view('chatMessage/mid1', 'uid')
+    assert view_manager.dynamo.get_view('chatMessage/mid2', 'uid')
 
     # check the chat total is correct
     chat.refresh_item()
@@ -71,3 +76,7 @@ def test_truncate_chat_messages(chat_message_manager, user, chat):
     # check the two messages have been deleted
     assert chat_message_manager.get_chat_message(message_id_1) is None
     assert chat_message_manager.get_chat_message(message_id_2) is None
+
+    # check the message views have also been deleted
+    assert view_manager.dynamo.get_view('chatMessage/mid1', 'uid') is None
+    assert view_manager.dynamo.get_view('chatMessage/mid2', 'uid') is None
