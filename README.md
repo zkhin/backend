@@ -167,7 +167,6 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
-| `postView/{postId}/{viewedByUserId}` | `-` | `0` | `postId`, `postedByUserId`, `viewedByUserId`, `viewCount:Number`, `firstViewedAt`, `lastViewedAt` | `postView/{postId}` | `{lastViewedAt}` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `rankCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdAt`, `lastMessageAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |
 | `chatMembership/{chatId}/{userId}` | `-` | `0` | `chatId`, `userId`, `joinedAt`, | | | | | | | `chatMembership/{chatId}` | `{joinedAt}` | `chatMembership/{userId}` | `{lastMessageAt}` |
