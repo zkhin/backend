@@ -18,6 +18,11 @@ def user2(user_manager):
 
 
 @pytest.fixture
+def user3(user_manager):
+    yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
+
+
+@pytest.fixture
 def posts(post_manager, user):
     post1 = post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
     post2 = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t')
@@ -91,6 +96,15 @@ def test_cant_record_view_bad_item_type(view_manager):
         view_manager.record_view(item_type, None, None, None, None)
 
 
+def test_record_view_chat_message(view_manager, chat_message, user2):
+    # check there is no view
+    assert view_manager.get_viewed_status(chat_message, user2.id) == 'NOT_VIEWED'
+
+    # add a view, check that it worked
+    view_manager.record_view('chat_message', chat_message.id, user2.id, 2, pendulum.now('utc'))
+    assert view_manager.get_viewed_status(chat_message, user2.id) == 'VIEWED'
+
+
 def test_record_view_comment(view_manager, comment, user2):
     # check there is no view
     assert view_manager.get_viewed_status(comment, user2.id) == 'NOT_VIEWED'
@@ -100,13 +114,27 @@ def test_record_view_comment(view_manager, comment, user2):
     assert view_manager.get_viewed_status(comment, user2.id) == 'VIEWED'
 
 
-def test_record_view_chat_message(view_manager, chat_message, user2):
-    # check there is no view
-    assert view_manager.get_viewed_status(chat_message, user2.id) == 'NOT_VIEWED'
+def test_record_view_comment_clears_new_comment_activity(view_manager, comment_manager, posts, user, user2, user3):
+    post, _ = posts
 
-    # add a view, check that it worked
-    view_manager.record_view('chat_message', chat_message.id, user2.id, 2, pendulum.now('utc'))
-    assert view_manager.get_viewed_status(chat_message, user2.id) == 'VIEWED'
+    # add a comment by a different user to get some activity on the post
+    comment = comment_manager.add_comment('cmid2', post.id, user2.id, 'witty comment')
+    post.refresh_item()
+    assert post.item.get('hasNewCommentActivity', False) is True
+
+    # record a view of that comment by a user that is not the post owner
+    view_manager.record_view('comment', comment.id, user3.id, 2, pendulum.now('utc'))
+
+    # verify the post still has comment activity
+    post.refresh_item()
+    assert post.item.get('hasNewCommentActivity', False) is True
+
+    # record a view of that comment by the post owner
+    view_manager.record_view('comment', comment.id, user.id, 2, pendulum.now('utc'))
+
+    # verify the post now has no comment activity
+    post.refresh_item()
+    assert post.item.get('hasNewCommentActivity', False) is False
 
 
 def test_record_view_post_not_completed(view_manager, posts, caplog, post_manager, user_manager, trending_manager):

@@ -1,0 +1,12 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+#set ($targetUserId = $ctx.source.postedByUserId)
+
+## private to only the post owner
+#if ($callerUserId != $targetUserId)
+  #return
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $util.toJson($util.defaultIfNull($ctx.source.hasNewCommentActivity, false))
+}

@@ -437,7 +437,7 @@ def test_get_next_completed_post_to_expire_no_posts(post_dynamo):
     assert post is None
 
 
-def test_get_next_completed_post_to_expire_one_post(dynamo_client, post_dynamo):
+def test_get_next_completed_post_to_expire_one_post(post_dynamo):
     user_id = 'user-id'
     post_id_1 = 'post-id-1'
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
@@ -450,7 +450,7 @@ def test_get_next_completed_post_to_expire_one_post(dynamo_client, post_dynamo):
     assert post_dynamo.get_next_completed_post_to_expire(user_id)['postId'] == post_id_1
 
 
-def test_get_next_completed_post_to_expire_two_posts(dynamo_client, post_dynamo):
+def test_get_next_completed_post_to_expire_two_posts(post_dynamo):
     user_id = 'user-id'
     post_id_1, post_id_2 = 'post-id-1', 'post-id-2'
     now = pendulum.now('utc')
@@ -487,7 +487,7 @@ def test_set_no_values(post_dynamo):
         post_dynamo.set('post-id')
 
 
-def test_set_text(post_dynamo, dynamo_client):
+def test_set_text(post_dynamo):
     # create a post with some text
     text = 'for shiz'
     transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text=text, text_tags=[])]
@@ -524,7 +524,7 @@ def test_set_text(post_dynamo, dynamo_client):
     assert 'textTags' not in post_item
 
 
-def test_set_comments_disabled(post_dynamo, dynamo_client):
+def test_set_comments_disabled(post_dynamo):
     # create a post with some text, media objects
     transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
     post_dynamo.client.transact_write_items(transacts)
@@ -542,7 +542,7 @@ def test_set_comments_disabled(post_dynamo, dynamo_client):
     assert post_item['commentsDisabled'] is False
 
 
-def test_set_likes_disabled(post_dynamo, dynamo_client):
+def test_set_likes_disabled(post_dynamo):
     # create a post with some text, media objects
     transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
     post_dynamo.client.transact_write_items(transacts)
@@ -560,7 +560,7 @@ def test_set_likes_disabled(post_dynamo, dynamo_client):
     assert post_item['likesDisabled'] is False
 
 
-def test_set_sharing_disabled(post_dynamo, dynamo_client):
+def test_set_sharing_disabled(post_dynamo):
     # create a post with some text, media objects
     transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
     post_dynamo.client.transact_write_items(transacts)
@@ -578,7 +578,7 @@ def test_set_sharing_disabled(post_dynamo, dynamo_client):
     assert post_item['sharingDisabled'] is False
 
 
-def test_set_verification_hidden(post_dynamo, dynamo_client):
+def test_set_verification_hidden(post_dynamo):
     # create a post with some text, media objects
     transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
     post_dynamo.client.transact_write_items(transacts)
@@ -596,7 +596,25 @@ def test_set_verification_hidden(post_dynamo, dynamo_client):
     assert post_item['verificationHidden'] is False
 
 
-def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
+def test_set_has_new_comment_activity(post_dynamo):
+    # create a post with some text, media objects
+    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post('pid1')
+    assert 'hasNewCommentActivity' not in post_item
+
+    # edit it back and forth
+    post_item = post_dynamo.set('pid1', has_new_comment_activity=True)
+    assert post_item['hasNewCommentActivity'] is True
+    post_item = post_dynamo.set('pid1', has_new_comment_activity=False)
+    assert post_item['hasNewCommentActivity'] is False
+
+    # double check the value stuck
+    post_item = post_dynamo.get_post('pid1')
+    assert post_item['hasNewCommentActivity'] is False
+
+
+def test_generate_expired_post_pks_by_day(post_dynamo):
     # add three posts, two that expire on the same day, and one that never expires, and complete them all
     now = pendulum.now('utc')
     approx_hours_till_noon_tomorrow = 36 - now.time().hour
@@ -652,7 +670,7 @@ def test_generate_expired_post_pks_by_day(post_dynamo, dynamo_client):
     assert expired_posts[1]['sortKey'] == post2['sortKey']
 
 
-def test_generate_expired_post_pks_with_scan(post_dynamo, dynamo_client):
+def test_generate_expired_post_pks_with_scan(post_dynamo):
     # add four posts, one that expires a week ago, one that expires yesterday
     # and one that expires today, and one that doesnt expire
     now = pendulum.now('utc')
@@ -694,6 +712,7 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
+    assert post_item.get('hasNewCommentActivity', False) is False
 
     # verify we can't decrement count below zero
     transact = post_dynamo.transact_decrement_comment_count(post_id)
@@ -701,24 +720,55 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
+    assert post_item.get('hasNewCommentActivity', False) is False
 
     # increment the count, verify
     transact = post_dynamo.transact_increment_comment_count(post_id)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 1
+    assert post_item.get('hasNewCommentActivity', False) is False
 
     # increment the count, verify
     transact = post_dynamo.transact_increment_comment_count(post_id)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 2
+    assert post_item.get('hasNewCommentActivity', False) is False
 
     # decrement the count, verify
     transact = post_dynamo.transact_decrement_comment_count(post_id)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 1
+    assert post_item.get('hasNewCommentActivity', False) is False
+
+
+def test_transact_increment_decrement_comment_count_register_new_comment_activity(post_dynamo):
+    post_id = 'pid'
+
+    # add a post, verify starts with no activity
+    transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('hasNewCommentActivity', False) is False
+
+    # register some activity with an increment, verify
+    transact = post_dynamo.transact_increment_comment_count(post_id, register_new_comment_activity=True)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('hasNewCommentActivity', False) is True
+
+    # clear the actiivty
+    post_dynamo.set(post_id, has_new_comment_activity=False)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('hasNewCommentActivity', False) is False
+
+    # register some activity with an decrement, verify
+    transact = post_dynamo.transact_decrement_comment_count(post_id, register_new_comment_activity=True)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item.get('hasNewCommentActivity', False) is True
 
 
 def test_transact_set_album_id_pending_post(post_dynamo):

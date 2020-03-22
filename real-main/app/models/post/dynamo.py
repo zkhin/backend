@@ -223,9 +223,10 @@ class PostDynamo:
             raise exceptions.PostDoesNotExist(post_id)
 
     def set(self, post_id, text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
-            sharing_disabled=None, verification_hidden=None):
-        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
-        assert any(k is not None for k in args), 'Action-less post edit requested'
+            sharing_disabled=None, verification_hidden=None, has_new_comment_activity=None):
+        assert any(k is not None for k in (
+            text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, has_new_comment_activity
+        )), 'Action-less post edit requested'
 
         exp_actions = defaultdict(list)
         exp_names = {}
@@ -261,6 +262,10 @@ class PostDynamo:
         if verification_hidden is not None:
             exp_actions['SET'].append('verificationHidden = :vd')
             exp_values[':vd'] = verification_hidden
+
+        if has_new_comment_activity is not None:
+            exp_actions['SET'].append('hasNewCommentActivity = :hnca')
+            exp_values[':hnca'] = has_new_comment_activity
 
         update_query_kwargs = {
             'Key': {
@@ -365,8 +370,8 @@ class PostDynamo:
             },
         }
 
-    def transact_increment_comment_count(self, post_id):
-        return {
+    def transact_increment_comment_count(self, post_id, register_new_comment_activity=False):
+        transact = {
             'Update': {
                 'Key': {
                     'partitionKey': {'S': f'post/{post_id}'},
@@ -379,9 +384,13 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
+        if register_new_comment_activity:
+            transact['Update']['UpdateExpression'] += ' SET hasNewCommentActivity = :hnca'
+            transact['Update']['ExpressionAttributeValues'][':hnca'] = {'BOOL': True}
+        return transact
 
-    def transact_decrement_comment_count(self, post_id):
-        return {
+    def transact_decrement_comment_count(self, post_id, register_new_comment_activity=False):
+        transact = {
             'Update': {
                 'Key': {
                     'partitionKey': {'S': f'post/{post_id}'},
@@ -396,6 +405,10 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
             },
         }
+        if register_new_comment_activity:
+            transact['Update']['UpdateExpression'] += ' SET hasNewCommentActivity = :hnca'
+            transact['Update']['ExpressionAttributeValues'][':hnca'] = {'BOOL': True}
+        return transact
 
     def transact_set_album_id(self, post_item, album_id, album_rank=None):
         post_id = post_item['postId']

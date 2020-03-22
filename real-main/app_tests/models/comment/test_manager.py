@@ -38,9 +38,23 @@ def test_add_comment(comment_manager, user, post):
     assert comment.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
     assert comment.item['commentedAt'] == now.to_iso8601_string()
 
-    # check the post counter incremented
+    # check the post counter incremented, no new comment acitivy b/c the post owner commented
     post.refresh_item()
     assert post.item['commentCount'] == 1
+    assert post.item.get('hasNewCommentActivity', False) is False
+
+
+def test_add_comment_registers_new_comment_activity(comment_manager, user2, post):
+    comment_id = 'cid'
+
+    # add the comment, verify
+    comment = comment_manager.add_comment(comment_id, post.id, user2.id, 'lore ipsum')
+    assert comment.id == comment_id
+
+    # check the post counter incremented, and there *is* new comment acitivy
+    post.refresh_item()
+    assert post.item['commentCount'] == 1
+    assert post.item.get('hasNewCommentActivity', False) is True
 
 
 def test_add_comment_cant_reuse_ids(comment_manager, user, post):
@@ -137,64 +151,6 @@ def test_private_user_can_comment_on_own_post(comment_manager, user, post):
 
     comment = comment_manager.add_comment(comment_id, post.id, user.id, 't')
     assert comment.id == comment_id
-
-
-def test_owner_of_comment_can_delete_it(comment_manager, user, post):
-    comment_id = 'cid'
-    comment_manager.add_comment(comment_id, post.id, user.id, text='t')
-
-    # verify we see the comment in the DB
-    comment_item = comment_manager.dynamo.get_comment(comment_id)
-    assert comment_item['commentId'] == comment_id
-
-    # owner of comment deletes it
-    comment = comment_manager.delete_comment(comment_id, user.id)
-    assert comment.id == comment_id
-
-    # verify comment is no longer in db
-    assert comment_manager.dynamo.get_comment(comment_id) is None
-
-
-def test_owner_of_post_can_delete_comment_on_their_post(comment_manager, user, post):
-    comment_id = 'cid'
-    commenter_user_id = 'cuid'
-
-    # other user adds a comment to post
-    comment_manager.add_comment(comment_id, post.id, commenter_user_id, text='t')
-
-    # verify we see the comment in the DB
-    comment_item = comment_manager.dynamo.get_comment(comment_id)
-    assert comment_item['commentId'] == comment_id
-
-    # owner of the post deletes it
-    comment = comment_manager.delete_comment(comment_id, user.id)
-    assert comment.id == comment_id
-
-    # verify comment is no longer in db
-    assert comment_manager.dynamo.get_comment(comment_id) is None
-
-
-def test_rando_cannot_delete_comment(comment_manager, post):
-    comment_id = 'cid'
-    commenter_user_id = 'c-uid'
-    rando_user_id = 'rando-uid'
-
-    # other user adds a comment to post
-    comment_manager.add_comment(comment_id, post.id, commenter_user_id, text='t')
-
-    # verify rando can't delete the comment
-    with pytest.raises(comment_manager.exceptions.CommentException):
-        comment_manager.delete_comment(comment_id, rando_user_id)
-
-    # verify we still see the comment in the DB
-    comment_item = comment_manager.dynamo.get_comment(comment_id)
-    assert comment_item['commentId'] == comment_id
-
-
-def test_cant_delete_comment_that_doesnt_exist(comment_manager, user, post):
-    # verify rando can't delete the comment
-    with pytest.raises(comment_manager.exceptions.CommentException):
-        comment_manager.delete_comment('dne-cid', user.id)
 
 
 def test_delete_all_by_user(comment_manager, user, post):

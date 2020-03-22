@@ -891,8 +891,12 @@ def add_comment(caller_user_id, arguments, source, context):
 def delete_comment(caller_user_id, arguments, source, context):
     comment_id = arguments['commentId']
 
+    comment = comment_manager.get_comment(comment_id)
+    if not comment:
+        raise ClientException(f'No comment with id `{comment_id}` found')
+
     try:
-        comment = comment_manager.delete_comment(comment_id, caller_user_id)
+        comment.delete(caller_user_id)
     except comment_manager.exceptions.CommentException as err:
         raise ClientException(str(err))
 

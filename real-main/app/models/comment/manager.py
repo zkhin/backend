@@ -50,7 +50,9 @@ class CommentManager:
         if post.item.get('commentsDisabled', False):
             raise exceptions.CommentException(f'Comments are disabled on post `{post_id}`')
 
+        register_new_comment_activity = False
         if user_id != post.user_id:
+            register_new_comment_activity = True
 
             # can't comment if there's a blocking relationship, either direction
             if self.block_manager.is_blocked(post.user_id, user_id):
@@ -69,7 +71,9 @@ class CommentManager:
         text_tags = self.user_manager.get_text_tags(text)
         transacts = [
             self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
-            self.post_manager.dynamo.transact_increment_comment_count(post_id),
+            self.post_manager.dynamo.transact_increment_comment_count(
+                post_id, register_new_comment_activity=register_new_comment_activity,
+            ),
         ]
         transact_exceptions = [
             exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
@@ -80,24 +84,10 @@ class CommentManager:
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)
 
-    def delete_comment(self, comment_id, deleter_user_id):
-        comment = self.get_comment(comment_id)
-        if not comment:
-            raise exceptions.CommentException(f'No comment with id `{comment_id}` found')
-
-        # users may only delete their own comments or comments on their posts
-        if comment.user_id != deleter_user_id:
-            post = self.post_manager.get_post(comment.post_id)
-            if post.user_id != deleter_user_id:
-                raise exceptions.CommentException(f'User is not authorized to delete comment `{comment_id}`')
-
-        comment.delete()
-        return comment
-
     def delete_all_by_user(self, user_id):
         for comment_item in self.dynamo.generate_by_user(user_id):
-            self.init_comment(comment_item).delete()
+            self.init_comment(comment_item).delete(None)
 
     def delete_all_on_post(self, post_id):
         for comment_item in self.dynamo.generate_by_post(post_id):
-            self.init_comment(comment_item).delete()
+            self.init_comment(comment_item).delete(None)

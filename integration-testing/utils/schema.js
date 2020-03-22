@@ -589,6 +589,7 @@ module.exports.addPostNoMedia = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
+      hasNewCommentActivity
     }
   }
   ${fragments.comment}
@@ -652,6 +653,7 @@ module.exports.post = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
+      hasNewCommentActivity
       onymousLikeCount
       anonymousLikeCount
       onymouslyLikedBy (limit: $onymouslyLikedByLimit) {

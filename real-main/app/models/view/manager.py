@@ -90,7 +90,13 @@ class ViewManager:
             else:
                 is_new_view = True
 
-        # bunch of special-case stuff for posts follows
+        # special-case stuff for comments
+        if item_type == 'comment':
+            post = self.post_manager.get_post(inst.post_id)
+            if user_id == post.user_id:
+                post.clear_new_comment_activity()
+
+        # special-case stuff for posts
         if item_type == 'post':
             post = inst
 

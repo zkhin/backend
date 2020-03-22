@@ -633,6 +633,11 @@ custom:
         field: isVerified
         dataSource: DynamodbDataSource
 
+      - type: Post
+        field: hasNewCommentActivity
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
       - type: Album
         field: art
         dataSource: LambdaDataSource

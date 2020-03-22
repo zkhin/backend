@@ -596,6 +596,10 @@ type Post {
   comments(limit: Int, nextToken: String, reverse: Boolean): PaginatedComments
   commentCount: Int
   commentsDisabled: Boolean
+
+  # Have new comments appeared on the post since the last time a view of a comment was reported?
+  #   - private to post owner only
+  hasNewCommentActivity: Boolean
 }
 
 type PaginatedPosts {

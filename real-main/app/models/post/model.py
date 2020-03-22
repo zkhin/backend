@@ -482,6 +482,10 @@ class Post:
         self.item['mediaObjects'] = post_media
         return self
 
+    def clear_new_comment_activity(self):
+        self.item = self.dynamo.set(self.id, has_new_comment_activity=False)
+        return self
+
     def set_expires_at(self, expires_at):
         prev_item = self.item.copy() if 'expiresAt' in self.item else None
         if expires_at:
