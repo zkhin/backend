@@ -11,10 +11,8 @@
     $util.qr($chatMemberships.add($item))
   #else
     ## item is a [chatId, userId] list
-    #set ($chatId = $item[0])
-    #set ($userId = $item[1])
-    #set ($pk = "chatMembership/$chatId/$userId")
-    #set ($index = $ctx.stash.pkToIndex[$pk])
+    #set ($lookupKey = "$item[0]/$item[1]")
+    #set ($index = $ctx.stash.idsToIndex[$lookupKey])
     #if (! $util.isNull($ctx.result.data.${table}[$index]))
       #set ($chatMembership = $ctx.result.data.${table}[$index])
       $util.qr($chatMemberships.add($chatMembership))

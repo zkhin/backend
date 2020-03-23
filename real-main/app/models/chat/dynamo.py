@@ -21,8 +21,8 @@ class ChatDynamo:
 
     def get_chat_membership(self, chat_id, user_id, strongly_consistent=False):
         return self.client.get_item({
-            'partitionKey': f'chatMembership/{chat_id}/{user_id}',
-            'sortKey': '-',
+            'partitionKey': f'chat/{chat_id}',
+            'sortKey': f'member/{user_id}',
         }, strongly_consistent=strongly_consistent)
 
     def get_direct_chat(self, user_id_1, user_id_2):
@@ -77,15 +77,12 @@ class ChatDynamo:
         return {'Put': {
             'Item': {
                 'schemaVersion': {'N': '0'},
-                'partitionKey': {'S': f'chatMembership/{chat_id}/{user_id}'},
-                'sortKey': {'S': '-'},
-                'gsiK1PartitionKey': {'S': f'chatMembership/{chat_id}'},
-                'gsiK1SortKey': {'S': joined_at_str},
-                'gsiK2PartitionKey': {'S': f'chatMembership/{user_id}'},
-                'gsiK2SortKey': {'S': joined_at_str},
-                'chatId': {'S': chat_id},
-                'userId': {'S': user_id},
-                'joinedAt': {'S': joined_at_str},
+                'partitionKey': {'S': f'chat/{chat_id}'},
+                'sortKey': {'S': f'member/{user_id}'},
+                'gsiK1PartitionKey': {'S': f'chat/{chat_id}'},
+                'gsiK1SortKey': {'S': f'member/{joined_at_str}'},
+                'gsiK2PartitionKey': {'S': f'member/{user_id}'},
+                'gsiK2SortKey': {'S': f'chat/{joined_at_str}'},
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
@@ -93,8 +90,8 @@ class ChatDynamo:
     def transact_delete_chat_membership(self, chat_id, user_id):
         return {'Delete': {
             'Key': {
-                'partitionKey': {'S': f'chatMembership/{chat_id}/{user_id}'},
-                'sortKey': {'S': '-'},
+                'partitionKey': {'S': f'chat/{chat_id}'},
+                'sortKey': {'S': f'member/{user_id}'},
             },
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
@@ -116,20 +113,26 @@ class ChatDynamo:
 
     def generate_chat_membership_user_ids_by_chat(self, chat_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiK1PartitionKey').eq(f'chatMembership/{chat_id}'),
+            'KeyConditionExpression': (
+                Key('gsiK1PartitionKey').eq(f'chat/{chat_id}')
+                & Key('gsiK1SortKey').begins_with('member/')
+            ),
             'IndexName': 'GSI-K1',
         }
         return map(
-            lambda item: item['partitionKey'].split('/')[2],
+            lambda item: item['sortKey'][len('member/'):],
             self.client.generate_all_query(query_kwargs),
         )
 
     def generate_chat_membership_chat_ids_by_user(self, user_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiK2PartitionKey').eq(f'chatMembership/{user_id}'),
+            'KeyConditionExpression': (
+                Key('gsiK2PartitionKey').eq(f'member/{user_id}')
+                & Key('gsiK2SortKey').begins_with('chat/')
+            ),
             'IndexName': 'GSI-K2',
         }
         return map(
-            lambda item: item['partitionKey'].split('/')[1],
+            lambda item: item['partitionKey'][len('chat/'):],
             self.client.generate_all_query(query_kwargs),
         )

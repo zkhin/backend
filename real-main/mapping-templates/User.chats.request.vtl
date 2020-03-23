@@ -15,9 +15,10 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiK2PartitionKey = :pk",
+    "expression": "gsiK2PartitionKey = :pk AND begins_with(gsiK2SortKey, :skPrefix)",
     "expressionValues": {
-      ":pk": { "S": "chatMembership/$targetUserId" }
+      ":pk": { "S": "member/$targetUserId" },
+      ":skPrefix": { "S": "chat/" }
     }
   },
   "index": "GSI-K2",

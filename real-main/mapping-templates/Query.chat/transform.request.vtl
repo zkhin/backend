@@ -2,8 +2,10 @@
 ## while Chat.batchGet expects a list of chatIds
 
 #set ($chatIds = [])
+#set ($prefix = "chat/")
 #foreach ($item in $ctx.prev.result)
-  $util.qr($chatIds.add($item['chatId']))
+  #set ($chatId = $item.partitionKey.substring($prefix.length()))
+  $util.qr($chatIds.add($chatId))
 #end
 
 {

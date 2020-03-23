@@ -3,8 +3,9 @@
 #end
 
 #set ($userIds = [])
+#set ($prefix = "member/")
 #foreach ($item in $ctx.result.items)
-  #set ($userId = $item.partitionKey.split("/")[2])
+  #set ($userId = $item.sortKey.substring($prefix.length()))
   $util.qr($userIds.add($userId))
 #end
 

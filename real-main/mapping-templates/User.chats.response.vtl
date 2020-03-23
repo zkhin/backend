@@ -5,8 +5,9 @@
 ## from each ChatMembership, pull out the chatId out of the pk
 ## the PaginatedChats.items resolver will resolve each chatId to a chat object
 #set ($chatIds = [])
+#set ($prefix = "chat/")
 #foreach ($item in $ctx.result.items)
-  #set ($chatId = $item.partitionKey.split("/")[1])
+  #set ($chatId = $item.partitionKey.substring($prefix.length()))
   $util.qr($chatIds.add($chatId))
 #end
 

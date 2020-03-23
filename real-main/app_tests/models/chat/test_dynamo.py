@@ -101,16 +101,13 @@ def test_transact_add_chat_membership(chat_dynamo):
     item = chat_dynamo.get_chat_membership(chat_id, user_id)
     joined_at_str = now.to_iso8601_string()
     assert item == {
-        'partitionKey': 'chatMembership/cid2/uid',
-        'sortKey': '-',
+        'partitionKey': 'chat/cid2',
+        'sortKey': 'member/uid',
         'schemaVersion': 0,
-        'gsiK1PartitionKey': 'chatMembership/cid2',
-        'gsiK1SortKey': joined_at_str,
-        'gsiK2PartitionKey': 'chatMembership/uid',
-        'gsiK2SortKey': joined_at_str,
-        'chatId': 'cid2',
-        'userId': 'uid',
-        'joinedAt': joined_at_str,
+        'gsiK1PartitionKey': 'chat/cid2',
+        'gsiK1SortKey': f'member/{joined_at_str}',
+        'gsiK2PartitionKey': 'member/uid',
+        'gsiK2SortKey': f'chat/{joined_at_str}',
     }
 
 

@@ -169,7 +169,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `rankCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdAt`, `lastMessageAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |
-| `chatMembership/{chatId}/{userId}` | `-` | `0` | `chatId`, `userId`, `joinedAt`, | | | | | | | `chatMembership/{chatId}` | `{joinedAt}` | `chatMembership/{userId}` | `{lastMessageAt}` |
+| `chat/{chatId}` | `member/{userId}` | `0` | | | | | | | | `chat/{chatId}` | `member/{joinedAt}` | `member/{userId}` | `chat/{joinedAt}` |
 | `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `lastEditedAt`, `text`, `textTags:[{tag, userID}]` | `chatMessage/{chatId}` | `{createdAt}` |
 | `chatMessage/{messageId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `chatMessage/{messageId}` | `view/{firstViewedAt}` |
 

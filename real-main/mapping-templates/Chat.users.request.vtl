@@ -7,9 +7,10 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiK1PartitionKey = :pk",
+    "expression": "gsiK1PartitionKey = :pk AND begins_with(gsiK1SortKey, :skPrefix)",
     "expressionValues": {
-      ":pk": { "S": "chatMembership/$ctx.source.chatId" }
+      ":pk": { "S": "chat/$ctx.source.chatId" },
+      ":skPrefix": { "S": "member/" }
     }
   },
   "index": "GSI-K1",
