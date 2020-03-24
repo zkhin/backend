@@ -605,11 +605,6 @@ test('Edit album post order', async () => {
   expect(prevAlbum['art']['url1080p'].split('?')[0]).not.toBe(album['art']['url1080p'].split('?')[0])
   expect(prevAlbum['art']['url480p'].split('?')[0]).not.toBe(album['art']['url480p'].split('?')[0])
   expect(prevAlbum['art']['url64p'].split('?')[0]).not.toBe(album['art']['url64p'].split('?')[0])
-  expect(prevAlbum['url'].split('?')[0]).not.toBe(album['url'].split('?')[0])
-  expect(prevAlbum['url4k'].split('?')[0]).not.toBe(album['url4k'].split('?')[0])
-  expect(prevAlbum['url1080p'].split('?')[0]).not.toBe(album['url1080p'].split('?')[0])
-  expect(prevAlbum['url480p'].split('?')[0]).not.toBe(album['url480p'].split('?')[0])
-  expect(prevAlbum['url64p'].split('?')[0]).not.toBe(album['url64p'].split('?')[0])
   prevAlbum = album
 
   // move the posts around a bit
@@ -636,11 +631,6 @@ test('Edit album post order', async () => {
   expect(prevAlbum['art']['url1080p'].split('?')[0]).toBe(album['art']['url1080p'].split('?')[0])
   expect(prevAlbum['art']['url480p'].split('?')[0]).toBe(album['art']['url480p'].split('?')[0])
   expect(prevAlbum['art']['url64p'].split('?')[0]).toBe(album['art']['url64p'].split('?')[0])
-  expect(prevAlbum['url'].split('?')[0]).toBe(album['url'].split('?')[0])
-  expect(prevAlbum['url4k'].split('?')[0]).toBe(album['url4k'].split('?')[0])
-  expect(prevAlbum['url1080p'].split('?')[0]).toBe(album['url1080p'].split('?')[0])
-  expect(prevAlbum['url480p'].split('?')[0]).toBe(album['url480p'].split('?')[0])
-  expect(prevAlbum['url64p'].split('?')[0]).toBe(album['url64p'].split('?')[0])
   prevAlbum = album
 
   // move the posts around a bit
@@ -667,11 +657,6 @@ test('Edit album post order', async () => {
   expect(prevAlbum['art']['url1080p'].split('?')[0]).not.toBe(album['art']['url1080p'].split('?')[0])
   expect(prevAlbum['art']['url480p'].split('?')[0]).not.toBe(album['art']['url480p'].split('?')[0])
   expect(prevAlbum['art']['url64p'].split('?')[0]).not.toBe(album['art']['url64p'].split('?')[0])
-  expect(prevAlbum['url'].split('?')[0]).not.toBe(album['url'].split('?')[0])
-  expect(prevAlbum['url4k'].split('?')[0]).not.toBe(album['url4k'].split('?')[0])
-  expect(prevAlbum['url1080p'].split('?')[0]).not.toBe(album['url1080p'].split('?')[0])
-  expect(prevAlbum['url480p'].split('?')[0]).not.toBe(album['url480p'].split('?')[0])
-  expect(prevAlbum['url64p'].split('?')[0]).not.toBe(album['url64p'].split('?')[0])
   prevAlbum = album
 
   // try a no-op
@@ -698,9 +683,4 @@ test('Edit album post order', async () => {
   expect(prevAlbum['art']['url1080p'].split('?')[0]).toBe(album['art']['url1080p'].split('?')[0])
   expect(prevAlbum['art']['url480p'].split('?')[0]).toBe(album['art']['url480p'].split('?')[0])
   expect(prevAlbum['art']['url64p'].split('?')[0]).toBe(album['art']['url64p'].split('?')[0])
-  expect(prevAlbum['url'].split('?')[0]).toBe(album['url'].split('?')[0])
-  expect(prevAlbum['url4k'].split('?')[0]).toBe(album['url4k'].split('?')[0])
-  expect(prevAlbum['url1080p'].split('?')[0]).toBe(album['url1080p'].split('?')[0])
-  expect(prevAlbum['url480p'].split('?')[0]).toBe(album['url480p'].split('?')[0])
-  expect(prevAlbum['url64p'].split('?')[0]).toBe(album['url64p'].split('?')[0])
 })

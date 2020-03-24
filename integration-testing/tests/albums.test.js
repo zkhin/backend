@@ -41,11 +41,6 @@ test('Add, read, and delete an album', async () => {
   expect(album['art']['url1080p']).not.toBeNull()
   expect(album['art']['url480p']).not.toBeNull()
   expect(album['art']['url64p']).not.toBeNull()
-  expect(album['url']).not.toBeNull()
-  expect(album['url4k']).not.toBeNull()
-  expect(album['url1080p']).not.toBeNull()
-  expect(album['url480p']).not.toBeNull()
-  expect(album['url64p']).not.toBeNull()
   expect(album['postCount']).toBe(0)
   expect(album['postsLastUpdatedAt']).toBeNull()
   expect(album['posts']['items']).toHaveLength(0)
@@ -390,11 +385,6 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(album['art']['url1080p']).not.toBeNull()
   expect(album['art']['url480p']).not.toBeNull()
   expect(album['art']['url64p']).not.toBeNull()
-  expect(album['url']).not.toBeNull()
-  expect(album['url4k']).not.toBeNull()
-  expect(album['url1080p']).not.toBeNull()
-  expect(album['url480p']).not.toBeNull()
-  expect(album['url64p']).not.toBeNull()
 
   // check we can access the art urls. these will throw an error if response code is not 2XX
   await rp.head({uri: album['art']['url'], simple: true})
@@ -402,11 +392,6 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   await rp.head({uri: album['art']['url1080p'], simple: true})
   await rp.head({uri: album['art']['url480p'], simple: true})
   await rp.head({uri: album['art']['url64p'], simple: true})
-  await rp.head({uri: album['url'], simple: true})
-  await rp.head({uri: album['url4k'], simple: true})
-  await rp.head({uri: album['url1080p'], simple: true})
-  await rp.head({uri: album['url480p'], simple: true})
-  await rp.head({uri: album['url64p'], simple: true})
 
   // add a post to that album
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
@@ -427,22 +412,12 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(albumOnePost['art']['url1080p']).not.toBeNull()
   expect(albumOnePost['art']['url480p']).not.toBeNull()
   expect(albumOnePost['art']['url64p']).not.toBeNull()
-  expect(albumOnePost['url']).not.toBeNull()
-  expect(albumOnePost['url4k']).not.toBeNull()
-  expect(albumOnePost['url1080p']).not.toBeNull()
-  expect(albumOnePost['url480p']).not.toBeNull()
-  expect(albumOnePost['url64p']).not.toBeNull()
 
   expect(albumOnePost['art']['url'].split('?')[0]).not.toBe(album['art']['url'].split('?')[0])
   expect(albumOnePost['art']['url4k'].split('?')[0]).not.toBe(album['art']['url4k'].split('?')[0])
   expect(albumOnePost['art']['url1080p'].split('?')[0]).not.toBe(album['art']['url1080p'].split('?')[0])
   expect(albumOnePost['art']['url480p'].split('?')[0]).not.toBe(album['art']['url480p'].split('?')[0])
   expect(albumOnePost['art']['url64p'].split('?')[0]).not.toBe(album['art']['url64p'].split('?')[0])
-  expect(albumOnePost['url'].split('?')[0]).not.toBe(album['url'].split('?')[0])
-  expect(albumOnePost['url4k'].split('?')[0]).not.toBe(album['url4k'].split('?')[0])
-  expect(albumOnePost['url1080p'].split('?')[0]).not.toBe(album['url1080p'].split('?')[0])
-  expect(albumOnePost['url480p'].split('?')[0]).not.toBe(album['url480p'].split('?')[0])
-  expect(albumOnePost['url64p'].split('?')[0]).not.toBe(album['url64p'].split('?')[0])
 
   // check we can access those urls
   await rp.head({uri: albumOnePost['art']['url'], simple: true})
@@ -450,11 +425,6 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   await rp.head({uri: albumOnePost['art']['url1080p'], simple: true})
   await rp.head({uri: albumOnePost['art']['url480p'], simple: true})
   await rp.head({uri: albumOnePost['art']['url64p'], simple: true})
-  await rp.head({uri: albumOnePost['url'], simple: true})
-  await rp.head({uri: albumOnePost['url4k'], simple: true})
-  await rp.head({uri: albumOnePost['url1080p'], simple: true})
-  await rp.head({uri: albumOnePost['url480p'], simple: true})
-  await rp.head({uri: albumOnePost['url64p'], simple: true})
 
   // add a second post to that album
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
@@ -474,22 +444,12 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(albumTwoPosts['art']['url1080p']).not.toBeNull()
   expect(albumTwoPosts['art']['url480p']).not.toBeNull()
   expect(albumTwoPosts['art']['url64p']).not.toBeNull()
-  expect(albumTwoPosts['url']).not.toBeNull()
-  expect(albumTwoPosts['url4k']).not.toBeNull()
-  expect(albumTwoPosts['url1080p']).not.toBeNull()
-  expect(albumTwoPosts['url480p']).not.toBeNull()
-  expect(albumTwoPosts['url64p']).not.toBeNull()
 
   expect(albumTwoPosts['art']['url'].split('?')[0]).toBe(albumOnePost['art']['url'].split('?')[0])
   expect(albumTwoPosts['art']['url4k'].split('?')[0]).toBe(albumOnePost['art']['url4k'].split('?')[0])
   expect(albumTwoPosts['art']['url1080p'].split('?')[0]).toBe(albumOnePost['art']['url1080p'].split('?')[0])
   expect(albumTwoPosts['art']['url480p'].split('?')[0]).toBe(albumOnePost['art']['url480p'].split('?')[0])
   expect(albumTwoPosts['art']['url64p'].split('?')[0]).toBe(albumOnePost['art']['url64p'].split('?')[0])
-  expect(albumTwoPosts['url'].split('?')[0]).toBe(albumOnePost['url'].split('?')[0])
-  expect(albumTwoPosts['url4k'].split('?')[0]).toBe(albumOnePost['url4k'].split('?')[0])
-  expect(albumTwoPosts['url1080p'].split('?')[0]).toBe(albumOnePost['url1080p'].split('?')[0])
-  expect(albumTwoPosts['url480p'].split('?')[0]).toBe(albumOnePost['url480p'].split('?')[0])
-  expect(albumTwoPosts['url64p'].split('?')[0]).toBe(albumOnePost['url64p'].split('?')[0])
 
   // add a third post to that album
   const [postId3, mediaId3] = [uuidv4(), uuidv4()]
@@ -509,22 +469,12 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(albumThreePosts['art']['url1080p']).not.toBeNull()
   expect(albumThreePosts['art']['url480p']).not.toBeNull()
   expect(albumThreePosts['art']['url64p']).not.toBeNull()
-  expect(albumThreePosts['url']).not.toBeNull()
-  expect(albumThreePosts['url4k']).not.toBeNull()
-  expect(albumThreePosts['url1080p']).not.toBeNull()
-  expect(albumThreePosts['url480p']).not.toBeNull()
-  expect(albumThreePosts['url64p']).not.toBeNull()
 
   expect(albumThreePosts['art']['url'].split('?')[0]).toBe(albumTwoPosts['art']['url'].split('?')[0])
   expect(albumThreePosts['art']['url4k'].split('?')[0]).toBe(albumTwoPosts['art']['url4k'].split('?')[0])
   expect(albumThreePosts['art']['url1080p'].split('?')[0]).toBe(albumTwoPosts['art']['url1080p'].split('?')[0])
   expect(albumThreePosts['art']['url480p'].split('?')[0]).toBe(albumTwoPosts['art']['url480p'].split('?')[0])
   expect(albumThreePosts['art']['url64p'].split('?')[0]).toBe(albumTwoPosts['art']['url64p'].split('?')[0])
-  expect(albumThreePosts['url'].split('?')[0]).toBe(albumTwoPosts['url'].split('?')[0])
-  expect(albumThreePosts['url4k'].split('?')[0]).toBe(albumTwoPosts['url4k'].split('?')[0])
-  expect(albumThreePosts['url1080p'].split('?')[0]).toBe(albumTwoPosts['url1080p'].split('?')[0])
-  expect(albumThreePosts['url480p'].split('?')[0]).toBe(albumTwoPosts['url480p'].split('?')[0])
-  expect(albumThreePosts['url64p'].split('?')[0]).toBe(albumTwoPosts['url64p'].split('?')[0])
 
   // add a fourth post to that album
   const [postId4, mediaId4] = [uuidv4(), uuidv4()]
@@ -544,22 +494,12 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(albumFourPosts['art']['url1080p']).not.toBeNull()
   expect(albumFourPosts['art']['url480p']).not.toBeNull()
   expect(albumFourPosts['art']['url64p']).not.toBeNull()
-  expect(albumFourPosts['url']).not.toBeNull()
-  expect(albumFourPosts['url4k']).not.toBeNull()
-  expect(albumFourPosts['url1080p']).not.toBeNull()
-  expect(albumFourPosts['url480p']).not.toBeNull()
-  expect(albumFourPosts['url64p']).not.toBeNull()
 
   expect(albumFourPosts['art']['url'].split('?')[0]).not.toBe(albumThreePosts['art']['url'].split('?')[0])
   expect(albumFourPosts['art']['url4k'].split('?')[0]).not.toBe(albumThreePosts['art']['url4k'].split('?')[0])
   expect(albumFourPosts['art']['url1080p'].split('?')[0]).not.toBe(albumThreePosts['art']['url1080p'].split('?')[0])
   expect(albumFourPosts['art']['url480p'].split('?')[0]).not.toBe(albumThreePosts['art']['url480p'].split('?')[0])
   expect(albumFourPosts['art']['url64p'].split('?')[0]).not.toBe(albumThreePosts['art']['url64p'].split('?')[0])
-  expect(albumFourPosts['url'].split('?')[0]).not.toBe(albumThreePosts['url'].split('?')[0])
-  expect(albumFourPosts['url4k'].split('?')[0]).not.toBe(albumThreePosts['url4k'].split('?')[0])
-  expect(albumFourPosts['url1080p'].split('?')[0]).not.toBe(albumThreePosts['url1080p'].split('?')[0])
-  expect(albumFourPosts['url480p'].split('?')[0]).not.toBe(albumThreePosts['url480p'].split('?')[0])
-  expect(albumFourPosts['url64p'].split('?')[0]).not.toBe(albumThreePosts['url64p'].split('?')[0])
 
   // check we can access those urls
   await rp.head({uri: albumFourPosts['art']['url'], simple: true})
@@ -567,9 +507,4 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   await rp.head({uri: albumFourPosts['art']['url1080p'], simple: true})
   await rp.head({uri: albumFourPosts['art']['url480p'], simple: true})
   await rp.head({uri: albumFourPosts['art']['url64p'], simple: true})
-  await rp.head({uri: albumFourPosts['url'], simple: true})
-  await rp.head({uri: albumFourPosts['url4k'], simple: true})
-  await rp.head({uri: albumFourPosts['url1080p'], simple: true})
-  await rp.head({uri: albumFourPosts['url480p'], simple: true})
-  await rp.head({uri: albumFourPosts['url64p'], simple: true})
 })

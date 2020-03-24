@@ -84,11 +84,6 @@ module.exports.album = gql`
     art {
       ...ImageFragment
     }
-    url
-    url4k
-    url1080p
-    url480p
-    url64p
     postCount
     postsLastUpdatedAt
     posts {

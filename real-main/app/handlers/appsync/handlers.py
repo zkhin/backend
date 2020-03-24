@@ -981,36 +981,6 @@ def album_art(caller_user_id, arguments, source, context):
     }
 
 
-@routes.register('Album.url')
-def album_url(caller_user_id, arguments, source, context):
-    album = album_manager.init_album(source)
-    return album.get_art_image_url(image_size.NATIVE)
-
-
-@routes.register('Album.url64p')
-def album_url_64p(caller_user_id, arguments, source, context):
-    album = album_manager.init_album(source)
-    return album.get_art_image_url(image_size.P64)
-
-
-@routes.register('Album.url480p')
-def album_url_480p(caller_user_id, arguments, source, context):
-    album = album_manager.init_album(source)
-    return album.get_art_image_url(image_size.P480)
-
-
-@routes.register('Album.url1080p')
-def album_url_1080p(caller_user_id, arguments, source, context):
-    album = album_manager.init_album(source)
-    return album.get_art_image_url(image_size.P1080)
-
-
-@routes.register('Album.url4k')
-def album_url_4k(caller_user_id, arguments, source, context):
-    album = album_manager.init_album(source)
-    return album.get_art_image_url(image_size.K4)
-
-
 @routes.register('Mutation.createDirectChat')
 def create_direct_chat(caller_user_id, arguments, source, context):
     user_id = arguments['userId']

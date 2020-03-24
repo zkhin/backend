@@ -645,36 +645,6 @@ custom:
         response: Lambda.response.vtl
 
       - type: Album
-        field: url
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: Album
-        field: url4k
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: Album
-        field: url1080p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: Album
-        field: url480p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: Album
-        field: url64p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: Album
         field: postCount
         dataSource: NoneDataSource
         response: PassThru.response.vtl

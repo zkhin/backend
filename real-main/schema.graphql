@@ -634,13 +634,6 @@ type Album {
   description: String
   art: Image!
 
-  # DEPRECATED: use Album.art instead
-  url: AWSURL  # native
-  url4k: AWSURL
-  url1080p: AWSURL
-  url480p: AWSURL
-  url64p: AWSURL
-
   # Posts in the album
   #   - posts with status COMPLETED only
   #   - ordered by postedAt, most recent post first
