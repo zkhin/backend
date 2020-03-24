@@ -129,36 +129,6 @@ custom:
         response: Lambda.response.vtl
 
       - type: User
-        field: photoUrl
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: User
-        field: photoUrl64p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: User
-        field: photoUrl480p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: User
-        field: photoUrl1080p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: User
-        field: photoUrl4k
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: User
         field: followerStatus
         dataSource: DynamodbDataSource
 

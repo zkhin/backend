@@ -305,36 +305,6 @@ def user_photo(caller_user_id, arguments, source, context):
     }
 
 
-@routes.register('User.photoUrl')
-def user_photo_url(caller_user_id, arguments, source, context):
-    user = user_manager.init_user(source)
-    return user.get_photo_url(image_size.NATIVE)
-
-
-@routes.register('User.photoUrl64p')
-def user_photo_url_64p(caller_user_id, arguments, source, context):
-    user = user_manager.init_user(source)
-    return user.get_photo_url(image_size.P64)
-
-
-@routes.register('User.photoUrl480p')
-def user_photo_url_480p(caller_user_id, arguments, source, context):
-    user = user_manager.init_user(source)
-    return user.get_photo_url(image_size.P480)
-
-
-@routes.register('User.photoUrl1080p')
-def user_photo_url_1080p(caller_user_id, arguments, source, context):
-    user = user_manager.init_user(source)
-    return user.get_photo_url(image_size.P1080)
-
-
-@routes.register('User.photoUrl4k')
-def user_photo_url_4k(caller_user_id, arguments, source, context):
-    user = user_manager.init_user(source)
-    return user.get_photo_url(image_size.K4)
-
-
 @routes.register('Mutation.followUser')
 def follow_user(caller_user_id, arguments, source, context):
     follower_user_id = caller_user_id

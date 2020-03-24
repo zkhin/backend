@@ -283,13 +283,12 @@ test('User search returns urls for profile pics', async () => {
   // give the search index a good chunk of time to update
   await misc.sleep(3000)
 
-  // do a search, and check that we do *not* see a photoUrl
+  // do a search, and check that we do *not* see a photo
   resp = await ourClient.query({query: schema.searchUsers, variables: {searchToken: newUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
   expect(resp['data']['searchUsers']['items'][0]['photo']).toBeNull()
-  expect(resp['data']['searchUsers']['items'][0]['photoUrl']).toBeNull()
 
   // add a post with media, upload that media
   const [postId, mediaId] = [uuidv4(), uuidv4()]
@@ -305,13 +304,11 @@ test('User search returns urls for profile pics', async () => {
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']['url']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
 
-  // do a search, and check that we see a photoUrl
+  // do a search, and check that we see a photo
   resp = await ourClient.query({query: schema.searchUsers, variables: {searchToken: newUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
-  expect(resp['data']['searchUsers']['items'][0]['photoUrl']).toBeTruthy()
   expect(resp['data']['searchUsers']['items'][0]['photo']['url']).toBeTruthy()
 })

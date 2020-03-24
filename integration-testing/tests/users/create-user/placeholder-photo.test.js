@@ -33,11 +33,6 @@ test('Mutation.createCognitoOnlyUser with no placeholder photos in bucket fails 
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['userId']).toBe(userId)
   expect(resp['data']['self']['photo']).toBeNull()
-  expect(resp['data']['self']['photoUrl']).toBeNull()
-  expect(resp['data']['self']['photoUrl64p']).toBeNull()
-  expect(resp['data']['self']['photoUrl480p']).toBeNull()
-  expect(resp['data']['self']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['self']['photoUrl4k']).toBeNull()
 })
 
 
@@ -67,23 +62,11 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   expect(resp['data']['self']['photo']['url1080p']).toMatch(urlRootRE)
   expect(resp['data']['self']['photo']['url4k']).toMatch(urlRootRE)
 
-  expect(resp['data']['self']['photoUrl']).toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl64p']).toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl480p']).toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl1080p']).toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl4k']).toMatch(urlRootRE)
-
   expect(resp['data']['self']['photo']['url']).toMatch(/.*\/native\.jpg$/)
   expect(resp['data']['self']['photo']['url64p']).toMatch(/.*\/64p\.jpg$/)
   expect(resp['data']['self']['photo']['url480p']).toMatch(/.*\/480p\.jpg$/)
   expect(resp['data']['self']['photo']['url1080p']).toMatch(/.*\/1080p\.jpg$/)
   expect(resp['data']['self']['photo']['url4k']).toMatch(/.*\/4K\.jpg$/)
-
-  expect(resp['data']['self']['photoUrl']).toMatch(/.*\/native\.jpg$/)
-  expect(resp['data']['self']['photoUrl64p']).toMatch(/.*\/64p\.jpg$/)
-  expect(resp['data']['self']['photoUrl480p']).toMatch(/.*\/480p\.jpg$/)
-  expect(resp['data']['self']['photoUrl1080p']).toMatch(/.*\/1080p\.jpg$/)
-  expect(resp['data']['self']['photoUrl4k']).toMatch(/.*\/4K\.jpg$/)
 
   // verify we can access the urls
   await rp.head({uri: resp['data']['self']['photo']['url'], simple: true})
@@ -92,23 +75,12 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   await rp.head({uri: resp['data']['self']['photo']['url480p'], simple: true})
   await rp.head({uri: resp['data']['self']['photo']['url64p'], simple: true})
 
-  await rp.head({uri: resp['data']['self']['photoUrl'], simple: true})
-  await rp.head({uri: resp['data']['self']['photoUrl4k'], simple: true})
-  await rp.head({uri: resp['data']['self']['photoUrl1080p'], simple: true})
-  await rp.head({uri: resp['data']['self']['photoUrl480p'], simple: true})
-  await rp.head({uri: resp['data']['self']['photoUrl64p'], simple: true})
-
   // If you want to manually verify these urls, here they are
   //console.log(resp['data']['self']['photo']['url'])
   //console.log(resp['data']['self']['photo']['url64p'])
   //console.log(resp['data']['self']['photo']['url480p'])
   //console.log(resp['data']['self']['photo']['url1080p'])
   //console.log(resp['data']['self']['photo']['url4k'])
-  //console.log(resp['data']['self']['photoUrl'])
-  //console.log(resp['data']['self']['photoUrl64p'])
-  //console.log(resp['data']['self']['photoUrl480p'])
-  //console.log(resp['data']['self']['photoUrl1080p'])
-  //console.log(resp['data']['self']['photoUrl4k'])
 
   // now set a custom profile photo, and make sure the placeholder urls go away
 
@@ -132,21 +104,11 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   resp = await client.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl64p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl480p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl1080p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl4k']).toBeTruthy()
 
   // check that it is really set already set
   resp = await client.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl64p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl480p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl1080p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl4k']).toBeTruthy()
 
   // check that the urls are no longer coming from the placeholder photos bucket
   expect(resp['data']['self']['photo']['url']).not.toMatch(urlRootRE)
@@ -154,10 +116,4 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   expect(resp['data']['self']['photo']['url480p']).not.toMatch(urlRootRE)
   expect(resp['data']['self']['photo']['url1080p']).not.toMatch(urlRootRE)
   expect(resp['data']['self']['photo']['url4k']).not.toMatch(urlRootRE)
-
-  expect(resp['data']['self']['photoUrl']).not.toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl64p']).not.toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl480p']).not.toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl1080p']).not.toMatch(urlRootRE)
-  expect(resp['data']['self']['photoUrl4k']).not.toMatch(urlRootRE)
 })

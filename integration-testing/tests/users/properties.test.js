@@ -170,11 +170,6 @@ test('Set and delete our profile photo, using postId', async () => {
   let resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeNull()
-  expect(resp['data']['self']['photoUrl']).toBeNull()
-  expect(resp['data']['self']['photoUrl64p']).toBeNull()
-  expect(resp['data']['self']['photoUrl480p']).toBeNull()
-  expect(resp['data']['self']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['self']['photoUrl4k']).toBeNull()
 
   // create a post with an image
   const [postId, mediaId] = [uuidv4(), uuidv4()]
@@ -187,11 +182,6 @@ test('Set and delete our profile photo, using postId', async () => {
   // set our photo
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: postId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl64p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl480p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl1080p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl4k']).toBeTruthy()
   let image = resp['data']['setUserDetails']['photo']
   expect(image['url']).toBeTruthy()
   expect(image['url64p']).toBeTruthy()
@@ -202,11 +192,6 @@ test('Set and delete our profile photo, using postId', async () => {
   // check that it is really set already set, and that root urls are same as before
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['photoUrl']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl64p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl480p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl1080p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl4k']).toBeTruthy()
   expect(image['url'].split('?')[0]).toBe(resp['data']['self']['photo']['url'].split('?')[0])
   expect(image['url64p'].split('?')[0]).toBe(resp['data']['self']['photo']['url64p'].split('?')[0])
   expect(image['url480p'].split('?')[0]).toBe(resp['data']['self']['photo']['url480p'].split('?')[0])
@@ -224,21 +209,11 @@ test('Set and delete our profile photo, using postId', async () => {
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: ''}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl64p']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl480p']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl4k']).toBeNull()
 
   // check that it really got deleted
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeNull()
-  expect(resp['data']['self']['photoUrl']).toBeNull()
-  expect(resp['data']['self']['photoUrl64p']).toBeNull()
-  expect(resp['data']['self']['photoUrl480p']).toBeNull()
-  expect(resp['data']['self']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['self']['photoUrl4k']).toBeNull()
 })
 
 
@@ -249,11 +224,6 @@ test('Set and delete our profile photo, using mediaId', async () => {
   let resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeNull()
-  expect(resp['data']['self']['photoUrl']).toBeNull()
-  expect(resp['data']['self']['photoUrl64p']).toBeNull()
-  expect(resp['data']['self']['photoUrl480p']).toBeNull()
-  expect(resp['data']['self']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['self']['photoUrl4k']).toBeNull()
 
   // create a post with an image
   const [postId, mediaId] = [uuidv4(), uuidv4()]
@@ -274,11 +244,6 @@ test('Set and delete our profile photo, using mediaId', async () => {
   // set our photo
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl64p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl480p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl1080p']).toBeTruthy()
-  expect(resp['data']['setUserDetails']['photoUrl4k']).toBeTruthy()
   let image = resp['data']['setUserDetails']['photo']
   expect(image['url']).toBeTruthy()
   expect(image['url64p']).toBeTruthy()
@@ -289,11 +254,6 @@ test('Set and delete our profile photo, using mediaId', async () => {
   // check that it is really set already set, and that root urls are same as before
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['photoUrl']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl64p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl480p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl1080p']).toBeTruthy()
-  expect(resp['data']['self']['photoUrl4k']).toBeTruthy()
   expect(image['url'].split('?')[0]).toBe(resp['data']['self']['photo']['url'].split('?')[0])
   expect(image['url64p'].split('?')[0]).toBe(resp['data']['self']['photo']['url64p'].split('?')[0])
   expect(image['url480p'].split('?')[0]).toBe(resp['data']['self']['photo']['url480p'].split('?')[0])
@@ -311,21 +271,11 @@ test('Set and delete our profile photo, using mediaId', async () => {
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: ''}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl64p']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl480p']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['setUserDetails']['photoUrl4k']).toBeNull()
 
   // check that it really got deleted
   resp = await ourClient.query({query: schema.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeNull()
-  expect(resp['data']['self']['photoUrl']).toBeNull()
-  expect(resp['data']['self']['photoUrl64p']).toBeNull()
-  expect(resp['data']['self']['photoUrl480p']).toBeNull()
-  expect(resp['data']['self']['photoUrl1080p']).toBeNull()
-  expect(resp['data']['self']['photoUrl4k']).toBeNull()
 })
 
 

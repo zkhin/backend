@@ -249,7 +249,6 @@ module.exports.searchUsers = gql`
         userId
         username
         fullName
-        photoUrl
         photo {
           url
         }
@@ -314,11 +313,6 @@ module.exports.setUserDetails = gql`
       photo {
         ...ImageFragment
       }
-      photoUrl
-      photoUrl64p
-      photoUrl480p
-      photoUrl1080p
-      photoUrl4k
     }
   }
   ${fragments.image}

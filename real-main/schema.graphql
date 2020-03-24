@@ -251,13 +251,6 @@ type User {
   signedUpAt: AWSDateTime
   photo: Image
 
-  # DEPRECATED: use User.photo instead
-  photoUrl: AWSURL
-  photoUrl64p: AWSURL
-  photoUrl480p: AWSURL
-  photoUrl1080p: AWSURL
-  photoUrl4k: AWSURL
-
   blockedStatus: BlockStatus!  # is the caller blocking them?
   blockerStatus: BlockStatus!  # are they blocking the caller?
 
