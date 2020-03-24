@@ -94,7 +94,7 @@ class ViewManager:
         if item_type == 'comment':
             post = self.post_manager.get_post(inst.post_id)
             if user_id == post.user_id:
-                post.clear_new_comment_activity()
+                post.set_new_comment_activity(False)
 
         # special-case stuff for posts
         if item_type == 'post':

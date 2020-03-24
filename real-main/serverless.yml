@@ -224,6 +224,11 @@ custom:
         response: PassThru.response.vtl
 
       - type: User
+        field: postHasNewCommentActivity
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: User
         field: feed
         dataSource: DynamodbDataSource
 

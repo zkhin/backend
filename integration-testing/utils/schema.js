@@ -481,6 +481,7 @@ module.exports.addPost = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
+      hasNewCommentActivity
     }
   }
   ${fragments.comment}
@@ -577,6 +578,7 @@ module.exports.post = gql`
         postCount
         blockerStatus
         followedStatus
+        postHasNewCommentActivity
       }
       expiresAt
       album {

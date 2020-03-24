@@ -223,9 +223,9 @@ class PostDynamo:
             raise exceptions.PostDoesNotExist(post_id)
 
     def set(self, post_id, text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
-            sharing_disabled=None, verification_hidden=None, has_new_comment_activity=None):
+            sharing_disabled=None, verification_hidden=None):
         assert any(k is not None for k in (
-            text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, has_new_comment_activity
+            text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,
         )), 'Action-less post edit requested'
 
         exp_actions = defaultdict(list)
@@ -263,10 +263,6 @@ class PostDynamo:
             exp_actions['SET'].append('verificationHidden = :vd')
             exp_values[':vd'] = verification_hidden
 
-        if has_new_comment_activity is not None:
-            exp_actions['SET'].append('hasNewCommentActivity = :hnca')
-            exp_values[':hnca'] = has_new_comment_activity
-
         update_query_kwargs = {
             'Key': {
                 'partitionKey': f'post/{post_id}',
@@ -281,6 +277,31 @@ class PostDynamo:
             update_query_kwargs['ExpressionAttributeValues'] = exp_values
 
         return self.client.update_item(update_query_kwargs)
+
+    def transact_set_has_new_comment_activity(self, post_id, new_value):
+        """
+        Set the boolean Post.hasNewCommentActivity.
+        If the post already had the value that we're seting to, an exception will be thrown.
+        """
+        cond_exp = 'attribute_exists(partitionKey)'
+        if new_value:
+            cond_exp += ' AND (attribute_not_exists(hasNewCommentActivity) OR hasNewCommentActivity = :ov)'
+        else:
+            cond_exp += ' AND hasNewCommentActivity = :ov'
+        return {
+            'Update': {
+                'Key': {
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': '-'},
+                },
+                'UpdateExpression': 'SET hasNewCommentActivity = :nv',
+                'ExpressionAttributeValues': {
+                    ':nv': {'BOOL': new_value},
+                    ':ov': {'BOOL': not new_value},
+                },
+                'ConditionExpression': cond_exp,
+            },
+        }
 
     def set_expires_at(self, post_item, expires_at):
         expires_at_str = expires_at.to_iso8601_string()
@@ -370,8 +391,8 @@ class PostDynamo:
             },
         }
 
-    def transact_increment_comment_count(self, post_id, register_new_comment_activity=False):
-        transact = {
+    def transact_increment_comment_count(self, post_id):
+        return {
             'Update': {
                 'Key': {
                     'partitionKey': {'S': f'post/{post_id}'},
@@ -384,13 +405,9 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
-        if register_new_comment_activity:
-            transact['Update']['UpdateExpression'] += ' SET hasNewCommentActivity = :hnca'
-            transact['Update']['ExpressionAttributeValues'][':hnca'] = {'BOOL': True}
-        return transact
 
-    def transact_decrement_comment_count(self, post_id, register_new_comment_activity=False):
-        transact = {
+    def transact_decrement_comment_count(self, post_id):
+        return {
             'Update': {
                 'Key': {
                     'partitionKey': {'S': f'post/{post_id}'},
@@ -405,10 +422,6 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
             },
         }
-        if register_new_comment_activity:
-            transact['Update']['UpdateExpression'] += ' SET hasNewCommentActivity = :hnca'
-            transact['Update']['ExpressionAttributeValues'][':hnca'] = {'BOOL': True}
-        return transact
 
     def transact_set_album_id(self, post_item, album_id, album_rank=None):
         post_id = post_item['postId']

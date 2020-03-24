@@ -237,6 +237,12 @@ class UserDynamo:
     def transact_decrement_post_count(self, user_id):
         return self._transact_decrement_count(user_id, 'postCount')
 
+    def transact_increment_post_has_new_comment_activity_count(self, user_id):
+        return self._transact_increment_count(user_id, 'postHasNewCommentActivityCount')
+
+    def transact_decrement_post_has_new_comment_activity_count(self, user_id):
+        return self._transact_decrement_count(user_id, 'postHasNewCommentActivityCount')
+
     def increment_post_viewed_by_count(self, user_id):
         query_kwargs = {
             'Key': {

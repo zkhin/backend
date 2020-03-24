@@ -290,6 +290,10 @@ type User {
   posts(postStatus: PostStatus, postType: PostType, limit: Int, nextToken: String): PaginatedPosts
   postCount: Int  # only posts with COMPLETED status
 
+  # Do any of the user's posts have Post.hasNewCommentActivity set?
+  #   - private to user themselves only
+  postHasNewCommentActivity: Boolean
+
   # Posts the user has anonymously liked
   #   - private to user themselves only
   #   - ordered with most recently liked post first

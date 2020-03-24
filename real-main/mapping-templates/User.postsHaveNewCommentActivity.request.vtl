@@ -1,0 +1,16 @@
+## private to the user themselves
+#if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
+  #return ()
+#end
+
+#set ($count = $util.defaultIfNull($ctx.source.postHasNewCommentActivityCount, 0))
+#if ($count > 0)
+  #set ($result = true)
+#else
+  #set ($result = false)
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $util.toJson($result)
+}

@@ -482,8 +482,32 @@ class Post:
         self.item['mediaObjects'] = post_media
         return self
 
-    def clear_new_comment_activity(self):
-        self.item = self.dynamo.set(self.id, has_new_comment_activity=False)
+    def set_new_comment_activity(self, new_value):
+        old_value = self.item.get('hasNewCommentActivity', False)
+        if old_value == new_value:
+            return self
+
+        # order matters to moto (in test suite), but not on dynamo
+        transacts = [self.dynamo.transact_set_has_new_comment_activity(self.id, new_value)]
+        transact_exceptions = [exceptions.DoesNotHaveExpectedCommentActivity(self.id, old_value)]
+
+        user_dyanmo = self.user_manager.dynamo
+        if new_value:
+            transacts.append(user_dyanmo.transact_increment_post_has_new_comment_activity_count(self.user_id))
+        else:
+            transacts.append(user_dyanmo.transact_decrement_post_has_new_comment_activity_count(self.user_id))
+        transact_exceptions.append(exceptions.PostException(
+            f'Unable to increment/decrement posts have new comment activity count for user `{self.user_id}`',
+        ))
+
+        try:
+            self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        except exceptions.DoesNotHaveExpectedCommentActivity:
+            # race condition, another thread already set the comment activity so we don't need to
+            pass
+
+        # avoid another refresh_item b/c of possible race conditions
+        self.item['hasNewCommentActivity'] = new_value
         return self
 
     def set_expires_at(self, expires_at):

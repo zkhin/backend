@@ -42,9 +42,11 @@ def test_add_comment(comment_manager, user, post):
     post.refresh_item()
     assert post.item['commentCount'] == 1
     assert post.item.get('hasNewCommentActivity', False) is False
+    user.refresh_item()
+    assert user.item.get('postHasNewCommentActivityCount', 0) == 0
 
 
-def test_add_comment_registers_new_comment_activity(comment_manager, user2, post):
+def test_add_comment_registers_new_comment_activity(comment_manager, user, user2, post):
     comment_id = 'cid'
 
     # add the comment, verify
@@ -55,6 +57,8 @@ def test_add_comment_registers_new_comment_activity(comment_manager, user2, post
     post.refresh_item()
     assert post.item['commentCount'] == 1
     assert post.item.get('hasNewCommentActivity', False) is True
+    user.refresh_item()
+    assert user.item.get('postHasNewCommentActivityCount', 0) == 1
 
 
 def test_add_comment_cant_reuse_ids(comment_manager, user, post):

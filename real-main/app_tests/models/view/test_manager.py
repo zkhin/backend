@@ -121,6 +121,8 @@ def test_record_view_comment_clears_new_comment_activity(view_manager, comment_m
     comment = comment_manager.add_comment('cmid2', post.id, user2.id, 'witty comment')
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is True
+    user.refresh_item()
+    assert user.item.get('postHasNewCommentActivityCount', 0) == 1
 
     # record a view of that comment by a user that is not the post owner
     view_manager.record_view('comment', comment.id, user3.id, 2, pendulum.now('utc'))
@@ -128,6 +130,8 @@ def test_record_view_comment_clears_new_comment_activity(view_manager, comment_m
     # verify the post still has comment activity
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is True
+    user.refresh_item()
+    assert user.item.get('postHasNewCommentActivityCount', 0) == 1
 
     # record a view of that comment by the post owner
     view_manager.record_view('comment', comment.id, user.id, 2, pendulum.now('utc'))
@@ -135,6 +139,8 @@ def test_record_view_comment_clears_new_comment_activity(view_manager, comment_m
     # verify the post now has no comment activity
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is False
+    user.refresh_item()
+    assert user.item.get('postHasNewCommentActivityCount', 0) == 0
 
 
 def test_record_view_post_not_completed(view_manager, posts, caplog, post_manager, user_manager, trending_manager):

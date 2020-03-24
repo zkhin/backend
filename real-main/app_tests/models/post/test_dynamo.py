@@ -596,24 +596,6 @@ def test_set_verification_hidden(post_dynamo):
     assert post_item['verificationHidden'] is False
 
 
-def test_set_has_new_comment_activity(post_dynamo):
-    # create a post with some text, media objects
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pid1')
-    assert 'hasNewCommentActivity' not in post_item
-
-    # edit it back and forth
-    post_item = post_dynamo.set('pid1', has_new_comment_activity=True)
-    assert post_item['hasNewCommentActivity'] is True
-    post_item = post_dynamo.set('pid1', has_new_comment_activity=False)
-    assert post_item['hasNewCommentActivity'] is False
-
-    # double check the value stuck
-    post_item = post_dynamo.get_post('pid1')
-    assert post_item['hasNewCommentActivity'] is False
-
-
 def test_generate_expired_post_pks_by_day(post_dynamo):
     # add three posts, two that expire on the same day, and one that never expires, and complete them all
     now = pendulum.now('utc')
@@ -712,7 +694,6 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
-    assert post_item.get('hasNewCommentActivity', False) is False
 
     # verify we can't decrement count below zero
     transact = post_dynamo.transact_decrement_comment_count(post_id)
@@ -720,55 +701,73 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
-    assert post_item.get('hasNewCommentActivity', False) is False
 
     # increment the count, verify
     transact = post_dynamo.transact_increment_comment_count(post_id)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 1
-    assert post_item.get('hasNewCommentActivity', False) is False
 
     # increment the count, verify
     transact = post_dynamo.transact_increment_comment_count(post_id)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 2
-    assert post_item.get('hasNewCommentActivity', False) is False
 
     # decrement the count, verify
     transact = post_dynamo.transact_decrement_comment_count(post_id)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 1
-    assert post_item.get('hasNewCommentActivity', False) is False
 
 
-def test_transact_increment_decrement_comment_count_register_new_comment_activity(post_dynamo):
+def test_transact_set_has_new_comment_activity(post_dynamo):
     post_id = 'pid'
 
-    # add a post, verify starts with no activity
+    # add a post, verify starts with no new comment activity
     transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('hasNewCommentActivity', False) is False
+    assert 'hasNewCommentActivity' not in post_item
 
-    # register some activity with an increment, verify
-    transact = post_dynamo.transact_increment_comment_count(post_id, register_new_comment_activity=True)
+    # verify can't set missing to False
+    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert 'hasNewCommentActivity' not in post_item
+
+    # verify can set missing to True
+    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('hasNewCommentActivity', False) is True
+    assert post_item['hasNewCommentActivity'] is True
 
-    # clear the actiivty
-    post_dynamo.set(post_id, has_new_comment_activity=False)
+    # verify can't set True to True
+    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('hasNewCommentActivity', False) is False
+    assert post_item['hasNewCommentActivity'] is True
 
-    # register some activity with an decrement, verify
-    transact = post_dynamo.transact_decrement_comment_count(post_id, register_new_comment_activity=True)
+    # verify can set True to False
+    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('hasNewCommentActivity', False) is True
+    assert post_item['hasNewCommentActivity'] is False
+
+    # verify can't set False to False
+    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['hasNewCommentActivity'] is False
+
+    # verify can set False to True
+    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
+    post_dynamo.client.transact_write_items([transact])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['hasNewCommentActivity'] is True
 
 
 def test_transact_set_album_id_pending_post(post_dynamo):

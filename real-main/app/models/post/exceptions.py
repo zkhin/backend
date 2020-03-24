@@ -50,3 +50,13 @@ class UnableToDecrementPostLikeCounter(PostException):
 
     def __str__(self):
         return f'Post `{self.post_id}` either does not exist or has a like counter of < 1'
+
+
+class DoesNotHaveExpectedCommentActivity(PostException):
+
+    def __init__(self, post_id, expected_value):
+        self.post_id = post_id
+        self.expected_value = expected_value
+
+    def __str__(self):
+        return f'Post `{self.post_id}` does not have Post.hasNewCommentActivity set to `{self.expected_value}`'

@@ -35,21 +35,19 @@ class Comment:
         post = self.post_manager.get_post(self.post_id)
 
         # users may only delete their own comments or comments on their posts
-        register_new_comment_activity = False
-        if deleter_user_id:
-            register_new_comment_activity = (deleter_user_id != post.user_id)
-            if deleter_user_id not in (post.user_id, self.user_id):
-                raise exceptions.CommentException(f'User is not authorized to delete comment `{self.id}`')
+        if deleter_user_id and deleter_user_id not in (post.user_id, self.user_id):
+            raise exceptions.CommentException(f'User is not authorized to delete comment `{self.id}`')
 
         # order matters to moto (in test suite), but not on dynamo
         transacts = [
-            self.post_manager.dynamo.transact_decrement_comment_count(
-                self.post_id, register_new_comment_activity=register_new_comment_activity,
-            ),
+            self.post_manager.dynamo.transact_decrement_comment_count(self.post_id),
             self.dynamo.transact_delete_comment(self.id),
         ]
-
         self.dynamo.client.transact_write_items(transacts)
+
+        # if this comment is being deleted by anyone other than post owner, count it as new comment activity
+        if deleter_user_id and deleter_user_id != post.user_id:
+            post.set_new_comment_activity(True)
 
         # delete view records on the comment
         self.view_manager.delete_views(self.item['partitionKey'])

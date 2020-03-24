@@ -50,9 +50,7 @@ class CommentManager:
         if post.item.get('commentsDisabled', False):
             raise exceptions.CommentException(f'Comments are disabled on post `{post_id}`')
 
-        register_new_comment_activity = False
         if user_id != post.user_id:
-            register_new_comment_activity = True
 
             # can't comment if there's a blocking relationship, either direction
             if self.block_manager.is_blocked(post.user_id, user_id):
@@ -71,15 +69,17 @@ class CommentManager:
         text_tags = self.user_manager.get_text_tags(text)
         transacts = [
             self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
-            self.post_manager.dynamo.transact_increment_comment_count(
-                post_id, register_new_comment_activity=register_new_comment_activity,
-            ),
+            self.post_manager.dynamo.transact_increment_comment_count(post_id),
         ]
         transact_exceptions = [
             exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
             exceptions.CommentException('Unable to increment Post.commentCount'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+
+        # if this comment is from anyone other than post owner, count it as new comment activity
+        if user_id != post.user_id:
+            post.set_new_comment_activity(True)
 
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)

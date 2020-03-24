@@ -761,16 +761,3 @@ def test_build_image_thumbnails(user, processing_video_post, s3_uploads_client):
     assert s3_uploads_client.exists(post.get_image_path(image_size.P1080))
     assert s3_uploads_client.exists(post.get_image_path(image_size.P480))
     assert s3_uploads_client.exists(post.get_image_path(image_size.P64))
-
-
-def test_clear_new_comment_activity(post):
-    # give the post some new comment activity
-    post.dynamo.set(post.id, has_new_comment_activity=True)
-    post.refresh_item()
-    assert post.item.get('hasNewCommentActivity', False) is True
-
-    # clear the comment activity
-    post.clear_new_comment_activity()
-    assert post.item.get('hasNewCommentActivity', False) is False
-    post.refresh_item()
-    assert post.item.get('hasNewCommentActivity', False) is False
