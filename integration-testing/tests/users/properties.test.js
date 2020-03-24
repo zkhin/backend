@@ -108,26 +108,6 @@ test('Try to get user that does not exist', async () => {
 })
 
 
-test('Cant set profile photo with both post and media ids', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-
-  // create a image post
-  let variables = {postId, mediaId, imageData: grantDataB64}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
-
-  // check cant use both ids at the same time, even if they refer to the same thing
-  variables = {photoPostId: postId, photoMediaId: mediaId}
-  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables})).rejects.toThrow('ClientError')
-})
-
-
 test('Various photoPostId failures', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const textOnlyPostId = uuidv4()
@@ -207,68 +187,6 @@ test('Set and delete our profile photo, using postId', async () => {
 
   // delete our photo
   resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: ''}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['photo']).toBeNull()
-
-  // check that it really got deleted
-  resp = await ourClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['photo']).toBeNull()
-})
-
-
-test('Set and delete our profile photo, using mediaId', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-
-  // check that it's not already set
-  let resp = await ourClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['photo']).toBeNull()
-
-  // create a post with an image
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
-
-  // get our uploaded/completed media, we should have just that one media object
-  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-
-  // set our photo
-  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})
-  expect(resp['errors']).toBeUndefined()
-  let image = resp['data']['setUserDetails']['photo']
-  expect(image['url']).toBeTruthy()
-  expect(image['url64p']).toBeTruthy()
-  expect(image['url480p']).toBeTruthy()
-  expect(image['url1080p']).toBeTruthy()
-  expect(image['url4k']).toBeTruthy()
-
-  // check that it is really set already set, and that root urls are same as before
-  resp = await ourClient.query({query: schema.self})
-  expect(resp['errors']).toBeUndefined()
-  expect(image['url'].split('?')[0]).toBe(resp['data']['self']['photo']['url'].split('?')[0])
-  expect(image['url64p'].split('?')[0]).toBe(resp['data']['self']['photo']['url64p'].split('?')[0])
-  expect(image['url480p'].split('?')[0]).toBe(resp['data']['self']['photo']['url480p'].split('?')[0])
-  expect(image['url1080p'].split('?')[0]).toBe(resp['data']['self']['photo']['url1080p'].split('?')[0])
-  expect(image['url4k'].split('?')[0]).toBe(resp['data']['self']['photo']['url4k'].split('?')[0])
-
-  // check we can access those urls
-  await rp.head({uri: image['url'], simple: true})
-  await rp.head({uri: image['url4k'], simple: true})
-  await rp.head({uri: image['url1080p'], simple: true})
-  await rp.head({uri: image['url480p'], simple: true})
-  await rp.head({uri: image['url64p'], simple: true})
-
-  // delete our photo
-  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: ''}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']).toBeNull()
 

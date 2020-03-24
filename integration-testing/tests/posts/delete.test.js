@@ -99,7 +99,7 @@ test('Delete a post that was our next story to expire', async () => {
 })
 
 
-test('Deleting post with media', async () => {
+test('Deleting image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // we create an image post
@@ -107,48 +107,26 @@ test('Deleting post with media', async () => {
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
 
-  // verify we can see the post & media object
+  // verify we can see the post
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'PENDING'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(1)
   expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 
   // delete the post
   resp = await ourClient.mutate({mutation: schema.deletePost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['deletePost']['postStatus']).toBe('DELETING')
-  expect(resp['data']['deletePost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['deletePost']['mediaObjects'][0]['mediaStatus']).toBe('DELETING')
 
-  // verify we can no longer see the post or media object
+  // verify we can no longer see the post 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'PENDING'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'DELETING'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'AWAITING_UPLOAD'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'DELETING'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
 })
 
 

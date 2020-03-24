@@ -209,8 +209,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
-  // add a media post
-  // add a pending post object with two images
+  // add an image post
   const postId = uuidv4()
   const mediaId = uuidv4()
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
@@ -231,9 +230,6 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp['data']['self']['anonymouslyLikedPosts']['items']).toHaveLength(1)
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['postId']).toBe(postId)
   expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['image']['url']).toBeTruthy()
-  expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['self']['anonymouslyLikedPosts']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
 
   // we check their list of posts they onymously liked
   resp = await ourClient.query({query: schema.user, variables: {userId: theirUserId}})
@@ -241,9 +237,6 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp['data']['user']['onymouslyLikedPosts']['items']).toHaveLength(1)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['postId']).toBe(postId)
   expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['image']['url']).toBeTruthy()
-  expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['user']['onymouslyLikedPosts']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
 })
 
 

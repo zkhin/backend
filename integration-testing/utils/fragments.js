@@ -114,28 +114,6 @@ module.exports.comment = gql`
   }
 `
 
-module.exports.mediaObject = gql`
-  fragment MediaObjectFragment on MediaObject {
-    mediaId
-    mediaStatus
-    mediaType
-    isVerified
-    uploadUrl
-    url
-    url4k
-    url1080p
-    url480p
-    url64p
-    height
-    width
-    colors {
-      r
-      g
-      b
-    }
-  }
-`
-
 module.exports.textTaggedUser = gql`
   fragment TextTaggedUserFragment on TextTaggedUser {
     tag

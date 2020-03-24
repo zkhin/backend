@@ -81,7 +81,6 @@ type Mutation {
     username: String,
     fullName: String,
     bio: String,
-    photoMediaId: ID,  # DEPRECATED: use photoPostId
     photoPostId: ID,  # must be refer to a completed image post
     privacyStatus: PrivacyStatus,
     followCountsHidden: Boolean,
@@ -158,16 +157,16 @@ type Mutation {
   #   - trying to flag a post we do not have access to is an error
   flagPost(postId: ID!): Post
 
-  # Delete a Post and all of its media
+  # Delete a Post
   deletePost(postId: ID!): Post
 
   # Archive a Post
   #   - can only be done to your own posts
   #   - removes the post from followers feeds, stories
-  #   - makes the post and media objects only visible to yourself
+  #   - makes the post only visible to yourself
   archivePost(postId: ID!): Post
 
-  # Restore an archived post, and any media it has
+  # Restore an archived post
   restoreArchivedPost(postId: ID!): Post
 
   # Post likes
@@ -290,19 +289,6 @@ type User {
   #   - posts of a private user are private to only themselves and their followers
   posts(postStatus: PostStatus, postType: PostType, limit: Int, nextToken: String): PaginatedPosts
   postCount: Int  # only posts with COMPLETED status
-
-  # DEPRECATED: use User.posts(postType = 'IMAGE') instead
-  # User's media objects
-  #   - mediaStatus defaults to UPLOADED if unset
-  #   - mediaType defaults to IMAGE if unset
-  #   - when looking at another user's media objects, mediaStatus may only be set to UPLOADED
-  #   - media objcts of a private user are private to only themselves and their followers
-  mediaObjects(
-    mediaStatus: MediaObjectStatus,
-    mediaType: MediaObjectType,
-    limit: Int,
-    nextToken: String,
-  ): PaginatedMediaObjects
 
   # Posts the user has anonymously liked
   #   - private to user themselves only
@@ -431,15 +417,6 @@ enum MediaObjectType {
   IMAGE
 }
 
-enum MediaObjectStatus {
-  AWAITING_UPLOAD
-  PROCESSING_UPLOAD
-  UPLOADED
-  ERROR
-  ARCHIVED
-  DELETING
-}
-
 enum PostStatus {
   PENDING
   PROCESSING
@@ -510,27 +487,6 @@ type CloudFrontAccessCookies {
   keyPairId: String!        # value of CloudFront-Key-Pair-Id cookie
 }
 
-type MediaObject {
-  mediaId: ID!
-  mediaType: MediaObjectType!
-  mediaStatus: MediaObjectStatus  # null & 'UPLOADED' are synonymous
-  isVerified: Boolean!
-  url: AWSURL
-  url64p: AWSURL
-  url480p: AWSURL
-  url1080p: AWSURL
-  url4k: AWSURL
-  uploadUrl: AWSURL
-  width: Int
-  height: Int
-  colors: [Color!]
-}
-
-type PaginatedMediaObjects {
-  items: [MediaObject!]!
-  nextToken: String
-}
-
 type Post {
   postId: ID!
   postedAt: AWSDateTime!
@@ -547,22 +503,18 @@ type Post {
   likesDisabled: Boolean
   sharingDisabled: Boolean
   verificationHidden: Boolean
-
-  # DEPRECATED: use Post.image, Post.isVerified and Post.imageUploadUrl instead
-  mediaObjects: [MediaObject!]!
-
-  # Replacement for mediaObjects
-  image: Image
   isVerified: Boolean
+
+  image: Image
   imageUploadUrl: AWSURL
 
   video: Video
   videoUploadUrl: AWSURL
 
-  # The first post with the same media as this post
+  # The first post with the same image as this post
   #   - null if post has not yet reached COMPLETED stage
   #   - null if the caller does not have access to the original post
-  #   - will be a copy of parent post if parent post is the first with this media
+  #   - will be a copy of parent post if parent post is the first with this image
   originalPost: Post
 
   # Count of unique users who have viewed this post

@@ -596,7 +596,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   const [theirClient] = await loginCache.getCleanLogin()
   const [otherClient, otherUserId] = await loginCache.getCleanLogin()
 
-  // we add a media post
+  // we add an image post
   const ourPostId = uuidv4()
   let variables = {postId: ourPostId, mediaId: uuidv4(), imageData: imageData1B64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
@@ -606,7 +606,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
   await misc.sleep(2000)  // let dynamo converge
 
-  // they add a media post that's a duplicate of ours
+  // they add an image post that's a duplicate of ours
   const theirPostId = uuidv4()
   variables = {postId: theirPostId, mediaId: uuidv4(), imageData: imageData1B64}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})

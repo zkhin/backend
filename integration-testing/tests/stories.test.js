@@ -97,43 +97,37 @@ test('Add a post that shows up as story', async () => {
 })
 
 
-test('Add posts with media show up in stories', async () => {
+test('Add posts with images show up in stories', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const imageBytes = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
   const imageData = new Buffer.from(imageBytes).toString('base64')
 
-  // we add a media post, give s3 trigger a second to fire
+  // we add a image post, give s3 trigger a second to fire
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   let variables = {postId: postId1, mediaId: mediaId1, lifetime: 'PT1M', imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(resp['data']['addPost']['image']).toBeTruthy()
 
-  // we add a media post, give s3 trigger a second to fire
+  // we add a image post, give s3 trigger a second to fire
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   variables = {postId: postId2, mediaId: mediaId2, lifetime: 'PT2H', imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
+  expect(resp['data']['addPost']['image']).toBeTruthy()
 
-  // verify we see those stories, with media
+  // verify we see those stories
   resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(2)
   expect(resp['data']['user']['stories']['items'][0]['postId']).toBe(postId1)
   expect(resp['data']['user']['stories']['items'][0]['image']['url']).toBeTruthy()
-  expect(resp['data']['user']['stories']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['user']['stories']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
-  expect(resp['data']['user']['stories']['items'][0]['mediaObjects'][0]['url']).toBeTruthy()
   expect(resp['data']['user']['stories']['items'][1]['postId']).toBe(postId2)
   expect(resp['data']['user']['stories']['items'][1]['image']['url']).toBeTruthy()
-  expect(resp['data']['user']['stories']['items'][1]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['user']['stories']['items'][1]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
-  expect(resp['data']['user']['stories']['items'][1]['mediaObjects'][0]['url']).toBeTruthy()
 })
 
 

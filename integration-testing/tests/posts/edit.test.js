@@ -30,9 +30,7 @@ test('Edit post', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
+  expect(resp['data']['addPost']['image']).toBeTruthy()
 
   // verify it has no text
   resp = await ourClient.query({query: schema.post, variables: {postId}})

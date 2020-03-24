@@ -27,44 +27,32 @@ afterAll(async () => await loginCache.clean())
 test('Archiving an image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  // we uplaod an image post
+  // we upload an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['addPost']['image']).toBeTruthy()
 
-  // check we see that post in the feed, in the posts, and in the mediaObjects
+  // check we see that post in the feed and in the posts
   resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['feed']['items']).toHaveLength(1)
   expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
   expect(resp['data']['self']['feed']['items'][0]['image']['url']).not.toBeNull()
   expect(resp['data']['self']['feed']['items'][0]['imageUploadUrl']).toBeNull()
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(1)
   expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
 
-  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-
   // archive the post
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
-  expect(resp['data']['archivePost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['archivePost']['mediaObjects'][0]['mediaStatus']).toBe('ARCHIVED')
 
-  // post and media should be gone from the normal queries - feed, posts, mediaObjects
+  // post should be gone from the normal queries - feed, posts
   resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['feed']['items']).toHaveLength(0)
@@ -73,23 +61,11 @@ test('Archiving an image post', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
 
-  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
-
-  // post and media should be visible when specifically requesting archived posts
+  // post should be visible when specifically requesting archived posts
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(1)
   expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
-
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'ARCHIVED'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
 })
 
 
@@ -102,41 +78,22 @@ test('Cant archive a post in PENDING status', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
 
   // verify we can't archive that post
   await expect(ourClient.mutate({mutation: schema.archivePost, variables: {postId}})).rejects.toThrow('ClientError')
 })
 
 
-test('Archiving an image post does not affect media urls', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+test('Archiving an image post does not affect image urls', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
 
   // we uplaod an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const image = resp['data']['addPost']['image']
   expect(image['url']).toBeTruthy()
-
-  // check the urls are as we expect
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'UPLOADED'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url64p']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url480p']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url1080p']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url4k']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['uploadUrl']).toBeNull()
 
   // archive the post
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
@@ -144,30 +101,6 @@ test('Archiving an image post does not affect media urls', async () => {
   expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
   expect(resp['data']['archivePost']['imageUploadUrl']).toBeNull()
   expect(resp['data']['archivePost']['image']['url']).toBeTruthy()
-  expect(resp['data']['archivePost']['image']['url']).toBeTruthy()
-  expect(resp['data']['archivePost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['archivePost']['mediaObjects'][0]['mediaStatus']).toBe('ARCHIVED')
-  expect(resp['data']['archivePost']['mediaObjects'][0]['url']).toBeTruthy()
-  expect(resp['data']['archivePost']['mediaObjects'][0]['url64p']).toBeTruthy()
-  expect(resp['data']['archivePost']['mediaObjects'][0]['url480p']).toBeTruthy()
-  expect(resp['data']['archivePost']['mediaObjects'][0]['url1080p']).toBeTruthy()
-  expect(resp['data']['archivePost']['mediaObjects'][0]['url4k']).toBeTruthy()
-  expect(resp['data']['archivePost']['mediaObjects'][0]['uploadUrl']).toBeNull()
-
-  // check the url haven't changed
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'ARCHIVED'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url64p']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url480p']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url1080p']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['url4k']).toBeTruthy()
-  expect(resp['data']['user']['mediaObjects']['items'][0]['uploadUrl']).toBeNull()
 
   // check the url bases have not changed
   resp = await ourClient.query({query: schema.post, variables: {postId}})
@@ -186,61 +119,42 @@ test('Archiving an image post does not affect media urls', async () => {
 test('Restoring an archived image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  // we uplaod an image post
+  // we upload an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
+  expect(resp['data']['addPost']['image']).toBeTruthy()
 
   // archive the post
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
-  expect(resp['data']['archivePost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['archivePost']['mediaObjects'][0]['mediaStatus']).toBe('ARCHIVED')
+  expect(resp['data']['archivePost']['image']).toBeTruthy()
 
   // restore the post
   resp = await ourClient.mutate({mutation: schema.restoreArchivedPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['restoreArchivedPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['restoreArchivedPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['restoreArchivedPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
+  expect(resp['data']['restoreArchivedPost']['image']).toBeTruthy()
 
-  // check we see that post in the feed, in the posts, and in the mediaObjects
+  // check we see that post in the feed and in the posts
   resp = await ourClient.query({query: schema.selfFeed})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['feed']['items']).toHaveLength(1)
   expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
   expect(resp['data']['self']['feed']['items'][0]['imageUploadUrl']).toBeNull()
-  expect(resp['data']['self']['feed']['items'][0]['image']['url']).not.toBeNull()
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['url']).not.toBeNull()
-  expect(resp['data']['self']['feed']['items'][0]['mediaObjects'][0]['uploadUrl']).toBeNull()
+  expect(resp['data']['self']['feed']['items'][0]['image']['url']).toBeTruthy()
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(1)
   expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId)
 
-  resp = await ourClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(1)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId)
-
-  // post and media should not be visible when specifically requesting archived posts
+  // post should not be visible when specifically requesting archived posts
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
-
-  resp = await ourClient.query({
-    query: schema.userMediaObjects,
-    variables: {userId: ourUserId, mediaStatus: 'ARCHIVED'},
-  })
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
 })
 
 
@@ -293,7 +207,7 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postCount']).toBe(0)
 
-  // add media post with direct image data upload, verify post count goes up immediately
+  // add image post with direct image data upload, verify post count goes up immediately
   let [postId, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
@@ -303,16 +217,14 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['postCount']).toBe(1)
 
-  // add a media post, verify count doesn't go up until the media is uploaded
+  // add a image post, verify count doesn't go up until the image is uploaded
   ;[postId, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['postedBy']['postCount']).toBe(1)  // count has not incremented
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
-  expect(uploadUrl.split('?')[0]).toBe(resp['data']['addPost']['mediaObjects'][0]['uploadUrl'].split('?')[0])
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 

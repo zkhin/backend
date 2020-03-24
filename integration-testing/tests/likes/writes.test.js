@@ -31,7 +31,7 @@ test('Cannot like/dislike posts that do not exist', async () => {
 
 
 test('Cannot like/dislike PENDING posts', async () => {
-  // we add a media post, but don't upload the media
+  // we add an image post, but don't upload the image
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
   const mediaId = uuidv4()

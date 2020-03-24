@@ -92,27 +92,21 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
-  // we add a media post that never expires
+  // we add an image post that never expires
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
-  // we add a media post that is also a story
+  // we add a image post that is also a story
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   variables = {postId: postId2, mediaId: mediaId2, lifetime: 'P1D', imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId2)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
   // verify they see our user directly
   resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
@@ -129,17 +123,12 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['self']['followerUsers']['items']).toHaveLength(1)
   expect(resp['data']['self']['followerUsers']['items'][0]['userId']).toBe(ourUserId)
 
-  // verify they see our posts, media objects
+  // verify they see our posts objects
   resp = await theirClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(2)
   expect(resp['data']['user']['posts']['items'][0]['postId']).toBe(postId2)
   expect(resp['data']['user']['posts']['items'][1]['postId']).toBe(postId1)
-  resp = await theirClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(2)
-  expect(resp['data']['user']['mediaObjects']['items'][0]['mediaId']).toBe(mediaId2)
-  expect(resp['data']['user']['mediaObjects']['items'][1]['mediaId']).toBe(mediaId1)
 
   // verify they see our stories
   resp = await theirClient.query({query: schema.self})

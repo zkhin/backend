@@ -34,7 +34,6 @@ test('Add post no expiration', async () => {
   expect(post['postId']).toBe(postId)
   expect(post['postType']).toBe('IMAGE')
   expect(post['postStatus']).toBe('COMPLETED')
-  expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
   expect(post['expiresAt']).toBeNull()
   expect(post['originalPost']['postId']).toBe(postId)
   await misc.sleep(2000)  // let dynamo converge
@@ -105,7 +104,6 @@ test('Add text-only post', async () => {
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['text']).toBe(text)
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(0)
   expect(resp['data']['addPost']['isVerified']).toBeNull()
   expect(resp['data']['addPost']['image']).toBeNull()
   expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
@@ -124,7 +122,6 @@ test('Add pending video post minimal', async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['videoUploadUrl']).toBeTruthy()
   expect(resp['data']['addPost']['text']).toBeNull()
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(0)
   expect(resp['data']['addPost']['isVerified']).toBeNull()
   expect(resp['data']['addPost']['image']).toBeNull()
   expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
@@ -156,7 +153,6 @@ test('Add pending video post maximal', async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['videoUploadUrl']).toBeTruthy()
   expect(resp['data']['addPost']['text']).toBe(text)
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(0)
   expect(resp['data']['addPost']['isVerified']).toBe(true)
   expect(resp['data']['addPost']['image']).toBeNull()
   expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
@@ -176,7 +172,7 @@ test('Cant add video post to album (yet)', async () => {
 })
 
 
-test('Add media post with image data directly included', async () => {
+test('Add image post with image data directly included', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // add the post with image data included in the gql call
@@ -188,13 +184,7 @@ test('Add media post with image data directly included', async () => {
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
   const image = resp['data']['addPost']['image']
-  expect(image['url']).not.toBeNull()
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  const media = resp['data']['addPost']['mediaObjects'][0]
-  expect(media['mediaId']).toBe(mediaId)
-  expect(media['mediaStatus']).toBe('UPLOADED')
-  expect(media['uploadUrl']).toBeNull()
-  expect(media['url']).not.toBeNull()
+  expect(image['url']).toBeTruthy()
 
   // verify we can access all of the urls
   await rp.head({uri: image['url'], simple: true})
@@ -202,14 +192,9 @@ test('Add media post with image data directly included', async () => {
   await rp.head({uri: image['url1080p'], simple: true})
   await rp.head({uri: image['url480p'], simple: true})
   await rp.head({uri: image['url64p'], simple: true})
-  await rp.head({uri: media['url'], simple: true})
-  await rp.head({uri: media['url4k'], simple: true})
-  await rp.head({uri: media['url1080p'], simple: true})
-  await rp.head({uri: media['url480p'], simple: true})
-  await rp.head({uri: media['url64p'], simple: true})
 
   // check the data in the native image is correct
-  const s3ImageData = await rp.get({uri: media['url'], encoding: null})
+  const s3ImageData = await rp.get({uri: image['url'], encoding: null})
   expect(s3ImageData.equals(imageBytes)).toBe(true)
 
   // double check everything saved to db correctly
@@ -219,30 +204,19 @@ test('Add media post with image data directly included', async () => {
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['post']['imageUploadUrl']).toBeNull()
   const imageCheck = resp['data']['post']['image']
-  expect(resp['data']['post']['mediaObjects']).toHaveLength(1)
-  const mediaCheck = resp['data']['post']['mediaObjects'][0]
-  expect(mediaCheck['mediaId']).toBe(mediaId)
-  expect(mediaCheck['mediaStatus']).toBe('UPLOADED')
-  expect(mediaCheck['uploadUrl']).toBeNull()
 
   expect(imageCheck['url'].split('?')[0]).toBe(image['url'].split('?')[0])
   expect(imageCheck['url4k'].split('?')[0]).toBe(image['url4k'].split('?')[0])
   expect(imageCheck['url1080p'].split('?')[0]).toBe(image['url1080p'].split('?')[0])
   expect(imageCheck['url480p'].split('?')[0]).toBe(image['url480p'].split('?')[0])
   expect(imageCheck['url64p'].split('?')[0]).toBe(image['url64p'].split('?')[0])
-
-  expect(mediaCheck['url'].split('?')[0]).toBe(media['url'].split('?')[0])
-  expect(mediaCheck['url4k'].split('?')[0]).toBe(media['url4k'].split('?')[0])
-  expect(mediaCheck['url1080p'].split('?')[0]).toBe(media['url1080p'].split('?')[0])
-  expect(mediaCheck['url480p'].split('?')[0]).toBe(media['url480p'].split('?')[0])
-  expect(mediaCheck['url64p'].split('?')[0]).toBe(media['url64p'].split('?')[0])
 })
 
 
-test('Add media post (with postType specified), check non-duplicates are not marked as such', async () => {
+test('Add image post (with postType specified), check non-duplicates are not marked as such', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
-  // we add a media post, give s3 trigger a second to fire
+  // we add a image post, give s3 trigger a second to fire
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, postType: 'IMAGE'}})
   expect(resp['errors']).toBeUndefined()
@@ -251,19 +225,13 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   expect(post['postStatus']).toBe('PENDING')
   expect(post['imageUploadUrl']).toBeTruthy()
   expect(post['image']).toBeNull()
-  expect(post['mediaObjects']).toHaveLength(1)
-  expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(post['mediaObjects'][0]['mediaStatus']).toBe('AWAITING_UPLOAD')
-  expect(post['mediaObjects'][0]['uploadUrl']).toBeTruthy()
-  expect(post['mediaObjects'][0]['url']).toBeNull()
   let uploadUrl = post['imageUploadUrl']
-  expect(uploadUrl.split('?')[0]).toBe(post['mediaObjects'][0]['uploadUrl'].split('?')[0])
 
-  // upload the media, give S3 trigger a second to fire
+  // upload the image, give S3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
-  // add another media post with a different image
+  // add another image post with a different image
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId2, mediaId: mediaId2}})
   expect(resp['errors']).toBeUndefined()
@@ -271,7 +239,7 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
-  // check the post & media have changed status and look good
+  // check the post has changed status and looks good
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['post']
@@ -280,11 +248,6 @@ test('Add media post (with postType specified), check non-duplicates are not mar
   expect(post['imageUploadUrl']).toBeNull()
   expect(post['image']['url']).toBeTruthy()
   expect(post['originalPost']['postId']).toBe(postId)
-  expect(post['mediaObjects']).toHaveLength(1)
-  expect(post['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(post['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
-  expect(post['mediaObjects'][0]['uploadUrl']).toBeNull()
-  expect(post['mediaObjects'][0]['url']).toBeTruthy()
 
   // check the originalPost properties don't point at each other
   resp = await ourClient.query({query: schema.post, variables: {postId: postId}})
@@ -309,7 +272,6 @@ test('Add post with text of empty string same as null text', async () => {
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['text']).toBeNull()
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
 })
 
 
@@ -457,7 +419,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   const ourPostId = uuidv4()
   const theirPostId = uuidv4()
 
-  // we add a media post, complete it, check it's original
+  // we add a image post, complete it, check it's original
   let variables = {postId: ourPostId, mediaId: uuidv4(), imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
@@ -466,7 +428,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp['data']['addPost']['originalPost']['postId']).toBe(ourPostId)
   await misc.sleep(1000)  // let dynamo converge
 
-  // they add another media post with the same media, original should point back to first post
+  // they add another image post with the same image, original should point back to first post
   variables = {postId: theirPostId, mediaId: uuidv4(), imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()

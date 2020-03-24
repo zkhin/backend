@@ -179,7 +179,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['data']['addAlbum']['postsLastUpdatedAt']).toBeNull()
   expect(resp['data']['addAlbum']['posts']['items']).toHaveLength(0)
 
-  // we add a media post in that album (in PENDING state)
+  // we add a image post in that album (in PENDING state)
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, albumId}})
   expect(resp['errors']).toBeUndefined()
@@ -196,7 +196,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['data']['album']['postsLastUpdatedAt']).toBeNull()
   expect(resp['data']['album']['posts']['items']).toHaveLength(0)
 
-  // upload the media, thus completing the post
+  // upload the image, thus completing the post
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
@@ -321,14 +321,14 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
-  // add a media post, leave it in PENDING state
+  // add an image post, leave it in PENDING state
   const [postId1, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId: postId1, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
 
-  // add a media post, and archive it
+  // add an image post, and archive it
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   let variables = {postId: postId2, mediaId: mediaId2, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
@@ -368,7 +368,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
-  // add a media post in the album
+  // add an image post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
@@ -378,7 +378,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
   await misc.sleep(1000)  // let dynamo converge
 
-  // add another media post in the album
+  // add another image post in the album
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   variables = {postId: postId2, mediaId: mediaId2, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
@@ -441,7 +441,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
-  // add a media post in the album
+  // add an image post in the album
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, albumId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})

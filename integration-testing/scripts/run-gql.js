@@ -124,7 +124,6 @@ const setUserDetails = gql(`mutation SetUserDetails {
     bio
     email
     phoneNumber
-    photoUrl
   }
 }`)
 
@@ -152,13 +151,6 @@ const getAddTextPost = () => gql(`mutation AddTextPost {
     }
     postStatus
     text
-    mediaObjects {
-      mediaId
-      mediaType
-      mediaStatus
-      url
-      uploadUrl
-    }
   }
 }`)
 
@@ -175,13 +167,6 @@ const getAddMediaPost = gql(`mutation AddMediaPost {
     }
     postStatus
     text
-    mediaObjects {
-      mediaId
-      mediaType
-      mediaStatus
-      url
-      uploadUrl
-    }
   }
 }`)
 
@@ -199,13 +184,6 @@ const getAddTextAndMediaPost = () => gql(`mutation AddTextAndMediaPost {
     }
     postStatus
     text
-    mediaObjects {
-      mediaId
-      mediaType
-      mediaStatus
-      url
-      uploadUrl
-    }
   }
 }`)
 
@@ -217,7 +195,6 @@ const querySelf = gql(`{
     bio
     email
     phoneNumber
-    photoUrl
   }
 }`)
 
@@ -271,29 +248,9 @@ const selfPosts = gql(`{
         }
         postStatus
         text
-        mediaObjects {
-          mediaId
-          mediaType
-          mediaStatus
-          url
-          uploadUrl
-        }
       }
       nextToken
     }
-  }
-}`)
-
-const getMediaObjects = gql(`{
-  getMediaObjects {
-    items {
-      mediaId
-      mediaType
-      mediaStatus
-      url
-      uploadUrl
-    }
-    nextToken
   }
 }`)
 
@@ -309,13 +266,6 @@ const selfFeed = gql(`{
         }
         postStatus
         text
-        mediaObjects {
-          mediaId
-          mediaType
-          mediaStatus
-          url
-          uploadUrl
-        }
       }
       nextToken
     }

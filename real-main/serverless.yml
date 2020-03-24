@@ -236,11 +236,6 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: User
-        field: mediaObjects
-        dataSource: DynamodbDataSource
-        response: PassThru.response.vtl
-
-      - type: User
         field: postViewedByCount
         dataSource: NoneDataSource
         response: PassThru.response.vtl
@@ -547,10 +542,6 @@ custom:
         dataSource: DynamodbDataSource
 
       - type: Post
-        field: mediaObjects
-        dataSource: DynamodbDataSource
-
-      - type: Post
         field: textTaggedUsers
         request: Source.textTaggedUsers/before.request.vtl
         response: Source.textTaggedUsers/after.response.vtl
@@ -739,46 +730,6 @@ custom:
 
       - type: Mutation
         field: reportPostViews
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: MediaObject
-        field: isVerified
-        dataSource: DynamodbDataSource
-
-      - type: MediaObject
-        field: url
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: MediaObject
-        field: url64p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: MediaObject
-        field: url480p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: MediaObject
-        field: url1080p
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: MediaObject
-        field: url4k
-        dataSource: LambdaDataSource
-        request: Lambda.request.vtl
-        response: Lambda.response.vtl
-
-      - type: MediaObject
-        field: uploadUrl
         dataSource: LambdaDataSource
         request: Lambda.request.vtl
         response: Lambda.response.vtl

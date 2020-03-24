@@ -36,19 +36,10 @@ module.exports.self = gql`
           postId
         }
       }
-      mediaObjects {
-        items {
-          mediaId
-        }
-      }
       anonymouslyLikedPosts (limit: $anonymouslyLikedPostsLimit) {
         items {
           postId
           image {
-            url
-          }
-          mediaObjects {
-            mediaId
             url
           }
         }
@@ -57,10 +48,6 @@ module.exports.self = gql`
         items {
           postId
           image {
-            url
-          }
-          mediaObjects {
-            mediaId
             url
           }
         }
@@ -134,19 +121,10 @@ module.exports.user = gql`
           postId
         }
       }
-      mediaObjects {
-        items {
-          mediaId
-        }
-      }
       anonymouslyLikedPosts {
         items {
           postId
           image {
-            url
-          }
-          mediaObjects {
-            mediaId
             url
           }
         }
@@ -155,10 +133,6 @@ module.exports.user = gql`
         items {
           postId
           image {
-            url
-          }
-          mediaObjects {
-            mediaId
             url
           }
         }
@@ -305,8 +279,8 @@ module.exports.setUserViewCountsHidden = gql`
 `
 
 module.exports.setUserDetails = gql`
-  mutation SetUserDetails ($bio: String, $fullName: String, $photoMediaId: ID, $photoPostId: ID) {
-    setUserDetails (bio: $bio, fullName: $fullName, photoMediaId: $photoMediaId, photoPostId: $photoPostId) {
+  mutation SetUserDetails ($bio: String, $fullName: String, $photoPostId: ID) {
+    setUserDetails (bio: $bio, fullName: $fullName, photoPostId: $photoPostId) {
       userId
       bio
       fullName
@@ -491,9 +465,6 @@ module.exports.addPost = gql`
       originalPost {
         postId
       }
-      mediaObjects {
-        ...MediaObjectFragment
-      }
       postedBy {
         userId
         postCount
@@ -514,11 +485,10 @@ module.exports.addPost = gql`
   }
   ${fragments.comment}
   ${fragments.image}
-  ${fragments.mediaObject}
   ${fragments.textTaggedUser}
 `
 
-// Note: this will be merged with module.exports.addPost when mediaObjects are dropped
+// Note: this will be merged with module.exports.addPost when mediaObjectUploads are dropped
 module.exports.addPostNoMedia = gql`
   mutation AddPost (
     $postId: ID!,
@@ -563,9 +533,6 @@ module.exports.addPostNoMedia = gql`
       }
       originalPost {
         postId
-      }
-      mediaObjects {
-        mediaId
       }
       postedBy {
         userId
@@ -631,9 +598,6 @@ module.exports.post = gql`
       }
       videoUploadUrl
       isVerified
-      mediaObjects {
-        ...MediaObjectFragment
-      }
       flagStatus
       likeStatus
       viewedStatus
@@ -665,7 +629,6 @@ module.exports.post = gql`
   }
   ${fragments.comment}
   ${fragments.image}
-  ${fragments.mediaObject}
   ${fragments.textTaggedUser}
   ${fragments.video}
 `
@@ -692,9 +655,6 @@ module.exports.userPosts = gql`
           image {
             url
           }
-          mediaObjects {
-            ...MediaObjectFragment
-          }
           postedBy {
             userId
             postCount
@@ -705,20 +665,6 @@ module.exports.userPosts = gql`
       }
     }
   }
-  ${fragments.mediaObject}
-`
-
-module.exports.userMediaObjects = gql`
-  query UserMediaObjects ($userId: ID!, $mediaStatus: MediaObjectStatus) {
-    user (userId: $userId) {
-      mediaObjects (mediaStatus: $mediaStatus) {
-        items {
-          ...MediaObjectFragment
-        }
-      }
-    }
-  }
-  ${fragments.mediaObject}
 `
 
 module.exports.editPost = gql`
@@ -751,11 +697,6 @@ module.exports.editPost = gql`
         ...TextTaggedUserFragment
       }
       image {
-        url
-      }
-      mediaObjects {
-        mediaId
-        mediaStatus
         url
       }
       commentsDisabled
@@ -812,10 +753,6 @@ module.exports.deletePost = gql`
     deletePost(postId: $postId) {
       postId
       postStatus
-      mediaObjects {
-        mediaId
-        mediaStatus
-      }
     }
   }
 `
@@ -836,12 +773,8 @@ module.exports.archivePost = gql`
       }
       imageUploadUrl
       videoUploadUrl
-      mediaObjects {
-        ...MediaObjectFragment
-      }
     }
   }
-  ${fragments.mediaObject}
 `
 
 module.exports.restoreArchivedPost = gql`
@@ -856,11 +789,6 @@ module.exports.restoreArchivedPost = gql`
         followedStatus
       }
       image {
-        url
-      }
-      mediaObjects {
-        mediaId
-        mediaStatus
         url
       }
     }
@@ -945,11 +873,6 @@ module.exports.userStories = gql`
           image {
             url
           }
-          mediaObjects {
-            mediaId
-            mediaStatus
-            url
-          }
         }
       }
     }
@@ -974,11 +897,6 @@ module.exports.selfFeed = gql`
           }
           imageUploadUrl
           videoUploadUrl
-          mediaObjects {
-            mediaId
-            url
-            uploadUrl
-          }
           onymousLikeCount
           anonymousLikeCount
         }

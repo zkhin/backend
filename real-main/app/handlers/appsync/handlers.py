@@ -146,7 +146,6 @@ def set_user_details(caller_user_id, arguments, source, context):
     username = arguments.get('username')
     full_name = arguments.get('fullName')
     bio = arguments.get('bio')
-    photo_media_id = arguments.get('photoMediaId')
     photo_post_id = arguments.get('photoPostId')
     privacy_status = arguments.get('privacyStatus')
     follow_counts_hidden = arguments.get('followCountsHidden')
@@ -159,7 +158,7 @@ def set_user_details(caller_user_id, arguments, source, context):
     verification_hidden = arguments.get('verificationHidden')
 
     args = (
-        username, full_name, bio, photo_media_id, photo_post_id, privacy_status, follow_counts_hidden,
+        username, full_name, bio, photo_post_id, privacy_status, follow_counts_hidden,
         language_code, theme_code, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,
         view_counts_hidden,
     )
@@ -169,9 +168,6 @@ def set_user_details(caller_user_id, arguments, source, context):
     user = user_manager.get_user(caller_user_id)
     if not user:
         raise ClientException(f'User `{caller_user_id}` does not exist')
-
-    if photo_media_id is not None and photo_post_id is not None:
-        raise ClientException('Cannot specify both photoMediaId and photoPostId')
 
     # are we claiming a new username?
     if username is not None:
@@ -183,7 +179,7 @@ def set_user_details(caller_user_id, arguments, source, context):
     # are we setting a new profile picture?
     if photo_post_id is not None:
         if photo_post_id == '':
-            photo_media_id = ''
+            media = None
         else:
             post = post_manager.get_post(photo_post_id)
             if not post:
@@ -192,21 +188,8 @@ def set_user_details(caller_user_id, arguments, source, context):
                 raise ClientException(f'Post `{photo_post_id}` does not have type `{PostType.IMAGE}`')
             if post.status != PostStatus.COMPLETED:
                 raise ClientException(f'Post `{photo_post_id}` does not have status `{PostStatus.COMPLETED}`')
-            media_items = list(media_manager.dynamo.generate_by_post(post.id))
-            photo_media_id = media_items[0]['mediaId']
-
-    if photo_media_id is not None:
-        if photo_media_id == '':
-            media = None
-        else:
-            media = media_manager.get_media(photo_media_id)
-            if not media:
-                raise ClientException(f'No media with media_id `{photo_media_id}` found')
-
-            uploaded_status = media_manager.enums.MediaStatus.UPLOADED
-            if media.item['mediaStatus'] != uploaded_status:
-                raise ClientException(f'Cannot set profile photo to media not in {uploaded_status} status')
-
+            media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
+            media = media_manager.init_media(media_item)
         user.update_photo(media)
 
     # are we changing our privacy status?
@@ -796,39 +779,6 @@ def dislike_post(caller_user_id, arguments, source, context):
     resp[post_like_count] -= 1
     resp['likeStatus'] = LikeStatus.NOT_LIKED
     return resp
-
-
-@routes.register('MediaObject.url')
-def media_objects_url(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(image_size.NATIVE)
-
-
-@routes.register('MediaObject.url64p')
-def media_objects_url_64p(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(image_size.P64)
-
-
-@routes.register('MediaObject.url480p')
-def media_objects_url_480p(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(image_size.P480)
-
-
-@routes.register('MediaObject.url1080p')
-def media_objects_url_1080p(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(image_size.P1080)
-
-
-@routes.register('MediaObject.url4k')
-def media_objects_url_4k(caller_user_id, arguments, source, context):
-    return media_manager.init_media(source).get_readonly_url(image_size.K4)
-
-
-@routes.register('MediaObject.uploadUrl')
-def media_objects_upload_url(caller_user_id, arguments, source, context):
-    # only the owner of the post gets an upload url
-    if caller_user_id != source['userId']:
-        return None
-    return media_manager.init_media(source).get_writeonly_url()
 
 
 @routes.register('Mutation.reportPostViews')

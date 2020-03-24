@@ -22,8 +22,6 @@ const generateRandomJpeg = (width, height) => {
   return jpeg.encode(imgData, quality).data
 }
 
-// would be nice to query the media object directly but theres currently
-// no graphql query field to do so
 const sleepUntilPostCompleted = async (gqlClient, postId, {maxWaitMs = 10*1000, pollingIntervalMs = 1000} = {}) => {
   const queryPost = gql(`query Post ($postId: ID!) {
     post (postId: $postId) {

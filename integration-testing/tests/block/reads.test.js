@@ -33,16 +33,13 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
-  // we add a media post, complete it
+  // we add an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we set some details on our profile
@@ -86,7 +83,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['fullName']).not.toBeNull()
   expect(ourUserFull['languageCode']).not.toBeNull()
   expect(ourUserFull['likesDisabled']).toBe(false)
-  expect(ourUserFull['mediaObjects']['items']).toHaveLength(1)
   expect(ourUserFull['onymouslyLikedPosts']['items']).toHaveLength(0)
   // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
   // expect(ourUserFull['phoneNumber']).not.toBeNull()
@@ -134,7 +130,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull['fullName'] = null
   ourUserFull['languageCode'] = null
   ourUserFull['likesDisabled'] = null
-  ourUserFull['mediaObjects'] = null
   ourUserFull['onymouslyLikedPosts'] = null
   // ourUserFull['phoneNumber'] is already null
   ourUserFull['photo'] = null
@@ -224,7 +219,7 @@ test('Blocked cannot see blockers follower or followed users lists', async () =>
 })
 
 
-test('Blocked cannot see blockers posts, mediaObjects or stories', async () => {
+test('Blocked cannot see blockers posts or stories', async () => {
   // use and them
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -234,27 +229,21 @@ test('Blocked cannot see blockers posts, mediaObjects or stories', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
-  // verify they cannot see our posts, mediaObjects or stories
+  // verify they cannot see our posts or stories
   resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']).toBeNull()
   resp = await theirClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']).toBeNull()
-  resp = await theirClient.query({query: schema.userMediaObjects, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']).toBeNull()
 
-  // verify we can see their posts, mediaObjects or stories
+  // verify we can see their posts or stories
   resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(0)
   resp = await theirClient.query({query: schema.userPosts, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
-  resp = await theirClient.query({query: schema.userMediaObjects, variables: {userId: theirUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['mediaObjects']['items']).toHaveLength(0)
 })
 
 
@@ -292,7 +281,7 @@ test('Blocked cannot see directly see blockers posts', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
-  // we add a media post, complete it
+  // we add an image post, complete it
   const [postId1, mediaId1] = [uuidv4(), uuidv4()]
   let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
@@ -300,7 +289,7 @@ test('Blocked cannot see directly see blockers posts', async () => {
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
-  // they add a media post, complete it
+  // they add an image post, complete it
   const [postId2, mediaId2] = [uuidv4(), uuidv4()]
   variables = {postId: postId2, mediaId: mediaId2, imageData: grantDataB64}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})

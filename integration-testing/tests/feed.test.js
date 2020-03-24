@@ -53,10 +53,10 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
-  expect(items[0]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
+  expect(items[0]['image']).toBeTruthy()
   expect(items[1]['postId']).toBe(postId1)
   expect(items[1]['text']).toBe(postText1)
-  expect(items[1]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(items[1]['image']).toBeTruthy()
 
   // they archive a post, verify it disappears from our feed
   resp = await theirClient.mutate({mutation: schema.archivePost, variables: {postId: postId1}})
@@ -106,10 +106,10 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
-  expect(items[0]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
+  expect(items[0]['image']).toBeTruthy()
   expect(items[1]['postId']).toBe(postId1)
   expect(items[1]['text']).toBe(postText1)
-  expect(items[1]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(items[1]['image']).toBeTruthy()
 
   // we unfollow them, and those two posts disappear from our feed
   resp = await ourClient.mutate({mutation: schema.unfollowUser, variables: {userId: theirUserId}})
@@ -168,10 +168,10 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
-  expect(items[0]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
+  expect(items[0]['image']).toBeTruthy()
   expect(items[1]['postId']).toBe(postId1)
   expect(items[1]['text']).toBe(postText1)
-  expect(items[1]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(items[1]['image']).toBeTruthy()
 
   // they change their mind and deny the request, and those two posts disapear from our feed
   resp = await theirClient.mutate({mutation: schema.denyFollowerUser, variables: {userId: ourUserId}})
@@ -231,10 +231,10 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(items).toHaveLength(2)
   expect(items[0]['postId']).toBe(postId2)
   expect(items[0]['text']).toBe(postText2)
-  expect(items[0]['mediaObjects'][0]['mediaId']).toBe(mediaId2)
+  expect(items[0]['image']).toBeTruthy()
   expect(items[1]['postId']).toBe(postId1)
   expect(items[1]['text']).toBe(postText1)
-  expect(items[1]['mediaObjects'][0]['mediaId']).toBe(mediaId1)
+  expect(items[1]['image']).toBeTruthy()
 })
 
 

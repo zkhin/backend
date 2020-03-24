@@ -290,18 +290,15 @@ test('User search returns urls for profile pics', async () => {
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
   expect(resp['data']['searchUsers']['items'][0]['photo']).toBeNull()
 
-  // add a post with media, upload that media
+  // add an image post, upload that image
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['mediaObjects']).toHaveLength(1)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaId']).toBe(mediaId)
-  expect(resp['data']['addPost']['mediaObjects'][0]['mediaStatus']).toBe('UPLOADED')
 
-  // set our profile photo to that media
-  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoMediaId: mediaId}})
+  // set our profile photo to that image
+  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']['url']).toBeTruthy()
 
