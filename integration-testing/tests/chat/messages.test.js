@@ -4,6 +4,7 @@ const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -67,7 +68,7 @@ test('Add messages to a direct chat', async () => {
   resp = await ourClient.query({query: schema.chat, variables: {chatId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']['chatId']).toBe(chatId)
-  expect(resp['data']['chat']['lastMessageAt']).toBe(lastMessageCreatedAt)
+  expect(resp['data']['chat']['lastMessageActivityAt']).toBe(lastMessageCreatedAt)
   expect(resp['data']['chat']['messageCount']).toBe(4)
   expect(resp['data']['chat']['messages']['items']).toHaveLength(4)
   expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId1)
@@ -91,7 +92,7 @@ test('Add messages to a direct chat', async () => {
   resp = await theirClient.query({query: schema.chat, variables: {chatId, reverse: true}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']['chatId']).toBe(chatId)
-  expect(resp['data']['chat']['lastMessageAt']).toBe(lastMessageCreatedAt)
+  expect(resp['data']['chat']['lastMessageActivityAt']).toBe(lastMessageCreatedAt)
   expect(resp['data']['chat']['messageCount']).toBe(4)
   expect(resp['data']['chat']['messages']['items']).toHaveLength(4)
   expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId4)
@@ -272,4 +273,123 @@ test('Tag users in a chat message', async () => {
   expect(resp['data']['chat']['messages']['items'][1]['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
   expect(resp['data']['chat']['messages']['items'][1]['textTaggedUsers'][0]['user']['userId']).toBe(theirUserId)
   expect(resp['data']['chat']['messages']['items'][2]['textTaggedUsers']).toHaveLength(0)
+})
+
+
+test('Edit chat message', async () => {
+  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+  const [randoClient] = await loginCache.getCleanLogin()
+
+  // they open up a chat with us
+  const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
+  let variables = {userId: ourUserId, chatId, messageId, messageText: orgText}
+  let resp = await theirClient.mutate({mutation: schema.createDirectChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createDirectChat']['chatId']).toBe(chatId)
+
+  // verify neither rando nor us can edit the chat message
+  variables = {messageId, text: 'lore new'}
+  await expect(randoClient.mutate({mutation: schema.editChatMessage, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.editChatMessage, variables})).rejects.toThrow('ClientError')
+
+  // we report a view of the message
+  variables = {messageIds: [messageId]}
+  resp = await ourClient.mutate({mutation: schema.reportChatMessageViews, variables})
+  expect(resp['errors']).toBeUndefined()
+
+  // check the message hasn't changed
+  resp = await ourClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
+  expect(resp['data']['chat']['messages']['items'][0]['text']).toBe(orgText)
+  expect(resp['data']['chat']['messages']['items'][0]['textTaggedUsers']).toEqual([])
+  expect(resp['data']['chat']['messages']['items'][0]['lastEditedAt']).toBeNull()
+  expect(resp['data']['chat']['messages']['items'][0]['viewedStatus']).toBe('VIEWED')
+
+  // check they *can* edit the message
+  let newText = `lore new, @${ourUsername}`
+  let before = moment().toISOString()
+  resp = await theirClient.mutate({mutation: schema.editChatMessage, variables: {messageId, text: newText}})
+  let after = moment().toISOString()
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editChatMessage']['messageId']).toBe(messageId)
+  expect(resp['data']['editChatMessage']['text']).toBe(newText)
+  expect(resp['data']['editChatMessage']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['editChatMessage']['textTaggedUsers'][0]['tag']).toBe(`@${ourUsername}`)
+  expect(resp['data']['editChatMessage']['textTaggedUsers'][0]['user']['userId']).toBe(ourUserId)
+  expect(resp['data']['editChatMessage']['viewedStatus']).toBe('VIEWED')
+  const lastEditedAt = resp['data']['editChatMessage']['lastEditedAt']
+  expect(before <= lastEditedAt).toBe(true)
+  expect(after >= lastEditedAt).toBe(true)
+  const message = resp['data']['editChatMessage']
+
+  // check that really stuck in db
+  resp = await theirClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]).toEqual(message)
+
+  // check when we see the message, the viewed status reflects that we have seen the message, but not the edit
+  resp = await ourClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
+  expect(resp['data']['chat']['messages']['items'][0]['viewedStatus']).toBe('NOT_VIEWED_SINCE_LAST_EDIT')
+
+  // we report another view of the message
+  variables = {messageIds: [messageId]}
+  resp = await ourClient.mutate({mutation: schema.reportChatMessageViews, variables})
+  expect(resp['errors']).toBeUndefined()
+
+  // check when we see the message, the viewed status is correct
+  resp = await ourClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
+  expect(resp['data']['chat']['messages']['items'][0]['viewedStatus']).toBe('VIEWED')
+})
+
+
+test('Delete chat message', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+  const [randoClient] = await loginCache.getCleanLogin()
+
+  // they open up a chat with us
+  const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
+  let variables = {userId: ourUserId, chatId, messageId, messageText: orgText}
+  let resp = await theirClient.mutate({mutation: schema.createDirectChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createDirectChat']['chatId']).toBe(chatId)
+
+  // verify neither rando nor us can delete the chat message
+  variables = {messageId: uuidv4()}
+  await expect(randoClient.mutate({mutation: schema.deleteChatMessage, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.deleteChatMessage, variables})).rejects.toThrow('ClientError')
+
+  // check the message hasn't changed
+  resp = await theirClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
+
+  // check they *can* delete the message
+  resp = await theirClient.mutate({mutation: schema.deleteChatMessage, variables: {messageId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['deleteChatMessage']['messageId']).toBe(messageId)
+  await misc.sleep(2000)  // let dynamo converge
+
+  // check that the message has now dissapeared from the db
+  resp = await theirClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['messageCount']).toBe(0)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(0)
 })

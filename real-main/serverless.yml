@@ -23,6 +23,7 @@ provider:
     COGNITO_BACKEND_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoBackendUserPoolClientId, 'placeholder'}
     COGNITO_TESTING_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoTestingUserPoolClientId, 'placeholder'}
 
+    APPSYNC_GRAPHQL_URL: '#{GraphQlApi.GraphQLUrl}'
     DYNAMODB_TABLE: ${self:provider.stackName}
     UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}  # naming to avoid resource dependency loops
     PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
@@ -76,6 +77,10 @@ provider:
         - iam:GetRole
         - iam:PassRole
       Resource: !GetAtt MediaCovertRole.Arn
+    - Effect: Allow
+      Action:
+        - appsync:GraphQL
+      Resource: '#{GraphQlApi.Arn}/types/Mutation/fields/trigger*'
 
 custom:
   envvars:
@@ -93,6 +98,7 @@ custom:
     substitutions:
       table: ${self:provider.environment.DYNAMODB_TABLE}
       frontendResourcesDomain: ${self:provider.environment.FRONTEND_RESOURCES_DOMAIN}
+      lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
 
     mappingTemplates:
 
@@ -752,6 +758,18 @@ custom:
         response: Lambda.response.vtl
 
       - type: Mutation
+        field: editChatMessage
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: deleteChatMessage
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
         field: reportChatMessageViews
         dataSource: LambdaDataSource
         request: Lambda.request.vtl
@@ -839,6 +857,15 @@ custom:
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
+
+      - type: Mutation
+        field: triggerChatMessageNotification
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: Subscription
+        field: onChatMessageNotification
+        dataSource: DynamodbDataSource
 
     functionConfigurations:
 

@@ -41,9 +41,8 @@ class Album:
         return self
 
     def serialize(self, caller_user_id):
-        user = self.user_manager.get_user(self.user_id)
         resp = self.item.copy()
-        resp['ownedBy'] = user.serialize(caller_user_id)
+        resp['ownedBy'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
         return resp
 
     def update(self, name=None, description=None):

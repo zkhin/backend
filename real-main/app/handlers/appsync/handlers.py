@@ -3,7 +3,7 @@ import os
 
 import pendulum
 
-from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
+from app.clients import (AppSyncClient, CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
                          SecretsManagerClient, S3Client)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
@@ -33,6 +33,7 @@ logger = logging.getLogger()
 
 secrets_manager_client = SecretsManagerClient()
 clients = {
+    'appsync': AppSyncClient(),
     'cloudfront': CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': CognitoClient(),
     'dynamo': DynamoClient(),
@@ -917,6 +918,7 @@ def create_direct_chat(caller_user_id, arguments, source, context):
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
+    # neither party could be listening to the chat notifications yet, so no need to fire the trigger
     chat.refresh_item(strongly_consistent=True)
     return chat.item
 
@@ -934,6 +936,41 @@ def add_chat_message(caller_user_id, arguments, source, context):
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
+    message.trigger_notification(message.enums.ChatMessageNotificationType.ADDED)
+    return message.serialize(caller_user_id)
+
+
+@routes.register('Mutation.editChatMessage')
+def edit_chat_message(caller_user_id, arguments, source, context):
+    message_id, text = arguments['messageId'], arguments['text']
+
+    message = chat_message_manager.get_chat_message(message_id)
+    if not message or message.user_id != caller_user_id:
+        raise ClientException(f'User `{caller_user_id}` cannot edit message `{message_id}`')
+
+    try:
+        message.edit(text)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    message.trigger_notification(message.enums.ChatMessageNotificationType.EDITED)
+    return message.serialize(caller_user_id)
+
+
+@routes.register('Mutation.deleteChatMessage')
+def delete_chat_message(caller_user_id, arguments, source, context):
+    message_id = arguments['messageId']
+
+    message = chat_message_manager.get_chat_message(message_id)
+    if not message or message.user_id != caller_user_id:
+        raise ClientException(f'User `{caller_user_id}` cannot delete message `{message_id}`')
+
+    try:
+        message.delete()
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    message.trigger_notification(message.enums.ChatMessageNotificationType.DELETED)
     return message.serialize(caller_user_id)
 
 

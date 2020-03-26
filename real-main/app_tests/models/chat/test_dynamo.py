@@ -142,7 +142,7 @@ def test_transact_register_chat_message_added(chat_dynamo):
     # check its starting state
     chat_item = chat_dynamo.get_chat(chat_id)
     assert 'messageCount' not in chat_item
-    assert 'lastMessageAt' not in chat_item
+    assert 'lastMessageActivityAt' not in chat_item
 
     # register a message added
     now = pendulum.now('utc')
@@ -152,9 +152,9 @@ def test_transact_register_chat_message_added(chat_dynamo):
     # check state now
     new_chat_item = chat_dynamo.get_chat(chat_id)
     assert new_chat_item['messageCount'] == 1
-    assert pendulum.parse(new_chat_item['lastMessageAt']) == now
+    assert pendulum.parse(new_chat_item['lastMessageActivityAt']) == now
     chat_item['messageCount'] = new_chat_item['messageCount']
-    chat_item['lastMessageAt'] = new_chat_item['lastMessageAt']
+    chat_item['lastMessageActivityAt'] = new_chat_item['lastMessageActivityAt']
     assert chat_item == new_chat_item
 
     # register another message added
@@ -165,9 +165,80 @@ def test_transact_register_chat_message_added(chat_dynamo):
     # check state now
     new_chat_item = chat_dynamo.get_chat(chat_id)
     assert new_chat_item['messageCount'] == 2
-    assert pendulum.parse(new_chat_item['lastMessageAt']) == now
+    assert pendulum.parse(new_chat_item['lastMessageActivityAt']) == now
     chat_item['messageCount'] = new_chat_item['messageCount']
-    chat_item['lastMessageAt'] = new_chat_item['lastMessageAt']
+    chat_item['lastMessageActivityAt'] = new_chat_item['lastMessageActivityAt']
+    assert chat_item == new_chat_item
+
+
+def test_transact_register_chat_message_edited(chat_dynamo):
+    chat_id = 'cid'
+
+    # verify can't register to non-existent chat
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_register_chat_message_edited(chat_id, now)
+    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_dynamo.client.transact_write_items([transact])
+
+    # add a chat
+    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype')
+    chat_dynamo.client.transact_write_items([transact])
+
+    # register a message added (will always happen before editing a message)
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_register_chat_message_added(chat_id, now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # check its starting state
+    chat_item = chat_dynamo.get_chat(chat_id)
+    assert pendulum.parse(chat_item['lastMessageActivityAt']) == now
+
+    # register a message edited
+    new_now = pendulum.now('utc')
+    transact = chat_dynamo.transact_register_chat_message_edited(chat_id, new_now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # check state now
+    new_chat_item = chat_dynamo.get_chat(chat_id)
+    assert pendulum.parse(new_chat_item['lastMessageActivityAt']) == new_now
+    chat_item['lastMessageActivityAt'] = new_chat_item['lastMessageActivityAt']
+    assert chat_item == new_chat_item
+
+
+def test_transact_register_chat_message_deleted(chat_dynamo):
+    chat_id = 'cid'
+
+    # verify can't register to non-existent chat
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_register_chat_message_deleted(chat_id, now)
+    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_dynamo.client.transact_write_items([transact])
+
+    # add a chat
+    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype')
+    chat_dynamo.client.transact_write_items([transact])
+
+    # register a message added (will always happen before deleting a message)
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_register_chat_message_added(chat_id, now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # check its starting state
+    chat_item = chat_dynamo.get_chat(chat_id)
+    assert chat_item['messageCount'] == 1
+    assert pendulum.parse(chat_item['lastMessageActivityAt']) == now
+
+    # register a message deleted
+    new_now = pendulum.now('utc')
+    transact = chat_dynamo.transact_register_chat_message_deleted(chat_id, new_now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # check state now
+    new_chat_item = chat_dynamo.get_chat(chat_id)
+    assert new_chat_item['messageCount'] == 0
+    assert pendulum.parse(new_chat_item['lastMessageActivityAt']) == new_now
+    chat_item['messageCount'] = new_chat_item['messageCount']
+    chat_item['lastMessageActivityAt'] = new_chat_item['lastMessageActivityAt']
     assert chat_item == new_chat_item
 
 

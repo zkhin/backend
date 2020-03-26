@@ -21,6 +21,7 @@ pendulum = "^2.0.5"
 pytest-cov = "^2.8.1"
 colorthief = "^0.2.1"
 python-dotenv = "^0.12.0"
+gql-py = {git = "https://github.com/mfogel/gql_py.git", rev = "6ce3421"}
 
 [build-system]
 requires = ["poetry>=0.12"]

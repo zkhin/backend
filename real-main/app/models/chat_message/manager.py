@@ -23,6 +23,8 @@ class ChatMessageManager:
         self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
 
         self.clients = clients
+        if 'appsync' in clients:
+            self.appsync_client = clients['appsync']
         if 'dynamo' in clients:
             self.dynamo = ChatMessageDynamo(clients['dynamo'])
 
@@ -31,7 +33,13 @@ class ChatMessageManager:
         return self.init_chat_message(item) if item else None
 
     def init_chat_message(self, item):
-        return ChatMessage(item, self.dynamo, view_manager=self.view_manager)
+        kwargs = {
+            'appsync_client': self.appsync_client,
+            'chat_manager': self.chat_manager,
+            'user_manager': self.user_manager,
+            'view_manager': self.view_manager,
+        }
+        return ChatMessage(item, self.dynamo, **kwargs)
 
     def add_chat_message(self, message_id, text, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')

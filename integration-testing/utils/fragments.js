@@ -9,7 +9,7 @@ module.exports.chat = gql`
     chatType
     name
     createdAt
-    lastMessageAt
+    lastMessageActivityAt
     userCount
     users {
       items {
@@ -38,6 +38,22 @@ module.exports.chatMessage = gql`
       userId
     }
     viewedStatus
+  }
+`
+
+module.exports.chatMessageNotification = gql`
+  fragment ChatMessageNotificationFragment on ChatMessageNotification {
+    messageId
+    chatId
+    authorUserId
+    type
+    text
+    textTaggedUserIds {
+      tag
+      userId
+    }
+    createdAt
+    lastEditedAt
   }
 `
 

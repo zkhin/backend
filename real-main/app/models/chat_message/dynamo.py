@@ -1,7 +1,6 @@
 import logging
 
 from boto3.dynamodb.conditions import Key
-import pendulum
 
 logger = logging.getLogger()
 
@@ -17,8 +16,7 @@ class ChatMessageDynamo:
             'sortKey': '-',
         }, strongly_consistent=strongly_consistent)
 
-    def transact_add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now=None):
-        now = now or pendulum.now('utc')
+    def transact_add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now):
         created_at_str = now.to_iso8601_string()
         return {'Put': {
             'Item': {
@@ -41,6 +39,39 @@ class ChatMessageDynamo:
                 ]},
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
+        }}
+
+    def transact_edit_chat_message(self, message_id, text, text_tags, now):
+        return {'Update': {
+            'Key': {
+                'partitionKey': {'S': f'chatMessage/{message_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'UpdateExpression': 'SET lastEditedAt = :at, #textName = :text, textTags = :textTags',
+            'ExpressionAttributeNames': {
+                '#textName': 'text',
+            },
+            'ExpressionAttributeValues': {
+                ':at': {'S': now.to_iso8601_string()},
+                ':text': {'S': text},
+                ':textTags': {'L': [
+                    {'M': {
+                        'tag': {'S': text_tag['tag']},
+                        'userId': {'S': text_tag['userId']},
+                    }}
+                    for text_tag in text_tags
+                ]},
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }}
+
+    def transact_delete_chat_message(self, message_id):
+        return {'Delete': {
+            'Key': {
+                'partitionKey': {'S': f'chatMessage/{message_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
     def generate_chat_messages_by_chat(self, chat_id, pks_only=False):

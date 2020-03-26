@@ -31,7 +31,7 @@ def test_add_chat_message(chat_message_manager, user, chat):
 
     # check message count starts off at zero
     assert 'messageCount' not in chat.item
-    assert 'lastMessageAt' not in chat.item
+    assert 'lastMessageActivityAt' not in chat.item
 
     # add the message, check it looks ok
     message = chat_message_manager.add_chat_message(message_id, text, chat.id, user_id, now=now)
@@ -44,7 +44,7 @@ def test_add_chat_message(chat_message_manager, user, chat):
     # check the chat was altered correctly
     chat.refresh_item()
     assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageAt'] == now.to_iso8601_string()
+    assert chat.item['lastMessageActivityAt'] == now.to_iso8601_string()
 
 
 def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):

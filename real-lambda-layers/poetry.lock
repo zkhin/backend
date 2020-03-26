@@ -73,6 +73,30 @@ requests = ["requests (>=2.4.0,<3.0.0)"]
 
 [[package]]
 category = "main"
+description = "GraphQL Client for Pythonistas"
+name = "gql-py"
+optional = false
+python-versions = "*"
+version = "0.6.0"
+
+[package.dependencies]
+graphql-core-next = "1.0.5"
+requests = ">=2.19.1,<3"
+
+[package.source]
+reference = "6ce342140cefe3d61b85a1a8b1351e2b8fca1403"
+type = "git"
+url = "https://github.com/mfogel/gql_py.git"
+[[package]]
+category = "main"
+description = "GraphQL-core-next is a Python port of GraphQL.js, the JavaScript reference implementation for GraphQL."
+name = "graphql-core-next"
+optional = false
+python-versions = ">=3.6"
+version = "1.0.5"
+
+[[package]]
+category = "main"
 description = "Internationalized Domain Names in Applications (IDNA)"
 name = "idna"
 optional = false
@@ -196,7 +220,7 @@ secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "cer
 socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7,<2.0)"]
 
 [metadata]
-content-hash = "9b41be15cb7c86e68c839c9539f99ad2ec36f409ae28221a968d4277e57a1143"
+content-hash = "06d4b3d334419c999b5957565c041f0328a225625947c0e228fadcb5c46a042c"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -273,6 +297,11 @@ cryptography = [
 elasticsearch = [
     {file = "elasticsearch-7.5.1-py2.py3-none-any.whl", hash = "sha256:1815ee1377e7d3cf32770738a70785fe4ab1f05be28336a330ed71cb295a7c6c"},
     {file = "elasticsearch-7.5.1.tar.gz", hash = "sha256:2a0ca516378ae9b87ac840e7bb529ec508f3010360dd9feed605dff2a898aff5"},
+]
+gql-py = []
+graphql-core-next = [
+    {file = "GraphQL-core-next-1.0.5.tar.gz", hash = "sha256:c663ccc36d9a5ece606b5b4f5509835f0ec8d6e6b941992ced67384edcbfd045"},
+    {file = "GraphQL_core_next-1.0.5-py3-none-any.whl", hash = "sha256:5a6cdf23a3b24fa738a903b9fcdaa1db2768a6552f8d1fb8fb79d9add16d090d"},
 ]
 idna = [
     {file = "idna-2.8-py2.py3-none-any.whl", hash = "sha256:ea8b7f6188e6fa117537c3df7da9fc686d485087abf6ac197f9c46432f7e4a3c"},

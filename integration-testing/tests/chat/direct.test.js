@@ -57,7 +57,7 @@ test('Create a direct chat', async () => {
   expect(before <= chat['createdAt']).toBe(true)
   expect(after >= chat['createdAt']).toBe(true)
   const chatCreatedAt = chat['createdAt']
-  expect(chat['lastMessageAt']).toBe(chatCreatedAt)
+  expect(chat['lastMessageActivityAt']).toBe(chatCreatedAt)
   expect(chat['userCount']).toBe(2)
   expect(chat['users']['items']).toHaveLength(2)
   expect(chat['users']['items'].map(u => u['userId']).sort()).toEqual([ourUserId, theirUserId].sort())

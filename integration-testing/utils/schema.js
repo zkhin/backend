@@ -1081,8 +1081,26 @@ module.exports.createDirectChat = gql`
 `
 
 module.exports.addChatMessage = gql`
-  mutation AddChatMessage ($chatId: ID!, $messageId: ID! $text: String!) {
+  mutation AddChatMessage ($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage (chatId: $chatId, messageId: $messageId, text: $text) {
+      ...ChatMessageFragment
+    }
+  }
+  ${fragments.chatMessage}
+`
+
+module.exports.editChatMessage = gql`
+  mutation EditChatMessage ($messageId: ID!, $text: String!) {
+    editChatMessage (messageId: $messageId, text: $text) {
+      ...ChatMessageFragment
+    }
+  }
+  ${fragments.chatMessage}
+`
+
+module.exports.deleteChatMessage = gql`
+  mutation DeleteChatMessage ($messageId: ID!) {
+    deleteChatMessage (messageId: $messageId) {
       ...ChatMessageFragment
     }
   }
@@ -1093,4 +1111,22 @@ module.exports.reportChatMessageViews = gql`
   mutation ReportChatMessageViews ($messageIds: [ID!]!) {
     reportChatMessageViews (messageIds: $messageIds)
   }
+`
+
+module.exports.triggerChatMessageNotification = gql`
+  mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
+    triggerChatMessageNotification (input: $input) {
+      ...ChatMessageNotificationFragment
+    }
+  }
+  ${fragments.chatMessageNotification}
+`
+
+module.exports.onChatMessageNotification = gql`
+  subscription OnChatMessageNotification ($chatId: ID!) {
+    onChatMessageNotification (chatId: $chatId) {
+      ...ChatMessageNotificationFragment
+    }
+  }
+  ${fragments.chatMessageNotification}
 `

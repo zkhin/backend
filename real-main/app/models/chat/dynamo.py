@@ -97,18 +97,45 @@ class ChatDynamo:
         }}
 
     def transact_register_chat_message_added(self, chat_id, now):
-        last_message_at_str = now.to_iso8601_string()
         return {'Update': {
             'Key': {
                 'partitionKey': {'S': f'chat/{chat_id}'},
                 'sortKey': {'S': '-'},
             },
-            'UpdateExpression': 'ADD messageCount :one SET lastMessageAt = :lma',
+            'UpdateExpression': 'ADD messageCount :one SET lastMessageActivityAt = :at',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},
-                ':lma': {'S': last_message_at_str}
+                ':at': {'S': now.to_iso8601_string()}
             },
-            'ConditionExpression': 'attribute_exists(partitionKey) and not lastMessageAt > :lma',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }}
+
+    def transact_register_chat_message_edited(self, chat_id, now):
+        return {'Update': {
+            'Key': {
+                'partitionKey': {'S': f'chat/{chat_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'UpdateExpression': 'SET lastMessageActivityAt = :at',
+            'ExpressionAttributeValues': {
+                ':at': {'S': now.to_iso8601_string()}
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }}
+
+    def transact_register_chat_message_deleted(self, chat_id, now):
+        return {'Update': {
+            'Key': {
+                'partitionKey': {'S': f'chat/{chat_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'UpdateExpression': 'ADD messageCount :negOne SET lastMessageActivityAt = :at',
+            'ExpressionAttributeValues': {
+                ':negOne': {'N': '-1'},
+                ':zero': {'N': '0'},
+                ':at': {'S': now.to_iso8601_string()}
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
         }}
 
     def generate_chat_membership_user_ids_by_chat(self, chat_id):

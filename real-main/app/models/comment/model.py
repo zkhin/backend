@@ -25,8 +25,7 @@ class Comment:
 
     def serialize(self, caller_user_id):
         resp = self.item.copy()
-        user = self.user_manager.get_user(self.user_id)
-        resp['commentedBy'] = user.serialize(caller_user_id)
+        resp['commentedBy'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
         resp['viewedStatus'] = self.view_manager.get_viewed_status(self, caller_user_id)
         return resp
 

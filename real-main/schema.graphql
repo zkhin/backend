@@ -1,6 +1,7 @@
 schema {
   query: Query
   mutation: Mutation
+  subscription: Subscription
 }
 
 type Query {
@@ -211,28 +212,25 @@ type Mutation {
   #leaveGroupChat(chatId: ID!): Chat
 
   # Chat messages
+  #   - may only be edited or deleted by message author
   addChatMessage(chatId: ID!, messageId: ID!, text: String!): ChatMessage
-  #editChatMessage(messageId: ID!, text: String!): ChatMessage
-  #deleteChatMessage(messageId: ID!): ChatMessage
+  editChatMessage(messageId: ID!, text: String!): ChatMessage
+  deleteChatMessage(messageId: ID!): ChatMessage
   reportChatMessageViews(messageIds: [ID!]!): Boolean
+
+  # Used internally to fire subscription events. Calling externally is an error.
+  triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
 
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
   lambdaServerError(arg1: String, arg2: String): String
   dynamoServerError(arg1: String, arg2: String): String
-
-  # These are used internally to fire subscription events. Calling them externally is an error.
-  triggerChatMessageAdded(userId: ID!): ChatMessage
-  #triggerChatMessageEdited(userId: ID!): ChatMessage
-  #triggerChatMessageDeleted(userId: ID!): ChatMessage
 }
 
 type Subscription {
-  # Subscribe to changes to chat messages sent to a given user
-  #   - may only be called with the caller's own userId
-  onChatMessageAdded(userId: ID!): ChatMessage @aws_subscribe(mutations: ["triggerChatMessageAdded"])
-  #onChatMessageEdited(userId: ID!): ChatMessage @aws_subscribe(mutations: ["triggerChatMessageEdited"])
-  #onChatMessageDeleted(userId: ID!): ChatMessage @aws_subscribe(mutations: ["triggerChatMessageDeleted"])
+  # Subscribe to notifications of changes to the chat messages in a given chat
+  #   - may only be called with a chatId of a chat the caller is in
+  onChatMessageNotification(chatId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
 }
 
 type User {
@@ -336,7 +334,7 @@ type User {
 
   # Chats the user is in
   #   - private to the user themselves
-  #   - ordered by Chat.lastMessageAt, most recent first
+  #   - ordered by Chat.messagesLastActivityAt, most recent first
   chats(limit: Int, nextToken: String): PaginatedChats
   chatCount: Int
 
@@ -357,7 +355,7 @@ type Chat {
   chatType: ChatType!
   name: String
   createdAt: AWSDateTime!
-  lastMessageAt: AWSDateTime
+  lastMessageActivityAt: AWSDateTime
   # Users: ordered by joinedAt, earliest first
   users(limit: Int, nextToken: String): PaginatedUsers!
   userCount: Int!
@@ -373,18 +371,47 @@ type PaginatedChats {
 
 type ChatMessage {
   messageId: ID!
-  text: String
+  text: String!
   textTaggedUsers: [TextTaggedUser!]!  # max of 100
   createdAt: AWSDateTime!
   lastEditedAt: AWSDateTime
   chat: Chat!
-  author: User  # null indicates this is a system message (ex: 'user X left the group')
+  author: User  # null if this is a system message (ex: 'user X left the chat')
   viewedStatus: ViewedStatus!  # has the caller viewed this message?
 }
 
 type PaginatedChatMessages {
   items: [ChatMessage!]!
   nextToken: String
+}
+
+# Abridged version of a ChatMessage that will be pushed to clients
+type ChatMessageNotification {
+  messageId: ID!
+  chatId: ID!
+  authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
+  type: ChatMessageNotificationType!
+  text: String!
+  textTaggedUserIds: [TextTaggedUserId!]!  # max of 100
+  createdAt: AWSDateTime!
+  lastEditedAt: AWSDateTime
+}
+
+enum ChatMessageNotificationType {
+  ADDED
+  EDITED
+  DELETED
+}
+
+input ChatMessageNotificationInput {
+  messageId: ID!
+  chatId: ID!
+  authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
+  type: ChatMessageNotificationType!
+  text: String!
+  textTaggedUserIds: [TextTaggedUserIdInput!]!
+  createdAt: AWSDateTime!
+  lastEditedAt: AWSDateTime
 }
 
 enum PrivacyStatus {
@@ -399,7 +426,7 @@ enum ChatType {
 
 enum ViewedStatus {
   NOT_VIEWED
-  # NOT_VIEWED_SINCE_LAST_EDIT
+  NOT_VIEWED_SINCE_LAST_EDIT
   VIEWED
 }
 
@@ -559,6 +586,17 @@ type PaginatedPosts {
 type TextTaggedUser {
   tag: String!  # ex: '@ian'
   user: User!
+}
+
+# Abridged version to be used in notification objects for subscriptions
+type TextTaggedUserId {
+  tag: String!  # ex: '@ian'
+  userId: ID!
+}
+
+input TextTaggedUserIdInput {
+  tag: String!  # ex: '@ian'
+  userId: ID!
 }
 
 type Comment {

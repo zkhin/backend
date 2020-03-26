@@ -168,9 +168,9 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `rankCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
-| `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdAt`, `lastMessageAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |
+| `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdAt`, `lastMessageActivityAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |
 | `chat/{chatId}` | `member/{userId}` | `0` | | | | | | | | `chat/{chatId}` | `member/{joinedAt}` | `member/{userId}` | `chat/{joinedAt}` |
-| `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `lastEditedAt`, `text`, `textTags:[{tag, userID}]` | `chatMessage/{chatId}` | `{createdAt}` |
+| `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `lastEditedAt`, `text`, `textTags:[{tag, userId}]` | `chatMessage/{chatId}` | `{createdAt}` |
 | `chatMessage/{messageId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `chatMessage/{messageId}` | `view/{firstViewedAt}` |
 
 Note that:

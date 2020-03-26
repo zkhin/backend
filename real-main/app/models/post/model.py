@@ -175,8 +175,7 @@ class Post:
 
     def serialize(self, caller_user_id):
         resp = self.item.copy()
-        user = self.user_manager.get_user(self.user_id)
-        resp['postedBy'] = user.serialize(caller_user_id)
+        resp['postedBy'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
         return resp
 
     def build_image_thumbnails(self):

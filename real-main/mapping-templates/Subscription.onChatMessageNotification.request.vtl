@@ -1,0 +1,11 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+#set ($chatId = $ctx.args.chatId)
+
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "chat/$chatId" },
+    "sortKey": { "S": "member/$callerUserId" }
+  }
+}

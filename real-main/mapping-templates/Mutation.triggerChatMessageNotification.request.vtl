@@ -1,0 +1,9 @@
+#if (! $ctx.identity.username.startsWith('${lambdaRoleId}:'))
+  ## the error message format is diff here than other mapping templates b/c this is a mutation
+  $util.error('ClientError: Access denied', 'ClientError')
+#end
+
+{
+  "version": "2018-05-29",
+  "payload": $util.toJson($ctx.args.input)
+}

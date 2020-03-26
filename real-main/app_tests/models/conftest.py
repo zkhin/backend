@@ -7,7 +7,7 @@ import boto3
 from moto import mock_dynamodb2, mock_s3, mock_secretsmanager
 import pytest
 
-from app.clients import (CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
+from app.clients import (AppSyncClient, CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
                          MediaConvertClient, S3Client, SecretsManagerClient)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
@@ -72,6 +72,11 @@ def secrets_manager_client(post_verification_api_creds):
         client = SecretsManagerClient(post_verification_api_creds_name=post_verification_name)
         client.boto_client.create_secret(Name=post_verification_name, SecretString=post_verification_secret_string)
         yield client
+
+
+@pytest.fixture
+def appsync_client():
+    yield Mock(AppSyncClient(appsync_graphql_url='my-graphql-url'))
 
 
 @pytest.fixture
@@ -146,8 +151,8 @@ def chat_manager(dynamo_client):
 
 
 @pytest.fixture
-def chat_message_manager(dynamo_client):
-    yield ChatMessageManager({'dynamo': dynamo_client})
+def chat_message_manager(dynamo_client, appsync_client):
+    yield ChatMessageManager({'appsync': appsync_client, 'dynamo': dynamo_client})
 
 
 @pytest.fixture
@@ -218,4 +223,4 @@ def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeho
 
 @pytest.fixture
 def view_manager(dynamo_client):
-    yield ViewManager({'dynamo': dynamo_client})
+    yield ViewManager({'appsync': appsync_client, 'dynamo': dynamo_client})
