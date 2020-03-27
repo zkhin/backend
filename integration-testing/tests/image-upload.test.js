@@ -79,9 +79,9 @@ test('Uploading image sets width, height and colors', async () => {
   expect(resp['data']['post']['image']['height']).toBe(imageHeight)
   expect(resp['data']['post']['image']['width']).toBe(imageWidth)
   expect(resp['data']['post']['image']['colors']).toHaveLength(5)
-  expect(resp['data']['post']['image']['colors'][0]['r']).not.toBeNull()
-  expect(resp['data']['post']['image']['colors'][0]['g']).not.toBeNull()
-  expect(resp['data']['post']['image']['colors'][0]['b']).not.toBeNull()
+  expect(resp['data']['post']['image']['colors'][0]['r']).toBeTruthy()
+  expect(resp['data']['post']['image']['colors'][0]['g']).toBeTruthy()
+  expect(resp['data']['post']['image']['colors'][0]['b']).toBeTruthy()
 })
 
 

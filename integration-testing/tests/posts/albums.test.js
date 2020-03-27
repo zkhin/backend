@@ -211,7 +211,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
   expect(resp['data']['album']['postCount']).toBe(1)
-  expect(resp['data']['album']['postsLastUpdatedAt']).not.toBeNull()
+  expect(resp['data']['album']['postsLastUpdatedAt']).toBeTruthy()
   expect(resp['data']['album']['posts']['items']).toHaveLength(1)
   expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId)
 })
@@ -396,7 +396,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId)
   expect(resp['data']['album']['posts']['items'][1]['postId']).toBe(postId2)
   let postsLastUpdatedAt = resp['data']['album']['postsLastUpdatedAt']
-  expect(postsLastUpdatedAt).not.toBeNull()
+  expect(postsLastUpdatedAt).toBeTruthy()
 
   // archive the post
   resp = await ourClient.mutate({mutation: schema.archivePost, variables: {postId}})
@@ -458,7 +458,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
   expect(resp['data']['album']['posts']['items']).toHaveLength(1)
   expect(resp['data']['album']['posts']['items'][0]['postId']).toBe(postId)
   let postsLastUpdatedAt = resp['data']['album']['postsLastUpdatedAt']
-  expect(postsLastUpdatedAt).not.toBeNull()
+  expect(postsLastUpdatedAt).toBeTruthy()
 
   // delete the post
   resp = await ourClient.mutate({mutation: schema.deletePost, variables: {postId}})

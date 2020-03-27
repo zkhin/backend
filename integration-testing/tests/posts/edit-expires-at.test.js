@@ -98,7 +98,7 @@ test('Add and remove expiresAt from a Post', async () => {
   resp = await ourClient.mutate({mutation: schema.editPostExpiresAt, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostExpiresAt']['postId']).toBe(postId)
-  expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
+  expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeTruthy()
   expect(moment(resp['data']['editPostExpiresAt']['expiresAt']).isSame(expiresAt)).toBe(true)
 
   // we edit the post to remove its expiresAt using null
@@ -113,7 +113,7 @@ test('Add and remove expiresAt from a Post', async () => {
   resp = await ourClient.mutate({mutation: schema.editPostExpiresAt, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostExpiresAt']['postId']).toBe(postId)
-  expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
+  expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeTruthy()
   expect(moment(resp['data']['editPostExpiresAt']['expiresAt']).isSame(expiresAt)).toBe(true)
 
   // we edit the post to remove its expiresAt using undefined
@@ -136,7 +136,7 @@ test('Edit Post.expiresAt with UTC', async () => {
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
-  expect(post['expiresAt']).not.toBeNull()
+  expect(post['expiresAt']).toBeTruthy()
   const at = moment(post['expiresAt'])
 
   // change the expiresAt
@@ -146,7 +146,7 @@ test('Edit Post.expiresAt with UTC', async () => {
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['editPostExpiresAt']
   expect(post['postId']).toBe(postId)
-  expect(post['expiresAt']).not.toBeNull()
+  expect(post['expiresAt']).toBeTruthy()
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
 
   // pull the post again to make sure that new value stuck in DB
@@ -154,7 +154,7 @@ test('Edit Post.expiresAt with UTC', async () => {
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['post']
   expect(post['postId']).toBe(postId)
-  expect(post['expiresAt']).not.toBeNull()
+  expect(post['expiresAt']).toBeTruthy()
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
 })
 
@@ -170,7 +170,7 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
-  expect(post['expiresAt']).not.toBeNull()
+  expect(post['expiresAt']).toBeTruthy()
   const at = moment(post['expiresAt'])
 
   // change the expiresAt
@@ -182,7 +182,7 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['editPostExpiresAt']
   expect(post['postId']).toBe(postId)
-  expect(post['expiresAt']).not.toBeNull()
+  expect(post['expiresAt']).toBeTruthy()
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
 
   // pull the post again to make sure that new value stuck in DB
@@ -190,7 +190,7 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['post']
   expect(post['postId']).toBe(postId)
-  expect(post['expiresAt']).not.toBeNull()
+  expect(post['expiresAt']).toBeTruthy()
   expect(moment(post['expiresAt']).isSame(at)).toBe(true)
 })
 
@@ -216,7 +216,7 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   resp = await ourClient.mutate({mutation: schema.editPostExpiresAt, variables: {postId, expiresAt}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostExpiresAt']['postId']).toBe(postId)
-  expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
+  expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeTruthy()
 
   // check we now have a story
   resp = await ourClient.query({query: schema.userStories, variables: {userId: ourUserId}})
@@ -252,7 +252,7 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['expiresAt']).not.toBeNull()
+  expect(resp['data']['addPost']['expiresAt']).toBeTruthy()
 
   // check we see them in our first followed stories
   resp = await ourClient.query({query: schema.self})
@@ -296,7 +296,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
-  expect(resp['data']['addPost']['expiresAt']).not.toBeNull()
+  expect(resp['data']['addPost']['expiresAt']).toBeTruthy()
   const at = moment(resp['data']['addPost']['expiresAt'])
 
   // other adds a post that is also a story
@@ -304,7 +304,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   resp = await otherClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(otherPostId)
-  expect(resp['data']['addPost']['expiresAt']).not.toBeNull()
+  expect(resp['data']['addPost']['expiresAt']).toBeTruthy()
 
   // check we see them as expected in our first followed stories
   resp = await ourClient.query({query: schema.self})
@@ -319,7 +319,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   resp = await theirClient.mutate({mutation: schema.editPostExpiresAt, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostExpiresAt']['postId']).toBe(theirPostId)
-  expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
+  expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeTruthy()
 
   // check we see them as expected in our first followed stories (order reversed from earlier)
   resp = await ourClient.query({query: schema.self})
@@ -334,7 +334,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   resp = await theirClient.mutate({mutation: schema.editPostExpiresAt, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostExpiresAt']['postId']).toBe(theirPostId)
-  expect(resp['data']['editPostExpiresAt']['expiresAt']).not.toBeNull()
+  expect(resp['data']['editPostExpiresAt']['expiresAt']).toBeTruthy()
 
   // check we see them as expected in our first followed stories (order back to original)
   resp = await ourClient.query({query: schema.self})

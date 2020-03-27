@@ -39,7 +39,7 @@ test('Archiving an image post', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['feed']['items']).toHaveLength(1)
   expect(resp['data']['self']['feed']['items'][0]['postId']).toBe(postId)
-  expect(resp['data']['self']['feed']['items'][0]['image']['url']).not.toBeNull()
+  expect(resp['data']['self']['feed']['items'][0]['image']['url']).toBeTruthy()
   expect(resp['data']['self']['feed']['items'][0]['imageUploadUrl']).toBeNull()
 
   resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
