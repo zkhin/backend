@@ -22,8 +22,7 @@ def chat(chat_manager, user2, user3):
     yield chat_manager.add_direct_chat('cid', user2.id, user3.id)
 
 
-def test_add_chat_message(chat_message_manager, user, chat):
-    now = pendulum.now('utc')
+def test_add_chat_message(chat_message_manager, user, chat, user2, user3):
     username = user.item['username']
     text = f'whats up with @{username}?'
     message_id = 'mid'
@@ -33,18 +32,28 @@ def test_add_chat_message(chat_message_manager, user, chat):
     assert 'messageCount' not in chat.item
     assert 'lastMessageActivityAt' not in chat.item
 
+    # check the chat memberships start off with correct lastMessageActivityAt
+    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + chat.item['createdAt']
+    assert chat.dynamo.get_chat_membership(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + chat.item['createdAt']
+
     # add the message, check it looks ok
+    now = pendulum.now('utc')
+    now_str = now.to_iso8601_string()
     message = chat_message_manager.add_chat_message(message_id, text, chat.id, user_id, now=now)
     assert message.id == message_id
     assert message.user_id == user_id
-    assert message.item['createdAt'] == now.to_iso8601_string()
+    assert message.item['createdAt'] == now_str
     assert message.item['text'] == text
     assert message.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
 
     # check the chat was altered correctly
     chat.refresh_item()
     assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageActivityAt'] == now.to_iso8601_string()
+    assert chat.item['lastMessageActivityAt'] == now_str
+
+    # check the chat memberships lastMessageActivityAt was updated
+    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + now_str
+    assert chat.dynamo.get_chat_membership(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + now_str
 
 
 def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):

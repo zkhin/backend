@@ -55,11 +55,16 @@ class ChatMessage:
     def edit(self, text, now=None):
         now = now or pendulum.now('utc')
         text_tags = self.user_manager.get_text_tags(text)
+
         transacts = [
             self.dynamo.transact_edit_chat_message(self.id, text, text_tags, now=now),
             self.chat_manager.dynamo.transact_register_chat_message_edited(self.chat_id, now),
         ]
         self.dynamo.client.transact_write_items(transacts)
+
+        chat = self.chat_manager.get_chat(self.chat_id)
+        chat.update_memberships_last_message_activity_at(now)
+
         self.refresh_item(strongly_consistent=True)
         return self
 
@@ -70,6 +75,10 @@ class ChatMessage:
             self.chat_manager.dynamo.transact_register_chat_message_deleted(self.chat_id, now),
         ]
         self.dynamo.client.transact_write_items(transacts)
+
+        chat = self.chat_manager.get_chat(self.chat_id)
+        chat.update_memberships_last_message_activity_at(now)
+
         return self
 
     def trigger_notification(self, notification_type):

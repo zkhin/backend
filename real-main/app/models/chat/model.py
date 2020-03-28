@@ -25,6 +25,12 @@ class Chat:
         self.item = self.dynamo.get_chat(self.id, strongly_consistent=strongly_consistent)
         return self
 
+    def update_memberships_last_message_activity_at(self, now):
+        # Note that dynamo has no support for batch updates.
+        # This update will need to be made async at some scale (chats with 1000+ members?)
+        for user_id in self.dynamo.generate_chat_membership_user_ids_by_chat(self.id):
+            self.dynamo.update_chat_membership_last_message_activity_at(self.id, user_id, now)
+
     def leave_chat(self, user_id):
         if self.type == enums.ChatType.DIRECT:
             return self.delete_direct_chat(leaving_user_id=user_id)

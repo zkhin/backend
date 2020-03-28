@@ -41,7 +41,7 @@ def test_chat_message_serialize(message, user1, user2, chat, view_manager):
     message.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED
 
 
-def test_chat_message_edit(message, chat, user1):
+def test_chat_message_edit(message, chat, user1, user2):
     # check starting state
     chat.refresh_item()
     assert chat.item['messageCount'] == 1
@@ -49,6 +49,10 @@ def test_chat_message_edit(message, chat, user1):
     assert message.item['text'] == 'lore ipsum'
     assert message.item['textTags'] == []
     assert 'lastEditedAt' not in message.item
+
+    # check starting chat membership sort order state
+    assert chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
+    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
 
     # edit the message
     username = user1.item['username']
@@ -68,14 +72,22 @@ def test_chat_message_edit(message, chat, user1):
     assert message.item['textTags'] == [{'tag': f'@{username}', 'userId': user1.id}]
     assert pendulum.parse(message.item['lastEditedAt']) == now
 
+    # check final chat membership sort order state
+    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'][len('chat/'):]) == now
 
-def test_chat_message_delete(message, chat):
+
+def test_chat_message_delete(message, chat, user1, user2):
     # double check starting state
     chat.refresh_item()
     message.refresh_item()
     assert chat.item['messageCount'] == 1
     assert chat.item['lastMessageActivityAt'] == message.item['createdAt']
     assert message.item
+
+    # check starting chat membership sort order state
+    assert chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
+    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
 
     # delete the message
     now = pendulum.now('utc')
@@ -89,6 +101,10 @@ def test_chat_message_delete(message, chat):
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
     message.refresh_item()
     assert message.item is None
+
+    # check final chat membership sort order state
+    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'][len('chat/'):]) == now
 
 
 def test_chat_message_trigger_notification(message, chat, user1):

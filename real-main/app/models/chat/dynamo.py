@@ -82,7 +82,7 @@ class ChatDynamo:
                 'gsiK1PartitionKey': {'S': f'chat/{chat_id}'},
                 'gsiK1SortKey': {'S': f'member/{joined_at_str}'},
                 'gsiK2PartitionKey': {'S': f'member/{user_id}'},
-                'gsiK2SortKey': {'S': f'chat/{joined_at_str}'},
+                'gsiK2SortKey': {'S': f'chat/{joined_at_str}'},  # actually tracks lastMessageActivityAt
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
@@ -137,6 +137,19 @@ class ChatDynamo:
             },
             'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
         }}
+
+    def update_chat_membership_last_message_activity_at(self, chat_id, user_id, now):
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'chat/{chat_id}',
+                'sortKey': f'member/{user_id}',
+            },
+            'UpdateExpression': 'SET gsiK2SortKey = :gsik2sk',
+            'ExpressionAttributeValues': {
+                ':gsik2sk': 'chat/' + now.to_iso8601_string(),
+            },
+        }
+        return self.client.update_item(query_kwargs)
 
     def generate_chat_membership_user_ids_by_chat(self, chat_id):
         query_kwargs = {

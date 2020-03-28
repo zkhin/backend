@@ -393,3 +393,85 @@ test('Delete chat message', async () => {
   expect(resp['data']['chat']['messageCount']).toBe(0)
   expect(resp['data']['chat']['messages']['items']).toHaveLength(0)
 })
+
+
+test.only('User.chats sort order should react to message adds, edits and deletes', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [other1Client] = await loginCache.getCleanLogin()
+  const [other2Client] = await loginCache.getCleanLogin()
+
+  // other1 opens up a chat with us
+  const [chatId1, messageId11] = [uuidv4(), uuidv4()]
+  let variables = {userId: ourUserId, chatId: chatId1, messageId: messageId11, messageText: 'lore ipsum'}
+  let resp = await other1Client.mutate({mutation: schema.createDirectChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createDirectChat']['chatId']).toBe(chatId1)
+
+  // other2 opens up a chat with us
+  const [chatId2, messageId21] = [uuidv4(), uuidv4()]
+  variables = {userId: ourUserId, chatId: chatId2, messageId: messageId21, messageText: 'lore ipsum'}
+  resp = await other2Client.mutate({mutation: schema.createDirectChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createDirectChat']['chatId']).toBe(chatId2)
+
+  // verify we see both those chats in correct order
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['chats']['items']).toHaveLength(2)
+  expect(resp['data']['self']['chats']['items'][0]['chatId']).toBe(chatId2)
+  expect(resp['data']['self']['chats']['items'][1]['chatId']).toBe(chatId1)
+
+  // other1 edits their original message
+  variables = {messageId: messageId11, text: 'lore ipsum for reals'}
+  resp = await other1Client.mutate({mutation: schema.editChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editChatMessage']['messageId']).toBe(messageId11)
+
+  // verify the order we see chats in has now changed
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['chats']['items']).toHaveLength(2)
+  expect(resp['data']['self']['chats']['items'][0]['chatId']).toBe(chatId1)
+  expect(resp['data']['self']['chats']['items'][1]['chatId']).toBe(chatId2)
+
+  // other2 deletes their original message
+  variables = {messageId: messageId21}
+  resp = await other2Client.mutate({mutation: schema.deleteChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['deleteChatMessage']['messageId']).toBe(messageId21)
+
+  // verify the order we see chats in has now changed
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['chats']['items']).toHaveLength(2)
+  expect(resp['data']['self']['chats']['items'][0]['chatId']).toBe(chatId2)
+  expect(resp['data']['self']['chats']['items'][1]['chatId']).toBe(chatId1)
+
+  // we add a message to chat1
+  const messageId12 = uuidv4()
+  variables = {chatId: chatId1, messageId: messageId12, text: 'new text'}
+  resp = await ourClient.mutate({mutation: schema.addChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addChatMessage']['messageId']).toBe(messageId12)
+
+  // verify the order we see chats in has now changed
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['chats']['items']).toHaveLength(2)
+  expect(resp['data']['self']['chats']['items'][0]['chatId']).toBe(chatId1)
+  expect(resp['data']['self']['chats']['items'][1]['chatId']).toBe(chatId2)
+
+  // we add another message to chat1
+  const messageId13 = uuidv4()
+  variables = {chatId: chatId1, messageId: messageId13, text: 'new text'}
+  resp = await ourClient.mutate({mutation: schema.addChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addChatMessage']['messageId']).toBe(messageId13)
+
+  // verify the order we see chats in has _not_ changed
+  resp = await ourClient.query({query: schema.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['chats']['items']).toHaveLength(2)
+  expect(resp['data']['self']['chats']['items'][0]['chatId']).toBe(chatId1)
+  expect(resp['data']['self']['chats']['items'][1]['chatId']).toBe(chatId2)
+})

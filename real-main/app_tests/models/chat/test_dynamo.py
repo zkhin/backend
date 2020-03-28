@@ -242,6 +242,31 @@ def test_transact_register_chat_message_deleted(chat_dynamo):
     assert chat_item == new_chat_item
 
 
+def test_update_chat_membership_last_message_activity_at(chat_dynamo):
+    chat_id = 'cid'
+
+    # add a member to the chat
+    user_id = 'uid1'
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_add_chat_membership(chat_id, user_id, now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # verify starting state
+    org_item = chat_dynamo.get_chat_membership(chat_id, user_id)
+    assert org_item['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
+
+    # update the last message activity at for that memeber
+    new_now = pendulum.now('utc')
+    item = chat_dynamo.update_chat_membership_last_message_activity_at(chat_id, user_id, new_now)
+    assert item['gsiK2SortKey'] == 'chat/' + new_now.to_iso8601_string()
+
+    # verify final state
+    item = chat_dynamo.get_chat_membership(chat_id, user_id)
+    assert item['gsiK2SortKey'] == 'chat/' + new_now.to_iso8601_string()
+    item['gsiK2SortKey'] = org_item['gsiK2SortKey']
+    assert item == org_item
+
+
 def test_generate_chat_membership_user_ids_by_chat(chat_dynamo):
     chat_id = 'cid'
 

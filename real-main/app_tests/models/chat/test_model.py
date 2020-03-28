@@ -1,3 +1,4 @@
+import pendulum
 import pytest
 
 
@@ -14,6 +15,23 @@ def user2(user_manager):
 @pytest.fixture
 def direct_chat(chat_manager, user1, user2):
     yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
+
+
+def test_update_memberships_last_message_activity_at(direct_chat, user1, user2):
+    # verify starting state
+    membership_1 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user1.id)
+    membership_2 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user2.id)
+    new_at = pendulum.now('utc')
+    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) != new_at
+    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) != new_at
+
+    direct_chat.update_memberships_last_message_activity_at(new_at)
+
+    # verify final state
+    membership_1 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user1.id)
+    membership_2 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user2.id)
+    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) == new_at
+    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) == new_at
 
 
 def test_leave_direct_chat(direct_chat, user1, user2):

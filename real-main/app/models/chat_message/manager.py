@@ -51,6 +51,9 @@ class ChatMessageManager:
         ]
         self.dynamo.client.transact_write_items(transacts)
 
+        chat = self.chat_manager.get_chat(chat_id)
+        chat.update_memberships_last_message_activity_at(now)
+
         return self.get_chat_message(message_id, strongly_consistent=True)
 
     def truncate_chat_messages(self, chat_id):
