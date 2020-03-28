@@ -25,7 +25,7 @@ class MediaDynamo:
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         media_item = {
-            'schemaVersion': {'N': '0'},
+            'schemaVersion': {'N': '2'},
             'partitionKey': {'S': f'media/{media_id}'},
             'sortKey': {'S': '-'},
             'gsiA1PartitionKey': {'S': f'media/{post_id}'},

@@ -83,6 +83,7 @@ class PostManager:
         if len(media_uploads) > 1:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with more than one media'
             raise exceptions.PostException(msg)
+        media_upload = media_uploads[0] if media_uploads else None
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -106,11 +107,12 @@ class PostManager:
             text_tags=text_tags, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled, verification_hidden=verification_hidden, album_id=album_id,
         )]
-        for mu in media_uploads:
+        if post_type == enums.PostType.IMAGE:
             # 'media_upload' is straight from graphql, format dictated by schema
             transacts.append(self.media_manager.dynamo.transact_add_media(
-                posted_by_user_id, post_id, mu['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD, posted_at=now,
-                taken_in_real=mu.get('takenInReal'), original_format=mu.get('originalFormat'),
+                posted_by_user_id, post_id, media_upload['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD,
+                posted_at=now, taken_in_real=media_upload.get('takenInReal'),
+                original_format=media_upload.get('originalFormat'),
             ))
         self.dynamo.client.transact_write_items(transacts)
 
@@ -123,17 +125,21 @@ class PostManager:
 
         media_items = []
         if post.type == enums.PostType.IMAGE:
-            # if image data was directly included for any media objects, process it
-            for mu in media_uploads:
-                media = self.media_manager.get_media(mu['mediaId'], strongly_consistent=True)
-                if image_data := mu.get('imageData'):
-                    media.upload_native_image_data_base64(image_data)
-                    media.process_upload()
-                media_items.append(media.item)
+            media = self.media_manager.get_media(media_upload['mediaId'], strongly_consistent=True)
 
-            # if all media has been processed, complete the post
-            if all(media_item['mediaStatus'] == MediaStatus.UPLOADED for media_item in media_items):
+            # if image data was directly included for any media objects, process it
+            if image_data := media_upload.get('imageData'):
+
+                # set the post to PROCESSING so the s3 trigger doesn't try to process
+                transacts = [self.dynamo.transact_set_post_status(post.item, enums.PostStatus.PROCESSING)]
+                self.dynamo.client.transact_write_items(transacts)
+
+                # upload the media, complete the post
+                media.upload_native_image_data_base64(image_data)
+                media.process_upload()
                 post.complete(now=now)
+
+            media_items.append(media.item)
 
         post.item['mediaObjects'] = media_items
         return post

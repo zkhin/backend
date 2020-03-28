@@ -73,6 +73,8 @@ class Media:
 
     def get_s3_path(self, size):
         "From within the user's directory, return the path to the s3 object of the requested size"
+        if self.item.get('schemaVersion', 0) > 0:
+            return '/'.join([self.item['userId'], 'post', self.item['postId'], 'image', size.filename])
         return '/'.join([
             self.item['userId'], 'post', self.item['postId'], 'media', self.item['mediaId'], size.filename,
         ])

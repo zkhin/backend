@@ -161,7 +161,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `post/{postId}` | `-` | `1` | `postId`, `postedAt`, `postedByUserId`, `postType`, `postStatus`, `albumId`, `originalPostId`, `expiresAt`, `text`, `textTags:[{tag, userId}]`, `viewedByCount:Number`, `onymousLikeCount:Number`, `anonymousLikeCount:Number`, `flagCount:Number`, `commentCount:Number`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `hasNewCommentActivity:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{postedByUserId}` | `{postStatus}/{postType}/{postedAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` | | | `post/{albumId}` | `{albumRank:Number}` |
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
 | `flag/{flaggerUserId}/{postId}` | `-`| `1` | `flaggerUserId`, `postId`, `flaggedAt` | `flag/{flaggerUserId}` | `{flaggedAt}` | `flag/{postId}` | `{flaggedAt}` |
-| `media/{mediaId}` | `-` | `0` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `checksum`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` | | | `media/{checksum}` | `{postedAt}` |
+| `media/{mediaId}` | `-` | `2` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `checksum`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` | | | `media/{checksum}` | `{postedAt}` |
 | `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `comment/{commentId}` | `view/{firstViewedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
@@ -210,7 +210,8 @@ The order of operations to implement a data migration is:
 
 The following objects are stored with the given path structures:
 
-- Image posts: `{userId}/post/{postId}/media/{mediaId}/***.jpg`.
+- Image posts:
+  - `{userId}/post/{postId}/image/***.jpg`
 - Video posts:
   - `{userId}/post/{postId}/video/video-original.mov`.
   - `{userId}/post/{postId}/video/video-hls/*`

@@ -1,11 +1,13 @@
 from unittest.mock import call
 
+import pytest
+
 from app.models.media.model import Media
 from app.models.media.enums import MediaStatus
 from app.utils import image_size
 
 
-def test_get_s3_path():
+def test_get_s3_path_schema_version_0():
     item = {
         'userId': 'us-east-1:user-id',
         'postId': 'post-id',
@@ -16,12 +18,32 @@ def test_get_s3_path():
     path = media.get_s3_path(image_size.NATIVE)
     assert path == 'us-east-1:user-id/post/post-id/media/media-id/native.jpg'
 
+    item['schemaVersion'] = 0
+    media = Media(item, None)
+    path = media.get_s3_path(image_size.NATIVE)
+    assert path == 'us-east-1:user-id/post/post-id/media/media-id/native.jpg'
 
-def test_get_readonly_url(cloudfront_client):
+
+@pytest.mark.parametrize("schema_version", [1, 2])
+def test_get_s3_path_schema_version_gt_0(schema_version):
+    item = {
+        'userId': 'us-east-1:user-id',
+        'postId': 'post-id',
+        'mediaId': 'media-id',
+        'schemaVersion': schema_version,
+    }
+
+    media = Media(item, None)
+    path = media.get_s3_path(image_size.NATIVE)
+    assert path == 'us-east-1:user-id/post/post-id/image/native.jpg'
+
+
+def test_get_readonly_url_schema_version_0(cloudfront_client):
     item = {
         'userId': 'user-id',
         'postId': 'post-id',
         'mediaId': 'media-id',
+        'schemaVersion': 0,
     }
     expected_url = {}
     cloudfront_client.configure_mock(**{
@@ -36,6 +58,27 @@ def test_get_readonly_url(cloudfront_client):
     assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['GET', 'HEAD'])]
 
 
+@pytest.mark.parametrize("schema_version", [1, 2])
+def test_get_readonly_url_schema_version_gt_0(cloudfront_client, schema_version):
+    item = {
+        'userId': 'user-id',
+        'postId': 'post-id',
+        'mediaId': 'media-id',
+        'schemaVersion': schema_version,
+    }
+    expected_url = {}
+    cloudfront_client.configure_mock(**{
+        'generate_presigned_url.return_value': expected_url,
+    })
+
+    media = Media(item, None, cloudfront_client=cloudfront_client)
+    url = media.get_readonly_url(image_size.NATIVE)
+    assert url == expected_url
+
+    expected_path = 'user-id/post/post-id/image/native.jpg'
+    assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['GET', 'HEAD'])]
+
+
 def test_get_readonly_url_not_uploaded():
     source = {'mediaId': 'mid', 'path': 'path', 'mediaStatus': MediaStatus.AWAITING_UPLOAD}
     media = Media(source, None)
@@ -43,12 +86,13 @@ def test_get_readonly_url_not_uploaded():
     assert url is None
 
 
-def test_get_writeonly_url(cloudfront_client):
+def test_get_writeonly_url_schema_version_0(cloudfront_client):
     item = {
         'userId': 'user-id',
         'postId': 'post-id',
         'mediaId': 'media-id',
         'mediaStatus': MediaStatus.AWAITING_UPLOAD,
+        'schemaVersion': 0,
     }
     expected_url = {}
     cloudfront_client.configure_mock(**{
@@ -60,6 +104,28 @@ def test_get_writeonly_url(cloudfront_client):
     assert url == expected_url
 
     expected_path = 'user-id/post/post-id/media/media-id/native.jpg'
+    assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['PUT'])]
+
+
+@pytest.mark.parametrize("schema_version", [1, 2])
+def test_get_writeonly_url_schema_version_gt_0(cloudfront_client, schema_version):
+    item = {
+        'userId': 'user-id',
+        'postId': 'post-id',
+        'mediaId': 'media-id',
+        'mediaStatus': MediaStatus.AWAITING_UPLOAD,
+        'schemaVersion': schema_version,
+    }
+    expected_url = {}
+    cloudfront_client.configure_mock(**{
+        'generate_presigned_url.return_value': expected_url,
+    })
+
+    media = Media(item, None, cloudfront_client=cloudfront_client)
+    url = media.get_writeonly_url()
+    assert url == expected_url
+
+    expected_path = 'user-id/post/post-id/image/native.jpg'
     assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['PUT'])]
 
 

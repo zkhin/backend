@@ -37,3 +37,9 @@ def dynamo_table():
     with moto.mock_dynamodb2():
         dynamo_resource = boto3.resource('dynamodb')
         yield dynamo_resource.create_table(TableName='test-table', BillingMode='PAY_PER_REQUEST', **table_schema)
+
+
+@pytest.fixture
+def s3_bucket():
+    with moto.mock_s3():
+        yield boto3.resource('s3').create_bucket(Bucket='test-bucket')

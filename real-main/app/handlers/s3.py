@@ -6,7 +6,7 @@ from app.clients import CloudFrontClient, DynamoClient, MediaConvertClient, S3Cl
 from app.logging import LogLevelContext
 from app.models.media import MediaManager
 from app.models.post import PostManager
-from app.models.post.enums import PostStatus
+from app.models.post.enums import PostStatus, PostType
 
 UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
 
@@ -33,15 +33,20 @@ def image_post_uploaded(event, context):
 
     # Avoid firing on creation of other images (profile photo, album art)
     # Once images are moved to their new path at {userId}/post/{postId}/image/{size}.jpg,
-    # the s3 object created event suffix filter should be expaneded and this check removed
-    if 'media' not in path:
+    # the s3 object created event suffix filter should be expaneded to '/image/native.jpg'
+    # and this check removed (currently set to '/native.jpg').
+    if 'post' not in path:
         return
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'BEGIN: Handling object created event for key `{path}`')
 
-    _, _, post_id, _, media_id, _ = path.split('/')
+    # At this point we have triggered this event because of:
+    #   - video post poster images
+    #   - image upload for image posts schema version 0
+    #   - image upload for image posts schema version 1
+    post_id = path.split('/')[2]
 
     # strongly consistent because we may have just added the post to dynamo
     post = post_manager.get_post(post_id, strongly_consistent=True)
@@ -49,14 +54,19 @@ def image_post_uploaded(event, context):
         logger.warning(f'Unable to find post `{post_id}`, ignoring upload')
         return
 
+    if post.type != PostType.IMAGE:
+        logger.warning(f'Fired for video post `{post_id}` poster image, ignoring')
+        return
+
     if post.status != PostStatus.PENDING:
         logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.status}`, ignoring upload')
         return
 
-    # strongly consistent because we may have just added the media to dynamo
-    media = media_manager.get_media(media_id, strongly_consistent=True) if media_id else None
-    if media_id and not media:
-        logger.warning(f'Unable to find media `{media_id}`, ignoring upload')
+    # Retrieving the media in a way that works for both schema version 0 & 1.
+    media_items = list(media_manager.dynamo.generate_by_post(post_id))
+    media = media_manager.init_media(media_items[0]) if media_items else None
+    if not media:
+        logger.warning(f'Unable to find media for post `{post_id}`, ignoring upload')
         return
 
     try:

@@ -175,7 +175,7 @@ def test_transact_add_media_sans_options(media_dynamo):
     assert before_str <= posted_at_str
     assert after_str >= posted_at_str
     assert media_item == {
-        'schemaVersion': 0,
+        'schemaVersion': 2,
         'partitionKey': 'media/mid',
         'sortKey': '-',
         'gsiA1PartitionKey': 'media/pid',
@@ -209,7 +209,7 @@ def test_transact_add_media_with_options(media_dynamo):
     posted_at_str = posted_at.to_iso8601_string()
     media_item = media_dynamo.get_media(media_id)
     assert media_item == {
-        'schemaVersion': 0,
+        'schemaVersion': 2,
         'partitionKey': 'media/mid',
         'sortKey': '-',
         'gsiA1PartitionKey': 'media/pid',
