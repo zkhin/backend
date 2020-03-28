@@ -334,7 +334,7 @@ type User {
 
   # Chats the user is in
   #   - private to the user themselves
-  #   - ordered by Chat.messagesLastActivityAt, most recent first
+  #   - ordered by Chat.lastMessageActivityAt, most recent first
   chats(limit: Int, nextToken: String): PaginatedChats
   chatCount: Int
 
