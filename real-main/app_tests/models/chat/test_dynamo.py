@@ -12,10 +12,11 @@ def chat_dynamo(dynamo_client):
 def test_transact_add_chat_minimal(chat_dynamo):
     chat_id = 'cid'
     chat_type = 'ctype'
+    user_id = 'cuid'
 
     # add the chat to the DB
     before = pendulum.now('utc')
-    transact = chat_dynamo.transact_add_chat(chat_id, chat_type)
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_id)
     after = pendulum.now('utc')
     chat_dynamo.client.transact_write_items([transact])
 
@@ -31,6 +32,7 @@ def test_transact_add_chat_minimal(chat_dynamo):
         'chatId': 'cid',
         'chatType': 'ctype',
         'createdAt': created_at.to_iso8601_string(),
+        'createdByUserId': user_id,
     }
 
     # verify we can't add another chat with same id
@@ -38,15 +40,16 @@ def test_transact_add_chat_minimal(chat_dynamo):
         chat_dynamo.client.transact_write_items([transact])
 
 
-def test_transact_add_chat_maximal(chat_dynamo):
+def test_transact_add_direct_chat_maximal(chat_dynamo):
     chat_id = 'cid2'
     chat_type = 'DIRECT'
-    user_ids = ['uidb', 'uida']
+    creator_user_id = 'uidb'
+    with_user_id = 'uida'
     name = 'cname'
     now = pendulum.now('utc')
 
     # add the chat to the DB
-    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_ids=user_ids, name=name, now=now)
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, creator_user_id, with_user_id, name=name, now=now)
     chat_dynamo.client.transact_write_items([transact])
 
     # retrieve the chat and verify all good
@@ -62,23 +65,25 @@ def test_transact_add_chat_maximal(chat_dynamo):
         'name': 'cname',
         'userCount': 2,
         'createdAt': now.to_iso8601_string(),
+        'createdByUserId': creator_user_id,
     }
 
 
 def test_transact_add_chat_errors(chat_dynamo):
-    with pytest.raises(AssertionError, match='require user_ids'):
-        chat_dynamo.transact_add_chat('cid', 'DIRECT')
+    with pytest.raises(AssertionError, match='require with_user_id'):
+        chat_dynamo.transact_add_chat('cid', 'DIRECT', 'uid')
 
-    with pytest.raises(AssertionError, match='forbit user_ids'):
-        chat_dynamo.transact_add_chat('cid', 'GROUP', user_ids=[])
+    with pytest.raises(AssertionError, match='forbit with_user_id'):
+        chat_dynamo.transact_add_chat('cid', 'GROUP', 'uid', with_user_id='uid')
 
 
 def test_transact_delete_chat(chat_dynamo):
     chat_id = 'cid'
     chat_type = 'ctype'
+    user_id = 'uid'
 
     # add the chat to the DB, verify it is in DB
-    transact = chat_dynamo.transact_add_chat(chat_id, chat_type)
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_id)
     chat_dynamo.client.transact_write_items([transact])
     assert chat_dynamo.get_chat(chat_id)
 
@@ -136,7 +141,7 @@ def test_transact_register_chat_message_added(chat_dynamo):
         chat_dynamo.client.transact_write_items([transact])
 
     # add a chat
-    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype')
+    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype', 'uid')
     chat_dynamo.client.transact_write_items([transact])
 
     # check its starting state
@@ -181,7 +186,7 @@ def test_transact_register_chat_message_edited(chat_dynamo):
         chat_dynamo.client.transact_write_items([transact])
 
     # add a chat
-    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype')
+    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype', 'uid')
     chat_dynamo.client.transact_write_items([transact])
 
     # register a message added (will always happen before editing a message)
@@ -215,7 +220,7 @@ def test_transact_register_chat_message_deleted(chat_dynamo):
         chat_dynamo.client.transact_write_items([transact])
 
     # add a chat
-    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype')
+    transact = chat_dynamo.transact_add_chat(chat_id, 'ctype', 'uid')
     chat_dynamo.client.transact_write_items([transact])
 
     # register a message added (will always happen before deleting a message)

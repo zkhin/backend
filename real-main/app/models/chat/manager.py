@@ -45,36 +45,40 @@ class ChatManager:
         }
         return Chat(chat_item, self.dynamo, **kwargs) if chat_item else None
 
-    def add_direct_chat(self, chat_id, user_id_1, user_id_2, now=None):
+    def add_direct_chat(self, chat_id, created_by_user_id, with_user_id, now=None):
         now = now or pendulum.now('utc')
 
         # can't direct chat with ourselves
-        if user_id_1 == user_id_2:
-            raise exceptions.ChatException(f'User `{user_id_1}` cannot open direct chat with themselves')
+        if created_by_user_id == with_user_id:
+            raise exceptions.ChatException(f'User `{created_by_user_id}` cannot open direct chat with themselves')
 
         # can't chat if there's a blocking relationship, either direction
-        if self.block_manager.is_blocked(user_id_1, user_id_2):
-            raise exceptions.ChatException(f'User `{user_id_1}` has blocked user `{user_id_2}`')
-        if self.block_manager.is_blocked(user_id_2, user_id_1):
-            raise exceptions.ChatException(f'User `{user_id_2}` has blocked user `{user_id_1}`')
+        if self.block_manager.is_blocked(created_by_user_id, with_user_id):
+            raise exceptions.ChatException(f'User `{created_by_user_id}` has blocked user `{with_user_id}`')
+        if self.block_manager.is_blocked(with_user_id, created_by_user_id):
+            raise exceptions.ChatException(f'User `{with_user_id}` has blocked user `{created_by_user_id}`')
 
         # can't add a chat if one already exists between the two users
-        if self.get_direct_chat(user_id_1, user_id_2):
-            raise exceptions.ChatException(f'Chat already exists between user `{user_id_1}` and user `{user_id_2}`')
+        if self.get_direct_chat(created_by_user_id, with_user_id):
+            raise exceptions.ChatException(
+                f'Chat already exists between user `{created_by_user_id}` and user `{with_user_id}`',
+            )
 
         transacts = [
-            self.dynamo.transact_add_chat(chat_id, enums.ChatType.DIRECT, user_ids=[user_id_1, user_id_2], now=now),
-            self.dynamo.transact_add_chat_membership(chat_id, user_id_1, now=now),
-            self.dynamo.transact_add_chat_membership(chat_id, user_id_2, now=now),
-            self.user_manager.dynamo.transact_increment_chat_count(user_id_1),
-            self.user_manager.dynamo.transact_increment_chat_count(user_id_2),
+            self.dynamo.transact_add_chat(
+                chat_id, enums.ChatType.DIRECT, created_by_user_id, with_user_id=with_user_id, now=now,
+            ),
+            self.dynamo.transact_add_chat_membership(chat_id, created_by_user_id, now=now),
+            self.dynamo.transact_add_chat_membership(chat_id, with_user_id, now=now),
+            self.user_manager.dynamo.transact_increment_chat_count(created_by_user_id),
+            self.user_manager.dynamo.transact_increment_chat_count(with_user_id),
         ]
         transact_exceptions = [
             exceptions.ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
-            exceptions.ChatException(f'Unable to add user `{user_id_1}` to chat `{chat_id}`'),
-            exceptions.ChatException(f'Unable to add user `{user_id_2}` to chat `{chat_id}`'),
-            exceptions.ChatException(f'Unable to increment User.chatCount for user `{user_id_1}`'),
-            exceptions.ChatException(f'Unable to increment User.chatCount for user `{user_id_2}`'),
+            exceptions.ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
+            exceptions.ChatException(f'Unable to add user `{with_user_id}` to chat `{chat_id}`'),
+            exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
+            exceptions.ChatException(f'Unable to increment User.chatCount for user `{with_user_id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 

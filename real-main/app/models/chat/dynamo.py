@@ -33,12 +33,12 @@ class ChatDynamo:
         }
         return self.client.query_head(query_kwargs)
 
-    def transact_add_chat(self, chat_id, chat_type, user_ids=None, name=None, now=None):
-        # user_ids parameter is required for direct chats, forbidden for group
+    def transact_add_chat(self, chat_id, chat_type, created_by_user_id, with_user_id=None, name=None, now=None):
+        # with_user_id parameter is required for direct chats, forbidden for group
         if (chat_type == ChatType.DIRECT):
-            assert user_ids and len(user_ids) == 2, 'DIRECT chats require user_ids parameter'
+            assert with_user_id, 'DIRECT chats require with_user_id kwarg'
         if (chat_type == ChatType.GROUP):
-            assert user_ids is None, 'GROUP chat forbit user_ids parameter'
+            assert with_user_id is None, 'GROUP chat forbit with_user_id kwarg'
 
         now = now or pendulum.now('utc')
         created_at_str = now.to_iso8601_string()
@@ -50,15 +50,16 @@ class ChatDynamo:
                 'chatId': {'S': chat_id},
                 'chatType': {'S': chat_type},
                 'createdAt': {'S': created_at_str},
+                'createdByUserId': {'S': created_by_user_id},
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
         if name:
             query_kwargs['Put']['Item']['name'] = {'S': name}
-        if user_ids:
-            user_ids = sorted(user_ids)
-            query_kwargs['Put']['Item']['userCount'] = {'N': str(len(user_ids))}
-            query_kwargs['Put']['Item']['gsiA1PartitionKey'] = {'S': f'chat/{user_ids[0]}/{user_ids[1]}'}
+        if with_user_id:
+            user_id_1, user_id_2 = sorted([created_by_user_id, with_user_id])
+            query_kwargs['Put']['Item']['userCount'] = {'N': '2'}
+            query_kwargs['Put']['Item']['gsiA1PartitionKey'] = {'S': f'chat/{user_id_1}/{user_id_2}'}
             query_kwargs['Put']['Item']['gsiA1SortKey'] = {'S': '-'}
         return query_kwargs
 
