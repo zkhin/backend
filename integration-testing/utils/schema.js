@@ -1080,6 +1080,72 @@ module.exports.createDirectChat = gql`
   ${fragments.chatMessage}
 `
 
+module.exports.createGroupChat = gql`
+  mutation CreateGroupChat ($chatId: ID!, $name: String, $userIds: [ID!]!, $messageId: ID! $messageText: String!) {
+    createGroupChat (
+      chatId: $chatId, name: $name, userIds: $userIds, messageId: $messageId, messageText: $messageText,
+    ) {
+      ...ChatFragment
+      messageCount
+      messages {
+        items {
+          ...ChatMessageFragment
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
+module.exports.editGroupChat = gql`
+  mutation EditGroupChat ($chatId: ID!, $name: String!) {
+    editGroupChat (chatId: $chatId, name: $name) {
+      ...ChatFragment
+      messageCount
+      messages {
+        items {
+          ...ChatMessageFragment
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
+module.exports.addToGroupChat = gql`
+  mutation AddToGroupChat ($chatId: ID!, $userIds: [ID!]!) {
+    addToGroupChat (chatId: $chatId, userIds: $userIds) {
+      ...ChatFragment
+      messageCount
+      messages {
+        items {
+          ...ChatMessageFragment
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
+module.exports.leaveGroupChat = gql`
+  mutation LeaveGroupChat ($chatId: ID!) {
+    leaveGroupChat (chatId: $chatId) {
+      ...ChatFragment
+      messageCount
+      messages {
+        items {
+          ...ChatMessageFragment
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
 module.exports.addChatMessage = gql`
   mutation AddChatMessage ($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage (chatId: $chatId, messageId: $messageId, text: $text) {

@@ -904,8 +904,8 @@ def album_art(caller_user_id, arguments, source, context):
 
 @routes.register('Mutation.createDirectChat')
 def create_direct_chat(caller_user_id, arguments, source, context):
-    user_id = arguments['userId']
-    chat_id, message_id, message_text = arguments['chatId'], arguments['messageId'], arguments['messageText']
+    chat_id, user_id = arguments['chatId'], arguments['userId']
+    message_id, message_text = arguments['messageId'], arguments['messageText']
 
     user = user_manager.get_user(user_id)
     if not user:
@@ -923,12 +923,79 @@ def create_direct_chat(caller_user_id, arguments, source, context):
     return chat.item
 
 
+@routes.register('Mutation.createGroupChat')
+def create_group_chat(caller_user_id, arguments, source, context):
+    chat_id, user_ids, name = arguments['chatId'], arguments['userIds'], arguments.get('name')
+    message_id, message_text = arguments['messageId'], arguments['messageText']
+
+    now = pendulum.now('utc')
+    try:
+        chat = chat_manager.add_group_chat(chat_id, caller_user_id, name=name, now=now)
+        chat.add(user_ids, added_by_user_id=caller_user_id, now=now)
+        chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id, now=now)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    # no user could be listening to the chat notifications yet, so no need to fire the trigger
+    chat.refresh_item(strongly_consistent=True)
+    return chat.item
+
+
+@routes.register('Mutation.editGroupChat')
+def edit_group_chat(caller_user_id, arguments, source, context):
+    chat_id = arguments['chatId']
+    name = arguments.get('name')
+
+    chat = chat_manager.get_chat(chat_id)
+    if not chat or not chat.is_member(caller_user_id):
+        raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
+
+    try:
+        chat.edit(name=name)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    return chat.item
+
+
+@routes.register('Mutation.addToGroupChat')
+def add_to_group_chat(caller_user_id, arguments, source, context):
+    chat_id, user_ids = arguments['chatId'], arguments['userIds']
+
+    chat = chat_manager.get_chat(chat_id)
+    if not chat or not chat.is_member(caller_user_id):
+        raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
+
+    try:
+        chat.add(user_ids, added_by_user_id=caller_user_id)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    return chat.item
+
+
+@routes.register('Mutation.leaveGroupChat')
+def leave_group_chat(caller_user_id, arguments, source, context):
+    chat_id = arguments['chatId']
+
+    chat = chat_manager.get_chat(chat_id)
+    if not chat or not chat.is_member(caller_user_id):
+        raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
+
+    try:
+        chat.leave(caller_user_id)
+    except chat_manager.exceptions.ChatException as err:
+        raise ClientException(str(err))
+
+    return chat.item
+
+
 @routes.register('Mutation.addChatMessage')
 def add_chat_message(caller_user_id, arguments, source, context):
     chat_id, message_id, text = arguments['chatId'], arguments['messageId'], arguments['text']
 
-    item = chat_manager.dynamo.get_chat_membership(chat_id, caller_user_id)
-    if not item:
+    chat = chat_manager.get_chat(chat_id)
+    if not chat or not chat.is_member(caller_user_id):
         raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
 
     try:

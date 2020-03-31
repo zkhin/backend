@@ -34,6 +34,7 @@ module.exports.chatMessage = gql`
     chat {
       chatId
     }
+    authorUserId
     author {
       userId
     }

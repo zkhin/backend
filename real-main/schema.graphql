@@ -206,10 +206,10 @@ type Mutation {
   #   - it is an error to try to add someone to or leave from a direct chat
   #   - when creating a chat, the first message must be included
   createDirectChat(chatId: ID!, userId: ID!, messageId: ID! messageText: String!): Chat
-  #createGroupChat(chatId: ID!, name: String, userIds: [ID!]!, messageId: ID! messageText: String!): Chat
-  #editGroupChat(chatId: ID!, name: String!): Chat
-  #addToGroupChat(chatId: ID!, userIds: [ID!]!): Chat
-  #leaveGroupChat(chatId: ID!): Chat
+  createGroupChat(chatId: ID!, name: String, userIds: [ID!]!, messageId: ID!, messageText: String!): Chat
+  editGroupChat(chatId: ID!, name: String!): Chat
+  addToGroupChat(chatId: ID!, userIds: [ID!]!): Chat
+  leaveGroupChat(chatId: ID!): Chat
 
   # Chat messages
   #   - may only be edited or deleted by message author
@@ -376,7 +376,8 @@ type ChatMessage {
   createdAt: AWSDateTime!
   lastEditedAt: AWSDateTime
   chat: Chat!
-  author: User  # null if this is a system message (ex: 'user X left the chat')
+  authorUserId: ID!  # null if this is a system message (ex: 'user X left the chat')
+  author: User  # null if either system message, or user deleted, or blocked/er by/of caller
   viewedStatus: ViewedStatus!  # has the caller viewed this message?
 }
 

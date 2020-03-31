@@ -9,9 +9,9 @@ def chat_dynamo(dynamo_client):
     yield ChatDynamo(dynamo_client)
 
 
-def test_transact_add_chat_minimal(chat_dynamo):
+def test_transact_add_group_chat_minimal(chat_dynamo):
     chat_id = 'cid'
-    chat_type = 'ctype'
+    chat_type = 'GROUP'
     user_id = 'cuid'
 
     # add the chat to the DB
@@ -30,9 +30,40 @@ def test_transact_add_chat_minimal(chat_dynamo):
         'sortKey': '-',
         'schemaVersion': 0,
         'chatId': 'cid',
-        'chatType': 'ctype',
+        'chatType': 'GROUP',
         'createdAt': created_at.to_iso8601_string(),
-        'createdByUserId': user_id,
+        'createdByUserId': 'cuid',
+        'userCount': 1,
+    }
+
+    # verify we can't add another chat with same id
+    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_dynamo.client.transact_write_items([transact])
+
+
+def test_transact_add_group_chat_maximal(chat_dynamo):
+    chat_id = 'cid'
+    chat_type = 'GROUP'
+    user_id = 'cuid'
+    name = 'group name'
+
+    # add the chat to the DB
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_id, name=name, now=now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # retrieve the chat and verify all good
+    chat_item = chat_dynamo.get_chat(chat_id)
+    assert chat_item == {
+        'partitionKey': 'chat/cid',
+        'sortKey': '-',
+        'schemaVersion': 0,
+        'chatId': 'cid',
+        'chatType': 'GROUP',
+        'createdAt': now.to_iso8601_string(),
+        'createdByUserId': 'cuid',
+        'userCount': 1,
+        'name': 'group name'
     }
 
     # verify we can't add another chat with same id
@@ -65,7 +96,7 @@ def test_transact_add_direct_chat_maximal(chat_dynamo):
         'name': 'cname',
         'userCount': 2,
         'createdAt': now.to_iso8601_string(),
-        'createdByUserId': creator_user_id,
+        'createdByUserId': 'uidb',
     }
 
 
@@ -75,6 +106,25 @@ def test_transact_add_chat_errors(chat_dynamo):
 
     with pytest.raises(AssertionError, match='forbit with_user_id'):
         chat_dynamo.transact_add_chat('cid', 'GROUP', 'uid', with_user_id='uid')
+
+
+def test_update_name(chat_dynamo):
+    chat_id = 'cid'
+    chat_type = 'ctype'
+    user_id = 'uid'
+
+    # add the chat to the DB, verify it is in DB
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_id)
+    chat_dynamo.client.transact_write_items([transact])
+    assert 'name' not in chat_dynamo.get_chat(chat_id)
+
+    # update the chat name to something
+    chat_dynamo.update_name(chat_id, 'new name')
+    assert chat_dynamo.get_chat(chat_id)['name'] == 'new name'
+
+    # delete the chat name
+    chat_dynamo.update_name(chat_id, '')
+    assert 'name' not in chat_dynamo.get_chat(chat_id)
 
 
 def test_transact_delete_chat(chat_dynamo):
@@ -91,6 +141,58 @@ def test_transact_delete_chat(chat_dynamo):
     transact = chat_dynamo.transact_delete_chat(chat_id)
     chat_dynamo.client.transact_write_items([transact])
     assert chat_dynamo.get_chat(chat_id) is None
+
+
+def test_transact_delete_chat_expected_user_count(chat_dynamo):
+    chat_id = 'cid'
+    chat_type = 'ctype'
+    user_id = 'uid'
+
+    # add the chat to the DB, verify it is in DB
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_id)
+    chat_dynamo.client.transact_write_items([transact])
+    assert chat_dynamo.get_chat(chat_id)['userCount'] == 1
+
+    # verify can't deleted with wrong userCount
+    transact = chat_dynamo.transact_delete_chat(chat_id, expected_user_count=0)
+    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_dynamo.client.transact_write_items([transact])
+
+    # delete it, verify it was removed from DB
+    transact = chat_dynamo.transact_delete_chat(chat_id, expected_user_count=1)
+    chat_dynamo.client.transact_write_items([transact])
+    assert chat_dynamo.get_chat(chat_id) is None
+
+
+def test_increment_decrement_chat_user_count(chat_dynamo):
+    chat_id = 'cid'
+    chat_type = 'ctype'
+    user_id = 'uid'
+
+    # add the chat to the DB, verify it is in DB
+    transact = chat_dynamo.transact_add_chat(chat_id, chat_type, user_id)
+    chat_dynamo.client.transact_write_items([transact])
+    assert chat_dynamo.get_chat(chat_id)['userCount'] == 1
+
+    # increment
+    transacts = [chat_dynamo.transact_increment_chat_user_count(chat_id)]
+    chat_dynamo.client.transact_write_items(transacts)
+    assert chat_dynamo.get_chat(chat_id)['userCount'] == 2
+
+    # decrement
+    transacts = [chat_dynamo.transact_decrement_chat_user_count(chat_id)]
+    chat_dynamo.client.transact_write_items(transacts)
+    assert chat_dynamo.get_chat(chat_id)['userCount'] == 1
+
+    # decrement
+    transacts = [chat_dynamo.transact_decrement_chat_user_count(chat_id)]
+    chat_dynamo.client.transact_write_items(transacts)
+    assert chat_dynamo.get_chat(chat_id)['userCount'] == 0
+
+    # verify can't go below zero
+    transacts = [chat_dynamo.transact_decrement_chat_user_count(chat_id)]
+    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_dynamo.client.transact_write_items(transacts)
 
 
 def test_transact_add_chat_membership(chat_dynamo):

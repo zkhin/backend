@@ -419,3 +419,44 @@ test('resetUser deletes all of our direct chats', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']).toBeNull()
 })
+
+
+test('resetUser causes us to leave group chats', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we create a group chat with them
+  const [chatId, messageId] = [uuidv4(), uuidv4()]
+  let variables = {chatId, userIds: [theirUserId], messageId, messageText: 'm1'}
+  let resp = await ourClient.mutate({mutation: schema.createGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createGroupChat']['chatId']).toBe(chatId)
+
+  // check they see us and our chat message in the second group chat
+  resp = await theirClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['userCount']).toBe(2)
+  expect(resp['data']['chat']['users']['items'].map(u => u['userId']).sort())
+    .toEqual([ourUserId, theirUserId].sort())
+  expect(resp['data']['chat']['messageCount']).toBe(1)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
+  expect(resp['data']['chat']['messages']['items'][0]['authorUserId']).toBe(ourUserId)
+  expect(resp['data']['chat']['messages']['items'][0]['author']['userId']).toBe(ourUserId)
+
+  // reset our user
+  await ourClient.mutate({mutation: schema.resetUser})
+
+  // check we disappeared from the chat, and our message now appears without an author
+  resp = await theirClient.query({query: schema.chat, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['userCount']).toBe(1)
+  expect(resp['data']['chat']['users']['items'].map(u => u['userId'])).toEqual([theirUserId])
+  expect(resp['data']['chat']['messageCount']).toBe(1)
+  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
+  expect(resp['data']['chat']['messages']['items'][0]['authorUserId']).toBe(ourUserId)
+  expect(resp['data']['chat']['messages']['items'][0]['author']).toBeNull()
+})

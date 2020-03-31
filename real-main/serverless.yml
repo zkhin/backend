@@ -309,6 +309,11 @@ custom:
         response: PassThru.response.vtl
 
       - type: ChatMessage
+        field: authorUserId
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: ChatMessage
         field: chat
         request: ChatMessage.chat/before.request.vtl
         response: ChatMessage.chat/after.response.vtl
@@ -752,6 +757,30 @@ custom:
         response: Lambda.response.vtl
 
       - type: Mutation
+        field: createGroupChat
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: editGroupChat
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: addToGroupChat
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: leaveGroupChat
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
         field: addChatMessage
         dataSource: LambdaDataSource
         request: Lambda.request.vtl
@@ -807,14 +836,12 @@ custom:
         kind: PIPELINE
         functions:
           - ChatMessages.batchGet
-          - PaginatedChatMessages.items.hideSystemMessages
-          - Users.beginPipeline
+          - PaginatedChatMessages.items.beginUserPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
-          - Users.endPipeline
-          - PaginatedChatMessages.items.unhideSystemMessages
+          - PaginatedChatMessages.items.endUserPipeline
 
       - type: PaginatedComments
         field: items
@@ -922,13 +949,13 @@ custom:
         response: PassThru.response.vtl
 
       - dataSource: NoneDataSource
-        name: PaginatedChatMessages.items.hideSystemMessages
-        request: PaginatedChatMessages.items/hideSystemMessages.request.vtl
+        name: PaginatedChatMessages.items.beginUserPipeline
+        request: PaginatedChatMessages.items/beginUserPipeline.request.vtl
         response: PassThru.response.vtl
 
       - dataSource: NoneDataSource
-        name: PaginatedChatMessages.items.unhideSystemMessages
-        request: PaginatedChatMessages.items/unhideSystemMessages.request.vtl
+        name: PaginatedChatMessages.items.endUserPipeline
+        request: PaginatedChatMessages.items/endUserPipeline.request.vtl
         response: PassThru.response.vtl
 
     dataSources:

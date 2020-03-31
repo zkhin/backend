@@ -59,7 +59,6 @@ test('Create a direct chat', async () => {
   const chatCreatedAt = chat['createdAt']
   expect(chat['lastMessageActivityAt']).toBe(chatCreatedAt)
   expect(chat['userCount']).toBe(2)
-  expect(chat['users']['items']).toHaveLength(2)
   expect(chat['users']['items'].map(u => u['userId']).sort()).toEqual([ourUserId, theirUserId].sort())
   expect(chat['messageCount']).toBe(1)
   expect(chat['messages']['items']).toHaveLength(1)

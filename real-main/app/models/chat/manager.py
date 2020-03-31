@@ -40,6 +40,7 @@ class ChatManager:
 
     def init_chat(self, chat_item):
         kwargs = {
+            'block_manager': self.block_manager,
             'chat_message_manager': self.chat_message_manager,
             'user_manager': self.user_manager,
         }
@@ -84,10 +85,30 @@ class ChatManager:
 
         return self.get_chat(chat_id, strongly_consistent=True)
 
+    def add_group_chat(self, chat_id, created_by_user_id, name=None, now=None):
+        now = now or pendulum.now('utc')
+
+        # create the group chat with just caller in it
+        transacts = [
+            self.dynamo.transact_add_chat(chat_id, enums.ChatType.GROUP, created_by_user_id, name=name, now=now),
+            self.dynamo.transact_add_chat_membership(chat_id, created_by_user_id, now=now),
+            self.user_manager.dynamo.transact_increment_chat_count(created_by_user_id),
+        ]
+        transact_exceptions = [
+            exceptions.ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
+            exceptions.ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
+            exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
+        ]
+        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        return self.get_chat(chat_id, strongly_consistent=True)
+
     def leave_all_chats(self, user_id):
         for chat_id in self.dynamo.generate_chat_membership_chat_ids_by_user(user_id):
             chat = self.get_chat(chat_id)
             if not chat:
                 logger.warning(f'Unable to find chat `{chat_id}` that user `{user_id}` is member of, ignoring')
                 continue
-            chat.leave_chat(user_id)
+            if chat.type == enums.ChatType.DIRECT:
+                chat.delete_direct_chat()
+            else:
+                chat.leave(user_id)

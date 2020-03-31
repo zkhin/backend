@@ -70,6 +70,7 @@ def test_add_direct_chat(chat_manager, user1, user2):
     assert chat.id == chat_id
     assert chat.type == ChatType.DIRECT
     assert chat.item['createdAt'] == now.to_iso8601_string()
+    assert chat.item['createdByUserId'] == user1.id
     assert chat.item.get('messageCount', 0) == 0
     assert chat.item.get('name') is None
 
@@ -84,6 +85,57 @@ def test_add_direct_chat(chat_manager, user1, user2):
     assert sorted(user_ids) == sorted([user1.id, user2.id])
 
 
+def test_add_minimal_group_chat(chat_manager, user1):
+    # verify user's chat count start at zero
+    assert user1.item.get('chatCount', 0) == 0
+
+    # add the chat, verify it looks ok
+    chat_id = 'cid'
+    before = pendulum.now('utc').to_iso8601_string()
+    chat = chat_manager.add_group_chat(chat_id, user1.id)
+    after = pendulum.now('utc').to_iso8601_string()
+    assert chat.id == chat_id
+    assert chat.type == ChatType.GROUP
+    assert chat.item.get('messageCount', 0) == 0
+    assert chat.item.get('name') is None
+    assert chat.item['createdByUserId'] == user1.id
+    assert before <= chat.item['createdAt']
+    assert after >= chat.item['createdAt']
+
+    # verify user's chat counts have incremented
+    user1.refresh_item()
+    assert user1.item.get('chatCount', 0) == 1
+
+    # verify chat membership was created
+    user_ids = list(chat_manager.dynamo.generate_chat_membership_user_ids_by_chat(chat_id))
+    assert user_ids == [user1.id]
+
+
+def test_add_maximal_group_chat(chat_manager, user1):
+    # verify user's chat count start at zero
+    assert user1.item.get('chatCount', 0) == 0
+
+    # add the chat, verify it looks ok
+    chat_id = 'cid'
+    name = 'lore'
+    now = pendulum.now('utc')
+    chat = chat_manager.add_group_chat(chat_id, user1.id, name=name, now=now)
+    assert chat.id == chat_id
+    assert chat.type == ChatType.GROUP
+    assert chat.item.get('messageCount', 0) == 0
+    assert chat.item['name'] == name
+    assert chat.item['createdByUserId'] == user1.id
+    assert pendulum.parse(chat.item['createdAt']) == now
+
+    # verify user's chat counts have incremented
+    user1.refresh_item()
+    assert user1.item.get('chatCount', 0) == 1
+
+    # verify chat membership was created
+    user_ids = list(chat_manager.dynamo.generate_chat_membership_user_ids_by_chat(chat_id))
+    assert user_ids == [user1.id]
+
+
 def test_leave_all_chats(chat_manager, user1, user2, user3):
     # user1 opens up direct chats with both of the other two users
     chat_id_1 = 'cid1'
@@ -91,21 +143,32 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     chat_manager.add_direct_chat(chat_id_1, user1.id, user2.id)
     chat_manager.add_direct_chat(chat_id_2, user1.id, user3.id)
 
+    # user1 sets up a group chat with only themselves in it, and another with user2
+    chat_id_3 = 'cid3'
+    chat_id_4 = 'cid4'
+    chat_manager.add_group_chat(chat_id_3, user1.id)
+    chat_manager.add_group_chat(chat_id_4, user1.id).add([user2.id])
+
     # verify that's reflected in the user totals
     user1.refresh_item()
     user2.refresh_item()
     user3.refresh_item()
-    assert user1.item['chatCount'] == 2
-    assert user2.item['chatCount'] == 1
+    assert user1.item['chatCount'] == 4
+    assert user2.item['chatCount'] == 2
     assert user3.item['chatCount'] == 1
 
     # verify we see the chat and chat_memberships in the DB
-    assert chat_manager.dynamo.get_chat(chat_id_1)
-    assert chat_manager.dynamo.get_chat(chat_id_2)
+    assert chat_manager.dynamo.get_chat(chat_id_1)['userCount'] == 2
+    assert chat_manager.dynamo.get_chat(chat_id_2)['userCount'] == 2
+    assert chat_manager.dynamo.get_chat(chat_id_3)['userCount'] == 1
+    assert chat_manager.dynamo.get_chat(chat_id_4)['userCount'] == 2
     assert chat_manager.dynamo.get_chat_membership(chat_id_1, user1.id)
     assert chat_manager.dynamo.get_chat_membership(chat_id_1, user2.id)
     assert chat_manager.dynamo.get_chat_membership(chat_id_2, user1.id)
     assert chat_manager.dynamo.get_chat_membership(chat_id_2, user3.id)
+    assert chat_manager.dynamo.get_chat_membership(chat_id_3, user1.id)
+    assert chat_manager.dynamo.get_chat_membership(chat_id_4, user1.id)
+    assert chat_manager.dynamo.get_chat_membership(chat_id_4, user2.id)
 
     # user1 leaves all their chats, which should trigger deletes of both direct chats
     chat_manager.leave_all_chats(user1.id)
@@ -115,13 +178,18 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     user2.refresh_item()
     user3.refresh_item()
     assert user1.item['chatCount'] == 0
-    assert user2.item['chatCount'] == 0
+    assert user2.item['chatCount'] == 1
     assert user3.item['chatCount'] == 0
 
     # verify we see the chat and chat_memberships in the DB
     assert chat_manager.dynamo.get_chat(chat_id_1) is None
     assert chat_manager.dynamo.get_chat(chat_id_2) is None
+    assert chat_manager.dynamo.get_chat(chat_id_3) is None
+    assert chat_manager.dynamo.get_chat(chat_id_4)['userCount'] == 1
     assert chat_manager.dynamo.get_chat_membership(chat_id_1, user1.id) is None
     assert chat_manager.dynamo.get_chat_membership(chat_id_1, user2.id) is None
     assert chat_manager.dynamo.get_chat_membership(chat_id_2, user1.id) is None
     assert chat_manager.dynamo.get_chat_membership(chat_id_2, user3.id) is None
+    assert chat_manager.dynamo.get_chat_membership(chat_id_3, user1.id) is None
+    assert chat_manager.dynamo.get_chat_membership(chat_id_4, user1.id) is None
+    assert chat_manager.dynamo.get_chat_membership(chat_id_4, user2.id)

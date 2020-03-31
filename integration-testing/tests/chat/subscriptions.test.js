@@ -142,6 +142,7 @@ test('Multiple messages notifications fire', async () => {
   expect(ourMsgNotifications[1]['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
   expect(theirMsgNotifications).toEqual(ourMsgNotifications)
 
+  // shut down the subscriptions
   ourSub.unsubscribe()
   theirSub.unsubscribe()
   await ourSubInitTimeout
@@ -259,6 +260,143 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
     '__typename': 'ChatMessageNotification',
   })
 
+  // shut down the subscription
   sub.unsubscribe()
   await subInitTimeout
+})
+
+
+test('Notifications for a group chat', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
+  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+
+  // we create a group chat with all of us in it
+  const chatId = uuidv4()
+  let variables = {chatId, userIds: [other1UserId, other2UserId], messageId: uuidv4(), messageText: 'm1'}
+  let resp = await ourClient.mutate({mutation: schema.createGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createGroupChat']['chatId']).toBe(chatId)
+
+  // we initialize a subscription to new message notifications from the chat
+  const [resolvers, rejectors] = [[], []]
+  let nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
+  const sub = await ourClient
+    .subscribe({query: schema.onChatMessageNotification, variables: {chatId}})
+    .subscribe({
+      next: resp => { rejectors.pop(); resolvers.pop()(resp) },
+      error: resp => { resolvers.pop(); rejectors.pop()(resp) },
+    })
+  const subInitTimeout = misc.sleep(15000)  // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000)  // let the subscription initialize
+
+  // other1 adds a message to the chat
+  const messageId2 = uuidv4()
+  variables = {chatId, messageId: messageId2, text: 'text 2'}
+  resp = await other1Client.mutate({mutation: schema.addChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addChatMessage']['messageId']).toBe(messageId2)
+
+  // verify we received the message
+  resp = await nextNotification
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(other1UserId)
+  nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
+
+  // other2 adds a message to the chat
+  const messageId3 = uuidv4()
+  variables = {chatId, messageId: messageId3, text: 'text 3'}
+  resp = await other2Client.mutate({mutation: schema.addChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addChatMessage']['messageId']).toBe(messageId3)
+
+  // verify we received the message
+  resp = await nextNotification
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
+  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(other2UserId)
+
+  // shut down our subscription
+  sub.unsubscribe()
+  await subInitTimeout
+})
+
+
+/**
+ * AppSync's limited graphql subscription features don't allow filtering of message notifications on a
+ * per-user basis. All clients subscribed to notifications from a chat receive the same notifications.
+ *
+ * This test verifies appsync is behaving as expected, not afirming that the system *should*
+ * behave this way. If jest had an 'expected to fail' notation, then the opposite of this test
+ * would be written and it would be marked as 'expected to fail'.
+ */
+test('Message notifications do not respect blocking relationships in a group chat', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we create a group chat with both of us in it
+  const chatId = uuidv4()
+  let variables = {chatId, userIds: [theirUserId], messageId: uuidv4(), messageText: 'm1'}
+  let resp = await ourClient.mutate({mutation: schema.createGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createGroupChat']['chatId']).toBe(chatId)
+  expect(resp['data']['createGroupChat']['userCount']).toBe(2)
+  expect(resp['data']['createGroupChat']['users']['items'].map(u => u['userId']).sort())
+    .toEqual([ourUserId, theirUserId].sort())
+
+  // they block us
+  resp = await theirClient.mutate({mutation: schema.blockUser, variables: {userId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['blockUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
+
+  // they listen to notifciations from the group chat
+  let next, error
+  const theirNextNotification = new Promise((resolve, reject) => {next = resolve; error = reject})
+  const theirSub = await theirClient
+    .subscribe({query: schema.onChatMessageNotification, variables: {chatId}})
+    .subscribe({next, error})
+  const theirSubInitTimeout = misc.sleep(15000)  // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000)  // let the subscription initialize
+
+  // we add a message
+  const messageId2 = uuidv4()
+  variables = {chatId, messageId: messageId2, text: 'lore'}
+  resp = await ourClient.mutate({mutation: schema.addChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addChatMessage']['messageId']).toBe(messageId2)
+
+  // verify they received a notifcation for our message (would be better if they didn't)
+  resp = await theirNextNotification
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(ourUserId)
+
+  // we listen to notifciations from the group chat
+  const ourNextNotification = new Promise((resolve, reject) => {next = resolve; error = reject})
+  const ourSub = await ourClient
+    .subscribe({query: schema.onChatMessageNotification, variables: {chatId}})
+    .subscribe({next, error})
+  const ourSubInitTimeout = misc.sleep(15000)  // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000)  // let the subscription initialize
+
+  // they add a message
+  const messageId3 = uuidv4()
+  variables = {chatId, messageId: messageId3, text: 'ipsum'}
+  resp = await theirClient.mutate({mutation: schema.addChatMessage, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addChatMessage']['messageId']).toBe(messageId3)
+
+  // verify we received a notifcation for their message (would be better if we didn't)
+  resp = await ourNextNotification
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
+  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(theirUserId)
+
+  // shut down the subscriptions
+  ourSub.unsubscribe()
+  theirSub.unsubscribe()
+  await ourSubInitTimeout
+  await theirSubInitTimeout
 })

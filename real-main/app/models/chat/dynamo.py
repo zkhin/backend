@@ -61,16 +61,38 @@ class ChatDynamo:
             query_kwargs['Put']['Item']['userCount'] = {'N': '2'}
             query_kwargs['Put']['Item']['gsiA1PartitionKey'] = {'S': f'chat/{user_id_1}/{user_id_2}'}
             query_kwargs['Put']['Item']['gsiA1SortKey'] = {'S': '-'}
+        else:
+            query_kwargs['Put']['Item']['userCount'] = {'N': '1'}
         return query_kwargs
 
-    def transact_delete_chat(self, chat_id):
-        return {'Delete': {
+    def update_name(self, chat_id, name):
+        "Set `name` to empty string to delete"
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'chat/{chat_id}',
+                'sortKey': '-',
+            },
+            'ExpressionAttributeNames': {'#name': 'name'},
+        }
+        if name:
+            query_kwargs['UpdateExpression'] = 'SET #name = :name'
+            query_kwargs['ExpressionAttributeValues'] = {':name': name}
+        else:
+            query_kwargs['UpdateExpression'] = 'REMOVE #name'
+        return self.client.update_item(query_kwargs)
+
+    def transact_delete_chat(self, chat_id, expected_user_count=None):
+        query_kwargs = {'Delete': {
             'Key': {
                 'partitionKey': {'S': f'chat/{chat_id}'},
                 'sortKey': {'S': '-'},
             },
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
+        if expected_user_count is not None:
+            query_kwargs['Delete']['ConditionExpression'] += ' AND userCount = :uc'
+            query_kwargs['Delete']['ExpressionAttributeValues'] = {':uc': {'N': str(expected_user_count)}}
+        return query_kwargs
 
     def transact_add_chat_membership(self, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')
@@ -95,6 +117,33 @@ class ChatDynamo:
                 'sortKey': {'S': f'member/{user_id}'},
             },
             'ConditionExpression': 'attribute_exists(partitionKey)',
+        }}
+
+    def transact_increment_chat_user_count(self, chat_id):
+        return {'Update': {
+            'Key': {
+                'partitionKey': {'S': f'chat/{chat_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'UpdateExpression': 'ADD userCount :one',
+            'ExpressionAttributeValues': {
+                ':one': {'N': '1'},
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }}
+
+    def transact_decrement_chat_user_count(self, chat_id):
+        return {'Update': {
+            'Key': {
+                'partitionKey': {'S': f'chat/{chat_id}'},
+                'sortKey': {'S': '-'},
+            },
+            'UpdateExpression': 'ADD userCount :negOne',
+            'ExpressionAttributeValues': {
+                ':negOne': {'N': '-1'},
+                ':zero': {'N': '0'},
+            },
+            'ConditionExpression': 'attribute_exists(partitionKey) AND userCount > :zero',
         }}
 
     def transact_register_chat_message_added(self, chat_id, now):
