@@ -376,7 +376,7 @@ type ChatMessage {
   createdAt: AWSDateTime!
   lastEditedAt: AWSDateTime
   chat: Chat!
-  authorUserId: ID!  # null if this is a system message (ex: 'user X left the chat')
+  authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
   author: User  # null if either system message, or user deleted, or blocked/er by/of caller
   viewedStatus: ViewedStatus!  # has the caller viewed this message?
 }
