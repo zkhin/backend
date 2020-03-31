@@ -100,6 +100,8 @@ class ChatManager:
             exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+
+        self.chat_message_manager.add_system_message_group_created(chat_id, created_by_user_id, name=name, now=now)
         return self.get_chat(chat_id, strongly_consistent=True)
 
     def leave_all_chats(self, user_id):

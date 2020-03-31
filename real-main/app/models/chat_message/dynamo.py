@@ -18,7 +18,7 @@ class ChatMessageDynamo:
 
     def transact_add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now):
         created_at_str = now.to_iso8601_string()
-        return {'Put': {
+        query_kwargs = {'Put': {
             'Item': {
                 'schemaVersion': {'N': '0'},
                 'partitionKey': {'S': f'chatMessage/{message_id}'},
@@ -27,7 +27,6 @@ class ChatMessageDynamo:
                 'gsiA1SortKey': {'S': created_at_str},
                 'messageId': {'S': message_id},
                 'chatId': {'S': chat_id},
-                'userId': {'S': author_user_id},
                 'createdAt': {'S': created_at_str},
                 'text': {'S': text},
                 'textTags': {'L': [
@@ -40,6 +39,9 @@ class ChatMessageDynamo:
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
+        if author_user_id:
+            query_kwargs['Put']['Item']['userId'] = {'S': author_user_id}
+        return query_kwargs
 
     def transact_edit_chat_message(self, message_id, text, text_tags, now):
         return {'Update': {

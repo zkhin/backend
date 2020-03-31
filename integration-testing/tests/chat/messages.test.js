@@ -399,7 +399,7 @@ test('Delete chat message', async () => {
 })
 
 
-test.only('User.chats sort order should react to message adds, edits and deletes', async () => {
+test('User.chats sort order should react to message adds, edits and deletes', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [other1Client] = await loginCache.getCleanLogin()
   const [other2Client] = await loginCache.getCleanLogin()

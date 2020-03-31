@@ -267,7 +267,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 
 
 test('Notifications for a group chat', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
   const [other1Client, other1UserId] = await loginCache.getCleanLogin()
   const [other2Client, other2UserId] = await loginCache.getCleanLogin()
 
@@ -302,6 +302,26 @@ test('Notifications for a group chat', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId2)
   expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(other1UserId)
+  nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
+
+  // we edit group name to trigger a system message
+  variables = {chatId, name: 'new name'}
+  resp = await ourClient.mutate({mutation: schema.editGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['editGroupChat']['chatId']).toBe(chatId)
+  expect(resp['data']['editGroupChat']['name']).toBe('new name')
+
+  // verify we received the message
+  resp = await nextNotification
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onChatMessageNotification']['messageId']).toBeTruthy()
+  expect(resp['data']['onChatMessageNotification']['text']).toContain(ourUsername)
+  expect(resp['data']['onChatMessageNotification']['text']).toContain('changed the name of the group')
+  expect(resp['data']['onChatMessageNotification']['text']).toContain('"new name"')
+  expect(resp['data']['onChatMessageNotification']['textTaggedUserIds']).toHaveLength(1)
+  expect(resp['data']['onChatMessageNotification']['textTaggedUserIds'][0]['tag']).toContain(ourUsername)
+  expect(resp['data']['onChatMessageNotification']['textTaggedUserIds'][0]['userId']).toContain(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBeNull()
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
 
   // other2 adds a message to the chat

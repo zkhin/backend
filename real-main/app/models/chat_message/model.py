@@ -40,7 +40,7 @@ class ChatMessage:
         # immutables
         self.id = item['messageId']
         self.chat_id = self.item['chatId']
-        self.user_id = self.item['userId']
+        self.user_id = self.item.get('userId')  # system messages have no userId
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_chat_message(self.id, strongly_consistent=strongly_consistent)

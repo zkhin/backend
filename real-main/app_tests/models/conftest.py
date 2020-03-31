@@ -146,8 +146,8 @@ def block_manager(dynamo_client):
 
 
 @pytest.fixture
-def chat_manager(dynamo_client):
-    yield ChatManager({'dynamo': dynamo_client})
+def chat_manager(dynamo_client, appsync_client):
+    yield ChatManager({'appsync': appsync_client, 'dynamo': dynamo_client})
 
 
 @pytest.fixture

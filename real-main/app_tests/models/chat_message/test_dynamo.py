@@ -9,10 +9,10 @@ def chat_message_dynamo(dynamo_client):
     yield ChatMessageDynamo(dynamo_client)
 
 
-def test_transact_add_chat_message(chat_message_dynamo):
+@pytest.mark.parametrize("user_id", ['uid', None])
+def test_transact_add_chat_message(chat_message_dynamo, user_id):
     message_id = 'mid'
     chat_id = 'cid'
-    user_id = 'uid'
     text = 'message_text'
     text_tags = [
         {'tag': '@1', 'userId': 'uidt1'},
@@ -26,7 +26,7 @@ def test_transact_add_chat_message(chat_message_dynamo):
 
     # retrieve the message and verify all good
     item = chat_message_dynamo.get_chat_message(message_id)
-    assert item == {
+    expected_item = {
         'partitionKey': 'chatMessage/mid',
         'sortKey': '-',
         'schemaVersion': 0,
@@ -34,11 +34,13 @@ def test_transact_add_chat_message(chat_message_dynamo):
         'gsiA1SortKey': now.to_iso8601_string(),
         'messageId': 'mid',
         'chatId': 'cid',
-        'userId': 'uid',
         'createdAt': now.to_iso8601_string(),
         'text': text,
         'textTags': text_tags,
     }
+    if user_id:
+        expected_item['userId'] = user_id
+    assert item == expected_item
 
     # verify we can't add another chat with same id
     with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):

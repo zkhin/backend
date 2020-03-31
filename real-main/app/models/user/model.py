@@ -55,6 +55,10 @@ class User:
         self.placeholder_photos_directory = placeholder_photos_directory
         self.frontend_resources_domain = frontend_resources_domain
 
+    @property
+    def username(self):
+        return self.item['username']
+
     def get_photo_path(self, size, photo_media_id=None):
         photo_media_id = photo_media_id or self.item.get('photoMediaId')
         if not photo_media_id:

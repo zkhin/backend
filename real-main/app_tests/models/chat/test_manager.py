@@ -1,3 +1,5 @@
+from unittest.mock import Mock, call
+
 import pendulum
 import pytest
 
@@ -86,21 +88,23 @@ def test_add_direct_chat(chat_manager, user1, user2):
 
 
 def test_add_minimal_group_chat(chat_manager, user1):
-    # verify user's chat count start at zero
+    # verify and set up starting state
     assert user1.item.get('chatCount', 0) == 0
+    chat_manager.chat_message_manager = Mock()
 
     # add the chat, verify it looks ok
     chat_id = 'cid'
-    before = pendulum.now('utc').to_iso8601_string()
+    before = pendulum.now('utc')
     chat = chat_manager.add_group_chat(chat_id, user1.id)
-    after = pendulum.now('utc').to_iso8601_string()
+    after = pendulum.now('utc')
     assert chat.id == chat_id
     assert chat.type == ChatType.GROUP
     assert chat.item.get('messageCount', 0) == 0
     assert chat.item.get('name') is None
     assert chat.item['createdByUserId'] == user1.id
-    assert before <= chat.item['createdAt']
-    assert after >= chat.item['createdAt']
+    created_at = pendulum.parse(chat.item['createdAt'])
+    assert before <= created_at
+    assert after >= created_at
 
     # verify user's chat counts have incremented
     user1.refresh_item()
@@ -110,10 +114,16 @@ def test_add_minimal_group_chat(chat_manager, user1):
     user_ids = list(chat_manager.dynamo.generate_chat_membership_user_ids_by_chat(chat_id))
     assert user_ids == [user1.id]
 
+    # verify the system chat message was triggered
+    assert chat_manager.chat_message_manager.mock_calls == [
+        call.add_system_message_group_created(chat_id, user1.id, name=None, now=created_at),
+    ]
+
 
 def test_add_maximal_group_chat(chat_manager, user1):
-    # verify user's chat count start at zero
+    # verify and set up starting state
     assert user1.item.get('chatCount', 0) == 0
+    chat_manager.chat_message_manager = Mock()
 
     # add the chat, verify it looks ok
     chat_id = 'cid'
@@ -135,6 +145,11 @@ def test_add_maximal_group_chat(chat_manager, user1):
     user_ids = list(chat_manager.dynamo.generate_chat_membership_user_ids_by_chat(chat_id))
     assert user_ids == [user1.id]
 
+    # verify the system chat message was triggered
+    assert chat_manager.chat_message_manager.mock_calls == [
+        call.add_system_message_group_created(chat_id, user1.id, name=name, now=now),
+    ]
+
 
 def test_leave_all_chats(chat_manager, user1, user2, user3):
     # user1 opens up direct chats with both of the other two users
@@ -147,7 +162,7 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     chat_id_3 = 'cid3'
     chat_id_4 = 'cid4'
     chat_manager.add_group_chat(chat_id_3, user1.id)
-    chat_manager.add_group_chat(chat_id_4, user1.id).add([user2.id])
+    chat_manager.add_group_chat(chat_id_4, user1.id).add(user1.id, [user2.id])
 
     # verify that's reflected in the user totals
     user1.refresh_item()

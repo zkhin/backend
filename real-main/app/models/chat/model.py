@@ -39,21 +39,30 @@ class Chat:
         for user_id in self.dynamo.generate_chat_membership_user_ids_by_chat(self.id):
             self.dynamo.update_chat_membership_last_message_activity_at(self.id, user_id, now)
 
-    def edit(self, name=None):
+    def edit(self, edited_by_user_id, name=None):
         if self.type != enums.ChatType.GROUP:
             raise exceptions.ChatException(f'Cannot edit non-GROUP chat `{self.id}`')
 
         if name is None:
             return
         self.item = self.dynamo.update_name(self.id, name)
+        self.chat_message_manager.add_system_message_group_name_edited(self.id, edited_by_user_id, name)
+        self.item['messageCount'] = self.item.get('messageCount', 0) + 1
         return self
 
-    def add(self, user_ids, added_by_user_id=None, now=None):
+    def add(self, added_by_user_id, user_ids, now=None):
         now = now or pendulum.now('utc')
         if self.type != enums.ChatType.GROUP:
             raise exceptions.ChatException(f'Cannot add users to non-GROUP chat `{self.id}`')
 
+        users = []
         for user_id in set(user_ids):
+
+            # make sure the user exists
+            user = self.user_manager.get_user(user_id)
+            if not user:
+                continue
+
             if added_by_user_id is not None:
                 if user_id == added_by_user_id:
                     continue  # must already be in the chat
@@ -81,6 +90,11 @@ class Chat:
                 pass
             else:
                 self.item['userCount'] = self.item.get('userCount', 0) + 1
+                users.append(user)
+
+        if users:
+            self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user_id, users, now=now)
+            self.item['messageCount'] = self.item.get('messageCount', 0) + 1
 
     def leave(self, user_id):
         if self.type != enums.ChatType.GROUP:
@@ -103,6 +117,9 @@ class Chat:
         # were we the last user in the chat? If so, clean up
         if self.item['userCount'] <= 0:
             self.delete_group_chat()
+        else:
+            self.chat_message_manager.add_system_message_left_group(self.id, user_id)
+            self.item['messageCount'] = self.item.get('messageCount', 0) + 1
 
         return self
 

@@ -928,11 +928,10 @@ def create_group_chat(caller_user_id, arguments, source, context):
     chat_id, user_ids, name = arguments['chatId'], arguments['userIds'], arguments.get('name')
     message_id, message_text = arguments['messageId'], arguments['messageText']
 
-    now = pendulum.now('utc')
     try:
-        chat = chat_manager.add_group_chat(chat_id, caller_user_id, name=name, now=now)
-        chat.add(user_ids, added_by_user_id=caller_user_id, now=now)
-        chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id, now=now)
+        chat = chat_manager.add_group_chat(chat_id, caller_user_id, name=name)
+        chat.add(caller_user_id, user_ids)
+        chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id)
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
@@ -951,7 +950,7 @@ def edit_group_chat(caller_user_id, arguments, source, context):
         raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
 
     try:
-        chat.edit(name=name)
+        chat.edit(caller_user_id, name=name)
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
@@ -967,7 +966,7 @@ def add_to_group_chat(caller_user_id, arguments, source, context):
         raise ClientException(f'User `{caller_user_id}` is not a member of chat `{chat_id}`')
 
     try:
-        chat.add(user_ids, added_by_user_id=caller_user_id)
+        chat.add(caller_user_id, user_ids)
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
