@@ -133,17 +133,5 @@ const signUserUp = async (email, phone, password, autoconfirm, pinpointEndpointI
     },
   }).promise()
 
-  if (pinpointEndpointId) {
-    await AWSPinpoint.updateEndpoint({
-      ApplicationId: pinpointAppId,
-      EndpointId: pinpointEndpointId,
-      EndpointRequest: {
-        User: {
-          UserId: userId
-        },
-      },
-    }).promise()
-  }
-
   console.log(respSignUp)
 }

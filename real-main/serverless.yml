@@ -1312,6 +1312,11 @@ resources:
           - email
           - phone_number
           - family_name
+        AnalyticsConfiguration:
+          ApplicationId: !Ref PinpointApp
+          ExternalId: 'real-cognito-to-pinpoint-client-#{AWS::AccountId}-${self:provider.stage}'
+          RoleArn: !GetAtt CognitoToPinpointRole.Arn
+          UserDataShared: true
 
     CognitoFrontendUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
@@ -1343,17 +1348,11 @@ resources:
         WriteAttributes:
           - email
           - phone_number
-
-    CognitoPinpointClient:
-      Type: AWS::Cognito::UserPoolClient
-      Properties:
         AnalyticsConfiguration:
           ApplicationId: !Ref PinpointApp
           ExternalId: 'real-cognito-to-pinpoint-client-#{AWS::AccountId}-${self:provider.stage}'
           RoleArn: !GetAtt CognitoToPinpointRole.Arn
           UserDataShared: true
-        UserPoolId:
-          Ref: CognitoUserPool
 
     PinpointApp:
       Type: AWS::Pinpoint::App
@@ -1372,13 +1371,17 @@ resources:
                   - cognito-idp.amazonaws.com
               Action:
                 - sts:AssumeRole
+        # copied from an auto-generated role using AWS console
         Policies:
           - PolicyName: CognitoToPinpointPolicy
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
                 - Effect: Allow
-                  Action: mobiletargeting:*
+                  Action: mobiletargeting:UpdateEndpoint
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
+                - Effect: Allow
+                  Action: mobileanalytics:PutItems
                   Resource: '*'
 
     # IAM role for MediaConvert to use to transcode video
