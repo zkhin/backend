@@ -1380,9 +1380,6 @@ resources:
                 - Effect: Allow
                   Action: mobiletargeting:UpdateEndpoint
                   Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
-                - Effect: Allow
-                  Action: mobileanalytics:PutItems
-                  Resource: '*'
 
     # IAM role for MediaConvert to use to transcode video
     MediaCovertRole:
