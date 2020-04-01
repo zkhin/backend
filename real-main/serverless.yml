@@ -1344,6 +1344,43 @@ resources:
           - email
           - phone_number
 
+    CognitoPinpointClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        AnalyticsConfiguration:
+          ApplicationId: !Ref PinpointApp
+          ExternalId: 'real-cognito-to-pinpoint-client-#{AWS::AccountId}-${self:provider.stage}'
+          RoleArn: !GetAtt CognitoToPinpointRole.Arn
+          UserDataShared: true
+        UserPoolId:
+          Ref: CognitoUserPool
+
+    PinpointApp:
+      Type: AWS::Pinpoint::App
+      Properties:
+        Name: REAL-${self:provider.stage}
+
+    CognitoToPinpointRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - cognito-idp.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: CognitoToPinpointPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: mobiletargeting:*
+                  Resource: '*'
+
     # IAM role for MediaConvert to use to transcode video
     MediaCovertRole:
       Type: AWS::IAM::Role
@@ -1539,6 +1576,9 @@ resources:
 
     MediaConvertRoleArn:
       Value: !GetAtt MediaCovertRole.Arn
+
+    PinpointApplicationId:
+      Value: !Ref PinpointApp
 
     UploadsBucketName:
       Value: ${self:provider.environment.UPLOADS_BUCKET}
