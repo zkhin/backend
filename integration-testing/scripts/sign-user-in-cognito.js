@@ -47,6 +47,9 @@ const prmtSchema = {
     destination: {
       description: 'Filename to write the results to? leave blank for stdout',
     },
+    pinpointEndpointId: {
+      description: 'Pinpoint endpoint id to send analytics to? Leave blank to skip',
+    }
   },
 }
 
@@ -56,7 +59,7 @@ prmt.get(prmtSchema, async (err, result) => {
     console.log(err)
     return 1
   }
-  const tokens = await generateTokens(result.username, result.password)
+  const tokens = await generateTokens(result.username, result.password, result.pinpointEndpointId)
   const gqlCreds = await generateGQLCredentials(tokens['IdToken'])
   const output = JSON.stringify({
     authProvider: 'COGNITO',
@@ -67,11 +70,12 @@ prmt.get(prmtSchema, async (err, result) => {
   else console.log(output)
 })
 
-const generateTokens = async (username, password) => {
+const generateTokens = async (username, password, pinpointEndpointId) => {
   // sign them in
   const resp = await cognitoUserPoolClient.initiateAuth({
     AuthFlow: 'USER_PASSWORD_AUTH',
-    AuthParameters: {USERNAME: username, PASSWORD: password},
+    AuthParameters: { USERNAME: username, PASSWORD: password },
+    AnalyticsMetadata: { AnalyticsEndpointId: pinpointEndpointId },
   }).promise()
   return resp['AuthenticationResult']
 }

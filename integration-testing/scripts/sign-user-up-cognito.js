@@ -4,8 +4,10 @@ const AWS = require('aws-sdk')
 const dotenv = require('dotenv')
 const prmt = require('prompt')
 const pwdGenerator = require('generate-password')
+const uuidv4 = require('uuid/v4')
 
 dotenv.config()
+const AWSPinpoint = new AWS.Pinpoint()
 
 const awsRegion = process.env.AWS_REGION
 if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
@@ -18,6 +20,9 @@ if (testingCognitoClientId === undefined) throw new Error('Env var COGNITO_TESTI
 
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
+
+const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
+if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
 
 
 // All users the test client creates must have this family name (or the sign up
@@ -48,6 +53,13 @@ const prmtSchema = {
       type: 'boolean',
       required: true,
     },
+    pinpointAnalytics: {
+      description: 'Send analytics to pinpoint? A new endpoint ID will be automatically generated',
+      default: 'true',
+      message: 'Please enter "t" or "f"',
+      type: 'boolean',
+      required: true,
+    },
   },
 }
 
@@ -59,13 +71,25 @@ prmt.get(prmtSchema, async (err, result) => {
     return 1
   }
   if (! result.email && ! result.phone) throw 'At least one of email or phone is required'
-  await signUserUp(result.email, result.phone, result.password, result.autoconfirm)
+  const pinpointEndpointId = result.pinpointAnalytics ? await generatePinpointEndpointId() : null
+  await signUserUp(result.email, result.phone, result.password, result.autoconfirm, pinpointEndpointId)
 })
 
-const signUserUp = async (email, phone, password, autoconfirm) => {
+const generatePinpointEndpointId = async () => {
+  const endpointId = uuidv4()
+  await AWSPinpoint.updateEndpoint({
+    ApplicationId: pinpointAppId,
+    EndpointId: endpointId,
+    EndpointRequest: {},
+  }).promise()
+  console.log(`Auto-generated pinpoint endpoint id: ${endpointId}`)
+  return endpointId
+}
+
+const signUserUp = async (email, phone, password, autoconfirm, pinpointEndpointId) => {
   if (! password) {
     password = pwdGenerator.generate({numbers: true, symbols: true, strict: true})
-    console.log(`Auto generated password: ${password}`)
+    console.log(`Auto-generated password: ${password}`)
   }
   const userAttrs = []
   if (autoconfirm) {
@@ -104,7 +128,22 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
     Username: userId,
     Password: password,
     UserAttributes: userAttrs,
+    AnalyticsMetadata: {
+      AnalyticsEndpointId: pinpointEndpointId,  // ignored if null
+    },
   }).promise()
+
+  if (pinpointEndpointId) {
+    await AWSPinpoint.updateEndpoint({
+      ApplicationId: pinpointAppId,
+      EndpointId: pinpointEndpointId,
+      EndpointRequest: {
+        User: {
+          UserId: userId
+        },
+      },
+    }).promise()
+  }
 
   console.log(respSignUp)
 }
