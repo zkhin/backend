@@ -20,16 +20,6 @@ if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL
 const userPoolId = process.env.COGNITO_USER_POOL_ID
 if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must be defined')
 
-const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-  ClientId: cognitoClientId,
-  Region: awsRegion,
-}})
-
-const cognitoIndentityPoolClient = new AWS.CognitoIdentity({params: {
-  IdentityPoolId: identityPoolId,
-}})
-
-
 prmt.message = ''
 prmt.start()
 
@@ -49,7 +39,7 @@ const prmtSchema = {
     },
     pinpointEndpointId: {
       description: 'Pinpoint endpoint id to send analytics to? Leave blank to skip',
-    }
+    },
   },
 }
 
@@ -72,15 +62,22 @@ prmt.get(prmtSchema, async (err, result) => {
 
 const generateTokens = async (username, password, pinpointEndpointId) => {
   // sign them in
+  const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
+    ClientId: cognitoClientId,
+    Region: awsRegion,
+    AnalyticsMetadata: { AnalyticsEndpointId: pinpointEndpointId },  // ignored if null
+  }})
   const resp = await cognitoUserPoolClient.initiateAuth({
     AuthFlow: 'USER_PASSWORD_AUTH',
     AuthParameters: { USERNAME: username, PASSWORD: password },
-    AnalyticsMetadata: { AnalyticsEndpointId: pinpointEndpointId },
   }).promise()
   return resp['AuthenticationResult']
 }
 
 const generateGQLCredentials = async (idToken) => {
+  const cognitoIndentityPoolClient = new AWS.CognitoIdentity({params: {
+    IdentityPoolId: identityPoolId,
+  }})
   const userId = jwtDecode(idToken)['cognito:username']
   const Logins = {[`cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`]: idToken}
   const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()

@@ -12,19 +12,17 @@ if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined
 const frontendCognitoClientId = process.env.COGNITO_FRONTEND_CLIENT_ID
 if (frontendCognitoClientId === undefined) throw new Error('Env var COGNITO_FRONTEND_CLIENT_ID must be defined')
 
-const testingCognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID
-if (testingCognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIENT_ID must be defined')
-
-const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
-if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
-
 prmt.message = ''
 prmt.start()
 
 const prmtSchema = {
   properties: {
-    usernameLike: {
-      description: 'Email, phone, username or user id?',
+    userId: {
+      description: 'User id (aka cognito user pool \'username\') of user to confirm?',
+    },
+    confirmationCode: {
+      description: 'Confirmation code from email/sms?',
+      pattern: /^[0-9]{6}$/,
     },
     pinpointEndpointId: {
       description: 'Pinpoint endpoint id to send analytics to? Leave blank to skip',
@@ -38,18 +36,21 @@ prmt.get(prmtSchema, async (err, result) => {
     console.log(err)
     return 1
   }
-  await sendResetPassword(result.usernameLike, result.pinpointEndpointId)
+  await confirmUser(result.userId, result.confirmationCode, result.pinpointEndpointId)
 })
 
-const sendResetPassword = async (usernameLike, pinpointEndpointId) => {
+const confirmUser = async (userId, confirmationCode, pinpointEndpointId) => {
   const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-    ClientId: testingCognitoClientId,
+    ClientId: frontendCognitoClientId,
     Region: awsRegion,
     AnalyticsMetadata: { AnalyticsEndpointId: pinpointEndpointId },  // ignored if null
   }})
-  const resp = await userPoolClient.forgotPassword({
-    Username: usernameLike,
+
+  // empty response upon success
+  await userPoolClient.confirmSignUp({
+    ConfirmationCode: confirmationCode,
+    Username: userId,
   }).promise()
 
-  console.log(resp)
+  console.log('User successfully confirmed.')
 }

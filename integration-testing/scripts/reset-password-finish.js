@@ -29,6 +29,9 @@ const prmtSchema = {
       description: 'New password? leave blank to auto-generate',
       hidden: true,
     },
+    pinpointEndpointId: {
+      description: 'Pinpoint endpoint id to send analytics to? Leave blank to skip',
+    },
   },
 }
 
@@ -38,10 +41,10 @@ prmt.get(prmtSchema, async (err, result) => {
     console.log(err)
     return 1
   }
-  await chooseNewPassword(result.usernameLike, result.confirmationCode, result.password)
+  await chooseNewPassword(result.usernameLike, result.confirmationCode, result.password, result.pinpointEndpointId)
 })
 
-const chooseNewPassword = async (usernameLike, confirmationCode, password) => {
+const chooseNewPassword = async (usernameLike, confirmationCode, password, pinpointEndpointId) => {
   if (! password) {
     password = pwdGenerator.generate({numbers: true, symbols: true, strict: true})
     console.log(`Auto generated password: ${password}`)
@@ -49,6 +52,7 @@ const chooseNewPassword = async (usernameLike, confirmationCode, password) => {
   const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
     ClientId: testingCognitoClientId,
     Region: awsRegion,
+    AnalyticsMetadata: { AnalyticsEndpointId: pinpointEndpointId },  // ignored if null
   }})
 
   // empty response upon success

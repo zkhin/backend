@@ -7,7 +7,6 @@ const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 
 dotenv.config()
-const AWSPinpoint = new AWS.Pinpoint()
 
 const awsRegion = process.env.AWS_REGION
 if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
@@ -77,7 +76,8 @@ prmt.get(prmtSchema, async (err, result) => {
 
 const generatePinpointEndpointId = async () => {
   const endpointId = uuidv4()
-  await AWSPinpoint.updateEndpoint({
+  const pinpoint = new AWS.Pinpoint()
+  await pinpoint.updateEndpoint({
     ApplicationId: pinpointAppId,
     EndpointId: endpointId,
     EndpointRequest: {},
