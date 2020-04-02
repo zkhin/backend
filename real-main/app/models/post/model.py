@@ -75,6 +75,10 @@ class Post:
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
 
+    def get_s3_image_path(self, size):
+        "From within the user's directory, return the path to the s3 object of the requested size"
+        return '/'.join([self.item['postedByUserId'], 'post', self.item['postId'], 'image', size.filename])
+
     def get_native_image_buffer(self):
         if self.status == PostStatus.PENDING:
             raise exceptions.PostException(f'No native image buffer for {PostStatus.PENDING} post `{self.id}``')

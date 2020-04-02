@@ -155,10 +155,10 @@ def test_update_user_username(user_dynamo):
     assert new_item == old_item
 
 
-def test_set_user_photo_media_id(user_dynamo):
+def test_set_user_photo_post_id(user_dynamo):
     user_id = 'my-user-id'
     username = 'name'
-    media_id = 'mid'
+    post_id = 'mid'
 
     # add user to DB
     item = user_dynamo.add_user(user_id, username)
@@ -166,37 +166,37 @@ def test_set_user_photo_media_id(user_dynamo):
 
     # check it starts empty
     item = user_dynamo.get_user(user_id)
-    assert 'photoMediaId' not in item
+    assert 'photoPostId' not in item
 
     # set it
-    item = user_dynamo.set_user_photo_media_id(user_id, media_id)
-    assert item['photoMediaId'] == media_id
+    item = user_dynamo.set_user_photo_post_id(user_id, post_id)
+    assert item['photoPostId'] == post_id
 
     # check that it really made it to the db
     item = user_dynamo.get_user(user_id)
-    assert item['photoMediaId'] == media_id
+    assert item['photoPostId'] == post_id
 
 
 def test_set_user_photo_path_delete_it(user_dynamo):
     user_id = 'my-user-id'
     username = 'name'
-    old_media_id = 'mid'
+    old_post_id = 'mid'
 
     # add user to DB
     item = user_dynamo.add_user(user_id, username)
     assert item['username'] == username
 
-    # set old media id
-    item = user_dynamo.set_user_photo_media_id(user_id, old_media_id)
-    assert item['photoMediaId'] == old_media_id
+    # set old post id
+    item = user_dynamo.set_user_photo_post_id(user_id, old_post_id)
+    assert item['photoPostId'] == old_post_id
 
     # set new photo path, deleting it
-    item = user_dynamo.set_user_photo_media_id(user_id, None)
-    assert 'photoMediaId' not in item
+    item = user_dynamo.set_user_photo_post_id(user_id, None)
+    assert 'photoPostId' not in item
 
     # check that it really made it to the db
     item = user_dynamo.get_user(user_id)
-    assert 'photoMediaId' not in item
+    assert 'photoPostId' not in item
 
 
 def test_set_user_details_doesnt_exist(user_dynamo):

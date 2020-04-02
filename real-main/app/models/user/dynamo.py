@@ -84,7 +84,7 @@ class UserDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def set_user_photo_media_id(self, user_id, media_id):
+    def set_user_photo_post_id(self, user_id, photo_id):
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
@@ -92,11 +92,11 @@ class UserDynamo:
             },
         }
 
-        if media_id:
-            query_kwargs['UpdateExpression'] = 'SET photoMediaId = :ppmi'
-            query_kwargs['ExpressionAttributeValues'] = {':ppmi': media_id}
+        if photo_id:
+            query_kwargs['UpdateExpression'] = 'SET photoPostId = :ppid'
+            query_kwargs['ExpressionAttributeValues'] = {':ppid': photo_id}
         else:
-            query_kwargs['UpdateExpression'] = 'REMOVE photoMediaId'
+            query_kwargs['UpdateExpression'] = 'REMOVE photoPostId'
 
         return self.client.update_item(query_kwargs)
 

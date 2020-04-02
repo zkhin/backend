@@ -25,43 +25,37 @@ def user(user_manager):
 
 
 @pytest.fixture
-def uploaded_media(user, post_manager, media_manager, image_data_b64, mock_post_verification_api):
+def uploaded_post(user, post_manager, image_data_b64, mock_post_verification_api):
     post_id = 'post-id'
-    media_id = 'media-id'
-    post = post_manager.add_post(
-        user.id, post_id, PostType.IMAGE, media_uploads=[{'mediaId': media_id, 'imageData': image_data_b64}],
-    )
-    yield media_manager.init_media(post.item['mediaObjects'][0])
+    media_uploads = [{'mediaId': 'media-id', 'imageData': image_data_b64}]
+    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, media_uploads=media_uploads)
 
 
 @pytest.fixture
-def another_uploaded_media(user, post_manager, media_manager, grant_data_b64, mock_post_verification_api):
+def another_uploaded_post(user, post_manager, grant_data_b64, mock_post_verification_api):
     post_id = 'post-id-2'
-    media_id = 'media-id-2'
-    post = post_manager.add_post(
-        user.id, post_id, PostType.IMAGE, media_uploads=[{'mediaId': media_id, 'imageData': grant_data_b64}],
-    )
-    yield media_manager.init_media(post.item['mediaObjects'][0])
+    media_uploads = [{'mediaId': 'media-id-2', 'imageData': grant_data_b64}]
+    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, media_uploads=media_uploads)
 
 
-def test_get_photo_path(user, uploaded_media):
-    # without photoMediaId set
+def test_get_photo_path(user, uploaded_post):
+    # without photoPostId set
     for size in image_size.ALL:
         assert user.get_photo_path(size) is None
 
     # set it
-    user.update_photo(uploaded_media)
-    assert user.item['photoMediaId'] == uploaded_media.id
+    user.update_photo(uploaded_post)
+    assert user.item['photoPostId'] == uploaded_post.id
 
     # should now return the paths
     for size in image_size.ALL:
         path = user.get_photo_path(size)
         assert path is not None
         assert size.name in path
-        assert uploaded_media.id in path
+        assert uploaded_post.id in path
 
 
-def test_get_placeholder_photo_path(user, uploaded_media):
+def test_get_placeholder_photo_path(user):
     user.placeholder_photos_directory = 'pp-photo-dir'
 
     # without placeholderPhotoCode set
@@ -78,7 +72,7 @@ def test_get_placeholder_photo_path(user, uploaded_media):
         assert path == f'{user.placeholder_photos_directory}/{placeholder_photo_code}/{size.name}.jpg'
 
 
-def test_get_photo_url(user, uploaded_media, cloudfront_client):
+def test_get_photo_url(user, uploaded_post, cloudfront_client):
     user.placeholder_photos_directory = 'pp-photo-dir'
     user.frontend_resources_domain = 'pp-photo-domain'
 
@@ -94,9 +88,9 @@ def test_get_photo_url(user, uploaded_media, cloudfront_client):
         url = user.get_photo_url(size)
         assert url == f'{url_root}/{placeholder_photo_code}/{size.name}.jpg'
 
-    # photo media set
-    user.update_photo(uploaded_media)
-    assert user.item['photoMediaId'] == uploaded_media.id
+    # photo post set
+    user.update_photo(uploaded_post)
+    assert user.item['photoPostId'] == uploaded_post.id
 
     presigned_url = {}
     cloudfront_client.configure_mock(**{'generate_presigned_url.return_value': presigned_url})
@@ -110,43 +104,37 @@ def test_get_photo_url(user, uploaded_media, cloudfront_client):
         cloudfront_client.reset_mock()
 
 
-def test_set_photo_first_time(user, uploaded_media):
+def test_set_photo_multiple_times(user, uploaded_post, another_uploaded_post):
     # verify it's not already set
     user.refresh_item()
-    assert 'photoMediaId' not in user.item
+    assert 'photoPostId' not in user.item
 
     # set it
-    user.update_photo(uploaded_media)
-    assert user.item['photoMediaId'] == uploaded_media.id
+    user.update_photo(uploaded_post)
+    assert user.item['photoPostId'] == uploaded_post.id
 
     # verify it stuck in the db
     user.refresh_item()
-    assert user.item['photoMediaId'] == uploaded_media.id
+    assert user.item['photoPostId'] == uploaded_post.id
 
     # check it's in s3
     for size in image_size.ALL:
         path = user.get_photo_path(size)
         assert user.s3_uploads_client.exists(path)
 
-
-def test_change_photo(user, uploaded_media, another_uploaded_media):
-    # set it
-    user.update_photo(uploaded_media)
-    assert user.item['photoMediaId'] == uploaded_media.id
-
-    # pull the original photo_data
+    # pull the photo_data we just set up there
     org_bodies = {}
     for size in image_size.ALL:
         path = user.get_photo_path(size)
         org_bodies[size] = list(user.s3_uploads_client.get_object_data_stream(path))
 
     # change it
-    user.update_photo(another_uploaded_media)
-    assert user.item['photoMediaId'] == another_uploaded_media.id
+    user.update_photo(another_uploaded_post)
+    assert user.item['photoPostId'] == another_uploaded_post.id
 
     # verify it stuck in the db
     user.refresh_item()
-    assert user.item['photoMediaId'] == another_uploaded_media.id
+    assert user.item['photoPostId'] == another_uploaded_post.id
 
     # pull the new photo_data
     for size in image_size.ALL:
@@ -154,26 +142,35 @@ def test_change_photo(user, uploaded_media, another_uploaded_media):
         new_body = list(user.s3_uploads_client.get_object_data_stream(path))
         assert new_body != org_bodies[size]
 
-    # check the old photo data was deleted
+    # verify the old images are still there
+    # we don't delete them as there may still be un-expired signed urls pointing to the old images
     for size in image_size.ALL:
-        path = user.get_photo_path(size, photo_media_id=uploaded_media.id)
-        assert not user.s3_uploads_client.exists(path)
+        path = user.get_photo_path(size, photo_post_id=uploaded_post.id)
+        assert user.s3_uploads_client.exists(path)
 
 
-def test_delete_photo(user, uploaded_media):
+def test_clear_photo_s3_objects(user, uploaded_post, another_uploaded_post):
     # set it
-    user.update_photo(uploaded_media)
-    assert user.item['photoMediaId'] == uploaded_media.id
+    user.update_photo(uploaded_post)
+    assert user.item['photoPostId'] == uploaded_post.id
 
-    # delete it
-    user.update_photo(None)
-    assert 'photoMediaId' not in user.item
+    # change it
+    user.update_photo(another_uploaded_post)
+    assert user.item['photoPostId'] == another_uploaded_post.id
 
-    # verify it stuck in the db
-    user.refresh_item()
-    assert 'photoMediaId' not in user.item
-
-    # check s3 was cleared
+    # verify a bunch of stuff is in S3 now, old and new
     for size in image_size.ALL:
-        path = user.get_photo_path(size, photo_media_id=uploaded_media.id)
-        assert not user.s3_uploads_client.exists(path)
+        old_path = user.get_photo_path(size, photo_post_id=uploaded_post.id)
+        new_path = user.get_photo_path(size, photo_post_id=another_uploaded_post.id)
+        assert user.s3_uploads_client.exists(old_path)
+        assert user.s3_uploads_client.exists(new_path)
+
+    # clear it all away
+    user.clear_photo_s3_objects()
+
+    # verify all profile photos, old and new, were deleted from s3
+    for size in image_size.ALL:
+        old_path = user.get_photo_path(size, photo_post_id=uploaded_post.id)
+        new_path = user.get_photo_path(size, photo_post_id=another_uploaded_post.id)
+        assert not user.s3_uploads_client.exists(old_path)
+        assert not user.s3_uploads_client.exists(new_path)

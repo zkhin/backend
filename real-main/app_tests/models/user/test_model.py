@@ -372,22 +372,22 @@ def test_delete_no_entry_in_user_pool(user, caplog):
 
 
 def test_delete_user_with_profile_pic(user):
-    media_id = 'mid'
+    post_id = 'mid'
     photo_data = b'this is an image'
     content_type = 'image/jpeg'
 
     # add a profile pic of all sizes for that user
-    paths = [user.get_photo_path(size, photo_media_id=media_id) for size in image_size.ALL]
+    paths = [user.get_photo_path(size, photo_post_id=post_id) for size in image_size.ALL]
     for path in paths:
         user.s3_uploads_client.put_object(path, photo_data, content_type)
-    user.dynamo.set_user_photo_media_id(user.id, media_id)
+    user.dynamo.set_user_photo_post_id(user.id, post_id)
     user.refresh_item()
 
     # verify s3 was populated, dynamo set
     for size in image_size.ALL:
         path = user.get_photo_path(size)
         assert user.s3_uploads_client.exists(path)
-    assert 'photoMediaId' in user.item
+    assert 'photoPostId' in user.item
 
     # delete the user
     user.delete()

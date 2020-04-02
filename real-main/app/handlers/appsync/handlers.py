@@ -180,7 +180,7 @@ def set_user_details(caller_user_id, arguments, source, context):
     # are we setting a new profile picture?
     if photo_post_id is not None:
         if photo_post_id == '':
-            media = None
+            post = None
         else:
             post = post_manager.get_post(photo_post_id)
             if not post:
@@ -189,9 +189,7 @@ def set_user_details(caller_user_id, arguments, source, context):
                 raise ClientException(f'Post `{photo_post_id}` does not have type `{PostType.IMAGE}`')
             if post.status != PostStatus.COMPLETED:
                 raise ClientException(f'Post `{photo_post_id}` does not have status `{PostStatus.COMPLETED}`')
-            media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
-            media = media_manager.init_media(media_item)
-        user.update_photo(media)
+        user.update_photo(post)
 
     # are we changing our privacy status?
     if privacy_status is not None:

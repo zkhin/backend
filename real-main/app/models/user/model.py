@@ -59,11 +59,12 @@ class User:
     def username(self):
         return self.item['username']
 
-    def get_photo_path(self, size, photo_media_id=None):
-        photo_media_id = photo_media_id or self.item.get('photoMediaId')
-        if not photo_media_id:
+    def get_photo_path(self, size, photo_post_id=None):
+        # TODO: remove the 'photoMediaId' check here once db has been migrated
+        photo_post_id = photo_post_id or self.item.get('photoPostId') or self.item.get('photoMediaId')
+        if not photo_post_id:
             return None
-        return '/'.join([self.id, 'profile-photo', photo_media_id, size.filename])
+        return '/'.join([self.id, 'profile-photo', photo_post_id, size.filename])
 
     def get_placeholder_photo_path(self, size):
         code = self.item.get('placeholderPhotoCode')
@@ -125,29 +126,29 @@ class User:
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
         return self
 
-    def update_photo(self, media):
-        old_media_id = self.item.get('photoMediaId')
-        new_media_id = media.id if media else None
-        if new_media_id == old_media_id:
+    def update_photo(self, post):
+        # TODO: remove the 'photoMediaId' check here once db has been migrated
+        old_post_id = self.item.get('photoPostId') or self.item.get('photoMediaId')
+        new_post_id = post.id if post else None
+        if new_post_id == old_post_id:
             return self
 
         # add the new s3 objects
-        if new_media_id:
-            self.add_photo_s3_objects(media)
+        if new_post_id:
+            self.add_photo_s3_objects(post)
 
         # then dynamo
-        self.item = self.dynamo.set_user_photo_media_id(self.id, new_media_id)
+        self.item = self.dynamo.set_user_photo_post_id(self.id, new_post_id)
 
-        # delete the old s3 objects
-        if old_media_id:
-            self.delete_photo_s3_objects(photo_media_id=old_media_id)
-
+        # Leave the old images around as their may be existing urls out there that point to them
+        # Could schedule a job to delete them a hour from now
         return self
 
-    def add_photo_s3_objects(self, media):
+    def add_photo_s3_objects(self, post):
+        assert post.type == post.enums.PostType.IMAGE
         for size in image_size.ALL:
-            source_path = media.get_s3_path(size)
-            dest_path = self.get_photo_path(size, photo_media_id=media.id)
+            source_path = post.get_s3_image_path(size)
+            dest_path = self.get_photo_path(size, photo_post_id=post.id)
             self.s3_uploads_client.copy_object(source_path, dest_path)
 
     def update_details(self, full_name=None, bio=None, language_code=None, theme_code=None,
@@ -190,10 +191,9 @@ class User:
             self.item = self.dynamo.set_user_details(self.id, **kwargs)
         return self
 
-    def delete_photo_s3_objects(self, photo_media_id=None):
-        for size in image_size.ALL:
-            path = self.get_photo_path(size, photo_media_id=photo_media_id)
-            self.s3_uploads_client.delete_object(path)
+    def clear_photo_s3_objects(self):
+        photo_dir_prefix = '/'.join([self.id, 'profile-photo', ''])
+        self.s3_uploads_client.delete_objects_with_prefix(photo_dir_prefix)
 
     def delete(self):
         """
@@ -203,9 +203,8 @@ class User:
         # remove our trending item, if it's there
         self.trending_manager.dynamo.delete_trending(self.id)
 
-        # delete our profile photo, if we have one
-        if 'photoMediaId' in self.item:
-            self.delete_photo_s3_objects()
+        # delete current and old profile photos
+        self.clear_photo_s3_objects()
 
         # release our preferred_username from cognito
         try:
