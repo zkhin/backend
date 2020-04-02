@@ -30,10 +30,12 @@ provider:
     PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
     FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
     CLOUDFRONT_DOMAIN: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsDomainName, 'placeholder'}
-    SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1  # choosen manually when creating a key pair in the console
-    SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     ES_SEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
+
+    SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
+    SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
+    SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
 
     # avoid alerts when running integration test suite in dev env
     FLAGGED_ALERT_THRESHOLD: ${self:custom.envvars.FLAGGED_ALERT_THRESHOLD.${self:provider.stage}, '3'}

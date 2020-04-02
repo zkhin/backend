@@ -128,9 +128,12 @@ class UserManager:
         self.validate.username(username)
         full_name = None if full_name == '' else full_name  # treat empty string like null
 
-        email = self.google_client.get_verified_email(google_id_token).lower()
-        if not email:
-            raise self.exceptions.UserValidationException('Unable to retrieve email with that token')
+        try:
+            email = self.google_client.get_verified_email(google_id_token).lower()
+        except ValueError as err:
+            msg = f'Unable to extract verified email from google id token: {err}'
+            logger.warning(msg)
+            raise self.exceptions.UserValidationException(msg)
 
         # set the user up in cognito
         try:

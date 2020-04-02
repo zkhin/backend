@@ -1,3 +1,4 @@
+import logging
 import re
 from unittest.mock import call
 
@@ -286,6 +287,23 @@ def test_create_google_user_success(user_manager):
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
+
+
+def test_create_google_user_invalid_id_token(user_manager, caplog):
+    google_token = 'google-token'
+    user_id = 'my-user-id'
+    username = 'newuser'
+
+    # set up our mocks to behave correctly
+    user_manager.google_client.configure_mock(**{'get_verified_email.side_effect': ValueError('wrong flavor')})
+
+    # create the google user, check it is as expected
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(user_manager.exceptions.UserValidationException, match='wrong flavor'):
+            user_manager.create_google_user(user_id, username, google_token)
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert 'wrong flavor' in caplog.records[0].msg
 
 
 def test_get_available_placeholder_photo_codes(user_manager):

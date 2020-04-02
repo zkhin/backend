@@ -38,7 +38,7 @@ clients = {
     'cognito': CognitoClient(),
     'dynamo': DynamoClient(),
     'facebook': FacebookClient(),
-    'google': GoogleClient(),
+    'google': GoogleClient(secrets_manager_client.get_google_client_ids),
     's3_uploads': S3Client(UPLOADS_BUCKET),
     's3_placeholder_photos': S3Client(PLACEHOLDER_PHOTOS_BUCKET),
     'secrets_manager': secrets_manager_client,

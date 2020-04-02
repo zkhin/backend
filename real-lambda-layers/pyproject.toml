@@ -16,6 +16,8 @@ more-itertools = "^8.2.0"
 pendulum = "^2.0.5"
 colorthief = "^0.2.1"
 gql-py = {git = "https://github.com/mfogel/gql_py.git", rev = "6ce3421"}
+google-auth = "^1.13.1"
+CacheControl = "^0.12.6"
 
 [tool.poetry.dev-dependencies]
 

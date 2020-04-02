@@ -111,7 +111,7 @@ def facebook_client():
 
 @pytest.fixture
 def google_client():
-    yield Mock(GoogleClient())
+    yield Mock(GoogleClient(lambda: {}))
 
 
 # can't nest the moto context managers, it appears. To be able to use two mocked S3 buckets
