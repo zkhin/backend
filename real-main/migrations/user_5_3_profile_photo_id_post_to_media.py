@@ -10,9 +10,12 @@ logger = logging.getLogger()
 
 class Migration:
     """
-    Move User.photoMediaId to User.photoPostId, making a best-effort attempt
-    to translate mediaId's to photoId's, and falling back on re-using a mediaId
-    as a photoId when the media is not found.
+    Move User.photoMediaId to User.photoPostId.
+
+    We don't try to translate from mediaId to postId because:
+      - we would have to also move objects in S3
+      - some of the original media will have been deleted, so it would
+        end up being a best-effort translation anyway
     """
 
     def __init__(self, boto_table):
@@ -40,36 +43,20 @@ class Migration:
 
     def migrate_user(self, user_item):
         user_id = user_item['userId']
-        logger.warning(f'Migrating `{user_id}`')
-
-        # try to pull the media object from dynamo to get the post id
         media_id = user_item['photoMediaId']
-        kwargs = {
-            'Key': {
-                'partitionKey': f'media/{media_id}',
-                'sortKey': '-',
-            },
-        }
-        media_item = self.boto_table.get_item(**kwargs).get('Item')
+        logger.warning(f'Migrating `{user_id}`')
 
         kwargs = {
             'Key': {
                 'partitionKey': user_item['partitionKey'],
                 'sortKey': user_item['sortKey'],
             },
-            'UpdateExpression': 'REMOVE photoMediaId',
+            'UpdateExpression': 'REMOVE photoMediaId SET photoPostId = :mid',
             'ExpressionAttributeValues': {
                 ':mid': media_id,
             },
             'ConditionExpression': 'attribute_exists(partitionKey) AND photoMediaId = :mid',
         }
-
-        if media_item:
-            kwargs['UpdateExpression'] += ' SET photoPostId = :pid'
-            kwargs['ExpressionAttributeValues'][':pid'] = media_item['postId']
-        else:
-            logger.warning(f'Migrating `{user_id}`: media `{media_id}` does not exist, using mediaId as postId')
-            kwargs['UpdateExpression'] += ' SET photoPostId = :mid'
 
         self.boto_table.update_item(**kwargs)
 
