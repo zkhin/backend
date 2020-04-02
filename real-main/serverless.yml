@@ -1463,18 +1463,23 @@ resources:
             MetricNamespace: ${self:provider.stackName}
             MetricName: AppSyncServerErrors
 
+    PinpointApp:
+      Type: AWS::Pinpoint::App
+      Properties:
+        Name: REAL-${self:provider.stage}
+
     FrontendLogGroup:
       Type: AWS::Logs::LogGroup
       Properties:
         LogGroupName: /frontend/real-${self:provider.stage}-frontend
         RetentionInDays: 7
 
-    FrontendLogger:
+    FrontendIAMUser:
       Type: AWS::IAM::User
       Properties:
-        UserName: real-${self:provider.stage}-frontend-logger
+        UserName: REAL-frontend-${self:provider.stage}
         Policies:
-          - PolicyName: real-${self:provider.stage}-frontend-logger-policy
+          - PolicyName: FrontendUserPolicy-${self:provider.stage}
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
@@ -1489,12 +1494,19 @@ resources:
                     - logs:PutLogEvents
                   Resource:
                     - !Join [ /, [ !GetAtt FrontendLogGroup.Arn, '*' ] ]
+                # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
+                - Effect: Allow
+                  Action: mobiletargeting:UpdateEndpoint
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
+                - Effect: Allow
+                  Action: mobiletargeting:PutEvents
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
 
-    FrontendLoggerAccessKey:
+    FrontendIAMUserAccessKey:
       Type: AWS::IAM::AccessKey
       Properties:
         UserName:
-          Ref: FrontendLogger
+          Ref: FrontendIAMUser
 
   Outputs:
 
@@ -1521,12 +1533,12 @@ resources:
     ElasticSearchEndpoint:
       Value: !GetAtt ElasticSearchDomain.DomainEndpoint
 
-    FrontendLoggerAccessKeyId:
+    FrontendIAMUserAccessKeyId:
       Value:
-        Ref: FrontendLoggerAccessKey
+        Ref: FrontendIAMUserAccessKey
 
-    FrontendLoggerSecretAccessKey:
-      Value: !GetAtt FrontendLoggerAccessKey.SecretAccessKey
+    FrontendIAMUserSecretAccessKey:
+      Value: !GetAtt FrontendIAMUserAccessKey.SecretAccessKey
 
     GitBranch:
       Value: ${git:branch}
@@ -1539,6 +1551,9 @@ resources:
 
     MediaConvertRoleArn:
       Value: !GetAtt MediaCovertRole.Arn
+
+    PinpointApplicationId:
+      Value: !Ref PinpointApp
 
     UploadsBucketName:
       Value: ${self:provider.environment.UPLOADS_BUCKET}
