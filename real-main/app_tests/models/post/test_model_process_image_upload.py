@@ -25,7 +25,7 @@ def pending_post(post_manager, user):
 
 
 @pytest.fixture
-def completed_post(post_manager, user, image_data_b64, mock_post_verification_api):
+def completed_post(post_manager, user, image_data_b64):
     yield post_manager.add_post(
         user.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
     )

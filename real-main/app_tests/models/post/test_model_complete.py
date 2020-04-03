@@ -134,8 +134,7 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
     ]
 
 
-def test_complete_with_album(album_manager, post_manager, post_with_media_with_album, user_manager, image_data,
-                             mock_post_verification_api):
+def test_complete_with_album(album_manager, post_manager, post_with_media_with_album, user_manager, image_data):
     post = post_with_media_with_album
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)

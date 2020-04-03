@@ -73,7 +73,7 @@ def test_delete_no_posts(user, album):
     assert album.item is None
 
 
-def test_delete(user, album, post_manager, image_data_b64, mock_post_verification_api):
+def test_delete(user, album, post_manager, image_data_b64):
     # create two posts in the album
     post1 = post_manager.add_post(
         user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],

@@ -144,3 +144,41 @@ def test_set_checksum(media_manager, media_awaiting_upload):
     assert media.item['checksum'] == md5
     media.refresh_item()
     assert media.item['checksum'] == md5
+
+
+def test_set_is_verified_minimal(media_awaiting_upload):
+    # check initial state and configure mock
+    media = media_awaiting_upload
+    assert 'isVerified' not in media.item
+    media.post_verification_client = Mock(**{'verify_image.return_value': False})
+
+    # do the call, check final state
+    media.set_is_verified()
+    assert media.item['isVerified'] is False
+    media.refresh_item()
+    assert media.item['isVerified'] is False
+
+    # check mock called correctly
+    assert media.post_verification_client.mock_calls == [
+        call.verify_image(media.get_readonly_url(image_size.NATIVE), taken_in_real=None, original_format=None),
+    ]
+
+
+def test_set_is_verified_maximal(media_awaiting_upload):
+    # check initial state and configure mock
+    media = media_awaiting_upload
+    assert 'isVerified' not in media.item
+    media.post_verification_client = Mock(**{'verify_image.return_value': True})
+    media.item['takenInReal'] = False
+    media.item['originalFormat'] = 'oreo'
+
+    # do the call, check final state
+    media.set_is_verified()
+    assert media.item['isVerified'] is True
+    media.refresh_item()
+    assert media.item['isVerified'] is True
+
+    # check mock called correctly
+    assert media.post_verification_client.mock_calls == [
+        call.verify_image(media.get_readonly_url(image_size.NATIVE), taken_in_real=False, original_format='oreo'),
+    ]

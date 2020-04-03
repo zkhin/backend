@@ -68,7 +68,7 @@ def post_with_expiration(post_manager, user2):
 
 
 @pytest.fixture
-def post_with_media(post_manager, user2, image_data_b64, mock_post_verification_api):
+def post_with_media(post_manager, user2, image_data_b64):
     yield post_manager.add_post(
         user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
     )
@@ -580,7 +580,7 @@ def test_set_album_video_post(albums, user2, completed_video_post):
     assert 'artHash' not in album2.item
 
 
-def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64):
     post1 = post_manager.add_post(
         user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
     )
@@ -631,7 +631,7 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
     assert post2.item['gsiK3SortKey'] == Decimal(0.5)
 
 
-def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64):
     # album with three posts in it
     album, _ = albums
     post1 = post_manager.add_post(
@@ -674,7 +674,7 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 48))
 
 
-def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_data_b64):
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
@@ -709,7 +709,7 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-4 / 6))
 
 
-def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_data_b64, mock_post_verification_api):
+def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_data_b64):
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(

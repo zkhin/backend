@@ -4,7 +4,6 @@ from io import BytesIO
 
 from colorthief import ColorThief
 from PIL import Image, ImageOps
-import requests
 
 from app.utils import image_size
 
@@ -20,16 +19,16 @@ class Media:
 
     jpeg_content_type = 'image/jpeg'
 
-    def __init__(self, item, media_dynamo, cloudfront_client=None, secrets_manager_client=None,
+    def __init__(self, item, media_dynamo, cloudfront_client=None, post_verification_client=None,
                  s3_uploads_client=None):
         self.dynamo = media_dynamo
 
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client
+        if post_verification_client:
+            self.post_verification_client = post_verification_client
         if s3_uploads_client:
             self.s3_uploads_client = s3_uploads_client
-        if secrets_manager_client:
-            self.post_verification_api_creds_getter = secrets_manager_client.get_post_verification_api_creds
 
         self.item = item
         self.id = item['mediaId']
@@ -123,30 +122,10 @@ class Media:
         return self
 
     def set_is_verified(self):
-        api_creds = self.post_verification_api_creds_getter()
-        headers = {'x-api-key': api_creds['key']}
-        url = api_creds['root'] + 'verify/image'
-
-        data = {
-            'url': self.get_readonly_url(image_size.NATIVE),
-            'metadata': {},
-        }
-        if 'takenInReal' in self.item:
-            data['metadata']['takenInReal'] = self.item['takenInReal']
-        if 'originalFormat' in self.item:
-            data['metadata']['originalFormat'] = self.item['originalFormat']
-
-        # synchronous for now. Note this generally runs in an async env already: an s3-object-created handler
-        resp = requests.post(url, headers=headers, json=data)
-        if resp.status_code != 200:
-            msg = f'Received error from post verification service: `{resp.status_code}` with body: `{resp.text}`'
-            raise exceptions.MediaException(msg)
-        try:
-            is_verified = resp.json()['data']['isVerified']
-        except Exception:
-            msg = f'Unable to parse reponse from post verification service with body: `{resp.text}`'
-            raise exceptions.MediaException(msg)
-
+        image_url = self.get_readonly_url(image_size.NATIVE)
+        is_verified = self.post_verification_client.verify_image(
+            image_url, taken_in_real=self.item.get('takenInReal'), original_format=self.item.get('originalFormat'),
+        )
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
 

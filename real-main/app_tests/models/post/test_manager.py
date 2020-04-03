@@ -287,7 +287,7 @@ def test_add_media_post_text_empty_string(post_manager):
     assert 'textTags' not in post.item
 
 
-def test_add_media_post_with_image_data(user, post_manager, requests_mock, post_verification_api_creds):
+def test_add_media_post_with_image_data(user, post_manager):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
@@ -297,19 +297,6 @@ def test_add_media_post_with_image_data(user, post_manager, requests_mock, post_
         base64.encode(fh, image_data_b64)
     image_data_b64.seek(0)
     media_upload = {'mediaId': media_id, 'imageData': image_data_b64.read()}
-
-    # mock out the response from the post verification api
-    post_manager.clients['cloudfront'].configure_mock(**{
-        'generate_presigned_url.return_value': 'https://a-url.com',
-    })
-    resp_json = {
-        'errors': [],
-        'data': {
-            'isVerified': True,
-        }
-    }
-    api_url = post_verification_api_creds['root'] + 'verify/image'
-    requests_mock.post(api_url, json=resp_json)
 
     # add the post (& media)
     post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, media_uploads=[media_upload])

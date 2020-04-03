@@ -2,7 +2,8 @@ import logging
 import os
 import urllib
 
-from app.clients import CloudFrontClient, DynamoClient, MediaConvertClient, S3Client, SecretsManagerClient
+from app.clients import (CloudFrontClient, DynamoClient, MediaConvertClient, PostVerificationClient, S3Client,
+                         SecretsManagerClient)
 from app.logging import LogLevelContext
 from app.models.media import MediaManager
 from app.models.post import PostManager
@@ -17,8 +18,8 @@ clients = {
     'cloudfront': CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'dynamo': DynamoClient(),
     'mediaconvert': MediaConvertClient(),
+    'post_verification': PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     's3_uploads': S3Client(UPLOADS_BUCKET),
-    'secrets_manager': secrets_manager_client,
 }
 
 managers = {}

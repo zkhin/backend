@@ -4,7 +4,7 @@ import os
 import pendulum
 
 from app.clients import (AppSyncClient, CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
-                         SecretsManagerClient, S3Client)
+                         PostVerificationClient, SecretsManagerClient, S3Client)
 from app.models.album import AlbumManager
 from app.models.block import BlockManager
 from app.models.chat import ChatManager
@@ -39,9 +39,9 @@ clients = {
     'dynamo': DynamoClient(),
     'facebook': FacebookClient(),
     'google': GoogleClient(secrets_manager_client.get_google_client_ids),
+    'post_verification': PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     's3_uploads': S3Client(UPLOADS_BUCKET),
     's3_placeholder_photos': S3Client(PLACEHOLDER_PHOTOS_BUCKET),
-    'secrets_manager': secrets_manager_client,
 }
 
 # shared hash of all managers, allows inter-manager communication
