@@ -317,3 +317,29 @@ def test_record_view_for_non_original_post(view_manager, user, posts, post_manag
     assert trending_manager.dynamo.get_trending(org_post.id).get('gsiK3SortKey', 0) == 1
     assert trending_manager.dynamo.get_trending(non_org_post.id) is None
     assert trending_manager.dynamo.get_trending(user.id).get('gsiK3SortKey', 0) == 1
+
+
+def test_record_view_day_old_post_doesnt_trend(view_manager, post_manager, user_manager, trending_manager, user):
+    viewed_by_user_id = 'vuid'
+    now = pendulum.now('utc')
+
+    # add a post over a day ago
+    posted_at = now - pendulum.duration(days=2)
+    post = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t', now=posted_at)
+
+    # check there is no post view yet recorded for this user on this post
+    assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'NOT_VIEWED'
+    assert post_manager.dynamo.get_post(post.id).get('viewedByCount', 0) == 0
+    assert user_manager.dynamo.get_user(post.user_id).get('postViewedByCount', 0) == 0
+    assert trending_manager.dynamo.get_trending(post.id) is None
+    assert trending_manager.dynamo.get_trending(post.user_id) is None
+
+    # record the first post view
+    view_manager.record_view('post', post.id, viewed_by_user_id, 2, pendulum.now('utc'))
+    assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'VIEWED'
+
+    # check the viewedByCounts incremented but the trending indexes did not
+    assert post_manager.dynamo.get_post(post.id).get('viewedByCount', 0) == 1
+    assert user_manager.dynamo.get_user(post.user_id).get('postViewedByCount', 0) == 1
+    assert trending_manager.dynamo.get_trending(post.id) is None
+    assert trending_manager.dynamo.get_trending(post.user_id) is None

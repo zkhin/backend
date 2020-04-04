@@ -68,6 +68,10 @@ class Post:
         return self.item['postStatus']
 
     @property
+    def posted_at(self):
+        return pendulum.parse(self.item['postedAt'])
+
+    @property
     def s3_prefix(self):
         return '/'.join([self.user_id, 'post', self.id])
 

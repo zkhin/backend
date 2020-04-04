@@ -108,7 +108,9 @@ class ViewManager:
             # if this is an original post, the trending indexes. If not, then record a view on the original
             original_post_id = post.item.get('originalPostId', post.id)
             if original_post_id == post.id:
-                self.trending_manager.record_view_count(TrendingItemType.POST, post.id, 1, now=viewed_at)
-                self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, 1, now=viewed_at)
+                # only add this view to the trending indexes if the post is less than a 24 hrs old
+                if (viewed_at - post.posted_at < pendulum.duration(hours=24)):
+                    self.trending_manager.record_view_count(TrendingItemType.POST, post.id, 1, now=viewed_at)
+                    self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, 1, now=viewed_at)
             else:
                 self.record_view('post', original_post_id, user_id, view_count, viewed_at)
