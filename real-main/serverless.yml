@@ -978,14 +978,7 @@ custom:
       - type: AMAZON_ELASTICSEARCH
         name: ElasticSearchDataSource
         config:
-          endpoint: !Join [ '', [ 'https://', !GetAtt ElasticSearchDomain.DomainEndpoint ] ]
-          # the custom iamRoleStatements stanza is actually necessary because of a bug
-          # https://github.com/sid88in/serverless-appsync-plugin/issues/233#issuecomment-602923390
-          iamRoleStatements:
-            - Effect: Allow
-              Action:
-                - es:ESHttpGet
-              Resource: !Join [ '', [ !GetAtt ElasticSearchDomain.Arn, '/*' ] ]
+          domain: ElasticSearchDomain
 
   # https://github.com/ACloudGuru/serverless-plugin-aws-alerts
   alerts:
