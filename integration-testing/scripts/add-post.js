@@ -275,7 +275,11 @@ prmt.get(prmtSchema, async (err, result) => {
 
 
 const addImagePost = gql(`mutation AddMediaPost ($postId: ID!, $mediaId: ID!, $text: String) {
-  addPost (postId: $postId, text: $text, mediaObjectUploads: [{mediaId: $mediaId, mediaType: IMAGE}]) {
+  addPost (
+    postId: $postId,
+    text: $text,
+    mediaObjectUploads: [{mediaId: $mediaId, mediaType: IMAGE, takenInReal: true, originalFormat: "HEIC"}],
+  ) {
     postId
     imageUploadUrl
   }
