@@ -60,8 +60,7 @@ class User:
         return self.item['username']
 
     def get_photo_path(self, size, photo_post_id=None):
-        # TODO: remove the 'photoMediaId' check here once db has been migrated
-        photo_post_id = photo_post_id or self.item.get('photoPostId') or self.item.get('photoMediaId')
+        photo_post_id = photo_post_id or self.item.get('photoPostId')
         if not photo_post_id:
             return None
         return '/'.join([self.id, 'profile-photo', photo_post_id, size.filename])
@@ -127,8 +126,7 @@ class User:
         return self
 
     def update_photo(self, post):
-        # TODO: remove the 'photoMediaId' check here once db has been migrated
-        old_post_id = self.item.get('photoPostId') or self.item.get('photoMediaId')
+        old_post_id = self.item.get('photoPostId')
         new_post_id = post.id if post else None
         if new_post_id == old_post_id:
             return self
