@@ -912,11 +912,11 @@ def create_direct_chat(caller_user_id, arguments, source, context):
     now = pendulum.now('utc')
     try:
         chat = chat_manager.add_direct_chat(chat_id, caller_user_id, user_id, now=now)
-        chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id, now=now)
+        message = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id, now=now)
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
-    # neither party could be listening to the chat notifications yet, so no need to fire the trigger
+    message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED, user_ids=[user_id])
     chat.refresh_item(strongly_consistent=True)
     return chat.item
 
@@ -929,11 +929,11 @@ def create_group_chat(caller_user_id, arguments, source, context):
     try:
         chat = chat_manager.add_group_chat(chat_id, caller_user_id, name=name)
         chat.add(caller_user_id, user_ids)
-        chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id)
+        message = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user_id)
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
-    # no user could be listening to the chat notifications yet, so no need to fire the trigger
+    message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED, user_ids=user_ids)
     chat.refresh_item(strongly_consistent=True)
     return chat.item
 
@@ -1000,7 +1000,7 @@ def add_chat_message(caller_user_id, arguments, source, context):
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
-    message.trigger_notification(message.enums.ChatMessageNotificationType.ADDED)
+    message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED)
     return message.serialize(caller_user_id)
 
 
@@ -1017,7 +1017,7 @@ def edit_chat_message(caller_user_id, arguments, source, context):
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
-    message.trigger_notification(message.enums.ChatMessageNotificationType.EDITED)
+    message.trigger_notifications(message.enums.ChatMessageNotificationType.EDITED)
     return message.serialize(caller_user_id)
 
 
@@ -1034,7 +1034,7 @@ def delete_chat_message(caller_user_id, arguments, source, context):
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
-    message.trigger_notification(message.enums.ChatMessageNotificationType.DELETED)
+    message.trigger_notifications(message.enums.ChatMessageNotificationType.DELETED)
     return message.serialize(caller_user_id)
 
 

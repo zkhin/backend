@@ -44,6 +44,7 @@ module.exports.chatMessage = gql`
 
 module.exports.chatMessageNotification = gql`
   fragment ChatMessageNotificationFragment on ChatMessageNotification {
+    userId
     messageId
     chatId
     authorUserId

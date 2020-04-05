@@ -1189,8 +1189,8 @@ module.exports.triggerChatMessageNotification = gql`
 `
 
 module.exports.onChatMessageNotification = gql`
-  subscription OnChatMessageNotification ($chatId: ID!) {
-    onChatMessageNotification (chatId: $chatId) {
+  subscription OnChatMessageNotification ($userId: ID!) {
+    onChatMessageNotification (userId: $userId) {
       ...ChatMessageNotificationFragment
     }
   }

@@ -228,9 +228,11 @@ type Mutation {
 }
 
 type Subscription {
-  # Subscribe to notifications of changes to the chat messages in a given chat
-  #   - may only be called with a chatId of a chat the caller is in
-  onChatMessageNotification(chatId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
+  # Subscribe to notifications of changes (adds, edits, and deletes) of chat messages
+  # in chats we are in or have just been added to
+  #   - userId must be caller's own userId. Required by AppSync subscription design
+  #   - does not fire for the caller's own messages
+  onChatMessageNotification(userId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
 }
 
 type User {
@@ -388,6 +390,7 @@ type PaginatedChatMessages {
 
 # Abridged version of a ChatMessage that will be pushed to clients
 type ChatMessageNotification {
+  userId: ID!  # user this notification is intended for
   messageId: ID!
   chatId: ID!
   authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
@@ -405,6 +408,7 @@ enum ChatMessageNotificationType {
 }
 
 input ChatMessageNotificationInput {
+  userId: ID!  # user this notification is intended for
   messageId: ID!
   chatId: ID!
   authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')

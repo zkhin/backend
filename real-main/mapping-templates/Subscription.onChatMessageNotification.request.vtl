@@ -1,11 +1,11 @@
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
-#set ($chatId = $ctx.args.chatId)
+#set ($userId = $ctx.args.userId)
+
+#if ($userId != $callerUserId)
+  $util.error('Cannot subscribe to chat messages intended for another user', 'ClientError')
+#end
 
 {
   "version": "2018-05-29",
-  "operation": "GetItem",
-  "key": {
-    "partitionKey": { "S": "chat/$chatId" },
-    "sortKey": { "S": "member/$callerUserId" }
-  }
+  "payload": $util.toJson(null)
 }

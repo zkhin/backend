@@ -14,6 +14,7 @@ class ChatMessage:
     trigger_notification_mutation = '''
         mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
             triggerChatMessageNotification (input: $input) {
+                userId
                 messageId
                 chatId
                 authorUserId
@@ -81,8 +82,16 @@ class ChatMessage:
 
         return self
 
-    def trigger_notification(self, notification_type):
-        variables = {'input': {
+    def trigger_notifications(self, notification_type, user_ids=None):
+        """
+        Trigger onChatMessageNotification to be sent to clients.
+
+        The `user_ids` parameter can be used to ensure that messages will be
+        sent to those user_ids even if they aren't found as members in the DB.
+        This is useful when members of the chat have just been added and thus
+        dynamo may not have converged yet.
+        """
+        base = {
             'messageId': self.id,
             'chatId': self.chat_id,
             'authorUserId': self.user_id,
@@ -91,5 +100,15 @@ class ChatMessage:
             'textTaggedUserIds': self.item.get('textTags', []),
             'createdAt': self.item['createdAt'],
             'lastEditedAt': self.item.get('lastEditedAt'),
-        }}
-        self.appsync_client.send(self.trigger_notification_mutation, variables)
+        }
+        user_ids = set(user_ids or [])
+        for user_id in self.chat_manager.dynamo.generate_chat_membership_user_ids_by_chat(self.chat_id):
+            if user_id == self.user_id:  # no notification for the message author
+                continue
+            self.appsync_client.send(self.trigger_notification_mutation, {'input': {**base, **{'userId': user_id}}})
+            if user_id in user_ids:
+                user_ids.remove(user_id)
+        for user_id in user_ids:
+            if user_id == self.user_id:  # no notification for the message author
+                continue
+            self.appsync_client.send(self.trigger_notification_mutation, {'input': {**base, **{'userId': user_id}}})

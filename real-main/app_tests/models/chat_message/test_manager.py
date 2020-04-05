@@ -1,5 +1,3 @@
-from unittest.mock import Mock
-
 import pendulum
 import pytest
 
@@ -93,9 +91,8 @@ def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):
     assert view_manager.dynamo.get_view('chatMessage/mid2', 'uid') is None
 
 
-def test_add_system_message(chat_message_manager, chat):
+def test_add_system_message(chat_message_manager, chat, appsync_client, user2, user3):
     text = 'sample sample'
-    chat_message_manager.appsync_client = Mock()
 
     # check message count starts off at zero
     assert 'messageCount' not in chat.item
@@ -116,9 +113,16 @@ def test_add_system_message(chat_message_manager, chat):
     assert chat.item['lastMessageActivityAt'] == now.to_iso8601_string()
 
     # check the message notification was triggered
-    assert len(chat_message_manager.appsync_client.mock_calls) == 1
-    assert len(chat_message_manager.appsync_client.send.call_args.args) == 2
-    variables = chat_message_manager.appsync_client.send.call_args.args[1]
+    assert len(appsync_client.send.call_args_list) == 2
+    assert len(appsync_client.send.call_args_list[0].args) == 2
+    variables = appsync_client.send.call_args_list[0].args[1]
+    assert variables['input']['userId'] == user2.id
+    assert variables['input']['messageId'] == message.id
+    assert variables['input']['authorUserId'] is None
+    assert variables['input']['type'] == 'ADDED'
+    assert len(appsync_client.send.call_args_list[1].args) == 2
+    variables = appsync_client.send.call_args_list[1].args[1]
+    assert variables['input']['userId'] == user3.id
     assert variables['input']['messageId'] == message.id
     assert variables['input']['authorUserId'] is None
     assert variables['input']['type'] == 'ADDED'

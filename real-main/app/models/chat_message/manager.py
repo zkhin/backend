@@ -71,7 +71,7 @@ class ChatMessageManager:
         text = f'@{user.username} created the group'
         if name:
             text += f' "{name}"'
-        return self.add_system_message(chat_id, text, now=now)
+        return self.add_system_message(chat_id, text, user_ids=[created_by_user_id], now=now)
 
     def add_system_message_added_to_group(self, chat_id, added_by_user_id, users, now=None):
         assert users, 'No system message should be sent if no users added to group'
@@ -82,7 +82,7 @@ class ChatMessageManager:
             text += ', '.join(f'@{u.username}' for u in users)
             text += ' and '
         text += f'@{user_1.username} to the group'
-        return self.add_system_message(chat_id, text, now=now)
+        return self.add_system_message(chat_id, text, user_ids=[u.id for u in users], now=now)
 
     def add_system_message_left_group(self, chat_id, user_id):
         user = self.user_manager.get_user(user_id)
@@ -98,9 +98,9 @@ class ChatMessageManager:
             text += 'deleted the name of the group'
         return self.add_system_message(chat_id, text)
 
-    def add_system_message(self, chat_id, text, now=None):
+    def add_system_message(self, chat_id, text, user_ids=None, now=None):
         user_id = None
         message_id = str(uuid.uuid4())
         message = self.add_chat_message(message_id, text, chat_id, user_id, now=now)
-        message.trigger_notification(message.enums.ChatMessageNotificationType.ADDED)
+        message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED, user_ids=user_ids)
         return message
