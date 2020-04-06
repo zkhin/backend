@@ -150,11 +150,11 @@ class Album:
 
         # generate and save thumbnails
         native_image_buf.seek(0)
-        target_image = Image.open(native_image_buf)
+        image = Image.open(native_image_buf)
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
-            target_image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
+            image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
-            target_image.save(in_mem_file, format='JPEG', quality=95)
+            image.save(in_mem_file, format='JPEG', quality=95, icc_profile=image.info.get('icc_profile'))
             in_mem_file.seek(0)
             path = self.get_art_image_path(size, art_hash=art_hash)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
