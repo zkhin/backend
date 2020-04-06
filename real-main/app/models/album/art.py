@@ -35,7 +35,7 @@ def generate_basic_grid(image_data_buffers):
 
     # convert to jpeg
     buf_out = BytesIO()
-    target_image.save(buf_out, format='JPEG', quality=95)
+    target_image.save(buf_out, format='JPEG', quality=100)
     buf_out.seek(0)
     return buf_out
 
@@ -90,6 +90,6 @@ def generate_zoomed_grid(image_data_buffers):
 
     # convert to jpeg
     buf_out = BytesIO()
-    target_image.save(buf_out, format='JPEG', quality=95)
+    target_image.save(buf_out, format='JPEG', quality=100)
     buf_out.seek(0)
     return buf_out

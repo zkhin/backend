@@ -52,7 +52,7 @@ def generate_text_image(text, dimensions, font_size=None):
 
     # save it as a jpeg
     buf_out = BytesIO()
-    img.save(buf_out, format='JPEG', quality=95)
+    img.save(buf_out, format='JPEG', quality=100)
     buf_out.seek(0)
     return buf_out
 
