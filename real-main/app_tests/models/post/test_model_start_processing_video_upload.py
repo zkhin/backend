@@ -20,7 +20,7 @@ def test_cant_start_processing_video_upload_various_errors(post_manager, user, p
     with pytest.raises(AssertionError, match='VIDEO'):
         text_only_post.start_processing_video_upload()
 
-    image_post = post_manager.add_post(user.id, 'pid-i', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1'}])
+    image_post = post_manager.add_post(user.id, 'pid-i', PostType.IMAGE)
     with pytest.raises(AssertionError, match='VIDEO'):
         image_post.start_processing_video_upload()
 

@@ -27,15 +27,13 @@ def user(user_manager):
 @pytest.fixture
 def uploaded_post(user, post_manager, image_data_b64):
     post_id = 'post-id'
-    media_uploads = [{'mediaId': 'media-id', 'imageData': image_data_b64}]
-    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, media_uploads=media_uploads)
+    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
 def another_uploaded_post(user, post_manager, grant_data_b64):
     post_id = 'post-id-2'
-    media_uploads = [{'mediaId': 'media-id-2', 'imageData': grant_data_b64}]
-    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, media_uploads=media_uploads)
+    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, image_input={'imageData': grant_data_b64})
 
 
 def test_get_photo_path(user, uploaded_post):

@@ -291,8 +291,9 @@ test('User search returns urls for profile pics', async () => {
   expect(resp['data']['searchUsers']['items'][0]['photo']).toBeNull()
 
   // add an image post, upload that image
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
+  const postId = uuidv4()
+  let variables = {postId, imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

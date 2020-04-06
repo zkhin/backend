@@ -25,8 +25,8 @@ afterAll(async () => await loginCache.clean())
 test('Edit post', async () => {
   // we create an image post
   const [ourClient] = await loginCache.getCleanLogin()
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -67,7 +67,7 @@ test('Edit post failures for for various scenarios', async () => {
   })).rejects.toThrow('does not exist')
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
 
@@ -104,7 +104,7 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   // we add a post
   const postId = uuidv4()
   const postText = 'je suis le possion?'
-  let variables = {postId, mediaId: uuidv4(), text: postText, imageData}
+  let variables = {postId, text: postText, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -134,7 +134,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   const postId = uuidv4()
 
   // we add a post
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -187,7 +187,7 @@ test('Edit post set likesDisabled', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['likesDisabled']).toBe(false)
@@ -214,7 +214,7 @@ test('Edit post set sharingDisabled', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
@@ -241,7 +241,7 @@ test('Edit post set verificationHidden', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
@@ -271,7 +271,8 @@ test('Edit post text ensure textTagged users is rewritten', async () => {
   // we add a post a tag
   let postId = uuidv4()
   let text = `hi @${theirUsername}!`
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4(), text}})
+  let variables = {postId, text}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
   expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(1)

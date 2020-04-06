@@ -52,8 +52,7 @@ test('Paginated list default', async () => {
   const postId = uuidv4()
 
   // add a post
-  let variables = {postId, mediaId: uuidv4(), imageData}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 

@@ -33,15 +33,14 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mide', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid2', media_uploads=[{'mediaId': 'mid'}], text='t')
+    yield post_manager.add_post(user.id, 'pid2', text='t')
 
 
 def test_archive_post_wrong_status(post_manager, post):

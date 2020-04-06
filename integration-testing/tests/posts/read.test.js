@@ -28,7 +28,7 @@ test('Filter User.posts by variour criteria', async () => {
   const archivedTextOnlyPostId = uuidv4()
 
   // add a completed image post
-  let variables = {postId: completedImagePostId, mediaId: uuidv4(), imageData}
+  let variables = {postId: completedImagePostId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(completedImagePostId)
@@ -36,7 +36,7 @@ test('Filter User.posts by variour criteria', async () => {
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
 
   // add pending image post
-  variables = {postId: pendingImagePostId, mediaId: uuidv4()}
+  variables = {postId: pendingImagePostId}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(pendingImagePostId)
@@ -45,7 +45,7 @@ test('Filter User.posts by variour criteria', async () => {
 
   // add completed text-only post
   variables = {postId: completedTextOnlyPostId, postType: 'TEXT_ONLY', text: 't'}
-  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(completedTextOnlyPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -53,7 +53,7 @@ test('Filter User.posts by variour criteria', async () => {
 
   // add archived text-only post
   variables = {postId: archivedTextOnlyPostId, postType: 'TEXT_ONLY', text: 't'}
-  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(archivedTextOnlyPostId)
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')

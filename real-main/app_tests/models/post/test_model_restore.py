@@ -21,17 +21,13 @@ def post_with_expiration(post_manager, user_manager):
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}], text='t',
-    )
+    yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, text='t')
 
 
 @pytest.fixture
 def post_with_media_completed(post_manager, user_manager, image_data_b64):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
-    )
+    yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
 
 
 def test_restore_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):

@@ -25,7 +25,7 @@ test('No text tags', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // post with no text
-  let variables = {postId: uuidv4(), mediaId: uuidv4()}
+  let variables = {postId: uuidv4()}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBeNull()
@@ -33,7 +33,7 @@ test('No text tags', async () => {
 
   // post with text, but no tagged users
   let text = 'zeds dead baby, zeds dead'
-  variables = {postId: uuidv4(), mediaId: uuidv4(), text}
+  variables = {postId: uuidv4(), text}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
@@ -42,7 +42,7 @@ test('No text tags', async () => {
   // post with text and tags, but those don't match to a user on the backend
   const username = cognito.generateUsername()
   text = `you do not exist, right @${username}?`
-  variables = {postId: uuidv4(), mediaId: uuidv4(), text}
+  variables = {postId: uuidv4(), text}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
@@ -58,7 +58,8 @@ test('Lots of text tags, current username does not match tagged one', async () =
   // add a post with a few tags, including a repeat
   let postId = uuidv4()
   let text = `hi @${theirUsername}! hi from @${ourUsername} What's up @${theirUsername}? you, @${otherUsername} ??`
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4(), text}})
+  let variables = {postId, text}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
   expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(3)
@@ -90,7 +91,8 @@ test('Changing username should not affect who is in tags', async () => {
   // add a post in which we tag ourselves
   let postId = uuidv4()
   let text = `hi me @${ourUsername}!`
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4(), text}})
+  let variables = {postId, text}
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
   expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(1)
@@ -127,7 +129,7 @@ test('Tags of usernames with special characters', async () => {
   // create a post and tag ourselves
   let postId = uuidv4()
   let text = `talking to myself @${ourUsername}-!?`
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4(), text}})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, text}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)
   expect(resp['data']['addPost']['textTaggedUsers']).toHaveLength(1)
@@ -145,7 +147,7 @@ test('Tagged user blocks caller', async () => {
   // other adds a post that tags them
   let postId = uuidv4()
   let text = `hi @${theirUsername}`
-  let variables = {postId, mediaId: uuidv4(), text, imageData}
+  let variables = {postId, text, imageData}
   let resp = await otherClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['text']).toBe(text)

@@ -1,5 +1,6 @@
 import itertools
 import logging
+import uuid
 
 import pendulum
 
@@ -62,28 +63,24 @@ class PostManager:
         }
         return Post(post_item, self.dynamo, **kwargs) if post_item else None
 
-    def add_post(self, posted_by_user_id, post_id, post_type, media_uploads=[], text=None, lifetime_duration=None,
+    def add_post(self, posted_by_user_id, post_id, post_type, image_input=None, text=None, lifetime_duration=None,
                  album_id=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
                  verification_hidden=None, now=None):
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
 
+        image_input = image_input or {}
+        if post_type == enums.PostType.IMAGE and 'mediaId' not in image_input:
+            image_input['mediaId'] = str(uuid.uuid4())
+
         if post_type == enums.PostType.TEXT_ONLY:
             if not text:
                 raise exceptions.PostException('Cannot add text-only post without text')
-            if media_uploads:
-                raise exceptions.PostException('Cannot add text-only post with media uploads')
+            if image_input:
+                raise exceptions.PostException('Cannot add text-only post with ImageInput')
 
-        if post_type == enums.PostType.IMAGE and not media_uploads:
-            raise exceptions.PostException('Cannot add image post without media uploads (for now)')
-
-        if post_type == enums.PostType.VIDEO and media_uploads:
-            raise exceptions.PostException('Cannot add video post with media uploads')
-
-        if len(media_uploads) > 1:
-            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with more than one media'
-            raise exceptions.PostException(msg)
-        media_upload = media_uploads[0] if media_uploads else None
+        if post_type == enums.PostType.VIDEO and image_input:
+            raise exceptions.PostException('Cannot add video post with ImageInput')
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -108,11 +105,11 @@ class PostManager:
             sharing_disabled=sharing_disabled, verification_hidden=verification_hidden, album_id=album_id,
         )]
         if post_type == enums.PostType.IMAGE:
-            # 'media_upload' is straight from graphql, format dictated by schema
+            # 'image_input' is straight from graphql, format dictated by schema
             transacts.append(self.media_manager.dynamo.transact_add_media(
-                posted_by_user_id, post_id, media_upload['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD,
-                posted_at=now, taken_in_real=media_upload.get('takenInReal'),
-                original_format=media_upload.get('originalFormat'),
+                posted_by_user_id, post_id, image_input['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD,
+                posted_at=now, taken_in_real=image_input.get('takenInReal'),
+                original_format=image_input.get('originalFormat'),
             ))
         self.dynamo.client.transact_write_items(transacts)
 
@@ -125,10 +122,10 @@ class PostManager:
 
         media_items = []
         if post.type == enums.PostType.IMAGE:
-            media = self.media_manager.get_media(media_upload['mediaId'], strongly_consistent=True)
+            media = self.media_manager.get_media(image_input['mediaId'], strongly_consistent=True)
 
             # if image data was directly included for any media objects, process it
-            if image_data := media_upload.get('imageData'):
+            if image_data := image_input.get('imageData'):
 
                 # set the post to PROCESSING so the s3 trigger doesn't try to process
                 transacts = [self.dynamo.transact_set_post_status(post.item, enums.PostStatus.PROCESSING)]

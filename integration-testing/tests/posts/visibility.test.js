@@ -38,8 +38,8 @@ test('Visiblity of post() and user.posts() for a public user', async () => {
   const [randoClient] = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  const postId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
@@ -89,8 +89,8 @@ test('Visiblity of post() and user.posts() for a private user', async () => {
   const [randoClient] = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -127,8 +127,8 @@ test('Visiblity of post() and user.posts() for the follow stages user', async ()
   const [followerClient, followerUserId] = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -180,7 +180,7 @@ test('Post that is not complete', async () => {
 
   // we add a image post, we don't complete it
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -204,7 +204,7 @@ test('Post.viewedBy only visible to post owner', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

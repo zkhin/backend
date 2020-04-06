@@ -93,16 +93,16 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // we add an image post that never expires
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // we add a image post that is also a story
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  variables = {postId: postId2, mediaId: mediaId2, lifetime: 'P1D', imageData: grantDataB64}
+  const postId2 = uuidv4()
+  variables = {postId: postId2, lifetime: 'P1D', imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -186,7 +186,7 @@ test('resetUser deletes any likes we have placed', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let variables = {postId, imageData: grantDataB64}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -268,7 +268,7 @@ test('resetUser deletes users flags of posts', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let variables = {postId, imageData: grantDataB64}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -324,7 +324,7 @@ test('resetUser deletes any comments we have added to posts', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: grantDataB64}
+  let variables = {postId, imageData: grantDataB64}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

@@ -19,16 +19,12 @@ def text_only_post(post_manager, user):
 
 @pytest.fixture
 def pending_post(post_manager, user):
-    yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1'}], text='t',
-    )
+    yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, text='t')
 
 
 @pytest.fixture
 def completed_post(post_manager, user, image_data_b64):
-    yield post_manager.add_post(
-        user.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-    )
+    yield post_manager.add_post(user.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 def test_cant_process_image_upload_various_errors(post_manager, user, pending_post, text_only_post, completed_post):

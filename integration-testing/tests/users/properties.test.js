@@ -119,7 +119,7 @@ test('Various photoPostId failures', async () => {
 
   // create a text-only post
   variables = {postId: textOnlyPostId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
-  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(textOnlyPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -130,7 +130,7 @@ test('Various photoPostId failures', async () => {
   await expect(ourClient.mutate({mutation: schema.setUserDetails, variables})).rejects.toThrow('ClientError')
 
   // create an image post, leave it in pending
-  variables = {postId: pendingImagePostId, mediaId: uuidv4()}
+  variables = {postId: pendingImagePostId}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(pendingImagePostId)
@@ -152,8 +152,9 @@ test('Set and delete our profile photo, using postId', async () => {
   expect(resp['data']['self']['photo']).toBeNull()
 
   // create a post with an image
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
+  const postId = uuidv4()
+  let variables = {postId, imageData: grantDataB64}
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

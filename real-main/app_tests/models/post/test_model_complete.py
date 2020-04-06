@@ -23,7 +23,7 @@ def post(post_manager, user):
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid1', 'pbUname1')
-    post = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1'}], text='t')
+    post = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, text='t')
     post_manager.media_manager.dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum1')
     yield post
 
@@ -32,8 +32,7 @@ def post_with_media(post_manager, user_manager):
 def post_with_media_with_expiration(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     post = post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2'}], text='t',
-        lifetime_duration=pendulum.duration(hours=1),
+        user.id, 'pid2', PostType.IMAGE, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
     post_manager.media_manager.dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum2')
     yield post
@@ -43,9 +42,7 @@ def post_with_media_with_expiration(post_manager, user_manager):
 def post_with_media_with_album(album_manager, post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
     album = album_manager.add_album(user.id, 'aid-3', 'album name 3')
-    post = post_manager.add_post(
-        user.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3'}], text='t', album_id=album.id,
-    )
+    post = post_manager.add_post(user.id, 'pid3', PostType.IMAGE, text='t', album_id=album.id)
     post_manager.media_manager.dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum3')
     yield post
 

@@ -29,8 +29,8 @@ test('Add image post passes verification', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a image post, check in PENDING
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, takenInReal: true, originalFormat: 'HEIC'}
+  const postId = uuidv4()
+  let variables = {postId, takenInReal: true, originalFormat: 'HEIC'}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
@@ -58,8 +58,8 @@ test('Add image post fails verification', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: smallGrantDataB64}
+  const postId = uuidv4()
+  let variables = {postId, imageData: smallGrantDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
@@ -81,8 +81,8 @@ test('Add image post verification hidden hides verification state', async () => 
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a image post with verification hidden, give s3 trigger a second to fire
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, verificationHidden: true, imageData: smallGrantDataB64}
+  const postId = uuidv4()
+  let variables = {postId, verificationHidden: true, imageData: smallGrantDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
@@ -131,7 +131,7 @@ test('Post verification hidden setting is private to post owner', async () => {
 
   // we add a post without setting verification hidden
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData: smallGrantDataB64}
+  let variables = {postId, imageData: smallGrantDataB64}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

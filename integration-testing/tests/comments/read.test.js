@@ -25,7 +25,7 @@ test('One user adds multiple comments, ordering', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -93,7 +93,7 @@ test('Comment report views, viewed status tracked correctly', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

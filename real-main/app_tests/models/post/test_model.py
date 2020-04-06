@@ -69,9 +69,7 @@ def post_with_expiration(post_manager, user2):
 
 @pytest.fixture
 def post_with_media(post_manager, user2, image_data_b64):
-    yield post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid', 'imageData': image_data_b64}], text='t',
-    )
+    yield post_manager.add_post(user2.id, 'pid', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
 
 
 def test_refresh_item(post):
@@ -368,7 +366,7 @@ def test_error_failure(post_manager, user, post, media_manager):
 
 def test_error_pending_post(post_manager, user, media_manager):
     # create a pending post
-    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
+    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE)
     media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
     media = media_manager.init_media(media_item)
     assert post.item['postStatus'] == PostStatus.PENDING
@@ -388,7 +386,7 @@ def test_error_pending_post(post_manager, user, media_manager):
 
 def test_error_processing_post(post_manager, user, media_manager):
     # create a pending post
-    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
+    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE)
     media_item = list(media_manager.dynamo.generate_by_post(post.id))[0]
     media = media_manager.init_media(media_item)
 
@@ -581,18 +579,10 @@ def test_set_album_video_post(albums, user2, completed_video_post):
 
 
 def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64):
-    post1 = post_manager.add_post(
-        user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
-    )
-    post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-    )
-    post3 = post_manager.add_post(
-        user2.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
-    )
-    post4 = post_manager.add_post(
-        user2.id, 'pid4', PostType.IMAGE, media_uploads=[{'mediaId': 'mid4', 'imageData': image_data_b64}],
-    )
+    post1 = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post2 = post_manager.add_post(user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post3 = post_manager.add_post(user2.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post4 = post_manager.add_post(user2.id, 'pid4', PostType.IMAGE, image_input={'imageData': image_data_b64})
     album1, album2 = albums
 
     # put post2 & post3 in first album
@@ -635,16 +625,13 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     # album with three posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post3 = post_manager.add_post(
-        user2.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # check starting state
@@ -678,12 +665,10 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # check starting state
@@ -713,12 +698,10 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # check starting state

@@ -29,7 +29,7 @@ test('Upload video basic success', async () => {
   // add a pending video post
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO'}
-  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('VIDEO')
@@ -113,7 +113,7 @@ test('Create video post in album, move in and out', async () => {
   // add a pending video post to that album
   const postId = uuidv4()
   variables = {postId, postType: 'VIDEO', albumId}
-  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('VIDEO')

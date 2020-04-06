@@ -30,7 +30,7 @@ test('Delete a post that was our next story to expire', async () => {
 
   // we create a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime: 'PT1H'}
+  let variables = {postId, imageData, lifetime: 'PT1H'}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -103,8 +103,8 @@ test('Deleting image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // we create an image post
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -138,7 +138,7 @@ test('Invalid attempts to delete posts', async () => {
   await expect(ourClient.mutate({mutation: schema.deletePost, variables: {postId}})).rejects.toThrow('not exist')
 
   // create a post
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId: uuidv4()}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
@@ -161,7 +161,7 @@ test('When a post is deleted, any likes of it disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 

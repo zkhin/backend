@@ -52,7 +52,7 @@ test('Verify it really hides view counts on user and post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

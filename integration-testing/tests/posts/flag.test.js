@@ -26,7 +26,7 @@ test('Anybody can flag post of public user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -44,7 +44,7 @@ test('Follower can flag post of private user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -70,7 +70,7 @@ test('Non-follower cannot flag post of private user', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -98,7 +98,7 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -128,7 +128,7 @@ test('Cannot double-flag a post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -149,7 +149,7 @@ test('Cannot flag post of user that has blocked us', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -178,7 +178,7 @@ test('Cannot flag post of user we have blocked', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 

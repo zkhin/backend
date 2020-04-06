@@ -27,7 +27,7 @@ test('Cant request over 100 of any of the like lists', async () => {
   // we add a post
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -57,7 +57,7 @@ test('Order of users that have onymously liked a post', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   await misc.sleep(1000)  // let dynamo converge
@@ -130,10 +130,10 @@ test('Order of onymously liked posts', async () => {
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
+  let variables = {postId: postId1, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData}
+  variables = {postId: postId2, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -170,10 +170,10 @@ test('Order of anonymously liked posts', async () => {
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
+  let variables = {postId: postId1, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData}
+  variables = {postId: postId2, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -211,8 +211,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
 
   // add an image post
   const postId = uuidv4()
-  const mediaId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
@@ -248,7 +247,7 @@ test('Like lists and counts are private to the owner of the post', async () => {
   // we add a post
   const postId = uuidv4()
   let variables = {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

@@ -26,7 +26,7 @@ test('Add a comments', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -78,7 +78,7 @@ test('Verify commentIds cannot be re-used ', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -109,7 +109,7 @@ test('Cant add comments to post with comments disabled', async () => {
 
   // we add a post with comments disabled
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, commentsDisabled: true}
+  let variables = {postId, imageData, commentsDisabled: true}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -134,14 +134,14 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
 
   // they add a post
   const theirPostId = uuidv4()
-  variables = {postId: theirPostId, mediaId: uuidv4(), imageData}
+  variables = {postId: theirPostId, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
 
   // we add a post
   const ourPostId = uuidv4()
-  variables = {postId: ourPostId, mediaId: uuidv4(), imageData}
+  variables = {postId: ourPostId, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
@@ -167,7 +167,7 @@ test('Cant add comments to a post of a private user unless were following them',
 
   // they add a post
   const postId = uuidv4()
-  variables = {postId, mediaId: uuidv4(), imageData}
+  variables = {postId, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

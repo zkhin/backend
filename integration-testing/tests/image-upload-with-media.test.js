@@ -1,5 +1,11 @@
 /* eslint-env jest */
 
+/**
+ * This whole file is DEPRECATED.
+ * To be removed when the mediaUploads argument to Mutation.addPost
+ * goes away.
+ */
+
 const fs = require('fs')
 const path = require('path')
 const requestImageSize = require('request-image-size')
@@ -33,19 +39,37 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
+test('Verify cannot add post with more than one image', async () => {
+  const [client] = await loginCache.getCleanLogin()
+
+  // add a pending post object with two images
+  const postId = uuidv4()
+  const variables = {postId, mediaId1: uuidv4(), mediaId2: uuidv4()}
+  await expect(client.mutate({mutation: schema.addPostTwoMedia, variables}))
+    .rejects.toThrow('ClientError')
+
+  // verify the post did not get created
+  let resp = await client.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']).toBeNull()
+})
+
+
 test('Uploading image sets width, height and colors', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // upload an image post
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let variables = {postId, mediaId}
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['image']).toBeNull()
   const uploadUrl = resp['data']['addPost']['imageUploadUrl']
 
   // double check the image post
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  variables = {postId}
+  resp = await ourClient.query({query: schema.post, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['image']).toBeNull()
@@ -55,7 +79,8 @@ test('Uploading image sets width, height and colors', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // check width, height and colors are now set
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  variables = {postId}
+  resp = await ourClient.query({query: schema.post, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['image']['height']).toBe(imageHeight)
@@ -71,8 +96,8 @@ test('Uploading png image results in error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // create a pending image post
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -94,8 +119,8 @@ test('Thumbnails built on successful upload', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // create a pending image post
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')

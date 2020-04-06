@@ -410,8 +410,9 @@ module.exports.unblockUser = gql`
   }
 `
 
-module.exports.addPost = gql`
-  mutation AddPost (
+// DEPRECATED
+module.exports.addPostMediaUploads = gql`
+  mutation AddPostMediaUploads (
     $postId: ID!,
     $postType: PostType,
     $mediaId: ID!,
@@ -489,13 +490,15 @@ module.exports.addPost = gql`
   ${fragments.textTaggedUser}
 `
 
-// Note: this will be merged with module.exports.addPost when mediaObjectUploads are dropped
-module.exports.addPostNoMedia = gql`
+module.exports.addPost = gql`
   mutation AddPost (
     $postId: ID!,
     $postType: PostType,
     $albumId: ID,
     $text: String,
+    $imageData: String,
+    $takenInReal: Boolean
+    $originalFormat: String,
     $lifetime: String
     $commentsDisabled: Boolean,
     $likesDisabled: Boolean,
@@ -507,6 +510,11 @@ module.exports.addPostNoMedia = gql`
       postType: $postType,
       albumId: $albumId,
       text: $text,
+      imageInput: {
+        takenInReal: $takenInReal,
+        originalFormat: $originalFormat,
+        imageData: $imageData,
+      },
       lifetime: $lifetime,
       commentsDisabled: $commentsDisabled,
       likesDisabled: $likesDisabled,
@@ -525,9 +533,13 @@ module.exports.addPostNoMedia = gql`
       imageUploadUrl
       videoUploadUrl
       isVerified
+      viewedStatus
       text
       textTaggedUsers {
         ...TextTaggedUserFragment
+      }
+      image {
+        ...ImageFragment
       }
       album {
         albumId
@@ -555,6 +567,7 @@ module.exports.addPostNoMedia = gql`
     }
   }
   ${fragments.comment}
+  ${fragments.image}
   ${fragments.textTaggedUser}
 `
 

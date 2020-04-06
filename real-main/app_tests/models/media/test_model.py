@@ -10,7 +10,7 @@ from app.utils import image_size
 
 @pytest.fixture
 def media_awaiting_upload(media_manager, post_manager):
-    post = post_manager.add_post('uid', 'pid', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}])
+    post = post_manager.add_post('uid', 'pid', PostType.IMAGE)
     media_item = post.item['mediaObjects'][0]
     yield media_manager.init_media(media_item)
 

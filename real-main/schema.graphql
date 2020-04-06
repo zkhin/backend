@@ -120,7 +120,8 @@ type Mutation {
     albumId: ID,
     lifetime: String,
     text: String,
-    mediaObjectUploads: [MediaObjectUpload!],
+    mediaObjectUploads: [MediaObjectUpload!],  # DEPRECATED. Use imageInput instead
+    imageInput: ImageInput,
     commentsDisabled: Boolean,
     likesDisabled: Boolean,
     sharingDisabled: Boolean,
@@ -442,6 +443,7 @@ enum BlockStatus {
   SELF
 }
 
+# DEPRECATED
 enum MediaObjectType {
   IMAGE
 }
@@ -472,6 +474,7 @@ enum FlagStatus {
   NOT_FLAGGED
 }
 
+# DEPRECATED: use ImageInput
 input MediaObjectUpload {
   mediaId: ID!
   mediaType: MediaObjectType = IMAGE
@@ -480,6 +483,17 @@ input MediaObjectUpload {
 
   # There are two ways to upload image data:
   #   - by http PUTing image data to MediaObject.uploadUrl, after creating the post OR
+  #   - by including image data here, as a base64-encoded string (intended for small images)
+  imageData: String
+}
+
+input ImageInput {
+  takenInReal: Boolean
+  originalFormat: String
+  # TODO: originalMetadata: String
+
+  # There are two ways to upload image data:
+  #   - by http PUTing image data to Post.imageUploadUrl, after creating the post OR
   #   - by including image data here, as a base64-encoded string (intended for small images)
   imageData: String
 }

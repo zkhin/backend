@@ -34,8 +34,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add an image post
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, imageData: grantDataB64}
+  const postId = uuidv4()
+  let variables = {postId, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -284,16 +284,16 @@ test('Blocked cannot see directly see blockers posts', async () => {
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add an image post, complete it
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, imageData: grantDataB64}
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // they add an image post, complete it
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  variables = {postId: postId2, mediaId: mediaId2, imageData: grantDataB64}
+  const postId2 = uuidv4()
+  variables = {postId: postId2, imageData: grantDataB64}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)

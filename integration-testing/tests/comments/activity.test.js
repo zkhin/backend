@@ -22,7 +22,7 @@ test('Post owner comment activity does not change Post.hasNewCommentActivity', a
   // we add a post
   const postId = uuidv4()
   let variables = {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['hasNewCommentActivity']).toBe(false)
@@ -70,7 +70,7 @@ test('Post.hasNewCommentActivity - set, reset, privacy', async () => {
   // we add a post
   const postId = uuidv4()
   let variables = {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['hasNewCommentActivity']).toBe(false)
@@ -157,14 +157,14 @@ test('User.postHasNewCommentActivity - set, reset, privacy', async () => {
   // we add a post
   const postId1 = uuidv4()
   let variables = {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'}
-  let resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
   // we add another post
   const postId2 = uuidv4()
   variables = {postId: postId2, postType: 'TEXT_ONLY', text: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: schema.addPostNoMedia, variables})
+  resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 

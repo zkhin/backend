@@ -48,11 +48,6 @@ def test_add_post_errors(post_manager):
     with pytest.raises(post_manager.exceptions.PostException, match='without text'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY)
 
-    # try to add a post without two media
-    media_uploads = [{'mediaId': 'mid1'}, {'mediaId': 'mid2'}]
-    with pytest.raises(post_manager.exceptions.PostException, match='more than one media'):
-        post_manager.add_post('pbuid', 'pid', PostType.IMAGE, media_uploads=media_uploads)
-
     # try to add a post with a negative lifetime value
     lifetime_duration = pendulum.duration(hours=-1)
     with pytest.raises(post_manager.exceptions.PostException, match='negative lifetime'):
@@ -63,21 +58,17 @@ def test_add_post_errors(post_manager):
     with pytest.raises(post_manager.exceptions.PostException, match='negative lifetime'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration)
 
-    # try to add an image post with no media_uploads
-    with pytest.raises(post_manager.exceptions.PostException, match='without media uploads'):
-        post_manager.add_post('pbuid', 'pid', PostType.IMAGE, text='my text')
-
     # try to add a text-only post with a media_upload
-    with pytest.raises(post_manager.exceptions.PostException, match='with media uploads'):
-        post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', media_uploads=[{'mediaId': 'mid'}])
+    with pytest.raises(post_manager.exceptions.PostException, match='with ImageInput'):
+        post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', image_input={'mediaId': 'mid'})
 
     # try to add a text-only post with no text
     with pytest.raises(post_manager.exceptions.PostException, match='without text'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY)
 
     # try to add a video post with a media_upload
-    with pytest.raises(post_manager.exceptions.PostException, match='with media uploads'):
-        post_manager.add_post('pbuid', 'pid', PostType.VIDEO, media_uploads=[{'mediaId': 'mid'}])
+    with pytest.raises(post_manager.exceptions.PostException, match='with ImageInput'):
+        post_manager.add_post('pbuid', 'pid', PostType.VIDEO, image_input={'mediaId': 'mid'})
 
 
 def test_add_text_only_post(post_manager, user_manager):
@@ -122,15 +113,15 @@ def test_add_text_with_tags_post(post_manager, user_manager):
 def test_add_post_album_errors(user_manager, post_manager, user, album):
     # can't create post with album that doesn't exist
     with pytest.raises(post_manager.exceptions.PostException, match='does not exist'):
-        post_manager.add_post(user.id, 'pid-4', PostType.IMAGE, media_uploads=[{'mediaId': 'm'}], album_id='aid-dne')
+        post_manager.add_post(user.id, 'pid-4', PostType.IMAGE, album_id='aid-dne')
 
     # can't create post in somebody else's album
     user2 = user_manager.create_cognito_only_user('uid-2', 'uname2')
     with pytest.raises(post_manager.exceptions.PostException, match='does not belong to'):
-        post_manager.add_post(user2.id, 'pid-4', PostType.IMAGE, media_uploads=[{'mediaId': 'm'}], album_id=album.id)
+        post_manager.add_post(user2.id, 'pid-4', PostType.IMAGE, album_id=album.id)
 
     # verify we can add without error
-    post_manager.add_post(user.id, 'pid-42', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}], album_id=album.id)
+    post_manager.add_post(user.id, 'pid-42', PostType.IMAGE, album_id=album.id)
 
 
 def test_add_text_only_post_to_album(post_manager, user, album):
@@ -246,10 +237,10 @@ def test_add_media_post(post_manager):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
-    media_upload = {'mediaId': media_id}
+    image_input = {'mediaId': media_id}
 
     # add the post (& media)
-    post_manager.add_post(user_id, post_id, PostType.IMAGE, now=now, media_uploads=[media_upload])
+    post_manager.add_post(user_id, post_id, PostType.IMAGE, now=now, image_input=image_input)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
@@ -275,10 +266,10 @@ def test_add_media_post_text_empty_string(post_manager):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
-    media_upload = {'mediaId': media_id}
+    image_input = {'mediaId': media_id}
 
     # add the post (& media)
-    post_manager.add_post(user_id, post_id, PostType.IMAGE, now=now, media_uploads=[media_upload], text='')
+    post_manager.add_post(user_id, post_id, PostType.IMAGE, now=now, image_input=image_input, text='')
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
@@ -296,10 +287,10 @@ def test_add_media_post_with_image_data(user, post_manager):
     with open(grant_path, 'rb') as fh:
         base64.encode(fh, image_data_b64)
     image_data_b64.seek(0)
-    media_upload = {'mediaId': media_id, 'imageData': image_data_b64.read()}
+    image_input = {'mediaId': media_id, 'imageData': image_data_b64.read()}
 
     # add the post (& media)
-    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, media_uploads=[media_upload])
+    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
@@ -326,7 +317,7 @@ def test_add_media_post_with_options(post_manager, album):
     text = 'lore ipsum'
     now = pendulum.now('utc')
     media_id = 'mid'
-    media_upload = {
+    image_input = {
         'mediaId': media_id,
         'takenInReal': False,
         'originalFormat': 'org-format',
@@ -335,7 +326,7 @@ def test_add_media_post_with_options(post_manager, album):
 
     # add the post (& media)
     post_manager.add_post(
-        user_id, post_id, PostType.IMAGE, text=text, now=now, media_uploads=[media_upload],
+        user_id, post_id, PostType.IMAGE, text=text, now=now, image_input=image_input,
         lifetime_duration=lifetime_duration, album_id=album.id, comments_disabled=False, likes_disabled=True,
         verification_hidden=False,
     )
@@ -457,8 +448,7 @@ def test_set_post_status_to_error(post_manager, user_manager):
         post.error()
 
     # add a PENDING post, transition it to ERROR, verify all good
-    media_uploads = [{'mediaId': 'mid1'}]
-    post = post_manager.add_post('pbuid', 'pid', PostType.IMAGE, media_uploads=media_uploads)
+    post = post_manager.add_post('pbuid', 'pid', PostType.IMAGE)
     post.error()
     assert post.item['postStatus'] == PostStatus.ERROR
     post.refresh_item()

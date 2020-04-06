@@ -28,8 +28,8 @@ test('Archiving an image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // we upload an image post
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['image']).toBeTruthy()
@@ -73,8 +73,8 @@ test('Cant archive a post in PENDING status', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we create a post, leave it with pending status
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -88,8 +88,8 @@ test('Archiving an image post does not affect image urls', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we uplaod an image post
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   const image = resp['data']['addPost']['image']
@@ -120,8 +120,8 @@ test('Restoring an archived image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // we upload an image post
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['image']).toBeTruthy()
@@ -169,7 +169,7 @@ test('Attempts to restore invalid posts', async () => {
   })).rejects.toThrow('does not exist')
 
   // create a post
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -208,8 +208,8 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['data']['self']['postCount']).toBe(0)
 
   // add image post with direct image data upload, verify post count goes up immediately
-  let [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  let postId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postedBy']['postCount']).toBe(1)
@@ -218,8 +218,8 @@ test('Post count reacts to user archiving posts', async () => {
   expect(resp['data']['self']['postCount']).toBe(1)
 
   // add a image post, verify count doesn't go up until the image is uploaded
-  ;[postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  postId  = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -258,7 +258,7 @@ test('Cant archive a post that is not ours', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -276,7 +276,7 @@ test('When a post is archived, any likes of it disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 

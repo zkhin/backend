@@ -36,10 +36,10 @@ test('When we stop following a private user, any likes of ours on their posts di
 
   // they add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
+  let variables = {postId: postId1, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData}
+  variables = {postId: postId2, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -116,10 +116,10 @@ test('When a private user decides to deny our following, any likes of ours on th
 
   // they add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
+  let variables = {postId: postId1, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData}
+  variables = {postId: postId2, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 

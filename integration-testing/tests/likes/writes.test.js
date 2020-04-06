@@ -34,8 +34,7 @@ test('Cannot like/dislike PENDING posts', async () => {
   // we add an image post, but don't upload the image
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  const mediaId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -52,7 +51,7 @@ test('Cannot like/dislike ARCHIVED posts', async () => {
   // we add a post, and archive it
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   await misc.sleep(1000)  // let dynamo converge
@@ -74,10 +73,10 @@ test('Cannot double like a post', async () => {
 
   // add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData}
+  let variables = {postId: postId1, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  variables = {postId: postId2, mediaId: uuidv4(), imageData}
+  variables = {postId: postId2, imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -120,7 +119,7 @@ test('Cannot dislike a post we have not liked', async () => {
 
   // add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -136,7 +135,7 @@ test('Cannot like posts of a user that has blocked us', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -173,7 +172,7 @@ test('Cannot like posts of a user we have blocked', async () => {
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -212,7 +211,7 @@ test('Can only like posts of private users if we are a follower of theirs', asyn
 
   // they add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime: 'P1D'}
+  let variables = {postId, imageData, lifetime: 'P1D'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -260,7 +259,7 @@ test('Onymously like, then dislike, a post', async () => {
   // we add a post
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -327,7 +326,7 @@ test('Anonymously like, then dislike, a post', async () => {
   // we add a post
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 
@@ -394,7 +393,7 @@ test('Like counts show up for posts in feed', async () => {
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   await misc.sleep(1000)  // let dynamo converge

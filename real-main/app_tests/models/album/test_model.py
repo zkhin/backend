@@ -23,7 +23,7 @@ def album(album_manager, user):
 
 @pytest.fixture
 def completed_image_post(post_manager, user, image_data_b64, mock_post_verification_api):
-    yield post_manager.add_post(user.id, 'pid1', media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}])
+    yield post_manager.add_post(user.id, 'pid1', image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
@@ -76,12 +76,10 @@ def test_delete_no_posts(user, album):
 def test_delete(user, album, post_manager, image_data_b64):
     # create two posts in the album
     post1 = post_manager.add_post(
-        user.id, 'pid1', PostType.IMAGE, media_uploads=[{'mediaId': 'mid1', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # verify starting state: can see album, posts are in it, user's albumCount, album art exists

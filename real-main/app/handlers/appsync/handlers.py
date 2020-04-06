@@ -433,8 +433,14 @@ def add_post(caller_user_id, arguments, source, context):
     post_id = arguments['postId']
     post_type = arguments.get('postType') or PostType.IMAGE
     text = arguments.get('text')
-    media_uploads = arguments.get('mediaObjectUploads', [])
+    image_input = arguments.get('imageInput')
     album_id = arguments.get('albumId')
+
+    media_uploads = arguments.get('mediaObjectUploads', [])
+    if not image_input and media_uploads:
+        if len(media_uploads) > 1:
+            raise ClientException('Refusing to add post with more than one media')
+        image_input = media_uploads[0]
 
     def argument_with_user_level_default(name):
         value = arguments.get(name)
@@ -462,7 +468,7 @@ def add_post(caller_user_id, arguments, source, context):
     org_post_count = user.item.get('postCount', 0)
     try:
         post = post_manager.add_post(
-            user.id, post_id, post_type, media_uploads=media_uploads, text=text, lifetime_duration=lifetime_duration,
+            user.id, post_id, post_type, image_input=image_input, text=text, lifetime_duration=lifetime_duration,
             album_id=album_id, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled, verification_hidden=verification_hidden,
         )

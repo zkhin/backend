@@ -28,23 +28,20 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, media_uploads=[{'mediaId': 'mid2', 'imageData': image_data_b64}],
-        album_id=album.id,
+        user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
 
 @pytest.fixture
 def completed_post_with_media(post_manager, user_manager, image_data_b64):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(
-        user.id, 'pid3', PostType.IMAGE, media_uploads=[{'mediaId': 'mid3', 'imageData': image_data_b64}],
-    )
+    yield post_manager.add_post(user.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid4', PostType.IMAGE, media_uploads=[{'mediaId': 'mid'}], text='t')
+    yield post_manager.add_post(user.id, 'pid4', PostType.IMAGE, text='t')
 
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):

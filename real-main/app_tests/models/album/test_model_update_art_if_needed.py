@@ -26,26 +26,23 @@ def album(album_manager, user):
 
 @pytest.fixture
 def post1(post_manager, user):
-    media_upload = {'mediaId': str(uuid4())}
     with open(grant_path, 'rb') as fh:
-        media_upload['imageData'] = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, media_uploads=[media_upload])
+        image_data = base64.b64encode(fh.read())
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
 
 
 @pytest.fixture
 def post2(post_manager, user):
-    media_upload = {'mediaId': str(uuid4())}
     with open(grant_horz_path, 'rb') as fh:
-        media_upload['imageData'] = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, media_uploads=[media_upload])
+        image_data = base64.b64encode(fh.read())
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
 
 
 @pytest.fixture
 def post3(post_manager, user):
-    media_upload = {'mediaId': str(uuid4())}
     with open(grant_vert_path, 'rb') as fh:
-        media_upload['imageData'] = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, media_uploads=[media_upload])
+        image_data = base64.b64encode(fh.read())
+    yield post_manager.add_post(user.id, str(uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
 
 
 @pytest.fixture

@@ -35,15 +35,14 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   expect(resp['data']['self']['feed']['items']).toHaveLength(0)
 
   // they add two posts, verify they shows up in our feed in order
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  const [postId1, postId2] = [uuidv4(), uuidv4()]
   const postText1 = 'Im sorry dave'
   const postText2 = 'Im afraid I cant do that'
-  let variables = {postId: postId1, mediaId: mediaId1, text: postText1, imageData}
+  let variables = {postId: postId1, text: postText1, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  variables = {postId: postId2, mediaId: mediaId2, text: postText2, imageData}
+  variables = {postId: postId2, text: postText2, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -77,15 +76,14 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // they add two posts
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  const [postId1, postId2] = [uuidv4(), uuidv4()]
   const postText1 = 'Im sorry dave'
   const postText2 = 'Im afraid I cant do that'
-  let variables = {postId: postId1, mediaId: mediaId1, text: postText1, imageData}
+  let variables = {postId: postId1, text: postText1, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  variables = {postId: postId2, mediaId: mediaId2, text: postText2, imageData}
+  variables = {postId: postId2, text: postText2, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -132,15 +130,14 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
 
   // they add two posts
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  const [postId1, postId2] = [uuidv4(), uuidv4()]
   const postText1 = 'Im sorry dave'
   const postText2 = 'Im afraid I cant do that'
-  let variables = {postId: postId1, mediaId: mediaId1, text: postText1, imageData}
+  let variables = {postId: postId1, text: postText1, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  variables = {postId: postId2, mediaId: mediaId2, text: postText2, imageData}
+  variables = {postId: postId2, text: postText2, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -193,15 +190,14 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
 
   // they add two posts
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  const [postId1, postId2] = [uuidv4(), uuidv4()]
   const postText1 = 'Im sorry dave'
   const postText2 = 'Im afraid I cant do that'
-  let variables = {postId: postId1, mediaId: mediaId1, text: postText1, imageData}
+  let variables = {postId: postId1, text: postText1, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
-  variables = {postId: postId2, mediaId: mediaId2, text: postText2, imageData}
+  variables = {postId: postId2, text: postText2, imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -249,8 +245,8 @@ test.skip('Post that expires is removed from feed', async () => {
   expect(resp['data']['followUser']['followedStatus'] == 'FOLLOWING')
 
   // they add a post that expires in a millisecond
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let variables = {postId, mediaId, lifetime: 'PT0.001S', imageData}
+  const postId = uuidv4()
+  let variables = {postId, lifetime: 'PT0.001S', imageData}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -280,8 +276,8 @@ test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctl
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // they add a post
-  const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await theirClient.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData}})
+  const postId = uuidv4()
+  resp = await theirClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 

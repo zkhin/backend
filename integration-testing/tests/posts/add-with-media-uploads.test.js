@@ -1,5 +1,11 @@
 /* eslint-env jest */
 
+/**
+ * This whole file is DEPRECATED.
+ * To be removed when the mediaUploads argument to Mutation.addPost
+ * goes away.
+ */
+
 const moment = require('moment')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
@@ -27,8 +33,8 @@ afterAll(async () => await loginCache.clean())
 test('Add post no expiration', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -68,11 +74,11 @@ test('Add post no expiration', async () => {
 test('Add post with expiration', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
-  const postId = uuidv4()
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
   const text = 'zeds dead baby, zeds dead'
   const lifetime = 'P7D'
-  let variables = {postId, text, lifetime}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let variables = {postId, text, lifetime, mediaId}
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   const post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -88,84 +94,12 @@ test('Add post with expiration', async () => {
 })
 
 
-test('Add text-only post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  const postId = uuidv4()
-  const text = 'zeds dead baby, zeds dead'
-
-  let variables = {postId, text, postType: 'TEXT_ONLY'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  expect(resp['data']['addPost']['text']).toBe(text)
-  expect(resp['data']['addPost']['isVerified']).toBeNull()
-  expect(resp['data']['addPost']['image']).toBeNull()
-  expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
-})
-
-
-test('Add pending video post minimal', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  const postId = uuidv4()
-  let variables = {postId, postType: 'VIDEO'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postType']).toBe('VIDEO')
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  expect(resp['data']['addPost']['videoUploadUrl']).toBeTruthy()
-  expect(resp['data']['addPost']['text']).toBeNull()
-  expect(resp['data']['addPost']['isVerified']).toBeNull()
-  expect(resp['data']['addPost']['image']).toBeNull()
-  expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(false)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(false)
-})
-
-
-test('Add pending video post maximal', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  const postId = uuidv4()
-  const text = 'lore ipsum'
-  let variables = {
-    postId,
-    postType: 'VIDEO',
-    text,
-    commentsDisabled: true,
-    likesDisabled: true,
-    sharingDisabled: true,
-    verificationHidden: true,
-  }
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postType']).toBe('VIDEO')
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  expect(resp['data']['addPost']['videoUploadUrl']).toBeTruthy()
-  expect(resp['data']['addPost']['text']).toBe(text)
-  expect(resp['data']['addPost']['isVerified']).toBe(true)
-  expect(resp['data']['addPost']['image']).toBeNull()
-  expect(resp['data']['addPost']['imageUploadUrl']).toBeNull()
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(true)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(true)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(true)
-})
-
-
 test('Cant add video post to album (yet)', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO', albumId: 'aid'}
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: schema.addPostMediaUploads, variables})).rejects.toThrow()
 })
 
 
@@ -173,8 +107,8 @@ test('Add image post with image data directly included', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // add the post with image data included in the gql call
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables: {postId, mediaId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
@@ -214,9 +148,9 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   const [ourClient] = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
-  const postId = uuidv4()
-  let variables = {postId, postType: 'IMAGE'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  const [postId, mediaId] = [uuidv4(), uuidv4()]
+  let variables = {postId, mediaId, postType: 'IMAGE'}
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -230,9 +164,9 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // add another image post with a different image
-  const postId2 = uuidv4()
-  variables = {postId: postId2}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
+  variables = {postId: postId2, mediaId: mediaId2}
+  resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   uploadUrl = resp['data']['addPost']['imageUploadUrl']
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
@@ -265,8 +199,8 @@ test('Add image post (with postType specified), check non-duplicates are not mar
 test('Add post with text of empty string same as null text', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
-  let variables = {postId, text: ''}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let variables = {postId, mediaId: uuidv4(), text: ''}
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
@@ -277,23 +211,23 @@ test('Add post with text of empty string same as null text', async () => {
 
 test('Cannot add post with invalid lifetime', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const variables = {postId: uuidv4()}
+  const variables = {postId: uuidv4(), mediaId: uuidv4()}
 
   // malformed duration string
   variables.lifetime = 'invalid'
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: schema.addPostMediaUploads, variables})).rejects.toThrow()
 
   // negative value for lifetime
   variables.lifetime = '-P1D'
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: schema.addPostMediaUploads, variables})).rejects.toThrow()
 
   // zero value for lifetime
   variables.lifetime = 'P0D'
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: schema.addPostMediaUploads, variables})).rejects.toThrow()
 
   // success!
   variables.lifetime = 'P1D'
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
 })
 
@@ -302,8 +236,8 @@ test('Mental health settings default values', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // no user-level settings set
-  let variables = {postId: uuidv4()}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let variables = {postId: uuidv4(), mediaId: uuidv4()}
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -322,8 +256,8 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['setUserDetails']['verificationHidden']).toBe(true)
 
   // check those new user-level settings are used as defaults for a new post
-  variables = {postId: uuidv4()}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  variables = {postId: uuidv4(), mediaId: uuidv4()}
+  resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
@@ -342,8 +276,8 @@ test('Mental health settings default values', async () => {
   expect(resp['data']['setUserDetails']['verificationHidden']).toBe(false)
 
   // check those new user-level settings are used as defaults for a new post
-  variables = {postId: uuidv4()}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  variables = {postId: uuidv4(), mediaId: uuidv4()}
+  resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -360,12 +294,13 @@ test('Mental health settings specify values', async () => {
   let postId = uuidv4()
   let variables = {
     postId,
+    mediaId: uuidv4(),
     commentsDisabled: false,
     likesDisabled: false,
     sharingDisabled: false,
     verificationHidden: false,
   }
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -386,12 +321,13 @@ test('Mental health settings specify values', async () => {
   postId = uuidv4()
   variables = {
     postId,
+    mediaId: uuidv4(),
     commentsDisabled: true,
     likesDisabled: true,
     sharingDisabled: true,
     verificationHidden: true,
   }
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
@@ -418,8 +354,8 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   const theirPostId = uuidv4()
 
   // we add a image post, complete it, check it's original
-  let variables = {postId: ourPostId, imageData}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let variables = {postId: ourPostId, mediaId: uuidv4(), imageData}
+  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -427,8 +363,8 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   await misc.sleep(1000)  // let dynamo converge
 
   // they add another image post with the same image, original should point back to first post
-  variables = {postId: theirPostId, imageData}
-  resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  variables = {postId: theirPostId, mediaId: uuidv4(), imageData}
+  resp = await theirClient.mutate({mutation: schema.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')

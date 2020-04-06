@@ -27,7 +27,7 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -64,7 +64,7 @@ test('Blocking a user causes their anonymous likes on our posts to dissapear', a
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -166,7 +166,7 @@ test('Blocking a follower causes unfollowing, our posts in their feed and first 
 
   // we add a story
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime: 'PT1H'}
+  let variables = {postId, imageData, lifetime: 'PT1H'}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -279,7 +279,7 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
 
   // they post a story
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime: 'PT1H'}
+  let variables = {postId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

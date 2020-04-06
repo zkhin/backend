@@ -35,12 +35,12 @@ test('Posts that are not within a day of expiring do not show up as a stories', 
 
   // they add two posts that are not close to expiring
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData, text: 'never expires'}
+  let variables = {postId: postId1, imageData, text: 'never expires'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
-  variables = {postId: postId2, mediaId: uuidv4(), imageData, text: 'in a week', lifetime: 'P7D'}
+  variables = {postId: postId2, imageData, text: 'in a week', lifetime: 'P7D'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -71,7 +71,7 @@ test('Add a post that shows up as story', async () => {
 
   // they add a post that expires in a day
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, text: 'immediate story', lifetime: 'P1D'}
+  let variables = {postId, imageData, text: 'immediate story', lifetime: 'P1D'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -103,8 +103,8 @@ test('Add posts with images show up in stories', async () => {
   const imageData = new Buffer.from(imageBytes).toString('base64')
 
   // we add a image post, give s3 trigger a second to fire
-  const [postId1, mediaId1] = [uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: mediaId1, lifetime: 'PT1M', imageData}
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, lifetime: 'PT1M', imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
@@ -112,8 +112,8 @@ test('Add posts with images show up in stories', async () => {
   expect(resp['data']['addPost']['image']).toBeTruthy()
 
   // we add a image post, give s3 trigger a second to fire
-  const [postId2, mediaId2] = [uuidv4(), uuidv4()]
-  variables = {postId: postId2, mediaId: mediaId2, lifetime: 'PT2H', imageData}
+  const postId2 = uuidv4()
+  variables = {postId: postId2, lifetime: 'PT2H', imageData}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
@@ -136,17 +136,17 @@ test('Stories are ordered by first-to-expire-first', async () => {
 
   // we add three stories with various lifetimes
   const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]
-  let variables = {postId: postId1, mediaId: uuidv4(), imageData, text: '6 hrs', lifetime: 'PT6H'}
+  let variables = {postId: postId1, imageData, text: '6 hrs', lifetime: 'PT6H'}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
 
-  variables = {postId: postId2, mediaId: uuidv4(), imageData, text: '1 hr', lifetime: 'PT1H'}
+  variables = {postId: postId2, imageData, text: '1 hr', lifetime: 'PT1H'}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
 
-  variables = {postId: postId3, mediaId: uuidv4(), imageData, text: '12 hrs', lifetime: 'PT12H'}
+  variables = {postId: postId3, imageData, text: '12 hrs', lifetime: 'PT12H'}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
@@ -175,12 +175,12 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // they each add a story
-  let variables = {postId: uuidv4(), mediaId: uuidv4(), imageData, text: '12 hrs', lifetime: 'PT12H'}
+  let variables = {postId: uuidv4(), imageData, text: '12 hrs', lifetime: 'PT12H'}
   resp = await other1Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
-  variables = {postId: uuidv4(), mediaId: uuidv4(), imageData, text: '6 hrs', lifetime: 'PT6H'}
+  variables = {postId: uuidv4(), imageData, text: '6 hrs', lifetime: 'PT6H'}
   resp = await other2Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -193,7 +193,7 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(other1UserId)
 
   // another story is added that's about to expire
-  variables = {postId: uuidv4(), mediaId: uuidv4(), imageData, text: '1 hr', lifetime: 'PT1H'}
+  variables = {postId: uuidv4(), imageData, text: '1 hr', lifetime: 'PT1H'}
   resp = await other1Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -206,7 +206,7 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp['data']['self']['followedUsersWithStories']['items'][1]['userId']).toBe(other2UserId)
 
   // another story is added that doesn't change the order
-  variables = {postId: uuidv4(), mediaId: uuidv4(), imageData, text: '13 hrs', lifetime: 'PT13H'}
+  variables = {postId: uuidv4(), imageData, text: '13 hrs', lifetime: 'PT13H'}
   resp = await other2Client.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -227,7 +227,7 @@ test('Stories of private user are visible to themselves and followers only', asy
   let resp = await ourClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
-  let variables = {postId, mediaId: uuidv4(), imageData, text: 'expires in an hour', lifetime: 'PT1H'}
+  let variables = {postId, imageData, text: 'expires in an hour', lifetime: 'PT1H'}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -295,7 +295,7 @@ test.skip('Post that expires is removed from stories', async () => {
 
   // they add a post that expires in a millisecond
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, text: 'expires 1ms', lifetime: 'PT0.001S'}
+  let variables = {postId, imageData, text: 'expires 1ms', lifetime: 'PT0.001S'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -333,7 +333,7 @@ test('Post that is archived is removed from stories', async () => {
 
   // they add a post that expires in an hour
   const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), imageData, text: 'expires in an hour', lifetime: 'PT1H'}
+  let variables = {postId, imageData, text: 'expires in an hour', lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

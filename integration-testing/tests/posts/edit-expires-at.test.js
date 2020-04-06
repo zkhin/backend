@@ -38,7 +38,7 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
   const postId = uuidv4()
 
   // they add a post
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -54,7 +54,7 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
   const postId = uuidv4()
 
   // we add a post
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -70,7 +70,7 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
   const postId = uuidv4()
 
   // we add a post
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -86,7 +86,7 @@ test('Add and remove expiresAt from a Post', async () => {
   const postId = uuidv4()
 
   // we add a post without an expiresAt
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -131,7 +131,7 @@ test('Edit Post.expiresAt with UTC', async () => {
   const lifetime = 'P1D'
 
   // add a post with a lifetime
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime}
+  let variables = {postId, imageData, lifetime}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
@@ -165,7 +165,7 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   const lifetime = 'P1D'
 
   // add a post with a lifetime
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime}
+  let variables = {postId, imageData, lifetime}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
@@ -200,7 +200,7 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   const postId = uuidv4()
 
   // add a post with no lifetime
-  let variables = {postId, mediaId: uuidv4(), imageData}
+  let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -248,7 +248,7 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // they add a post that is also a story
-  let variables = {postId, mediaId: uuidv4(), imageData, lifetime: 'PT1H'}
+  let variables = {postId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
@@ -292,7 +292,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
 
   // they add a post that is also a story
-  let variables = {postId: theirPostId, mediaId: uuidv4(), imageData, lifetime: 'PT1H'}
+  let variables = {postId: theirPostId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
@@ -300,7 +300,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   const at = moment(resp['data']['addPost']['expiresAt'])
 
   // other adds a post that is also a story
-  variables = {postId: otherPostId, mediaId: uuidv4(), imageData, lifetime: 'PT2H'}
+  variables = {postId: otherPostId, imageData, lifetime: 'PT2H'}
   resp = await otherClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(otherPostId)
