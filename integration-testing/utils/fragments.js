@@ -38,24 +38,6 @@ module.exports.chatMessage = gql`
     author {
       userId
     }
-    viewedStatus
-  }
-`
-
-module.exports.chatMessageNotification = gql`
-  fragment ChatMessageNotificationFragment on ChatMessageNotification {
-    userId
-    messageId
-    chatId
-    authorUserId
-    type
-    text
-    textTaggedUserIds {
-      tag
-      userId
-    }
-    createdAt
-    lastEditedAt
   }
 `
 

@@ -15,17 +15,26 @@ class ChatMessage:
         mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
             triggerChatMessageNotification (input: $input) {
                 userId
-                messageId
-                chatId
-                authorUserId
                 type
-                text
-                textTaggedUserIds {
-                    tag
-                    userId
+                message {
+                    messageId
+                    chat {
+                        chatId
+                    }
+                    authorUserId
+                    author {
+                        userId
+                    }
+                    text
+                    textTaggedUsers {
+                        tag
+                        user {
+                            userId
+                        }
+                    }
+                    createdAt
+                    lastEditedAt
                 }
-                createdAt
-                lastEditedAt
             }
         }
     '''

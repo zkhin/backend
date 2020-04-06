@@ -1056,6 +1056,7 @@ module.exports.chat = gql`
       messages (reverse: $reverse) {
         items {
           ...ChatMessageFragment
+          viewedStatus
         }
       }
     }
@@ -1072,6 +1073,7 @@ module.exports.createDirectChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          viewedStatus
         }
       }
     }
@@ -1090,6 +1092,7 @@ module.exports.createGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          viewedStatus
         }
       }
     }
@@ -1106,6 +1109,7 @@ module.exports.editGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          viewedStatus
         }
       }
     }
@@ -1122,6 +1126,7 @@ module.exports.addToGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          viewedStatus
         }
       }
     }
@@ -1138,6 +1143,7 @@ module.exports.leaveGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          viewedStatus
         }
       }
     }
@@ -1150,6 +1156,7 @@ module.exports.addChatMessage = gql`
   mutation AddChatMessage ($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage (chatId: $chatId, messageId: $messageId, text: $text) {
       ...ChatMessageFragment
+      viewedStatus
     }
   }
   ${fragments.chatMessage}
@@ -1159,6 +1166,7 @@ module.exports.editChatMessage = gql`
   mutation EditChatMessage ($messageId: ID!, $text: String!) {
     editChatMessage (messageId: $messageId, text: $text) {
       ...ChatMessageFragment
+      viewedStatus
     }
   }
   ${fragments.chatMessage}
@@ -1168,6 +1176,7 @@ module.exports.deleteChatMessage = gql`
   mutation DeleteChatMessage ($messageId: ID!) {
     deleteChatMessage (messageId: $messageId) {
       ...ChatMessageFragment
+      viewedStatus
     }
   }
   ${fragments.chatMessage}
@@ -1182,17 +1191,25 @@ module.exports.reportChatMessageViews = gql`
 module.exports.triggerChatMessageNotification = gql`
   mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
     triggerChatMessageNotification (input: $input) {
-      ...ChatMessageNotificationFragment
+      userId
+      type
+      message {
+        ...ChatMessageFragment
+      }
     }
   }
-  ${fragments.chatMessageNotification}
+  ${fragments.chatMessage}
 `
 
 module.exports.onChatMessageNotification = gql`
   subscription OnChatMessageNotification ($userId: ID!) {
     onChatMessageNotification (userId: $userId) {
-      ...ChatMessageNotificationFragment
+      userId
+      type
+      message {
+        ...ChatMessageFragment
+      }
     }
   }
-  ${fragments.chatMessageNotification}
+  ${fragments.chatMessage}
 `

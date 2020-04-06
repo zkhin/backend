@@ -160,35 +160,35 @@ test('Messages in multiple chats fire', async () => {
 
   // we should see all messages from chats we were in (except our own messages)
   expect(ourMsgNotifications).toHaveLength(3)
-  expect(ourMsgNotifications[0]['data']['onChatMessageNotification']['authorUserId']).toBe(theirUserId)
-  expect(ourMsgNotifications[1]['data']['onChatMessageNotification']['authorUserId']).toBeNull()
-  expect(ourMsgNotifications[2]['data']['onChatMessageNotification']['authorUserId']).toBe(otherUserId)
+  expect(ourMsgNotifications[0]['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
+  expect(ourMsgNotifications[1]['data']['onChatMessageNotification']['message']['authorUserId']).toBeNull()
+  expect(ourMsgNotifications[2]['data']['onChatMessageNotification']['message']['authorUserId']).toBe(otherUserId)
 
-  expect(ourMsgNotifications[0]['data']['onChatMessageNotification']['messageId']).toBe(messageId2)
-  expect(ourMsgNotifications[1]['data']['onChatMessageNotification']['text']).toContain('added')
-  expect(ourMsgNotifications[2]['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
+  expect(ourMsgNotifications[0]['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
+  expect(ourMsgNotifications[1]['data']['onChatMessageNotification']['message']['text']).toContain('added')
+  expect(ourMsgNotifications[2]['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId3)
 
   // they should see all messages from chats they were in (except their own messages)
   expect(theirMsgNotifications).toHaveLength(4)
-  expect(theirMsgNotifications[0]['data']['onChatMessageNotification']['authorUserId']).toBe(ourUserId)
-  expect(theirMsgNotifications[1]['data']['onChatMessageNotification']['authorUserId']).toBeNull()
-  expect(theirMsgNotifications[2]['data']['onChatMessageNotification']['authorUserId']).toBe(otherUserId)
-  expect(theirMsgNotifications[3]['data']['onChatMessageNotification']['authorUserId']).toBe(ourUserId)
+  expect(theirMsgNotifications[0]['data']['onChatMessageNotification']['message']['authorUserId']).toBe(ourUserId)
+  expect(theirMsgNotifications[1]['data']['onChatMessageNotification']['message']['authorUserId']).toBeNull()
+  expect(theirMsgNotifications[2]['data']['onChatMessageNotification']['message']['authorUserId']).toBe(otherUserId)
+  expect(theirMsgNotifications[3]['data']['onChatMessageNotification']['message']['authorUserId']).toBe(ourUserId)
 
-  expect(theirMsgNotifications[0]['data']['onChatMessageNotification']['messageId']).toBe(messageId1)
-  expect(theirMsgNotifications[1]['data']['onChatMessageNotification']['text']).toContain('added')
-  expect(theirMsgNotifications[2]['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
-  expect(theirMsgNotifications[3]['data']['onChatMessageNotification']['messageId']).toBe(messageId4)
+  expect(theirMsgNotifications[0]['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId1)
+  expect(theirMsgNotifications[1]['data']['onChatMessageNotification']['message']['text']).toContain('added')
+  expect(theirMsgNotifications[2]['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId3)
+  expect(theirMsgNotifications[3]['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId4)
 
   // other should see all msg from their chats (except their own)
   expect(otherMsgNotifications).toHaveLength(3)
-  expect(otherMsgNotifications[0]['data']['onChatMessageNotification']['authorUserId']).toBeNull()
-  expect(otherMsgNotifications[1]['data']['onChatMessageNotification']['authorUserId']).toBeNull()
-  expect(otherMsgNotifications[2]['data']['onChatMessageNotification']['authorUserId']).toBe(ourUserId)
+  expect(otherMsgNotifications[0]['data']['onChatMessageNotification']['message']['authorUserId']).toBeNull()
+  expect(otherMsgNotifications[1]['data']['onChatMessageNotification']['message']['authorUserId']).toBeNull()
+  expect(otherMsgNotifications[2]['data']['onChatMessageNotification']['message']['authorUserId']).toBe(ourUserId)
 
-  expect(otherMsgNotifications[0]['data']['onChatMessageNotification']['text']).toContain('created the group')
-  expect(otherMsgNotifications[1]['data']['onChatMessageNotification']['text']).toContain('added')
-  expect(otherMsgNotifications[2]['data']['onChatMessageNotification']['messageId']).toBe(messageId4)
+  expect(otherMsgNotifications[0]['data']['onChatMessageNotification']['message']['text']).toContain('created')
+  expect(otherMsgNotifications[1]['data']['onChatMessageNotification']['message']['text']).toContain('added')
+  expect(otherMsgNotifications[2]['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId4)
 
   // shut down the subscriptions
   ourSub.unsubscribe()
@@ -240,20 +240,19 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']).toEqual({
-    'userId': ourUserId,
-    'messageId': messageId2,
-    'chatId': chatId,
-    'authorUserId': theirUserId,
-    'type': 'ADDED',
-    'text': text2,
-    'textTaggedUserIds': [
-      {'tag': `@${ourUsername}`, 'userId': ourUserId, '__typename': 'TextTaggedUserId'},
-    ],
-    'createdAt': createdAt,
-    'lastEditedAt': null,
-    '__typename': 'ChatMessageNotification',
-  })
+  expect(resp['data']['onChatMessageNotification']['userId']).toBe(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['type']).toBe('ADDED')
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['message']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text2)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${ourUsername}`)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['user']['userId'])
+    .toBe(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['createdAt']).toBe(createdAt)
+  expect(resp['data']['onChatMessageNotification']['message']['lastEditedAt']).toBeNull()
 
   // set up a promise for the next notification
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
@@ -271,20 +270,19 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']).toEqual({
-    'userId': ourUserId,
-    'messageId': messageId2,
-    'chatId': chatId,
-    'authorUserId': theirUserId,
-    'type': 'EDITED',
-    'text': text3,
-    'textTaggedUserIds': [
-      {'tag': `@${theirUsername}`, 'userId': theirUserId, '__typename': 'TextTaggedUserId'},
-    ],
-    'createdAt': createdAt,
-    'lastEditedAt': lastEditedAt,
-    '__typename': 'ChatMessageNotification',
-  })
+  expect(resp['data']['onChatMessageNotification']['userId']).toBe(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['type']).toBe('EDITED')
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['message']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text3)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['user']['userId'])
+    .toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['createdAt']).toBe(createdAt)
+  expect(resp['data']['onChatMessageNotification']['message']['lastEditedAt']).toBe(lastEditedAt)
 
   // set up a promise for the next notification
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
@@ -298,20 +296,19 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   // verify the subscription received the notificaiton and in correct format
   resp = await nextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']).toEqual({
-    'userId': ourUserId,
-    'messageId': messageId2,
-    'chatId': chatId,
-    'authorUserId': theirUserId,
-    'type': 'DELETED',
-    'text': text3,
-    'textTaggedUserIds': [
-      {'tag': `@${theirUsername}`, 'userId': theirUserId, '__typename': 'TextTaggedUserId'},
-    ],
-    'createdAt': createdAt,
-    'lastEditedAt': lastEditedAt,
-    '__typename': 'ChatMessageNotification',
-  })
+  expect(resp['data']['onChatMessageNotification']['userId']).toBe(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['type']).toBe('DELETED')
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['message']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text3)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['user']['userId'])
+    .toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['createdAt']).toBe(createdAt)
+  expect(resp['data']['onChatMessageNotification']['message']['lastEditedAt']).toBe(lastEditedAt)
 
   // shut down the subscription
   sub.unsubscribe()
@@ -353,8 +350,8 @@ test('Notifications for a group chat', async () => {
   // verify we received the message
   resp = await nextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId2)
-  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(other1UserId)
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(other1UserId)
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
 
   // we edit group name to trigger a system message
@@ -367,14 +364,15 @@ test('Notifications for a group chat', async () => {
   // verify we received the message
   resp = await nextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']['messageId']).toBeTruthy()
-  expect(resp['data']['onChatMessageNotification']['text']).toContain(ourUsername)
-  expect(resp['data']['onChatMessageNotification']['text']).toContain('changed the name of the group')
-  expect(resp['data']['onChatMessageNotification']['text']).toContain('"new name"')
-  expect(resp['data']['onChatMessageNotification']['textTaggedUserIds']).toHaveLength(1)
-  expect(resp['data']['onChatMessageNotification']['textTaggedUserIds'][0]['tag']).toContain(ourUsername)
-  expect(resp['data']['onChatMessageNotification']['textTaggedUserIds'][0]['userId']).toContain(ourUserId)
-  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBeNull()
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBeTruthy()
+  expect(resp['data']['onChatMessageNotification']['message']['text']).toContain(ourUsername)
+  expect(resp['data']['onChatMessageNotification']['message']['text']).toContain('changed the name of the group')
+  expect(resp['data']['onChatMessageNotification']['message']['text']).toContain('"new name"')
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toContain(ourUsername)
+  expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['user']['userId'])
+    .toContain(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBeNull()
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
 
   // other2 adds a message to the chat
@@ -387,8 +385,8 @@ test('Notifications for a group chat', async () => {
   // verify we received the message
   resp = await nextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
-  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(other2UserId)
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId3)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(other2UserId)
 
   // shut down our subscription
   sub.unsubscribe()
@@ -439,8 +437,8 @@ test('Message notifications do not respect blocking relationships in a group cha
   // verify they received a notifcation for our message
   resp = await theirNextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId2)
-  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(ourUserId)
 
   // we listen to notifciations
   const ourNextNotification = new Promise((resolve, reject) => {next = resolve; error = reject})
@@ -460,8 +458,8 @@ test('Message notifications do not respect blocking relationships in a group cha
   // verify we received a notifcation for their message
   resp = await ourNextNotification
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['onChatMessageNotification']['messageId']).toBe(messageId3)
-  expect(resp['data']['onChatMessageNotification']['authorUserId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId3)
+  expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
 
   // shut down the subscriptions
   ourSub.unsubscribe()

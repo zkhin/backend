@@ -388,17 +388,10 @@ type PaginatedChatMessages {
   nextToken: String
 }
 
-# Abridged version of a ChatMessage that will be pushed to clients
 type ChatMessageNotification {
   userId: ID!  # user this notification is intended for
-  messageId: ID!
-  chatId: ID!
-  authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
   type: ChatMessageNotificationType!
-  text: String!
-  textTaggedUserIds: [TextTaggedUserId!]!  # max of 100
-  createdAt: AWSDateTime!
-  lastEditedAt: AWSDateTime
+  message: ChatMessage!
 }
 
 enum ChatMessageNotificationType {
@@ -591,12 +584,6 @@ type PaginatedPosts {
 type TextTaggedUser {
   tag: String!  # ex: '@ian'
   user: User!
-}
-
-# Abridged version to be used in notification objects for subscriptions
-type TextTaggedUserId {
-  tag: String!  # ex: '@ian'
-  userId: ID!
 }
 
 input TextTaggedUserIdInput {
