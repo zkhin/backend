@@ -192,7 +192,7 @@ class Post:
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
             image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
-            image.save(in_mem_file, format='JPEG')
+            image.save(in_mem_file, format='JPEG', quality=95)
             in_mem_file.seek(0)
             path = self.get_image_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)

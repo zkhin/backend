@@ -154,7 +154,7 @@ class Album:
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
             target_image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
-            target_image.save(in_mem_file, format='JPEG')
+            target_image.save(in_mem_file, format='JPEG', quality=95)
             in_mem_file.seek(0)
             path = self.get_art_image_path(size, art_hash=art_hash)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
