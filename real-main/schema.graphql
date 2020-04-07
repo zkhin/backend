@@ -405,9 +405,10 @@ input ChatMessageNotificationInput {
   userId: ID!  # user this notification is intended for
   messageId: ID!
   chatId: ID!
-  authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
   type: ChatMessageNotificationType!
   text: String!
+  authorUserId: ID  # null for system messages
+  authorUsername: String  # null for system messages or for blocking relationships
   textTaggedUserIds: [TextTaggedUserIdInput!]!
   createdAt: AWSDateTime!
   lastEditedAt: AWSDateTime

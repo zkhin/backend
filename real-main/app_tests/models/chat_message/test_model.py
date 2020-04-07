@@ -1,15 +1,30 @@
-from unittest.mock import call
+import base64
+from unittest.mock import Mock, call
+import os
 
 import pendulum
 import pytest
 
 from app.models.block.enums import BlockStatus
+from app.models.post.enums import PostType
 from app.models.view.enums import ViewedStatus
+
+grant_path = os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
-def user1(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def grant_data_b64():
+    with open(grant_path, 'rb') as fh:
+        yield base64.b64encode(fh.read())
+
+
+@pytest.fixture
+def user1(user_manager, post_manager, grant_data_b64):
+    # give the user a profile photo so that it will show up in the message notification trigger calls
+    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+    post = post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    user.update_photo(post)
+    yield user
 
 
 @pytest.fixture
@@ -112,89 +127,105 @@ def test_chat_message_delete(message, chat, user1, user2):
     assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'][len('chat/'):]) == now
 
 
-def test_trigger_notifications_direct(message, chat, user1, user2, appsync_client):
+def test_trigger_notification(message, chat, user1, user2, appsync_client):
     # trigger a notificaiton and check our mock client was called as expected
+    message.trigger_notification('ntype', user2.id)
+    assert len(appsync_client.mock_calls) == 1
+    assert len(appsync_client.send.call_args.kwargs) == 0
+    args = appsync_client.send.call_args.args
+    assert len(args) == 2
+    assert args[0] == message.trigger_notification_mutation
+    assert list(args[1].keys()) == ['input']
+    assert len(args[1]['input']) == 10
+    assert args[1]['input']['userId'] == user2.id
+    assert args[1]['input']['messageId'] == 'mid'
+    assert args[1]['input']['chatId'] == chat.id
+    assert args[1]['input']['authorUserId'] == user1.id
+    assert args[1]['input']['authorUsername'] == user1.username
+    assert args[1]['input']['type'] == 'ntype'
+    assert args[1]['input']['text'] == message.item['text']
+    assert args[1]['input']['textTaggedUserIds'] == []
+    assert args[1]['input']['createdAt'] == message.item['createdAt']
+    assert args[1]['input']['lastEditedAt'] is None
+
+
+def test_trigger_notification_blocking_relationship(chat_message_manager, chat, user1, user2, appsync_client,
+                                                    block_manager):
+    # user1 triggers a message notification that user2 recieves (in a group chat)
+    message1 = chat_message_manager.add_chat_message('mid3', 'lore', chat.id, user1.id)
+    message2 = chat_message_manager.add_chat_message('mid4', 'lore', chat.id, user2.id)
+
+    # user1 blocks user2
+    block_manager.block(user1, user2)
+
+    message1.trigger_notification('ntype', user2.id)
+    assert appsync_client.send.call_args.args[1]['input']['userId'] == user2.id
+    assert appsync_client.send.call_args.args[1]['input']['authorUserId'] == user1.id
+    assert appsync_client.send.call_args.args[1]['input']['authorUsername'] is None
+
+    message2.trigger_notification('ntype', user1.id)
+    assert appsync_client.send.call_args.args[1]['input']['userId'] == user1.id
+    assert appsync_client.send.call_args.args[1]['input']['authorUserId'] == user2.id
+    assert appsync_client.send.call_args.args[1]['input']['authorUsername'] is None
+
+
+def test_trigger_notification_system_message(chat_manager, chat_message_manager, user1, appsync_client):
+    group_chat = chat_manager.add_group_chat('cid', user1.id)
+    appsync_client.reset_mock()
+    # adding a system message triggers the notifcations automatically
+    message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user1.id, 'cname')
+    assert len(appsync_client.mock_calls) == 1
+    assert len(appsync_client.send.call_args.kwargs) == 0
+    args = appsync_client.send.call_args.args
+    assert len(args) == 2
+    assert args[0] == message.trigger_notification_mutation
+    assert list(args[1].keys()) == ['input']
+    assert len(args[1]['input']) == 10
+    assert args[1]['input']['userId'] == user1.id
+    assert args[1]['input']['messageId'] == message.id
+    assert args[1]['input']['chatId'] == group_chat.id
+    assert args[1]['input']['authorUserId'] is None
+    assert args[1]['input']['authorUsername'] is None
+    assert args[1]['input']['type'] == 'ADDED'
+    assert args[1]['input']['text'] == message.item['text']
+    assert args[1]['input']['textTaggedUserIds'] == [{'tag': f'@{user1.username}', 'userId': user1.id}]
+    assert args[1]['input']['createdAt'] == message.item['createdAt']
+    assert args[1]['input']['lastEditedAt'] is None
+
+
+def test_trigger_notifications_direct(message, chat, user1, user2, appsync_client):
+    message.trigger_notification = Mock()
     message.trigger_notifications('ntype')
-    appsync_client.mock_calls == [
-        call.send(message.trigger_notification_mutation, {'input': {
-            'userId': user2.id,
-            'messageId': message.id,
-            'chatId': chat.id,
-            'authorUserId': user1.id,
-            'type': 'ntype',
-            'text': message.item['text'],
-            'textTaggedUserIds': [],
-            'createdAt': message.item['createdAt'],
-            'lastEditedAt': None
-        }})
-    ]
+    assert message.trigger_notification.mock_calls == [call('ntype', user2.id)]
 
 
 def test_trigger_notifications_user_ids(message, chat, user1, user2, user3, appsync_client):
     # trigger a notification and check that we can use user_ids param to push
     # the notifications to users that aren't found in dynamo
+    message.trigger_notification = Mock()
     message.trigger_notifications('ntype', user_ids=[user2.id, user3.id])
-    assert len(appsync_client.mock_calls) == 2
-    sent_to_user_ids = []
-    for call_args in appsync_client.send.call_args_list:
-        assert call_args.args[0] == message.trigger_notification_mutation
-        assert list(call_args.args[1].keys()) == ['input']
-        assert call_args.args[1]['input']['messageId'] == 'mid'
-        assert call_args.args[1]['input']['chatId'] == chat.id
-        assert call_args.args[1]['input']['authorUserId'] == user1.id
-        assert call_args.args[1]['input']['type'] == 'ntype'
-        assert call_args.args[1]['input']['text'] == message.item['text']
-        assert call_args.args[1]['input']['textTaggedUserIds'] == []
-        assert call_args.args[1]['input']['createdAt'] == message.item['createdAt']
-        assert call_args.args[1]['input']['lastEditedAt'] is None
-        sent_to_user_ids.append(call_args.args[1]['input']['userId'])
-    # order of triggering isn't guaranteed
-    assert sorted(sent_to_user_ids) == sorted([user2.id, user3.id])
+    assert message.trigger_notification.mock_calls == [
+        call('ntype', user2.id),
+        call('ntype', user3.id),
+    ]
 
 
 def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, user2, user3, appsync_client):
     # user1 creates a group chat with everyone in it
     group_chat = chat_manager.add_group_chat('cid', user1.id)
     group_chat.add(user1.id, [user2.id, user3.id])
-    appsync_client.reset_mock()
 
     # user2 creates a message, trigger notificaitons on it
     message_id = 'mid'
     message = chat_message_manager.add_chat_message(message_id, 'lore', group_chat.id, user2.id)
+    message.trigger_notification = Mock()
     message.trigger_notifications('ntype')
-    assert len(appsync_client.mock_calls) == 2
-    sent_to_user_ids = []
-    for call_args in appsync_client.send.call_args_list:
-        assert call_args.args[0] == message.trigger_notification_mutation
-        assert list(call_args.args[1].keys()) == ['input']
-        assert call_args.args[1]['input']['messageId'] == message_id
-        assert call_args.args[1]['input']['chatId'] == group_chat.id
-        assert call_args.args[1]['input']['authorUserId'] == user2.id
-        assert call_args.args[1]['input']['type'] == 'ntype'
-        assert call_args.args[1]['input']['text'] == message.item['text']
-        assert call_args.args[1]['input']['textTaggedUserIds'] == []
-        assert call_args.args[1]['input']['createdAt'] == message.item['createdAt']
-        assert call_args.args[1]['input']['lastEditedAt'] is None
-        sent_to_user_ids.append(call_args.args[1]['input']['userId'])
-    # order of triggering isn't guaranteed
-    assert sorted(sent_to_user_ids) == sorted([user1.id, user3.id])
+    assert message.trigger_notification.mock_calls == [
+        call('ntype', user1.id),
+        call('ntype', user3.id),
+    ]
 
     # add system message, notifications are triggered automatically
     appsync_client.reset_mock()
     message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user3.id, 'cname')
-    assert len(appsync_client.send.call_args_list) == 3
-    sent_to_user_ids = []
-    for call_args in appsync_client.send.call_args_list:
-        assert call_args.args[0] == message.trigger_notification_mutation
-        assert list(call_args.args[1].keys()) == ['input']
-        assert call_args.args[1]['input']['messageId']
-        assert call_args.args[1]['input']['chatId'] == group_chat.id
-        assert call_args.args[1]['input']['authorUserId'] is None
-        assert call_args.args[1]['input']['type'] == 'ADDED'
-        assert call_args.args[1]['input']['text']
-        assert call_args.args[1]['input']['textTaggedUserIds']
-        assert call_args.args[1]['input']['createdAt']
-        assert call_args.args[1]['input']['lastEditedAt'] is None
-        sent_to_user_ids.append(call_args.args[1]['input']['userId'])
-    # order of triggering isn't guaranteed
-    assert sorted(sent_to_user_ids) == sorted([user1.id, user2.id, user3.id])
+    assert len(appsync_client.send.mock_calls) == 3  # one for each member of the group chat

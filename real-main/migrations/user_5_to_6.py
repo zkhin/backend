@@ -109,7 +109,7 @@ class Migration:
             return None
 
     def s3_put_object(self, user_id, path, data):
-        logger.warning(f'Post `{user_id}`: s3: putting object at `{path}`')
+        logger.warning(f'User `{user_id}`: s3: putting object at `{path}`')
         data.seek(0)
         self.s3_bucket.put_object(Key=path, Body=data, ContentType=self.content_type)
 

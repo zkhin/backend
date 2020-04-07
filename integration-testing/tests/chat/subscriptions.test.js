@@ -40,6 +40,7 @@ test('Chat message triggers cannot be called from external graphql client', asyn
     messageId,
     chatId,
     authorUserId: ourUserId,
+    authorUsername: 'uname',
     type: 'ADDED',
     text: 'lore ipsum',
     textTaggedUserIds: [],
@@ -246,6 +247,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['chat']['chatId']).toBe(chatId)
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['username']).toBe(theirUsername)
   expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text2)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${ourUsername}`)
@@ -276,6 +278,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['chat']['chatId']).toBe(chatId)
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['username']).toBe(theirUsername)
   expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text3)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
@@ -302,6 +305,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['chat']['chatId']).toBe(chatId)
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['username']).toBe(theirUsername)
   expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text3)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
@@ -373,6 +377,7 @@ test('Notifications for a group chat', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['user']['userId'])
     .toContain(ourUserId)
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBeNull()
+  expect(resp['data']['onChatMessageNotification']['message']['author']).toBeNull()
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
 
   // other2 adds a message to the chat
@@ -394,11 +399,7 @@ test('Notifications for a group chat', async () => {
 })
 
 
-/**
- * Like chat messages in a group chat, if two users with a blocking relationship are
- * together in a group chat, they will get notifications of each other's messages.
- */
-test('Message notifications do not respect blocking relationships in a group chat', async () => {
+test('Message notifications from blocke[r|d] users have authorUserId but no author', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
@@ -434,11 +435,12 @@ test('Message notifications do not respect blocking relationships in a group cha
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addChatMessage']['messageId']).toBe(messageId2)
 
-  // verify they received a notifcation for our message
+  // verify they received a notifcation for our message with no author
   resp = await theirNextNotification
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId2)
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(ourUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']).toBeNull()
 
   // we listen to notifciations
   const ourNextNotification = new Promise((resolve, reject) => {next = resolve; error = reject})
@@ -460,6 +462,7 @@ test('Message notifications do not respect blocking relationships in a group cha
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['onChatMessageNotification']['message']['messageId']).toBe(messageId3)
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
+  expect(resp['data']['onChatMessageNotification']['message']['author']).toBeNull()
 
   // shut down the subscriptions
   ourSub.unsubscribe()

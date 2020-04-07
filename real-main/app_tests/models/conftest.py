@@ -123,8 +123,8 @@ def chat_manager(dynamo_client, appsync_client):
 
 
 @pytest.fixture
-def chat_message_manager(dynamo_client, appsync_client):
-    yield ChatMessageManager({'appsync': appsync_client, 'dynamo': dynamo_client})
+def chat_message_manager(dynamo_client, appsync_client, cloudfront_client):
+    yield ChatMessageManager({'appsync': appsync_client, 'cloudfront': cloudfront_client, 'dynamo': dynamo_client})
 
 
 @pytest.fixture

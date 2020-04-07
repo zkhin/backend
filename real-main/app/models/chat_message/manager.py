@@ -3,7 +3,7 @@ import logging
 import pendulum
 import uuid
 
-from app.models import chat, user, view
+from app.models import block, chat, user, view
 
 from . import exceptions
 from .dynamo import ChatMessageDynamo
@@ -19,6 +19,7 @@ class ChatMessageManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['chat_message'] = self
+        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
         self.chat_manager = managers.get('chat') or chat.ChatManager(clients, managers=managers)
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
         self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
@@ -36,6 +37,7 @@ class ChatMessageManager:
     def init_chat_message(self, item):
         kwargs = {
             'appsync_client': self.appsync_client,
+            'block_manager': self.block_manager,
             'chat_manager': self.chat_manager,
             'user_manager': self.user_manager,
             'view_manager': self.view_manager,
