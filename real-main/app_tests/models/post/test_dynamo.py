@@ -50,7 +50,7 @@ def test_transact_add_pending_post_sans_options(post_dynamo):
     posted_at_str = posted_at.to_iso8601_string()
     post_item = post_dynamo.get_post(post_id)
     assert post_item == {
-        'schemaVersion': 2,
+        'schemaVersion': 3,
         'partitionKey': 'post/pid',
         'sortKey': '-',
         'gsiA2PartitionKey': 'post/pbuid',
@@ -87,7 +87,7 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     expires_at_str = expires_at.to_iso8601_string()
     post_item = post_dynamo.get_post(post_id)
     assert post_item == {
-        'schemaVersion': 2,
+        'schemaVersion': 3,
         'partitionKey': 'post/pid',
         'sortKey': '-',
         'gsiA2PartitionKey': 'post/pbuid',

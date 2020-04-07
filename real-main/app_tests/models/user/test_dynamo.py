@@ -24,7 +24,7 @@ def test_add_user_minimal(user_dynamo):
     assert after > now
 
     assert item == {
-        'schemaVersion': 5,
+        'schemaVersion': 6,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -57,7 +57,7 @@ def test_add_user_maximal(user_dynamo):
     assert after > now
 
     assert item == {
-        'schemaVersion': 5,
+        'schemaVersion': 6,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -80,7 +80,7 @@ def test_add_user_at_specific_time(user_dynamo):
 
     item = user_dynamo.add_user(user_id, username, now=now)
     assert item == {
-        'schemaVersion': 5,
+        'schemaVersion': 6,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',

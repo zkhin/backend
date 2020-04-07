@@ -92,7 +92,7 @@ class PostDynamo:
         posted_at_str = posted_at.to_iso8601_string()
         post_status = enums.PostStatus.PENDING
         post_item = {
-            'schemaVersion': {'N': '2'},
+            'schemaVersion': {'N': '3'},
             'partitionKey': {'S': f'post/{post_id}'},
             'sortKey': {'S': '-'},
             'gsiA2PartitionKey': {'S': f'post/{posted_by_user_id}'},
