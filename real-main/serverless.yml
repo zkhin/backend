@@ -83,6 +83,16 @@ provider:
       Action:
         - appsync:GraphQL
       Resource: '#{GraphQlApi.Arn}/types/Mutation/fields/trigger*'
+    # Allows for running data migrations with this role from lambda
+    - Effect: Allow
+      Action:
+        - logs:CreateLogGroup
+      Resource: '*'
+    - Effect: Allow
+      Action:
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource: !Join [ ':', [ 'arn:aws:logs', '#{AWS::Region}', '#{AWS::AccountId}', 'log-group', '/aws/lambda/*' ] ]
 
 custom:
   envvars:
