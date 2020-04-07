@@ -499,6 +499,7 @@ module.exports.addPost = gql`
     $imageData: String,
     $takenInReal: Boolean
     $originalFormat: String,
+    $originalMetadata: String,
     $lifetime: String
     $commentsDisabled: Boolean,
     $likesDisabled: Boolean,
@@ -513,6 +514,7 @@ module.exports.addPost = gql`
       imageInput: {
         takenInReal: $takenInReal,
         originalFormat: $originalFormat,
+        originalMetadata: $originalMetadata,
         imageData: $imageData,
       },
       lifetime: $lifetime,

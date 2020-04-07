@@ -321,6 +321,7 @@ def test_add_media_post_with_options(post_manager, album):
         'mediaId': media_id,
         'takenInReal': False,
         'originalFormat': 'org-format',
+        'originalMetadata': 'org-metadata',
     }
     lifetime_duration = pendulum.duration(hours=1)
 
@@ -344,6 +345,9 @@ def test_add_media_post_with_options(post_manager, album):
     assert post.item['commentsDisabled'] is False
     assert post.item['likesDisabled'] is True
     assert post.item['verificationHidden'] is False
+
+    post_original_metadata = post_manager.dynamo.get_original_metadata(post_id)
+    assert post_original_metadata['originalMetadata'] == 'org-metadata'
 
     media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
     assert len(media_items) == 1

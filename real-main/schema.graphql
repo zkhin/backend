@@ -490,7 +490,7 @@ input MediaObjectUpload {
 input ImageInput {
   takenInReal: Boolean
   originalFormat: String
-  # TODO: originalMetadata: String
+  originalMetadata: String
 
   # There are two ways to upload image data:
   #   - by http PUTing image data to Post.imageUploadUrl, after creating the post OR

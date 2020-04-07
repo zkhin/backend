@@ -24,6 +24,12 @@ class PostDynamo:
             'sortKey': '-',
         }, strongly_consistent=strongly_consistent)
 
+    def get_original_metadata(self, post_id):
+        return self.client.get_item({
+            'partitionKey': f'post/{post_id}',
+            'sortKey': 'originalMetadata',
+        })
+
     def get_next_completed_post_to_expire(self, user_id, exclude_post_id=None):
         query_kwargs = {
             'KeyConditionExpression': (
@@ -135,6 +141,17 @@ class PostDynamo:
 
         return {'Put': {
             'Item': post_item,
+            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
+        }}
+
+    def transact_add_original_metadata(self, post_id, original_metadata):
+        return {'Put': {
+            'Item': {
+                'schemaVersion': {'N': '0'},
+                'partitionKey': {'S': f'post/{post_id}'},
+                'sortKey': {'S': 'originalMetadata'},
+                'originalMetadata': {'S': original_metadata},
+            },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 

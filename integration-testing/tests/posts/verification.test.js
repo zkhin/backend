@@ -30,7 +30,7 @@ test('Add image post passes verification', async () => {
 
   // we add a image post, check in PENDING
   const postId = uuidv4()
-  let variables = {postId, takenInReal: true, originalFormat: 'HEIC'}
+  let variables = {postId, takenInReal: true, originalFormat: 'HEIC', originalMetadata: '{}'}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']

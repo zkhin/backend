@@ -111,6 +111,8 @@ class PostManager:
                 posted_at=now, taken_in_real=image_input.get('takenInReal'),
                 original_format=image_input.get('originalFormat'),
             ))
+            if original_metadata := image_input.get('originalMetadata'):
+                transacts.append(self.dynamo.transact_add_original_metadata(post_id, original_metadata))
         self.dynamo.client.transact_write_items(transacts)
 
         post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
