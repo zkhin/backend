@@ -3,7 +3,7 @@ import logging
 import os
 
 import boto3
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 logger = logging.getLogger()
 
@@ -67,17 +67,22 @@ class Migration:
 
     def migrate_post(self, post):
         post_id = post['postId']
+        logger.warning(f'Post `{post_id}`: starting migration')
         native_path = self.s3_get_image_path(post, NATIVE)
         native_data = self.s3_get_object_data(native_path)
         if native_data:
-            im = Image.open(io.BytesIO(native_data))
-            im = ImageOps.exif_transpose(im)
-            for size in THUMBNAILS:
-                im.thumbnail(size.max_dimensions)
-                data = io.BytesIO()
-                im.save(data, format='JPEG', quality=100, icc_profile=im.info.get('icc_profile'))
-                path = self.s3_get_image_path(post, size)
-                self.s3_put_object(post_id, path, data)
+            try:
+                im = Image.open(io.BytesIO(native_data))
+            except UnidentifiedImageError:
+                logger.warning(f'Post `{post_id}`: s3: native image appears corrupted')
+            else:
+                im = ImageOps.exif_transpose(im)
+                for size in THUMBNAILS:
+                    im.thumbnail(size.max_dimensions)
+                    data = io.BytesIO()
+                    im.save(data, format='JPEG', quality=100, icc_profile=im.info.get('icc_profile'))
+                    path = self.s3_get_image_path(post, size)
+                    self.s3_put_object(post_id, path, data)
         self.dynamo_update_post_schema_version(post_id)
 
     def dynamo_update_post_schema_version(self, post_id):

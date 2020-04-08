@@ -35,6 +35,23 @@ def user_with_photo(dynamo_table, s3_bucket, image_data):
 
 
 @pytest.fixture
+def user_with_broken_photo(dynamo_table, s3_bucket, image_data):
+    user_id = 'uid' + ''.join(random.choices(string.digits, k=4))
+    post_id = 'pid' + ''.join(random.choices(string.digits, k=4))
+    native_path = f'/{user_id}/profile-photo/{post_id}/native.jpg'
+    s3_bucket.put_object(Key=native_path, Body='not image data', ContentType='image/jpeg')
+    user_item = {
+        'partitionKey': f'user/{user_id}',
+        'sortKey': 'profile',
+        'schemaVersion': 5,
+        'userId': user_id,
+        'photoPostId': post_id,
+    }
+    dynamo_table.put_item(Item=user_item)
+    yield user_item
+
+
+@pytest.fixture
 def user_without_photo(dynamo_table):
     user_id = 'uid' + ''.join(random.choices(string.digits, k=4))
     user_item = {
@@ -82,18 +99,19 @@ def test_migrate_with_photo(dynamo_table, s3_bucket, caplog, user_with_photo):
         migration.run()
 
     # verify logging worked
-    assert len(caplog.records) == 5
+    assert len(caplog.records) == 6
     for rec in caplog.records:
-        assert user_with_photo['userId'] in str(rec)
-    assert ' s3: ' in str(caplog.records[0])
+        assert user_id in str(rec)
+    assert ' starting ' in str(caplog.records[0])
     assert ' s3: ' in str(caplog.records[1])
     assert ' s3: ' in str(caplog.records[2])
     assert ' s3: ' in str(caplog.records[3])
-    assert ' dynamo: ' in str(caplog.records[4])
-    assert '/4K.jpg' in str(caplog.records[0])
-    assert '/1080p.jpg' in str(caplog.records[1])
-    assert '/480p.jpg' in str(caplog.records[2])
-    assert '/64p.jpg' in str(caplog.records[3])
+    assert ' s3: ' in str(caplog.records[4])
+    assert ' dynamo: ' in str(caplog.records[5])
+    assert '/4K.jpg' in str(caplog.records[1])
+    assert '/1080p.jpg' in str(caplog.records[2])
+    assert '/480p.jpg' in str(caplog.records[3])
+    assert '/64p.jpg' in str(caplog.records[4])
 
     # verify final state
     assert dynamo_table.get_item(Key=dynamo_pk)['Item']['schemaVersion'] == 6
@@ -102,6 +120,30 @@ def test_migrate_with_photo(dynamo_table, s3_bucket, caplog, user_with_photo):
     s3_bucket.Object(s3_1080p_path).get()
     s3_bucket.Object(s3_480p_path).get()
     s3_bucket.Object(s3_64p_path).get()
+
+
+def test_migrate_with_broken_photo(dynamo_table, s3_bucket, caplog, user_with_broken_photo):
+    user_id = user_with_broken_photo['userId']
+    dynamo_pk = {'partitionKey': f'user/{user_id}', 'sortKey': 'profile'}
+
+    # verify starting state
+    assert dynamo_table.get_item(Key=dynamo_pk)['Item']['schemaVersion'] == 5
+
+    # migrate
+    migration = Migration(dynamo_table, s3_bucket)
+    with caplog.at_level(logging.WARNING):
+        migration.run()
+
+    # verify logging worked
+    assert len(caplog.records) == 3
+    for rec in caplog.records:
+        assert user_id in str(rec)
+    assert ' starting ' in str(caplog.records[0])
+    assert ' s3: ' in str(caplog.records[1])
+    assert ' dynamo: ' in str(caplog.records[2])
+
+    # verify final state
+    assert dynamo_table.get_item(Key=dynamo_pk)['Item']['schemaVersion'] == 6
 
 
 def test_migrate_multiple(dynamo_table, s3_bucket, caplog, user_with_photo, user_without_photo):
@@ -120,9 +162,9 @@ def test_migrate_multiple(dynamo_table, s3_bucket, caplog, user_with_photo, user
         migration.run()
 
     # verify logging worked
-    assert len(caplog.records) == 6
-    assert len([r for r in caplog.records if user_id_1 in str(r)]) == 5
-    assert len([r for r in caplog.records if user_id_2 in str(r)]) == 1
+    assert len(caplog.records) == 8
+    assert len([r for r in caplog.records if user_id_1 in str(r)]) == 6
+    assert len([r for r in caplog.records if user_id_2 in str(r)]) == 2
 
     # verify final state
     assert dynamo_table.get_item(Key=dynamo_pk_1)['Item']['schemaVersion'] == 6

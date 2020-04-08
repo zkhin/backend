@@ -3,7 +3,7 @@ import logging
 import os
 
 import boto3
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 logger = logging.getLogger()
 
@@ -67,17 +67,22 @@ class Migration:
 
     def migrate_user(self, user):
         user_id = user['userId']
+        logger.warning(f'User `{user_id}`: starting migration')
         native_path = self.s3_get_image_path(user, NATIVE)
         native_data = self.s3_get_object_data(native_path) if native_path else None
         if native_data:
-            im = Image.open(io.BytesIO(native_data))
-            im = ImageOps.exif_transpose(im)
-            for size in THUMBNAILS:
-                im.thumbnail(size.max_dimensions)
-                data = io.BytesIO()
-                im.save(data, format='JPEG', quality=100, icc_profile=im.info.get('icc_profile'))
-                path = self.s3_get_image_path(user, size)
-                self.s3_put_object(user_id, path, data)
+            try:
+                im = Image.open(io.BytesIO(native_data))
+            except UnidentifiedImageError:
+                logger.warning(f'User `{user_id}`: s3: native image appears corrupted')
+            else:
+                im = ImageOps.exif_transpose(im)
+                for size in THUMBNAILS:
+                    im.thumbnail(size.max_dimensions)
+                    data = io.BytesIO()
+                    im.save(data, format='JPEG', quality=100, icc_profile=im.info.get('icc_profile'))
+                    path = self.s3_get_image_path(user, size)
+                    self.s3_put_object(user_id, path, data)
         self.dynamo_update_user_schema_version(user_id)
 
     def dynamo_update_user_schema_version(self, user_id):
