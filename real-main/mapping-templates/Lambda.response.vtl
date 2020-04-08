@@ -1,13 +1,13 @@
 #if ($ctx.error)
   ## server error
-  $util.error($ctx.error.message, $ctx.error.type)
+  $util.error($ctx.error.message, 'ServerError')
 #end
 
 #if ($ctx.result.error)
   ## client error
   $util.error(
     $ctx.result.error.message,
-    $ctx.result.error.type,
+    'ClientError',
     $ctx.result.error.data,
     $ctx.result.error.info
   )

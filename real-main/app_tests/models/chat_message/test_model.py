@@ -1,4 +1,5 @@
 import base64
+import json
 from unittest.mock import Mock, call
 import os
 
@@ -127,6 +128,33 @@ def test_chat_message_delete(message, chat, user1, user2):
     assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'][len('chat/'):]) == now
 
 
+def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, block_manager):
+    # regular message
+    message = chat_message_manager.add_chat_message('mid', 'lore', chat.id, user1.id)
+    author_encoded = message.get_author_encoded(user3.id)
+    assert author_encoded
+    author_serialized = json.loads(author_encoded)
+    assert author_serialized['userId'] == user1.id
+    assert author_serialized['username'] == user1.username
+    assert author_serialized['photoPostId'] == user1.item['photoPostId']
+    assert author_serialized['blockerStatus'] == 'NOT_BLOCKING'
+    assert author_serialized['blockedStatus'] == 'NOT_BLOCKING'
+
+    # add a blocking relationship
+    block_manager.block(user1, user3)
+    assert message.get_author_encoded(user3.id) is None
+
+    # test the blocking relationship in the other direction
+    message = chat_message_manager.add_chat_message('mid2', 'lore', chat.id, user3.id)
+    assert message.get_author_encoded(user1.id) is None
+
+    # test with no author (simulates a system message)
+    message = chat_message_manager.add_chat_message('mid3', 'lore', chat.id, user2.id)
+    assert message.get_author_encoded(user1.id)
+    message._author = None
+    assert message.get_author_encoded(user1.id) is None
+
+
 def test_trigger_notification(message, chat, user1, user2, appsync_client):
     # trigger a notificaiton and check our mock client was called as expected
     message.trigger_notification('ntype', user2.id)
@@ -141,7 +169,8 @@ def test_trigger_notification(message, chat, user1, user2, appsync_client):
     assert args[1]['input']['messageId'] == 'mid'
     assert args[1]['input']['chatId'] == chat.id
     assert args[1]['input']['authorUserId'] == user1.id
-    assert args[1]['input']['authorUsername'] == user1.username
+    assert json.loads(args[1]['input']['authorEncoded'])['userId'] == user1.id
+    assert json.loads(args[1]['input']['authorEncoded'])['username'] == user1.username
     assert args[1]['input']['type'] == 'ntype'
     assert args[1]['input']['text'] == message.item['text']
     assert args[1]['input']['textTaggedUserIds'] == []
@@ -161,12 +190,12 @@ def test_trigger_notification_blocking_relationship(chat_message_manager, chat, 
     message1.trigger_notification('ntype', user2.id)
     assert appsync_client.send.call_args.args[1]['input']['userId'] == user2.id
     assert appsync_client.send.call_args.args[1]['input']['authorUserId'] == user1.id
-    assert appsync_client.send.call_args.args[1]['input']['authorUsername'] is None
+    assert appsync_client.send.call_args.args[1]['input']['authorEncoded'] is None
 
     message2.trigger_notification('ntype', user1.id)
     assert appsync_client.send.call_args.args[1]['input']['userId'] == user1.id
     assert appsync_client.send.call_args.args[1]['input']['authorUserId'] == user2.id
-    assert appsync_client.send.call_args.args[1]['input']['authorUsername'] is None
+    assert appsync_client.send.call_args.args[1]['input']['authorEncoded'] is None
 
 
 def test_trigger_notification_system_message(chat_manager, chat_message_manager, user1, appsync_client):
@@ -185,7 +214,7 @@ def test_trigger_notification_system_message(chat_manager, chat_message_manager,
     assert args[1]['input']['messageId'] == message.id
     assert args[1]['input']['chatId'] == group_chat.id
     assert args[1]['input']['authorUserId'] is None
-    assert args[1]['input']['authorUsername'] is None
+    assert args[1]['input']['authorEncoded'] is None
     assert args[1]['input']['type'] == 'ADDED'
     assert args[1]['input']['text'] == message.item['text']
     assert args[1]['input']['textTaggedUserIds'] == [{'tag': f'@{user1.username}', 'userId': user1.id}]

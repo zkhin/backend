@@ -1,10 +1,22 @@
+import decimal
+import json
 import logging
 
 import pendulum
 
+from app.models.block.enums import BlockStatus
+
 from . import enums, exceptions
 
 logger = logging.getLogger()
+
+
+class DecimalJsonEncoder(json.JSONEncoder):
+    "Helper class that can handle encoding decimals into json (as floats, percision lost)"
+    def default(self, obj):
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        return super(DecimalJsonEncoder, self).default(obj)
 
 
 class ChatMessage:
@@ -25,6 +37,9 @@ class ChatMessage:
                     author {
                         userId
                         username
+                        photo {
+                            url64p
+                        }
                     }
                     text
                     textTaggedUsers {
@@ -122,21 +137,28 @@ class ChatMessage:
                 continue
             self.trigger_notification(notification_type, user_id)
 
-    def trigger_notification(self, notification_type, user_id):
-        author_username = None
-        if (
-            self.author
-            and not self.block_manager.is_blocked(user_id, self.user_id)
-            and not self.block_manager.is_blocked(self.user_id, user_id)
-        ):
-            author_username = self.author.username
+    def get_author_encoded(self, user_id):
+        """
+        Return the author in a serialized, stringified form if they exist and there is no
+        blocking relationship between the given user and the author.
+        """
+        if not self.author:
+            return None
+        serialized = self.author.serialize(user_id)
+        if serialized['blockerStatus'] == BlockStatus.BLOCKING:
+            return None
+        serialized['blockedStatus'] = self.block_manager.get_block_status(user_id, self.author.id)
+        if serialized['blockedStatus'] == BlockStatus.BLOCKING:
+            return None
+        return json.dumps(serialized, cls=DecimalJsonEncoder)
 
+    def trigger_notification(self, notification_type, user_id):
         input_obj = {
             'userId': user_id,
             'messageId': self.id,
             'chatId': self.chat_id,
             'authorUserId': self.user_id,
-            'authorUsername': author_username,
+            'authorEncoded': self.get_author_encoded(user_id),
             'type': notification_type,
             'text': self.item['text'],
             'textTaggedUserIds': self.item.get('textTags', []),

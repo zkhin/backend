@@ -6,18 +6,24 @@ os.environ['APPSYNC_ROUTE_AUTODISCOVERY_PATH'] = ''
 from app.handlers.appsync import dispatch, routes  # noqa: E402
 
 
-def build_event(field, arguments, source=None, cognito_identity_id=None):
-    event = {
-        'field': field,
-        'arguments': arguments,
+@pytest.fixture
+def cognito_authed_event():
+    yield {
+        'field': 'Type.field',
+        'arguments': ['arg1', 'arg2'],
+        'identity': {'cognitoIdentityId': '42-42'},
+        'source': {'anotherField': 42},
     }
-    if cognito_identity_id:
-        event['identity'] = {
-            'cognitoIdentityId': cognito_identity_id,
-        }
-    if source:
-        event['source'] = source
-    return event
+
+
+@pytest.fixture
+def api_key_authed_event():
+    yield {
+        'field': 'Type.field',
+        'arguments': ['arg1', 'arg2'],
+        'identity': {},
+        'source': {'anotherField': 42},
+    }
 
 
 @pytest.fixture
@@ -33,41 +39,41 @@ def setup_one_route():
         }
 
 
-def test_unauthenticated_raises_exception(setup_one_route):
-    event = build_event('Type.field', [])
-    resp = dispatch(event, {})
-    assert resp == {
-        'error': 'No authentication found - all calls must be authenticated'
-    }
+def test_unknown_field_raises_exception(setup_one_route, cognito_authed_event):
+    cognito_authed_event['field'] = 'Type.unknownField'
+    with pytest.raises(Exception, match='No handler for field `Type.unknownField` found'):
+        dispatch(cognito_authed_event, {})
 
 
-def test_unknown_field_raises_exception(setup_one_route):
-    event = build_event('Type.unknownField', [], cognito_identity_id='42-42')
-    resp = dispatch(event, {})
-    assert resp == {
-        'error': "No handler for field `Type.unknownField` found"
-    }
-
-
-def test_success_case(setup_one_route):
-    event = build_event('Type.field', ['gogo'], cognito_identity_id='42-42')
-    resp = dispatch(event, {})
+def test_basic_success(setup_one_route, cognito_authed_event):
+    resp = dispatch(cognito_authed_event, {})
     assert resp == {
         'success': {
             'caller_user_id': '42-42',
-            'arguments': ['gogo'],
+            'arguments': ['arg1', 'arg2'],
+            'source': {'anotherField': 42},
+        },
+    }
+
+
+def test_no_source(setup_one_route, cognito_authed_event):
+    cognito_authed_event['source'] = None
+    resp = dispatch(cognito_authed_event, {})
+    assert resp == {
+        'success': {
+            'caller_user_id': '42-42',
+            'arguments': ['arg1', 'arg2'],
             'source': None,
         },
     }
 
 
-def test_with_source(setup_one_route):
-    event = build_event('Type.field', ['nono'], source={'y': 'n'}, cognito_identity_id='42-42')
-    resp = dispatch(event, {})
+def test_api_key_authenticated(setup_one_route, api_key_authed_event):
+    resp = dispatch(api_key_authed_event, {})
     assert resp == {
         'success': {
-            'caller_user_id': '42-42',
-            'arguments': ['nono'],
-            'source': {'y': 'n'},
+            'caller_user_id': None,
+            'arguments': ['arg1', 'arg2'],
+            'source': {'anotherField': 42},
         },
     }

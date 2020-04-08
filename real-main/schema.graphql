@@ -407,11 +407,13 @@ input ChatMessageNotificationInput {
   chatId: ID!
   type: ChatMessageNotificationType!
   text: String!
-  authorUserId: ID  # null for system messages
-  authorUsername: String  # null for system messages or for blocking relationships
   textTaggedUserIds: [TextTaggedUserIdInput!]!
   createdAt: AWSDateTime!
   lastEditedAt: AWSDateTime
+  authorUserId: ID  # null for system messages
+  # Stringified JSON of the author's serialized representation
+  #   - null for system messages or when caller has blocking relationship with author
+  authorEncoded : String
 }
 
 enum PrivacyStatus {

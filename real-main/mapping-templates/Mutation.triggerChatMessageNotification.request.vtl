@@ -16,12 +16,9 @@
 #end
 
 ## for users that have a blocking relationship authorUserId will be present
-## but authorUsername and other author fields will be null
-#if (! $util.isNull($input.authorUsername))
-  #set ($author = {
-    'userId': $input.authorUserId,
-    'username': $input.authorUsername
-  })
+## but authorEncoded will be null
+#if (! $util.isNull($input.authorEncoded))
+  #set ($author = $util.parseJson($input.authorEncoded))
 #end
 
 {

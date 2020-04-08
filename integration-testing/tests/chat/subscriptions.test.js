@@ -1,6 +1,8 @@
 /* eslint-env jest */
 
+const fs = require('fs')
 const moment = require('moment')
+const path = require('path')
 const uuidv4 = require('uuid/v4')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
@@ -8,6 +10,9 @@ global.WebSocket = require('ws')
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
 const schema = require('../../utils/schema.js')
+
+const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -40,7 +45,6 @@ test('Chat message triggers cannot be called from external graphql client', asyn
     messageId,
     chatId,
     authorUserId: ourUserId,
-    authorUsername: 'uname',
     type: 'ADDED',
     text: 'lore ipsum',
     textTaggedUserIds: [],
@@ -248,6 +252,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['username']).toBe(theirUsername)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['photo']).toBeNull()
   expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text2)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${ourUsername}`)
@@ -255,6 +260,17 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
     .toBe(ourUserId)
   expect(resp['data']['onChatMessageNotification']['message']['createdAt']).toBe(createdAt)
   expect(resp['data']['onChatMessageNotification']['message']['lastEditedAt']).toBeNull()
+
+  // they add a post they will use as a profile photo
+  const postId = uuidv4()
+  resp = await theirClient.mutate({mutation: schema.addPost, variables: {postId, imageData: grantDataB64}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // they set that post as their profile photo
+  resp = await theirClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['photo']['url']).toBeTruthy()
 
   // set up a promise for the next notification
   nextNotification = new Promise((resolve, reject) => {resolvers.push(resolve); rejectors.push(reject)})
@@ -279,6 +295,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['username']).toBe(theirUsername)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['photo']['url64p']).toBeTruthy()
   expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text3)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)
@@ -306,6 +323,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   expect(resp['data']['onChatMessageNotification']['message']['authorUserId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['userId']).toBe(theirUserId)
   expect(resp['data']['onChatMessageNotification']['message']['author']['username']).toBe(theirUsername)
+  expect(resp['data']['onChatMessageNotification']['message']['author']['photo']['url64p']).toBeTruthy()
   expect(resp['data']['onChatMessageNotification']['message']['text']).toBe(text3)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers']).toHaveLength(1)
   expect(resp['data']['onChatMessageNotification']['message']['textTaggedUsers'][0]['tag']).toBe(`@${theirUsername}`)

@@ -23,14 +23,16 @@ def dispatch(event, context):
     arguments = event['arguments']                      # graphql field arguments, if any
     source = event.get('source')                        # result of parent resolver, if any
     identity = event.get('identity')                    # AWS cognito identity, if the call was authenticated
-    caller_user_id = identity.get('cognitoIdentityId') if identity else None
 
-    if not caller_user_id:
-        return {'error': 'No authentication found - all calls must be authenticated'}
+    # None when called by backend to trigger subscriptions
+    caller_user_id = identity.get('cognitoIdentityId') if identity else None
 
     handler = routes.get_handler(field)
     if not handler:
-        return {'error': f'No handler for field `{field}` found'}
+        # should not be able to get here
+        msg = f'No handler for field `{field}` found'
+        logger.exception(msg)
+        raise Exception(msg)
 
     register_gql_details(req_id, field, caller_user_id, arguments, source)
 
@@ -45,7 +47,6 @@ def dispatch(event, context):
         logger.warning(msg)
         return {'error': {
             'message': msg,
-            'type': 'ClientError',
             'data': err.data,
             'info': err.info,
         }}

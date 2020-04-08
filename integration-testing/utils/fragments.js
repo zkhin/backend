@@ -38,6 +38,9 @@ module.exports.chatMessage = gql`
     author {
       userId
       username
+      photo {
+        url64p
+      }
     }
   }
 `
