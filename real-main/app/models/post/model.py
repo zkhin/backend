@@ -466,7 +466,8 @@ class Post:
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
         for media_item in self.item['mediaObjects']:
             self.dynamo.client.delete_item_by_pk(media_item)
-        self.dynamo.client.delete_item_by_pk(self.item)
+        self.dynamo.delete_original_metadata(self.id)
+        self.dynamo.delete_post(self.id)
 
         return self
 

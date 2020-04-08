@@ -41,7 +41,7 @@ def completed_post_with_media(post_manager, user_manager, image_data_b64):
 @pytest.fixture
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-    yield post_manager.add_post(user.id, 'pid4', PostType.IMAGE, text='t')
+    yield post_manager.add_post(user.id, 'pid4', PostType.IMAGE, text='t', image_input={'originalMetadata': '{}'})
 
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
@@ -105,6 +105,8 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     media = post_manager.media_manager.init_media(post_with_media.item['mediaObjects'][0])
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
+    assert post_manager.dynamo.get_post(post_with_media.id)
+    assert post_manager.dynamo.get_original_metadata(post_with_media.id)
 
     # check our starting post count
     posted_by_user.refresh_item()
@@ -130,6 +132,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.item is None
     media.refresh_item()
     assert media.item is None
+    assert post_manager.dynamo.get_original_metadata(post_with_media.id) is None
 
     # check our post count - should not have changed
     posted_by_user.refresh_item()

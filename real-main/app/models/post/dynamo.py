@@ -30,6 +30,20 @@ class PostDynamo:
             'sortKey': 'originalMetadata',
         })
 
+    def delete_post(self, post_id):
+        query_kwargs = {'Key': {
+            'partitionKey': f'post/{post_id}',
+            'sortKey': '-',
+        }}
+        return self.client.delete_item(query_kwargs)
+
+    def delete_original_metadata(self, post_id):
+        query_kwargs = {'Key': {
+            'partitionKey': f'post/{post_id}',
+            'sortKey': 'originalMetadata',
+        }}
+        return self.client.delete_item(query_kwargs)
+
     def get_next_completed_post_to_expire(self, user_id, exclude_post_id=None):
         query_kwargs = {
             'KeyConditionExpression': (

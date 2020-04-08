@@ -19,7 +19,7 @@ def test_post_does_not_exist(post_dynamo):
     assert resp is None
 
 
-def test_post_exists(post_dynamo):
+def test_post_add_and_delete(post_dynamo):
     post_id = 'my-post-id'
     user_id = 'my-user-id'
 
@@ -34,6 +34,10 @@ def test_post_exists(post_dynamo):
     # check strongly_consistent kwarg accepted
     resp = post_dynamo.get_post(post_id, strongly_consistent=True)
     assert resp['postId'] == post_id
+
+    # delete the post, check no longer exists
+    post_dynamo.delete_post(post_id)
+    assert post_dynamo.get_post(post_id) is None
 
 
 def test_transact_add_pending_post_sans_options(post_dynamo):
@@ -130,7 +134,7 @@ def test_transact_add_post_already_exists(post_dynamo):
         post_dynamo.client.transact_write_items(transacts)
 
 
-def test_transact_add_original_metadata(post_dynamo):
+def test_transact_add_original_metadata_and_delete(post_dynamo):
     post_id = 'pid'
     original_metadata = 'stringified json'
     assert post_dynamo.get_original_metadata(post_id) is None
@@ -148,6 +152,15 @@ def test_transact_add_original_metadata(post_dynamo):
     transacts = [post_dynamo.transact_add_original_metadata(post_id, 'new value')]
     with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.client.transact_write_items(transacts)
+    assert post_dynamo.get_original_metadata(post_id)
+
+    # delete the original metadata, verify it disappears
+    post_dynamo.delete_original_metadata(post_id)
+    assert post_dynamo.get_original_metadata(post_id) is None
+
+    # verify a no-op delete is ok
+    post_dynamo.delete_original_metadata(post_id)
+    assert post_dynamo.get_original_metadata(post_id) is None
 
 
 def test_generate_posts_by_user(post_dynamo):
