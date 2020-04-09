@@ -158,8 +158,8 @@ def like_manager(dynamo_client):
 
 
 @pytest.fixture
-def media_manager(dynamo_client, s3_uploads_client):
-    yield MediaManager({'dynamo': dynamo_client, 's3_uploads': s3_uploads_client})
+def media_manager(dynamo_client, s3_uploads_client, cloudfront_client):
+    yield MediaManager({'dynamo': dynamo_client, 'cloudfront': cloudfront_client, 's3_uploads': s3_uploads_client})
 
 
 @pytest.fixture

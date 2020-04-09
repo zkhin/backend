@@ -500,11 +500,11 @@ def post_image(caller_user_id, arguments, source, context):
         if media_items:
             media = media_manager.init_media(media_items[0])
             return {
-                'url': media.get_readonly_url(image_size.NATIVE),
-                'url64p': media.get_readonly_url(image_size.P64),
-                'url480p': media.get_readonly_url(image_size.P480),
-                'url1080p': media.get_readonly_url(image_size.P1080),
-                'url4k': media.get_readonly_url(image_size.K4),
+                'url': post.get_image_readonly_url(image_size.NATIVE),
+                'url64p': post.get_image_readonly_url(image_size.P64),
+                'url480p': post.get_image_readonly_url(image_size.P480),
+                'url1080p': post.get_image_readonly_url(image_size.P1080),
+                'url4k': post.get_image_readonly_url(image_size.K4),
                 'width': media.item.get('width'),
                 'height': media.item.get('height'),
                 'colors': media.item.get('colors'),
@@ -525,16 +525,17 @@ def post_image(caller_user_id, arguments, source, context):
 
 @routes.register('Post.imageUploadUrl')
 def post_image_upload_url(caller_user_id, arguments, source, context):
-    # only the owner of the post gets an upload url
-    if caller_user_id != source['postedByUserId']:
+    post_id = source['postId']
+    user_id = source['postedByUserId']
+
+    if caller_user_id != user_id:
         return None
-    media_items = [
-        mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
-        if mi['mediaStatus'] == media_manager.enums.MediaStatus.AWAITING_UPLOAD
-    ]
-    if not media_items:
+
+    post = post_manager.get_post(post_id)
+    if not post or post.type != PostType.IMAGE or post.status != PostStatus.PENDING:
         return None
-    return media_manager.init_media(media_items[0]).get_writeonly_url()
+
+    return post.get_image_writeonly_url()
 
 
 @routes.register('Post.video')
@@ -554,12 +555,13 @@ def post_video(caller_user_id, arguments, source, context):
 @routes.register('Post.videoUploadUrl')
 def post_video_upload_url(caller_user_id, arguments, source, context):
     post_id = source['postId']
-    post = post_manager.get_post(post_id)
+    user_id = source['postedByUserId']
 
-    if not post or post.type != PostType.VIDEO or post.status != PostStatus.PENDING:
+    if caller_user_id != user_id:
         return None
 
-    if caller_user_id != post.user_id:
+    post = post_manager.get_post(post_id)
+    if not post or post.type != PostType.VIDEO or post.status != PostStatus.PENDING:
         return None
 
     return post.get_video_writeonly_url()

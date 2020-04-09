@@ -132,9 +132,10 @@ class PostManager:
                 # set the post to PROCESSING so the s3 trigger doesn't try to process
                 transacts = [self.dynamo.transact_set_post_status(post.item, enums.PostStatus.PROCESSING)]
                 self.dynamo.client.transact_write_items(transacts)
+                post.item['postStatus'] = enums.PostStatus.PROCESSING
 
-                # upload the media, complete the post
-                media.upload_native_image_data_base64(image_data)
+                # upload the image data, complete the post
+                post.upload_native_image_data_base64(image_data)
                 media.process_upload()
                 post.complete(now=now)
 

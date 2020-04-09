@@ -1,4 +1,3 @@
-import base64
 from unittest.mock import Mock, call
 
 import pytest
@@ -9,8 +8,12 @@ from app.utils import image_size
 
 
 @pytest.fixture
-def media_awaiting_upload(media_manager, post_manager):
-    post = post_manager.add_post('uid', 'pid', PostType.IMAGE)
+def post(post_manager):
+    yield post_manager.add_post('uid', 'pid', PostType.IMAGE)
+
+
+@pytest.fixture
+def media_awaiting_upload(media_manager, post):
     media_item = post.item['mediaObjects'][0]
     yield media_manager.init_media(media_item)
 
@@ -100,25 +103,6 @@ def test_process_upload_success(media_awaiting_upload):
     assert media.set_checksum.mock_calls == [call()]
 
 
-def test_upload_native_image_data_base64(media_awaiting_upload):
-    media = media_awaiting_upload
-    native_path = media.get_s3_path(image_size.NATIVE)
-    image_data = b'imagedatahere'
-    image_data_b64 = base64.b64encode(image_data)
-
-    # check no data on media, nor in s3
-    assert not hasattr(media, '_native_image_data')
-    with pytest.raises(media.s3_uploads_client.exceptions.NoSuchKey):
-        assert media.s3_uploads_client.get_object_data_stream(native_path)
-
-    # put data up there
-    media.upload_native_image_data_base64(image_data_b64)
-
-    # check it was placed in mem and in s3
-    assert media.get_native_image_buffer().read() == image_data
-    assert media.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
-
-
 def test_set_status(media_awaiting_upload):
     assert media_awaiting_upload.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
 
@@ -146,7 +130,7 @@ def test_set_checksum(media_manager, media_awaiting_upload):
     assert media.item['checksum'] == md5
 
 
-def test_set_is_verified_minimal(media_awaiting_upload):
+def test_set_is_verified_minimal(media_awaiting_upload, post):
     # check initial state and configure mock
     media = media_awaiting_upload
     assert 'isVerified' not in media.item
@@ -160,17 +144,17 @@ def test_set_is_verified_minimal(media_awaiting_upload):
 
     # check mock called correctly
     assert media.post_verification_client.mock_calls == [
-        call.verify_image(media.get_readonly_url(image_size.NATIVE), taken_in_real=None, original_format=None),
+        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=None, original_format=None),
     ]
 
 
-def test_set_is_verified_maximal(media_awaiting_upload):
+def test_set_is_verified_maximal(media_awaiting_upload, post):
     # check initial state and configure mock
     media = media_awaiting_upload
     assert 'isVerified' not in media.item
     media.post_verification_client = Mock(**{'verify_image.return_value': True})
     media.item['takenInReal'] = False
-    media.item['originalFormat'] = 'oreo'
+    media.item['originalFormat'] = 'oo'
 
     # do the call, check final state
     media.set_is_verified()
@@ -180,5 +164,5 @@ def test_set_is_verified_maximal(media_awaiting_upload):
 
     # check mock called correctly
     assert media.post_verification_client.mock_calls == [
-        call.verify_image(media.get_readonly_url(image_size.NATIVE), taken_in_real=False, original_format='oreo'),
+        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=False, original_format='oo'),
     ]

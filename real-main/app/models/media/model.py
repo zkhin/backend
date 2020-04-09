@@ -1,4 +1,3 @@
-import base64
 import logging
 from io import BytesIO
 
@@ -44,57 +43,13 @@ class Media:
             self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
         return BytesIO(self._native_image_data)
 
-    def get_1080p_image_buffer(self):
-        if not hasattr(self, '_1080p_image_data'):
-            path = self.get_s3_path(image_size.P1080)
-            self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-        return BytesIO(self._1080p_image_data)
-
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_media(self.id, strongly_consistent=strongly_consistent)
         return self
 
-    def get_readonly_url(self, size):
-        have_ro_url = (enums.MediaStatus.PROCESSING_UPLOAD, enums.MediaStatus.UPLOADED, enums.MediaStatus.ARCHIVED)
-        if self.item['mediaStatus'] not in have_ro_url:
-            return None
-
-        path = self.get_s3_path(size)
-        return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
-
-    def get_writeonly_url(self):
-        have_writeonly_url = (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
-        if self.item['mediaStatus'] not in have_writeonly_url:
-            return None
-
-        path = self.get_s3_path(image_size.NATIVE)
-        return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
-
     def get_s3_path(self, size):
         "From within the user's directory, return the path to the s3 object of the requested size"
-        if self.item.get('schemaVersion', 0) > 0:
-            return '/'.join([self.item['userId'], 'post', self.item['postId'], 'image', size.filename])
-        return '/'.join([
-            self.item['userId'], 'post', self.item['postId'], 'media', self.item['mediaId'], size.filename,
-        ])
-
-    def has_all_s3_objects(self):
-        for size in image_size.ALL:
-            path = self.get_s3_path(size)
-            if not self.s3_uploads_client.exists(path):
-                return False
-        return True
-
-    def delete_all_s3_objects(self):
-        for size in image_size.ALL:
-            path = self.get_s3_path(size)
-            self.s3_uploads_client.delete_object(path)
-
-    def upload_native_image_data_base64(self, image_data):
-        "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
-        self._native_image_data = base64.b64decode(image_data)
-        path = self.get_s3_path(image_size.NATIVE)
-        self.s3_uploads_client.put_object(path, self.get_native_image_buffer(), self.jpeg_content_type)
+        return '/'.join([self.item['userId'], 'post', self.item['postId'], 'image', size.filename])
 
     def process_upload(self):
         allowed = (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
@@ -122,7 +77,8 @@ class Media:
         return self
 
     def set_is_verified(self):
-        image_url = self.get_readonly_url(image_size.NATIVE)
+        path = self.get_s3_path(image_size.NATIVE)
+        image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
         is_verified = self.post_verification_client.verify_image(
             image_url, taken_in_real=self.item.get('takenInReal'), original_format=self.item.get('originalFormat'),
         )

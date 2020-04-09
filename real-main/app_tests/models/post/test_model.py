@@ -1,3 +1,4 @@
+import base64
 from decimal import Decimal
 from os import path
 from io import BytesIO
@@ -32,6 +33,11 @@ def post(post_manager, user):
 @pytest.fixture
 def pending_video_post(post_manager, user2):
     yield post_manager.add_post(user2.id, 'pidv1', PostType.VIDEO)
+
+
+@pytest.fixture
+def pending_image_post(post_manager, user2):
+    yield post_manager.add_post(user2.id, 'pidi1', PostType.IMAGE)
 
 
 @pytest.fixture
@@ -279,6 +285,28 @@ def test_clear_expires_at(post_with_expiration):
     assert post.followed_first_story_manager.mock_calls == [
         call.refresh_after_story_change(story_prev=post_org_item, story_now=None),
     ]
+
+
+def test_upload_native_image_data_base64(pending_image_post):
+    post = pending_image_post
+    native_path = post.get_image_path(image_size.NATIVE)
+    image_data = b'imagedatahere'
+    image_data_b64 = base64.b64encode(image_data)
+
+    # mark the post a processing (in mem sufficient)
+    post.item['postStatus'] = PostStatus.PROCESSING
+
+    # check no data on post, nor in s3
+    assert not hasattr(post, '_native_image_data')
+    with pytest.raises(post.s3_uploads_client.exceptions.NoSuchKey):
+        assert post.s3_uploads_client.get_object_data_stream(native_path)
+
+    # put data up there
+    post.upload_native_image_data_base64(image_data_b64)
+
+    # check it was placed in mem and in s3
+    assert post.get_native_image_buffer().read() == image_data
+    assert post.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
 def test_set(post, user):

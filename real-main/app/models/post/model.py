@@ -1,3 +1,4 @@
+import base64
 from io import BytesIO
 import logging
 
@@ -92,16 +93,8 @@ class Post:
                 max_dims = image_size.K4.max_dimensions
                 self._native_image_data = generate_text_image(self.item['text'], max_dims).read()
 
-            elif self.type == PostType.VIDEO:
+            elif self.type in (PostType.IMAGE, PostType.VIDEO):
                 path = self.get_image_path(image_size.NATIVE)
-                self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-
-            elif self.type == PostType.IMAGE:
-                media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
-                if not media_item:
-                    # shouldn't get here, as the post should be in completed state and have media
-                    raise Exception(f'Did not find uploaded media for post `{self.id}`')
-                path = self.media_manager.init_media(media_item).get_s3_path(image_size.NATIVE)
                 self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
 
             else:
@@ -118,16 +111,8 @@ class Post:
                 max_dims = image_size.P1080.max_dimensions
                 self._1080p_image_data = generate_text_image(self.item['text'], max_dims).read()
 
-            elif self.type == PostType.VIDEO:
+            elif self.type in (PostType.IMAGE, PostType.VIDEO):
                 path = self.get_image_path(image_size.P1080)
-                self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-
-            elif self.type == PostType.IMAGE:
-                media_item = next(self.media_manager.dynamo.generate_by_post(self.id, uploaded=True), None)
-                if not media_item:
-                    # shouldn't get here, as the post should be in completed state and have media
-                    raise Exception(f'Did not find uploaded media for post `{self.id}`')
-                path = self.media_manager.init_media(media_item).get_s3_path(image_size.P1080)
                 self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
 
             else:
@@ -177,6 +162,10 @@ class Post:
         path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
 
+    def get_image_writeonly_url(self):
+        path = self.get_image_path(image_size.NATIVE)
+        return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
+
     def delete_s3_video(self):
         path = self.get_original_video_path()
         self.s3_uploads_client.delete_object(path)
@@ -211,6 +200,12 @@ class Post:
         # let any exceptions flow through up the chain
         media.process_upload()
         self.complete()
+
+    def upload_native_image_data_base64(self, image_data):
+        "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
+        self._native_image_data = base64.b64decode(image_data)
+        path = self.get_image_path(image_size.NATIVE)
+        self.s3_uploads_client.put_object(path, self.get_native_image_buffer(), self.jpeg_content_type)
 
     def start_processing_video_upload(self):
         assert self.type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
