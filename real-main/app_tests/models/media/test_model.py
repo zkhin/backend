@@ -54,42 +54,15 @@ def test_process_upload_wrong_status(media_awaiting_upload):
         media_awaiting_upload.process_upload()
 
 
-def test_process_upload_failure_non_jpeg(media_awaiting_upload):
-    media = media_awaiting_upload
-    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-
-    # mock out a bunch of methods
-    media.is_original_jpeg = Mock(return_value=False)
-    media.set_is_verified = Mock()
-    media.set_height_and_width = Mock()
-    media.set_colors = Mock()
-    media.set_thumbnails = Mock()
-    media.set_checksum = Mock()
-
-    # do the call, should update our status
-    with pytest.raises(media.exceptions.MediaException, match='Non-jpeg'):
-        media.process_upload()
-    assert media.item['mediaStatus'] == MediaStatus.PROCESSING_UPLOAD
-
-    # check the mocks were not called
-    assert media.set_is_verified.mock_calls == []
-    assert media.set_height_and_width.mock_calls == []
-    assert media.set_colors.mock_calls == []
-    assert media.set_thumbnails.mock_calls == []
-    assert media.set_checksum.mock_calls == []
-
-
 def test_process_upload_success(media_awaiting_upload):
     media = media_awaiting_upload
     assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
 
     # mock out a bunch of methods
-    media.is_original_jpeg = Mock(return_value=True)
     media.set_is_verified = Mock()
     media.set_height_and_width = Mock()
     media.set_colors = Mock()
     media.set_thumbnails = Mock()
-    media.set_checksum = Mock()
 
     # do the call, should update our status
     media.process_upload()
@@ -100,7 +73,6 @@ def test_process_upload_success(media_awaiting_upload):
     assert media.set_height_and_width.mock_calls == [call()]
     assert media.set_colors.mock_calls == [call()]
     assert media.set_thumbnails.mock_calls == [call()]
-    assert media.set_checksum.mock_calls == [call()]
 
 
 def test_set_status(media_awaiting_upload):
@@ -111,23 +83,6 @@ def test_set_status(media_awaiting_upload):
 
     media_awaiting_upload.refresh_item()
     assert media_awaiting_upload.item['mediaStatus'] == MediaStatus.ERROR
-
-
-def test_set_checksum(media_manager, media_awaiting_upload):
-    media = media_awaiting_upload
-    assert 'checksum' not in media.item
-
-    # put some content with a known md5 up in s3
-    content = b'anything'
-    md5 = 'f0e166dc34d14d6c228ffac576c9a43c'
-    media_path = media.get_s3_path(image_size.NATIVE)
-    media_manager.clients['s3_uploads'].put_object(media_path, content, 'application/octet-stream')
-
-    # set the checksum, check what was saved to the DB
-    media.set_checksum()
-    assert media.item['checksum'] == md5
-    media.refresh_item()
-    assert media.item['checksum'] == md5
 
 
 def test_set_is_verified_minimal(media_awaiting_upload, post):

@@ -13,7 +13,6 @@ grant_rotated_height = grant_width = 240
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 grant_rotated_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant-rotated.jpg')
 blank_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'big-blank.jpg')
-squirrel_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'squirrel.png')
 
 grant_colors = [
     {'r': 51, 'g': 58, 'b': 45},
@@ -241,33 +240,3 @@ def test_set_thumbnails_content_type(s3_uploads_client, media_awaiting_upload):
     # check 64p content type
     path_64 = media.get_s3_path(image_size.P64)
     assert s3_uploads_client.bucket.Object(path_64).content_type == 'image/jpeg'
-
-
-def test_is_original_jpeg_success(s3_uploads_client, media_awaiting_upload):
-    media = media_awaiting_upload
-
-    # put a jpeg image in the bucket
-    media_path = media.get_s3_path(image_size.NATIVE)
-    s3_uploads_client.put_object(media_path, open(grant_path, 'rb'), 'image/jpeg')
-
-    assert media.is_original_jpeg()
-
-
-def test_is_original_jpeg_failure(s3_uploads_client, media_awaiting_upload):
-    media = media_awaiting_upload
-
-    # put a png image in the bucket
-    media_path = media.get_s3_path(image_size.NATIVE)
-    s3_uploads_client.put_object(media_path, open(squirrel_path, 'rb'), 'image/png')
-
-    assert not media.is_original_jpeg()
-
-
-def test_is_original_jpeg_failure_with_exception(s3_uploads_client, media_awaiting_upload):
-    media = media_awaiting_upload
-
-    # put a png image in the bucket
-    media_path = media.get_s3_path(image_size.NATIVE)
-    s3_uploads_client.put_object(media_path, b'not an image', 'application/octet-stream')
-
-    assert not media.is_original_jpeg()

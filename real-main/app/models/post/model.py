@@ -102,6 +102,13 @@ class Post:
 
         return BytesIO(self._native_image_data)
 
+    def is_native_image_jpeg(self):
+        try:
+            image = Image.open(self.get_native_image_buffer())
+        except Exception:
+            return False
+        return image.format == 'JPEG'
+
     def get_1080p_image_buffer(self):
         if self.status == PostStatus.PENDING:
             raise exceptions.PostException(f'No 1080p image buffer for {PostStatus.PENDING} post `{self.id}``')
@@ -186,20 +193,29 @@ class Post:
             path = self.get_image_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
 
-    def process_image_upload(self, media=None):
+    def process_image_upload(self, image_data=None, media=None, now=None):
         assert self.type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
         assert self.status in (PostStatus.PENDING, PostStatus.ERROR), \
             'Can only process_image_upload() for PENDING & ERROR posts'
         assert media, 'For now, Post.process_image_upload() must be called with media'
+        now = now or pendulum.now('utc')
 
         # mark ourselves as processing
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.PROCESSING)]
         self.dynamo.client.transact_write_items(transacts)
         self.item['postStatus'] = PostStatus.PROCESSING
 
+        if image_data:
+            # s3 trigger is a no-op because we are already in PROCESSING
+            self.upload_native_image_data_base64(image_data)
+
         # let any exceptions flow through up the chain
+        if not self.is_native_image_jpeg():
+            raise exceptions.PostException(f'Non-jpeg image uploaded for post `{self.id}`')
+
+        self.set_checksum()
         media.process_upload()
-        self.complete()
+        self.complete(now=now)
 
     def upload_native_image_data_base64(self, image_data):
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
@@ -258,21 +274,26 @@ class Post:
             raise exceptions.PostException(msg)
 
         # Determine the original_post_id, if this post isn't original
-        # Note that in order to simplify the problem and focus on the use case that matters,
-        # we declare that only posts with exactly one media item may be non-original.
-        # That is to say, text-only posts or multiple-media posts will never have originalPostId set.
         original_post_id = None
-        media_items = list(self.media_manager.dynamo.generate_by_post(self.id))
-        media_item = (
-            # need strongly consistent because checksum was potentially just set
-            self.media_manager.dynamo.get_media(media_items[0]['mediaId'], strongly_consistent=True)
-            if media_items else None
-        )
-        if media_item:
-            first_media_id = self.media_manager.dynamo.get_first_media_id_with_checksum(media_item['checksum'])
-            if first_media_id and first_media_id != media_item['mediaId']:
-                first_media_item = self.media_manager.dynamo.get_media(first_media_id)
-                original_post_id = first_media_item['postId'] if first_media_item else None
+        if self.type == PostType.IMAGE:
+            # need strongly consistent because checksum may have been just set
+            checksum = self.refresh_item(strongly_consistent=True).item['checksum']
+            post_id, post_joined_at = self.dynamo.get_first_with_checksum(checksum)
+
+            # TODO: remove this once all checksums are migrated over from media items to posts
+            # Check to see if there's a media item with that checksum predating the any post with it
+            media_id, media_joined_at = self.media_manager.dynamo.get_first_with_checksum(checksum)
+            if media_id and (not post_id or media_joined_at < post_joined_at):
+                media_item = self.media_manager.dynamo.get_media(media_id)
+                if media_item:
+                    post_id = media_item['postId']
+
+            if post_id:
+                original_post_id = post_id
+
+        # if a post is original, then originalPostId is null
+        if original_post_id == self.id:
+            original_post_id = None
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
@@ -483,6 +504,12 @@ class Post:
             verification_hidden=verification_hidden,
         )
         self.item['mediaObjects'] = post_media
+        return self
+
+    def set_checksum(self):
+        path = self.get_image_path(image_size.NATIVE)
+        checksum = self.s3_uploads_client.get_object_checksum(path)
+        self.item = self.dynamo.set_checksum(self.id, self.item['postedAt'], checksum)
         return self
 
     def set_new_comment_activity(self, new_value):

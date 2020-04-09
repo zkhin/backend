@@ -128,16 +128,7 @@ class PostManager:
 
             # if image data was directly included for any media objects, process it
             if image_data := image_input.get('imageData'):
-
-                # set the post to PROCESSING so the s3 trigger doesn't try to process
-                transacts = [self.dynamo.transact_set_post_status(post.item, enums.PostStatus.PROCESSING)]
-                self.dynamo.client.transact_write_items(transacts)
-                post.item['postStatus'] = enums.PostStatus.PROCESSING
-
-                # upload the image data, complete the post
-                post.upload_native_image_data_base64(image_data)
-                media.process_upload()
-                post.complete(now=now)
+                post.process_image_upload(image_data=image_data, media=media, now=now)
 
             media_items.append(media.item)
 

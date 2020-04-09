@@ -1,8 +1,13 @@
+import base64
+from os import path
+
 import pytest
 
 from app.models.like.enums import LikeStatus
 from app.models.like.exceptions import LikeException, AlreadyLiked
 from app.models.post.enums import PostType
+
+grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
@@ -102,15 +107,16 @@ def test_cant_like_post_of_private_user_without_following(like_manager, follow_m
 
 def test_cant_like_incomplete_post(like_manager, post_manager, user1, user2):
     # add a media post which will be left in a pending state
-    post = post_manager.add_post(user1.id, 'pid1', PostType.IMAGE, image_input={'mediaId': 'mid'})
-    post_manager.media_manager.dynamo.set_checksum({'mediaId': 'mid', 'postedAt': post.item['postedAt']}, 'c-sum')
+    post = post_manager.add_post(user1.id, 'pid1', PostType.IMAGE)
+    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
 
     # verify we can't like it
     with pytest.raises(LikeException):
         like_manager.like_post(user2, post, LikeStatus.ONYMOUSLY_LIKED)
 
     # complete the post
-    post.complete()
+    image_data = base64.b64encode(open(grant_path, 'rb').read())
+    post.process_image_upload(image_data=image_data, media=media)
 
     # now we should be able to like it
     like_manager.like_post(user2, post, LikeStatus.ONYMOUSLY_LIKED)

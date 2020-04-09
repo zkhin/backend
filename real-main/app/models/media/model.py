@@ -60,10 +60,6 @@ class Media:
         if media_status != enums.MediaStatus.PROCESSING_UPLOAD:
             self.set_status(enums.MediaStatus.PROCESSING_UPLOAD)
 
-        # only accept jpeg uploads
-        if not self.is_original_jpeg():
-            raise exceptions.MediaException(f'Non-jpeg image uploaded for media `{self.id}`')
-
         try:
             self.set_thumbnails()
         except Exception as err:
@@ -72,7 +68,6 @@ class Media:
         self.set_is_verified()
         self.set_height_and_width()
         self.set_colors()
-        self.set_checksum()
         self.set_status(enums.MediaStatus.UPLOADED)
         return self
 
@@ -110,19 +105,6 @@ class Media:
             in_mem_file.seek(0)
             path = self.get_s3_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
-
-    def set_checksum(self):
-        path = self.get_s3_path(image_size.NATIVE)
-        checksum = self.s3_uploads_client.get_object_checksum(path)
-        self.item = self.dynamo.set_checksum(self.item, checksum)
-        return self
-
-    def is_original_jpeg(self):
-        try:
-            image = Image.open(self.get_native_image_buffer())
-        except Exception:
-            return False
-        return image.format == 'JPEG'
 
     def set_status(self, status):
         transact = self.dynamo.transact_set_status(self.item, status)

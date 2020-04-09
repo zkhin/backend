@@ -309,6 +309,32 @@ class PostDynamo:
 
         return self.client.update_item(update_query_kwargs)
 
+    def set_checksum(self, post_id, posted_at_str, checksum):
+        assert checksum  # no deletes
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'post/{post_id}',
+                'sortKey': '-',
+            },
+            'UpdateExpression': 'SET checksum = :checksum, gsiK2PartitionKey = :pk, gsiK2SortKey = :sk',
+            'ExpressionAttributeValues': {
+                ':checksum': checksum,
+                ':pk': f'postChecksum/{checksum}',
+                ':sk': posted_at_str,
+            },
+        }
+        return self.client.update_item(query_kwargs)
+
+    def get_first_with_checksum(self, checksum):
+        query_kwargs = {
+            'KeyConditionExpression': Key('gsiK2PartitionKey').eq(f'postChecksum/{checksum}'),
+            'IndexName': 'GSI-K2',
+        }
+        keys = self.client.query_head(query_kwargs)
+        post_id = keys['partitionKey'].split('/')[1] if keys else None
+        posted_at = keys['gsiK2SortKey'] if keys else None
+        return post_id, posted_at
+
     def transact_set_has_new_comment_activity(self, post_id, new_value):
         """
         Set the boolean Post.hasNewCommentActivity.

@@ -305,6 +305,66 @@ def test_transact_set_post_status_album_rank_handled_correctly_to_and_from_COMPL
     assert post_item['gsiK3SortKey'] == -1
 
 
+def test_set_checksum(post_dynamo):
+    post_id = 'pid'
+    posted_at_str = pendulum.now('utc').to_iso8601_string()
+    checksum = 'check this sum!'
+
+    # no support for deleting a checksum
+    with pytest.raises(AssertionError):
+        post_dynamo.set_checksum(post_id, posted_at_str, None)
+
+    # can't set for post that doesnt exist
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.set_checksum(post_id, posted_at_str, checksum)
+
+    # create the post
+    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
+    post_dynamo.client.transact_write_items(transacts)
+
+    # check starting state
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postId'] == post_id
+    assert 'checksum' not in post_item
+    assert 'gsiK2PartitionKey' not in post_item
+    assert 'gsiK2SortKey' not in post_item
+    posted_at_str = post_item['postedAt']
+
+    # set the checksum, check result
+    new_item = post_dynamo.set_checksum(post_id, posted_at_str, checksum)
+    assert new_item.pop('checksum') == 'check this sum!'
+    assert new_item.pop('gsiK2PartitionKey') == 'postChecksum/check this sum!'
+    assert new_item.pop('gsiK2SortKey') == posted_at_str
+    assert new_item == post_item
+
+
+def test_get_first_with_checksum(post_dynamo):
+    checksum = 'shaken, not checked'
+
+    # no post
+    assert post_dynamo.get_first_with_checksum(checksum) == (None, None)
+
+    # one post
+    post_id_1 = 'pid'
+    posted_at_1 = pendulum.now('utc')
+    post_dynamo.client.transact_write_items([
+        post_dynamo.transact_add_pending_post('uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1),
+    ])
+    posted_at_str_1 = posted_at_1.to_iso8601_string()
+    post_dynamo.set_checksum(post_id_1, posted_at_str_1, checksum)
+    assert post_dynamo.get_first_with_checksum(checksum) == (post_id_1, posted_at_str_1)
+
+    # two media, we should get the one with earliest postedAt
+    post_id_2 = 'pid2'
+    posted_at_2 = pendulum.now('utc')
+    post_dynamo.client.transact_write_items([
+        post_dynamo.transact_add_pending_post('uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2),
+    ])
+    posted_at_str_2 = posted_at_2.to_iso8601_string()
+    post_dynamo.set_checksum(post_id_2, posted_at_str_2, checksum)
+    assert post_dynamo.get_first_with_checksum(checksum) == (post_id_1, posted_at_str_1)
+
+
 def test_transact_increment_decrement_flag_count(post_dynamo):
     post_id = 'pid'
 

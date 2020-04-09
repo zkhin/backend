@@ -230,6 +230,22 @@ def test_delete_s3_video(s3_uploads_client):
     assert s3_uploads_client.exists(path) is False
 
 
+def test_set_checksum(post):
+    assert 'checksum' not in post.item
+
+    # put some content with a known md5 up in s3
+    content = b'anything'
+    md5 = 'f0e166dc34d14d6c228ffac576c9a43c'
+    path = post.get_image_path(image_size.NATIVE)
+    post.s3_uploads_client.put_object(path, content, 'application/octet-stream')
+
+    # set the checksum, check what was saved to the DB
+    post.set_checksum()
+    assert post.item['checksum'] == md5
+    post.refresh_item()
+    assert post.item['checksum'] == md5
+
+
 def test_set_expires_at(post):
     # add a post without an expires at
     assert 'expiresAt' not in post.item

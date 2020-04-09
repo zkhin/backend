@@ -24,7 +24,7 @@ def post(post_manager, user):
 def post_with_media(post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid1', 'pbUname1')
     post = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, text='t')
-    post_manager.media_manager.dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum1')
+    post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum1')
     yield post
 
 
@@ -34,7 +34,7 @@ def post_with_media_with_expiration(post_manager, user_manager):
     post = post_manager.add_post(
         user.id, 'pid2', PostType.IMAGE, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
-    post_manager.media_manager.dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum2')
+    post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum2')
     yield post
 
 
@@ -43,7 +43,7 @@ def post_with_media_with_album(album_manager, post_manager, user_manager):
     user = user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
     album = album_manager.add_album(user.id, 'aid-3', 'album name 3')
     post = post_manager.add_post(user.id, 'pid3', PostType.IMAGE, text='t', album_id=album.id)
-    post_manager.media_manager.dynamo.set_checksum(post.item['mediaObjects'][0], 'checksum3')
+    post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum3')
     yield post
 
 
@@ -176,15 +176,11 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
 def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_expiration):
     post1, post2 = post_with_media, post_with_media_with_expiration
 
-    # set the checksum on the media of both posts to the same thing
-    media1 = post_manager.media_manager.init_media(post1.item['mediaObjects'][0])
-    media2 = post_manager.media_manager.init_media(post2.item['mediaObjects'][0])
-
     # put some native-size media up in the mock s3, same content
-    media_path1 = media1.get_s3_path(image_size.NATIVE)
-    media_path2 = media2.get_s3_path(image_size.NATIVE)
-    post_manager.clients['s3_uploads'].put_object(media_path1, b'anything', 'application/octet-stream')
-    post_manager.clients['s3_uploads'].put_object(media_path2, b'anything', 'application/octet-stream')
+    path1 = post1.get_image_path(image_size.NATIVE)
+    path2 = post2.get_image_path(image_size.NATIVE)
+    post1.s3_uploads_client.put_object(path1, b'anything', 'application/octet-stream')
+    post2.s3_uploads_client.put_object(path2, b'anything', 'application/octet-stream')
 
     # mock out some calls to far-flung other managers
     post1.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
@@ -193,7 +189,7 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     post2.feed_manager = Mock(FeedManager({}))
 
     # complete the post that has the earlier postedAt, should not get an originalPostId
-    media1.set_checksum()
+    post1.set_checksum()
     post1.complete()
     assert post1.item['postStatus'] == PostStatus.COMPLETED
     assert 'originalPostId' not in post1.item
@@ -202,7 +198,7 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     assert 'originalPostId' not in post1.item
 
     # complete the post with the later postedAt, *should* get an originalPostId
-    media2.set_checksum()
+    post2.set_checksum()
     post2.complete()
     assert post2.item['postStatus'] == PostStatus.COMPLETED
     assert post2.item['originalPostId'] == post1.id
