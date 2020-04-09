@@ -19,4 +19,12 @@
   #if ($ctx.args.nextToken)
   , "nextToken": "$ctx.args.nextToken"
   #end
+  #if ($ctx.args.excludeUserId)
+  , "filter": {
+      "expression": "sortKey <> :sk",
+      "expressionValues": {
+        ":sk": { "S" : "member/$ctx.args.excludeUserId" }
+      },
+  }
+  #end
 }

@@ -177,6 +177,45 @@ test('Creating a group chat with our userId in the listed userIds has no affect'
 })
 
 
+test('Exclude users from list of users in a chat', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // we create a group chat with the two of us in it
+  const [chatId, messageId] = [uuidv4(), uuidv4()]
+  let variables = {chatId, userIds: [theirUserId], messageId, messageText: 'm1'}
+  let resp = await ourClient.mutate({mutation: schema.createGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createGroupChat']['chatId']).toBe(chatId)
+  expect(resp['data']['createGroupChat']['name']).toBeNull()
+  expect(resp['data']['createGroupChat']['userCount']).toBe(2)
+  expect(resp['data']['createGroupChat']['users']['items'].map(u => u['userId']).sort())
+    .toEqual([ourUserId, theirUserId].sort())
+
+  // check chat users, all included
+  resp = await ourClient.query({query: schema.chatUsers, variables: {chatId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['users']['items']).toHaveLength(2)
+  expect(resp['data']['chat']['users']['items'].map(u => u['userId']).sort())
+    .toEqual([ourUserId, theirUserId].sort())
+
+  // exclude ourselves
+  resp = await ourClient.query({query: schema.chatUsers, variables: {chatId, excludeUserId: ourUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['users']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['users']['items'][0]['userId']).toBe(theirUserId)
+
+  // exclude them
+  resp = await ourClient.query({query: schema.chatUsers, variables: {chatId, excludeUserId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['chat']['chatId']).toBe(chatId)
+  expect(resp['data']['chat']['users']['items']).toHaveLength(1)
+  expect(resp['data']['chat']['users']['items'][0]['userId']).toBe(ourUserId)
+})
+
+
 test('Create a group chat with just us and without a name, add people to it and leave from it', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()

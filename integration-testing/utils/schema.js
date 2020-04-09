@@ -1080,6 +1080,19 @@ module.exports.chat = gql`
   ${fragments.chatMessage}
 `
 
+module.exports.chatUsers = gql`
+  query Chat ($chatId: ID!, $excludeUserId: ID) {
+    chat (chatId: $chatId) {
+      chatId
+      users (excludeUserId: $excludeUserId) {
+        items {
+          userId
+        }
+      }
+    }
+  }
+`
+
 module.exports.createDirectChat = gql`
   mutation CreateDirectChat ($chatId: ID!, $userId: ID!, $messageId: ID! $messageText: String!) {
     createDirectChat (chatId: $chatId, userId: $userId, messageId: $messageId, messageText: $messageText) {

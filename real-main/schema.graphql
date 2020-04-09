@@ -360,7 +360,8 @@ type Chat {
   createdAt: AWSDateTime!
   lastMessageActivityAt: AWSDateTime
   # Users: ordered by joinedAt, earliest first
-  users(limit: Int, nextToken: String): PaginatedUsers!
+  #   - excludeUserId will filter out any user with that userId from the results
+  users(limit: Int, nextToken: String, excludeUserId: ID): PaginatedUsers!
   userCount: Int!
   # Messages: ordered by createdAt, earliest first by default
   messages(limit: Int, nextToken: String, reverse: Boolean): PaginatedChatMessages!
