@@ -332,8 +332,7 @@ class PostDynamo:
         }
         keys = self.client.query_head(query_kwargs)
         post_id = keys['partitionKey'].split('/')[1] if keys else None
-        posted_at = keys['gsiK2SortKey'] if keys else None
-        return post_id, posted_at
+        return post_id
 
     def transact_set_has_new_comment_activity(self, post_id, new_value):
         """

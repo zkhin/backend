@@ -278,22 +278,9 @@ class Post:
         if self.type == PostType.IMAGE:
             # need strongly consistent because checksum may have been just set
             checksum = self.refresh_item(strongly_consistent=True).item['checksum']
-            post_id, post_joined_at = self.dynamo.get_first_with_checksum(checksum)
-
-            # TODO: remove this once all checksums are migrated over from media items to posts
-            # Check to see if there's a media item with that checksum predating the any post with it
-            media_id, media_joined_at = self.media_manager.dynamo.get_first_with_checksum(checksum)
-            if media_id and (not post_id or media_joined_at < post_joined_at):
-                media_item = self.media_manager.dynamo.get_media(media_id)
-                if media_item:
-                    post_id = media_item['postId']
-
-            if post_id:
+            post_id = self.dynamo.get_first_with_checksum(checksum)
+            if post_id and post_id != self.id:
                 original_post_id = post_id
-
-        # if a post is original, then originalPostId is null
-        if original_post_id == self.id:
-            original_post_id = None
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None

@@ -234,43 +234,6 @@ def test_transact_add_media_already_exists(media_dynamo):
         media_dynamo.client.transact_write_items(transacts)
 
 
-# TODO: remove this test once checksums fully moved over to posts
-def test_get_first_with_checksum(media_dynamo, media_item, media_item_2):
-
-    # this used to live in app/models/media/dynamo.py, it's moved here just so because this
-    # test is the only place that still needs this functionality
-    def set_checksum(media_item, checksum):
-        assert checksum  # no deletes
-        media_id = media_item['mediaId']
-        posted_at_str = media_item['postedAt']
-        query_kwargs = {
-            'Key': {
-                'partitionKey': f'media/{media_id}',
-                'sortKey': '-',
-            },
-            'UpdateExpression': 'SET checksum = :checksum, gsiK1PartitionKey = :pk, gsiK1SortKey = :sk',
-            'ExpressionAttributeValues': {
-                ':checksum': checksum,
-                ':pk': f'media/{checksum}',
-                ':sk': posted_at_str,
-            },
-        }
-        return media_dynamo.client.update_item(query_kwargs)
-
-    checksum = 'shaken, not checked'
-
-    # no media
-    assert media_dynamo.get_first_with_checksum(checksum) == (None, None)
-
-    # one media
-    set_checksum(media_item_2, checksum)
-    assert media_dynamo.get_first_with_checksum(checksum) == (media_item_2['mediaId'], media_item_2['postedAt'])
-
-    # two media, we should get the one with earliest postedAt
-    set_checksum(media_item, checksum)
-    assert media_dynamo.get_first_with_checksum(checksum) == (media_item['mediaId'], media_item['postedAt'])
-
-
 def test_set_colors(media_dynamo, media_item):
     media_id = media_item['mediaId']
     assert 'colors' not in media_item

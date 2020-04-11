@@ -93,16 +93,6 @@ class MediaDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def get_first_with_checksum(self, checksum):
-        query_kwargs = {
-            'KeyConditionExpression': Key('gsiK1PartitionKey').eq(f'media/{checksum}'),
-            'IndexName': 'GSI-K1',
-        }
-        media_keys = self.client.query_head(query_kwargs)
-        media_id = media_keys['partitionKey'].split('/')[1] if media_keys else None
-        posted_at = media_keys['gsiK1SortKey'] if media_keys else None
-        return media_id, posted_at
-
     def transact_set_status(self, media_item, status):
         return {
             'Update': {

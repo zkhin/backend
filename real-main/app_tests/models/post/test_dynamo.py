@@ -342,7 +342,7 @@ def test_get_first_with_checksum(post_dynamo):
     checksum = 'shaken, not checked'
 
     # no post
-    assert post_dynamo.get_first_with_checksum(checksum) == (None, None)
+    assert post_dynamo.get_first_with_checksum(checksum) is None
 
     # one post
     post_id_1 = 'pid'
@@ -352,7 +352,7 @@ def test_get_first_with_checksum(post_dynamo):
     ])
     posted_at_str_1 = posted_at_1.to_iso8601_string()
     post_dynamo.set_checksum(post_id_1, posted_at_str_1, checksum)
-    assert post_dynamo.get_first_with_checksum(checksum) == (post_id_1, posted_at_str_1)
+    assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
 
     # two media, we should get the one with earliest postedAt
     post_id_2 = 'pid2'
@@ -362,7 +362,7 @@ def test_get_first_with_checksum(post_dynamo):
     ])
     posted_at_str_2 = posted_at_2.to_iso8601_string()
     post_dynamo.set_checksum(post_id_2, posted_at_str_2, checksum)
-    assert post_dynamo.get_first_with_checksum(checksum) == (post_id_1, posted_at_str_1)
+    assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
 
 
 def test_transact_increment_decrement_flag_count(post_dynamo):

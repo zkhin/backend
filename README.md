@@ -163,7 +163,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `post/{postId}` | `originalMetadata` | `0` | `originalMetadata` |
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
 | `flag/{flaggerUserId}/{postId}` | `-`| `1` | `flaggerUserId`, `postId`, `flaggedAt` | `flag/{flaggerUserId}` | `{flaggedAt}` | `flag/{postId}` | `{flaggedAt}` |
-| `media/{mediaId}` | `-` | `2` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `checksum`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` | | | `media/{checksum}` | `{postedAt}` |
+| `media/{mediaId}` | `-` | `2` | `postId`, `postedAt`, `userId`, `mediaId`, `mediaStatus`, `mediaType`, `isVerified:Boolean`, `takenInReal:Boolean`, `originalFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` | `media/{postId}` | `{mediaStatus}` | `media/{userId}` | `{mediaType}/{mediaStatus}/{postedAt}` |
 | `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `comment/{commentId}` | `view/{firstViewedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
