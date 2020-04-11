@@ -11,7 +11,7 @@ def test_record_view_count_new_trending(trending_manager):
     item_id = 'user-id'
     view_count = 4
 
-    trending_item = trending_manager.record_view_count(item_type, item_id, view_count)
+    trending_item = trending_manager.record_view_count(item_type, item_id, view_count=view_count)
     assert trending_item['pendingViewCount'] == 0
     assert trending_item['gsiK3SortKey'] == view_count
 
@@ -23,11 +23,11 @@ def test_record_view_count_existing_trending(trending_manager):
     update_view_count = 5
 
     # create a trending item
-    org_trending_item = trending_manager.record_view_count(item_type, item_id, org_view_count)
+    org_trending_item = trending_manager.record_view_count(item_type, item_id, view_count=org_view_count)
     assert org_trending_item['pendingViewCount'] == 0
 
     # update the trending item
-    updated_trending_item = trending_manager.record_view_count(item_type, item_id, update_view_count)
+    updated_trending_item = trending_manager.record_view_count(item_type, item_id, view_count=update_view_count)
     assert updated_trending_item['pendingViewCount'] == update_view_count
     assert updated_trending_item['gsiK3SortKey'] == org_trending_item['gsiK3SortKey']
     assert updated_trending_item['gsiA1SortKey'] == org_trending_item['gsiA1SortKey']
@@ -41,11 +41,11 @@ def test_record_view_count_multiple_records_with_same_timestamp(trending_manager
     now = pendulum.now('utc')
 
     # create a trending item
-    item = trending_manager.record_view_count(item_type, item_id, org_view_count, now=now)
+    item = trending_manager.record_view_count(item_type, item_id, view_count=org_view_count, now=now)
     assert item['pendingViewCount'] == 0
 
     # update the trending item
-    item = trending_manager.record_view_count(item_type, item_id, update_view_count, now=now)
+    item = trending_manager.record_view_count(item_type, item_id, view_count=update_view_count, now=now)
     assert item['pendingViewCount'] == 0
     assert item['gsiK3SortKey'] == org_view_count + update_view_count
 
@@ -91,17 +91,18 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
 
     # add one user item now
     user_id = 'user-id'
-    trending_manager.record_view_count(TrendingItemType.USER, user_id, 42, now=now)
+    trending_manager.record_view_count(TrendingItemType.USER, user_id, view_count=42, now=now)
 
     # add one post item in the future a second
     post_id_1 = 'post-id-1'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 9, now=(now + pendulum.duration(seconds=1)))
+    viewed_at = now + pendulum.duration(seconds=1)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=9, now=viewed_at)
 
     # add one post item a day ago, give it some pending views
     post_id_2 = 'post-id-2'
     post_at_2 = now - pendulum.duration(days=1)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 10, now=post_at_2)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 5)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=10, now=post_at_2)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=5)
 
     # pull originals from db, save them
     org_user_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.USER))
@@ -142,11 +143,13 @@ def test_reindex_deletes_as_needed(trending_manager):
 
     # add one post item just over a day ago
     post_id_1 = 'post-id-over'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, 1, now=(now - pendulum.duration(hours=25)))
+    viewed_at = now - pendulum.duration(hours=25)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=1, now=viewed_at)
 
     # add another post item just under a day ago
     post_id_2 = 'post-id-under'
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, 1, now=(now - pendulum.duration(hours=23)))
+    viewed_at = now - pendulum.duration(hours=23)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=1, now=viewed_at)
 
     # check we can see those post items
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))

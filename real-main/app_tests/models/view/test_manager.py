@@ -23,6 +23,11 @@ def user3(user_manager):
 
 
 @pytest.fixture
+def real_user(user_manager):
+    yield user_manager.create_cognito_only_user('pbuid4', 'real')
+
+
+@pytest.fixture
 def posts(post_manager, user):
     post1 = post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
     post2 = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t')
@@ -326,6 +331,30 @@ def test_record_view_day_old_post_doesnt_trend(view_manager, post_manager, user_
     # add a post over a day ago
     posted_at = now - pendulum.duration(days=2)
     post = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t', now=posted_at)
+
+    # check there is no post view yet recorded for this user on this post
+    assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'NOT_VIEWED'
+    assert post_manager.dynamo.get_post(post.id).get('viewedByCount', 0) == 0
+    assert user_manager.dynamo.get_user(post.user_id).get('postViewedByCount', 0) == 0
+    assert trending_manager.dynamo.get_trending(post.id) is None
+    assert trending_manager.dynamo.get_trending(post.user_id) is None
+
+    # record the first post view
+    view_manager.record_view('post', post.id, viewed_by_user_id, 2, pendulum.now('utc'))
+    assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'VIEWED'
+
+    # check the viewedByCounts incremented but the trending indexes did not
+    assert post_manager.dynamo.get_post(post.id).get('viewedByCount', 0) == 1
+    assert user_manager.dynamo.get_user(post.user_id).get('postViewedByCount', 0) == 1
+    assert trending_manager.dynamo.get_trending(post.id) is None
+    assert trending_manager.dynamo.get_trending(post.user_id) is None
+
+
+def test_record_view_real_user_doesnt_trend(view_manager, post_manager, user_manager, trending_manager, real_user):
+    viewed_by_user_id = 'vuid'
+
+    # real user adds a post
+    post = post_manager.add_post(real_user.id, 'pid2', PostType.TEXT_ONLY, text='t')
 
     # check there is no post view yet recorded for this user on this post
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'NOT_VIEWED'

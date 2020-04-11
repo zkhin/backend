@@ -38,6 +38,14 @@ class ViewManager:
             'post': self.post_manager.get_post,
         }
 
+    @property
+    def real_user_id(self):
+        "The userId of the 'real' user, if they exist"
+        if not hasattr(self, '_real_user_id'):
+            real_user = self.user_manager.get_user_by_username('real')
+            self._real_user_id = real_user.id if real_user else None
+        return self._real_user_id
+
     def get_viewed_status(self, inst, user_id):
         if inst.user_id == user_id:  # author of the message
             return enums.ViewedStatus.VIEWED
@@ -110,7 +118,9 @@ class ViewManager:
             if original_post_id == post.id:
                 # only add this view to the trending indexes if the post is less than a 24 hrs old
                 if (viewed_at - post.posted_at < pendulum.duration(hours=24)):
-                    self.trending_manager.record_view_count(TrendingItemType.POST, post.id, 1, now=viewed_at)
-                    self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, 1, now=viewed_at)
+                    # don't add real user or their posts to trending indexes
+                    if post.user_id != self.real_user_id:
+                        self.trending_manager.record_view_count(TrendingItemType.POST, post.id, now=viewed_at)
+                        self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, now=viewed_at)
             else:
                 self.record_view('post', original_post_id, user_id, view_count, viewed_at)

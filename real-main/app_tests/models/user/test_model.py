@@ -329,7 +329,7 @@ def test_delete_user_deletes_trending(user):
 
     # add a trending for the user
     item_type = trending_manager.enums.TrendingItemType.USER
-    trending_manager.record_view_count(item_type, user.id, 4)
+    trending_manager.record_view_count(item_type, user.id)
 
     # verify we can see it
     resp = trending_manager.dynamo.get_trending(user_id)

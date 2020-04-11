@@ -25,7 +25,7 @@ class TrendingManager:
         if 'dynamo' in clients:
             self.dynamo = dynamo.TrendingDynamo(clients['dynamo'])
 
-    def record_view_count(self, item_type, item_id, view_count, now=None):
+    def record_view_count(self, item_type, item_id, view_count=1, now=None):
         now = now or pendulum.now('utc')
         # first try to add it to an existing item
         try:
