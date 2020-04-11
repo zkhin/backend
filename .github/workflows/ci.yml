@@ -39,10 +39,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install git+https://github.com/PyCQA/pycodestyle.git  # includes walrus operator support
-        pip install git+https://github.com/PyCQA/pyflakes.git
-        pip install flake8
+        # waiting on a new release of pycodestyle, then flake8 to come out (with py3.8 feature support)
+        # https://github.com/PyCQA/pycodestyle/pull/922
+        # https://gitlab.com/pycqa/flake8/-/merge_requests/417
+        pip install flake8==3.7.9
+        pip install pyflakes==2.2.0
+        pip install --upgrade git+https://github.com/PyCQA/pycodestyle.git
 
     - name: Lint with flake8
       run: |
@@ -62,9 +64,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install git+https://github.com/PyCQA/pycodestyle.git  # includes walrus operator support
-        pip install git+https://github.com/PyCQA/pyflakes.git
-        pip install flake8
+        # waiting on a new release of pycodestyle, then flake8 to come out (with py3.8 feature support)
+        # https://github.com/PyCQA/pycodestyle/pull/922
+        # https://gitlab.com/pycqa/flake8/-/merge_requests/417
+        pip install flake8==3.7.9
+        pip install pyflakes==2.2.0
+        pip install --upgrade git+https://github.com/PyCQA/pycodestyle.git
 
     - name: Lint with flake8
       run: |
