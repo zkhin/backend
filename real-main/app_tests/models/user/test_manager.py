@@ -250,6 +250,24 @@ def test_create_facebook_user_success(user_manager):
     assert followeds[0]['followedUserId'] == real_user.id
 
 
+def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
+    # this error can happens if frontend uses the wrong createUser mutation
+
+    # configure cognito to respond as if username is already taken
+    exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
+    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+
+    with pytest.raises(user_manager.exceptions.UserValidationException):
+        user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
+
+    # configure cognito to respond as if email is already taken
+    exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
+    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+
+    with pytest.raises(user_manager.exceptions.UserValidationException):
+        user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
+
+
 def test_create_google_user_success(user_manager):
     google_token = 'google-token'
     cognito_token = 'cog-token'
@@ -287,6 +305,24 @@ def test_create_google_user_success(user_manager):
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
+
+
+def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
+    # this error can happens if frontend uses the wrong createUser mutation
+
+    # configure cognito to respond as if username is already taken
+    exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
+    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+
+    with pytest.raises(user_manager.exceptions.UserValidationException):
+        user_manager.create_google_user('uid', 'uname', 'google-id-token')
+
+    # configure cognito to respond as if email is already taken
+    exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
+    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+
+    with pytest.raises(user_manager.exceptions.UserValidationException):
+        user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
 
 def test_create_google_user_invalid_id_token(user_manager, caplog):

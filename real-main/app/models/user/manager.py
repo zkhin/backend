@@ -110,7 +110,8 @@ class UserManager:
             cognito_id_token = self.cognito_client.create_user_pool_entry(user_id, email, username)
             self.cognito_client.link_identity_pool_entries(user_id, cognito_id_token=cognito_id_token,
                                                            facebook_access_token=facebook_access_token)
-        except self.cognito_client.boto_client.exceptions.AliasExistsException:
+        except (self.cognito_client.boto_client.exceptions.AliasExistsException,
+                self.cognito_client.boto_client.exceptions.UsernameExistsException):
             raise self.exceptions.UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
             )
@@ -140,7 +141,8 @@ class UserManager:
             cognito_id_token = self.cognito_client.create_user_pool_entry(user_id, email, username)
             self.cognito_client.link_identity_pool_entries(user_id, cognito_id_token=cognito_id_token,
                                                            google_id_token=google_id_token)
-        except self.cognito_client.boto_client.exceptions.AliasExistsException:
+        except (self.cognito_client.boto_client.exceptions.AliasExistsException,
+                self.cognito_client.boto_client.exceptions.UsernameExistsException):
             raise self.exceptions.UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
             )
