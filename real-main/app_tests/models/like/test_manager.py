@@ -1,5 +1,6 @@
 import base64
 from os import path
+import uuid
 
 import pytest
 
@@ -11,8 +12,13 @@ grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jp
 
 
 @pytest.fixture
-def user1(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid1', 'pbUname1')
+def user1(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+user2 = user1
 
 
 @pytest.fixture
@@ -20,11 +26,6 @@ def user1_posts(post_manager, user1):
     post1 = post_manager.add_post(user1.id, 'pid1', PostType.TEXT_ONLY, text='lore ipsum')
     post2 = post_manager.add_post(user1.id, 'pid2', PostType.TEXT_ONLY, text='lore ipsum')
     yield (post1, post2)
-
-
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
 
 
 @pytest.fixture

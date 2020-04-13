@@ -1,6 +1,7 @@
 import base64
 from io import BytesIO
 from os import path
+import uuid
 
 import pendulum
 import pytest
@@ -13,8 +14,13 @@ grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jp
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+user2 = user
 
 
 @pytest.fixture
@@ -29,10 +35,9 @@ def album(album_manager, user):
     yield album_manager.add_album(user.id, 'aid', 'album name')
 
 
-def test_get_post(post_manager, user_manager):
+def test_get_post(post_manager, user):
     # create a post behind the scenes
     post_id = 'pid'
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
     post_manager.add_post(user.id, post_id, PostType.TEXT_ONLY, text='t')
 
     post = post_manager.get_post(post_id)
@@ -71,20 +76,18 @@ def test_add_post_errors(post_manager):
         post_manager.add_post('pbuid', 'pid', PostType.VIDEO, image_input={'mediaId': 'mid'})
 
 
-def test_add_text_only_post(post_manager, user_manager):
-    user_id = 'pbuid'
+def test_add_text_only_post(post_manager, user):
     post_id = 'pid'
     text = 'lore ipsum'
     now = pendulum.now('utc')
 
     # add the post
-    user_manager.create_cognito_only_user(user_id, 'pbUname')
-    post_manager.add_post(user_id, post_id, PostType.TEXT_ONLY, text=text, now=now)
+    post_manager.add_post(user.id, post_id, PostType.TEXT_ONLY, text=text, now=now)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
-    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedByUserId'] == user.id
     assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['text'] == 'lore ipsum'
     assert post.item['textTags'] == []
@@ -93,30 +96,26 @@ def test_add_text_only_post(post_manager, user_manager):
     assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
 
 
-def test_add_text_with_tags_post(post_manager, user_manager):
-    user_id = 'pbuid'
-    username = 'pbUname'
+def test_add_text_with_tags_post(post_manager, user):
     post_id = 'pid'
-    text = 'Tagging you @pbUname!'
+    text = f'Tagging you @{user.username}!'
 
     # add the post
-    user_manager.create_cognito_only_user(user_id, username)
-    post_manager.add_post(user_id, post_id, PostType.TEXT_ONLY, text=text)
+    post_manager.add_post(user.id, post_id, PostType.TEXT_ONLY, text=text)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['text'] == text
-    assert post.item['textTags'] == [{'tag': '@pbUname', 'userId': 'pbuid'}]
+    assert post.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
 
 
-def test_add_post_album_errors(user_manager, post_manager, user, album):
+def test_add_post_album_errors(user_manager, post_manager, user, album, user2):
     # can't create post with album that doesn't exist
     with pytest.raises(post_manager.exceptions.PostException, match='does not exist'):
         post_manager.add_post(user.id, 'pid-4', PostType.IMAGE, album_id='aid-dne')
 
     # can't create post in somebody else's album
-    user2 = user_manager.create_cognito_only_user('uid-2', 'uname2')
     with pytest.raises(post_manager.exceptions.PostException, match='does not belong to'):
         post_manager.add_post(user2.id, 'pid-4', PostType.IMAGE, album_id=album.id)
 
@@ -174,19 +173,17 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client):
     assert album.item['rankCount'] == 1
 
 
-def test_add_video_post_minimal(post_manager, user_manager):
-    user_id = 'pbuid'
+def test_add_video_post_minimal(post_manager, user):
     post_id = 'pid'
 
     # add the post
-    user_manager.create_cognito_only_user(user_id, 'pbUname')
-    post_manager.add_post(user_id, post_id, PostType.VIDEO)
+    post_manager.add_post(user.id, post_id, PostType.VIDEO)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['postType'] == PostType.VIDEO
-    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedByUserId'] == user.id
     assert post.item['postedAt']
     assert post.item['postStatus'] == PostStatus.PENDING
     assert 'text' not in post.item
@@ -195,10 +192,9 @@ def test_add_video_post_minimal(post_manager, user_manager):
     assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
 
 
-def test_add_video_post_maximal(post_manager, user_manager):
-    user_id = 'pbuid'
+def test_add_video_post_maximal(post_manager, user):
     post_id = 'pid'
-    text = 'from lore to ipsum, right @pbUname?'
+    text = f'from lore to ipsum, right @{user.username}?'
     now = pendulum.now('utc')
     lifetime_duration = pendulum.duration(hours=1)
     comments_disabled = True
@@ -208,9 +204,8 @@ def test_add_video_post_maximal(post_manager, user_manager):
     expires_at = now + lifetime_duration
 
     # add the post
-    user_manager.create_cognito_only_user(user_id, 'pbUname')
     post_manager.add_post(
-        user_id, post_id, PostType.VIDEO, text=text, lifetime_duration=lifetime_duration,
+        user.id, post_id, PostType.VIDEO, text=text, lifetime_duration=lifetime_duration,
         comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
         verification_hidden=verification_hidden, now=now,
     )
@@ -219,7 +214,7 @@ def test_add_video_post_maximal(post_manager, user_manager):
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert post.item['postType'] == PostType.VIDEO
-    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedByUserId'] == user.id
     assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['postStatus'] == PostStatus.PENDING
     assert post.item['text'] == text
@@ -232,20 +227,19 @@ def test_add_video_post_maximal(post_manager, user_manager):
     assert post.item['verificationHidden'] is True
 
 
-def test_add_media_post(post_manager):
-    user_id = 'pbuid'
+def test_add_media_post(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
     image_input = {'mediaId': media_id}
 
     # add the post (& media)
-    post_manager.add_post(user_id, post_id, PostType.IMAGE, now=now, image_input=image_input)
+    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
-    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedByUserId'] == user.id
     assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['postStatus'] == PostStatus.PENDING
     assert 'text' not in post.item
@@ -261,15 +255,14 @@ def test_add_media_post(post_manager):
     assert 'expiresAt' not in media_items[0]
 
 
-def test_add_media_post_text_empty_string(post_manager):
-    user_id = 'pbuid'
+def test_add_media_post_text_empty_string(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
     image_input = {'mediaId': media_id}
 
     # add the post (& media)
-    post_manager.add_post(user_id, post_id, PostType.IMAGE, now=now, image_input=image_input, text='')
+    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input, text='')
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
@@ -311,8 +304,7 @@ def test_add_media_post_with_image_data(user, post_manager):
     assert 'expiresAt' not in media_items[0]
 
 
-def test_add_media_post_with_options(post_manager, album):
-    user_id = 'pbuid'
+def test_add_media_post_with_options(post_manager, album, user):
     post_id = 'pid'
     text = 'lore ipsum'
     now = pendulum.now('utc')
@@ -327,7 +319,7 @@ def test_add_media_post_with_options(post_manager, album):
 
     # add the post (& media)
     post_manager.add_post(
-        user_id, post_id, PostType.IMAGE, text=text, now=now, image_input=image_input,
+        user.id, post_id, PostType.IMAGE, text=text, now=now, image_input=image_input,
         lifetime_duration=lifetime_duration, album_id=album.id, comments_disabled=False, likes_disabled=True,
         verification_hidden=False,
     )
@@ -336,7 +328,7 @@ def test_add_media_post_with_options(post_manager, album):
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
-    assert post.item['postedByUserId'] == user_id
+    assert post.item['postedByUserId'] == user.id
     assert post.item['albumId'] == album.id
     assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['text'] == 'lore ipsum'
@@ -359,8 +351,7 @@ def test_add_media_post_with_options(post_manager, album):
     assert media_items[0]['originalFormat'] == 'org-format'
 
 
-def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def test_delete_recently_expired_posts(post_manager, user, caplog):
     now = pendulum.now('utc')
 
     # create four posts with diff. expiration qualities
@@ -401,8 +392,7 @@ def test_delete_recently_expired_posts(post_manager, user_manager, caplog):
     assert post_expired_last_week.refresh_item().item
 
 
-def test_delete_older_expired_posts(post_manager, user_manager, caplog):
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def test_delete_older_expired_posts(post_manager, user, caplog):
     now = pendulum.now('utc')
 
     # create four posts with diff. expiration qualities
@@ -443,9 +433,7 @@ def test_delete_older_expired_posts(post_manager, user_manager, caplog):
     assert post_expired_last_week.refresh_item().item is None
 
 
-def test_set_post_status_to_error(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
-
+def test_set_post_status_to_error(post_manager, user_manager, user):
     # create a COMPLETED post, verify cannot transition it to ERROR
     post = post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
     with pytest.raises(post_manager.exceptions.PostException, match='PENDING'):

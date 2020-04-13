@@ -3,7 +3,8 @@ import pytest
 
 
 @pytest.fixture
-def user(user_manager):
+def user(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='uid')
     yield user_manager.create_cognito_only_user('uid', 'uname')
 
 

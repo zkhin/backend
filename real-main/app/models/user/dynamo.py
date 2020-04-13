@@ -5,7 +5,7 @@ from boto3.dynamodb.conditions import Key
 import pendulum
 
 from .enums import UserPrivacyStatus
-from .exceptions import UserDoesNotExist
+from .exceptions import UserAlreadyExists, UserDoesNotExist
 
 logger = logging.getLogger()
 
@@ -39,7 +39,10 @@ class UserDynamo:
             query_kwargs['Item']['email'] = email
         if phone:
             query_kwargs['Item']['phoneNumber'] = phone
-        return self.client.add_item(query_kwargs)
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise UserAlreadyExists(user_id)
 
     def get_user(self, user_id, strongly_consistent=False):
         return self.client.get_item({

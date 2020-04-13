@@ -1,28 +1,25 @@
 import pytest
+import uuid
 
 from app.models.post.enums import PostType
 from app.models.view.enums import ViewedStatus
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+user2 = user
+user3 = user
 
 
 @pytest.fixture
 def comment(user, post_manager, comment_manager):
     post = post_manager.add_post(user.id, 'pid', PostType.TEXT_ONLY, text='go go')
     yield comment_manager.add_comment('cid', post.id, user.id, 'run far')
-
-
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-
-
-@pytest.fixture
-def user3(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
 
 
 def test_serialize(comment_manager, comment, user, view_manager):

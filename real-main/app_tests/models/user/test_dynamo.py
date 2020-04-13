@@ -3,7 +3,7 @@ import pytest
 
 from app.models.user.dynamo import UserDynamo
 from app.models.user.enums import UserPrivacyStatus
-from app.models.user.exceptions import UserDoesNotExist
+from app.models.user.exceptions import UserAlreadyExists, UserDoesNotExist
 
 
 @pytest.fixture
@@ -71,6 +71,18 @@ def test_add_user_maximal(user_dynamo):
         'phoneNumber': phone,
         'placeholderPhotoCode': photo_code,
     }
+
+
+def test_add_user_already_exists(user_dynamo):
+    user_id = 'my-user-id'
+
+    # add the user
+    user_dynamo.add_user(user_id, 'bestusername')
+    assert user_dynamo.get_user(user_id)['userId'] == user_id
+
+    # verify we can't add them again
+    with pytest.raises(UserAlreadyExists):
+        user_dynamo.add_user(user_id, 'diffusername')
 
 
 def test_add_user_at_specific_time(user_dynamo):

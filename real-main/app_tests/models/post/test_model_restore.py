@@ -11,22 +11,25 @@ from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
-def post_with_expiration(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+def user(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid2')
+    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+
+
+@pytest.fixture
+def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
         user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
 
 
 @pytest.fixture
-def post_with_media(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+def post_with_media(post_manager, user):
     yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, text='t')
 
 
 @pytest.fixture
-def post_with_media_completed(post_manager, user_manager, image_data_b64):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+def post_with_media_completed(post_manager, user, image_data_b64):
     yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
 
 

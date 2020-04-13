@@ -20,21 +20,24 @@ def grant_data_b64():
 
 
 @pytest.fixture
-def user1(user_manager, post_manager, grant_data_b64):
-    # give the user a profile photo so that it will show up in the message notification trigger calls
+def user1(user_manager, post_manager, grant_data_b64, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid')
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+    # give the user a profile photo so that it will show up in the message notification trigger calls
     post = post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'imageData': grant_data_b64})
     user.update_photo(post)
     yield user
 
 
 @pytest.fixture
-def user2(user_manager):
+def user2(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid2')
     yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
 
 
 @pytest.fixture
-def user3(user_manager):
+def user3(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid3')
     yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
 
 

@@ -9,7 +9,8 @@ grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jp
 
 
 @pytest.fixture
-def user(user_manager):
+def user(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid')
     yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
 
 

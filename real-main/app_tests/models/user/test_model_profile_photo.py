@@ -17,11 +17,10 @@ def grant_data_b64():
 
 
 @pytest.fixture
-def user(user_manager):
+def user(user_manager, cognito_client):
     user_id = 'my-user-id'
-    username = 'myUname'
-    user = user_manager.create_cognito_only_user(user_id, username)
-    yield user
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, 'myUname')
 
 
 @pytest.fixture

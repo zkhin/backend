@@ -2,8 +2,7 @@ import base64
 from os import path
 from unittest.mock import Mock
 
-import boto3
-from moto import mock_dynamodb2, mock_s3
+from moto import mock_cognitoidp, mock_dynamodb2, mock_s3
 import pytest
 
 from app.clients import (AppSyncClient, CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
@@ -65,9 +64,14 @@ def post_verification_client():
 
 @pytest.fixture
 def cognito_client():
-    mocked = Mock(CognitoClient('my-user-pool-id', 'my-client-id'))
-    mocked.boto_client = boto3.client('cognito-idp')  # allows access to the exceptions classes
-    yield mocked
+    with mock_cognitoidp():
+        cognito_client = CognitoClient('dummy', 'my-client-id')
+        resp = cognito_client.boto_client.create_user_pool(
+            PoolName='user-pool-name',
+            AliasAttributes=['phone_number', 'email', 'preferred_username'],  # but doesnt appear to force uniqueness
+        )
+        cognito_client.user_pool_id = resp['UserPool']['Id']
+        yield cognito_client
 
 
 @pytest.fixture
@@ -180,7 +184,6 @@ def trending_manager(dynamo_client):
 @pytest.fixture
 def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeholder_photos_client, cognito_client,
                  facebook_client, google_client):
-    cognito_client.configure_mock(**{'get_user_attributes.return_value': {}})
     clients = {
         'cloudfront': cloudfront_client,
         'dynamo': dynamo_client,

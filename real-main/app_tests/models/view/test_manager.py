@@ -1,5 +1,6 @@
 import logging
 from unittest.mock import Mock, call
+import uuid
 
 import pendulum
 import pytest
@@ -8,23 +9,21 @@ from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+user2 = user
+user3 = user
 
 
 @pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-
-
-@pytest.fixture
-def user3(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
-
-
-@pytest.fixture
-def real_user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid4', 'real')
+def real_user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, 'real')
 
 
 @pytest.fixture

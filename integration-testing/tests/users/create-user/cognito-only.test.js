@@ -146,5 +146,18 @@ describe('cognito-only user', () => {
       expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
       expect(resp['data']['createCognitoOnlyUser']['fullName']).toBe(fullName)
     })
+
+    test('Calling Mutation.createCognitoOnlyUser with user that already exists is a ClientError', async () => {
+      // pick a valid full name, verify we can sign up with it
+      let variables = {username: cognito.generateUsername()}
+      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+      expect(resp['errors']).toBeUndefined()
+      expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
+
+      // try to create the user again, should fail with ClientError
+      await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
+      variables = {username: cognito.generateUsername()}
+      await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
+    })
   })
 })

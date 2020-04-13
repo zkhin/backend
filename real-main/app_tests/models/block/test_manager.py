@@ -1,4 +1,5 @@
 from unittest.mock import call, Mock
+import uuid
 
 import pytest
 
@@ -7,23 +8,15 @@ from app.models.post.enums import PostType
 
 
 @pytest.fixture
-def blocker_user(user_manager):
-    yield user_manager.create_cognito_only_user('blocker-uid', 'bockerUname')
+def blocker_user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def blocked_user(user_manager):
-    yield user_manager.create_cognito_only_user('blocked-uid', 'bockedUname')
-
-
-@pytest.fixture
-def blocker_user_2(user_manager):
-    yield user_manager.create_cognito_only_user('blocker-uid-2', 'bockerUname2')
-
-
-@pytest.fixture
-def blocked_user_2(user_manager):
-    yield user_manager.create_cognito_only_user('blocked-uid-2', 'bockedUname2')
+blocked_user = blocker_user
+blocker_user_2 = blocker_user
+blocked_user_2 = blocker_user
 
 
 def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_user):

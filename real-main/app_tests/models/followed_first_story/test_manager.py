@@ -8,8 +8,10 @@ from app.models.post.enums import PostType
 
 
 @pytest.fixture
-def following_user_ids(user_manager, follow_manager):
+def following_user_ids(user_manager, follow_manager, cognito_client):
     "A pair of user ids for which one follows the other"
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='fruid')
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='fduid')
     follower_user = user_manager.create_cognito_only_user('fruid', 'frUname')
     followed_user = user_manager.create_cognito_only_user('fduid', 'fdUname')
     follow_manager.dynamo.client.transact_write_items([

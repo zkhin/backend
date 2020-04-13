@@ -1,3 +1,5 @@
+import uuid
+
 import pendulum
 import pytest
 
@@ -11,18 +13,14 @@ def follow_dynamo(dynamo_client):
 
 
 @pytest.fixture
-def user1(user_manager):
-    yield user_manager.create_cognito_only_user('uid1', 'uname1')
+def user1(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('uid2', 'uname2')
-
-
-@pytest.fixture
-def user3(user_manager):
-    yield user_manager.create_cognito_only_user('uid3', 'uname3')
+user2 = user1
+user3 = user1
 
 
 def test_transact_add_following(follow_dynamo, user1, user2):

@@ -10,10 +10,14 @@ from app.models.user.enums import UserPrivacyStatus
 
 
 @pytest.fixture
-def users(user_manager):
+def users(user_manager, cognito_client):
     "Us and them"
-    our_user = user_manager.create_cognito_only_user(str(uuid4()), 'myUsername')
-    their_user = user_manager.create_cognito_only_user(str(uuid4()), 'theirUsername')
+    our_user_id = str(uuid4())
+    their_user_id = str(uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=our_user_id)
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=their_user_id)
+    our_user = user_manager.create_cognito_only_user(our_user_id, 'myUsername')
+    their_user = user_manager.create_cognito_only_user(their_user_id, 'theirUsername')
     yield (our_user, their_user)
 
 

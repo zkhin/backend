@@ -1,3 +1,5 @@
+import uuid
+
 import pendulum
 import pytest
 
@@ -5,13 +7,13 @@ from app.models.post.enums import PostType
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+user2 = user
 
 
 @pytest.fixture
@@ -99,9 +101,9 @@ def test_cant_comment_on_post_with_comments_disabled(comment_manager, user, post
     assert comment.id == comment_id
 
 
-def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, post, block_manager, user_manager):
+def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, post, block_manager, user2):
     comment_id = 'cid'
-    commenter = user_manager.create_cognito_only_user('cuid', 'cUname')
+    commenter = user2
 
     # owner blocks commenter, verify cannot comment
     block_manager.block(user, commenter)
@@ -120,12 +122,12 @@ def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, pos
     assert comment.id == comment_id
 
 
-def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, post, follow_manager, user_manager):
+def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, post, follow_manager, user2):
     comment_id = 'cid'
-    commenter = user_manager.create_cognito_only_user('cuid', 'cUname')
+    commenter = user2
 
     # post owner goes private
-    user.set_privacy_status(user_manager.enums.UserPrivacyStatus.PRIVATE)
+    user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
 
     # verify we can't comment on their post
     with pytest.raises(comment_manager.exceptions.CommentException):

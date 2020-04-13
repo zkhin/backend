@@ -1,8 +1,26 @@
 import logging
 import re
-from unittest.mock import call
+from unittest.mock import Mock, call
 
 import pytest
+
+
+@pytest.fixture
+def cognito_only_user1(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='uid-1')
+    yield user_manager.create_cognito_only_user('uid-1', 'username_1')
+
+
+@pytest.fixture
+def cognito_only_user2(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='uid-2')
+    yield user_manager.create_cognito_only_user('uid-2', 'username_2')
+
+
+@pytest.fixture
+def real_user(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='uidr')
+    yield user_manager.create_cognito_only_user('uidr', 'real')
 
 
 def test_get_user_that_doesnt_exist(user_manager):
@@ -10,28 +28,17 @@ def test_get_user_that_doesnt_exist(user_manager):
     assert resp is None
 
 
-def test_get_user_by_username(user_manager):
-    user_id = 'my-user-id'
-    username = 'therealuser'
-
-    # check user doesn't exist
-    user = user_manager.get_user_by_username(username)
+def test_get_user_by_username(user_manager, cognito_only_user1):
+    # check a user that doesn't exist
+    user = user_manager.get_user_by_username('nope_not_there')
     assert user is None
 
-    # create the user
-    user = user_manager.create_cognito_only_user(user_id, username)
-    assert user.id == user_id
-    assert user.item['userId'] == user_id
-    assert user.item['username'] == username
-
-    # check exists
-    user = user_manager.get_user_by_username(username)
-    assert user.id == user_id
-    assert user.item['userId'] == user_id
-    assert user.item['username'] == username
+    # check a user that exists
+    user = user_manager.get_user_by_username(cognito_only_user1.username)
+    assert user.id == cognito_only_user1.id
 
 
-def test_create_cognito_user(user_manager):
+def test_create_cognito_user(user_manager, cognito_client):
     user_id = 'my-user-id'
     username = 'therealuser'
     full_name = 'my-full-name'
@@ -39,6 +46,9 @@ def test_create_cognito_user(user_manager):
     # check the user doesn't already exist
     user = user_manager.get_user(user_id)
     assert user is None
+
+    # frontend does this part out-of-band
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
 
     # create the user
     user = user_manager.create_cognito_only_user(user_id, username, full_name=full_name)
@@ -49,12 +59,6 @@ def test_create_cognito_user(user_manager):
     assert 'email' not in user.item
     assert 'phoneNumber' not in user.item
 
-    # verify social services called as expected
-    assert user_manager.cognito_client.mock_calls == [
-        call.get_user_attributes(user_id),
-        call.set_user_attributes(user_id, {'preferred_username': username}),
-    ]
-
     # double check user got into db
     user = user_manager.get_user(user_id)
     assert user.id == user_id
@@ -64,21 +68,57 @@ def test_create_cognito_user(user_manager):
     assert 'email' not in user.item
     assert 'phoneNumber' not in user.item
 
+    # check cognito was set correctly
+    assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
 
-def test_create_cognito_user_with_email_and_phone(user_manager):
+
+def test_create_cognito_user_aleady_exists(user_manager, cognito_client):
+    user_id = 'my-user-id'
+    username = 'orgusername'
+    full_name = 'my-full-name'
+
+    # create the user in the userpool (frontend does this in live system)
+    cognito_client.boto_client.admin_create_user(
+        UserPoolId=cognito_client.user_pool_id,
+        Username=user_id,
+    )
+
+    # create the user
+    user = user_manager.create_cognito_only_user(user_id, username, full_name=full_name)
+    assert user.id == user_id
+    assert user.username == username
+
+    # check their cognito username is as expected
+    assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
+
+    # try to create the user again, this time with a diff username
+    with pytest.raises(user.exceptions.UserAlreadyExists):
+        user_manager.create_cognito_only_user(user_id, 'diffusername')
+
+    # verify that did not affect either dynamo nor cognito
+    user = user_manager.get_user(user_id)
+    assert user.username == username
+    assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
+
+
+def test_create_cognito_user_with_email_and_phone(user_manager, cognito_client):
     user_id = 'my-user-id'
     username = 'therealuser'
     full_name = 'my-full-name'
     email = 'great@best.com'
     phone = '+123'
 
-    cognito_user_attrs = {
-        'email': email,
-        'email_verified': True,
-        'phone_number': phone,
-        'phone_number_verified': True,
-    }
-    user_manager.cognito_client.configure_mock(**{'get_user_attributes.return_value': cognito_user_attrs})
+    # frontend does this part out-of-band: creates the user in cognito with verified email and phone
+    cognito_client.boto_client.admin_create_user(
+        UserPoolId=cognito_client.user_pool_id,
+        Username=user_id,
+        UserAttributes=[
+            {'Name': 'email', 'Value': email},
+            {'Name': 'email_verified', 'Value': 'true'},
+            {'Name': 'phone_number', 'Value': phone},
+            {'Name': 'phone_number_verified', 'Value': 'true'},
+        ]
+    )
 
     # check the user doesn't already exist
     user = user_manager.get_user(user_id)
@@ -93,27 +133,33 @@ def test_create_cognito_user_with_email_and_phone(user_manager):
     assert user.item['email'] == email
     assert user.item['phoneNumber'] == phone
 
-    # verify social services called as expected
-    assert user_manager.cognito_client.mock_calls == [
-        call.get_user_attributes(user_id),
-        call.set_user_attributes(user_id, {'preferred_username': username}),
-    ]
+    # check cognito attrs are as expected
+    cognito_attrs = user.cognito_client.get_user_attributes(user.id)
+    assert cognito_attrs['preferred_username'] == username
+    assert cognito_attrs['email'] == email
+    assert cognito_attrs['email_verified'] == 'true'
+    assert cognito_attrs['phone_number'] == phone
+    assert cognito_attrs['phone_number_verified'] == 'true'
 
 
-def test_create_cognito_user_with_non_verified_email_and_phone(user_manager):
+def test_create_cognito_user_with_non_verified_email_and_phone(user_manager, cognito_client):
     user_id = 'my-user-id'
     username = 'therealuser'
     full_name = 'my-full-name'
     email = 'great@best.com'
     phone = '+123'
 
-    cognito_user_attrs = {
-        'email': email,
-        'email_verified': False,
-        'phone_number': phone,
-        'phone_number_verified': False,
-    }
-    user_manager.cognito_client.configure_mock(**{'get_user_attributes.return_value': cognito_user_attrs})
+    # frontend does this part out-of-band: creates the user in cognito with unverified email and phone
+    cognito_client.boto_client.admin_create_user(
+        UserPoolId=cognito_client.user_pool_id,
+        Username=user_id,
+        UserAttributes=[
+            {'Name': 'email', 'Value': email},
+            {'Name': 'email_verified', 'Value': 'false'},
+            {'Name': 'phone_number', 'Value': phone},
+            {'Name': 'phone_number_verified', 'Value': 'false'},
+        ]
+    )
 
     # check the user doesn't already exist
     user = user_manager.get_user(user_id)
@@ -128,11 +174,13 @@ def test_create_cognito_user_with_non_verified_email_and_phone(user_manager):
     assert 'email' not in user.item
     assert 'phoneNumber' not in user.item
 
-    # verify social services called as expected
-    assert user_manager.cognito_client.mock_calls == [
-        call.get_user_attributes(user_id),
-        call.set_user_attributes(user_id, {'preferred_username': username}),
-    ]
+    # check cognito attrs are as expected
+    cognito_attrs = user.cognito_client.get_user_attributes(user.id)
+    assert cognito_attrs['preferred_username'] == username
+    assert cognito_attrs['email'] == email
+    assert cognito_attrs.get('email_verified', 'false') == 'false'
+    assert cognito_attrs['phone_number'] == phone
+    assert cognito_attrs.get('phone_number_verified', 'false') == 'false'
 
 
 def test_create_cognito_only_user_invalid_username(user_manager):
@@ -144,91 +192,91 @@ def test_create_cognito_only_user_invalid_username(user_manager):
         user_manager.create_cognito_only_user(user_id, invalid_username, full_name=full_name)
 
 
-def test_create_cognito_only_user_username_taken(user_manager):
-    user_id_1 = 'my-user-id-1'
-    user_id_2 = 'my-user-id-2'
-    username_1 = 'REAL'
-    username_2 = 'real'
+def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user1, cognito_client):
+    user_id = 'uid'
+    username_1 = cognito_only_user1.username.upper()
+    username_2 = cognito_only_user1.username.lower()
 
-    # create the first user
-    user_manager.create_cognito_only_user(user_id_1, username_1)
+    # frontend does this part out-of-band: creates the user in cognito, no preferred_username
+    cognito_client.boto_client.admin_create_user(
+        UserPoolId=cognito_client.user_pool_id,
+        Username=user_id,
+    )
 
-    # configure cognito to respond as if username is already taken
+    # moto doesn't seem to honor the 'make preferred usernames unique' setting (using it as an alias)
+    # so mock it's response like to simulate that it does
     exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.configure_mock(**{'set_user_attributes.side_effect': exception})
+    user_manager.cognito_client.set_user_attributes = Mock(side_effect=exception)
 
-    # the second should fail with a username clash
     with pytest.raises(user_manager.exceptions.UserValidationException):
-        user_manager.create_cognito_only_user(user_id_2, username_2)
+        user_manager.create_cognito_only_user(user_id, username_1)
+
+    with pytest.raises(user_manager.exceptions.UserValidationException):
+        user_manager.create_cognito_only_user(user_id, username_2)
 
 
-def test_create_cognito_only_user_username_released_if_user_not_found_in_cognito_user_pool(user_manager):
+def test_create_cognito_only_user_username_released_if_user_not_found_in_user_pool(user_manager, cognito_client):
+    # two users, one username, cognito only has a user set up for one of them
     user_id_1 = 'my-user-id-1'
     user_id_2 = 'my-user-id-2'
     username = 'myUsername'
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id_2)
 
-    # configure cognito to respond as if user doesn't exist
-    exception = user_manager.cognito_client.boto_client.exceptions.UserNotFoundException({}, None)
-    user_manager.cognito_client.configure_mock(**{'get_user_attributes.side_effect': exception})
-
-    # create the first user, should fail
+    # create the first user that doesn't exist in the user pool, should fail
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_cognito_only_user(user_id_1, username)
 
-    # cognito will now respond normally, someone else should be able to use the username now
-    user_manager.cognito_client.get_user_attributes.reset_mock(side_effect=True)
-    user_manager.create_cognito_only_user(user_id_2, username)
+    # should be able to now use that same username with the other user
+    user = user_manager.create_cognito_only_user(user_id_2, username)
+    assert user.username == username
+    assert cognito_client.get_user_attributes(user.id)['preferred_username'] == username.lower()
 
 
-def test_follow_real_user_if_exists(user_manager):
+def test_create_cognito_only_user_follow_real_user_doesnt_exist(user_manager, cognito_client):
     # create a user, verify no followeds
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='uid1')
     user = user_manager.create_cognito_only_user('uid1', 'uname1')
     assert list(user.follow_manager.dynamo.generate_followed_items(user.id)) == []
 
-    # real user doesn't exist, so this is a no-op
-    user_manager.follow_real_user(user)
-    assert list(user.follow_manager.dynamo.generate_followed_items(user.id)) == []
 
-    # create the rels user
-    real_user = user_manager.create_cognito_only_user('real-uid', 'real')
+def test_follow_real_user_exists(user_manager, cognito_only_user1, follow_manager, real_user):
+    # verify no followers (ensures cognito_only_user1 fixture generated before real_user)
+    assert list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
 
-    # now following them if they exist should work
-    user_manager.follow_real_user(user)
+    # follow that real user
+    user_manager.follow_real_user(cognito_only_user1)
+    followeds = list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id))
+    assert len(followeds) == 1
+    assert followeds[0]['followedUserId'] == real_user.id
+
+
+def test_follow_real_user_doesnt_exist(user_manager, cognito_only_user1, follow_manager):
+    assert list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+    user_manager.follow_real_user(cognito_only_user1)
+    assert list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+
+
+def test_create_cognito_only_user_follow_real_user_if_exists(user_manager, cognito_client, real_user):
+    # create a user, verify follows real user
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='uid1')
+    user = user_manager.create_cognito_only_user('uid1', 'uname1')
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
 
 
-def test_create_cognito_only_user_follow_real_user_if_exists(user_manager):
-    # create a 'real' user, they should not follow anyone
-    real_user = user_manager.create_cognito_only_user('real-uid', 'real')
-    assert list(real_user.follow_manager.dynamo.generate_followed_items(real_user.id)) == []
-
-    # create a user with a 'real' user in the DB, should follow real user
-    user = user_manager.create_cognito_only_user('uid2', 'uname2')
-    followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
-    assert len(followeds) == 1
-    assert followeds[0]['followedUserId'] == real_user.id
-
-
-def test_create_facebook_user_success(user_manager):
+def test_create_facebook_user_success(user_manager, real_user):
     fb_token = 'fb-token'
     cognito_token = 'cog-token'
     user_id = 'my-user-id'
-    username = 'therealuser'
+    username = 'my_username'
     full_name = 'my-full-name'
     email = 'My@email.com'
 
-    # create a 'real' user, they should not follow anyone
-    real_user = user_manager.create_cognito_only_user('real-uid', 'real')
-    assert list(real_user.follow_manager.dynamo.generate_followed_items(real_user.id)) == []
-    user_manager.cognito_client.reset_mock()
-
     # set up our mocks to behave correctly
     user_manager.facebook_client.configure_mock(**{'get_verified_email.return_value': email})
-    user_manager.cognito_client.configure_mock(**{
-        'create_user_pool_entry.return_value': cognito_token,
-    })
+    user_manager.cognito_client.create_user_pool_entry = Mock(return_value=cognito_token)
+    user_manager.cognito_client.link_identity_pool_entries = Mock()
 
     # create the facebook user, check it is as expected
     user = user_manager.create_facebook_user(user_id, username, fb_token, full_name=full_name)
@@ -239,9 +287,9 @@ def test_create_facebook_user_success(user_manager):
 
     # check mocks called as expected
     assert user_manager.facebook_client.mock_calls == [call.get_verified_email(fb_token)]
-    assert user_manager.cognito_client.mock_calls == [
-        call.create_user_pool_entry(user_id, email.lower(), username),
-        call.link_identity_pool_entries(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
+    assert user_manager.cognito_client.create_user_pool_entry.mock_calls == [call(user_id, email.lower(), username)]
+    assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
+        call(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
     ]
 
     # check we are following the real user
@@ -251,41 +299,33 @@ def test_create_facebook_user_success(user_manager):
 
 
 def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
-    # this error can happens if frontend uses the wrong createUser mutation
-
     # configure cognito to respond as if username is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
-    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
 
 
-def test_create_google_user_success(user_manager):
+def test_create_google_user_success(user_manager, real_user):
     google_token = 'google-token'
     cognito_token = 'cog-token'
     user_id = 'my-user-id'
-    username = 'therealuser'
+    username = 'myusername'
     full_name = 'my-full-name'
     email = 'My@email.com'  # emails from google can have upper case characters in them
 
-    # create a 'real' user, they should not follow anyone
-    real_user = user_manager.create_cognito_only_user('real-uid', 'real')
-    assert list(real_user.follow_manager.dynamo.generate_followed_items(real_user.id)) == []
-    user_manager.cognito_client.reset_mock()
-
     # set up our mocks to behave correctly
     user_manager.google_client.configure_mock(**{'get_verified_email.return_value': email})
-    user_manager.cognito_client.configure_mock(**{
-        'create_user_pool_entry.return_value': cognito_token,
-    })
+    user_manager.cognito_client.create_user_pool_entry = Mock(return_value=cognito_token)
+    user_manager.cognito_client.link_identity_pool_entries = Mock()
 
     # create the google user, check it is as expected
     user = user_manager.create_google_user(user_id, username, google_token, full_name=full_name)
@@ -296,9 +336,9 @@ def test_create_google_user_success(user_manager):
 
     # check mocks called as expected
     assert user_manager.google_client.mock_calls == [call.get_verified_email(google_token)]
-    assert user_manager.cognito_client.mock_calls == [
-        call.create_user_pool_entry(user_id, email.lower(), username),
-        call.link_identity_pool_entries(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
+    assert user_manager.cognito_client.create_user_pool_entry.mock_calls == [call(user_id, email.lower(), username)]
+    assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
+        call(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
     ]
 
     # check we are following the real user
@@ -308,20 +348,19 @@ def test_create_google_user_success(user_manager):
 
 
 def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
-    # this error can happens if frontend uses the wrong createUser mutation
 
     # configure cognito to respond as if username is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
-    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.configure_mock(**{'create_user_pool_entry.side_effect': exception})
+    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
 
@@ -391,7 +430,7 @@ def test_get_random_placeholder_photo_code(user_manager):
     assert code in ['black-white-cat', 'orange-person']
 
 
-def test_get_text_tags(user_manager):
+def test_get_text_tags(user_manager, cognito_only_user1, cognito_only_user2):
     # no tags
     text = 'no tags here'
     assert user_manager.get_text_tags(text) == []
@@ -400,20 +439,13 @@ def test_get_text_tags(user_manager):
     text = 'hey @youDontExist and @meneither'
     assert user_manager.get_text_tags(text) == []
 
-    # create two users in the DB
-    user_id1 = 'my-user-id'
-    username1 = 'therealuser'
-    user_manager.create_cognito_only_user(user_id1, username1)
-
-    user_id2 = 'my-other-id'
-    username2 = 'bestUsername'
-    user_manager.create_cognito_only_user(user_id2, username2)
-
     # with tags, some that exist and others that dont
+    username1 = cognito_only_user1.username
+    username2 = cognito_only_user2.username
     text = f'hey @{username1} and @nopenope and @{username2}'
     assert sorted(user_manager.get_text_tags(text), key=lambda x: x['tag']) == sorted([
-        {'tag': f'@{username1}', 'userId': user_id1},
-        {'tag': f'@{username2}', 'userId': user_id2},
+        {'tag': f'@{username1}', 'userId': cognito_only_user1.id},
+        {'tag': f'@{username2}', 'userId': cognito_only_user2.id},
     ], key=lambda x: x['tag'])
 
 

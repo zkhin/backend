@@ -11,7 +11,8 @@ from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
-def user(user_manager):
+def user(user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid')
     yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
 
 
@@ -21,16 +22,14 @@ def post(post_manager, user):
 
 
 @pytest.fixture
-def post_with_expiration(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
         user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
 
 
 @pytest.fixture
-def post_with_album(album_manager, post_manager, user_manager, image_data_b64):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+def post_with_album(album_manager, post_manager, user, image_data_b64):
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
         user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
@@ -38,8 +37,7 @@ def post_with_album(album_manager, post_manager, user_manager, image_data_b64):
 
 
 @pytest.fixture
-def post_with_media(post_manager, user_manager):
-    user = user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+def post_with_media(post_manager, user):
     yield post_manager.add_post(user.id, 'pid2', text='t')
 
 

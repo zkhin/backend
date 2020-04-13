@@ -1,6 +1,7 @@
 import logging
 import random
 import string
+import uuid
 
 import pytest
 
@@ -9,18 +10,18 @@ from app.models.post.enums import PostType
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('uid1', 'uname1')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+user2 = user
 
 
 @pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
-
-
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('uid2', 'uname2')
 
 
 @pytest.fixture

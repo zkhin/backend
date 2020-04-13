@@ -1,4 +1,5 @@
 from unittest.mock import Mock, call
+import uuid
 
 import pendulum
 import pytest
@@ -8,18 +9,14 @@ from app.models.chat.exceptions import ChatException
 
 
 @pytest.fixture
-def user1(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user1(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-
-
-@pytest.fixture
-def user3(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
+user2 = user1
+user3 = user1
 
 
 def test_cant_add_direct_chat_blocked(chat_manager, block_manager, user1, user2):

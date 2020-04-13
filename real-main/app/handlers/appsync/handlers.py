@@ -67,7 +67,7 @@ def create_cognito_only_user(caller_user_id, arguments, source, context):
     full_name = arguments.get('fullName')
     try:
         user = user_manager.create_cognito_only_user(caller_user_id, username, full_name=full_name)
-    except user_manager.exceptions.UserValidationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -79,7 +79,7 @@ def create_facebook_user(caller_user_id, arguments, source, context):
     facebook_token = arguments['facebookAccessToken']
     try:
         user = user_manager.create_facebook_user(caller_user_id, username, facebook_token, full_name=full_name)
-    except user_manager.exceptions.UserValidationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -91,7 +91,7 @@ def create_google_user(caller_user_id, arguments, source, context):
     google_id_token = arguments['googleIdToken']
     try:
         user = user_manager.create_google_user(caller_user_id, username, google_id_token, full_name=full_name)
-    except user_manager.exceptions.UserValidationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -102,7 +102,7 @@ def start_change_user_email(caller_user_id, arguments, source, context):
     user = user_manager.get_user(caller_user_id)
     try:
         user.start_change_contact_attribute('email', email)
-    except user_manager.exceptions.UserVerificationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -114,7 +114,7 @@ def finish_change_user_email(caller_user_id, arguments, source, context):
     user = user_manager.get_user(caller_user_id)
     try:
         user.finish_change_contact_attribute('email', access_token, code)
-    except user_manager.exceptions.UserVerificationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -125,7 +125,7 @@ def start_change_user_phone_number(caller_user_id, arguments, source, context):
     user = user_manager.get_user(caller_user_id)
     try:
         user.start_change_contact_attribute('phone', phone)
-    except user_manager.exceptions.UserVerificationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -137,7 +137,7 @@ def finish_change_user_phone_number(caller_user_id, arguments, source, context):
     user = user_manager.get_user(caller_user_id)
     try:
         user.finish_change_contact_attribute('phone', access_token, code)
-    except user_manager.exceptions.UserVerificationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 
@@ -174,7 +174,7 @@ def set_user_details(caller_user_id, arguments, source, context):
     if username is not None:
         try:
             user = user.update_username(username)
-        except user_manager.exceptions.UserValidationException as err:
+        except user_manager.exceptions.UserException as err:
             raise ClientException(str(err))
 
     # are we setting a new profile picture?
@@ -267,7 +267,7 @@ def reset_user(caller_user_id, arguments, source, context):
     # equivalent to calling Mutation.createCognitoOnlyUser()
     try:
         user = user_manager.create_cognito_only_user(caller_user_id, new_username)
-    except user_manager.exceptions.UserValidationException as err:
+    except user_manager.exceptions.UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
 

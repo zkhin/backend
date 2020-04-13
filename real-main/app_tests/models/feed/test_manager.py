@@ -3,7 +3,8 @@ import pendulum
 from app.models.post.enums import PostType
 
 
-def test_add_users_posts_to_feed(feed_manager, post_manager, user_manager):
+def test_add_users_posts_to_feed(feed_manager, post_manager, user_manager, cognito_client):
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pb-uid')
     posted_by_user = user_manager.create_cognito_only_user('pb-uid', 'pbUname')
     feed_user_id = 'fuid'
 

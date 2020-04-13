@@ -1,4 +1,4 @@
-from unittest.mock import call
+from unittest.mock import call, Mock
 
 import pytest
 
@@ -7,30 +7,30 @@ from app.utils import image_size
 
 
 @pytest.fixture
-def user(user_manager):
+def user(user_manager, cognito_client):
     user_id = 'my-user-id'
     username = 'theREALuser'
-    user = user_manager.create_cognito_only_user(user_id, username)
-    user.cognito_client.reset_mock()
-    yield user
+    # create the user in the userpool (frontend does this in live system)
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
-def user2(user_manager):
+def user2(user_manager, cognito_client):
     user_id = 'my-user-id-2'
     username = 'theREALuser2'
-    user = user_manager.create_cognito_only_user(user_id, username)
-    user.cognito_client.reset_mock()
-    yield user
+    # create the user in the userpool (frontend does this in live system)
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
-def user3(user_manager):
+def user3(user_manager, cognito_client):
     user_id = 'my-user-id-3'
     username = 'theREALuser3'
-    user = user_manager.create_cognito_only_user(user_id, username)
-    user.cognito_client.reset_mock()
-    yield user
+    # create the user in the userpool (frontend does this in live system)
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 def test_refresh(user):
@@ -44,8 +44,9 @@ def test_refresh(user):
 
 
 def test_invalid_username(user):
-    invalid_username = '-'
+    user.cognito_client = Mock()
 
+    invalid_username = '-'
     with pytest.raises(user.exceptions.UserValidationException):
         user.update_username(invalid_username)
 
@@ -54,25 +55,22 @@ def test_invalid_username(user):
 
 
 def test_update_username_no_change(user):
-    username = user.item['username']
+    user.cognito_client = Mock()
 
     org_user_item = user.item
-    user_item = user.update_username(username).item
-    assert user_item == org_user_item
+    user.update_username(user.username)
+    assert user.item == org_user_item
     assert user.cognito_client.mock_calls == []
 
 
 def test_success_update_username(user):
-    new_username = 'newusername'
+    assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == user.username.lower()
 
     # change the username, verify it changed
-    user_item = user.update_username(new_username).item
-    assert user_item['username'] == new_username
-
-    # check social calls as expected
-    assert user.cognito_client.mock_calls == [
-        call.set_user_attributes(user.id, {'preferred_username': new_username}),
-    ]
+    new_username = user.username + 'newusername'
+    user.update_username(new_username)
+    assert user.username == new_username
+    assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == new_username.lower()
 
 
 def test_cant_update_username_to_one_already_taken(user, user2):
@@ -82,9 +80,9 @@ def test_cant_update_username_to_one_already_taken(user, user2):
     user2.update_username(username.lower())
     assert user2.item['username'] == username.lower()
 
-    # configure the mocked cognito backend to respond as the real one does
+    # mock out the cognito backend so it behaves like the real thing
     exception = user.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user.cognito_client.configure_mock(**{'set_user_attributes.side_effect': exception})
+    user.cognito_client.set_user_attributes = Mock(side_effect=exception)
 
     # verify we can't update to that username
     with pytest.raises(user.exceptions.UserValidationException):
@@ -197,67 +195,93 @@ def test_set_privacy_status_from_private_to_public(user_manager, user, user2, us
 def test_start_change_email(user):
     prev_email = 'stop@stop.com'
     user.item = user.dynamo.set_user_details(user.id, email=prev_email)
+    user.cognito_client.set_user_attributes(user.id, {'email': prev_email, 'email_verified': 'true'})
 
+    # check starting state
+    user.item['email'] == prev_email
+    attrs = user.cognito_client.get_user_attributes(user.id)
+    assert attrs['email'] == prev_email
+    assert attrs['email_verified'] == 'true'
+    assert 'custom:unverified_email' not in attrs
+
+    # start the email change
     new_email = 'go@go.com'
     user.start_change_contact_attribute('email', new_email)
-    assert user.item['email'] == prev_email
 
-    assert user.cognito_client.mock_calls == [
-        call.set_user_attributes(user.id, {'email': new_email, 'custom:unverified_email': new_email}),
-        call.set_user_attributes(user.id, {'email': prev_email, 'email_verified': 'true'}),
-    ]
+    # check final state
+    assert user.item['email'] == prev_email
+    attrs = user.cognito_client.get_user_attributes(user.id)
+    assert attrs['email'] == prev_email
+    assert attrs['email_verified'] == 'true'
+    assert attrs['custom:unverified_email'] == new_email
 
 
 def test_finish_change_email(user):
+    # set up cognito like we have already started an email change
     new_email = 'go@go.com'
-    user.cognito_client.configure_mock(**{
-        'get_user_attributes.return_value': {'custom:unverified_email': new_email}
-    })
+    user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
-    access_token = {}
-    verification_code = {}
-    user.finish_change_contact_attribute('email', access_token, verification_code)
+    # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
+    user.cognito_client.verify_user_attribute = Mock()
+    user.cognito_client.clear_user_attribute = Mock()
+
+    user.finish_change_contact_attribute('email', 'access_token', 'verification_code')
     assert user.item['email'] == new_email
 
-    assert user.cognito_client.mock_calls == [
-        call.get_user_attributes(user.id),
-        call.verify_user_attribute(access_token, 'email', verification_code),
-        call.set_user_attributes(user.id, {'email': new_email, 'email_verified': 'true'}),
-        call.clear_user_attribute(user.id, 'custom:unverified_email')
+    attrs = user.cognito_client.get_user_attributes(user.id)
+    assert attrs['email'] == new_email
+    assert attrs['email_verified'] == 'true'
+
+    assert user.cognito_client.verify_user_attribute.mock_calls == [
+        call('access_token', 'email', 'verification_code'),
     ]
+    assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_email')]
 
 
 def test_start_change_phone(user):
     prev_phone = '+123'
     user.item = user.dynamo.set_user_details(user.id, phone=prev_phone)
+    user.cognito_client.set_user_attributes(user.id, {'phone': prev_phone, 'phone_verified': 'true'})
 
+    # check starting state
+    user.item['phoneNumber'] == prev_phone
+    attrs = user.cognito_client.get_user_attributes(user.id)
+    assert attrs['phone'] == prev_phone
+    assert attrs['phone_verified'] == 'true'
+    assert 'custom:unverified_phone' not in attrs
+
+    # start the email change
     new_phone = '+567'
     user.start_change_contact_attribute('phone', new_phone)
-    assert user.item['phoneNumber'] == prev_phone
 
-    assert user.cognito_client.mock_calls == [
-        call.set_user_attributes(user.id, {'phone_number': new_phone, 'custom:unverified_phone': new_phone}),
-        call.set_user_attributes(user.id, {'phone_number': prev_phone, 'phone_number_verified': 'true'}),
-    ]
+    # check final state
+    assert user.item['phoneNumber'] == prev_phone
+    attrs = user.cognito_client.get_user_attributes(user.id)
+    assert attrs['phone'] == prev_phone
+    assert attrs['phone_verified'] == 'true'
+    assert attrs['custom:unverified_phone'] == new_phone
 
 
 def test_finish_change_phone(user):
+    # set attributes in cognito that would have been set when email change process started
     new_phone = '+567'
-    user.cognito_client.configure_mock(**{
-        'get_user_attributes.return_value': {'custom:unverified_phone': new_phone}
-    })
+    user.cognito_client.set_user_attributes(user.id, {'custom:unverified_phone': new_phone})
 
-    access_token = {}
-    verification_code = {}
-    user.finish_change_contact_attribute('phone', access_token, verification_code)
+    # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
+    user.cognito_client.verify_user_attribute = Mock()
+    user.cognito_client.clear_user_attribute = Mock()
+
+    user.finish_change_contact_attribute('phone', 'access_token', 'verification_code')
     assert user.item['phoneNumber'] == new_phone
 
-    assert user.cognito_client.mock_calls == [
-        call.get_user_attributes(user.id),
-        call.verify_user_attribute(access_token, 'phone_number', verification_code),
-        call.set_user_attributes(user.id, {'phone_number': new_phone, 'phone_number_verified': 'true'}),
-        call.clear_user_attribute(user.id, 'custom:unverified_phone')
+    attrs = user.cognito_client.get_user_attributes(user.id)
+    assert attrs['phone_number'] == new_phone
+    assert attrs['phone_number_verified'] == 'true'
+
+    assert user.cognito_client.verify_user_attribute.mock_calls == [
+        call('access_token', 'phone_number', 'verification_code'),
     ]
+    assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_phone')]
 
 
 def test_start_change_email_same_as_existing(user):
@@ -270,20 +294,23 @@ def test_start_change_email_same_as_existing(user):
 
 
 def test_start_change_email_no_old_value(user):
+    # check starting state
+    assert 'email' not in user.item
+    user_attrs = user.cognito_client.get_user_attributes(user.id)
+    assert 'email' not in user_attrs
+    assert 'custom:unverified_email' not in user_attrs
+
     new_email = 'go@go.com'
     user.start_change_contact_attribute('email', new_email)
     assert 'email' not in user.item
 
-    assert user.cognito_client.mock_calls == [
-        call.set_user_attributes(user.id, {'email': new_email, 'custom:unverified_email': new_email}),
-    ]
+    # check the cognito attributes set correctly
+    user_attrs = user.cognito_client.get_user_attributes(user.id)
+    assert user_attrs['email'] == new_email
+    assert user_attrs['custom:unverified_email'] == new_email
 
 
 def test_finish_change_email_no_unverified_email(user):
-    user.cognito_client.configure_mock(**{
-        'get_user_attributes.return_value': {}
-    })
-
     access_token = {}
     verification_code = {}
     with pytest.raises(user.exceptions.UserVerificationException):
@@ -292,12 +319,13 @@ def test_finish_change_email_no_unverified_email(user):
 
 
 def test_finish_change_email_wrong_verification_code(user):
+    # set attributes in cognito that would have been set when email change process started
     new_email = 'go@go.com'
+    user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
+
+    # moto has not yet implemented verify_user_attribute
     exception = user.cognito_client.boto_client.exceptions.CodeMismatchException({}, None)
-    user.cognito_client.configure_mock(**{
-        'get_user_attributes.return_value': {'custom:unverified_email': new_email},
-        'verify_user_attribute.side_effect': exception,
-    })
+    user.cognito_client.boto_client.verify_user_attribute = Mock(side_effect=exception)
 
     access_token = {}
     verification_code = {}
@@ -307,6 +335,9 @@ def test_finish_change_email_wrong_verification_code(user):
 
 
 def test_delete_user_basic_flow(user):
+    # moto cognito has not yet implemented admin_delete_user_attributes
+    user.cognito_client.clear_user_attribute = Mock()
+
     # delete the user
     org_user_id = user.id
     org_user_item = user.item
@@ -314,8 +345,8 @@ def test_delete_user_basic_flow(user):
     assert deleted_user_item == org_user_item
 
     # verify cognito was called to release username over there
-    assert user.cognito_client.mock_calls == [
-        call.clear_user_attribute(org_user_id, 'preferred_username'),
+    assert user.cognito_client.clear_user_attribute.mock_calls == [
+        call(org_user_id, 'preferred_username'),
     ]
 
     # verify it got removed from the db
@@ -335,6 +366,9 @@ def test_delete_user_deletes_trending(user):
     resp = trending_manager.dynamo.get_trending(user_id)
     assert resp is not None
 
+    # moto cognito has not yet implemented admin_delete_user_attributes
+    user.cognito_client.boto_client.admin_delete_user_attributes = Mock()
+
     # delete the user
     user.delete()
 
@@ -344,6 +378,9 @@ def test_delete_user_deletes_trending(user):
 
 
 def test_delete_user_releases_username(user, user2):
+    # moto cognito has not yet implemented admin_delete_user_attributes
+    user.cognito_client.boto_client.admin_delete_user_attributes = Mock()
+
     # release our username by deleting our user
     username = user.item['username']
     user.delete()
@@ -355,8 +392,9 @@ def test_delete_user_releases_username(user, user2):
 
 def test_delete_no_entry_in_user_pool(user, caplog):
     # configure the user pool to behave as if there is no entry for this user
+    # note that moto cognito has not yet implemented admin_delete_user_attributes
     exception = user.cognito_client.boto_client.exceptions.UserNotFoundException({}, None)
-    user.cognito_client.configure_mock(**{'clear_user_attribute.side_effect': exception})
+    user.cognito_client.clear_user_attribute = Mock(side_effect=exception)
 
     # verify a delete works as usual
     user_id = user.id
@@ -388,6 +426,9 @@ def test_delete_user_with_profile_pic(user):
         path = user.get_photo_path(size)
         assert user.s3_uploads_client.exists(path)
     assert 'photoPostId' in user.item
+
+    # moto cognito has not yet implemented admin_delete_user_attributes
+    user.cognito_client.boto_client.admin_delete_user_attributes = Mock()
 
     # delete the user
     user.delete()

@@ -71,13 +71,14 @@ class UserManager:
         full_name = None if full_name == '' else full_name  # treat empty string like null
 
         try:
-            user_attrs = self.cognito_client.get_user_attributes(user_id)
+            attrs = self.cognito_client.get_user_attributes(user_id)
         except self.cognito_client.boto_client.exceptions.UserNotFoundException:
             raise self.exceptions.UserValidationException(
                 f'No entry found in cognito user pool with cognito username `{user_id}`'
             )
-        email = user_attrs.get('email') if user_attrs.get('email_verified') else None
-        phone = user_attrs.get('phone_number') if user_attrs.get('phone_number_verified') else None
+        email = attrs.get('email') if attrs.get('email_verified', 'false') == 'true' else None
+        phone = attrs.get('phone_number') if attrs.get('phone_number_verified', 'false') == 'true' else None
+        preferred_username = attrs.get('preferred_username', None)
 
         # set the lowercased version of username in cognito
         # this is part of allowing case-insensitive logins
@@ -90,8 +91,17 @@ class UserManager:
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
-        item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email, phone=phone,
-                                    placeholder_photo_code=photo_code)
+        try:
+            item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email, phone=phone,
+                                        placeholder_photo_code=photo_code)
+        except self.exceptions.UserAlreadyExists:
+            # un-claim the username in cognito
+            if preferred_username:
+                self.cognito_client.set_user_attributes(user_id, {'preferred_username': preferred_username})
+            else:
+                self.cognito_client.clear_user_attribute(user_id, 'preferred_username')
+            raise
+
         user = self.init_user(item)
         self.follow_real_user(user)
         return user

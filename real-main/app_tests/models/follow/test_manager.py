@@ -9,11 +9,18 @@ from app.models.user.enums import UserPrivacyStatus
 
 
 @pytest.fixture
-def users(user_manager):
+def users(user_manager, cognito_client):
     "Us and them"
-    our_user = user_manager.create_cognito_only_user(str(uuid4()), 'myUsername')
-    their_user = user_manager.create_cognito_only_user(str(uuid4()), 'theirUsername')
+    our_user_id = str(uuid4())
+    their_user_id = str(uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=our_user_id)
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=their_user_id)
+    our_user = user_manager.create_cognito_only_user(our_user_id, 'myUsername')
+    their_user = user_manager.create_cognito_only_user(their_user_id, 'theirUsername')
     yield (our_user, their_user)
+
+
+other_users = users
 
 
 @pytest.fixture
@@ -267,9 +274,9 @@ def test_reset_followed_items(follow_manager, users_private):
     assert their_user.refresh_item().item.get('followerCount', 0) == 0
 
 
-def test_generate_follower_user_ids(follow_manager, users, user_manager):
+def test_generate_follower_user_ids(follow_manager, users, other_users):
     our_user, their_user = users
-    other_user = user_manager.create_cognito_only_user(str(uuid4()), 'otherUsername')
+    other_user = other_users[0]
 
     # check we have no followers
     uids = list(follow_manager.generate_follower_user_ids(our_user.id))
@@ -290,9 +297,9 @@ def test_generate_follower_user_ids(follow_manager, users, user_manager):
     assert sorted(uids) == sorted([their_user.id, other_user.id])
 
 
-def test_generate_followed_user_ids(follow_manager, users, user_manager):
+def test_generate_followed_user_ids(follow_manager, users, other_users):
     our_user, their_user = users
-    other_user = user_manager.create_cognito_only_user(str(uuid4()), 'otherUsername')
+    other_user = other_users[0]
 
     # check we have no followeds
     uids = list(follow_manager.generate_followed_user_ids(our_user.id))

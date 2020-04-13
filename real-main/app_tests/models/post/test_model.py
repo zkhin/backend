@@ -3,6 +3,7 @@ from decimal import Decimal
 from os import path
 from io import BytesIO
 from unittest.mock import call, Mock
+import uuid
 
 import pendulum
 import pytest
@@ -16,13 +17,13 @@ grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jp
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+user2 = user
 
 
 @pytest.fixture
@@ -464,8 +465,7 @@ def test_set_album_errors(album_manager, post_manager, user_manager, post, post_
         post_with_media.set_album('aid-dne')
 
     # album is owned by a different user
-    user2 = user_manager.create_cognito_only_user('ouid', 'oUname')
-    album = album_manager.add_album(user2.id, 'aid-2', 'album name')
+    album = album_manager.add_album(user.id, 'aid-2', 'album name')
     with pytest.raises(post_manager.exceptions.PostException, match='belong to different users'):
         post_with_media.set_album(album.id)
 

@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from app.models.like.enums import LikeStatus
@@ -7,19 +9,18 @@ from app.models.post.exceptions import UnableToDecrementPostLikeCounter
 
 
 @pytest.fixture
-def post(dynamo_client, like_manager, user_manager, post_manager):
-    posted_by_user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
-    yield post_manager.add_post(posted_by_user.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+other_user = user
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('lbuid', 'lbUname')
-
-
-@pytest.fixture
-def other_user(user_manager):
-    yield user_manager.create_cognito_only_user('lbuid2', 'lbUname2')
+def post(dynamo_client, like_manager, user, post_manager):
+    yield post_manager.add_post(user.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
 
 
 @pytest.fixture

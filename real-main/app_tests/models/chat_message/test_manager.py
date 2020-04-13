@@ -1,20 +1,18 @@
+import uuid
+
 import pendulum
 import pytest
 
 
 @pytest.fixture
-def user(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
-
-
-@pytest.fixture
-def user3(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
+user2 = user
+user3 = user
 
 
 @pytest.fixture
@@ -129,15 +127,15 @@ def test_add_system_message(chat_message_manager, chat, appsync_client, user2, u
 
 
 def test_add_system_message_group_created(chat_message_manager, chat, user):
-    assert user.username == 'pbUname'
+    assert user.username
 
     # check message count starts off at zero
     assert 'messageCount' not in chat.item
 
     # add the message, check it looks ok
     message = chat_message_manager.add_system_message_group_created(chat.id, user.id)
-    assert message.item['text'] == '@pbUname created the group'
-    assert message.item['textTags'] == [{'tag': '@pbUname', 'userId': user.id}]
+    assert message.item['text'] == f'@{user.username} created the group'
+    assert message.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
 
     # check the chat was altered correctly
     chat.refresh_item()
@@ -145,8 +143,8 @@ def test_add_system_message_group_created(chat_message_manager, chat, user):
 
     # add another message, check it looks ok
     message = chat_message_manager.add_system_message_group_created(chat.id, user.id, name='group name')
-    assert message.item['text'] == '@pbUname created the group "group name"'
-    assert message.item['textTags'] == [{'tag': '@pbUname', 'userId': user.id}]
+    assert message.item['text'] == f'@{user.username} created the group "group name"'
+    assert message.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
 
     # check the chat was altered correctly
     chat.refresh_item()
@@ -154,9 +152,9 @@ def test_add_system_message_group_created(chat_message_manager, chat, user):
 
 
 def test_add_system_message_added_to_group(chat_message_manager, chat, user, user2, user3):
-    assert user.username == 'pbUname'
-    assert user2.username == 'pbUname2'
-    assert user3.username == 'pbUname3'
+    assert user.username
+    assert user2.username
+    assert user3.username
 
     # check message count starts off at zero
     assert 'messageCount' not in chat.item
@@ -167,17 +165,18 @@ def test_add_system_message_added_to_group(chat_message_manager, chat, user, use
 
     # add one user
     message = chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [user2])
-    assert message.item['text'] == '@pbUname added @pbUname2 to the group'
+    assert message.item['text'] == f'@{user.username} added @{user2.username} to the group'
     assert len(message.item['textTags']) == 2
 
     # add two users
     message = chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [user2, user3])
-    assert message.item['text'] == '@pbUname added @pbUname2 and @pbUname3 to the group'
+    assert message.item['text'] == f'@{user.username} added @{user2.username} and @{user3.username} to the group'
     assert len(message.item['textTags']) == 3
 
     # add three users
     message = chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [user2, user3, user])
-    assert message.item['text'] == '@pbUname added @pbUname2, @pbUname3 and @pbUname to the group'
+    assert message.item['text'] == \
+        f'@{user.username} added @{user2.username}, @{user3.username} and @{user.username} to the group'
     assert len(message.item['textTags']) == 3
 
     # check the chat was altered correctly
@@ -186,14 +185,14 @@ def test_add_system_message_added_to_group(chat_message_manager, chat, user, use
 
 
 def test_add_system_message_left_group(chat_message_manager, chat, user):
-    assert user.username == 'pbUname'
+    assert user.username
 
     # check message count starts off at zero
     assert 'messageCount' not in chat.item
 
     # user leaves
     message = chat_message_manager.add_system_message_left_group(chat.id, user.id)
-    assert message.item['text'] == '@pbUname left the group'
+    assert message.item['text'] == f'@{user.username} left the group'
     assert len(message.item['textTags']) == 1
 
     # check the chat was altered correctly
@@ -202,19 +201,19 @@ def test_add_system_message_left_group(chat_message_manager, chat, user):
 
 
 def test_add_system_message_group_name_edited(chat_message_manager, chat, user):
-    assert user.username == 'pbUname'
+    assert user.username
 
     # check message count starts off at zero
     assert 'messageCount' not in chat.item
 
     # user changes the name
     message = chat_message_manager.add_system_message_group_name_edited(chat.id, user.id, '4eva')
-    assert message.item['text'] == '@pbUname changed the name of the group to "4eva"'
+    assert message.item['text'] == f'@{user.username} changed the name of the group to "4eva"'
     assert len(message.item['textTags']) == 1
 
     # user deletes the name the name
     message = chat_message_manager.add_system_message_group_name_edited(chat.id, user.id, None)
-    assert message.item['text'] == '@pbUname deleted the name of the group'
+    assert message.item['text'] == f'@{user.username} deleted the name of the group'
     assert len(message.item['textTags']) == 1
 
     # check the chat was altered correctly

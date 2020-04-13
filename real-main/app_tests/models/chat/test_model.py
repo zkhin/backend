@@ -1,4 +1,5 @@
 from unittest.mock import Mock, call
+import uuid
 
 import pendulum
 import pytest
@@ -7,28 +8,20 @@ from app.models.chat.exceptions import ChatException
 
 
 @pytest.fixture
-def user1(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid', 'pbUname')
+def user1(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-@pytest.fixture
-def user2(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+user2 = user1
+user3 = user1
+user4 = user1
 
 
 @pytest.fixture
 def direct_chat(chat_manager, user1, user2):
     yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
-
-
-@pytest.fixture
-def user3(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid3', 'pbUname3')
-
-
-@pytest.fixture
-def user4(user_manager):
-    yield user_manager.create_cognito_only_user('pbuid4', 'pbUname4')
 
 
 @pytest.fixture
@@ -104,7 +97,7 @@ def test_edit_group_chat(group_chat, user1):
     ]
 
 
-def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager):
+def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager, cognito_client):
     group_chat.chat_message_manager = Mock()
     now = pendulum.now('utc')
 
@@ -131,6 +124,8 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     assert msg_mock.call_args.kwargs == {'now': now}
 
     # create two users, one that blocks user2 and one that user2 blocks
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid-blocker')
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid-blocked')
     user_blocker = user_manager.create_cognito_only_user('pbuid-blocker', 'pbUname_blocker')
     user_blocked = user_manager.create_cognito_only_user('pbuid-blocked', 'pbUname_blocked')
     block_manager.block(user_blocker, user2)
