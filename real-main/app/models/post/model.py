@@ -102,13 +102,6 @@ class Post:
 
         return BytesIO(self._native_image_data)
 
-    def is_native_image_jpeg(self):
-        try:
-            image = Image.open(self.get_native_image_buffer())
-        except Exception:
-            return False
-        return image.format == 'JPEG'
-
     def get_1080p_image_buffer(self):
         if self.status == PostStatus.PENDING:
             raise exceptions.PostException(f'No 1080p image buffer for {PostStatus.PENDING} post `{self.id}``')
@@ -170,7 +163,10 @@ class Post:
         return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
 
     def get_image_writeonly_url(self):
-        path = self.get_image_path(image_size.NATIVE)
+        media_item = next(self.media_manager.dynamo.generate_by_post(self.id), None)
+        image_format = media_item.get('imageFormat') if media_item else None
+        size = image_size.NATIVE_HEIC if image_format == 'HEIC' else image_size.NATIVE
+        path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
     def delete_s3_video(self):
@@ -209,12 +205,8 @@ class Post:
             # s3 trigger is a no-op because we are already in PROCESSING
             self.upload_native_image_data_base64(image_data)
 
-        # let any exceptions flow through up the chain
-        if not self.is_native_image_jpeg():
-            raise exceptions.PostException(f'Non-jpeg image uploaded for post `{self.id}`')
-
-        self.set_checksum()
         media.process_upload()
+        self.set_checksum()
         self.complete(now=now)
 
     def upload_native_image_data_base64(self, image_data):

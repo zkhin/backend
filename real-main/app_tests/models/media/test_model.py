@@ -1,10 +1,17 @@
+from os import path
 from unittest.mock import Mock, call
 
+from PIL import Image
 import pytest
 
 from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostType
 from app.utils import image_size
+
+
+heic_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'IMG_0265.HEIC')
+heic_width = 4032
+heic_height = 3024
 
 
 @pytest.fixture
@@ -14,6 +21,13 @@ def post(post_manager):
 
 @pytest.fixture
 def media_awaiting_upload(media_manager, post):
+    media_item = post.item['mediaObjects'][0]
+    yield media_manager.init_media(media_item)
+
+
+@pytest.fixture
+def media_awaiting_upload_heic(post_manager, media_manager):
+    post = post_manager.add_post('uid', 'pid2', PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
     media_item = post.item['mediaObjects'][0]
     yield media_manager.init_media(media_item)
 
@@ -59,6 +73,29 @@ def test_process_upload_success(media_awaiting_upload):
     assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
 
     # mock out a bunch of methods
+    media.set_native_jpeg = Mock()
+    media.set_is_verified = Mock()
+    media.set_height_and_width = Mock()
+    media.set_colors = Mock()
+    media.set_thumbnails = Mock()
+
+    # do the call, should update our status
+    media.process_upload()
+    assert media.item['mediaStatus'] == MediaStatus.UPLOADED
+
+    # check the mocks were called correctly
+    assert media.set_is_verified.mock_calls == [call()]
+    assert media.set_height_and_width.mock_calls == [call()]
+    assert media.set_colors.mock_calls == [call()]
+    assert media.set_thumbnails.mock_calls == [call()]
+
+
+def test_process_upload_success_heic(media_awaiting_upload_heic):
+    media = media_awaiting_upload_heic
+    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
+
+    # mock out a bunch of methods
+    media.set_native_jpeg = Mock()
     media.set_is_verified = Mock()
     media.set_height_and_width = Mock()
     media.set_colors = Mock()
@@ -121,3 +158,21 @@ def test_set_is_verified_maximal(media_awaiting_upload, post):
     assert media.post_verification_client.mock_calls == [
         call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=False, original_format='oo'),
     ]
+
+
+def test_set_native_jpeg(media_awaiting_upload, s3_uploads_client):
+    media = media_awaiting_upload
+
+    # put the heic image in the bucket
+    s3_heic_path = media.get_s3_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(s3_heic_path, open(heic_path, 'rb'), 'image/heic')
+
+    # verify there's no native jpeg
+    s3_jpeg_path = media.get_s3_path(image_size.NATIVE)
+    assert not s3_uploads_client.exists(s3_jpeg_path)
+
+    media.set_native_jpeg()
+
+    # verify there is now a native jpeg, of the correct size
+    image = Image.open(media.get_native_image_buffer())
+    assert image.size == (heic_width, heic_height)

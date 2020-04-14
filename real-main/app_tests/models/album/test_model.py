@@ -90,7 +90,7 @@ def test_delete(user, album, post_manager, image_data_b64):
     assert user.item.get('postCount', 0) == 2
     assert user.item.get('albumCount', 0) == 1
     album.refresh_item()
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
         assert album.s3_uploads_client.exists(path)
 
@@ -105,7 +105,7 @@ def test_delete(user, album, post_manager, image_data_b64):
     user.refresh_item()
     assert user.item.get('postCount', 0) == 2
     assert user.item.get('albumCount', 0) == 0
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
         assert not album.s3_uploads_client.exists(path)
 
@@ -129,12 +129,12 @@ def test_delete_cant_decrement_album_count_below_zero(user, album):
 def test_get_art_image_path(album):
     # test when album has no art
     assert 'artHash' not in album.item
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         assert album.get_art_image_path(size) is None
 
     # set an artHash, in mem is enough
     album.item['artHash'] = 'deadbeef'
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
         assert album.item['ownedByUserId'] in path
         assert 'album' in path
@@ -153,7 +153,7 @@ def test_get_art_image_url(album):
     assert 'artHash' not in album.item
     domain = 'here.there.com'
     album.frontend_resources_domain = domain
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         url = album.get_art_image_url(size)
         assert domain in url
         assert size.name in url
@@ -161,19 +161,19 @@ def test_get_art_image_url(album):
     # set an artHash, in mem is enough
     album.item['artHash'] = 'deadbeef'
     url = album.get_art_image_url(image_size.NATIVE)
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         assert album.get_art_image_url(size) == image_url
 
 
 def test_delete_art_images(album):
     # set an art hash and put imagery in mocked s3
     art_hash = 'hashing'
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         media1_path = album.get_art_image_path(size, art_hash)
         album.s3_uploads_client.put_object(media1_path, b'anything', 'application/octet-stream')
 
     # verify we can see that album art
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash)
         assert album.s3_uploads_client.exists(path)
 
@@ -181,7 +181,7 @@ def test_delete_art_images(album):
     album.delete_art_images(art_hash)
 
     # verify we cannot see that album art anymore
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash)
         assert not album.s3_uploads_client.exists(path)
 
@@ -191,7 +191,7 @@ def test_save_art_images(album):
     art_hash = 'the hash'
 
     # check nothing in S3
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash)
         assert not album.s3_uploads_client.exists(path)
 
@@ -201,7 +201,7 @@ def test_save_art_images(album):
     album.save_art_images(art_hash, BytesIO(image_data))
 
     # check all sizes are in S3
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash)
         assert album.s3_uploads_client.exists(path)
 
@@ -215,7 +215,7 @@ def test_save_art_images(album):
     album.save_art_images(art_hash, BytesIO(image_data))
 
     # check all sizes are in S3
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash)
         assert album.s3_uploads_client.exists(path)
 

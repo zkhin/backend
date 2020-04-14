@@ -478,6 +478,11 @@ enum FlagStatus {
   NOT_FLAGGED
 }
 
+enum ImageFormat {
+  HEIC
+  JPEG
+}
+
 # DEPRECATED: use ImageInput
 input MediaObjectUpload {
   mediaId: ID!
@@ -493,6 +498,7 @@ input MediaObjectUpload {
 
 input ImageInput {
   takenInReal: Boolean
+  imageFormat: ImageFormat = JPEG
   originalFormat: String
   originalMetadata: String
 

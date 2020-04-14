@@ -788,3 +788,30 @@ def test_build_image_thumbnails(user, processing_video_post, s3_uploads_client):
     assert s3_uploads_client.exists(post.get_image_path(image_size.P1080))
     assert s3_uploads_client.exists(post.get_image_path(image_size.P480))
     assert s3_uploads_client.exists(post.get_image_path(image_size.P64))
+
+
+def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_client):
+    post = pending_image_post
+    post.cloudfront_client = cloudfront_client
+
+    # check a jpg image post
+    assert post.get_image_writeonly_url()
+    assert 'native.jpg' in cloudfront_client.generate_presigned_url.call_args.args[0]
+    assert 'native.heic' not in cloudfront_client.generate_presigned_url.call_args.args[0]
+
+    # set the imageFormat to heic
+    media_id = next(post.media_manager.dynamo.generate_by_post(post.id), None)['mediaId']
+    query_kwargs = {
+        'Key': {
+            'partitionKey': f'media/{media_id}',
+            'sortKey': '-',
+        },
+        'UpdateExpression': 'SET imageFormat = :im',
+        'ExpressionAttributeValues': {':im': 'HEIC'},
+    }
+    dynamo_client.update_item(query_kwargs)
+
+    # check a heic image post
+    assert post.get_image_writeonly_url()
+    assert 'native.jpg' not in cloudfront_client.generate_presigned_url.call_args.args[0]
+    assert 'native.heic' in cloudfront_client.generate_presigned_url.call_args.args[0]

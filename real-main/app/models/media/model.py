@@ -3,6 +3,7 @@ from io import BytesIO
 
 from colorthief import ColorThief
 from PIL import Image, ImageOps
+import pyheif
 
 from app.utils import image_size
 
@@ -60,6 +61,9 @@ class Media:
         if media_status != enums.MediaStatus.PROCESSING_UPLOAD:
             self.set_status(enums.MediaStatus.PROCESSING_UPLOAD)
 
+        if self.item.get('imageFormat') == 'HEIC':
+            self.set_native_jpeg()
+
         try:
             self.set_thumbnails()
         except Exception as err:
@@ -94,6 +98,17 @@ class Media:
         else:
             self.item = self.dynamo.set_colors(self.id, colors)
         return self
+
+    def set_native_jpeg(self):
+        "From a native HEIC, upload a native jpeg"
+        heic_path = self.get_s3_path(image_size.NATIVE_HEIC)
+        heif_file = pyheif.read_heif(self.s3_uploads_client.get_object_data_stream(heic_path))
+        image = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
+        in_mem_file = BytesIO()
+        image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
+        in_mem_file.seek(0)
+        jpeg_path = self.get_s3_path(image_size.NATIVE)
+        self.s3_uploads_client.put_object(jpeg_path, in_mem_file.read(), self.jpeg_content_type)
 
     def set_thumbnails(self):
         image = Image.open(self.get_native_image_buffer())

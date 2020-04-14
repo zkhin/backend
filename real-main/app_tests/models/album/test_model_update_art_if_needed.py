@@ -90,7 +90,7 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     assert art_hash
 
     # check all art sizes are in S3, native image is correct
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
         assert album.s3_uploads_client.exists(path)
     native_path = album.get_art_image_path(image_size.NATIVE)
@@ -105,7 +105,7 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     assert 'artHash' not in album.item
 
     # check all art sizes were removed from S3
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash=art_hash)
         assert not album.s3_uploads_client.exists(path)
 
@@ -154,7 +154,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.get_native_image_buffer().read()
 
     # check the thumbnails are all in S3, and all the old thumbs have been removed
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
         old_path = album.get_art_image_path(size, art_hash=second_art_hash)
         assert s3_uploads_client.exists(path)

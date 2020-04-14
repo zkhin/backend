@@ -21,7 +21,7 @@ class MediaDynamo:
         }, strongly_consistent=strongly_consistent)
 
     def transact_add_media(self, posted_by_user_id, post_id, media_id, media_status=MediaStatus.AWAITING_UPLOAD,
-                           posted_at=None, taken_in_real=None, original_format=None):
+                           posted_at=None, taken_in_real=None, original_format=None, image_format=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         media_item = {
@@ -43,6 +43,8 @@ class MediaDynamo:
             media_item['takenInReal'] = {'BOOL': taken_in_real}
         if original_format is not None:
             media_item['originalFormat'] = {'S': original_format}
+        if image_format is not None:
+            media_item['imageFormat'] = {'S': image_format}
         return {'Put': {
             'Item': media_item,
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds

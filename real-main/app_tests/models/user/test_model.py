@@ -415,14 +415,14 @@ def test_delete_user_with_profile_pic(user):
     content_type = 'image/jpeg'
 
     # add a profile pic of all sizes for that user
-    paths = [user.get_photo_path(size, photo_post_id=post_id) for size in image_size.ALL]
+    paths = [user.get_photo_path(size, photo_post_id=post_id) for size in image_size.JPEGS]
     for path in paths:
         user.s3_uploads_client.put_object(path, photo_data, content_type)
     user.dynamo.set_user_photo_post_id(user.id, post_id)
     user.refresh_item()
 
     # verify s3 was populated, dynamo set
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = user.get_photo_path(size)
         assert user.s3_uploads_client.exists(path)
     assert 'photoPostId' in user.item

@@ -4,8 +4,8 @@ import pendulum
 import pytest
 
 from app.models.media.enums import MediaStatus
+from app.models.media.exceptions import MediaException
 from app.models.post.enums import PostStatus, PostType
-from app.models.post.exceptions import PostException
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post, medi
     assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
-    with pytest.raises(PostException, match='Non-jpeg'):
+    with pytest.raises(MediaException, match='does not exist'):
         pending_post.process_image_upload(media=media)
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 

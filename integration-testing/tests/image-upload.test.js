@@ -12,6 +12,7 @@ const schema = require('../utils/schema.js')
 
 const jpgHeaders = {'Content-Type': 'image/jpeg'}
 const pngHeaders = {'Content-Type': 'image/png'}
+const heicHeaders = {'Content-Type': 'image/heic'}
 
 const imageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
 const imageHeight = 320
@@ -20,6 +21,10 @@ const imageWidth = 240
 const bigImageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'big-blank.jpg'))
 const bigImageHeight = 2000
 const bigImageWidth = 4000
+
+const heicImageData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'IMG_0265.HEIC'))
+const heicImageHeight = 3024
+const heicImageWidth = 4032
 
 const pngData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'squirrel.png'))
 
@@ -58,6 +63,7 @@ test('Uploading image sets width, height and colors', async () => {
   resp = await ourClient.query({query: schema.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['post']['image']['height']).toBe(imageHeight)
   expect(resp['data']['post']['image']['width']).toBe(imageWidth)
   expect(resp['data']['post']['image']['colors']).toHaveLength(5)
@@ -87,6 +93,57 @@ test('Uploading png image results in error', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('ERROR')
+})
+
+
+test('Upload heic image', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // create a pending image post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageFormat: 'HEIC'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  const uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(uploadUrl).toContain('native.heic')
+
+  // upload a heic, give the s3 trigger a second to fire
+  await rp.put({url: uploadUrl, headers: heicHeaders, body: heicImageData})
+  await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 20*1000})
+
+  // check that post completed and generated all thumbnails ok
+  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  const image = resp['data']['post']['image']
+  expect(image).toBeTruthy()
+
+  // check the native image size dims
+  let size = await requestImageSize(image['url'])
+  expect(size.width).toBe(heicImageWidth)
+  expect(size.height).toBe(heicImageHeight)
+
+  // check the 64p image size dims
+  size = await requestImageSize(image['url64p'])
+  expect(size.width).toBeLessThan(114)
+  expect(size.height).toBe(64)
+
+  // check the 480p image size dims
+  size = await requestImageSize(image['url480p'])
+  expect(size.width).toBeLessThan(854)
+  expect(size.height).toBe(480)
+
+  // check the 1080p image size dims
+  size = await requestImageSize(image['url1080p'])
+  expect(size.width).toBeLessThan(1920)
+  expect(size.height).toBe(1080)
+
+  // check the 4k image size dims
+  size = await requestImageSize(image['url4k'])
+  expect(size.width).toBeLessThan(3840)
+  expect(size.height).toBe(2160)
 })
 
 

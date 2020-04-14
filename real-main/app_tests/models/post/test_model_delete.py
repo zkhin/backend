@@ -182,7 +182,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
 
     # check the all the media got deleted
-    for size in image_size.ALL:
+    for size in image_size.JPEGS:
         path = media.get_s3_path(size)
         assert post_manager.clients['s3_uploads'].exists(path) is False
 

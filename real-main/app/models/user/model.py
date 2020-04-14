@@ -144,7 +144,7 @@ class User:
 
     def add_photo_s3_objects(self, post):
         assert post.type == post.enums.PostType.IMAGE
-        for size in image_size.ALL:
+        for size in image_size.JPEGS:
             source_path = post.get_s3_image_path(size)
             dest_path = self.get_photo_path(size, photo_post_id=post.id)
             self.s3_uploads_client.copy_object(source_path, dest_path)

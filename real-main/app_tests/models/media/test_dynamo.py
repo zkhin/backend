@@ -198,7 +198,7 @@ def test_transact_add_media_with_options(media_dynamo):
     # add the media
     transacts = [media_dynamo.transact_add_media(
         user_id, post_id, media_id, posted_at=posted_at, taken_in_real=True, original_format='oformat',
-        media_status=media_status,
+        media_status=media_status, image_format='HEIC'
     )]
     media_dynamo.client.transact_write_items(transacts)
 
@@ -221,6 +221,7 @@ def test_transact_add_media_with_options(media_dynamo):
         'mediaStatus': media_status,
         'takenInReal': True,
         'originalFormat': 'oformat',
+        'imageFormat': 'HEIC',
     }
 
 

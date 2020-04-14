@@ -139,7 +139,7 @@ class Album:
 
     def delete_art_images(self, art_hash):
         # remove the images from s3
-        for size in image_size.ALL:
+        for size in image_size.JPEGS:
             path = self.get_art_image_path(size, art_hash=art_hash)
             self.s3_uploads_client.delete_object(path)
 

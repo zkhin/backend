@@ -555,6 +555,17 @@ version = "2.19"
 
 [[package]]
 category = "dev"
+description = "Python 3.6+ interface to libheif library"
+name = "pyheif"
+optional = false
+python-versions = ">= 3.6"
+version = "0.4"
+
+[package.dependencies]
+cffi = ">=1.0.0"
+
+[[package]]
+category = "dev"
 description = "Python parsing module"
 name = "pyparsing"
 optional = false
@@ -862,7 +873,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.12.0"
 
 [metadata]
-content-hash = "42750488b41ebb3e64d44abb70c8e528714390ba2f4903737ba930e198c97ada"
+content-hash = "233f393eb313ce28dd71b91aeba50999009ae1c93ffad8729068ba51f159e402"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -1228,6 +1239,12 @@ pyasn1-modules = [
 ]
 pycparser = [
     {file = "pycparser-2.19.tar.gz", hash = "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"},
+]
+pyheif = [
+    {file = "pyheif-0.4-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:ed0a86136651964ae11262af56acb98e308bb0be427b708dd01bf18229da53dd"},
+    {file = "pyheif-0.4-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:292729f84f2e78366902596c169ad14ee22bc69c77fe7978b3fe4d675837bc4a"},
+    {file = "pyheif-0.4-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:1fc992662a35c77d5cca2c2034fdb6a09d21eb0174959513fa34f3e6286284b9"},
+    {file = "pyheif-0.4.tar.gz", hash = "sha256:c522affce3a496060c2889b9a9ede7edac53a682b1139086d9b7f9e0e49a7cdd"},
 ]
 pyparsing = [
     {file = "pyparsing-2.4.6-py2.py3-none-any.whl", hash = "sha256:c342dccb5250c08d45fd6f8b4a559613ca603b57498511740e65cd11a2e7dcec"},

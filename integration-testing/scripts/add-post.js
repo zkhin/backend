@@ -97,6 +97,11 @@ const prmtSchema = {
       description: 'Type of post to add? Enter `t` for TEXT_ONLY, `i` for IMAGE, or `v` for VIDEO',
       required: true,
     },
+    imageFormat: {
+      description: 'Format of image to add? Enter `j` for JPEG or `h` for HEIC',
+      required: true,
+      ask: () => prmt.history('postType').value === 'i',
+    },
     path: {
       description: 'Path to image or video file to upload? Ex: `./image.jpeg` ',
       required: true,
@@ -174,7 +179,8 @@ prmt.get(prmtSchema, async (err, result) => {
     let uploadUrl
     process.stdout.write('Adding pending post...')
     if (result.postType === 'i') {
-      const variables = {postId, mediaId: uuidv4(), text: result.text}
+      const imageFormat = result.imageFormat === 'h' ? 'HEIC' : 'JPEG'
+      const variables = {postId, text: result.text, imageFormat}
       resp = await appsyncClient.mutate({ mutation: addImagePost, variables})
       uploadUrl = resp['data']['addPost']['imageUploadUrl']
     }
@@ -274,64 +280,71 @@ prmt.get(prmtSchema, async (err, result) => {
 })
 
 
-const addImagePost = gql(`mutation AddMediaPost ($postId: ID!, $mediaId: ID!, $text: String) {
-  addPost (
-    postId: $postId,
-    text: $text,
-    mediaObjectUploads: [{mediaId: $mediaId, mediaType: IMAGE, takenInReal: true, originalFormat: "HEIC"}],
-  ) {
-    postId
-    imageUploadUrl
-  }
-}`)
-
-
-const addVideoPost = gql(`mutation AddMediaPost ($postId: ID!, $text: String) {
-  addPost (postId: $postId, text: $text, postType: VIDEO) {
-    postId
-    videoUploadUrl
-  }
-}`)
-
-
-const addTextOnlyPost = gql(`mutation AddTextOnlyPost ($postId: ID!, $text: String!) {
-  addPost (postId: $postId, text: $text, postType: TEXT_ONLY) {
-    postId
-  }
-}`)
-
-
-const getPost = gql(`query GetPost ($postId: ID!) {
-  post (postId: $postId) {
-    postId
-    postType
-    postStatus
-    postedBy {
-      userId
-      username
+const addImagePost = gql`
+  mutation AddImagePost ($postId: ID!, $text: String, $imageFormat: ImageFormat) {
+    addPost (
+      postId: $postId,
+      text: $text,
+      imageInput: {takenInReal: true, originalFormat: "HEIC", imageFormat: $imageFormat},
+    ) {
+      postId
+      imageUploadUrl
     }
-    postedAt
-    text
-    image {
-      url
-      url4k
-      url1080p
-      url480p
-      url64p
+  }
+`
+
+const addVideoPost = gql`
+  mutation AddVideoPost ($postId: ID!, $text: String) {
+    addPost (postId: $postId, text: $text, postType: VIDEO) {
+      postId
+      videoUploadUrl
     }
-    video {
-      urlMasterM3U8
-      accessCookies {
-        domain
-        path
-        expiresAt
-        policy
-        signature
-        keyPairId
+  }
+`
+
+
+const addTextOnlyPost = gql`
+  mutation AddTextOnlyPost ($postId: ID!, $text: String!) {
+    addPost (postId: $postId, text: $text, postType: TEXT_ONLY) {
+      postId
+    }
+  }
+`
+
+
+const getPost = gql`
+  query GetPost ($postId: ID!) {
+    post (postId: $postId) {
+      postId
+      postType
+      postStatus
+      postedBy {
+        userId
+        username
+      }
+      postedAt
+      text
+      image {
+        url
+        url4k
+        url1080p
+        url480p
+        url64p
+      }
+      video {
+        urlMasterM3U8
+        accessCookies {
+          domain
+          path
+          expiresAt
+          policy
+          signature
+          keyPairId
+        }
       }
     }
   }
-}`)
+`
 
 
 const uploadMedia = async (obj, url) => {

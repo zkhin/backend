@@ -1591,6 +1591,11 @@ functions:
           event: s3:ObjectCreated:Put
           rules:
             - suffix: /native.jpg
+      - s3:
+          bucket: uploads  # translated to 'S3BucketUploads' by serverless
+          event: s3:ObjectCreated:Put
+          rules:
+            - suffix: /native.heic
     alarms:
       - functionErrors
       - functionThrottles

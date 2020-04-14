@@ -110,6 +110,7 @@ class PostManager:
                 posted_by_user_id, post_id, image_input['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD,
                 posted_at=now, taken_in_real=image_input.get('takenInReal'),
                 original_format=image_input.get('originalFormat'),
+                image_format=image_input.get('imageFormat'),
             ))
             if original_metadata := image_input.get('originalMetadata'):
                 transacts.append(self.dynamo.transact_add_original_metadata(post_id, original_metadata))
