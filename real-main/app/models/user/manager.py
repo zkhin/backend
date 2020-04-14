@@ -3,7 +3,7 @@ import os
 import random
 import re
 
-from app.models import block, follow, trending
+from app.models import block, follow, post, trending
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -27,6 +27,7 @@ class UserManager:
         managers['user'] = self
         self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
 
         self.clients = clients
@@ -50,6 +51,7 @@ class UserManager:
         kwargs = {
             'block_manager': getattr(self, 'block_manager', None),
             'follow_manager': getattr(self, 'follow_manager', None),
+            'post_manager': getattr(self, 'post_manager', None),
             'trending_manager': getattr(self, 'trending_manager', None),
         }
         return User(user_item, self.clients, **kwargs) if user_item else None

@@ -25,7 +25,7 @@ def user1(user_manager, post_manager, grant_data_b64, cognito_client):
     user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
     # give the user a profile photo so that it will show up in the message notification trigger calls
     post = post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'imageData': grant_data_b64})
-    user.update_photo(post)
+    user.update_photo(post.id)
     yield user
 
 

@@ -35,7 +35,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // we add an image post
   const postId = uuidv4()
-  let variables = {postId, imageData: grantDataB64}
+  let variables = {postId, imageData: grantDataB64, takenInReal: true}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

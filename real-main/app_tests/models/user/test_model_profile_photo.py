@@ -1,11 +1,14 @@
 import base64
 from os import path
 from unittest.mock import call
+import uuid
 
 import pytest
 
 from app.models.post.enums import PostType
 from app.utils import image_size
+
+from app.models.user.exceptions import UserException
 
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
@@ -18,21 +21,37 @@ def grant_data_b64():
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id = 'my-user-id'
+    user_id = str(uuid.uuid4())
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
-    yield user_manager.create_cognito_only_user(user_id, 'myUname')
+    yield user_manager.create_cognito_only_user(user_id, user_id[:8])
+
+
+user2 = user
+
+
+@pytest.fixture
+def pending_post(user, post_manager):
+    yield post_manager.add_post(user.id, 'pid-pend', PostType.IMAGE)
+
+
+@pytest.fixture
+def text_post(user, post_manager):
+    yield post_manager.add_post(user.id, 'pid-to', PostType.TEXT_ONLY, text='lore')
 
 
 @pytest.fixture
 def uploaded_post(user, post_manager, image_data_b64):
-    post_id = 'post-id'
-    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, image_input={'imageData': image_data_b64})
+    yield post_manager.add_post(user.id, 'post-id', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
 def another_uploaded_post(user, post_manager, grant_data_b64):
-    post_id = 'post-id-2'
-    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    yield post_manager.add_post(user.id, 'post-id-2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
+
+
+@pytest.fixture
+def another_users_post(user2, post_manager, grant_data_b64):
+    yield post_manager.add_post(user2.id, 'post-oid', PostType.IMAGE, image_input={'imageData': grant_data_b64})
 
 
 def test_get_photo_path(user, uploaded_post):
@@ -41,7 +60,7 @@ def test_get_photo_path(user, uploaded_post):
         assert user.get_photo_path(size) is None
 
     # set it
-    user.update_photo(uploaded_post)
+    user.update_photo(uploaded_post.id)
     assert user.item['photoPostId'] == uploaded_post.id
 
     # should now return the paths
@@ -86,7 +105,7 @@ def test_get_photo_url(user, uploaded_post, cloudfront_client):
         assert url == f'{url_root}/{placeholder_photo_code}/{size.name}.jpg'
 
     # photo post set
-    user.update_photo(uploaded_post)
+    user.update_photo(uploaded_post.id)
     assert user.item['photoPostId'] == uploaded_post.id
 
     presigned_url = {}
@@ -107,7 +126,7 @@ def test_set_photo_multiple_times(user, uploaded_post, another_uploaded_post):
     assert 'photoPostId' not in user.item
 
     # set it
-    user.update_photo(uploaded_post)
+    user.update_photo(uploaded_post.id)
     assert user.item['photoPostId'] == uploaded_post.id
 
     # verify it stuck in the db
@@ -126,7 +145,7 @@ def test_set_photo_multiple_times(user, uploaded_post, another_uploaded_post):
         org_bodies[size] = list(user.s3_uploads_client.get_object_data_stream(path))
 
     # change it
-    user.update_photo(another_uploaded_post)
+    user.update_photo(another_uploaded_post.id)
     assert user.item['photoPostId'] == another_uploaded_post.id
 
     # verify it stuck in the db
@@ -148,11 +167,11 @@ def test_set_photo_multiple_times(user, uploaded_post, another_uploaded_post):
 
 def test_clear_photo_s3_objects(user, uploaded_post, another_uploaded_post):
     # set it
-    user.update_photo(uploaded_post)
+    user.update_photo(uploaded_post.id)
     assert user.item['photoPostId'] == uploaded_post.id
 
     # change it
-    user.update_photo(another_uploaded_post)
+    user.update_photo(another_uploaded_post.id)
     assert user.item['photoPostId'] == another_uploaded_post.id
 
     # verify a bunch of stuff is in S3 now, old and new
@@ -171,3 +190,26 @@ def test_clear_photo_s3_objects(user, uploaded_post, another_uploaded_post):
         new_path = user.get_photo_path(size, photo_post_id=another_uploaded_post.id)
         assert not user.s3_uploads_client.exists(old_path)
         assert not user.s3_uploads_client.exists(new_path)
+
+
+def test_update_photo_errors(user, pending_post, text_post, another_users_post, uploaded_post):
+    # post doesn't exist
+    with pytest.raises(UserException, match='not found'):
+        user.update_photo('pid-dne')
+
+    # post isn't an image post
+    with pytest.raises(UserException, match='does not have type'):
+        user.update_photo(text_post.id)
+
+    # post hasn't/didn't reach COMPLETED
+    with pytest.raises(UserException, match='does not have status'):
+        user.update_photo(pending_post.id)
+
+    # post isn't ours
+    with pytest.raises(UserException, match='does not belong to'):
+        user.update_photo(another_users_post.id)
+
+    # post hasn't passed verification
+    uploaded_post.media.dynamo.set_is_verified(uploaded_post.media.id, False)
+    with pytest.raises(UserException, match='is not verified'):
+        user.update_photo(uploaded_post.id)

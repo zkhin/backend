@@ -2,6 +2,7 @@ import logging
 import os
 
 from app.utils import image_size
+from app.models.post.enums import PostStatus, PostType
 
 from . import enums, exceptions
 from .enums import UserPrivacyStatus
@@ -35,7 +36,7 @@ class User:
     client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
 
     def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
-                 placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY,
+                 post_manager=None, placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY,
                  frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
         self.clients = clients
         for client_name in self.client_names:
@@ -47,6 +48,8 @@ class User:
             self.block_manager = block_manager
         if follow_manager:
             self.follow_manager = follow_manager
+        if post_manager:
+            self.post_manager = post_manager
         if trending_manager:
             self.trending_manager = trending_manager
         self.validate = UserValidate()
@@ -125,18 +128,31 @@ class User:
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
         return self
 
-    def update_photo(self, post):
+    def update_photo(self, post_id):
+        "Update photo. Set post_id=None to go back to the default profile pics"
+
         old_post_id = self.item.get('photoPostId')
-        new_post_id = post.id if post else None
-        if new_post_id == old_post_id:
+        if post_id == old_post_id:
             return self
 
-        # add the new s3 objects
-        if new_post_id:
+        if post_id:
+            post = self.post_manager.get_post(post_id)
+            if not post:
+                raise exceptions.UserException(f'Post `{post_id}` not found')
+            if post.type != PostType.IMAGE:
+                raise exceptions.UserException(f'Post `{post_id}` does not have type `{PostType.IMAGE}`')
+            if post.status != PostStatus.COMPLETED:
+                raise exceptions.UserException(f'Post `{post_id}` does not have status `{PostStatus.COMPLETED}`')
+            if post.user_id != self.id:
+                raise exceptions.UserException(f'Post `{post_id}` does not belong to this user')
+            if post.media.item.get('isVerified') is not True:
+                raise exceptions.UserException(f'Post `{post_id}` is not verified')
+
+            # add the new s3 objects
             self.add_photo_s3_objects(post)
 
         # then dynamo
-        self.item = self.dynamo.set_user_photo_post_id(self.id, new_post_id)
+        self.item = self.dynamo.set_user_photo_post_id(self.id, post_id)
 
         # Leave the old images around as their may be existing urls out there that point to them
         # Could schedule a job to delete them a hour from now

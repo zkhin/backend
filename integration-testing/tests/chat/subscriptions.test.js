@@ -263,7 +263,8 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 
   // they add a post they will use as a profile photo
   const postId = uuidv4()
-  resp = await theirClient.mutate({mutation: schema.addPost, variables: {postId, imageData: grantDataB64}})
+  variables = {postId, imageData: grantDataB64, takenInReal: true}
+  resp = await theirClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 

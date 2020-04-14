@@ -110,36 +110,65 @@ test('Try to get user that does not exist', async () => {
 
 test('Various photoPostId failures', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const textOnlyPostId = uuidv4()
-  const pendingImagePostId = uuidv4()
+  const [theirClient] = await loginCache.getCleanLogin()
 
   // verify can't set profile photo using post that doesn't exist
-  let variables = {photoPostId: 'post-id-dne'}
-  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables})).rejects.toThrow('ClientError')
+  let postId = 'post-id-dne'
+  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: 'post-id-dne'}}))
+    .rejects.toThrow(/ClientError: .*not found/)
 
   // create a text-only post
-  variables = {postId: textOnlyPostId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
+  postId = uuidv4()
+  let variables = {postId, text: 'l', postType: 'TEXT_ONLY'}
   let resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(textOnlyPostId)
+  expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
 
   // verify can't set profile photo using text-only post
-  variables = {photoPostId: textOnlyPostId}
-  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables: {photoPostId: postId}}))
+    .rejects.toThrow(/ClientError: .*does not have type/)
 
   // create an image post, leave it in pending
-  variables = {postId: pendingImagePostId}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  postId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, postType: 'IMAGE'}})
   expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(pendingImagePostId)
+  expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
 
   // verify can't set profile photo using pending image post
-  variables = {photoPostId: pendingImagePostId}
-  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables})).rejects.toThrow('ClientError')
+  variables = {photoPostId: postId}
+  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables}))
+    .rejects.toThrow(/ClientError: .*does not have status/)
+
+  // the other user creates an image post
+  postId = uuidv4()
+  resp = await theirClient.mutate({mutation: schema.addPost, variables: {postId, imageData: grantDataB64}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['postType']).toBe('IMAGE')
+
+  // verify can't set our profile photo using their post
+  variables = {photoPostId: postId}
+  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables}))
+    .rejects.toThrow(/ClientError: .*does not belong to/)
+
+  // we create an image post that doesn't pass verification
+  postId = uuidv4()
+  resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData: grantDataB64}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['addPost']['postType']).toBe('IMAGE')
+  expect(resp['data']['addPost']['isVerified']).toBe(false)
+
+  // verify can't set our profile photo using non-verified post
+  variables = {photoPostId: postId}
+  await expect(ourClient.mutate({mutation: schema.setUserDetails, variables}))
+    .rejects.toThrow(/ClientError: .*is not verified/)
 })
 
 
@@ -151,9 +180,9 @@ test('Set and delete our profile photo, using postId', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeNull()
 
-  // create a post with an image
+  // create a post with an image that we can use as a profile pic
   const postId = uuidv4()
-  let variables = {postId, imageData: grantDataB64}
+  let variables = {postId, imageData: grantDataB64, takenInReal: true}
   resp = await ourClient.mutate({mutation: schema.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)

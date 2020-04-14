@@ -76,6 +76,13 @@ class Post:
     def s3_prefix(self):
         return '/'.join([self.user_id, 'post', self.id])
 
+    @property
+    def media(self):
+        if not hasattr(self, '_media'):
+            media_item = next(self.media_manager.dynamo.generate_by_post(self.id), None)
+            self._media = self.media_manager.init_media(media_item) if media_item else None
+        return self._media
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self

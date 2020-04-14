@@ -179,17 +179,11 @@ def set_user_details(caller_user_id, arguments, source, context):
 
     # are we setting a new profile picture?
     if photo_post_id is not None:
-        if photo_post_id == '':
-            post = None
-        else:
-            post = post_manager.get_post(photo_post_id)
-            if not post:
-                raise ClientException(f'No post with post_id `{photo_post_id}` found')
-            if post.type != PostType.IMAGE:
-                raise ClientException(f'Post `{photo_post_id}` does not have type `{PostType.IMAGE}`')
-            if post.status != PostStatus.COMPLETED:
-                raise ClientException(f'Post `{photo_post_id}` does not have status `{PostStatus.COMPLETED}`')
-        user.update_photo(post)
+        post_id = photo_post_id if photo_post_id != '' else None
+        try:
+            user.update_photo(post_id)
+        except user_manager.exceptions.UserException as err:
+            raise ClientException(str(err))
 
     # are we changing our privacy status?
     if privacy_status is not None:
