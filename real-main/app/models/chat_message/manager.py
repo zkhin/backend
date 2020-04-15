@@ -6,6 +6,7 @@ import uuid
 from app.models import block, chat, user, view
 
 from . import exceptions
+from .appsync import ChatMessageAppSync
 from .dynamo import ChatMessageDynamo
 from .model import ChatMessage
 
@@ -26,7 +27,7 @@ class ChatMessageManager:
 
         self.clients = clients
         if 'appsync' in clients:
-            self.appsync_client = clients['appsync']
+            self.appsync = ChatMessageAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = ChatMessageDynamo(clients['dynamo'])
 
@@ -36,13 +37,14 @@ class ChatMessageManager:
 
     def init_chat_message(self, item):
         kwargs = {
-            'appsync_client': self.appsync_client,
+            'chat_message_appsync': self.appsync,
+            'chat_message_dynamo': self.dynamo,
             'block_manager': self.block_manager,
             'chat_manager': self.chat_manager,
             'user_manager': self.user_manager,
             'view_manager': self.view_manager,
         }
-        return ChatMessage(item, self.dynamo, **kwargs)
+        return ChatMessage(item, **kwargs)
 
     def add_chat_message(self, message_id, text, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')

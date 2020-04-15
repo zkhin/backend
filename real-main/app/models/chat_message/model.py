@@ -23,43 +23,13 @@ class ChatMessage:
 
     enums = enums
     exceptions = exceptions
-    trigger_notification_mutation = '''
-        mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
-            triggerChatMessageNotification (input: $input) {
-                userId
-                type
-                message {
-                    messageId
-                    chat {
-                        chatId
-                    }
-                    authorUserId
-                    author {
-                        userId
-                        username
-                        photo {
-                            url64p
-                        }
-                    }
-                    text
-                    textTaggedUsers {
-                        tag
-                        user {
-                            userId
-                        }
-                    }
-                    createdAt
-                    lastEditedAt
-                }
-            }
-        }
-    '''
 
-    def __init__(self, item, chat_message_dynamo, appsync_client=None, block_manager=None, chat_manager=None,
-                 user_manager=None, view_manager=None):
+    def __init__(self, item, chat_message_dynamo=None, chat_message_appsync=None, block_manager=None,
+                 chat_manager=None, user_manager=None, view_manager=None):
         self.dynamo = chat_message_dynamo
+        self.appsync = chat_message_appsync
+
         self.item = item
-        self.appsync_client = appsync_client
         self.block_manager = block_manager
         self.chat_manager = chat_manager
         self.user_manager = user_manager
@@ -129,13 +99,13 @@ class ChatMessage:
         for user_id in user_ids:
             if user_id in already_notified_user_ids:
                 continue
-            self.trigger_notification(notification_type, user_id)
+            self.appsync.trigger_notification(notification_type, user_id, self)
             already_notified_user_ids.add(user_id)
 
         for user_id in self.chat_manager.dynamo.generate_chat_membership_user_ids_by_chat(self.chat_id):
             if user_id in already_notified_user_ids:
                 continue
-            self.trigger_notification(notification_type, user_id)
+            self.appsync.trigger_notification(notification_type, user_id, self)
 
     def get_author_encoded(self, user_id):
         """
@@ -151,18 +121,3 @@ class ChatMessage:
         if serialized['blockedStatus'] == BlockStatus.BLOCKING:
             return None
         return json.dumps(serialized, cls=DecimalJsonEncoder)
-
-    def trigger_notification(self, notification_type, user_id):
-        input_obj = {
-            'userId': user_id,
-            'messageId': self.id,
-            'chatId': self.chat_id,
-            'authorUserId': self.user_id,
-            'authorEncoded': self.get_author_encoded(user_id),
-            'type': notification_type,
-            'text': self.item['text'],
-            'textTaggedUserIds': self.item.get('textTags', []),
-            'createdAt': self.item['createdAt'],
-            'lastEditedAt': self.item.get('lastEditedAt'),
-        }
-        self.appsync_client.send(self.trigger_notification_mutation, {'input': input_obj})
