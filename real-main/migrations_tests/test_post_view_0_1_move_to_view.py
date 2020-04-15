@@ -1,5 +1,4 @@
 import logging
-import time
 
 import pendulum
 import pytest
@@ -78,13 +77,11 @@ def test_one_post_view_creates_new_view(dynamo_client, dynamo_table, caplog):
     }
 
 
-at_1_str = pendulum.now('utc').to_iso8601_string()
-time.sleep(0.01)
-at_2_str = pendulum.now('utc').to_iso8601_string()
-time.sleep(0.01)
-at_3_str = pendulum.now('utc').to_iso8601_string()
-time.sleep(0.01)
-at_4_str = pendulum.now('utc').to_iso8601_string()
+# using fixed datetimes here to play nice with running tests in parallel with pytest-xdist
+at_1_str = pendulum.datetime(2020, 4, 15, 16, 17, 27, 582351).to_iso8601_string()
+at_2_str = pendulum.datetime(2020, 4, 15, 16, 17, 27, 586571).to_iso8601_string()
+at_3_str = pendulum.datetime(2020, 4, 15, 16, 17, 27, 592468).to_iso8601_string()
+at_4_str = pendulum.datetime(2020, 4, 15, 16, 17, 27, 596673).to_iso8601_string()
 
 
 @pytest.mark.parametrize("pv_first_viewed_at_str", [at_1_str, at_2_str])

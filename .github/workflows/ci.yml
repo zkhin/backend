@@ -24,7 +24,7 @@ jobs:
       run: cd real-main && poetry install
 
     - name: Test with pytest
-      run: cd real-main && poetry run pytest app_tests migrations_tests
+      run: cd real-main && poetry run pytest -n auto app_tests migrations_tests
 
   real-main-flake8:
     runs-on: ubuntu-latest
