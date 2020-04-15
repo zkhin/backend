@@ -1222,13 +1222,8 @@ module.exports.triggerChatMessageNotification = gql`
   mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
     triggerChatMessageNotification (input: $input) {
       userId
-      type
-      message {
-        ...ChatMessageFragment
-      }
     }
   }
-  ${fragments.chatMessage}
 `
 
 module.exports.onChatMessageNotification = gql`
@@ -1242,4 +1237,26 @@ module.exports.onChatMessageNotification = gql`
     }
   }
   ${fragments.chatMessage}
+`
+
+module.exports.triggerPostNotification = gql`
+  mutation TriggerPostNotification ($input: PostNotificationInput!) {
+    triggerPostNotification (input: $input) {
+      userId
+    }
+  }
+`
+
+module.exports.onPostNotification = gql`
+  subscription OnPostNotification ($userId: ID!) {
+    onPostNotification (userId: $userId) {
+      userId
+      type
+      post {
+        postId
+        postStatus
+        isVerified
+      }
+    }
+  }
 `

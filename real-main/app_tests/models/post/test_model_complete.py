@@ -76,7 +76,7 @@ def test_complete_error_for_status(post_manager, post):
     assert PostStatus.DELETING in str(error_info.value)
 
 
-def test_complete(post_manager, post_with_media, user_manager):
+def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     post = post_with_media
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
@@ -88,6 +88,7 @@ def test_complete(post_manager, post_with_media, user_manager):
     # check starting state
     assert posted_by_user.item.get('postCount', 0) == 0
     assert post.item['postStatus'] == PostStatus.PENDING
+    assert appsync_client.mock_calls == []
 
     # complete the post, check state
     post.complete()
@@ -101,6 +102,11 @@ def test_complete(post_manager, post_with_media, user_manager):
     assert post.feed_manager.mock_calls == [
         call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
+
+    # check the subscription was triggered
+    assert len(appsync_client.mock_calls) == 1
+    assert 'triggerPostNotification' in appsync_client.send.call_args.args[0]
+    assert appsync_client.send.call_args.args[1]['input']['postId'] == post.id
 
 
 def test_complete_with_expiration(post_manager, post_with_media_with_expiration, user_manager):

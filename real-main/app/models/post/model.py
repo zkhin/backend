@@ -9,7 +9,7 @@ from app.models.media.enums import MediaStatus
 from app.utils import image_size
 
 from . import enums, exceptions
-from .enums import FlagStatus, PostStatus, PostType
+from .enums import FlagStatus, PostStatus, PostType, PostNotificationType
 from .text_image import generate_text_image
 
 logger = logging.getLogger()
@@ -23,11 +23,14 @@ class Post:
     exceptions = exceptions
     FlagStatus = FlagStatus
 
-    def __init__(self, item, post_dynamo, cloudfront_client=None, mediaconvert_client=None, s3_uploads_client=None,
-                 feed_manager=None, like_manager=None, media_manager=None, view_manager=None, user_manager=None,
-                 comment_manager=None, flag_manager=None, album_manager=None, followed_first_story_manager=None,
-                 trending_manager=None, post_manager=None):
-        self.dynamo = post_dynamo
+    def __init__(self, item, post_dynamo=None, post_appsync=None, cloudfront_client=None, mediaconvert_client=None,
+                 s3_uploads_client=None, feed_manager=None, like_manager=None, media_manager=None, view_manager=None,
+                 user_manager=None, comment_manager=None, flag_manager=None, album_manager=None,
+                 followed_first_story_manager=None, trending_manager=None, post_manager=None):
+        if post_dynamo:
+            self.dynamo = post_dynamo
+        if post_appsync:
+            self.appsync = post_appsync
 
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client
@@ -35,6 +38,7 @@ class Post:
             self.mediaconvert_client = mediaconvert_client
         if s3_uploads_client:
             self.s3_uploads_client = s3_uploads_client
+
         if album_manager:
             self.album_manager = album_manager
         if comment_manager:
@@ -309,6 +313,9 @@ class Post:
         # update album art if needed
         if album:
             album.update_art_if_needed()
+
+        # alert frontend
+        self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)
 
         return self
 

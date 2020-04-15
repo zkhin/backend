@@ -8,6 +8,7 @@ from app.models import album, comment, feed, flag, followed_first_story, like, m
 from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
+from .appsync import PostAppSync
 from .dynamo import PostDynamo
 from .model import Post
 
@@ -37,6 +38,8 @@ class PostManager:
         self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
 
         self.clients = clients
+        if 'appsync' in clients:
+            self.appsync = PostAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
 
@@ -46,6 +49,8 @@ class PostManager:
 
     def init_post(self, post_item):
         kwargs = {
+            'post_appsync': getattr(self, 'appsync', None),
+            'post_dynamo': getattr(self, 'dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
             's3_uploads_client': self.clients.get('s3_uploads'),
@@ -61,7 +66,7 @@ class PostManager:
             'user_manager': self.user_manager,
             'view_manager': self.view_manager,
         }
-        return Post(post_item, self.dynamo, **kwargs) if post_item else None
+        return Post(post_item, **kwargs) if post_item else None
 
     def add_post(self, posted_by_user_id, post_id, post_type, image_input=None, text=None, lifetime_duration=None,
                  album_id=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,

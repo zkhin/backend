@@ -902,9 +902,21 @@ custom:
         dataSource: NoneDataSource
         response: PassThru.response.vtl
 
+      - type: Mutation
+        field: triggerPostNotification
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
       - type: Subscription
         field: onChatMessageNotification
         dataSource: NoneDataSource
+        request: Subscription.byUserId.request.vtl
+        response: PassThru.response.vtl
+
+      - type: Subscription
+        field: onPostNotification
+        dataSource: NoneDataSource
+        request: Subscription.byUserId.request.vtl
         response: PassThru.response.vtl
 
     functionConfigurations:

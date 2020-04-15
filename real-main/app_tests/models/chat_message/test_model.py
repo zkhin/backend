@@ -159,6 +159,8 @@ def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, blo
 
 
 def test_trigger_notification(message, chat, user1, user2, appsync_client):
+    appsync_client.reset_mock()
+
     # trigger a notificaiton and check our mock client was called as expected
     message.trigger_notification('ntype', user2.id)
     assert len(appsync_client.mock_calls) == 1

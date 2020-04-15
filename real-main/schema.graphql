@@ -221,6 +221,7 @@ type Mutation {
 
   # Used internally to fire subscription events. Calling externally is an error.
   triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
+  triggerPostNotification(input: PostNotificationInput!): PostNotification!
 
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
@@ -229,11 +230,14 @@ type Mutation {
 }
 
 type Subscription {
-  # Subscribe to notifications of changes (adds, edits, and deletes) of chat messages
-  # in chats we are in or have just been added to
-  #   - userId must be caller's own userId. Required by AppSync subscription design
+  # Fires for changes (adds, edits, deletes) to chat messages in chats we are in or have just been added to
+  #   - userId must be caller's own userId
   #   - does not fire for the caller's own messages
   onChatMessageNotification(userId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
+
+  # Fires for some changes (see PostNotificationType) to callers's own posts
+  #   - userId must be caller's own userId
+  onPostNotification(userId: ID!): PostNotification @aws_subscribe(mutations: ["triggerPostNotification"])
 }
 
 type User {
@@ -404,9 +408,9 @@ enum ChatMessageNotificationType {
 
 input ChatMessageNotificationInput {
   userId: ID!  # user this notification is intended for
+  type: ChatMessageNotificationType!
   messageId: ID!
   chatId: ID!
-  type: ChatMessageNotificationType!
   text: String!
   textTaggedUserIds: [TextTaggedUserIdInput!]!
   createdAt: AWSDateTime!
@@ -603,6 +607,24 @@ type Post {
 type PaginatedPosts {
   items: [Post!]!
   nextToken: String
+}
+
+type PostNotification {
+  userId: ID!  # user this notification is intended for
+  type: PostNotificationType!
+  post: Post!
+}
+
+enum PostNotificationType {
+  COMPLETED
+}
+
+input PostNotificationInput {
+  userId: ID!  # user this notification is intended for
+  type: PostNotificationType!
+  postId: ID!
+  postStatus: PostStatus!
+  isVerified: Boolean
 }
 
 type TextTaggedUser {

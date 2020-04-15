@@ -167,8 +167,9 @@ def media_manager(dynamo_client, s3_uploads_client, cloudfront_client):
 
 
 @pytest.fixture
-def post_manager(dynamo_client, s3_uploads_client, cloudfront_client, post_verification_client):
+def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_client, post_verification_client):
     yield PostManager({
+        'appsync': appsync_client,
         'dynamo': dynamo_client,
         's3_uploads': s3_uploads_client,
         'cloudfront': cloudfront_client,

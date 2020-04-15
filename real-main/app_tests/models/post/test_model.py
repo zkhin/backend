@@ -143,7 +143,7 @@ def test_get_video_writeonly_url(cloudfront_client):
         'generate_presigned_url.return_value': expected_url,
     })
 
-    post = Post(item, None, cloudfront_client=cloudfront_client)
+    post = Post(item, cloudfront_client=cloudfront_client)
     url = post.get_video_writeonly_url()
     assert url == expected_url
 
@@ -163,7 +163,7 @@ def test_get_image_readonly_url(cloudfront_client):
         'generate_presigned_url.return_value': expected_url,
     })
 
-    post = Post(item, None, cloudfront_client=cloudfront_client)
+    post = Post(item, cloudfront_client=cloudfront_client)
     url = post.get_image_readonly_url(image_size.NATIVE)
     assert url == expected_url
 
@@ -191,7 +191,7 @@ def test_get_hls_access_cookies(cloudfront_client):
         'domain': domain,
     })
 
-    post = Post(item, None, cloudfront_client=cloudfront_client)
+    post = Post(item, cloudfront_client=cloudfront_client)
     expires_at = pendulum.now('utc')
     access_cookies = post.get_hls_access_cookies(expires_at=expires_at)
 
@@ -214,7 +214,7 @@ def test_delete_s3_video(s3_uploads_client):
         'postId': 'pid',
         'postType': PostType.VIDEO,
     }
-    post = Post(post_item, None, s3_uploads_client=s3_uploads_client)
+    post = Post(post_item, s3_uploads_client=s3_uploads_client)
     path = post.get_original_video_path()
     assert s3_uploads_client.exists(path) is False
 

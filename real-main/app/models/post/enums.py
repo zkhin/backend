@@ -29,3 +29,9 @@ class PostType:
     VIDEO = 'VIDEO'
 
     _ALL = (TEXT_ONLY, IMAGE, VIDEO)
+
+
+class PostNotificationType:
+    COMPLETED = 'COMPLETED'
+
+    _ALL = (COMPLETED)
