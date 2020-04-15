@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const schema = require('../../utils/schema.js')
+const { mutations, queries } = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -28,7 +28,7 @@ test('Add post no expiration', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -38,7 +38,7 @@ test('Add post no expiration', async () => {
   expect(post['originalPost']['postId']).toBe(postId)
   await misc.sleep(2000)  // let dynamo converge
 
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['post']
   expect(post['postId']).toBe(postId)
@@ -47,7 +47,7 @@ test('Add post no expiration', async () => {
   expect(post['expiresAt']).toBeNull()
   expect(post['originalPost']['postId']).toBe(postId)
 
-  resp = await ourClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
+  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(1)
   post = resp['data']['user']['posts']['items'][0]
@@ -57,7 +57,7 @@ test('Add post no expiration', async () => {
   expect(post['postedBy']['userId']).toBe(ourUserId)
   expect(post['expiresAt']).toBeNull()
 
-  resp = await ourClient.query({query: schema.selfFeed})
+  resp = await ourClient.query({query: queries.selfFeed})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['feed']['items']).toHaveLength(1)
   expect(resp['data']['self']['feed']['items'][0]['postId']).toEqual(postId)
@@ -72,7 +72,7 @@ test('Add post with expiration', async () => {
   const text = 'zeds dead baby, zeds dead'
   const lifetime = 'P7D'
   let variables = {postId, text, lifetime}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   const post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -95,7 +95,7 @@ test('Add text-only post', async () => {
   const text = 'zeds dead baby, zeds dead'
 
   let variables = {postId, text, postType: 'TEXT_ONLY'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('TEXT_ONLY')
@@ -112,7 +112,7 @@ test('Add pending video post minimal', async () => {
 
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('VIDEO')
@@ -143,7 +143,7 @@ test('Add pending video post maximal', async () => {
     sharingDisabled: true,
     verificationHidden: true,
   }
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('VIDEO')
@@ -165,7 +165,7 @@ test('Cant add video post to album (yet)', async () => {
 
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO', albumId: 'aid'}
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
 })
 
 
@@ -174,7 +174,7 @@ test('Add image post with image data directly included', async () => {
 
   // add the post with image data included in the gql call
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, imageData}})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
@@ -195,7 +195,7 @@ test('Add image post with image data directly included', async () => {
   expect(s3ImageData.equals(imageBytes)).toBe(true)
 
   // double check everything saved to db correctly
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
@@ -216,7 +216,7 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   // we add a image post, give s3 trigger a second to fire
   const postId = uuidv4()
   let variables = {postId, postType: 'IMAGE'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   let post = resp['data']['addPost']
   expect(post['postId']).toBe(postId)
@@ -232,14 +232,14 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   // add another image post with a different image
   const postId2 = uuidv4()
   variables = {postId: postId2}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   uploadUrl = resp['data']['addPost']['imageUploadUrl']
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // check the post has changed status and looks good
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   post = resp['data']['post']
   expect(post['postId']).toBe(postId)
@@ -249,12 +249,12 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   expect(post['originalPost']['postId']).toBe(postId)
 
   // check the originalPost properties don't point at each other
-  resp = await ourClient.query({query: schema.post, variables: {postId: postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['post']['originalPost']['postId']).toBe(postId)
-  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId2)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
@@ -266,7 +266,7 @@ test('Add post with text of empty string same as null text', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, text: ''}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
@@ -281,19 +281,19 @@ test('Cannot add post with invalid lifetime', async () => {
 
   // malformed duration string
   variables.lifetime = 'invalid'
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
 
   // negative value for lifetime
   variables.lifetime = '-P1D'
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
 
   // zero value for lifetime
   variables.lifetime = 'P0D'
-  await expect(ourClient.mutate({mutation: schema.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
 
   // success!
   variables.lifetime = 'P1D'
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
 })
 
@@ -303,7 +303,7 @@ test('Mental health settings default values', async () => {
 
   // no user-level settings set
   let variables = {postId: uuidv4()}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -313,7 +313,7 @@ test('Mental health settings default values', async () => {
 
   // set user-level mental health settings to true (which provide the defaults)
   variables = {commentsDisabled: true, likesDisabled: true, sharingDisabled: true, verificationHidden: true}
-  resp = await ourClient.mutate({mutation: schema.setUserMentalHealthSettings, variables})
+  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['userId']).toBe(ourUserId)
   expect(resp['data']['setUserDetails']['commentsDisabled']).toBe(true)
@@ -323,7 +323,7 @@ test('Mental health settings default values', async () => {
 
   // check those new user-level settings are used as defaults for a new post
   variables = {postId: uuidv4()}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
@@ -333,7 +333,7 @@ test('Mental health settings default values', async () => {
 
   // change the user-level mental health setting defaults
   variables = {commentsDisabled: false, likesDisabled: false, sharingDisabled: false, verificationHidden: false}
-  resp = await ourClient.mutate({mutation: schema.setUserMentalHealthSettings, variables})
+  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['userId']).toBe(ourUserId)
   expect(resp['data']['setUserDetails']['commentsDisabled']).toBe(false)
@@ -343,7 +343,7 @@ test('Mental health settings default values', async () => {
 
   // check those new user-level settings are used as defaults for a new post
   variables = {postId: uuidv4()}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(variables.postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -365,7 +365,7 @@ test('Mental health settings specify values', async () => {
     sharingDisabled: false,
     verificationHidden: false,
   }
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
@@ -374,7 +374,7 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['addPost']['verificationHidden']).toBe(false)
 
   // double check those values stuck
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentsDisabled']).toBe(false)
@@ -391,7 +391,7 @@ test('Mental health settings specify values', async () => {
     sharingDisabled: true,
     verificationHidden: true,
   }
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
@@ -400,7 +400,7 @@ test('Mental health settings specify values', async () => {
   expect(resp['data']['addPost']['verificationHidden']).toBe(true)
 
   // double check those values stuck
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentsDisabled']).toBe(true)
@@ -419,7 +419,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
 
   // we add a image post, complete it, check it's original
   let variables = {postId: ourPostId, imageData}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -428,7 +428,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
 
   // they add another image post with the same image, original should point back to first post
   variables = {postId: theirPostId, imageData}
-  resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -436,56 +436,56 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   await misc.sleep(1000)  // let dynamo converge
 
   // check each others post objects directly
-  resp = await theirClient.query({query: schema.post, variables: {postId: ourPostId}})
+  resp = await theirClient.query({query: queries.post, variables: {postId: ourPostId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(ourPostId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
-  resp = await ourClient.query({query: schema.post, variables: {postId: theirPostId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId: theirPostId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
   expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
 
   // we block them
-  resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
   expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
 
   // verify they can't see their post's originalPost
-  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['originalPost']).toBeNull()
 
   // we unblock them
-  resp = await ourClient.mutate({mutation: schema.unblockUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['unblockUser']['userId']).toBe(theirUserId)
   expect(resp['data']['unblockUser']['blockedStatus']).toBe('NOT_BLOCKING')
 
   // we go private
-  resp = await ourClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
 
   // verify they can't see their post's originalPost
-  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['originalPost']).toBeNull()
 
   // they request to follow us, we accept
-  resp = await theirClient.mutate({mutation: schema.followUser, variables: {userId: ourUserId}})
+  resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus']).toBe('REQUESTED')
-  resp = await ourClient.mutate({mutation: schema.acceptFollowerUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['acceptFollowerUser']['followerStatus']).toBe('FOLLOWING')
 
   // verify they *can* see their post's originalPost
-  resp = await theirClient.query({query: schema.post, variables: {postId: theirPostId}})
+  resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)

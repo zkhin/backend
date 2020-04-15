@@ -3,7 +3,7 @@
 const rp = require('request-promise-native')
 
 const cognito = require('../../../utils/cognito.js')
-const schema = require('../../../utils/schema.js')
+const { mutations } = require('../../../schema')
 
 
 /* Run me as a one-off, as you'll have to get a valid google id token
@@ -24,7 +24,7 @@ describe.skip('facebook user', () => {
   })
 
   afterEach(async () => {
-    if (client) await client.mutate({mutation: schema.resetUser})
+    if (client) await client.mutate({mutation: mutations.resetUser})
     // no way to delete ourselves from identity pool without an access token
     // no way to delete ourselves from identity pool without developer credentials
   })
@@ -56,7 +56,7 @@ describe.skip('facebook user', () => {
     const username = cognito.generateUsername()
     const fullName = 'a full name'
     let variables = {username, facebookAccessToken, fullName}
-    resp = await client.mutate({mutation: schema.createFacebookUser, variables})
+    resp = await client.mutate({mutation: mutations.createFacebookUser, variables})
     expect(resp['errors']).toBeUndefined()
     expect(resp['data']['createFacebookUser']['userId']).toBe(userId)
     expect(resp['data']['createFacebookUser']['username']).toBe(username)

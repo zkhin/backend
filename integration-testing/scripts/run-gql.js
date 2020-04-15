@@ -11,7 +11,7 @@ const util = require('util')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
-const schema = require('../utils/schema.js')
+const { mutations, queries } = require('../schema')
 
 dotenv.config()
 
@@ -129,13 +129,13 @@ const dynamoServerError = gql`
 `
 
 const main = async () => {
-  const resp = await appsyncClient.query({query: schema.self})
+  const resp = await appsyncClient.query({query: queries.self})
   /*
   const resp = await appsyncClient.mutate({
-    mutation: schema.createCognitoOnlyUser,
+    mutation: mutations.createCognitoOnlyUser,
     variables: {username: uuidv4().substring(24), fullName: 'my full name'},
   })
-  const resp = await appsyncClient.mutate({mutation: schema.resetUser})
+  const resp = await appsyncClient.mutate({mutation: mutations.resetUser})
   const resp = await appsyncClient.mutate({
     mutation: startChangeUserEmail,
     variables: {email: ''},

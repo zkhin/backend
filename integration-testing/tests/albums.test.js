@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const schema = require('../utils/schema.js')
+const { mutations, queries } = require('../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -29,7 +29,7 @@ test('Add, read, and delete an album', async () => {
   const albumId = uuidv4()
   const name = 'album name'
   const before = moment().toISOString()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name}})
   const after = moment().toISOString()
   expect(resp['errors']).toBeUndefined()
   const album = resp['data']['addAlbum']
@@ -48,17 +48,17 @@ test('Add, read, and delete an album', async () => {
   expect(after >= album['createdAt']).toBe(true)
 
   // read that album via direct access
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toEqual(album)
 
   // delete the album
-  resp = await ourClient.mutate({mutation: schema.deleteAlbum, variables: {albumId}})
+  resp = await ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['deleteAlbum']).toEqual(album)
 
   // check its really gone
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toBeNull()
 })
@@ -67,7 +67,7 @@ test('Add, read, and delete an album', async () => {
 test('Add album with empty string description, treated as null', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'r', description: ''}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'r', description: ''}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
   expect(resp['data']['addAlbum']['description']).toBeNull()
@@ -82,7 +82,7 @@ test('Edit an album', async () => {
   const orgName = 'org album name'
   const orgDescription = 'org album desc'
   let resp = await ourClient.mutate({
-    mutation: schema.addAlbum,
+    mutation: mutations.addAlbum,
     variables: {albumId, name: orgName, description: orgDescription},
   })
   expect(resp['errors']).toBeUndefined()
@@ -95,7 +95,7 @@ test('Edit an album', async () => {
   const newName = 'new album name'
   const newDescription = 'new album desc'
   resp = await ourClient.mutate({
-    mutation: schema.editAlbum,
+    mutation: mutations.editAlbum,
     variables: {albumId, name: newName, description: newDescription},
   })
   expect(resp['errors']).toBeUndefined()
@@ -109,12 +109,12 @@ test('Edit an album', async () => {
   }).toEqual(orgAlbum)
 
   // verify those stuck in the DB
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toEqual(editedAlbum)
 
   // delete the options which we can on that album, using empty string
-  resp = await ourClient.mutate({mutation: schema.editAlbum, variables: {albumId, description: ''}})
+  resp = await ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, description: ''}})
   expect(resp['errors']).toBeUndefined()
   const clearedAlbum = resp['data']['editAlbum']
   expect(clearedAlbum['albumId']).toBe(albumId)
@@ -126,13 +126,13 @@ test('Edit an album', async () => {
   }).toEqual(editedAlbum)
 
   // verify those stuck in the DB
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toEqual(clearedAlbum)
 
   // verify we can't null out the album name
   let variables = {albumId, name: ''}
-  await expect(ourClient.mutate({mutation: schema.editAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -142,14 +142,14 @@ test('Cant create two albums with same id', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify neither us nor them can add another album with same id
   let variables = {albumId, name: 'r'}
-  await expect(ourClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
-  await expect(theirClient.mutate({mutation: schema.addAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -159,17 +159,17 @@ test('Cant edit or delete somebody elses album', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify they can't edit it nor delete it
   let variables = {albumId, name: 'name'}
-  await expect(theirClient.mutate({mutation: schema.editAlbum, variables})).rejects.toThrow('ClientError')
-  await expect(theirClient.mutate({mutation: schema.deleteAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow('ClientError')
 
   // verify it's still there
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
 })
@@ -181,12 +181,13 @@ test('Empty album edit raises error', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify calling edit without specifying anything to edit is an error
-  await expect(theirClient.mutate({mutation: schema.editAlbum, variables: {albumId}})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables: {albumId}}))
+    .rejects.toThrow('ClientError')
 })
 
 
@@ -196,8 +197,8 @@ test('Cant edit, delete an album that doesnt exist', async () => {
 
   // cant edit or delete the non-existing album
   let variables = {albumId, name: 'name'}
-  await expect(ourClient.mutate({mutation: schema.editAlbum, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: schema.deleteAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -207,50 +208,50 @@ test('User.albums and Query.album block privacy', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // check they can see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBe(1)
   expect(resp['data']['user']['albums']['items']).toHaveLength(1)
 
   // check they can see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
 
   // we block them
-  resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBeNull()
   expect(resp['data']['user']['albums']).toBeNull()
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toBeNull()
 
   // we unblock them
-  resp = await ourClient.mutate({mutation: schema.unblockUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['unblockUser']['userId']).toBe(theirUserId)
 
   // check they can see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBe(1)
   expect(resp['data']['user']['albums']['items']).toHaveLength(1)
 
   // check they can see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
 })
@@ -261,78 +262,78 @@ test('User.albums and Query.album private user privacy', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // check they *can* see our albums
-  let resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  let resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBe(0)
   expect(resp['data']['user']['albums']['items']).toHaveLength(0)
 
   // we go private
-  resp = await ourClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
 
   // we add an album
   const albumId = uuidv4()
-  resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n'}})
+  resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBeNull()
   expect(resp['data']['user']['albums']).toBeNull()
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toBeNull()
 
   // they request to follow us
-  resp = await theirClient.mutate({mutation: schema.followUser, variables: {userId: ourUserId}})
+  resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['followUser']['followedStatus']).toBe('REQUESTED')
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBeNull()
   expect(resp['data']['user']['albums']).toBeNull()
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toBeNull()
 
   // we accept their follow request
-  resp = await ourClient.mutate({mutation: schema.acceptFollowerUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['acceptFollowerUser']['followerStatus']).toBe('FOLLOWING')
 
   // check they *can* see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBe(1)
   expect(resp['data']['user']['albums']['items']).toHaveLength(1)
 
   // check they *can* see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
 
   // now we deny their follow request
-  resp = await ourClient.mutate({mutation: schema.denyFollowerUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['denyFollowerUser']['followerStatus']).toBe('DENIED')
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['albumCount']).toBeNull()
   expect(resp['data']['user']['albums']).toBeNull()
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: schema.album, variables: {albumId}})
+  resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']).toBeNull()
 })
@@ -342,19 +343,19 @@ test('User.albums matches direct access, ordering', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // check we have no albums
-  let resp = await ourClient.query({query: schema.self})
+  let resp = await ourClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['albumCount']).toBe(0)
   expect(resp['data']['self']['albums']['items']).toHaveLength(0)
 
   // we add two albums - one minimal one maximal
   const [albumId1, albumId2] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId: albumId1, name: 'n1'}})
+  resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId: albumId1, name: 'n1'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId1)
   const album1 = resp['data']['addAlbum']
   resp = await ourClient.mutate({
-    mutation: schema.addAlbum,
+    mutation: mutations.addAlbum,
     variables: {albumId: albumId2, name: 'n2', description: 'd'},
   })
   expect(resp['errors']).toBeUndefined()
@@ -362,7 +363,7 @@ test('User.albums matches direct access, ordering', async () => {
   const album2 = resp['data']['addAlbum']
 
   // check they appear correctly in User.albums
-  resp = await ourClient.query({query: schema.self})
+  resp = await ourClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['albumCount']).toBe(2)
   expect(resp['data']['self']['albums']['items']).toHaveLength(2)
@@ -376,7 +377,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // we an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables: {albumId, name: 'n1'}})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n1'}})
   expect(resp['errors']).toBeUndefined()
   const album = resp['data']['addAlbum']
   expect(album['albumId']).toBe(albumId)
@@ -396,14 +397,14 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   // add a post to that album
   const postId1 = uuidv4()
   let variables = {postId: postId1, albumId, imageData}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   await misc.sleep(1000)  // let dynamo converge
 
   // check album has art urls and they have changed root
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   const albumOnePost = resp['data']['album']
   expect(albumOnePost['albumId']).toBe(albumId)
@@ -429,13 +430,13 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   // add a second post to that album
   const postId2 = uuidv4()
   variables = {postId: postId2, albumId, imageData}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls that have not changed root
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   const albumTwoPosts = resp['data']['album']
   expect(albumTwoPosts['albumId']).toBe(albumId)
@@ -454,13 +455,13 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   // add a third post to that album
   const postId3 = uuidv4()
   variables = {postId: postId3, albumId, imageData}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId3)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls that have not changed root
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   const albumThreePosts = resp['data']['album']
   expect(albumThreePosts['albumId']).toBe(albumId)
@@ -479,13 +480,13 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   // add a fourth post to that album
   const postId4 = uuidv4()
   variables = {postId: postId4, albumId, imageData}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId4)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // check album has art urls that have changed root
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   const albumFourPosts = resp['data']['album']
   expect(albumFourPosts['albumId']).toBe(albumId)

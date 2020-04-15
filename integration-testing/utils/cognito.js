@@ -14,7 +14,7 @@ const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
-const schema = require('./schema.js')
+const { mutations }= require('../schema')
 
 dotenv.config()
 
@@ -168,10 +168,10 @@ const getAppSyncLogin = async (newUserPhone) => {
   const username = familyName + myUuid.substring(24)
   if (userNeedsReset) {
     // one call resets the user and then does the equivalent of calling Mutation.createCognitoOnlyUser()
-    await appSyncClient.mutate({mutation: schema.resetUser, variables: {newUsername: username}})
+    await appSyncClient.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
   }
   else {
-    await appSyncClient.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})
+    await appSyncClient.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
   }
 
   return [appSyncClient, userId, password, email, username]
@@ -207,7 +207,7 @@ class AppSyncLoginCache {
       const client = login[0]
       const username = login[4]
       await client.clearStore()
-      await client.mutate({mutation: schema.resetUser, variables: {newUsername: username}})
+      await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
       this.cleanLogins.push(login)
       login = this.dirtyLogins.pop()
     }

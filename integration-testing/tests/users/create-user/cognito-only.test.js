@@ -4,7 +4,7 @@ const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
-const schema = require('../../../utils/schema.js')
+const { mutations } = require('../../../schema')
 
 
 describe('cognito-only user', () => {
@@ -17,7 +17,7 @@ describe('cognito-only user', () => {
   })
 
   afterEach(async () => {
-    if (client) await client.mutate({mutation: schema.resetUser})
+    if (client) await client.mutate({mutation: mutations.resetUser})
     if (accessToken) await cognito.userPoolClient.deleteUser({AccessToken: accessToken}).promise()
     // no way to delete ourselves from identity pool without developer credentials
   })
@@ -61,7 +61,8 @@ describe('cognito-only user', () => {
 
     // try to pick random username, register it - should fail
     let variables = {username: cognito.generateUsername()}
-    await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
+    await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
+      .rejects.toThrow('ClientError')
   })
 
   describe('success cases', () => {
@@ -108,7 +109,7 @@ describe('cognito-only user', () => {
       // pick a random username, register it, check all is good!
       const username = cognito.generateUsername()
       const before = moment().toISOString()
-      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})
+      let resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
       const after = moment().toISOString()
       expect(resp['errors']).toBeUndefined()
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
@@ -126,7 +127,7 @@ describe('cognito-only user', () => {
       // verify a empty string fullName treated like null
       const username = cognito.generateUsername()
       let variables = {username, fullName: ''}
-      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+      let resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables})
       expect(resp['errors']).toBeUndefined()
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
       expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
@@ -139,7 +140,7 @@ describe('cognito-only user', () => {
       const username = cognito.generateUsername()
       const fullName = 'Hunter S'
       let variables = {username, fullName}
-      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+      let resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables})
       expect(resp['errors']).toBeUndefined()
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
       expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
@@ -150,14 +151,16 @@ describe('cognito-only user', () => {
     test('Calling Mutation.createCognitoOnlyUser with user that already exists is a ClientError', async () => {
       // pick a valid full name, verify we can sign up with it
       let variables = {username: cognito.generateUsername()}
-      let resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables})
+      let resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables})
       expect(resp['errors']).toBeUndefined()
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
 
       // try to create the user again, should fail with ClientError
-      await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
+      await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
+        .rejects.toThrow('ClientError')
       variables = {username: cognito.generateUsername()}
-      await expect(client.mutate({mutation: schema.createCognitoOnlyUser, variables})).rejects.toThrow('ClientError')
+      await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
+        .rejects.toThrow('ClientError')
     })
   })
 })

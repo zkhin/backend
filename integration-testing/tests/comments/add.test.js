@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const schema = require('../../utils/schema.js')
+const { mutations, queries } = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -27,7 +27,7 @@ test('Add a comments', async () => {
   // we add a post
   const postId = uuidv4()
   let variables = {postId, imageData}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentCount']).toBe(0)
@@ -37,12 +37,12 @@ test('Add a comments', async () => {
   const ourCommentId = uuidv4()
   const ourText = 'nice post'
   variables = {commentId: ourCommentId, postId, text: ourText}
-  resp = await ourClient.mutate({mutation: schema.addComment, variables})
+  resp = await ourClient.mutate({mutation: mutations.addComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addComment']['commentId']).toBe(ourCommentId)
 
   // check we can see that comment
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentCount']).toBe(1)
@@ -55,12 +55,12 @@ test('Add a comments', async () => {
   const theirCommentId = uuidv4()
   const theirText = 'lore ipsum'
   variables = {commentId: theirCommentId, postId, text: theirText}
-  resp = await theirClient.mutate({mutation: schema.addComment, variables})
+  resp = await theirClient.mutate({mutation: mutations.addComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addComment']['commentId']).toBe(theirCommentId)
 
   // check we see both comments, in order, on the post
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['commentCount']).toBe(2)
@@ -79,27 +79,27 @@ test('Verify commentIds cannot be re-used ', async () => {
   // we add a post
   const postId = uuidv4()
   let variables = {postId, imageData}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // they comment on the post
   const commentId = uuidv4()
   variables = {commentId, postId, text: 'nice lore'}
-  resp = await theirClient.mutate({mutation: schema.addComment, variables})
+  resp = await theirClient.mutate({mutation: mutations.addComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addComment']['commentId']).toBe(commentId)
 
   // check we cannot add another comment re-using that commentId
   variables = {commentId, postId, text: 'i agree'}
-  await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 })
 
 
 test('Cant add comments to post that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   let variables = {commentId: uuidv4(), postId: 'dne-post-id', text: 'no way'}
-  await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 })
 
 
@@ -110,14 +110,14 @@ test('Cant add comments to post with comments disabled', async () => {
   // we add a post with comments disabled
   const postId = uuidv4()
   let variables = {postId, imageData, commentsDisabled: true}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
 
   // check they cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(theirClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(theirClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 })
 
 
@@ -127,7 +127,7 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
 
   // they block us
   let variables = {userId: ourUserId}
-  let resp = await theirClient.mutate({mutation: schema.blockUser, variables})
+  let resp = await theirClient.mutate({mutation: mutations.blockUser, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(ourUserId)
   expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
@@ -135,24 +135,24 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
   // they add a post
   const theirPostId = uuidv4()
   variables = {postId: theirPostId, imageData}
-  resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(theirPostId)
 
   // we add a post
   const ourPostId = uuidv4()
   variables = {postId: ourPostId, imageData}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(ourPostId)
 
   // check we cannot comment on their post
   variables = {commentId: uuidv4(), postId: theirPostId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 
   // check they cannot comment on our post
   variables = {commentId: uuidv4(), postId: ourPostId, text: 'no way'}
-  await expect(theirClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(theirClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 })
 
 
@@ -162,54 +162,54 @@ test('Cant add comments to a post of a private user unless were following them',
 
   // they go private
   let variables = {privacyStatus: 'PRIVATE'}
-  let resp = await theirClient.mutate({mutation: schema.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp['errors']).toBeUndefined()
 
   // they add a post
   const postId = uuidv4()
   variables = {postId, imageData}
-  resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
   // check they can comment on their own post
   let commentId = uuidv4()
   variables = {commentId: commentId, postId, text: 'no way'}
-  resp = await theirClient.mutate({mutation: schema.addComment, variables})
+  resp = await theirClient.mutate({mutation: mutations.addComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addComment']['commentId']).toBe(commentId)
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 
   // we request to follow them
   variables = {userId: theirUserId}
-  resp = await ourClient.mutate({mutation: schema.followUser, variables})
+  resp = await ourClient.mutate({mutation: mutations.followUser, variables})
   expect(resp['errors']).toBeUndefined()
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 
   // they accept our follow request
   variables = {userId: ourUserId}
-  resp = await theirClient.mutate({mutation: schema.acceptFollowerUser, variables})
+  resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables})
   expect(resp['errors']).toBeUndefined()
 
   // check we _can_ comment on the post
   commentId = uuidv4()
   variables = {commentId, postId, text: 'nice lore'}
-  resp = await ourClient.mutate({mutation: schema.addComment, variables})
+  resp = await ourClient.mutate({mutation: mutations.addComment, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addComment']['commentId']).toBe(commentId)
 
   // they change their mind and now deny our following
   variables = {userId: ourUserId}
-  resp = await theirClient.mutate({mutation: schema.denyFollowerUser, variables})
+  resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables})
   expect(resp['errors']).toBeUndefined()
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: schema.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
 })

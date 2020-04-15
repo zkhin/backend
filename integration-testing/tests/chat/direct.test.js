@@ -4,7 +4,7 @@ const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const schema = require('../../utils/schema.js')
+const { mutations, queries } = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -24,19 +24,19 @@ test('Create a direct chat', async () => {
   const [randoClient] = await loginCache.getCleanLogin()
 
   // check we have no direct chat between us
-  let resp = await ourClient.query({query: schema.self})
+  let resp = await ourClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['directChat']).toBeNull()
   expect(resp['data']['self']['chatCount']).toBe(0)
   expect(resp['data']['self']['chats']['items']).toHaveLength(0)
 
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']).toBeNull()
   expect(resp['data']['user']['chatCount']).toBeNull()
   expect(resp['data']['user']['chats']).toBeNull()
 
-  resp = await ourClient.query({query: schema.user, variables: {userId: theirUserId}})
+  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']).toBeNull()
   expect(resp['data']['user']['chatCount']).toBeNull()
@@ -47,7 +47,7 @@ test('Create a direct chat', async () => {
   const messageText = 'lore ipsum'
   let variables = {userId: theirUserId, chatId, messageId, messageText}
   let before = moment().toISOString()
-  resp = await ourClient.mutate({mutation: schema.createDirectChat, variables})
+  resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
   let after = moment().toISOString()
   expect(resp['errors']).toBeUndefined()
   let chat = resp['data']['createDirectChat']
@@ -72,21 +72,21 @@ test('Create a direct chat', async () => {
   expect(chat['messages']['items'][0]['viewedStatus']).toBe('VIEWED')
 
   // check we can see that direct chat when looking at their profile
-  resp = await ourClient.query({query: schema.user, variables: {userId: theirUserId}})
+  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']['chatId']).toBe(chatId)
   expect(resp['data']['user']['chatCount']).toBeNull()
   expect(resp['data']['user']['chats']).toBeNull()
 
   // check they can see that direct chat when looking at our profile
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']['chatId']).toBe(chatId)
   expect(resp['data']['user']['chatCount']).toBeNull()
   expect(resp['data']['user']['chats']).toBeNull()
 
   // check we see the chat in our list of chats
-  resp = await ourClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']).toBeNull()
   expect(resp['data']['user']['chatCount']).toBe(1)
@@ -94,7 +94,7 @@ test('Create a direct chat', async () => {
   expect(resp['data']['user']['chats']['items'][0]['chatId']).toBe(chatId)
 
   // check they see the chat in their list of chats
-  resp = await theirClient.query({query: schema.user, variables: {userId: theirUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']).toBeNull()
   expect(resp['data']['user']['chatCount']).toBe(1)
@@ -102,28 +102,28 @@ test('Create a direct chat', async () => {
   expect(resp['data']['user']['chats']['items'][0]['chatId']).toBe(chatId)
 
   // check we can both see the chat directly
-  resp = await ourClient.query({query: schema.chat, variables: {chatId}})
+  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']['chatId']).toBe(chatId)
 
-  resp = await theirClient.query({query: schema.chat, variables: {chatId}})
+  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']['chatId']).toBe(chatId)
 
   // check that another rando can't see either the chat either by looking at either of us or direct access
-  resp = await randoClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await randoClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']).toBeNull()
   expect(resp['data']['user']['chatCount']).toBeNull()
   expect(resp['data']['user']['chats']).toBeNull()
 
-  resp = await randoClient.query({query: schema.user, variables: {userId: theirUserId}})
+  resp = await randoClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']).toBeNull()
   expect(resp['data']['user']['chatCount']).toBeNull()
   expect(resp['data']['user']['chats']).toBeNull()
 
-  resp = await randoClient.query({query: schema.chat, variables: {chatId}})
+  resp = await randoClient.query({query: queries.chat, variables: {chatId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']).toBeNull()
 })
@@ -136,17 +136,17 @@ test('Cannot create a direct chat if one already exists', async () => {
   // they open up a direct chat with us
   const chatId = uuidv4()
   let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
-  let resp = await theirClient.mutate({mutation: schema.createDirectChat, variables})
+  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createDirectChat']['chatId']).toBe(chatId)
 
   // verify we cannot open up another direct chat with them
   variables = {userId: theirUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: schema.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
 
   // verify they cannot open up another direct chat with us
   variables = {userId: ourUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(theirClient.mutate({mutation: schema.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -155,7 +155,7 @@ test('Cannot open direct chat with self', async () => {
 
   const chatId = uuidv4()
   let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: schema.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
 })
 
 
@@ -165,7 +165,7 @@ test('Create multiple direct chats', async () => {
   const [other2Client] = await loginCache.getCleanLogin()
 
   // check we have no chats
-  let resp = await ourClient.query({query: schema.self})
+  let resp = await ourClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['chatCount']).toBe(0)
   expect(resp['data']['self']['chats']['items']).toHaveLength(0)
@@ -174,7 +174,7 @@ test('Create multiple direct chats', async () => {
   const [chatId1, messageId1] = [uuidv4(), uuidv4()]
   const messageText1 = 'heyya! from other 1'
   let variables = {userId: ourUserId, chatId: chatId1, messageId: messageId1, messageText: messageText1}
-  resp = await other1Client.mutate({mutation: schema.createDirectChat, variables})
+  resp = await other1Client.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createDirectChat']['chatId']).toBe(chatId1)
   expect(resp['data']['createDirectChat']['messages']['items']).toHaveLength(1)
@@ -185,7 +185,7 @@ test('Create multiple direct chats', async () => {
   const [chatId2, messageId2] = [uuidv4(), uuidv4()]
   const messageText2 = 'heyya! from other 2'
   variables = {userId: ourUserId, chatId: chatId2, messageId: messageId2, messageText: messageText2}
-  resp = await other2Client.mutate({mutation: schema.createDirectChat, variables})
+  resp = await other2Client.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createDirectChat']['chatId']).toBe(chatId2)
   expect(resp['data']['createDirectChat']['messages']['items']).toHaveLength(1)
@@ -193,7 +193,7 @@ test('Create multiple direct chats', async () => {
   expect(resp['data']['createDirectChat']['messages']['items'][0]['text']).toBe(messageText2)
 
   // check we see both chats
-  resp = await ourClient.query({query: schema.self})
+  resp = await ourClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['chatCount']).toBe(2)
   expect(resp['data']['self']['chats']['items']).toHaveLength(2)
@@ -201,22 +201,22 @@ test('Create multiple direct chats', async () => {
   expect(resp['data']['self']['chats']['items'][1]['chatId']).toBe(chatId1)
 
   // check other1 sees the direct chat with us
-  resp = await other1Client.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await other1Client.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']['chatId']).toBe(chatId1)
 
   // check other2 sees the direct chat with us
-  resp = await other2Client.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await other2Client.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['directChat']['chatId']).toBe(chatId2)
 
   // check other1 cannot see other2's chat
-  resp = await other1Client.query({query: schema.chat, variables: {chatId: chatId2}})
+  resp = await other1Client.query({query: queries.chat, variables: {chatId: chatId2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']).toBeNull()
 
   // check other2 cannot see other1's chat
-  resp = await other2Client.query({query: schema.chat, variables: {chatId: chatId1}})
+  resp = await other2Client.query({query: queries.chat, variables: {chatId: chatId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']).toBeNull()
 })

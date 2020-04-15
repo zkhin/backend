@@ -2,7 +2,7 @@
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const schema = require('../../utils/schema.js')
+const { mutations } = require('../../schema')
 
 const AuthFlow = cognito.AuthFlow
 
@@ -23,7 +23,7 @@ test('setting invalid username fails', async () => {
   const usernameTooLong = 'a'.repeat(31)
   const usernameBadChar = 'a!a'
 
-  const mutation = schema.setUsername
+  const mutation = mutations.setUsername
   await expect(client.mutate({mutation, variables: {username: usernameTooShort}})).rejects.toThrow('ClientError')
   await expect(client.mutate({mutation, variables: {username: usernameTooLong}})).rejects.toThrow('ClientError')
   await expect(client.mutate({mutation, variables: {username: usernameBadChar}})).rejects.toThrow('ClientError')
@@ -33,7 +33,7 @@ test('setting invalid username fails', async () => {
 test('changing username succeeds, then can use it to login in lowercase', async () => {
   const [client, , password] = await loginCache.getCleanLogin()
   const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
-  await client.mutate({mutation: schema.setUsername, variables: {username}})
+  await client.mutate({mutation: mutations.setUsername, variables: {username}})
 
   // try to login as the user in cognito with that new username, lowered
   const AuthParameters = {USERNAME: username.toLowerCase(), PASSWORD: password}
@@ -50,14 +50,14 @@ test('collision on changing username fails, login username is not changed', asyn
   const [theirClient, , theirPassword] = await loginCache.getCleanLogin()
 
   const ourUsername = 'TESTERgotSOMEcase' + misc.shortRandomString()
-  await ourClient.mutate({mutation: schema.setUsername, variables: {username: ourUsername}})
+  await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
 
   const theirUsername = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
-  await theirClient.mutate({mutation: schema.setUsername, variables: {username: theirUsername}})
+  await theirClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}})
 
   // try and fail setting user1's username to user2's
   await expect(ourClient.mutate({
-    mutation: schema.setUsername,
+    mutation: mutations.setUsername,
     variables: {username: theirUsername},
   })).rejects.toThrow('ClientError')
 

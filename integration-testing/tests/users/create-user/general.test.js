@@ -2,7 +2,7 @@
 
 const cognito = require('../../../utils/cognito.js')
 const misc = require('../../../utils/misc.js')
-const schema = require('../../../utils/schema.js')
+const { mutations, queries } = require('../../../schema')
 
 const AuthFlow = cognito.AuthFlow
 
@@ -21,7 +21,7 @@ test('Mutation.createCognitoOnlyUser with invalid username fails', async () => {
   const [client, userId] = await loginCache.getCleanLogin()
 
   // reset the user to clear their presence from dynamo
-  let resp = await client.mutate({mutation: schema.resetUser})
+  let resp = await client.mutate({mutation: mutations.resetUser})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
@@ -30,7 +30,7 @@ test('Mutation.createCognitoOnlyUser with invalid username fails', async () => {
   const unameBadChar = 'a!a'
 
   // verify we can't create a user for ourselves with an invalid username
-  const mutation = schema.createCognitoOnlyUser
+  const mutation = mutations.createCognitoOnlyUser
   await expect(client.mutate({mutation, variables: {username: unameTooShort}})).rejects.toThrow('ClientError')
   await expect(client.mutate({mutation, variables: {username: unameTooLong}})).rejects.toThrow('ClientError')
   await expect(client.mutate({ mutation, variables: {username: unameBadChar}})).rejects.toThrow('ClientError')
@@ -41,13 +41,13 @@ test('User can login with username used in Mutation.createCognitoOnlyUser', asyn
   const [client, userId, password] = await loginCache.getCleanLogin()
 
   // reset the user to clear their presence from dynamo
-  let resp = await client.mutate({mutation: schema.resetUser})
+  let resp = await client.mutate({mutation: mutations.resetUser})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
   // create a new user with a unique username
   const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
-  resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})
+  resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
   expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
@@ -67,19 +67,19 @@ test('Username collision causes Mutation.createCognitoOnlyUser to fail', async (
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // get their username
-  let resp = await theirClient.query({query: schema.self})
+  let resp = await theirClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['userId']).toBe(theirUserId)
   const theirUsername = resp['data']['self']['username']
 
   // reset our user to clear their presence from dynamo
-  resp = await ourClient.mutate({mutation: schema.resetUser})
+  resp = await ourClient.mutate({mutation: mutations.resetUser})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['resetUser']['userId']).toBe(ourUserId)
 
   // try to createCognitoOnlyUser for us with their username, should fail
   await expect(ourClient.mutate({
-    mutation: schema.createCognitoOnlyUser,
+    mutation: mutations.createCognitoOnlyUser,
     variables: {username: theirUsername}
   })).rejects.toThrow('ClientError')
 
@@ -97,14 +97,14 @@ test('Mutation.createCognitoOnlyUser saves fullName and can pull email from cogn
   const [client, userId, , email] = await loginCache.getCleanLogin()
 
   // reset the user to clear their presence from dynamo
-  let resp = await client.mutate({mutation: schema.resetUser})
+  let resp = await client.mutate({mutation: mutations.resetUser})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
   // create a new user some deets
   const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
   const fullName = 'my-full-name'
-  resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username, fullName}})
+  resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username, fullName}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
   expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
@@ -119,13 +119,13 @@ test('Mutation.createCognitoOnlyUser can pull phone from cognito, if set', async
   const [client, userId] = await cognito.getAppSyncLogin(phone)
 
   // reset the user to clear their presence from dynamo
-  let resp = await client.mutate({mutation: schema.resetUser})
+  let resp = await client.mutate({mutation: mutations.resetUser})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
   // create a new user some deets
   const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
-  resp = await client.mutate({mutation: schema.createCognitoOnlyUser, variables: {username}})
+  resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
   expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)

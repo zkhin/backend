@@ -1,0 +1,457 @@
+const gql = require('graphql-tag')
+
+const fragments = require('./fragments.js')
+
+module.exports.self = gql`
+  query Self ($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int) {
+    self {
+      userId
+      ...SimpleUserFields
+      photo {
+        ...ImageFragment
+      }
+      feed {
+        items {
+          postId
+        }
+      }
+      stories {
+        items {
+          postId
+        }
+      }
+      posts {
+        items {
+          postId
+        }
+      }
+      anonymouslyLikedPosts (limit: $anonymouslyLikedPostsLimit) {
+        items {
+          postId
+          image {
+            url
+          }
+        }
+      }
+      onymouslyLikedPosts (limit: $onymouslyLikedPostsLimit) {
+        items {
+          postId
+          image {
+            url
+          }
+        }
+      }
+      followerUsers {
+        items {
+          userId
+        }
+      }
+      followedUsers {
+        items {
+          userId
+        }
+      }
+      followedUsersWithStories {
+        items {
+          userId
+          blockerStatus
+          followedStatus
+        }
+      }
+      blockedUsers {
+        items {
+          userId
+          blockedStatus
+        }
+      }
+      albumCount
+      albums {
+        items {
+          ...AlbumFragment
+        }
+      }
+      chatCount
+      chats {
+        items {
+          ...ChatFragment
+        }
+      }
+      directChat {
+        ...ChatFragment
+      }
+    }
+  }
+  ${fragments.album}
+  ${fragments.chat}
+  ${fragments.image}
+  ${fragments.simpleUserFields}
+`
+
+module.exports.user = gql`
+  query User ($userId: ID!) {
+    user (userId: $userId) {
+      userId
+      ...SimpleUserFields
+      photo {
+        ...ImageFragment
+      }
+      feed {
+        items {
+          postId
+        }
+      }
+      stories {
+        items {
+          postId
+        }
+      }
+      posts {
+        items {
+          postId
+        }
+      }
+      anonymouslyLikedPosts {
+        items {
+          postId
+          image {
+            url
+          }
+        }
+      }
+      onymouslyLikedPosts {
+        items {
+          postId
+          image {
+            url
+          }
+        }
+      }
+      followerUsers {
+        items {
+          userId
+        }
+      }
+      followedUsers {
+        items {
+          userId
+        }
+      }
+      followedUsersWithStories {
+        items {
+          userId
+        }
+      }
+      blockedUsers {
+        items {
+          userId
+          blockedStatus
+        }
+      }
+      albumCount
+      albums {
+        items {
+          ...AlbumFragment
+        }
+      }
+      chatCount
+      chats {
+        items {
+          ...ChatFragment
+        }
+      }
+      directChat {
+        ...ChatFragment
+      }
+    }
+  }
+  ${fragments.album}
+  ${fragments.chat}
+  ${fragments.image}
+  ${fragments.simpleUserFields}
+`
+
+module.exports.searchUsers = gql`
+  query SearchUsers ($searchToken: String!) {
+    searchUsers (searchToken: $searchToken) {
+      items {
+        userId
+        username
+        fullName
+        photo {
+          url
+        }
+      }
+    }
+  }
+`
+
+module.exports.post = gql`
+  query Post ($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
+    post (postId: $postId) {
+      postId
+      postType
+      postStatus
+      postedAt
+      postedBy {
+        userId
+        postCount
+        blockerStatus
+        followedStatus
+        postHasNewCommentActivity
+      }
+      expiresAt
+      album {
+        albumId
+      }
+      originalPost {
+        postId
+      }
+      text
+      textTaggedUsers {
+        ...TextTaggedUserFragment
+      }
+      image {
+        ...ImageFragment
+      }
+      imageUploadUrl
+      video {
+        ...VideoFragment
+      }
+      videoUploadUrl
+      isVerified
+      flagStatus
+      likeStatus
+      viewedStatus
+      commentsDisabled
+      commentCount
+      comments (reverse: $commentsReverse) {
+        items {
+          ...CommentFragment
+        }
+      }
+      likesDisabled
+      sharingDisabled
+      verificationHidden
+      hasNewCommentActivity
+      onymousLikeCount
+      anonymousLikeCount
+      onymouslyLikedBy (limit: $onymouslyLikedByLimit) {
+        items {
+          userId
+        }
+      }
+      viewedByCount
+      viewedBy {
+        items {
+          userId
+        }
+      }
+    }
+  }
+  ${fragments.comment}
+  ${fragments.image}
+  ${fragments.textTaggedUser}
+  ${fragments.video}
+`
+
+module.exports.userPosts = gql`
+  query UserPosts ($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
+    user (userId: $userId) {
+      posts (postStatus: $postStatus, postType: $postType) {
+        items {
+          postId
+          postedAt
+          postType
+          postStatus
+          expiresAt
+          text
+          image {
+            url
+          }
+          postedBy {
+            userId
+            postCount
+            blockerStatus
+            followedStatus
+          }
+        }
+      }
+    }
+  }
+`
+
+module.exports.followedUsers = gql`
+  query FollowedUsers ($userId: ID!, $followStatus: FollowStatus) {
+    user (userId: $userId) {
+      followedUsers (followStatus: $followStatus) {
+        items {
+          userId
+          followedStatus
+          followerStatus
+        }
+      }
+    }
+  }
+`
+
+module.exports.followerUsers = gql`
+  query FollowerUsers ($userId: ID!, $followStatus: FollowStatus) {
+    user (userId: $userId) {
+      followerUsers (followStatus: $followStatus) {
+        items {
+          userId
+          followedStatus
+          followerStatus
+        }
+      }
+    }
+  }
+`
+
+module.exports.ourFollowedUsers = gql`
+  query OurFollowedUsers ($followStatus: FollowStatus) {
+    self {
+      followedUsers (followStatus: $followStatus) {
+        items {
+          userId
+          privacyStatus
+          fullName
+          bio
+          email
+          phoneNumber
+          followedStatus
+          followerStatus
+        }
+      }
+    }
+  }
+`
+
+module.exports.ourFollowerUsers = gql`
+  query OurFollowerUsers ($followStatus: FollowStatus) {
+    self {
+      followerUsers (followStatus: $followStatus) {
+        items {
+          userId
+          followedStatus
+          followerStatus
+        }
+      }
+    }
+  }
+`
+
+module.exports.userStories = gql`
+  query UserStories ($userId: ID!) {
+    user (userId: $userId) {
+      stories {
+        items {
+          postId
+          postedAt
+          postedBy {
+            userId
+            blockerStatus
+            followedStatus
+          }
+          expiresAt
+          text
+          image {
+            url
+          }
+        }
+      }
+    }
+  }
+`
+
+module.exports.selfFeed = gql`
+  query SelfFeed ($limit: Int) {
+    self {
+      feed (limit: $limit) {
+        items {
+          postId
+          postType
+          postedBy {
+            userId
+            blockerStatus
+            followedStatus
+          }
+          text
+          image {
+            url
+          }
+          imageUploadUrl
+          videoUploadUrl
+          onymousLikeCount
+          anonymousLikeCount
+        }
+      }
+    }
+  }
+`
+
+module.exports.trendingUsers = gql`
+  query TrendingUsers ($limit: Int) {
+    trendingUsers (limit: $limit) {
+      items {
+        userId
+        blockerStatus
+      }
+    }
+  }
+`
+
+module.exports.trendingPosts = gql`
+  query TrendingPosts ($limit: Int) {
+    trendingPosts (limit: $limit) {
+      items {
+        postId
+        postedBy {
+          userId
+          privacyStatus
+          blockerStatus
+          followedStatus
+        }
+      }
+    }
+  }
+`
+
+module.exports.album = gql`
+  query Album ($albumId: ID!) {
+    album (albumId: $albumId) {
+      ...AlbumFragment
+    }
+  }
+  ${fragments.album}
+`
+
+module.exports.chat = gql`
+  query Chat ($chatId: ID!, $reverse: Boolean) {
+    chat (chatId: $chatId) {
+      ...ChatFragment
+      messageCount
+      messages (reverse: $reverse) {
+        items {
+          ...ChatMessageFragment
+          viewedStatus
+        }
+      }
+    }
+  }
+  ${fragments.chat}
+  ${fragments.chatMessage}
+`
+
+module.exports.chatUsers = gql`
+  query Chat ($chatId: ID!, $excludeUserId: ID) {
+    chat (chatId: $chatId) {
+      chatId
+      users (excludeUserId: $excludeUserId) {
+        items {
+          userId
+        }
+      }
+    }
+  }
+`

@@ -7,7 +7,7 @@ global.WebSocket = require('ws')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const schema = require('../../utils/schema.js')
+const { mutations, subscriptions } = require('../../schema')
 
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const imageBytes = misc.generateRandomJpeg(8, 8)
@@ -29,7 +29,7 @@ test('Post message triggers cannot be called from external graphql client', asyn
 
   // create an image post in pending state
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables: {postId, postType: 'IMAGE'}})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, postType: 'IMAGE'}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('IMAGE')
@@ -43,7 +43,7 @@ test('Post message triggers cannot be called from external graphql client', asyn
     postStatus: 'COMPLETED',
     isVerified: false,
   }
-  await expect(ourClient.mutate({mutation: schema.triggerPostNotification, variables: {input}}))
+  await expect(ourClient.mutate({mutation: mutations.triggerPostNotification, variables: {input}}))
     .rejects.toThrow(/ClientError: Access denied/)
 })
 
@@ -57,13 +57,13 @@ test('Cannot subscribe to other users notifications', async () => {
   // the subscription next() method is never triggered
   const notifications = []
   await ourClient
-    .subscribe({query: schema.onPostNotification, variables: {userId: theirUserId}})
+    .subscribe({query: subscriptions.onPostNotification, variables: {userId: theirUserId}})
     .subscribe({next: resp => { notifications.push(resp) }, error: resp => { console.log(resp) }})
 
   // they create an image post, complete it
   const postId = uuidv4()
   let variables = {postId, imageData, takenInReal: true}
-  let resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  let resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -84,14 +84,14 @@ test('Format for COMPLETED message notifications', async () => {
   // we subscribe to post notifications
   const ourNotifications = []
   const ourSub = await ourClient
-    .subscribe({query: schema.onPostNotification, variables: {userId: ourUserId}})
+    .subscribe({query: subscriptions.onPostNotification, variables: {userId: ourUserId}})
     .subscribe({next: resp => { ourNotifications.push(resp) }, error: resp => { console.log(resp) }})
   const ourSubInitTimeout = misc.sleep(15000)  // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
 
   // we create a pending post that will fail verification
   const postId1 = uuidv4()
   let variables = {postId: postId1, postType: 'IMAGE'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -101,7 +101,7 @@ test('Format for COMPLETED message notifications', async () => {
   // we create a pending post that will pass verification
   const postId2 = uuidv4()
   variables = {postId: postId2, postType: 'IMAGE', takenInReal: true}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')

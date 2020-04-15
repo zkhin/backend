@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const schema = require('../../utils/schema.js')
+const { mutations, queries } = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -29,31 +29,32 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we block them
-  let resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add an image post
   const postId = uuidv4()
   let variables = {postId, imageData: grantDataB64, takenInReal: true}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we set some details on our profile
-  resp = await ourClient.mutate({mutation: schema.setUserDetails, variables: {
+  resp = await ourClient.mutate({mutation: mutations.setUserDetails, variables: {
     photoPostId: postId,
     bio: 'testing',
     fullName: 'test test',
   }})
   expect(resp['errors']).toBeUndefined()
-  resp = await ourClient.mutate({mutation: schema.setUserAcceptedEULAVersion, variables: {version: 'v2020-01-01.1'}})
+  variables = {version: 'v2020-01-01.1'}
+  resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables})
   expect(resp['errors']).toBeUndefined()
 
   // retrieve our user object
-  resp = await ourClient.query({query: schema.self})
+  resp = await ourClient.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   const ourUserFull = resp['data']['self']
   expect(ourUserFull['userId']).toBe(ourUserId)
@@ -99,7 +100,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull['viewCountsHidden']).toBe(false)
 
   // verify they see only a absolutely minimal profile of us
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   const ourUserLimited = resp['data']['user']
   expect(ourUserLimited['userId']).toBe(ourUserFull['userId'])
@@ -156,40 +157,40 @@ test('Blocked cannot see blocker in search results, blocker can see blocked in s
 
   // change our username to something without a dash https://github.com/Imcloug/Selfly-BackEnd/issues/48
   const ourUsername = 'TESTER' + misc.shortRandomString()
-  await ourClient.mutate({mutation: schema.setUsername, variables: {username: ourUsername}})
+  await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
 
   // change their username to something without a dash https://github.com/Imcloug/Selfly-BackEnd/issues/48
   const theirUsername = 'TESTER' + misc.shortRandomString()
-  await theirClient.mutate({mutation: schema.setUsername, variables: {username: theirUsername}})
+  await theirClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}})
 
   // give the search index a good chunk of time to update
   await misc.sleep(3000)
 
   // verify they show up in our search results
-  let resp = await ourClient.query({query: schema.searchUsers, variables: {searchToken: theirUsername}})
+  let resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: theirUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(theirUserId)
 
   // verify we show up in their search results
-  resp = await theirClient.query({query: schema.searchUsers, variables: {searchToken: ourUsername}})
+  resp = await theirClient.query({query: queries.searchUsers, variables: {searchToken: ourUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
 
   // we block them
-  resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // verify they still show up in our search results
-  resp = await ourClient.query({query: schema.searchUsers, variables: {searchToken: theirUsername}})
+  resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: theirUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(theirUserId)
 
   // verify we do not show up in their search results
-  resp = await theirClient.query({query: schema.searchUsers, variables: {searchToken: ourUsername}})
+  resp = await theirClient.query({query: queries.searchUsers, variables: {searchToken: ourUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 })
@@ -201,22 +202,22 @@ test('Blocked cannot see blockers follower or followed users lists', async () =>
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we block them
-  let resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // verify they cannot see our list of followers or followed
-  resp = await theirClient.query({query: schema.followedUsers, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.followedUsers, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followedUsers']).toBeNull()
-  resp = await theirClient.query({query: schema.followerUsers, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.followerUsers, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['followerUsers']).toBeNull()
 
   // verify we can still see their list of followers or followed
-  resp = await ourClient.query({query: schema.followedUsers, variables: {userId: theirUserId}})
+  resp = await ourClient.query({query: queries.followedUsers, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
-  resp = await ourClient.query({query: schema.followerUsers, variables: {userId: theirUserId}})
+  resp = await ourClient.query({query: queries.followerUsers, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
 })
 
@@ -227,23 +228,23 @@ test('Blocked cannot see blockers posts or stories', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we block them
-  let resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // verify they cannot see our posts or stories
-  resp = await theirClient.query({query: schema.userStories, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.userStories, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']).toBeNull()
-  resp = await theirClient.query({query: schema.userPosts, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']).toBeNull()
 
   // verify we can see their posts or stories
-  resp = await theirClient.query({query: schema.userStories, variables: {userId: theirUserId}})
+  resp = await theirClient.query({query: queries.userStories, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['stories']['items']).toHaveLength(0)
-  resp = await theirClient.query({query: schema.userPosts, variables: {userId: theirUserId}})
+  resp = await theirClient.query({query: queries.userPosts, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['posts']['items']).toHaveLength(0)
 })
@@ -255,18 +256,18 @@ test('Blocked cannot see blockers lists of likes', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we block them
-  let resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // verify they cannot see our lists of likes
-  resp = await theirClient.query({query: schema.user, variables: {userId: ourUserId}})
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['onymouslyLikedPosts']).toBeNull()
   expect(resp['data']['user']['anonymouslyLikedPosts']).toBeNull()
 
   // verify we can see their list of onymous likes
-  resp = await ourClient.query({query: schema.user, variables: {userId: theirUserId}})
+  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['user']['onymouslyLikedPosts']['items']).toHaveLength(0)
   expect(resp['data']['user']['anonymouslyLikedPosts']).toBeNull()
@@ -279,14 +280,14 @@ test('Blocked cannot see directly see blockers posts', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we block them
-  let resp = await ourClient.mutate({mutation: schema.blockUser, variables: {userId: theirUserId}})
+  let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // we add an image post, complete it
   const postId1 = uuidv4()
   let variables = {postId: postId1, imageData: grantDataB64}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId1)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
@@ -294,18 +295,18 @@ test('Blocked cannot see directly see blockers posts', async () => {
   // they add an image post, complete it
   const postId2 = uuidv4()
   variables = {postId: postId2, imageData: grantDataB64}
-  resp = await theirClient.mutate({mutation: schema.addPost, variables})
+  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId2)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // verify they cannot see our post or likers of the post
-  resp = await theirClient.query({query: schema.post, variables: {postId: postId1}})
+  resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']).toBeNull()
 
   // verify we can see their post and likers of the post
-  resp = await ourClient.query({query: schema.post, variables: {postId: postId2}})
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId2)
 })

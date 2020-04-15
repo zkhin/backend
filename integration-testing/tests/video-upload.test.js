@@ -8,7 +8,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const schema = require('../utils/schema.js')
+const { mutations, queries } = require('../schema')
 
 const videoData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'sample.mov'))
 const videoHeaders = {'Content-Type': 'video/quicktime'}
@@ -29,7 +29,7 @@ test('Upload video basic success', async () => {
   // add a pending video post
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO'}
-  let resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('VIDEO')
@@ -42,7 +42,7 @@ test('Upload video basic success', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 60*1000, pollingIntervalMs: 5*1000})
 
   // verify the basic parts of the post is as we expect
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
@@ -102,7 +102,7 @@ test('Create video post in album, move in and out', async () => {
   // we add an album
   const albumId = uuidv4()
   let variables = {albumId, name: 'first'}
-  let resp = await ourClient.mutate({mutation: schema.addAlbum, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
   expect(resp['data']['addAlbum']['postCount']).toBe(0)
@@ -113,7 +113,7 @@ test('Create video post in album, move in and out', async () => {
   // add a pending video post to that album
   const postId = uuidv4()
   variables = {postId, postType: 'VIDEO', albumId}
-  resp = await ourClient.mutate({mutation: schema.addPost, variables})
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postType']).toBe('VIDEO')
@@ -127,7 +127,7 @@ test('Create video post in album, move in and out', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 60*1000, pollingIntervalMs: 5*1000})
 
   // verify the appears as we expect
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
@@ -135,7 +135,7 @@ test('Create video post in album, move in and out', async () => {
   expect(resp['data']['post']['image']['url']).toBeTruthy()
 
   // check the album
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
   expect(resp['data']['album']['postCount']).toBe(1)
@@ -151,13 +151,13 @@ test('Create video post in album, move in and out', async () => {
   expect(placeholderAlbumArt['url64p'].split('?')[0]).not.toBe(postAlbumArt['url64p'].split('?')[0])
 
   // remove the post from the album
-  resp = await ourClient.mutate({mutation: schema.editPostAlbum, variables: {postId}})
+  resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostAlbum']['postId']).toBe(postId)
   expect(resp['data']['editPostAlbum']['album']).toBeNull()
 
   // check the album
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
   expect(resp['data']['album']['postCount']).toBe(0)
@@ -172,13 +172,13 @@ test('Create video post in album, move in and out', async () => {
   expect(placeholderAlbumArt['url64p'].split('?')[0]).toBe(albumArt['url64p'].split('?')[0])
 
   // add the post from the album
-  resp = await ourClient.mutate({mutation: schema.editPostAlbum, variables: {postId, albumId}})
+  resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPostAlbum']['postId']).toBe(postId)
   expect(resp['data']['editPostAlbum']['album']['albumId']).toBe(albumId)
 
   // check the album
-  resp = await ourClient.query({query: schema.album, variables: {albumId}})
+  resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['album']['albumId']).toBe(albumId)
   expect(resp['data']['album']['postCount']).toBe(1)

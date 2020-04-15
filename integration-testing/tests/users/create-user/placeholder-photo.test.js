@@ -6,7 +6,7 @@ const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
-const schema = require('../../../utils/schema.js')
+const { mutations, queries } = require('../../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -26,10 +26,10 @@ test('Mutation.createCognitoOnlyUser with no placeholder photos in bucket fails 
   const [client, userId, , , username] = await loginCache.getCleanLogin()
 
   // reset the user to clear & re-initialize their presence from dynamo
-  let resp = await client.mutate({mutation: schema.resetUser, variables: {newUsername: username}})
+  let resp = await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
   expect(resp['errors']).toBeUndefined()
 
-  resp = await client.query({query: schema.self})
+  resp = await client.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['userId']).toBe(userId)
   expect(resp['data']['self']['photo']).toBeNull()
@@ -47,10 +47,10 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   const [client, userId, , , username] = await loginCache.getCleanLogin()
 
   // reset the user to clear & re-initialize their presence from dynamo
-  let resp = await client.mutate({mutation: schema.resetUser, variables: {newUsername: username}})
+  let resp = await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
   expect(resp['errors']).toBeUndefined()
 
-  resp = await client.query({query: schema.self})
+  resp = await client.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   const urlRoot = `https://${placeholderPhotosDomain}/${placeholderPhotosDirectory}/${placeholderPhotoCode}/`
   const urlRootRE = new RegExp(`^${urlRoot}.*$`)
@@ -86,18 +86,18 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
 
   // create a post with an image
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  resp = await client.mutate({mutation: schema.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
+  resp = await client.mutate({mutation: mutations.addPost, variables: {postId, mediaId, imageData: grantDataB64}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
 
   // set our photo
-  resp = await client.mutate({mutation: schema.setUserDetails, variables: {photoPostId: postId}})
+  resp = await client.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserDetails']['photo']).toBeTruthy()
 
   // check that it is really set already set
-  resp = await client.query({query: schema.self})
+  resp = await client.query({query: queries.self})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['self']['photo']).toBeTruthy()
 

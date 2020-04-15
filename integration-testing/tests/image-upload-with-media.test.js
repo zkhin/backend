@@ -14,7 +14,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const schema = require('../utils/schema.js')
+const { mutations, queries } = require('../schema')
 
 const jpgHeaders = {'Content-Type': 'image/jpeg'}
 const pngHeaders = {'Content-Type': 'image/png'}
@@ -45,11 +45,11 @@ test('Verify cannot add post with more than one image', async () => {
   // add a pending post object with two images
   const postId = uuidv4()
   const variables = {postId, mediaId1: uuidv4(), mediaId2: uuidv4()}
-  await expect(client.mutate({mutation: schema.addPostTwoMedia, variables}))
+  await expect(client.mutate({mutation: mutations.addPostTwoMedia, variables}))
     .rejects.toThrow('ClientError')
 
   // verify the post did not get created
-  let resp = await client.query({query: schema.post, variables: {postId}})
+  let resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']).toBeNull()
 })
@@ -61,7 +61,7 @@ test('Uploading image sets width, height and colors', async () => {
   // upload an image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
   let variables = {postId, mediaId}
-  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables})
+  let resp = await ourClient.mutate({mutation: mutations.addPostMediaUploads, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['image']).toBeNull()
@@ -69,7 +69,7 @@ test('Uploading image sets width, height and colors', async () => {
 
   // double check the image post
   variables = {postId}
-  resp = await ourClient.query({query: schema.post, variables})
+  resp = await ourClient.query({query: queries.post, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['image']).toBeNull()
@@ -80,7 +80,7 @@ test('Uploading image sets width, height and colors', async () => {
 
   // check width, height and colors are now set
   variables = {postId}
-  resp = await ourClient.query({query: schema.post, variables})
+  resp = await ourClient.query({query: queries.post, variables})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['image']['height']).toBe(imageHeight)
@@ -97,7 +97,7 @@ test('Uploading png image results in error', async () => {
 
   // create a pending image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: mutations.addPostMediaUploads, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -108,7 +108,7 @@ test('Uploading png image results in error', async () => {
   await misc.sleep(5000)
 
   // check that post ended up in an ERROR state
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('ERROR')
@@ -120,7 +120,7 @@ test('Thumbnails built on successful upload', async () => {
 
   // create a pending image post
   const [postId, mediaId] = [uuidv4(), uuidv4()]
-  let resp = await ourClient.mutate({mutation: schema.addPostMediaUploads, variables: {postId, mediaId}})
+  let resp = await ourClient.mutate({mutation: mutations.addPostMediaUploads, variables: {postId, mediaId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
@@ -131,7 +131,7 @@ test('Thumbnails built on successful upload', async () => {
   await misc.sleep(5000)  // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
-  resp = await ourClient.query({query: schema.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   const image = resp['data']['post']['image']
