@@ -11,6 +11,8 @@ const util = require('util')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
+const schema = require('../utils/schema.js')
+
 dotenv.config()
 
 const awsRegion = process.env.AWS_REGION
@@ -51,278 +53,89 @@ const appsyncClient = new AWSAppSyncClient({
   },
 })
 
-
-const createCognitoOnlyUser = gql(
-  `mutation CreateCognitoOnlyUser ($username: String!, $fullName: String) {
-    createCognitoOnlyUser (username: $username, fullName: $fullName) {
+const startChangeUserEmail = gql`
+  mutation StartChangeUserEmail ($email: AWSEmail!) {
+    startChangeUserEmail (email: $email) {
       userId
       username
-      fullName
       email
       phoneNumber
     }
-  }`
-)
-
-const createGoogleUser = gql(
-  `mutation CreateGoogleUser ($username: String!, $fullName: String, $googleIdToken: String!) {
-    createGoogleUser (username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {
-      userId
-      username
-      fullName
-      email
-      phoneNumber
-    }
-  }`
-)
-
-const startChangeUserEmail = gql(`mutation StartChangeUserEmail ($email: AWSEmail!) {
-  startChangeUserEmail (email: $email) {
-    userId
-    username
-    email
-    phoneNumber
   }
-}`)
+`
 
-const finishChangeUserEmail = gql(
-  `mutation FinishChangeUserEmail ($cognitoAccessToken: String!, $verificationCode: String!) {
+const finishChangeUserEmail = gql`
+  mutation FinishChangeUserEmail ($cognitoAccessToken: String!, $verificationCode: String!) {
     finishChangeUserEmail (cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
       userId
       username
       email
       phoneNumber
     }
-  }`
-)
-
-const startChangeUserPhoneNumber = gql(`mutation StartChangeUserPhoneNumber ($phoneNumber: AWSPhone!) {
-  startChangeUserPhoneNumber (phoneNumber: $phoneNumber) {
-    userId
-    username
-    email
-    phoneNumber
   }
-}`)
+`
 
-const finishChangeUserPhoneNumber = gql(
-  `mutation FinishChangeUserPhoneNumber ($cognitoAccessToken: String!, $verificationCode: String!) {
+const startChangeUserPhoneNumber = gql`
+  mutation StartChangeUserPhoneNumber ($phoneNumber: AWSPhone!) {
+    startChangeUserPhoneNumber (phoneNumber: $phoneNumber) {
+      userId
+      username
+      email
+      phoneNumber
+    }
+  }
+`
+
+const finishChangeUserPhoneNumber = gql`
+  mutation FinishChangeUserPhoneNumber ($cognitoAccessToken: String!, $verificationCode: String!) {
     finishChangeUserPhoneNumber (cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
       userId
       username
       email
       phoneNumber
     }
-  }`
-)
-
-const setUserDetails = gql(`mutation SetUserDetails {
-  setUserDetails (fullName: "Miss. Purple", bio: "millions of peaches") {
-    userId
-    username
-    fullName
-    bio
-    email
-    phoneNumber
   }
-}`)
+`
 
-const followUser = gql(`mutation FollowUser {
-  followUser (userId: "us-east-1:4ded2ca8-4384-4a51-a432-3c2f73c53cfc") {
-    userId
-    username
-  }
-}`)
-
-const unfollowUser = gql(`mutation UnfollowUser {
-  unfollowUser (userId: "us-east-1:4ded2ca8-4384-4a51-a432-3c2f73c53cfc") {
-    userId
-    username
-  }
-}`)
-
-const getAddTextPost = () => gql(`mutation AddTextPost {
-  addPost (postId: "${uuidv4()}", text: "the best weather, the best") {
-    postId
-    postedAt
-    postedBy {
-      userId
-      username
-    }
-    postStatus
-    text
-  }
-}`)
-
-const getAddMediaPost = gql(`mutation AddMediaPost {
-  addPost (
-    postId: "${uuidv4()}",
-    mediaObjectUploads: [{mediaId: "${uuidv4()}", type: IMAGE}, {mediaId: "${uuidv4()}", type: VIDEO}]
-  ) {
-    postId
-    postedAt
-    postedBy {
-      userId
-      username
-    }
-    postStatus
-    text
-  }
-}`)
-
-const getAddTextAndMediaPost = () => gql(`mutation AddTextAndMediaPost {
-  addPost (
-    postId: "${uuidv4()}",
-    text: "best cat video, ever."
-    mediaObjectUploads: [{mediaId: "mid3", type: VIDEO}]
-  ) {
-    postId
-    postedAt
-    postedBy {
-      userId
-      username
-    }
-    postStatus
-    text
-  }
-}`)
-
-const querySelf = gql(`{
-  self {
-    userId
-    username
-    fullName
-    bio
-    email
-    phoneNumber
-  }
-}`)
-
-const searchUsers = gql(`{
-  searchUsers (searchToken: "me") {
-    items {
+const setUserDetails = gql`
+  mutation SetUserDetails {
+    setUserDetails (fullName: "Miss. Purple", bio: "millions of peaches") {
       userId
       username
       fullName
       bio
-      followedStatus
-      followerStatus
       email
       phoneNumber
-      followedStatus
-      followerStatus
-    }
-    nextToken
-  }
-}`)
-
-const getFollowedUsers = gql(`{
-  getFollowedUsers {
-    items {
-      userId
-      username
-    }
-    nextToken
-  }
-}`)
-
-const getFollowerUsers = gql(`{
-  getFollowerUsers {
-    items {
-      userId
-      username
-    }
-    nextToken
-  }
-}`)
-
-const selfPosts = gql(`{
-  self {
-    posts (limit: 3) {
-      items {
-        postId
-        postedAt
-        postedBy {
-          userId
-          username
-        }
-        postStatus
-        text
-      }
-      nextToken
     }
   }
-}`)
+`
 
-const selfFeed = gql(`{
-  self {
-    feed (limit: 3) {
-      items {
-        postId
-        postedAt
-        postedBy {
-          userId
-          username
-        }
-        postStatus
-        text
-      }
-      nextToken
-    }
+const lambdaClientError = gql`
+  mutation LambdaClientError {
+    lambdaClientError (arg1: "test-arg1", arg2: "test-arg2")
   }
-}`)
+`
 
-const reportPostViews = gql(`mutation ReportPostView {
-  reportPostViews(postIds: ["${uuidv4()}", "${uuidv4()}"])
-}`)
-
-const trendingPosts = gql(`{
-  trendingPosts {
-    items {
-      postId
-      postedBy {
-        userId
-        email
-      }
-    }
+const lambdaServerError = gql`
+  mutation LambdaServerError {
+    lambdaServerError (arg1: "test-arg1", arg2: "test-arg2")
   }
-}`)
+`
 
-const trendingUsers = gql(`{
-  trendingUsers {
-    items {
-      userId
-      email
-    }
+const dynamoServerError = gql`
+  mutation DynamoServerError {
+    dynamoServerError (arg1: "test-arg1", arg2: "test-arg2")
   }
-}`)
+`
 
-const resetUser = gql(`mutation ResetUser {
-  resetUser {
-    userId
-  }
-}`)
-
-
-const lambdaClientError = gql(`mutation LambdaClientError {
-  lambdaClientError (arg1: "test-arg1", arg2: "test-arg2")
-}`)
-
-const lambdaServerError = gql(`mutation LambdaServerError {
-  lambdaServerError (arg1: "test-arg1", arg2: "test-arg2")
-}`)
-
-const dynamoServerError = gql(`mutation DynamoServerError {
-  dynamoServerError (arg1: "test-arg1", arg2: "test-arg2")
-}`)
-
-async function main() {
+const main = async () => {
+  const resp = await appsyncClient.query({query: schema.self})
+  /*
   const resp = await appsyncClient.mutate({
-    mutation: createCognitoOnlyUser,
+    mutation: schema.createCognitoOnlyUser,
     variables: {username: uuidv4().substring(24), fullName: 'my full name'},
   })
-  /*
-  const resp = await appsyncClient.mutate({mutation: resetUser})
+  const resp = await appsyncClient.mutate({mutation: schema.resetUser})
   const resp = await appsyncClient.mutate({
     mutation: startChangeUserEmail,
     variables: {email: ''},
@@ -340,9 +153,8 @@ async function main() {
     variables: {cognitoAccessToken, verificationCode: ''},
   })
   */
-  //const resp = await appsyncClient.query({ query: querySelf })
   // log object to full depth https://stackoverflow.com/a/10729284
-  console.log(util.inspect(resp, false, null, true))
+  console.log(JSON.stringify(resp, null, 2))
 }
 
 main()
