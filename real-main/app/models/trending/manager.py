@@ -42,7 +42,7 @@ class TrendingManager:
         # try to add it to an existing item with the same 'now' as this view
         # this happens when a user views multiple posts by the same user for the first time
         try:
-            return self.dynamo.increment_trending_view_count(item_id, view_count, now=now)
+            return self.dynamo.increment_trending_score(item_id, view_count, now=now)
         except self.exceptions.TrendingException:
             pass
 

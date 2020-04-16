@@ -106,8 +106,9 @@ def test_cant_increment_trending_pending_view_count_at_or_before_last_indexed_at
         trending_dynamo.increment_trending_pending_view_count(item_id, 10, now=before)
 
 
-def test_increment_trending_view_count(trending_dynamo):
+def test_increment_trending_score(trending_dynamo):
     # create a trending
+    past = pendulum.now('utc')
     now = pendulum.now('utc')
     item_type = enums.TrendingItemType.POST
     item_id = 'item-id'
@@ -118,11 +119,15 @@ def test_increment_trending_view_count(trending_dynamo):
     # can't update it with a timestamp in the future
     future = pendulum.now('utc')
     with pytest.raises(exceptions.TrendingException):
-        trending_dynamo.increment_trending_view_count(item_id, 10, now=future)
+        trending_dynamo.increment_trending_score(item_id, 10, now=future)
 
     # can update it with a timestamp at the lastIndexedAt time
-    resp = trending_dynamo.increment_trending_view_count(item_id, 10, now=now)
+    resp = trending_dynamo.increment_trending_score(item_id, 10, now=now)
     assert resp['gsiK3SortKey'] == 64
+
+    # can update it with a timestamp before the lastIndexedAt time
+    resp = trending_dynamo.increment_trending_score(item_id, 10, now=past)
+    assert resp['gsiK3SortKey'] == 74
 
 
 def test_update_trending_score_success(trending_dynamo):

@@ -48,7 +48,8 @@ class TrendingDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             raise exceptions.TrendingAlreadyExists(item_id)
 
-    def increment_trending_view_count(self, item_id, view_count, now=None):
+    def increment_trending_score(self, item_id, view_count, now=None):
+        "Add view counts directly to the trending score"
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': {
@@ -56,7 +57,7 @@ class TrendingDynamo:
                 'sortKey': '-',
             },
             'UpdateExpression': 'ADD gsiK3SortKey :cnt',
-            'ConditionExpression': 'gsiA1SortKey = :gsia1sk',
+            'ConditionExpression': 'gsiA1SortKey >= :gsia1sk',
             'ExpressionAttributeValues': {
                 ':cnt': view_count,
                 ':gsia1sk': now.to_iso8601_string(),
