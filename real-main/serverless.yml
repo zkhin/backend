@@ -18,20 +18,22 @@ provider:
     # AWS_REGION is supplied by default by lambda
     AWS_ACCOUNT_ID: '#{AWS::AccountId}'
 
-    # using cloud formation as a buffer here to avoid resource dependency loops. Deploy twice to get correct values.
-    COGNITO_USER_POOL_ID: ${cf:${self:provider.stackName}.CognitoUserPoolId, 'placeholder'}
-    COGNITO_BACKEND_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoBackendUserPoolClientId, 'placeholder'}
-    COGNITO_TESTING_USER_POOL_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoTestingUserPoolClientId, 'placeholder'}
-
     APPSYNC_GRAPHQL_URL: '#{GraphQlApi.GraphQLUrl}'
-    DYNAMODB_TABLE: ${self:provider.stackName}
-    UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}  # naming to avoid resource dependency loops
-    PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
-    PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
-    FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
-    CLOUDFRONT_DOMAIN: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsDomainName, 'placeholder'}
+    DYNAMO_TABLE: ${self:provider.stackName}
     ES_SEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
+
+    # Note: use of cloudformation variables with 'placeholder' is to avoid resource dependency loops
+    CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
+    CLOUDFRONT_UPLOADS_DOMAIN: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsDomainName, 'placeholder'}
+
+    COGNITO_USER_POOL_ID: ${cf:${self:provider.stackName}.CognitoUserPoolId, 'placeholder'}
+    COGNITO_USER_POOL_BACKEND_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoBackendUserPoolClientId, 'placeholder'}
+    COGNITO_USER_POOL_TESTING_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoTestingUserPoolClientId, 'placeholder'}
+
+    S3_PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
+    S3_PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
+    S3_UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}
 
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
@@ -59,8 +61,8 @@ provider:
       Action:
         - s3:*
       Resource:
-        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.UPLOADS_BUCKET}' ] ]  # needed for 404's to work (via s3:ListBucket)
-        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.UPLOADS_BUCKET}', '/*' ] ]
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_UPLOADS_BUCKET}' ] ]  # needed for 404's to work (via s3:ListBucket)
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_UPLOADS_BUCKET}', '/*' ] ]
     - Effect: Allow
       Action:
         - es:ESHttp*
@@ -68,7 +70,7 @@ provider:
     - Effect: Allow
       Action:
         - s3:ListBucket
-      Resource: !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.PLACEHOLDER_PHOTOS_BUCKET}' ] ]
+      Resource: !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_PLACEHOLDER_PHOTOS_BUCKET}' ] ]
     - Effect: Allow
       Action:
         - mediaconvert:CreateJob
@@ -108,8 +110,8 @@ custom:
     logConfig:
       level: ERROR
     substitutions:
-      table: ${self:provider.environment.DYNAMODB_TABLE}
-      frontendResourcesDomain: ${self:provider.environment.FRONTEND_RESOURCES_DOMAIN}
+      table: ${self:provider.environment.DYNAMO_TABLE}
+      frontendResourcesDomain: ${self:provider.environment.CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN}
       lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
 
     mappingTemplates:
@@ -991,7 +993,7 @@ custom:
       - type: AMAZON_DYNAMODB
         name: DynamodbDataSource
         config:
-          tableName: ${self:provider.environment.DYNAMODB_TABLE}
+          tableName: ${self:provider.environment.DYNAMO_TABLE}
 
       - type: AWS_LAMBDA
         name: LambdaDataSource
@@ -1049,7 +1051,7 @@ resources:
       Type: AWS::DynamoDB::Table
       DeletionPolicy: Retain
       Properties:
-        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        TableName: ${self:provider.environment.DYNAMO_TABLE}
         BillingMode: PAY_PER_REQUEST
         StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
@@ -1384,7 +1386,7 @@ resources:
       Type: AWS::S3::Bucket
       DeletionPolicy: Retain
       Properties:
-        BucketName: ${self:provider.environment.UPLOADS_BUCKET}
+        BucketName: ${self:provider.environment.S3_UPLOADS_BUCKET}
         AccessControl: Private
         PublicAccessBlockConfiguration:
           BlockPublicAcls: true
@@ -1399,7 +1401,7 @@ resources:
     S3UploadsBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
-        Bucket: ${self:provider.environment.UPLOADS_BUCKET}
+        Bucket: ${self:provider.environment.S3_UPLOADS_BUCKET}
         PolicyDocument:
           Statement:
             - Action:
@@ -1425,7 +1427,7 @@ resources:
         Action: lambda:InvokeFunction
         Principal: s3.amazonaws.com
         SourceAccount: '#{AWS::AccountId}'
-        SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+        SourceArn: 'arn:aws:s3:::${self:provider.environment.S3_UPLOADS_BUCKET}'
 
     S3VideoPostUploadedLambdaPermissionUploadsS3:
       Type: AWS::Lambda::Permission
@@ -1434,7 +1436,7 @@ resources:
         Action: lambda:InvokeFunction
         Principal: s3.amazonaws.com
         SourceAccount: '#{AWS::AccountId}'
-        SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+        SourceArn: 'arn:aws:s3:::${self:provider.environment.S3_UPLOADS_BUCKET}'
 
     S3VideoPostProcessedLambdaPermissionUploadsS3:
       Type: AWS::Lambda::Permission
@@ -1443,7 +1445,7 @@ resources:
         Action: lambda:InvokeFunction
         Principal: s3.amazonaws.com
         SourceAccount: '#{AWS::AccountId}'
-        SourceArn: 'arn:aws:s3:::${self:provider.environment.UPLOADS_BUCKET}'
+        SourceArn: 'arn:aws:s3:::${self:provider.environment.S3_UPLOADS_BUCKET}'
 
     # Based off the cloudformation template output of serverless-plugin-aws-alerts
     AppSyncServerErrorAlarm:
@@ -1573,10 +1575,10 @@ resources:
     PinpointApplicationId:
       Value: !Ref PinpointApp
 
-    UploadsBucketName:
-      Value: ${self:provider.environment.UPLOADS_BUCKET}
+    UploadsBucket:
+      Value: ${self:provider.environment.S3_UPLOADS_BUCKET}
 
-    UploadsBucketDomainName:
+    UploadsBucketDomain:
       Value: !GetAtt S3BucketUploads.DomainName
 
 functions:

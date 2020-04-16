@@ -9,7 +9,7 @@ from app.models.media import MediaManager
 from app.models.post import PostManager
 from app.models.post.enums import PostStatus, PostType
 
-UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
+S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
 
@@ -20,7 +20,7 @@ clients = {
     'dynamo': DynamoClient(),
     'mediaconvert': MediaConvertClient(),
     'post_verification': PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
-    's3_uploads': S3Client(UPLOADS_BUCKET),
+    's3_uploads': S3Client(S3_UPLOADS_BUCKET),
 }
 
 managers = {}

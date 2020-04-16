@@ -26,8 +26,8 @@ from app.utils import image_size
 from . import routes
 from .exceptions import ClientException
 
-UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
-PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('PLACEHOLDER_PHOTOS_BUCKET')
+S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
+S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
 
 logger = logging.getLogger()
 
@@ -40,8 +40,8 @@ clients = {
     'facebook': FacebookClient(),
     'google': GoogleClient(secrets_manager_client.get_google_client_ids),
     'post_verification': PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
-    's3_uploads': S3Client(UPLOADS_BUCKET),
-    's3_placeholder_photos': S3Client(PLACEHOLDER_PHOTOS_BUCKET),
+    's3_uploads': S3Client(S3_UPLOADS_BUCKET),
+    's3_placeholder_photos': S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
 }
 
 # shared hash of all managers, allows inter-manager communication

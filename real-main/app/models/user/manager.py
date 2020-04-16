@@ -12,7 +12,7 @@ from .validate import UserValidate
 
 logger = logging.getLogger()
 
-PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('PLACEHOLDER_PHOTOS_DIRECTORY')
+S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTORY')
 
 
 class UserManager:
@@ -22,7 +22,7 @@ class UserManager:
     client_names = ['cloudfront', 'cognito', 'dynamo', 'facebook', 'google', 's3_uploads', 's3_placeholder_photos']
     username_tag_regex = re.compile('@' + UserValidate.username_regex.pattern)
 
-    def __init__(self, clients, managers=None, placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY):
+    def __init__(self, clients, managers=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY):
         managers = managers or {}
         managers['user'] = self
         self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)

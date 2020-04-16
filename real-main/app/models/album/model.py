@@ -12,7 +12,7 @@ from . import art, exceptions
 
 logger = logging.getLogger()
 
-FRONTEND_RESOURCES_DOMAIN = os.environ.get('FRONTEND_RESOURCES_DOMAIN')
+CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN')
 
 
 class Album:
@@ -21,7 +21,8 @@ class Album:
     jpeg_content_type = 'image/jpeg'
 
     def __init__(self, album_item, album_dynamo, cloudfront_client=None, s3_uploads_client=None,
-                 user_manager=None, post_manager=None, frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
+                 user_manager=None, post_manager=None,
+                 frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN):
         self.dynamo = album_dynamo
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client

@@ -7,13 +7,13 @@ from app.clients import CognitoClient, DynamoClient, S3Client
 from app.models.post import PostManager
 from app.models.trending import TrendingManager
 
-UPLOADS_BUCKET = os.environ.get('UPLOADS_BUCKET')
+S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
 
 cognito_client = CognitoClient()
 dynamo_client = DynamoClient()
-s3_uploads_client = S3Client(UPLOADS_BUCKET)
+s3_uploads_client = S3Client(S3_UPLOADS_BUCKET)
 clients = {
     'dynamo': dynamo_client,
     'cognito': cognito_client,

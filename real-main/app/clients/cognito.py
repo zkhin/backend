@@ -7,7 +7,7 @@ import boto3
 
 AWS_REGION = os.environ.get('AWS_REGION')
 COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
-COGNITO_BACKEND_CLIENT_ID = os.environ.get('COGNITO_BACKEND_USER_POOL_CLIENT_ID')
+COGNITO_BACKEND_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_BACKEND_CLIENT_ID')
 
 logger = logging.getLogger()
 

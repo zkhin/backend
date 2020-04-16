@@ -4,7 +4,7 @@ import re
 
 logger = logging.getLogger()
 
-COGNITO_TESTING_CLIENT_ID = os.environ.get('COGNITO_TESTING_USER_POOL_CLIENT_ID')
+COGNITO_TESTING_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_TESTING_CLIENT_ID')
 
 username_re = re.compile(r'us-east-1:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z')
 

@@ -10,12 +10,12 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 import pendulum
 
-CLOUDFRONT_DOMAIN = os.environ.get('CLOUDFRONT_DOMAIN')
+CLOUDFRONT_UPLOADS_DOMAIN = os.environ.get('CLOUDFRONT_UPLOADS_DOMAIN')
 
 
 class CloudFrontClient:
 
-    def __init__(self, key_pair_getter, domain=CLOUDFRONT_DOMAIN):
+    def __init__(self, key_pair_getter, domain=CLOUDFRONT_UPLOADS_DOMAIN):
         assert domain, "CloudFront domain is required"
         self.domain = domain
         self.key_pair_getter = key_pair_getter

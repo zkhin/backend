@@ -11,8 +11,8 @@ from .validate import UserValidate
 
 logger = logging.getLogger()
 
-PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('PLACEHOLDER_PHOTOS_DIRECTORY')
-FRONTEND_RESOURCES_DOMAIN = os.environ.get('FRONTEND_RESOURCES_DOMAIN')
+S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTORY')
+CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN')
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
@@ -36,8 +36,8 @@ class User:
     client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
 
     def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
-                 post_manager=None, placeholder_photos_directory=PLACEHOLDER_PHOTOS_DIRECTORY,
-                 frontend_resources_domain=FRONTEND_RESOURCES_DOMAIN):
+                 post_manager=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
+                 frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN):
         self.clients = clients
         for client_name in self.client_names:
             if client_name in clients:

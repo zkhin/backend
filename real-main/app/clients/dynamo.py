@@ -5,12 +5,12 @@ import re
 
 import boto3
 
-DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE')
+DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 
 
 class DynamoClient:
 
-    def __init__(self, table_name=DYNAMODB_TABLE, create_table_schema=None):
+    def __init__(self, table_name=DYNAMO_TABLE, create_table_schema=None):
         """
         If create_table_schema is not None, then the table will be created
         on-the-fly. Useful when testing with a mocked dynamodb backend.
