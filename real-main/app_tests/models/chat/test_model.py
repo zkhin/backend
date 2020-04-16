@@ -40,23 +40,6 @@ def test_is_member_group_chat(group_chat, user1, user2):
     assert group_chat.is_member(user2.id) is False
 
 
-def test_update_memberships_last_message_activity_at(direct_chat, user1, user2):
-    # verify starting state
-    membership_1 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user1.id)
-    membership_2 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user2.id)
-    new_at = pendulum.now('utc')
-    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) != new_at
-    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) != new_at
-
-    direct_chat.update_memberships_last_message_activity_at(new_at)
-
-    # verify final state
-    membership_1 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user1.id)
-    membership_2 = direct_chat.dynamo.get_chat_membership(direct_chat.id, user2.id)
-    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) == new_at
-    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) == new_at
-
-
 def test_cant_edit_non_group_chat(direct_chat, user1):
     with pytest.raises(ChatException, match='non-GROUP chat'):
         direct_chat.edit(user1.id, name='new name')

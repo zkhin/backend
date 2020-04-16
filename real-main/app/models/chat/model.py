@@ -33,12 +33,6 @@ class Chat:
     def is_member(self, user_id):
         return bool(self.dynamo.get_chat_membership(self.id, user_id))
 
-    def update_memberships_last_message_activity_at(self, now):
-        # Note that dynamo has no support for batch updates.
-        # This update will need to be made async at some scale (chats with 1000+ members?)
-        for user_id in self.dynamo.generate_chat_membership_user_ids_by_chat(self.id):
-            self.dynamo.update_chat_membership_last_message_activity_at(self.id, user_id, now)
-
     def edit(self, edited_by_user_id, name=None):
         if self.type != enums.ChatType.GROUP:
             raise exceptions.ChatException(f'Cannot edit non-GROUP chat `{self.id}`')

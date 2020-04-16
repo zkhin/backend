@@ -349,6 +349,42 @@ def test_transact_register_chat_message_deleted(chat_dynamo):
     assert chat_item == new_chat_item
 
 
+def test_update_all_chat_memberships_last_message_activity_at(chat_dynamo):
+    chat_id = 'cid'
+
+    # test with no members, should be no-op
+    now = pendulum.now('utc')
+    chat_dynamo.update_all_chat_memberships_last_message_activity_at(chat_id, now)
+
+    # a add member to the chat, verify starting state
+    user_id_1 = 'uid1'
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_add_chat_membership(chat_id, user_id_1, now)
+    chat_dynamo.client.transact_write_items([transact])
+    assert chat_dynamo.get_chat_membership(chat_id, user_id_1)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
+
+    # update with one member, verify final state
+    now = pendulum.now('utc')
+    chat_dynamo.update_all_chat_memberships_last_message_activity_at(chat_id, now)
+    assert chat_dynamo.get_chat_membership(chat_id, user_id_1)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
+
+    # add another member to the chat
+    user_id_2 = 'uid2'
+    now = pendulum.now('utc')
+    transact = chat_dynamo.transact_add_chat_membership(chat_id, user_id_2, now)
+    chat_dynamo.client.transact_write_items([transact])
+
+    # verify starting state
+    now = pendulum.now('utc')
+    assert chat_dynamo.get_chat_membership(chat_id, user_id_1)['gsiK2SortKey'] < 'chat/' + now.to_iso8601_string()
+    assert chat_dynamo.get_chat_membership(chat_id, user_id_2)['gsiK2SortKey'] < 'chat/' + now.to_iso8601_string()
+
+    # do the update with two members, verify final state
+    chat_dynamo.update_all_chat_memberships_last_message_activity_at(chat_id, now)
+    assert chat_dynamo.get_chat_membership(chat_id, user_id_1)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
+    assert chat_dynamo.get_chat_membership(chat_id, user_id_2)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
+
+
 def test_update_chat_membership_last_message_activity_at(chat_dynamo):
     chat_id = 'cid'
 

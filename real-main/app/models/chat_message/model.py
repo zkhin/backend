@@ -65,9 +65,7 @@ class ChatMessage:
         ]
         self.dynamo.client.transact_write_items(transacts)
 
-        chat = self.chat_manager.get_chat(self.chat_id)
-        chat.update_memberships_last_message_activity_at(now)
-
+        self.chat_manager.dynamo.update_all_chat_memberships_last_message_activity_at(self.chat_id, now)
         self.refresh_item(strongly_consistent=True)
         return self
 
@@ -79,9 +77,7 @@ class ChatMessage:
         ]
         self.dynamo.client.transact_write_items(transacts)
 
-        chat = self.chat_manager.get_chat(self.chat_id)
-        chat.update_memberships_last_message_activity_at(now)
-
+        self.chat_manager.dynamo.update_all_chat_memberships_last_message_activity_at(self.chat_id, now)
         return self
 
     def trigger_notifications(self, notification_type, user_ids=None):
