@@ -34,10 +34,8 @@ test('Try to double-accept a follow request', async () => {
   expect(resp['data']['acceptFollowerUser']['followerStatus']).toBe('FOLLOWING')
 
   // they try to accept the follow request again
-  await expect(theirClient.mutate({
-    mutation: mutations.acceptFollowerUser,
-    variables: {userId: ourUserId},
-  })).rejects.toThrow()
+  await expect(theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}))
+    .rejects.toThrow(/ClientError: .* already has status /)
 })
 
 
@@ -61,19 +59,18 @@ test('Try to double-deny a follow request', async () => {
   expect(resp['data']['denyFollowerUser']['followerStatus']).toBe('DENIED')
 
   // they try to accept the follow request again
-  await expect(theirClient.mutate({
-    mutation: mutations.denyFollowerUser,
-    variables: {userId: ourUserId},
-  })).rejects.toThrow()
+  await expect(theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}))
+    .rejects.toThrow(/ClientError: .* already has status /)
 })
 
 
 test('Cant accept/deny non-existent follow requests', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
-  const variables = {userId: theirUserId}
-  await expect(ourClient.mutate({mutation: mutations.acceptFollowerUser, variables})).rejects.toThrow()
-  await expect(ourClient.mutate({mutation: mutations.denyFollowerUser, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: .* has not requested /)
+  await expect(ourClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: .* has not requested /)
 })
 
 

@@ -130,9 +130,8 @@ test('Delete someone elses comment on our post', async () => {
 
 test('Cant delete a comment that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-
-  let variables = {commentId: uuidv4()}
-  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: uuidv4()}}))
+    .rejects.toThrow(/ClientError: No comment/)
 })
 
 
@@ -157,8 +156,8 @@ test('Cant delete someone elses comment on someone elses post', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(theirCommentId)
 
   // verify we can't delete their comment
-  variables = {commentId: theirCommentId}
-  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: theirCommentId}}))
+    .rejects.toThrow(/ClientError: .* not authorized to delete/)
 
   // check they can see that comment on the post
   resp = await theirClient.query({query: queries.post, variables: {postId}})

@@ -55,12 +55,12 @@ def test_add_post_errors(post_manager):
 
     # try to add a post with a negative lifetime value
     lifetime_duration = pendulum.duration(hours=-1)
-    with pytest.raises(post_manager.exceptions.PostException, match='negative lifetime'):
+    with pytest.raises(post_manager.exceptions.PostException, match='non-positive lifetime'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration)
 
     # try to add a post with a zero lifetime value
     lifetime_duration = pendulum.duration(hours=0)
-    with pytest.raises(post_manager.exceptions.PostException, match='negative lifetime'):
+    with pytest.raises(post_manager.exceptions.PostException, match='non-positive lifetime'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration)
 
     # try to add a text-only post with a media_upload

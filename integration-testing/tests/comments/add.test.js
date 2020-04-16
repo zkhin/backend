@@ -91,15 +91,16 @@ test('Verify commentIds cannot be re-used ', async () => {
   expect(resp['data']['addComment']['commentId']).toBe(commentId)
 
   // check we cannot add another comment re-using that commentId
-  variables = {commentId, postId, text: 'i agree'}
-  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'i agree'}}))
+    .rejects.toThrow(/ClientError: Unable to add comment /)
 })
 
 
 test('Cant add comments to post that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  let variables = {commentId: uuidv4(), postId: 'dne-post-id', text: 'no way'}
-  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  const commentId = uuidv4()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId: 'pid', text: 't'}}))
+    .rejects.toThrow(/ClientError: Post .* does not exist$/)
 })
 
 
@@ -117,7 +118,8 @@ test('Cant add comments to post with comments disabled', async () => {
 
   // check they cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(theirClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(theirClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: Comments are disabled on post/)
 })
 
 
@@ -148,11 +150,13 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
 
   // check we cannot comment on their post
   variables = {commentId: uuidv4(), postId: theirPostId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: .* has blocked user /)
 
   // check they cannot comment on our post
   variables = {commentId: uuidv4(), postId: ourPostId, text: 'no way'}
-  await expect(theirClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(theirClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: .* has blocked post owner /)
 })
 
 
@@ -181,7 +185,8 @@ test('Cant add comments to a post of a private user unless were following them',
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: .* is private /)
 
   // we request to follow them
   variables = {userId: theirUserId}
@@ -190,7 +195,8 @@ test('Cant add comments to a post of a private user unless were following them',
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: .* is private /)
 
   // they accept our follow request
   variables = {userId: ourUserId}
@@ -211,5 +217,6 @@ test('Cant add comments to a post of a private user unless were following them',
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
-  await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: .* is private /)
 })

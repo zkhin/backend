@@ -71,7 +71,7 @@ test('Try to double follow a user', async () => {
 
   // we cannot follow them again
   await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow()
+    .rejects.toThrow(/ClientError: .* already /)
 
   // verify we're still in following them
   resp = await theirClient.query({query: queries.ourFollowerUsers})
@@ -96,7 +96,7 @@ test('Try to double follow a user', async () => {
 
   // we cannot follow them again
   await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow()
+    .rejects.toThrow(/ClientError: .* already /)
 
   // verify we're still in REQUESTED state
   resp = await theirClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'REQUESTED'}})
@@ -112,7 +112,7 @@ test('Try to unfollow a user we are not following', async () => {
 
   // try to unfollow them
   await expect(ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow()
+    .rejects.toThrow(/ClientError: .* is not following /)
 })
 
 

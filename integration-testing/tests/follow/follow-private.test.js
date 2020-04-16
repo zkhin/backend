@@ -159,7 +159,7 @@ test('Cancelling follow requests', async() => {
   expect(resp['data']['denyFollowerUser']['followerStatus']).toBe('DENIED')
   // we cannot unfollow them
   await expect(ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow()
+    .rejects.toThrow(/ClientError: .* has status `DENIED`$/)
   // they accept the follow request
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
   expect(resp['errors']).toBeUndefined()

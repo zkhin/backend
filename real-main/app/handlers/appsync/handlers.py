@@ -316,7 +316,7 @@ def unfollow_user(caller_user_id, arguments, source, context):
 
     follow = follow_manager.get_follow(follower_user_id, followed_user_id)
     if not follow:
-        raise ClientException(f'User `{follower_user_id}` is not folloing `{followed_user_id}`')
+        raise ClientException(f'User `{follower_user_id}` is not following `{followed_user_id}`')
 
     try:
         follow.unfollow()

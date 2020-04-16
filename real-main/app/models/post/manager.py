@@ -89,7 +89,7 @@ class PostManager:
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
-            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with negative lifetime'
+            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with non-positive lifetime'
             raise exceptions.PostException(msg)
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None

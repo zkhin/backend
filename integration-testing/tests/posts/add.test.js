@@ -164,8 +164,9 @@ test('Cant add video post to album (yet)', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
-  let variables = {postId, postType: 'VIDEO', albumId: 'aid'}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
+  let variables = {postId, postType: 'VIDEO', albumId: uuidv4()}
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow('ClientError')
 })
 
 
@@ -281,15 +282,18 @@ test('Cannot add post with invalid lifetime', async () => {
 
   // malformed duration string
   variables.lifetime = 'invalid'
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: Unable to parse lifetime /)
 
   // negative value for lifetime
   variables.lifetime = '-P1D'
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: Unable to parse lifetime /)  // server-side lib doesn't support negative durations
 
   // zero value for lifetime
   variables.lifetime = 'P0D'
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow()
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: .* with non-positive lifetime$/)
 
   // success!
   variables.lifetime = 'P1D'
