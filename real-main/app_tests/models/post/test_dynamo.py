@@ -82,7 +82,7 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     transacts = [post_dynamo.transact_add_pending_post(
         user_id, post_id, post_type, posted_at=posted_at, expires_at=expires_at, text=text, text_tags=text_tags,
         comments_disabled=True, likes_disabled=False, sharing_disabled=False, verification_hidden=True,
-        album_id=album_id,
+        album_id=album_id, set_as_user_photo=True,
     )]
     post_dynamo.client.transact_write_items(transacts)
 
@@ -117,6 +117,7 @@ def test_transact_add_pending_post_with_options(post_dynamo):
         'likesDisabled': False,
         'sharingDisabled': False,
         'verificationHidden': True,
+        'setAsUserPhoto': True,
     }
 
 
@@ -269,6 +270,33 @@ def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     assert post_item['gsiA3SortKey'].startswith(new_status + '/')
     assert post_item['gsiA2SortKey'].startswith(new_status + '/')
     assert post_item['gsiA1SortKey'].startswith(new_status + '/')
+
+
+def test_transact_set_post_status_COMPLETED_clears_set_as_user_photo(post_dynamo):
+    post_id = 'my-post-id'
+    user_id = 'my-user-id'
+
+    # add a post, verify stating state
+    post_dynamo.client.transact_write_items([
+        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', set_as_user_photo=True),
+    ])
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.PENDING
+    assert post_item['setAsUserPhoto'] is True
+
+    # change to PROCESSING, should not delete setAsUserPhoto
+    transacts = [post_dynamo.transact_set_post_status(post_item, PostStatus.PROCESSING)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.PROCESSING
+    assert post_item['setAsUserPhoto'] is True
+
+    # complete the post, should delete setAsUserPhoto
+    transacts = [post_dynamo.transact_set_post_status(post_item, PostStatus.COMPLETED)]
+    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.get_post(post_id)
+    assert post_item['postStatus'] == PostStatus.COMPLETED
+    assert 'setAsUserPhoto' not in post_item
 
 
 def test_transact_set_post_status_album_rank_handled_correctly_to_and_from_COMPLETED_in_album(post_dynamo):

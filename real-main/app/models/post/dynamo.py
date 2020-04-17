@@ -101,7 +101,8 @@ class PostDynamo:
 
     def transact_add_pending_post(self, posted_by_user_id, post_id, post_type, posted_at=None, expires_at=None,
                                   album_id=None, text=None, text_tags=None, comments_disabled=None,
-                                  likes_disabled=None, sharing_disabled=None, verification_hidden=None):
+                                  likes_disabled=None, sharing_disabled=None, verification_hidden=None,
+                                  set_as_user_photo=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         post_status = enums.PostStatus.PENDING
@@ -152,6 +153,8 @@ class PostDynamo:
             post_item['sharingDisabled'] = {'BOOL': sharing_disabled}
         if verification_hidden is not None:
             post_item['verificationHidden'] = {'BOOL': verification_hidden}
+        if set_as_user_photo is not None:
+            post_item['setAsUserPhoto'] = {'BOOL': set_as_user_photo}
 
         return {'Put': {
             'Item': post_item,
@@ -237,6 +240,11 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
+
+        # the setAsUserPhoto attr is not needed after reaching COMPLETED, so delete it if it exists
+        if status == PostStatus.COMPLETED:
+            transact['Update']['UpdateExpression'] += ' REMOVE setAsUserPhoto'
+
         return transact
 
     def increment_viewed_by_count(self, post_id):

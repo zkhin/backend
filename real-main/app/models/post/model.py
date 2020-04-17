@@ -87,6 +87,12 @@ class Post:
             self._media = self.media_manager.init_media(media_item) if media_item else None
         return self._media
 
+    @property
+    def user(self):
+        if not hasattr(self, '_user'):
+            self._user = self.user_manager.get_user(self.user_id)
+        return self._user
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -285,6 +291,7 @@ class Post:
             if post_id and post_id != self.id:
                 original_post_id = post_id
 
+        set_as_user_photo = self.item.get('setAsUserPhoto')
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
         album_rank = album.get_next_last_rank() if album else None
@@ -302,6 +309,10 @@ class Post:
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
+
+        # update the user's profile photo, if needed
+        if set_as_user_photo:
+            self.user.update_photo(self.id)
 
         # update the first story if needed
         if self.item.get('expiresAt'):

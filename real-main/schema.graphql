@@ -114,6 +114,9 @@ type Mutation {
   #   - postId and the mediaId's should be random v4 uuid's generated client-side.
   #   - lifetime should be a ISO Duration string. Ex: 1 day: 'P1D', 1 week: 'P7D', 1 month: 'P1M', 1 year: 'P1Y'
   #   - if lifetime is unset, defaults to infinite
+  #   - setAsUserPhoto:
+  #     - may only be used with IMAGE posts
+  #     - if set to True, the post will be set as user profile photo if/when it reaches COMPLETED status
   addPost(
     postId: ID!,
     postType: PostType,  # defaults to IMAGE if not supplied
@@ -126,6 +129,7 @@ type Mutation {
     likesDisabled: Boolean,
     sharingDisabled: Boolean,
     verificationHidden: Boolean,
+    setAsUserPhoto: Boolean,
   ): Post
 
   # Edit a Post

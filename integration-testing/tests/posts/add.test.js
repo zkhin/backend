@@ -494,3 +494,93 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp['data']['post']['postId']).toBe(theirPostId)
   expect(resp['data']['post']['originalPost']['postId']).toBe(ourPostId)
 })
+
+
+test('Add post setAsUserPhoto failures', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // verify can't use setAsUserPhoto with text or video posts
+  let variables = {postId: uuidv4(), postType: 'TEXT_ONLY', text: 't', setAsUserPhoto: true}
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: Cannot .* with setAsUserPhoto$/)
+
+  variables = {postId: uuidv4(), postType: 'VIDEO', setAsUserPhoto: true}
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: Cannot .* with setAsUserPhoto$/)
+
+  // verify doesn't set user photo if uploaded image can't be processed (image data included with upload)
+  variables = {postId: uuidv4(), postType: 'IMAGE', setAsUserPhoto: true, imageData: 'notimagedata'}
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: .* thumbnails /)
+
+  // add a pending post with setAsUserPhoto
+  const postId = uuidv4()
+  variables = {postId, postType: 'IMAGE', setAsUserPhoto: true}
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  let uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(uploadUrl).toBeTruthy()
+
+  // upload the image data that isn't a valid image, give it a long time to process
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: 'not-a-valid-image'})
+  await misc.sleep(10 * 1000)
+
+  // check that our profile photo has not changed
+  resp = await ourClient.query({query: queries.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['photo']).toBeNull()
+})
+
+
+test('Add post setAsUserPhoto success', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // check we have no profile photo
+  let resp = await ourClient.query({query: queries.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['photo']).toBeNull()
+
+  // add a post and use setAsUserPhoto with image data directly uploaded
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, postType: 'IMAGE', setAsUserPhoto: true, imageData, takenInReal: true}
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // make sure dynamo converges
+  await misc.sleep(2000)
+
+  // check that our profile photo has changed
+  resp = await ourClient.query({query: queries.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['photo']['url']).toContain(postId1)
+
+  // add a post and use setAsUserPhoto, don't include image data directly
+  const postId2 = uuidv4()
+  variables = {postId: postId2, postType: 'IMAGE', setAsUserPhoto: true, takenInReal: true}
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
+  let uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(uploadUrl).toBeTruthy()
+
+  // upload the image data
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await misc.sleepUntilPostCompleted(ourClient, postId2)
+
+  // make sure dynamo converges
+  await misc.sleep(2000)
+
+  // check that our profile photo has changed
+  resp = await ourClient.query({query: queries.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['photo']['url']).toContain(postId2)
+})

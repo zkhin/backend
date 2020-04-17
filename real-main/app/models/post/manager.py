@@ -70,7 +70,7 @@ class PostManager:
 
     def add_post(self, posted_by_user_id, post_id, post_type, image_input=None, text=None, lifetime_duration=None,
                  album_id=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
-                 verification_hidden=None, now=None):
+                 verification_hidden=None, set_as_user_photo=None, now=None):
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
 
@@ -83,9 +83,14 @@ class PostManager:
                 raise exceptions.PostException('Cannot add text-only post without text')
             if image_input:
                 raise exceptions.PostException('Cannot add text-only post with ImageInput')
+            if set_as_user_photo:
+                raise exceptions.PostException('Cannot add text-only post with setAsUserPhoto')
 
-        if post_type == enums.PostType.VIDEO and image_input:
-            raise exceptions.PostException('Cannot add video post with ImageInput')
+        if post_type == enums.PostType.VIDEO:
+            if image_input:
+                raise exceptions.PostException('Cannot add video post with ImageInput')
+            if set_as_user_photo:
+                raise exceptions.PostException('Cannot add video post with setAsUserPhoto')
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -108,6 +113,7 @@ class PostManager:
             posted_by_user_id, post_id, post_type, posted_at=now, expires_at=expires_at, text=text,
             text_tags=text_tags, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled, verification_hidden=verification_hidden, album_id=album_id,
+            set_as_user_photo=set_as_user_photo,
         )]
         if post_type == enums.PostType.IMAGE:
             # 'image_input' is straight from graphql, format dictated by schema

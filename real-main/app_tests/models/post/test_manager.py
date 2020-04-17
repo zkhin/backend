@@ -67,6 +67,10 @@ def test_add_post_errors(post_manager):
     with pytest.raises(post_manager.exceptions.PostException, match='with ImageInput'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', image_input={'mediaId': 'mid'})
 
+    # try to add a text-only post with a media_upload
+    with pytest.raises(post_manager.exceptions.PostException, match='with setAsUserPhoto'):
+        post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY, text='t', set_as_user_photo=True)
+
     # try to add a text-only post with no text
     with pytest.raises(post_manager.exceptions.PostException, match='without text'):
         post_manager.add_post('pbuid', 'pid', PostType.TEXT_ONLY)
@@ -74,6 +78,10 @@ def test_add_post_errors(post_manager):
     # try to add a video post with a media_upload
     with pytest.raises(post_manager.exceptions.PostException, match='with ImageInput'):
         post_manager.add_post('pbuid', 'pid', PostType.VIDEO, image_input={'mediaId': 'mid'})
+
+    # try to add a video post as profile pic
+    with pytest.raises(post_manager.exceptions.PostException, match='with setAsUserPhoto'):
+        post_manager.add_post('pbuid', 'pid', PostType.VIDEO, set_as_user_photo=True)
 
 
 def test_add_text_only_post(post_manager, user):
@@ -227,7 +235,7 @@ def test_add_video_post_maximal(post_manager, user):
     assert post.item['verificationHidden'] is True
 
 
-def test_add_media_post(post_manager, user):
+def test_add_image_post(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
@@ -255,7 +263,7 @@ def test_add_media_post(post_manager, user):
     assert 'expiresAt' not in media_items[0]
 
 
-def test_add_media_post_text_empty_string(post_manager, user):
+def test_add_image_post_text_empty_string(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
@@ -271,7 +279,7 @@ def test_add_media_post_text_empty_string(post_manager, user):
     assert 'textTags' not in post.item
 
 
-def test_add_media_post_with_image_data(user, post_manager):
+def test_add_image_post_with_image_data(user, post_manager):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
@@ -304,7 +312,7 @@ def test_add_media_post_with_image_data(user, post_manager):
     assert 'expiresAt' not in media_items[0]
 
 
-def test_add_media_post_with_options(post_manager, album, user):
+def test_add_image_post_with_options(post_manager, album, user):
     post_id = 'pid'
     text = 'lore ipsum'
     now = pendulum.now('utc')
@@ -321,7 +329,7 @@ def test_add_media_post_with_options(post_manager, album, user):
     post_manager.add_post(
         user.id, post_id, PostType.IMAGE, text=text, now=now, image_input=image_input,
         lifetime_duration=lifetime_duration, album_id=album.id, comments_disabled=False, likes_disabled=True,
-        verification_hidden=False,
+        verification_hidden=False, set_as_user_photo=True,
     )
     expires_at = now + lifetime_duration
 
@@ -337,6 +345,7 @@ def test_add_media_post_with_options(post_manager, album, user):
     assert post.item['commentsDisabled'] is False
     assert post.item['likesDisabled'] is True
     assert post.item['verificationHidden'] is False
+    assert post.item['setAsUserPhoto'] is True
 
     post_original_metadata = post_manager.dynamo.get_original_metadata(post_id)
     assert post_original_metadata['originalMetadata'] == 'org-metadata'

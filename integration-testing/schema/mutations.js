@@ -312,6 +312,7 @@ module.exports.addPost = gql`
     $likesDisabled: Boolean,
     $sharingDisabled: Boolean,
     $verificationHidden: Boolean,
+    $setAsUserPhoto: Boolean,
   ) {
     addPost (
       postId: $postId,
@@ -330,6 +331,7 @@ module.exports.addPost = gql`
       likesDisabled: $likesDisabled,
       sharingDisabled: $sharingDisabled,
       verificationHidden: $verificationHidden,
+      setAsUserPhoto: $setAsUserPhoto,
     ) {
       postId
       postedAt

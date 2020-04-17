@@ -31,6 +31,14 @@ def post_with_media(post_manager, user):
 
 
 @pytest.fixture
+def post_set_as_user_photo(post_manager, user, media_manager):
+    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, set_as_user_photo=True)
+    post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum2')
+    media_manager.dynamo.set_is_verified(post.media.id, True)
+    yield post
+
+
+@pytest.fixture
 def post_with_media_with_expiration(post_manager, user):
     post = post_manager.add_post(
         user.id, 'pid2', PostType.IMAGE, text='t', lifetime_duration=pendulum.duration(hours=1),
@@ -211,3 +219,15 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     post2.refresh_item()
     assert post2.item['postStatus'] == PostStatus.COMPLETED
     assert post2.item['originalPostId'] == post1.id
+
+
+def test_complete_with_set_as_user_photo(post_manager, user, post_with_media, post_set_as_user_photo):
+    # complete the post without use_as_user_photo, verify user photo change api no called
+    post_with_media.user.update_photo = Mock()
+    post_with_media.complete()
+    assert post_with_media.user.update_photo.mock_calls == []
+
+    # complete the post without use_as_user_photo, verify user photo change api called
+    post_set_as_user_photo.user.update_photo = Mock()
+    post_set_as_user_photo.complete()
+    assert post_set_as_user_photo.user.update_photo.mock_calls == [call(post_set_as_user_photo.id)]

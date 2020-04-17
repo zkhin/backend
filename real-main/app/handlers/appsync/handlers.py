@@ -429,6 +429,7 @@ def add_post(caller_user_id, arguments, source, context):
     text = arguments.get('text')
     image_input = arguments.get('imageInput')
     album_id = arguments.get('albumId')
+    set_as_user_photo = arguments.get('setAsUserPhoto')
 
     media_uploads = arguments.get('mediaObjectUploads', [])
     if not image_input and media_uploads:
@@ -465,8 +466,9 @@ def add_post(caller_user_id, arguments, source, context):
             user.id, post_id, post_type, image_input=image_input, text=text, lifetime_duration=lifetime_duration,
             album_id=album_id, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled, verification_hidden=verification_hidden,
+            set_as_user_photo=set_as_user_photo,
         )
-    except post_manager.exceptions.PostException as err:
+    except (post_manager.exceptions.PostException, media_manager.exceptions.MediaException) as err:
         raise ClientException(str(err))
 
     resp = post.serialize(caller_user_id)
