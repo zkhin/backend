@@ -1,10 +1,7 @@
-from functools import reduce
 import logging
 
-from boto3.dynamodb.conditions import Attr, Key
+from boto3.dynamodb.conditions import Key
 import pendulum
-
-from .enums import MediaStatus
 
 logger = logging.getLogger()
 
@@ -20,7 +17,7 @@ class MediaDynamo:
             'sortKey': '-',
         }, strongly_consistent=strongly_consistent)
 
-    def transact_add_media(self, posted_by_user_id, post_id, media_id, media_status=MediaStatus.AWAITING_UPLOAD,
+    def transact_add_media(self, posted_by_user_id, post_id, media_id,
                            posted_at=None, taken_in_real=None, original_format=None, image_format=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
@@ -29,15 +26,12 @@ class MediaDynamo:
             'partitionKey': {'S': f'media/{media_id}'},
             'sortKey': {'S': '-'},
             'gsiA1PartitionKey': {'S': f'media/{post_id}'},
-            'gsiA1SortKey': {'S': media_status},
-            'gsiA2PartitionKey': {'S': f'media/{posted_by_user_id}'},
-            'gsiA2SortKey': {'S': f'IMAGE/{media_status}/{posted_at_str}'},
+            'gsiA1SortKey': {'S': '-'},
             'userId': {'S': posted_by_user_id},
             'postId': {'S': post_id},
             'postedAt': {'S': posted_at_str},
             'mediaId': {'S': media_id},
             'mediaType': {'S': 'IMAGE'},
-            'mediaStatus': {'S': media_status},
         }
         if taken_in_real is not None:
             media_item['takenInReal'] = {'BOOL': taken_in_real}
@@ -95,40 +89,9 @@ class MediaDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def transact_set_status(self, media_item, status):
-        return {
-            'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'media/{media_item["mediaId"]}'},
-                    'sortKey': {'S': '-'},
-                },
-                'UpdateExpression': 'SET mediaStatus = :status, gsiA1SortKey = :status, gsiA2SortKey = :gsiA2SK',
-                'ExpressionAttributeValues': {
-                    ':status': {'S': status},
-                    ':gsiA2SK': {'S': f'IMAGE/{status}/{media_item["postedAt"]}'},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            }
-        }
-
-    def generate_by_user(self, user_id):
+    def generate_by_post(self, post_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'media/{user_id}'),
-            'IndexName': 'GSI-A2',
-        }
-        return self.client.generate_all_query(query_kwargs)
-
-    def generate_by_post(self, post_id, uploaded=None):
-        key_exps = [Key('gsiA1PartitionKey').eq(f'media/{post_id}')]
-        if uploaded is True:
-            key_exps.append(Key('gsiA1SortKey').eq(MediaStatus.UPLOADED))
-
-        query_kwargs = {
-            'KeyConditionExpression': reduce(lambda a, b: a & b, key_exps),
+            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'media/{post_id}'),
             'IndexName': 'GSI-A1',
         }
-
-        if uploaded is False:
-            query_kwargs['FilterExpression'] = Attr('mediaStatus').ne(MediaStatus.UPLOADED)
-
         return self.client.generate_all_query(query_kwargs)

@@ -1,6 +1,6 @@
 import logging
 
-from . import enums, exceptions
+from . import exceptions
 from .dynamo import MediaDynamo
 from .model import Media
 
@@ -9,7 +9,6 @@ logger = logging.getLogger()
 
 class MediaManager:
 
-    enums = enums
     exceptions = exceptions
 
     def __init__(self, clients, managers=None):

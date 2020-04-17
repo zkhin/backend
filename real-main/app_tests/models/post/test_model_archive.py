@@ -6,7 +6,6 @@ import pytest
 from app.models.feed import FeedManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
-from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus, PostType
 
 
@@ -78,7 +77,6 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
     # archive the post
     post.archive()
     assert post.item['postStatus'] == PostStatus.ARCHIVED
-    assert len(post.item['mediaObjects']) == 0
 
     # check the post count decremented
     posted_by_user.refresh_item()
@@ -120,8 +118,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     # archive the post
     post.archive()
     assert post.item['postStatus'] == PostStatus.ARCHIVED
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.ARCHIVED
 
     # check the post is still in the album, but since it's no longer completed, it doesn't show in the count
     assert post.item['albumId'] == album.id

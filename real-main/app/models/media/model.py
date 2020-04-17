@@ -7,14 +7,13 @@ import pyheif
 
 from app.utils import image_size
 
-from . import enums, exceptions
+from . import exceptions
 
 logger = logging.getLogger()
 
 
 class Media:
 
-    enums = enums
     exceptions = exceptions
 
     jpeg_content_type = 'image/jpeg'
@@ -33,11 +32,6 @@ class Media:
         self.item = item
         self.id = item['mediaId']
 
-        if self.item and 'mediaStatus' not in self.item:
-            # When media objects are stored in feed objects, they are assumed to be
-            # in UPLOADED state and it is not explicity saved in dynamo
-            self.item['mediaStatus'] = enums.MediaStatus.UPLOADED
-
     def get_native_image_buffer(self):
         if not hasattr(self, '_native_image_data'):
             path = self.get_s3_path(image_size.NATIVE)
@@ -53,14 +47,6 @@ class Media:
         return '/'.join([self.item['userId'], 'post', self.item['postId'], 'image', size.filename])
 
     def process_upload(self):
-        allowed = (enums.MediaStatus.AWAITING_UPLOAD, enums.MediaStatus.ERROR)
-        media_status = self.item['mediaStatus']
-        assert media_status in allowed, f'Media is in non-processable status: `{media_status}`'
-
-        # mark as processing before we start downloading the file from S3
-        if media_status != enums.MediaStatus.PROCESSING_UPLOAD:
-            self.set_status(enums.MediaStatus.PROCESSING_UPLOAD)
-
         if self.item.get('imageFormat') == 'HEIC':
             self.set_native_jpeg()
 
@@ -72,7 +58,6 @@ class Media:
         self.set_is_verified()
         self.set_height_and_width()
         self.set_colors()
-        self.set_status(enums.MediaStatus.UPLOADED)
         return self
 
     def set_is_verified(self):
@@ -120,9 +105,3 @@ class Media:
             in_mem_file.seek(0)
             path = self.get_s3_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
-
-    def set_status(self, status):
-        transact = self.dynamo.transact_set_status(self.item, status)
-        self.dynamo.client.transact_write_items([transact])
-        self.item['mediaStatus'] = status  # not worry about stale in-memory copies of indexes
-        return self

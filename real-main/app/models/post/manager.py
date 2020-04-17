@@ -5,7 +5,6 @@ import uuid
 import pendulum
 
 from app.models import album, comment, feed, flag, followed_first_story, like, media, trending, user, view
-from app.models.media.enums import MediaStatus
 
 from . import enums, exceptions
 from .appsync import PostAppSync
@@ -118,7 +117,7 @@ class PostManager:
         if post_type == enums.PostType.IMAGE:
             # 'image_input' is straight from graphql, format dictated by schema
             transacts.append(self.media_manager.dynamo.transact_add_media(
-                posted_by_user_id, post_id, image_input['mediaId'], media_status=MediaStatus.AWAITING_UPLOAD,
+                posted_by_user_id, post_id, image_input['mediaId'],
                 posted_at=now, taken_in_real=image_input.get('takenInReal'),
                 original_format=image_input.get('originalFormat'),
                 image_format=image_input.get('imageFormat'),
@@ -134,17 +133,10 @@ class PostManager:
         if post.type == enums.PostType.TEXT_ONLY:
             post.complete(now=now)
 
-        media_items = []
         if post.type == enums.PostType.IMAGE:
-            media = self.media_manager.get_media(image_input['mediaId'], strongly_consistent=True)
-
-            # if image data was directly included for any media objects, process it
             if image_data := image_input.get('imageData'):
-                post.process_image_upload(image_data=image_data, media=media, now=now)
+                post.process_image_upload(image_data=image_data, now=now)
 
-            media_items.append(media.item)
-
-        post.item['mediaObjects'] = media_items
         return post
 
     def delete_recently_expired_posts(self, now=None):

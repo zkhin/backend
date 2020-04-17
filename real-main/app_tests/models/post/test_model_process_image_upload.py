@@ -3,7 +3,6 @@ from unittest.mock import Mock, call
 import pendulum
 import pytest
 
-from app.models.media.enums import MediaStatus
 from app.models.media.exceptions import MediaException
 from app.models.post.enums import PostStatus, PostType
 
@@ -36,56 +35,41 @@ def test_cant_process_image_upload_various_errors(post_manager, user, pending_po
     with pytest.raises(AssertionError, match='PENDING'):
         completed_post.process_image_upload()
 
-    with pytest.raises(AssertionError, match='must be called with media'):
-        pending_post.process_image_upload()
 
-
-def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post, media_manager):
-    media_item = list(media_manager.dynamo.generate_by_post(pending_post.id))[0]
-    media = media_manager.init_media(media_item)
-
-    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
+def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
     with pytest.raises(MediaException, match='does not exist'):
-        pending_post.process_image_upload(media=media)
+        pending_post.process_image_upload()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
     pending_post.refresh_item()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
 
-def test_process_image_upload_success(pending_post, media_manager):
-    media_item = list(media_manager.dynamo.generate_by_post(pending_post.id))[0]
-    media = media_manager.init_media(media_item)
-
-    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
+def test_process_image_upload_success(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
     # mock out a bunch of methods
-    media.set_is_verified = Mock()
-    media.set_height_and_width = Mock()
-    media.set_colors = Mock()
-    media.set_thumbnails = Mock()
+    pending_post.media.set_is_verified = Mock()
+    pending_post.media.set_height_and_width = Mock()
+    pending_post.media.set_colors = Mock()
+    pending_post.media.set_thumbnails = Mock()
     pending_post.is_native_image_jpeg = Mock(return_value=True)
     pending_post.set_checksum = Mock()
     pending_post.complete = Mock()
 
     now = pendulum.now('utc')
-    pending_post.process_image_upload(media=media, now=now)
+    pending_post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert media.set_is_verified.mock_calls == [call()]
-    assert media.set_height_and_width.mock_calls == [call()]
-    assert media.set_colors.mock_calls == [call()]
-    assert media.set_thumbnails.mock_calls == [call()]
+    assert pending_post.media.set_is_verified.mock_calls == [call()]
+    assert pending_post.media.set_height_and_width.mock_calls == [call()]
+    assert pending_post.media.set_colors.mock_calls == [call()]
+    assert pending_post.media.set_thumbnails.mock_calls == [call()]
     assert pending_post.set_checksum.mock_calls == [call()]
     assert pending_post.complete.mock_calls == [call(now=now)]
 
-    assert media.item['mediaStatus'] == MediaStatus.UPLOADED
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING  # we mocked out the call to complete()
-
-    media.refresh_item()
     pending_post.refresh_item()
-    assert media.item['mediaStatus'] == MediaStatus.UPLOADED
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING  # we mocked out the call to complete()

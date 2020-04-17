@@ -26,8 +26,7 @@ grant_colors = [
 @pytest.fixture
 def media_awaiting_upload(media_manager, post_manager):
     post = post_manager.add_post('uid', 'pid', PostType.IMAGE)
-    media_item = post.item['mediaObjects'][0]
-    yield media_manager.init_media(media_item)
+    yield post.media
 
 
 def test_set_height_and_width(dynamo_client, s3_uploads_client, media_awaiting_upload):

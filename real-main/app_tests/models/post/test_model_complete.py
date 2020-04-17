@@ -154,10 +154,9 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.item['gsiK3SortKey'] == -1
 
     # put media out in mocked s3 for the post, so album art can be generated
-    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
-    path = media.get_s3_path(image_size.NATIVE)
+    path = post.media.get_s3_path(image_size.NATIVE)
     post_manager.clients['s3_uploads'].put_object(path, image_data, 'application/octet-stream')
-    media.process_upload()
+    post.media.process_upload()
 
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))

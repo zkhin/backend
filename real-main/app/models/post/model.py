@@ -5,7 +5,6 @@ import logging
 import pendulum
 from PIL import Image, ImageOps
 
-from app.models.media.enums import MediaStatus
 from app.utils import image_size
 
 from . import enums, exceptions
@@ -180,9 +179,11 @@ class Post:
         return self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
 
     def get_image_writeonly_url(self):
-        media_item = next(self.media_manager.dynamo.generate_by_post(self.id), None)
-        image_format = media_item.get('imageFormat') if media_item else None
-        size = image_size.NATIVE_HEIC if image_format == 'HEIC' else image_size.NATIVE
+        assert self.type == PostType.IMAGE
+        # protect against this being called before dynamo index has converged
+        if not self.media:
+            return None
+        size = image_size.NATIVE_HEIC if self.media.item.get('imageFormat') == 'HEIC' else image_size.NATIVE
         path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
@@ -206,11 +207,10 @@ class Post:
             path = self.get_image_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
 
-    def process_image_upload(self, image_data=None, media=None, now=None):
+    def process_image_upload(self, image_data=None, now=None):
         assert self.type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
         assert self.status in (PostStatus.PENDING, PostStatus.ERROR), \
             'Can only process_image_upload() for PENDING & ERROR posts'
-        assert media, 'For now, Post.process_image_upload() must be called with media'
         now = now or pendulum.now('utc')
 
         # mark ourselves as processing
@@ -222,7 +222,7 @@ class Post:
             # s3 trigger is a no-op because we are already in PROCESSING
             self.upload_native_image_data_base64(image_data)
 
-        media.process_upload()
+        self.media.process_upload()
         self.set_checksum()
         self.complete(now=now)
 
@@ -260,18 +260,14 @@ class Post:
         self.build_image_thumbnails()
         self.complete()
 
-    def error(self, media=None):
+    def error(self):
         if self.status not in (PostStatus.PENDING, PostStatus.PROCESSING):
             raise exceptions.PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
 
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ERROR)]
-        if media:
-            transacts.append(media.dynamo.transact_set_status(media.item, media.enums.MediaStatus.ERROR))
-
         self.dynamo.client.transact_write_items(transacts)
+
         self.refresh_item(strongly_consistent=True)
-        if media:
-            media.refresh_item(strongly_consistent=True)
         return self
 
     def complete(self, now=None):
@@ -338,27 +334,15 @@ class Post:
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
 
-        # archive the post and its media objects
+        # set the post as archived
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
             self.user_manager.dynamo.transact_decrement_post_count(self.user_id),
         ]
         if album:
             transacts.append(album.dynamo.transact_remove_post(album.id))
-
-        media_items = []
-        for media_item in self.media_manager.dynamo.generate_by_post(self.id):
-            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.ARCHIVED))
-            media_items.append(media_item)
-
         self.dynamo.client.transact_write_items(transacts)
-
-        # update in-memory copy of dynamo state
         self.refresh_item(strongly_consistent=True)
-        self.item['mediaObjects'] = [
-            self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
-            for media_item in media_items
-        ]
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
@@ -393,23 +377,11 @@ class Post:
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
             self.user_manager.dynamo.transact_increment_post_count(self.user_id),
         ]
-
         if album:
             old_rank_count = album.item.get('rankCount')
             transacts.append(self.album_manager.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
-
-        media_items = list(self.media_manager.dynamo.generate_by_post(self.id))
-        for media_item in media_items:
-            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.UPLOADED))
-
         self.dynamo.client.transact_write_items(transacts)
-
-        # update in-memory copy of dynamo state
         self.refresh_item(strongly_consistent=True)
-        self.item['mediaObjects'] = [
-            self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
-            for media_item in media_items
-        ]
 
         # refresh the first story if needed
         if self.item.get('expiresAt'):
@@ -434,26 +406,14 @@ class Post:
                 album = self.album_manager.get_album(album_id)
 
         # mark the post and the media as in the deleting process
-        media_items = []
+        prev_post_status = self.status
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING)]
         if self.status == PostStatus.COMPLETED:
             transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.user_id))
             if album:
                 transacts.append(album.dynamo.transact_remove_post(album.id))
-
-        for media_item in self.media_manager.dynamo.generate_by_post(self.id):
-            transacts.append(self.media_manager.dynamo.transact_set_status(media_item, MediaStatus.DELETING))
-            media_items.append(media_item)
-
         self.dynamo.client.transact_write_items(transacts)
-
-        # update in-memory copy of dynamo state
-        prev_post_status = self.status
         self.refresh_item(strongly_consistent=True)
-        self.item['mediaObjects'] = [
-            self.media_manager.dynamo.get_media(media_item['mediaId'], strongly_consistent=True)
-            for media_item in media_items
-        ]
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
@@ -484,8 +444,8 @@ class Post:
 
         # do the deletes for real
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
-        for media_item in self.item['mediaObjects']:
-            self.dynamo.client.delete_item_by_pk(media_item)
+        if self.media:
+            self.dynamo.client.delete_item_by_pk(self.media.item)
         self.dynamo.delete_original_metadata(self.id)
         self.dynamo.delete_post(self.id)
 
@@ -497,8 +457,7 @@ class Post:
         if all(v is None for v in args):
             raise exceptions.PostException('Empty edit requested')
 
-        post_media = list(self.media_manager.dynamo.generate_by_post(self.id))
-        if text == '' and not post_media:
+        if self.type == PostType.TEXT_ONLY and text == '':
             raise exceptions.PostException('Cannot set text to null on text-only post')
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
@@ -507,7 +466,6 @@ class Post:
             likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
         )
-        self.item['mediaObjects'] = post_media
         return self
 
     def set_checksum(self):

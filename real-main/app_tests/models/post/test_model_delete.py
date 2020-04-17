@@ -8,7 +8,6 @@ from app.models.feed import FeedManager
 from app.models.flag import FlagManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
-from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus, PostType
 from app.models.trending import TrendingManager
 from app.models.view import ViewManager
@@ -67,7 +66,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # delete the post
     post.delete()
     assert post.item['postStatus'] == PostStatus.DELETING
-    assert post.item['mediaObjects'] == []
     post_item = post.item
 
     # check the post is no longer in the DB
@@ -104,7 +102,7 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
 
 def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post = post_with_media
-    media = post_manager.media_manager.init_media(post_with_media.item['mediaObjects'][0])
+    media = post.media
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
     assert post_manager.dynamo.get_post(post_with_media.id)
@@ -125,8 +123,6 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     # delete the post
     post.delete()
     assert post.item['postStatus'] == PostStatus.DELETING
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
 
     # check the db again
     post_item = post.item
@@ -159,7 +155,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
 
 def test_delete_completed_media_post(post_manager, completed_post_with_media, user_manager):
     post = completed_post_with_media
-    media = post_manager.media_manager.init_media(post.item['mediaObjects'][0])
+    media = post.media
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
@@ -178,8 +174,6 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     # delete the post
     post.delete()
     assert post.item['postStatus'] == PostStatus.DELETING
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
 
     # check the all the media got deleted
     for size in image_size.JPEGS:
@@ -244,8 +238,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     # delete the post
     post.delete()
     assert post.item['postStatus'] == PostStatus.DELETING
-    assert len(post.item['mediaObjects']) == 1
-    assert post.item['mediaObjects'][0]['mediaStatus'] == MediaStatus.DELETING
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == -1
 

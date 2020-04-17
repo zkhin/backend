@@ -4,7 +4,6 @@ from unittest.mock import Mock, call
 from PIL import Image
 import pytest
 
-from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostType
 from app.utils import image_size
 
@@ -21,15 +20,13 @@ def post(post_manager):
 
 @pytest.fixture
 def media_awaiting_upload(media_manager, post):
-    media_item = post.item['mediaObjects'][0]
-    yield media_manager.init_media(media_item)
+    yield post.media
 
 
 @pytest.fixture
 def media_awaiting_upload_heic(post_manager, media_manager):
     post = post_manager.add_post('uid', 'pid2', PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
-    media_item = post.item['mediaObjects'][0]
-    yield media_manager.init_media(media_item)
+    yield post.media
 
 
 def test_refresh_item(dynamo_client, media_awaiting_upload):
@@ -54,23 +51,8 @@ def test_refresh_item(dynamo_client, media_awaiting_upload):
     assert media.item[field] == value
 
 
-def test_process_upload_wrong_status(media_awaiting_upload):
-    media_awaiting_upload.item['mediaStatus'] = MediaStatus.UPLOADED
-    with pytest.raises(AssertionError, match='status'):
-        media_awaiting_upload.process_upload()
-
-    media_awaiting_upload.item['mediaStatus'] = MediaStatus.ARCHIVED
-    with pytest.raises(AssertionError, match='status'):
-        media_awaiting_upload.process_upload()
-
-    media_awaiting_upload.item['mediaStatus'] = MediaStatus.DELETING
-    with pytest.raises(AssertionError, match='status'):
-        media_awaiting_upload.process_upload()
-
-
 def test_process_upload_success(media_awaiting_upload):
     media = media_awaiting_upload
-    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
 
     # mock out a bunch of methods
     media.set_native_jpeg = Mock()
@@ -81,7 +63,6 @@ def test_process_upload_success(media_awaiting_upload):
 
     # do the call, should update our status
     media.process_upload()
-    assert media.item['mediaStatus'] == MediaStatus.UPLOADED
 
     # check the mocks were called correctly
     assert media.set_is_verified.mock_calls == [call()]
@@ -92,7 +73,6 @@ def test_process_upload_success(media_awaiting_upload):
 
 def test_process_upload_success_heic(media_awaiting_upload_heic):
     media = media_awaiting_upload_heic
-    assert media.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
 
     # mock out a bunch of methods
     media.set_native_jpeg = Mock()
@@ -103,23 +83,12 @@ def test_process_upload_success_heic(media_awaiting_upload_heic):
 
     # do the call, should update our status
     media.process_upload()
-    assert media.item['mediaStatus'] == MediaStatus.UPLOADED
 
     # check the mocks were called correctly
     assert media.set_is_verified.mock_calls == [call()]
     assert media.set_height_and_width.mock_calls == [call()]
     assert media.set_colors.mock_calls == [call()]
     assert media.set_thumbnails.mock_calls == [call()]
-
-
-def test_set_status(media_awaiting_upload):
-    assert media_awaiting_upload.item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-
-    media_awaiting_upload.set_status(MediaStatus.ERROR)
-    assert media_awaiting_upload.item['mediaStatus'] == MediaStatus.ERROR
-
-    media_awaiting_upload.refresh_item()
-    assert media_awaiting_upload.item['mediaStatus'] == MediaStatus.ERROR
 
 
 def test_set_is_verified_minimal(media_awaiting_upload, post):

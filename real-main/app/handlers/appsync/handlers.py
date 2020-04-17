@@ -487,36 +487,26 @@ def post_image(caller_user_id, arguments, source, context):
     if not post or post.status == PostStatus.DELETING:
         return None
 
-    if post.type == PostType.IMAGE:
-        allowed_statuses = [media_manager.enums.MediaStatus.UPLOADED, media_manager.enums.MediaStatus.ARCHIVED]
-        media_items = [
-            mi for mi in media_manager.dynamo.generate_by_post(source['postId'])
-            if mi['mediaStatus'] in allowed_statuses
-        ]
-        if media_items:
-            media = media_manager.init_media(media_items[0])
-            return {
-                'url': post.get_image_readonly_url(image_size.NATIVE),
-                'url64p': post.get_image_readonly_url(image_size.P64),
-                'url480p': post.get_image_readonly_url(image_size.P480),
-                'url1080p': post.get_image_readonly_url(image_size.P1080),
-                'url4k': post.get_image_readonly_url(image_size.K4),
-                'width': media.item.get('width'),
-                'height': media.item.get('height'),
-                'colors': media.item.get('colors'),
-            }
+    if post.type == PostType.TEXT_ONLY:
+        return None
 
-    if post.type == PostType.VIDEO:
-        if post.status in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
-            return {
-                'url': post.get_image_readonly_url(image_size.NATIVE),
-                'url64p': post.get_image_readonly_url(image_size.P64),
-                'url480p': post.get_image_readonly_url(image_size.P480),
-                'url1080p': post.get_image_readonly_url(image_size.P1080),
-                'url4k': post.get_image_readonly_url(image_size.K4),
-            }
+    if post.status not in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
+        return None
 
-    return None
+    image_item = {
+        'url': post.get_image_readonly_url(image_size.NATIVE),
+        'url64p': post.get_image_readonly_url(image_size.P64),
+        'url480p': post.get_image_readonly_url(image_size.P480),
+        'url1080p': post.get_image_readonly_url(image_size.P1080),
+        'url4k': post.get_image_readonly_url(image_size.K4),
+    }
+
+    if post.media:
+        image_item['width'] = post.media.item.get('width')
+        image_item['height'] = post.media.item.get('height')
+        image_item['colors'] = post.media.item.get('colors')
+
+    return image_item
 
 
 @routes.register('Post.imageUploadUrl')

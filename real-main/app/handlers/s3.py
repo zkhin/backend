@@ -64,18 +64,11 @@ def image_post_uploaded(event, context):
         logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.status}`, ignoring upload')
         return
 
-    # Retrieving the media in a way that works for both schema version 0 & 1.
-    media_items = list(media_manager.dynamo.generate_by_post(post_id))
-    media = media_manager.init_media(media_items[0]) if media_items else None
-    if not media:
-        logger.warning(f'Unable to find media for post `{post_id}`, ignoring upload')
-        return
-
     try:
-        post.process_image_upload(media=media)
-    except (post.exceptions.PostException, media.exceptions.MediaException) as err:
+        post.process_image_upload()
+    except (post_manager.exceptions.PostException, media_manager.exceptions.MediaException) as err:
         logger.warning(str(err))
-        post.error(media=media)
+        post.error()
 
 
 def video_post_uploaded(event, context):

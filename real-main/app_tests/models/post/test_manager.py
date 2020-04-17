@@ -6,7 +6,6 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.media.enums import MediaStatus
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
@@ -254,13 +253,10 @@ def test_add_image_post(post_manager, user):
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
 
-    media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
-    assert len(media_items) == 1
-    assert media_items[0]['mediaId'] == media_id
-    assert media_items[0]['mediaType'] == 'IMAGE'
-    assert media_items[0]['postedAt'] == now.to_iso8601_string()
-    assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-    assert 'expiresAt' not in media_items[0]
+    assert post.media.item['mediaId'] == media_id
+    assert post.media.item['mediaType'] == 'IMAGE'
+    assert post.media.item['postedAt'] == now.to_iso8601_string()
+    assert 'expiresAt' not in post.media.item
 
 
 def test_add_image_post_text_empty_string(post_manager, user):
@@ -303,13 +299,10 @@ def test_add_image_post_with_image_data(user, post_manager):
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
 
-    media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
-    assert len(media_items) == 1
-    assert media_items[0]['mediaId'] == media_id
-    assert media_items[0]['mediaType'] == 'IMAGE'
-    assert media_items[0]['postedAt'] == now.to_iso8601_string()
-    assert media_items[0]['mediaStatus'] == MediaStatus.UPLOADED
-    assert 'expiresAt' not in media_items[0]
+    assert post.media.item['mediaId'] == media_id
+    assert post.media.item['mediaType'] == 'IMAGE'
+    assert post.media.item['postedAt'] == now.to_iso8601_string()
+    assert 'expiresAt' not in post.media.item
 
 
 def test_add_image_post_with_options(post_manager, album, user):
@@ -350,14 +343,11 @@ def test_add_image_post_with_options(post_manager, album, user):
     post_original_metadata = post_manager.dynamo.get_original_metadata(post_id)
     assert post_original_metadata['originalMetadata'] == 'org-metadata'
 
-    media_items = list(post_manager.media_manager.dynamo.generate_by_post(post_id))
-    assert len(media_items) == 1
-    assert media_items[0]['mediaId'] == media_id
-    assert media_items[0]['mediaType'] == 'IMAGE'
-    assert media_items[0]['postedAt'] == now.to_iso8601_string()
-    assert media_items[0]['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-    assert media_items[0]['takenInReal'] is False
-    assert media_items[0]['originalFormat'] == 'org-format'
+    assert post.media.item['mediaId'] == media_id
+    assert post.media.item['mediaType'] == 'IMAGE'
+    assert post.media.item['postedAt'] == now.to_iso8601_string()
+    assert post.media.item['takenInReal'] is False
+    assert post.media.item['originalFormat'] == 'org-format'
 
 
 def test_delete_recently_expired_posts(post_manager, user, caplog):

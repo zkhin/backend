@@ -3,7 +3,6 @@ import pytest
 
 from app.models.post.enums import PostType
 from app.models.media.dynamo import MediaDynamo
-from app.models.media.enums import MediaStatus
 
 
 @pytest.fixture
@@ -17,7 +16,7 @@ def media_item(media_dynamo, post_manager):
 
     # add a post with media
     post = post_manager.add_post(user_id, 'pid', PostType.IMAGE)
-    yield post.item['mediaObjects'][0]
+    yield post.media.item
 
 
 @pytest.fixture
@@ -26,7 +25,7 @@ def media_item_2(media_dynamo, post_manager):
 
     # add a post with media
     post = post_manager.add_post(user_id, 'pid-2', PostType.IMAGE)
-    yield post.item['mediaObjects'][0]
+    yield post.media.item
 
 
 def test_media_does_not_exist(media_dynamo):
@@ -76,47 +75,6 @@ def test_media_set_height_and_width(media_dynamo, media_item):
     assert media_item['width'] == 2000
 
 
-def test_media_set_status(media_dynamo, media_item):
-    assert media_item['mediaStatus'] == MediaStatus.AWAITING_UPLOAD
-
-    transact = media_dynamo.transact_set_status(media_item, MediaStatus.UPLOADED)
-    media_dynamo.client.transact_write_items([transact])
-    assert media_dynamo.get_media(media_item['mediaId'])['mediaStatus'] == MediaStatus.UPLOADED
-
-    transact = media_dynamo.transact_set_status(media_item, MediaStatus.ERROR)
-    media_dynamo.client.transact_write_items([transact])
-    assert media_dynamo.get_media(media_item['mediaId'])['mediaStatus'] == MediaStatus.ERROR
-
-
-def test_generate_by_user(media_dynamo, post_manager):
-    user_id = 'uid'
-
-    # with no media
-    medias = list(media_dynamo.generate_by_user(user_id))
-    assert medias == []
-
-    # add a post with media
-    post_manager.add_post(user_id, 'pid', PostType.IMAGE, image_input={'mediaId': 'mid'})
-
-    # list media again, check correct
-    medias = list(media_dynamo.generate_by_user(user_id))
-    assert [m['mediaId'] for m in medias] == ['mid']
-
-    # add another post with media
-    post_manager.add_post(user_id, 'pid2', PostType.IMAGE, image_input={'mediaId': 'mid2'})
-
-    # list media again, check correct
-    medias = list(media_dynamo.generate_by_user(user_id))
-    assert [m['mediaId'] for m in medias] == ['mid', 'mid2']
-
-    # now a different user adds a post with
-    post_manager.add_post('otherid', 'pid3', PostType.IMAGE, image_input={'mediaId': 'mid3'})
-
-    # list media again, check hasn't changed
-    medias = list(media_dynamo.generate_by_user(user_id))
-    assert [m['mediaId'] for m in medias] == ['mid', 'mid2']
-
-
 def test_generate_by_post(media_dynamo, post_manager):
     user_id = 'uid'
 
@@ -133,26 +91,6 @@ def test_generate_by_post(media_dynamo, post_manager):
     # check post with one media
     medias = list(media_dynamo.generate_by_post(post_id_one_media))
     assert [m['mediaId'] for m in medias] == ['p1-mid']
-
-
-def test_generate_by_post_uploaded_or_not(media_dynamo, post_manager):
-    # add a post with one media
-    post_manager.add_post('uid', 'pid', PostType.IMAGE)
-
-    # check generation
-    media_items = list(media_dynamo.generate_by_post('pid'))
-    assert len(media_items) == 1
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=False))) == 1
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=True))) == 0
-
-    # mark one media uploaded
-    transact = media_dynamo.transact_set_status(media_items[0], MediaStatus.UPLOADED)
-    media_dynamo.client.transact_write_items([transact])
-
-    # check generation
-    assert len(list(media_dynamo.generate_by_post('pid'))) == 1
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=False))) == 0
-    assert len(list(media_dynamo.generate_by_post('pid', uploaded=True))) == 1
 
 
 def test_transact_add_media_sans_options(media_dynamo):
@@ -176,15 +114,12 @@ def test_transact_add_media_sans_options(media_dynamo):
         'partitionKey': 'media/mid',
         'sortKey': '-',
         'gsiA1PartitionKey': 'media/pid',
-        'gsiA1SortKey': MediaStatus.AWAITING_UPLOAD,
-        'gsiA2PartitionKey': 'media/pbuid',
-        'gsiA2SortKey': 'IMAGE/' + MediaStatus.AWAITING_UPLOAD + '/' + posted_at_str,
+        'gsiA1SortKey': '-',
         'userId': 'pbuid',
         'postId': 'pid',
         'postedAt': posted_at_str,
         'mediaId': 'mid',
         'mediaType': 'IMAGE',
-        'mediaStatus': MediaStatus.AWAITING_UPLOAD,
     }
 
 
@@ -192,13 +127,12 @@ def test_transact_add_media_with_options(media_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
     media_id = 'mid'
-    media_status = 'mstatus'
     posted_at = pendulum.now('utc')
 
     # add the media
     transacts = [media_dynamo.transact_add_media(
         user_id, post_id, media_id, posted_at=posted_at, taken_in_real=True, original_format='oformat',
-        media_status=media_status, image_format='HEIC'
+        image_format='HEIC'
     )]
     media_dynamo.client.transact_write_items(transacts)
 
@@ -210,15 +144,12 @@ def test_transact_add_media_with_options(media_dynamo):
         'partitionKey': 'media/mid',
         'sortKey': '-',
         'gsiA1PartitionKey': 'media/pid',
-        'gsiA1SortKey': media_status,
-        'gsiA2PartitionKey': 'media/pbuid',
-        'gsiA2SortKey': 'IMAGE/' + media_status + '/' + posted_at_str,
+        'gsiA1SortKey': '-',
         'userId': 'pbuid',
         'postId': 'pid',
         'postedAt': posted_at_str,
         'mediaId': 'mid',
         'mediaType': 'IMAGE',
-        'mediaStatus': media_status,
         'takenInReal': True,
         'originalFormat': 'oformat',
         'imageFormat': 'HEIC',
