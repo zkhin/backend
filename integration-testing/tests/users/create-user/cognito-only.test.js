@@ -62,7 +62,7 @@ describe('cognito-only user', () => {
     // try to pick random username, register it - should fail
     let variables = {username: cognito.generateUsername()}
     await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
-      .rejects.toThrow('ClientError')
+      .rejects.toThrow(/ClientError: No entry found in cognito user pool /)
   })
 
   describe('success cases', () => {
@@ -157,10 +157,10 @@ describe('cognito-only user', () => {
 
       // try to create the user again, should fail with ClientError
       await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
-        .rejects.toThrow('ClientError')
+        .rejects.toThrow(/ClientError: .* already exists/)
       variables = {username: cognito.generateUsername()}
       await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
-        .rejects.toThrow('ClientError')
+        .rejects.toThrow(/ClientError: .* already exists/)
     })
   })
 })

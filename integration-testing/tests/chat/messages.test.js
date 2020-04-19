@@ -214,7 +214,8 @@ test('Cant add a message to a chat we are not in', async () => {
 
   // verify the rando can't add a message to our chat
   variables = {chatId, messageId: uuidv4(), text: 'lore'}
-  await expect(randoClient.mutate({mutation: mutations.addChatMessage, variables})).rejects.toThrow('ClientError')
+  await expect(randoClient.mutate({mutation: mutations.addChatMessage, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // check the chat and verify the rando's message didn't get saved
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
@@ -294,8 +295,10 @@ test('Edit chat message', async () => {
 
   // verify neither rando nor us can edit the chat message
   variables = {messageId, text: 'lore new'}
-  await expect(randoClient.mutate({mutation: mutations.editChatMessage, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.editChatMessage, variables})).rejects.toThrow('ClientError')
+  await expect(randoClient.mutate({mutation: mutations.editChatMessage, variables}))
+    .rejects.toThrow(/ClientError: User .* cannot edit message /)
+  await expect(ourClient.mutate({mutation: mutations.editChatMessage, variables}))
+    .rejects.toThrow(/ClientError: User .* cannot edit message /)
 
   // we report a view of the message
   variables = {messageIds: [messageId]}
@@ -374,8 +377,10 @@ test('Delete chat message', async () => {
 
   // verify neither rando nor us can delete the chat message
   variables = {messageId: uuidv4()}
-  await expect(randoClient.mutate({mutation: mutations.deleteChatMessage, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables})).rejects.toThrow('ClientError')
+  await expect(randoClient.mutate({mutation: mutations.deleteChatMessage, variables}))
+    .rejects.toThrow(/ClientError: User .* cannot delete message /)
+  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables}))
+    .rejects.toThrow(/ClientError: User .* cannot delete message /)
 
   // check the message hasn't changed
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})

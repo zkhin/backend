@@ -34,14 +34,17 @@ test('Cannot like/dislike posts with likes disabled', async () => {
 
   // verify we can't like the post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Likes are disabled for this post /)
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Likes are disabled for this post /)
 
   // verify they can't like the post
   variables = {postId}
-  await expect(theirClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Likes are disabled for this post /)
   await expect(theirClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow('ClientError')
+    .rejects.toThrow(/ClientError: Likes are disabled for this post /)
 
   // verify no likes show up on the post
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -87,8 +90,10 @@ test('Likes preservered through period with posts likes disabled', async () => {
 
   // verify we can't like the post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Likes are disabled for this post /)
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Likes are disabled for this post /)
 
   // verify no likes show up on the post
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -139,14 +144,17 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
 
   // verify we can't like their post
   variables = {postId: theirPostId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Caller .* has disabled likes/)
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Caller .* has disabled likes/)
 
   // verify they can't like our post
   variables = {postId: ourPostId}
-  await expect(theirClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
+    .rejects.toThrow(/ClientError: Owner of this post .* has disabled likes/)
   await expect(theirClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow('ClientError')
+    .rejects.toThrow(/ClientError: Owner of this post .* has disabled likes/)
 
   // verify we *can't* see like counts on our own post
   variables = {postId: ourPostId}

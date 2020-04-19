@@ -46,7 +46,7 @@ test('Verify cannot add post with more than one image', async () => {
   const postId = uuidv4()
   const variables = {postId, mediaId1: uuidv4(), mediaId2: uuidv4()}
   await expect(client.mutate({mutation: mutations.addPostTwoMedia, variables}))
-    .rejects.toThrow('ClientError')
+    .rejects.toThrow(/ClientError: .* add post with more than one media/)
 
   // verify the post did not get created
   let resp = await client.query({query: queries.post, variables: {postId}})

@@ -24,9 +24,12 @@ test('setting invalid username fails', async () => {
   const usernameBadChar = 'a!a'
 
   const mutation = mutations.setUsername
-  await expect(client.mutate({mutation, variables: {username: usernameTooShort}})).rejects.toThrow('ClientError')
-  await expect(client.mutate({mutation, variables: {username: usernameTooLong}})).rejects.toThrow('ClientError')
-  await expect(client.mutate({mutation, variables: {username: usernameBadChar}})).rejects.toThrow('ClientError')
+  await expect(client.mutate({mutation, variables: {username: usernameTooShort}}))
+    .rejects.toThrow(/ClientError: Username .* does not validate/)
+  await expect(client.mutate({mutation, variables: {username: usernameTooLong}}))
+    .rejects.toThrow(/ClientError: Username .* does not validate/)
+  await expect(client.mutate({mutation, variables: {username: usernameBadChar}}))
+    .rejects.toThrow(/ClientError: Username .* does not validate/)
 })
 
 
@@ -56,10 +59,8 @@ test('collision on changing username fails, login username is not changed', asyn
   await theirClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}})
 
   // try and fail setting user1's username to user2's
-  await expect(ourClient.mutate({
-    mutation: mutations.setUsername,
-    variables: {username: theirUsername},
-  })).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}}))
+    .rejects.toThrow(/ClientError: Username .* already taken /)
 
   // verify user1 can still login with their original username
   let AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}

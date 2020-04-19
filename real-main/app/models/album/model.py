@@ -48,7 +48,7 @@ class Album:
 
     def update(self, name=None, description=None):
         if name == '':
-            raise exceptions.AlbumException('All posts must have names')
+            raise exceptions.AlbumException('All albums must have names')
         self.item = self.dynamo.set(self.id, name=name, description=description)
         return self
 

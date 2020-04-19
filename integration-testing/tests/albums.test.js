@@ -132,7 +132,8 @@ test('Edit an album', async () => {
 
   // verify we can't null out the album name
   let variables = {albumId, name: ''}
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables}))
+    .rejects.toThrow(/ClientError: All albums must have names/)
 })
 
 
@@ -148,8 +149,10 @@ test('Cant create two albums with same id', async () => {
 
   // verify neither us nor them can add another album with same id
   let variables = {albumId, name: 'r'}
-  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow('ClientError')
-  await expect(theirClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables}))
+    .rejects.toThrow(/ClientError: Unable to add album /)
+  await expect(theirClient.mutate({mutation: mutations.addAlbum, variables}))
+    .rejects.toThrow(/ClientError: Unable to add album /)
 })
 
 
@@ -165,8 +168,10 @@ test('Cant edit or delete somebody elses album', async () => {
 
   // verify they can't edit it nor delete it
   let variables = {albumId, name: 'name'}
-  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow('ClientError')
-  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables}))
+    .rejects.toThrow(/ClientError: Caller .* does not own Album /)
+  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables}))
+    .rejects.toThrow(/ClientError: Caller .* does not own Album /)
 
   // verify it's still there
   resp = await theirClient.query({query: queries.album, variables: {albumId}})
@@ -177,7 +182,6 @@ test('Cant edit or delete somebody elses album', async () => {
 
 test('Empty album edit raises error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -186,8 +190,8 @@ test('Empty album edit raises error', async () => {
   expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
 
   // verify calling edit without specifying anything to edit is an error
-  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables: {albumId}}))
-    .rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId}}))
+    .rejects.toThrow(/ClientError: Called without any arguments/)
 })
 
 
@@ -197,8 +201,10 @@ test('Cant edit, delete an album that doesnt exist', async () => {
 
   // cant edit or delete the non-existing album
   let variables = {albumId, name: 'name'}
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables}))
+    .rejects.toThrow(/ClientError: Album .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables}))
+    .rejects.toThrow(/ClientError: Album .* does not exist/)
 })
 
 

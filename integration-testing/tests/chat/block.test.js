@@ -90,11 +90,13 @@ test('Cannot open a direct chat with a user that blocks us or that we block', as
   // check they cannot open up a direct chat with us
   const chatVars = {chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
   let variables = {userId: ourUserId, ...chatVars}
-  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables}))
+    .rejects.toThrow(/ClientError: .* has been blocked by /)
 
   // check we cannot open up a direct chat with them
   variables = {userId: theirUserId, ...chatVars}
-  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
+    .rejects.toThrow(/ClientError: .* has blocked /)
 })
 
 

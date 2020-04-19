@@ -81,7 +81,7 @@ test('Non-follower cannot flag post of private user', async () => {
 
   // they try to flag that post
   await expect(theirClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
-    .rejects.toThrow('ClientError')
+    .rejects.toThrow(/ClientError: .* does not have access to post/)
 })
 
 
@@ -90,7 +90,8 @@ test('Cannot flag post that does not exist', async () => {
 
   // try to flag a non-existent post
   const postId = uuidv4()
-  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: Post .* does not exist/)
 })
 
 
@@ -139,7 +140,8 @@ test('Cannot double-flag a post', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // try to flag it a second time
-  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: .* has already been flagged /)
 })
 
 
@@ -159,7 +161,8 @@ test('Cannot flag post of user that has blocked us', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot flag their post
-  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: .* has been blocked by owner /)
 
   // they unblock us
   resp = await theirClient.mutate({mutation: mutations.unblockUser, variables: {userId: ourUserId}})
@@ -188,7 +191,8 @@ test('Cannot flag post of user we have blocked', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot flag their post
-  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: .* has blocked owner /)
 
   // we unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})

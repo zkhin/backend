@@ -31,9 +31,12 @@ test('Mutation.createCognitoOnlyUser with invalid username fails', async () => {
 
   // verify we can't create a user for ourselves with an invalid username
   const mutation = mutations.createCognitoOnlyUser
-  await expect(client.mutate({mutation, variables: {username: unameTooShort}})).rejects.toThrow('ClientError')
-  await expect(client.mutate({mutation, variables: {username: unameTooLong}})).rejects.toThrow('ClientError')
-  await expect(client.mutate({ mutation, variables: {username: unameBadChar}})).rejects.toThrow('ClientError')
+  await expect(client.mutate({mutation, variables: {username: unameTooShort}}))
+    .rejects.toThrow(/ClientError: Username .* does not validate/)
+  await expect(client.mutate({mutation, variables: {username: unameTooLong}}))
+    .rejects.toThrow(/ClientError: Username .* does not validate/)
+  await expect(client.mutate({ mutation, variables: {username: unameBadChar}}))
+    .rejects.toThrow(/ClientError: Username .* does not validate/)
 })
 
 
@@ -78,10 +81,8 @@ test('Username collision causes Mutation.createCognitoOnlyUser to fail', async (
   expect(resp['data']['resetUser']['userId']).toBe(ourUserId)
 
   // try to createCognitoOnlyUser for us with their username, should fail
-  await expect(ourClient.mutate({
-    mutation: mutations.createCognitoOnlyUser,
-    variables: {username: theirUsername}
-  })).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username: theirUsername}}))
+    .rejects.toThrow(/ClientError: Username .* already taken /)
 
   // verify they can still login with their ousername
   const AuthParameters = {USERNAME: theirUsername.toLowerCase(), PASSWORD: theirPassword}

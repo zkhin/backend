@@ -95,16 +95,6 @@ test('Add post with expiration', async () => {
 })
 
 
-test('Cant add video post to album (yet)', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  const postId = uuidv4()
-  let variables = {postId, mediaId: uuidv4(), postType: 'VIDEO', albumId: uuidv4()}
-  await expect(ourClient.mutate({mutation: mutations.addPostMediaUploads, variables}))
-    .rejects.toThrow('ClientError')
-})
-
-
 test('Add image post with image data directly included', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 

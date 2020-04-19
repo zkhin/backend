@@ -142,11 +142,13 @@ test('Cannot create a direct chat if one already exists', async () => {
 
   // verify we cannot open up another direct chat with them
   variables = {userId: theirUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
+    .rejects.toThrow(/ClientError: Chat already exists /)
 
   // verify they cannot open up another direct chat with us
   variables = {userId: ourUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables}))
+    .rejects.toThrow(/ClientError: Chat already exists /)
 })
 
 
@@ -155,7 +157,8 @@ test('Cannot open direct chat with self', async () => {
 
   const chatId = uuidv4()
   let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
+    .rejects.toThrow(/ClientError: .* cannot open direct chat with themselves/)
 })
 
 

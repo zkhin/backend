@@ -848,6 +848,9 @@ def edit_album(caller_user_id, arguments, source, context):
     name = arguments.get('name')
     description = arguments.get('description')
 
+    if name is None and description is None:
+        raise ClientException('Called without any arguments... probably not what you intended?')
+
     album = album_manager.get_album(album_id)
     if not album:
         raise ClientException(f'Album `{album_id}` does not exist')

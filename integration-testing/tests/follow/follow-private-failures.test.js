@@ -84,10 +84,8 @@ test('Cant request to follow a user that has blocked us', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot request to follow them
-  await expect(ourClient.mutate({
-    mutation: mutations.followUser,
-    variables: {userId: theirUserId},
-  })).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: .* has been blocked by /)
 
   // they unblock us
   resp = await theirClient.mutate({mutation: mutations.unblockUser, variables: {userId: ourUserId}})
@@ -110,8 +108,8 @@ test('Cant request to follow a user that we have blocked', async () => {
   expect(resp['errors']).toBeUndefined()
 
   // verify we cannot request to follow them
-  let [mutation, variables] = [mutations.followUser, {userId: theirUserId}]
-  await expect(ourClient.mutate({mutation, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: .* has blocked /)
 
   // we unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})

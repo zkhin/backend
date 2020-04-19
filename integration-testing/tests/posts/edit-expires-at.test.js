@@ -28,7 +28,8 @@ test('Cant edit Post.expiresAt for post that do not exist', async () => {
     postId: uuidv4(),
     expiresAt: moment().add(moment.duration('P1D')).toISOString(),
   }
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
+    .rejects.toThrow(/ClientError: Post .* does not exist/)
 })
 
 
@@ -45,7 +46,8 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
 
   // we try to edit its expiresAt
   variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
+    .rejects.toThrow(/ClientError: Cannot edit another /)
 })
 
 
@@ -61,7 +63,8 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
 
   // we try to edit its expiresAt to a date in the past
   variables = {postId, expiresAt: moment().subtract(moment.duration('PT1M')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
+    .rejects.toThrow(/ClientError: Cannot .* in the past/)
 })
 
 

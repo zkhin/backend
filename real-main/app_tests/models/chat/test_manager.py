@@ -27,7 +27,7 @@ def test_cant_add_direct_chat_blocked(chat_manager, block_manager, user1, user2)
     with pytest.raises(ChatException, match='has blocked'):
         chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
 
-    with pytest.raises(ChatException, match='has blocked'):
+    with pytest.raises(ChatException, match='has been blocked'):
         chat_manager.add_direct_chat(chat_id, user2.id, user1.id)
 
 

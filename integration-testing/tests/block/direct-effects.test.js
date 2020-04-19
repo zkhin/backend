@@ -68,8 +68,8 @@ test('User.blockedUsers, User.blockedStatus respond correctly to blocking and un
 test('Unblocking a user we have not blocked is an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
-  let opts = {mutation: mutations.unblockUser, variables: {userId: theirUserId}}
-  await expect(ourClient.mutate(opts)).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: .* has not blocked /)
 })
 
 
@@ -83,16 +83,18 @@ test('Double blocking a user is an error', async () => {
   expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
 
   // try to block them again
-  let variables = {userId: theirUserId}
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: .* has already blocked /)
 })
 
 
 test('Trying to block or unblock yourself is an error', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   let variables = {userId: ourUserId}
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables})).rejects.toThrow('ClientError')
-  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.blockUser, variables}))
+    .rejects.toThrow(/ClientError: Cannot block yourself/)
+  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables}))
+    .rejects.toThrow(/ClientError: Cannot unblock yourself/)
 })
 
 

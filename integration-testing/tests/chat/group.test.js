@@ -394,7 +394,8 @@ test('Cannot add someone to a chat that DNE, that we are not in or that is a a d
 
   // check we can't add other1 to a chat that DNE
   let variables = {chatId: uuidv4(), userIds: [other1UserId]}
-  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // other1 creates a group chat with only themselves in it
   const chatId1 = uuidv4()
@@ -406,7 +407,8 @@ test('Cannot add someone to a chat that DNE, that we are not in or that is a a d
 
   // check we cannot add other2 to that group chat
   variables = {chatId: chatId1, userIds: [other2UserId]}
-  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // we create a direct chat with other2
   const chatId2 = uuidv4()
@@ -418,7 +420,8 @@ test('Cannot add someone to a chat that DNE, that we are not in or that is a a d
 
   // check we cannot add other1 to that direct chat
   variables = {chatId: chatId2, userIds: [other1UserId]}
-  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables}))
+    .rejects.toThrow(/ClientError: Cannot add users to non-GROUP chat /)
 })
 
 
@@ -428,7 +431,8 @@ test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat
 
   // check we cannot leave a chat that DNE
   let variables = {chatId: uuidv4()}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // they create a group chat with only themselves in it
   const chatId1 = uuidv4()
@@ -440,7 +444,8 @@ test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat
 
   // check we cannot leave from that group chat we are not in
   variables = {chatId: chatId1}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // we create a direct chat with them
   const chatId2 = uuidv4()
@@ -452,7 +457,8 @@ test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat
 
   // check we cannot leave that direct chat
   variables = {chatId: chatId2}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables}))
+    .rejects.toThrow(/ClientError: Cannot leave non-GROUP chat /)
 })
 
 
@@ -462,7 +468,8 @@ test('Cannnot edit name of chat that DNE, that we are not in, or that is a direc
 
   // check we cannot edit a chat that DNE
   let variables = {chatId: uuidv4(), name: 'new name'}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // they create a group chat with only themselves in it
   const chatId1 = uuidv4()
@@ -474,7 +481,8 @@ test('Cannnot edit name of chat that DNE, that we are not in, or that is a direc
 
   // check we cannot edit the name of their group chat
   variables = {chatId: chatId1, name: 'c name'}
-  await expect(ourClient.mutate({mutation: mutations.editGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editGroupChat, variables}))
+    .rejects.toThrow(/ClientError: .* is not a member/)
 
   // we create a direct chat with them
   const chatId2 = uuidv4()
@@ -486,5 +494,6 @@ test('Cannnot edit name of chat that DNE, that we are not in, or that is a direc
 
   // check we cannot edit the name of that direct chat
   variables = {chatId: chatId2, name: 'c name'}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.editGroupChat, variables}))
+    .rejects.toThrow(/ClientError: Cannot edit non-GROUP chat /)
 })

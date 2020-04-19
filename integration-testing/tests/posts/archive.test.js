@@ -81,7 +81,7 @@ test('Cant archive a post in PENDING status', async () => {
 
   // verify we can't archive that post
   await expect(ourClient.mutate({mutation: mutations.archivePost, variables: {postId}}))
-    .rejects.toThrow('ClientError')
+    .rejects.toThrow(/ClientError: Cannot archive post with status /)
 })
 
 

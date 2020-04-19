@@ -94,7 +94,8 @@ describe('Read and write properties our our own profile', () => {
 
 test('setUserDetails without any arguments returns an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails}))
+    .rejects.toThrow(/ClientError: Called without any arguments/)
 })
 
 

@@ -53,8 +53,8 @@ test('Chat message triggers cannot be called from external graphql client', asyn
 
   // verify niether of us can call the trigger method, even with a valid chat & message id
   let mutation = mutations.triggerChatMessageNotification
-  await expect(ourClient.mutate({mutation, variables})).rejects.toThrow('ClientError')
-  await expect(theirClient.mutate({mutation, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation, variables})).rejects.toThrow(/ClientError: Access denied/)
+  await expect(theirClient.mutate({mutation, variables})).rejects.toThrow(/ClientError: Access denied/)
 })
 
 

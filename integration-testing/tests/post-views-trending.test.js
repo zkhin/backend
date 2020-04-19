@@ -240,11 +240,13 @@ test('Report post views error conditions', async () => {
 
   // must report at least one view
   let variables = {postIds: []}
-  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables}))
+    .rejects.toThrow(/ClientError: A minimum of 1 post id /)
 
   // can't report more than 100 views
   variables = {postIds: Array(101).fill().map(() => uuidv4())}
-  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables}))
+    .rejects.toThrow(/ClientError: A max of 100 post ids /)
 })
 
 

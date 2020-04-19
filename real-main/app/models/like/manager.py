@@ -53,10 +53,10 @@ class LikeManager:
 
         required_status = self.post_manager.enums.PostStatus.COMPLETED
         if post.status != required_status:
-            raise exceptions.LikeException(f'Can only like posts with {required_status} status')
+            raise exceptions.LikeException(f'Cannot like posts with status `{post.status}`')
 
         if post.item.get('likesDisabled'):
-            raise exceptions.LikeException(f'Likes are disabled this post `{post.id}`')
+            raise exceptions.LikeException(f'Likes are disabled for this post `{post.id}`')
 
         if posted_by_user.item.get('likesDisabled'):
             raise exceptions.LikeException(f'Owner of this post (user `{posted_by_user.id}` has disabled likes')

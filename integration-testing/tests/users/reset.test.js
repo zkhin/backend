@@ -39,14 +39,13 @@ test("resetUser really releases the user's username", async () => {
   expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
 
   // verify someone else cannot claim our username or variants of
-  await expect(theirClient.mutate({
-    mutation: mutations.setUsername,
-    variables: {username: ourUsername}
-  })).rejects.toThrow('ClientError')
-  await expect(theirClient.mutate({
-    mutation: mutations.setUsername,
-    variables: {username: ourUsername.toUpperCase()}
-  })).rejects.toThrow('ClientError')
+  let mutation = mutations.setUsername
+  await expect(theirClient.mutate({mutation, variables: {username: ourUsername}}))
+    .rejects.toThrow(/ClientError: .* already taken /)
+  await expect(theirClient.mutate({mutation, variables: {username: ourUsername.toLowerCase()}}))
+    .rejects.toThrow(/ClientError: .* already taken /)
+  await expect(theirClient.mutate({mutation, variables: {username: ourUsername.toUpperCase()}}))
+    .rejects.toThrow(/ClientError: .* already taken /)
 
   // reset our account
   resp = await ourClient.mutate({mutation: mutations.resetUser})

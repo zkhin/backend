@@ -160,16 +160,6 @@ test('Add pending video post maximal', async () => {
 })
 
 
-test('Cant add video post to album (yet)', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-
-  const postId = uuidv4()
-  let variables = {postId, postType: 'VIDEO', albumId: uuidv4()}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow('ClientError')
-})
-
-
 test('Add image post with image data directly included', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 

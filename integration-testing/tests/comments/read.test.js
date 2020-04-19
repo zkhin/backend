@@ -80,10 +80,12 @@ test('Cant report no comment views, or more than 100', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   let variables = {commentIds: []}
-  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables}))
+    .rejects.toThrow(/ClientError: A minimum of 1 comment id /)
 
   variables = {commentIds: Array(101).fill().map(() => uuidv4())}
-  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables})).rejects.toThrow('ClientError')
+  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables}))
+    .rejects.toThrow(/ClientError: A max of 100 comment ids /)
 })
 
 
