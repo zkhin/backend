@@ -145,7 +145,8 @@ class User:
                 raise exceptions.UserException(f'Post `{post_id}` does not have status `{PostStatus.COMPLETED}`')
             if post.user_id != self.id:
                 raise exceptions.UserException(f'Post `{post_id}` does not belong to this user')
-            if post.item.get('isVerified') is not True:
+            # TODO: remove the reference to post.media here after isVerified is migrated from media to post
+            if post.item.get('isVerified', post.media.item.get('isVerified') if post.media else None) is not True:
                 raise exceptions.UserException(f'Post `{post_id}` is not verified')
 
             # add the new s3 objects
