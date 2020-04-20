@@ -4,6 +4,8 @@ import math
 
 import pendulum
 
+from app.models import post
+
 from . import dynamo, enums, exceptions
 
 logger = logging.getLogger()
@@ -20,6 +22,7 @@ class TrendingManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['trending'] = self
+        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
@@ -55,6 +58,15 @@ class TrendingManager:
         cutoff = cutoff or pendulum.now('utc')
         for item in self.dynamo.generate_trendings(item_type, max_last_indexed_at=cutoff):
             item_id = item['partitionKey'][9:]
+            item_type = item['gsiK3PartitionKey'][9:]
+
+            # immediately remove posts once they hit 24 hrs old
+            if (item_type == enums.TrendingItemType.POST):
+                post = self.post_manager.get_post(item_id)
+                if (cutoff - post.posted_at) > pendulum.duration(hours=24):
+                    self.dynamo.delete_trending(item_id)
+                    continue
+
             old_score = item['gsiK3SortKey']
             last_indexed_at = pendulum.parse(item['gsiA1SortKey'])
             pending_view_count = item['pendingViewCount']

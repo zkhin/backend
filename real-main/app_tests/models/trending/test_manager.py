@@ -1,9 +1,18 @@
 import math
+import uuid
 
 import pendulum
 import pytest
 
+from app.models.post.enums import PostType
 from app.models.trending.enums import TrendingItemType
+
+
+@pytest.fixture
+def user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
 def test_record_view_count_new_trending(trending_manager):
@@ -86,20 +95,21 @@ def test_calculate_new_score_pending_views(trending_manager):
     assert float(new_score) == pytest.approx(15)
 
 
-def test_reindex_all_operates_on_correct_items(trending_manager):
+def test_reindex_all_operates_on_correct_items(trending_manager, user, post_manager):
     now = pendulum.now('utc')
 
     # add one user item now
-    user_id = 'user-id'
-    trending_manager.record_view_count(TrendingItemType.USER, user_id, view_count=42, now=now)
+    trending_manager.record_view_count(TrendingItemType.USER, user.id, view_count=42, now=now)
 
     # add one post item in the future a second
     post_id_1 = 'post-id-1'
+    post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t')
     viewed_at = now + pendulum.duration(seconds=1)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=9, now=viewed_at)
 
     # add one post item a day ago, give it some pending views
     post_id_2 = 'post-id-2'
+    post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t')
     post_at_2 = now - pendulum.duration(days=1)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=10, now=post_at_2)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=5)
@@ -107,7 +117,7 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
     # pull originals from db, save them
     org_user_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.USER))
     assert len(org_user_items) == 1
-    assert org_user_items[0]['partitionKey'] == f'trending/{user_id}'
+    assert org_user_items[0]['partitionKey'] == f'trending/{user.id}'
 
     org_post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
     assert len(org_post_items) == 2
@@ -138,16 +148,18 @@ def test_reindex_all_operates_on_correct_items(trending_manager):
     assert list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST)) == new_post_items
 
 
-def test_reindex_deletes_as_needed(trending_manager):
+def test_reindex_deletes_as_needed_from_score_decay(trending_manager, post_manager, user):
     now = pendulum.now('utc')
 
-    # add one post item just over a day ago
+    # add one post item viewed just over a day ago
     post_id_1 = 'post-id-over'
+    post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t')
     viewed_at = now - pendulum.duration(hours=25)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=1, now=viewed_at)
 
-    # add another post item just under a day ago
+    # add another post item viewed just under a day ago
     post_id_2 = 'post-id-under'
+    post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t')
     viewed_at = now - pendulum.duration(hours=23)
     trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=1, now=viewed_at)
 
@@ -159,6 +171,34 @@ def test_reindex_deletes_as_needed(trending_manager):
 
     # reindex
     trending_manager.reindex(TrendingItemType.POST, cutoff=now)
+
+    # check that one post item has disappeared, and the other has not
+    post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
+    assert len(post_items) == 1
+    assert post_items[0]['partitionKey'] == f'trending/{post_id_2}'
+
+
+def test_reindex_deletes_posts_older_than_24_hours(trending_manager, user, post_manager):
+    # add one post just over a day ago
+    posted_at_1 = pendulum.now('utc') - pendulum.duration(hours=25)
+    post_id_1 = 'post-id-over'
+    post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t', now=posted_at_1)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=10)
+
+    # add nother post just under a day ago
+    post_id_2 = 'post-id-under'
+    posted_at_2 = pendulum.now('utc') - pendulum.duration(hours=23)
+    post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t', now=posted_at_2)
+    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=10)
+
+    # check we can see those post items
+    post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
+    assert len(post_items) == 2
+    assert post_items[0]['partitionKey'] == f'trending/{post_id_1}'
+    assert post_items[1]['partitionKey'] == f'trending/{post_id_2}'
+
+    # reindex
+    trending_manager.reindex(TrendingItemType.POST)
 
     # check that one post item has disappeared, and the other has not
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
