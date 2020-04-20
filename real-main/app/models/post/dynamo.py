@@ -333,6 +333,17 @@ class PostDynamo:
         }
         return self.client.update_item(query_kwargs)
 
+    def set_is_verified(self, post_id, is_verified):
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'post/{post_id}',
+                'sortKey': '-',
+            },
+            'UpdateExpression': 'SET isVerified = :iv',
+            'ExpressionAttributeValues': {':iv': is_verified},
+        }
+        return self.client.update_item(query_kwargs)
+
     def get_first_with_checksum(self, checksum):
         query_kwargs = {
             'KeyConditionExpression': Key('gsiK2PartitionKey').eq(f'postChecksum/{checksum}'),

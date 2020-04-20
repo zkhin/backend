@@ -30,7 +30,6 @@ class MediaManager:
         "Use the provided media item to initialize a new Media instance"
         kwargs = {
             'cloudfront_client': self.clients.get('cloudfront'),
-            'post_verification_client': self.clients.get('post_verification'),
             's3_uploads_client': self.clients.get('s3_uploads'),
         }
         return Media(media_item, self.dynamo, **kwargs)

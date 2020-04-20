@@ -52,6 +52,7 @@ class PostManager:
             'post_dynamo': getattr(self, 'dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
+            'post_verification_client': self.clients.get('post_verification'),
             's3_uploads_client': self.clients.get('s3_uploads'),
             'album_manager': self.album_manager,
             'comment_manager': self.comment_manager,

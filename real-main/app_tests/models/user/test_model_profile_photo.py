@@ -200,6 +200,6 @@ def test_update_photo_errors(user, pending_post, text_post, another_users_post, 
         user.update_photo(another_users_post.id)
 
     # post hasn't passed verification
-    uploaded_post.media.dynamo.set_is_verified(uploaded_post.media.id, False)
+    uploaded_post.dynamo.set_is_verified(uploaded_post.id, False)
     with pytest.raises(UserException, match='is not verified'):
         user.update_photo(uploaded_post.id)

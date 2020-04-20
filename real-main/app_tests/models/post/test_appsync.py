@@ -26,7 +26,7 @@ def completed_post(post_manager, user, image_data_b64):
 
 def test_trigger_notification_completed(post_appsync, user, completed_post, appsync_client):
     # check starting state
-    assert completed_post.media.item['isVerified'] is True
+    assert completed_post.item['isVerified'] is True
     appsync_client.reset_mock()
 
     # trigger, check client was called correctly
@@ -45,7 +45,7 @@ def test_trigger_notification_completed(post_appsync, user, completed_post, apps
 
     # clear client mock state and mark the post failed
     appsync_client.reset_mock()
-    completed_post.media.item['isVerified'] = False
+    completed_post.item['isVerified'] = False
 
     # trigger, check client was called correctly
     post_appsync.trigger_notification(PostNotificationType.COMPLETED, completed_post)

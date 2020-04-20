@@ -380,7 +380,7 @@ def test_record_view_post_failed_verif_doesnt_trend(view_manager, post_manager, 
     # real user adds two identical image posts, mark one as failed verificaiton
     post1 = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
     post2 = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
-    post2.media.dynamo.set_is_verified(post2.media.id, False)
+    post2.dynamo.set_is_verified(post2.id, False)
 
     # check there is no trending for either post or the user
     assert trending_manager.dynamo.get_trending(post1.id) is None

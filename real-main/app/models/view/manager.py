@@ -122,8 +122,8 @@ class ViewManager:
             if (viewed_at - post.posted_at > pendulum.duration(hours=24)):
                 return
 
-            # don't add image posts that failed verification
-            if post.media and not post.media.item.get('isVerified'):
+            # don't add posts that failed verification
+            if post.item.get('isVerified') is False:
                 return
 
             # don't add real user or their posts to trending indexes

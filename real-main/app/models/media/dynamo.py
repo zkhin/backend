@@ -44,17 +44,6 @@ class MediaDynamo:
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 
-    def set_is_verified(self, media_id, is_verified):
-        query_kwargs = {
-            'Key': {
-                'partitionKey': f'media/{media_id}',
-                'sortKey': '-',
-            },
-            'UpdateExpression': 'SET isVerified = :iv',
-            'ExpressionAttributeValues': {':iv': is_verified},
-        }
-        return self.client.update_item(query_kwargs)
-
     def set_height_and_width(self, media_id, height, width):
         query_kwargs = {
             'Key': {

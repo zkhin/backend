@@ -50,17 +50,6 @@ def test_media_exists(media_dynamo, post_manager):
     assert resp['mediaId'] == media_id
 
 
-def test_media_set_is_verified(media_dynamo, media_item):
-    media_id = media_item['mediaId']
-    assert 'isVerified' not in media_item
-
-    media_item = media_dynamo.set_is_verified(media_id, True)
-    assert media_item['isVerified'] is True
-
-    media_item = media_dynamo.set_is_verified(media_id, False)
-    assert media_item['isVerified'] is False
-
-
 def test_media_set_height_and_width(media_dynamo, media_item):
     media_id = media_item['mediaId']
     assert 'height' not in media_item

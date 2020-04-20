@@ -3,6 +3,13 @@
   #return (true)
 #end
 
+#if (! $util.isNull($ctx.source.isVerified))
+  #return ($ctx.source.isVerified)
+#end
+
+## TODO: Once migration has been applied to move isVerified
+##       from media item to post, this query can be removed
+##       and this template changed to a NoneDataSource
 {
   "version": "2018-05-29",
   "operation": "Query",

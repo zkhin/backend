@@ -27,6 +27,6 @@ class PostAppSync:
             'type': notification_type,
             'postId': post.id,
             'postStatus': post.status,
-            'isVerified': post.media.item.get('isVerified') if post.media else None,
+            'isVerified': post.item.get('isVerified'),
         }
         self.client.send(mutation, {'input': input_obj})

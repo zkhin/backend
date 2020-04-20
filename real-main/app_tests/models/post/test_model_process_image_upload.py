@@ -51,11 +51,11 @@ def test_process_image_upload_success(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
     # mock out a bunch of methods
-    pending_post.media.set_is_verified = Mock()
     pending_post.media.set_height_and_width = Mock()
     pending_post.media.set_colors = Mock()
     pending_post.media.set_thumbnails = Mock()
     pending_post.is_native_image_jpeg = Mock(return_value=True)
+    pending_post.set_is_verified = Mock()
     pending_post.set_checksum = Mock()
     pending_post.complete = Mock()
 
@@ -63,10 +63,10 @@ def test_process_image_upload_success(pending_post):
     pending_post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert pending_post.media.set_is_verified.mock_calls == [call()]
     assert pending_post.media.set_height_and_width.mock_calls == [call()]
     assert pending_post.media.set_colors.mock_calls == [call()]
     assert pending_post.media.set_thumbnails.mock_calls == [call()]
+    assert pending_post.set_is_verified.mock_calls == [call()]
     assert pending_post.set_checksum.mock_calls == [call()]
     assert pending_post.complete.mock_calls == [call(now=now)]
 

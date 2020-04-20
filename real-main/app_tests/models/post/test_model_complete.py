@@ -31,10 +31,10 @@ def post_with_media(post_manager, user):
 
 
 @pytest.fixture
-def post_set_as_user_photo(post_manager, user, media_manager):
+def post_set_as_user_photo(post_manager, user):
     post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, set_as_user_photo=True)
     post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum2')
-    media_manager.dynamo.set_is_verified(post.media.id, True)
+    post.dynamo.set_is_verified(post.id, True)
     yield post
 
 

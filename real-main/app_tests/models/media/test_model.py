@@ -56,7 +56,6 @@ def test_process_upload_success(media_awaiting_upload):
 
     # mock out a bunch of methods
     media.set_native_jpeg = Mock()
-    media.set_is_verified = Mock()
     media.set_height_and_width = Mock()
     media.set_colors = Mock()
     media.set_thumbnails = Mock()
@@ -65,7 +64,6 @@ def test_process_upload_success(media_awaiting_upload):
     media.process_upload()
 
     # check the mocks were called correctly
-    assert media.set_is_verified.mock_calls == [call()]
     assert media.set_height_and_width.mock_calls == [call()]
     assert media.set_colors.mock_calls == [call()]
     assert media.set_thumbnails.mock_calls == [call()]
@@ -76,7 +74,6 @@ def test_process_upload_success_heic(media_awaiting_upload_heic):
 
     # mock out a bunch of methods
     media.set_native_jpeg = Mock()
-    media.set_is_verified = Mock()
     media.set_height_and_width = Mock()
     media.set_colors = Mock()
     media.set_thumbnails = Mock()
@@ -85,48 +82,9 @@ def test_process_upload_success_heic(media_awaiting_upload_heic):
     media.process_upload()
 
     # check the mocks were called correctly
-    assert media.set_is_verified.mock_calls == [call()]
     assert media.set_height_and_width.mock_calls == [call()]
     assert media.set_colors.mock_calls == [call()]
     assert media.set_thumbnails.mock_calls == [call()]
-
-
-def test_set_is_verified_minimal(media_awaiting_upload, post):
-    # check initial state and configure mock
-    media = media_awaiting_upload
-    assert 'isVerified' not in media.item
-    media.post_verification_client = Mock(**{'verify_image.return_value': False})
-
-    # do the call, check final state
-    media.set_is_verified()
-    assert media.item['isVerified'] is False
-    media.refresh_item()
-    assert media.item['isVerified'] is False
-
-    # check mock called correctly
-    assert media.post_verification_client.mock_calls == [
-        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=None, original_format=None),
-    ]
-
-
-def test_set_is_verified_maximal(media_awaiting_upload, post):
-    # check initial state and configure mock
-    media = media_awaiting_upload
-    assert 'isVerified' not in media.item
-    media.post_verification_client = Mock(**{'verify_image.return_value': True})
-    media.item['takenInReal'] = False
-    media.item['originalFormat'] = 'oo'
-
-    # do the call, check final state
-    media.set_is_verified()
-    assert media.item['isVerified'] is True
-    media.refresh_item()
-    assert media.item['isVerified'] is True
-
-    # check mock called correctly
-    assert media.post_verification_client.mock_calls == [
-        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=False, original_format='oo'),
-    ]
 
 
 def test_set_native_jpeg(media_awaiting_upload, s3_uploads_client):

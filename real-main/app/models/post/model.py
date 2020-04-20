@@ -23,9 +23,9 @@ class Post:
     FlagStatus = FlagStatus
 
     def __init__(self, item, post_dynamo=None, post_appsync=None, cloudfront_client=None, mediaconvert_client=None,
-                 s3_uploads_client=None, feed_manager=None, like_manager=None, media_manager=None, view_manager=None,
-                 user_manager=None, comment_manager=None, flag_manager=None, album_manager=None,
-                 followed_first_story_manager=None, trending_manager=None, post_manager=None):
+                 post_verification_client=None, s3_uploads_client=None, feed_manager=None, like_manager=None,
+                 media_manager=None, view_manager=None, user_manager=None, comment_manager=None, flag_manager=None,
+                 album_manager=None, followed_first_story_manager=None, trending_manager=None, post_manager=None):
         if post_dynamo:
             self.dynamo = post_dynamo
         if post_appsync:
@@ -35,6 +35,8 @@ class Post:
             self.cloudfront_client = cloudfront_client
         if mediaconvert_client:
             self.mediaconvert_client = mediaconvert_client
+        if post_verification_client:
+            self.post_verification_client = post_verification_client
         if s3_uploads_client:
             self.s3_uploads_client = s3_uploads_client
 
@@ -223,6 +225,7 @@ class Post:
             self.upload_native_image_data_base64(image_data)
 
         self.media.process_upload()
+        self.set_is_verified()
         self.set_checksum()
         self.complete(now=now)
 
@@ -472,6 +475,17 @@ class Post:
         path = self.get_image_path(image_size.NATIVE)
         checksum = self.s3_uploads_client.get_object_checksum(path)
         self.item = self.dynamo.set_checksum(self.id, self.item['postedAt'], checksum)
+        return self
+
+    def set_is_verified(self):
+        assert self.media
+        path = self.get_image_path(image_size.NATIVE)
+        image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
+        is_verified = self.post_verification_client.verify_image(
+            image_url, taken_in_real=self.media.item.get('takenInReal'),
+            original_format=self.media.item.get('originalFormat'),
+        )
+        self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
 
     def set_new_comment_activity(self, new_value):

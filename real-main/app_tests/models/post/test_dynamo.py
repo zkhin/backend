@@ -393,6 +393,31 @@ def test_get_first_with_checksum(post_dynamo):
     assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
 
 
+def test_post_set_is_verified(post_dynamo):
+    post_id = 'pid'
+
+    # can't set for post that doesnt exist
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.set_is_verified(post_id, True)
+
+    # create the post
+    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
+    post_dynamo.client.transact_write_items(transacts)
+
+    # verify starting state
+    assert 'isVerified' not in post_dynamo.get_post(post_id)
+
+    # change the value, verify
+    post_item = post_dynamo.set_is_verified(post_id, True)
+    assert post_item['isVerified'] is True
+    assert post_dynamo.get_post(post_id)['isVerified'] is True
+
+    # change the value, verify
+    post_item = post_dynamo.set_is_verified(post_id, False)
+    assert post_item['isVerified'] is False
+    assert post_dynamo.get_post(post_id)['isVerified'] is False
+
+
 def test_transact_increment_decrement_flag_count(post_dynamo):
     post_id = 'pid'
 

@@ -145,7 +145,7 @@ class User:
                 raise exceptions.UserException(f'Post `{post_id}` does not have status `{PostStatus.COMPLETED}`')
             if post.user_id != self.id:
                 raise exceptions.UserException(f'Post `{post_id}` does not belong to this user')
-            if post.media.item.get('isVerified') is not True:
+            if post.item.get('isVerified') is not True:
                 raise exceptions.UserException(f'Post `{post_id}` is not verified')
 
             # add the new s3 objects

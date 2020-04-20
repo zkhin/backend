@@ -18,14 +18,11 @@ class Media:
 
     jpeg_content_type = 'image/jpeg'
 
-    def __init__(self, item, media_dynamo, cloudfront_client=None, post_verification_client=None,
-                 s3_uploads_client=None):
+    def __init__(self, item, media_dynamo, cloudfront_client=None, s3_uploads_client=None):
         self.dynamo = media_dynamo
 
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client
-        if post_verification_client:
-            self.post_verification_client = post_verification_client
         if s3_uploads_client:
             self.s3_uploads_client = s3_uploads_client
 
@@ -55,18 +52,8 @@ class Media:
         except Exception as err:
             raise exceptions.MediaException(f'Unable to generate thumbnails for media `{self.id}`: {err}')
 
-        self.set_is_verified()
         self.set_height_and_width()
         self.set_colors()
-        return self
-
-    def set_is_verified(self):
-        path = self.get_s3_path(image_size.NATIVE)
-        image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
-        is_verified = self.post_verification_client.verify_image(
-            image_url, taken_in_real=self.item.get('takenInReal'), original_format=self.item.get('originalFormat'),
-        )
-        self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
 
     def set_height_and_width(self):
