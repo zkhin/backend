@@ -1,5 +1,3 @@
-import base64
-from os import path
 from unittest.mock import call
 import uuid
 
@@ -9,14 +7,6 @@ from app.models.post.enums import PostType
 from app.utils import image_size
 
 from app.models.user.exceptions import UserException
-
-grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
-
-
-@pytest.fixture
-def grant_data_b64():
-    with open(grant_path, 'rb') as fh:
-        yield base64.b64encode(fh.read())
 
 
 @pytest.fixture

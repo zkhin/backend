@@ -1,6 +1,5 @@
 import base64
 from decimal import Decimal
-from os import path
 from io import BytesIO
 from unittest.mock import call, Mock
 import uuid
@@ -12,8 +11,6 @@ from app.models.post.enums import PostType, PostStatus
 from app.models.post.model import Post
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.utils import image_size
-
-grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
@@ -42,13 +39,13 @@ def pending_image_post(post_manager, user2):
 
 
 @pytest.fixture
-def processing_video_post(pending_video_post, s3_uploads_client):
+def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
     post = pending_video_post
     transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
     post.dynamo.client.transact_write_items(transacts)
     post.refresh_item()
     image_path = post.get_image_path(image_size.NATIVE)
-    s3_uploads_client.put_object(image_path, open(grant_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(image_path, grant_data, 'image/jpeg')
     yield post
 
 

@@ -1,11 +1,7 @@
-from os import path
-
 import pytest
 
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
-
-grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
@@ -20,13 +16,13 @@ def pending_video_post(post_manager, user):
 
 
 @pytest.fixture
-def processing_video_post(pending_video_post, s3_uploads_client):
+def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
     post = pending_video_post
     transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
     post.dynamo.client.transact_write_items(transacts)
     post.refresh_item()
     poster_path = post.get_poster_path()
-    s3_uploads_client.put_object(poster_path, open(grant_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(poster_path, grant_data, 'image/jpeg')
     yield post
 
 

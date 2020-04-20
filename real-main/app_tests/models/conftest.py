@@ -25,6 +25,7 @@ from app.models.view import ViewManager
 
 from app_tests.dynamodb.table_schema import table_schema
 
+grant_path = path.join(path.dirname(__file__), '..', 'fixtures', 'grant.jpg')
 tiny_path = path.join(path.dirname(__file__), '..', 'fixtures', 'tiny.jpg')
 
 
@@ -37,6 +38,17 @@ def image_data():
 @pytest.fixture
 def image_data_b64(image_data):
     yield base64.b64encode(image_data)
+
+
+@pytest.fixture
+def grant_data():
+    with open(grant_path, 'rb') as fh:
+        yield fh.read()
+
+
+@pytest.fixture
+def grant_data_b64(grant_data):
+    yield base64.b64encode(grant_data)
 
 
 @pytest.fixture

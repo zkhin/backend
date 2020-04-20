@@ -113,14 +113,22 @@ class ViewManager:
                 self.post_manager.dynamo.increment_viewed_by_count(post.id)
                 self.user_manager.dynamo.increment_post_viewed_by_count(post.user_id)
 
-            # if this is an original post, the trending indexes. If not, then record a view on the original
+            # Points towards trending indexes are attributed to the original post
             original_post_id = post.item.get('originalPostId', post.id)
-            if original_post_id == post.id:
-                # only add this view to the trending indexes if the post is less than a 24 hrs old
-                if (viewed_at - post.posted_at < pendulum.duration(hours=24)):
-                    # don't add real user or their posts to trending indexes
-                    if post.user_id != self.real_user_id:
-                        self.trending_manager.record_view_count(TrendingItemType.POST, post.id, now=viewed_at)
-                        self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, now=viewed_at)
-            else:
-                self.record_view('post', original_post_id, user_id, view_count, viewed_at)
+            if original_post_id != post.id:
+                return self.record_view('post', original_post_id, user_id, view_count, viewed_at)
+
+            # don't add the trending indexes if the post is more than a 24 hrs old
+            if (viewed_at - post.posted_at > pendulum.duration(hours=24)):
+                return
+
+            # don't add image posts that failed verification
+            if post.media and not post.media.item.get('isVerified'):
+                return
+
+            # don't add real user or their posts to trending indexes
+            if post.user_id == self.real_user_id:
+                return
+
+            self.trending_manager.record_view_count(TrendingItemType.POST, post.id, now=viewed_at)
+            self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, now=viewed_at)

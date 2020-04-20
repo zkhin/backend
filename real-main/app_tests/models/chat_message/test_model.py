@@ -1,7 +1,5 @@
-import base64
 import json
 from unittest.mock import Mock, call
-import os
 
 import pendulum
 import pytest
@@ -9,14 +7,6 @@ import pytest
 from app.models.block.enums import BlockStatus
 from app.models.post.enums import PostType
 from app.models.view.enums import ViewedStatus
-
-grant_path = os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
-
-
-@pytest.fixture
-def grant_data_b64():
-    with open(grant_path, 'rb') as fh:
-        yield base64.b64encode(fh.read())
 
 
 @pytest.fixture

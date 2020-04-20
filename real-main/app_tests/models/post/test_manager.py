@@ -1,6 +1,3 @@
-import base64
-from io import BytesIO
-from os import path
 import uuid
 
 import pendulum
@@ -8,8 +5,6 @@ import pytest
 
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
-
-grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 
 
 @pytest.fixture
@@ -148,7 +143,7 @@ def test_add_text_only_post_to_album(post_manager, user, album):
     assert album.item['rankCount'] == 1
 
 
-def test_video_post_to_album(post_manager, user, album, s3_uploads_client):
+def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant_data):
     post_id = 'pid'
 
     # add the post, check all looks good
@@ -166,7 +161,7 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client):
     post.dynamo.client.transact_write_items(transacts)
     post.refresh_item()
     image_path = post.get_image_path(image_size.NATIVE)
-    s3_uploads_client.put_object(image_path, open(grant_path, 'rb'), 'image/jpeg')
+    s3_uploads_client.put_object(image_path, grant_data, 'image/jpeg')
     post.complete()
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3SortKey'] == 0   # album rank
@@ -275,16 +270,11 @@ def test_add_image_post_text_empty_string(post_manager, user):
     assert 'textTags' not in post.item
 
 
-def test_add_image_post_with_image_data(user, post_manager):
+def test_add_image_post_with_image_data(user, post_manager, grant_data_b64):
     post_id = 'pid'
     now = pendulum.now('utc')
     media_id = 'mid'
-
-    image_data_b64 = BytesIO()
-    with open(grant_path, 'rb') as fh:
-        base64.encode(fh, image_data_b64)
-    image_data_b64.seek(0)
-    image_input = {'mediaId': media_id, 'imageData': image_data_b64.read()}
+    image_input = {'mediaId': media_id, 'imageData': grant_data_b64}
 
     # add the post (& media)
     post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input)

@@ -371,3 +371,27 @@ def test_record_view_real_user_doesnt_trend(view_manager, post_manager, user_man
     assert user_manager.dynamo.get_user(post.user_id).get('postViewedByCount', 0) == 1
     assert trending_manager.dynamo.get_trending(post.id) is None
     assert trending_manager.dynamo.get_trending(post.user_id) is None
+
+
+def test_record_view_post_failed_verif_doesnt_trend(view_manager, post_manager, trending_manager, image_data_b64,
+                                                    user, grant_data_b64):
+    viewed_by_user_id = 'vuid'
+
+    # real user adds two identical image posts, mark one as failed verificaiton
+    post1 = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post2 = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    post2.media.dynamo.set_is_verified(post2.media.id, False)
+
+    # check there is no trending for either post or the user
+    assert trending_manager.dynamo.get_trending(post1.id) is None
+    assert trending_manager.dynamo.get_trending(post2.id) is None
+    assert trending_manager.dynamo.get_trending(user.id) is None
+
+    # record a view on each post
+    view_manager.record_view('post', post1.id, viewed_by_user_id, 1, pendulum.now('utc'))
+    view_manager.record_view('post', post2.id, viewed_by_user_id, 1, pendulum.now('utc'))
+
+    # check the verified post is trending but the non-verified isn't
+    assert trending_manager.dynamo.get_trending(post1.id).get('gsiK3SortKey', 0) == 1
+    assert trending_manager.dynamo.get_trending(post2.id) is None
+    assert trending_manager.dynamo.get_trending(user.id).get('gsiK3SortKey', 0) == 1
