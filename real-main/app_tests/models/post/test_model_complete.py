@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import call, Mock
 import uuid
 
@@ -226,7 +227,23 @@ def test_complete_with_set_as_user_photo(post_manager, user, post_with_media, po
     post_with_media.complete()
     assert post_with_media.user.update_photo.mock_calls == []
 
-    # complete the post without use_as_user_photo, verify user photo change api called
+    # complete the post with use_as_user_photo, verify user photo change api called
     post_set_as_user_photo.user.update_photo = Mock()
     post_set_as_user_photo.complete()
     assert post_set_as_user_photo.user.update_photo.mock_calls == [call(post_set_as_user_photo.id)]
+
+
+def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, post_set_as_user_photo, caplog):
+    # set up mocks
+    post_set_as_user_photo.user.update_photo = Mock(side_effect=user.exceptions.UserException('nope'))
+    post_set_as_user_photo.appsync.trigger_notification = Mock()
+
+    # complete the post with use_as_user_photo with an exception throw from setting the photo, and
+    # verify the rest of the post completion completes correctly
+    with caplog.at_level(logging.WARNING):
+        post_set_as_user_photo.complete()
+    assert len(caplog.records) == 1
+    assert 'Unable to set user photo' in str(caplog.records[0])
+
+    assert post_set_as_user_photo.user.update_photo.mock_calls == [call(post_set_as_user_photo.id)]
+    assert len(post_set_as_user_photo.appsync.trigger_notification.mock_calls) == 1
