@@ -4,7 +4,6 @@ import logging
 import pendulum
 
 from app.models import comment, chat_message, post, trending, user
-from app.models.trending.enums import TrendingItemType
 
 from . import enums, exceptions
 from .dynamo import ViewDynamo
@@ -32,20 +31,6 @@ class ViewManager:
         if 'dynamo' in clients:
             self.dynamo = ViewDynamo(clients['dynamo'])
 
-        self.inst_getters = {
-            'chat_message': self.chat_message_manager.get_chat_message,
-            'comment': self.comment_manager.get_comment,
-            'post': self.post_manager.get_post,
-        }
-
-    @property
-    def real_user_id(self):
-        "The userId of the 'real' user, if they exist"
-        if not hasattr(self, '_real_user_id'):
-            real_user = self.user_manager.get_user_by_username('real')
-            self._real_user_id = real_user.id if real_user else None
-        return self._real_user_id
-
     def get_viewed_status(self, inst, user_id):
         if inst.user_id == user_id:  # author of the message
             return enums.ViewedStatus.VIEWED
@@ -59,33 +44,77 @@ class ViewManager:
         self.dynamo.delete_views(view_item_generator)
 
     def record_views(self, item_type, item_ids, user_id, viewed_at=None):
+        if item_type == 'chat_message':
+            recorder = self.record_view_for_chat_message
+        elif item_type == 'comment':
+            recorder = self.record_view_for_comment
+        elif item_type == 'post':
+            recorder = self.record_view_for_post
+        else:
+            raise AssertionError(f'Unknown item type `{item_type}`')
+
         viewed_at = viewed_at or pendulum.now('utc')
         grouped_item_ids = dict(Counter(item_ids))
         for item_id, view_count in grouped_item_ids.items():
-            self.record_view(item_type, item_id, user_id, view_count, viewed_at)
+            recorder(item_id, user_id, view_count, viewed_at)
 
-    def record_view(self, item_type, item_id, user_id, view_count, viewed_at):
-        # verify we can record views on this item
-        inst_getter = self.inst_getters.get(item_type)
-        if not inst_getter:
-            raise Exception(f'Unrecognized item type `{item_type}`')
-
-        inst = inst_getter(item_id)
-        if not inst:
-            logger.warning(f'Cannot record views by user `{user_id}` on DNE {item_type} `{item_id}`')
+    def record_view_for_comment(self, comment_id, user_id, view_count, viewed_at):
+        comment = self.comment_manager.get_comment(comment_id)
+        if not comment:
+            logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE comment `{comment_id}`')
             return
 
-        if item_type == 'post':
-            if inst.status != inst.enums.PostStatus.COMPLETED:
-                logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{item_id}`')
-                return
-
-        # don't count views on things user owns
-        if inst.user_id == user_id:
+        # don't count views of user's own comments
+        if comment.user_id == user_id:
             return
 
+        self.write_view_to_dynamo(comment.item['partitionKey'], user_id, view_count, viewed_at)
+
+        post = self.post_manager.get_post(comment.post_id)
+        if user_id == post.user_id:
+            post.set_new_comment_activity(False)
+
+    def record_view_for_chat_message(self, message_id, user_id, view_count, viewed_at):
+        message = self.chat_message_manager.get_chat_message(message_id)
+        if not message:
+            logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE message `{message_id}`')
+            return
+
+        # don't count views of user's own chat messages
+        if message.user_id == user_id:
+            return
+
+        self.write_view_to_dynamo(message.item['partitionKey'], user_id, view_count, viewed_at)
+
+    def record_view_for_post(self, post_id, user_id, view_count, viewed_at):
+        post = self.post_manager.get_post(post_id)
+        if not post:
+            logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE post `{post_id}`')
+            return
+
+        if post.status != post.enums.PostStatus.COMPLETED:
+            logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{post_id}`')
+            return
+
+        # only count views of other user's posts
+        if post.user_id != user_id:
+            is_new_view = self.write_view_to_dynamo(post.item['partitionKey'], user_id, view_count, viewed_at)
+
+            # record the viewedBy on the post and user
+            if is_new_view:
+                self.post_manager.dynamo.increment_viewed_by_count(post.id)
+                self.user_manager.dynamo.increment_post_viewed_by_count(post.user_id)
+
+            # If this is a non-original post, count this like a view of the original post as well
+            original_post_id = post.item.get('originalPostId', post.id)
+            if original_post_id != post.id:
+                self.record_view_for_post(original_post_id, user_id, view_count, viewed_at)
+
+        # let the treinding indexes know about this view
+        self.trending_manager.increment_scores_for_post(post, now=viewed_at)
+
+    def write_view_to_dynamo(self, partition_key, user_id, view_count, viewed_at):
         is_new_view = False
-        partition_key = inst.item['partitionKey']
         view_item = self.dynamo.get_view(partition_key, user_id)
         if view_item:
             self.dynamo.increment_view(partition_key, user_id, view_count, viewed_at)
@@ -97,39 +126,4 @@ class ViewManager:
                 self.dynamo.increment_view(partition_key, user_id, view_count, viewed_at)
             else:
                 is_new_view = True
-
-        # special-case stuff for comments
-        if item_type == 'comment':
-            post = self.post_manager.get_post(inst.post_id)
-            if user_id == post.user_id:
-                post.set_new_comment_activity(False)
-
-        # special-case stuff for posts
-        if item_type == 'post':
-            post = inst
-
-            # record the viewedBy on the post and user
-            if is_new_view:
-                self.post_manager.dynamo.increment_viewed_by_count(post.id)
-                self.user_manager.dynamo.increment_post_viewed_by_count(post.user_id)
-
-            # Points towards trending indexes are attributed to the original post
-            original_post_id = post.item.get('originalPostId', post.id)
-            if original_post_id != post.id:
-                return self.record_view('post', original_post_id, user_id, view_count, viewed_at)
-
-            # don't add the trending indexes if the post is more than a 24 hrs old
-            if (viewed_at - post.posted_at > pendulum.duration(hours=24)):
-                return
-
-            # don't add posts that failed verification
-            # TODO: remove the reference to post.media here after isVerified is migrated from media to post
-            if post.item.get('isVerified', post.media.item.get('isVerified') if post.media else None) is False:
-                return
-
-            # don't add real user or their posts to trending indexes
-            if post.user_id == self.real_user_id:
-                return
-
-            self.trending_manager.record_view_count(TrendingItemType.POST, post.id, now=viewed_at)
-            self.trending_manager.record_view_count(TrendingItemType.USER, post.user_id, now=viewed_at)
+        return is_new_view

@@ -4,7 +4,7 @@ import math
 
 import pendulum
 
-from app.models import post
+from app.models import post, user
 
 from . import dynamo, enums, exceptions
 
@@ -16,42 +16,75 @@ class TrendingManager:
     enums = enums
     exceptions = exceptions
 
-    average_lifetime = pendulum.duration(days=1)
-    min_score_cutoff = 0.37  # ~ 1/e
+    lifetime_days = 1
+    lifetime = pendulum.duration(days=lifetime_days)
+    min_score_cutoff = lifetime_days / math.e
 
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['trending'] = self
         self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = dynamo.TrendingDynamo(clients['dynamo'])
 
-    def record_view_count(self, item_type, item_id, view_count=1, now=None):
+    @property
+    def real_user_id(self):
+        "The userId of the 'real' user, if they exist"
+        if not hasattr(self, '_real_user_id'):
+            real_user = self.user_manager.get_user_by_username('real')
+            self._real_user_id = real_user.id if real_user else None
+        return self._real_user_id
+
+    def increment_scores_for_post(self, post, now=None):
+        now = now or pendulum.now('utc')
+
+        # Non-original posts don't contribute to trending
+        if post.id != post.item.get('originalPostId', post.id):
+            return
+
+        # don't add the trending indexes if the post is more than a 24 hrs old
+        if (now - post.posted_at > pendulum.duration(hours=24)):
+            return
+
+        # don't add posts that failed verification
+        # TODO: remove the reference to post.media here after isVerified is migrated from media to post
+        if post.item.get('isVerified', post.media.item.get('isVerified') if post.media else None) is False:
+            return
+
+        # don't add real user or their posts to trending indexes
+        if post.user_id == self.real_user_id:
+            return
+
+        self.increment_score(enums.TrendingItemType.POST, post.id, now=now)
+        self.increment_score(enums.TrendingItemType.USER, post.user_id, now=now)
+
+    def increment_score(self, item_type, item_id, amount=1, now=None):
         now = now or pendulum.now('utc')
         # first try to add it to an existing item
         try:
-            return self.dynamo.increment_trending_pending_view_count(item_id, view_count, now=now)
+            return self.dynamo.increment_trending_pending_view_count(item_id, amount, now=now)
         except self.exceptions.TrendingException:
             pass
 
         # try to add a new item
         try:
-            return self.dynamo.create_trending(item_type, item_id, view_count, now=now)
+            return self.dynamo.create_trending(item_type, item_id, amount, now=now)
         except self.exceptions.TrendingAlreadyExists:
             pass
 
         # try to add it to an existing item with the same 'now' as this view
         # this happens when a user views multiple posts by the same user for the first time
         try:
-            return self.dynamo.increment_trending_score(item_id, view_count, now=now)
+            return self.dynamo.increment_trending_score(item_id, amount, now=now)
         except self.exceptions.TrendingException:
             pass
 
         # we should get here in the case of a race condition which we lost.
         # as such, we should now be able to add it to an existing item
-        return self.dynamo.increment_trending_pending_view_count(item_id, view_count, now=now)
+        return self.dynamo.increment_trending_pending_view_count(item_id, amount, now=now)
 
     def reindex(self, item_type, cutoff=None):
         "Do a pass over all trending items of `item_type` and update their score"
@@ -80,5 +113,5 @@ class TrendingManager:
 
     def calculate_new_score(self, old_score, last_indexed_at, pending_view_count, now):
         "Calcualte the new score for the item, as a Decimal, because that's what dynamodb can consume"
-        coeff = Decimal(math.exp((now - last_indexed_at) / self.average_lifetime) ** -1)
+        coeff = Decimal(math.exp((now - last_indexed_at) / self.lifetime) ** -1)
         return old_score * coeff + pending_view_count

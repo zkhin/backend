@@ -15,48 +15,55 @@ def user(user_manager, cognito_client):
     yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
 
 
-def test_record_view_count_new_trending(trending_manager):
+@pytest.fixture
+def real_user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, 'real')
+
+
+def test_increment_score_new_trending(trending_manager):
     item_type = trending_manager.enums.TrendingItemType.USER
     item_id = 'user-id'
-    view_count = 4
+    amount = 4
 
-    trending_item = trending_manager.record_view_count(item_type, item_id, view_count=view_count)
+    trending_item = trending_manager.increment_score(item_type, item_id, amount=amount)
     assert trending_item['pendingViewCount'] == 0
-    assert trending_item['gsiK3SortKey'] == view_count
+    assert trending_item['gsiK3SortKey'] == amount
 
 
-def test_record_view_count_existing_trending(trending_manager):
+def test_increment_score_existing_trending(trending_manager):
     item_type = trending_manager.enums.TrendingItemType.POST
     item_id = 'user-id'
-    org_view_count = 4
-    update_view_count = 5
+    org_amount = 4
+    update_amount = 5
 
     # create a trending item
-    org_trending_item = trending_manager.record_view_count(item_type, item_id, view_count=org_view_count)
+    org_trending_item = trending_manager.increment_score(item_type, item_id, amount=org_amount)
     assert org_trending_item['pendingViewCount'] == 0
 
     # update the trending item
-    updated_trending_item = trending_manager.record_view_count(item_type, item_id, view_count=update_view_count)
-    assert updated_trending_item['pendingViewCount'] == update_view_count
+    updated_trending_item = trending_manager.increment_score(item_type, item_id, amount=update_amount)
+    assert updated_trending_item['pendingViewCount'] == update_amount
     assert updated_trending_item['gsiK3SortKey'] == org_trending_item['gsiK3SortKey']
     assert updated_trending_item['gsiA1SortKey'] == org_trending_item['gsiA1SortKey']
 
 
-def test_record_view_count_multiple_records_with_same_timestamp(trending_manager):
+def test_increment_score_multiple_records_with_same_timestamp(trending_manager):
     item_type = trending_manager.enums.TrendingItemType.POST
     item_id = 'user-id'
-    org_view_count = 4
-    update_view_count = 5
+    org_amount = 4
+    update_amount = 5
     now = pendulum.now('utc')
 
     # create a trending item
-    item = trending_manager.record_view_count(item_type, item_id, view_count=org_view_count, now=now)
+    item = trending_manager.increment_score(item_type, item_id, amount=org_amount, now=now)
     assert item['pendingViewCount'] == 0
 
     # update the trending item
-    item = trending_manager.record_view_count(item_type, item_id, view_count=update_view_count, now=now)
+    item = trending_manager.increment_score(item_type, item_id, amount=update_amount, now=now)
     assert item['pendingViewCount'] == 0
-    assert item['gsiK3SortKey'] == org_view_count + update_view_count
+    assert item['gsiK3SortKey'] == org_amount + update_amount
 
 
 def test_calculate_new_score_decay(trending_manager):
@@ -99,20 +106,20 @@ def test_reindex_all_operates_on_correct_items(trending_manager, user, post_mana
     now = pendulum.now('utc')
 
     # add one user item now
-    trending_manager.record_view_count(TrendingItemType.USER, user.id, view_count=42, now=now)
+    trending_manager.increment_score(TrendingItemType.USER, user.id, amount=42, now=now)
 
     # add one post item in the future a second
     post_id_1 = 'post-id-1'
     post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t')
     viewed_at = now + pendulum.duration(seconds=1)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=9, now=viewed_at)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_1, amount=9, now=viewed_at)
 
     # add one post item a day ago, give it some pending views
     post_id_2 = 'post-id-2'
     post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t')
     post_at_2 = now - pendulum.duration(days=1)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=10, now=post_at_2)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=5)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=10, now=post_at_2)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=5)
 
     # pull originals from db, save them
     org_user_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.USER))
@@ -155,13 +162,13 @@ def test_reindex_deletes_as_needed_from_score_decay(trending_manager, post_manag
     post_id_1 = 'post-id-over'
     post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t')
     viewed_at = now - pendulum.duration(hours=25)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=1, now=viewed_at)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_1, amount=1, now=viewed_at)
 
     # add another post item viewed just under a day ago
     post_id_2 = 'post-id-under'
     post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t')
     viewed_at = now - pendulum.duration(hours=23)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=1, now=viewed_at)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=1, now=viewed_at)
 
     # check we can see those post items
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
@@ -183,13 +190,13 @@ def test_reindex_deletes_posts_older_than_24_hours(trending_manager, user, post_
     posted_at_1 = pendulum.now('utc') - pendulum.duration(hours=25)
     post_id_1 = 'post-id-over'
     post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t', now=posted_at_1)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_1, view_count=10)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_1, amount=10)
 
     # add nother post just under a day ago
     post_id_2 = 'post-id-under'
     posted_at_2 = pendulum.now('utc') - pendulum.duration(hours=23)
     post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t', now=posted_at_2)
-    trending_manager.record_view_count(TrendingItemType.POST, post_id_2, view_count=10)
+    trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=10)
 
     # check we can see those post items
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
@@ -204,3 +211,35 @@ def test_reindex_deletes_posts_older_than_24_hours(trending_manager, user, post_
     post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
     assert len(post_items) == 1
     assert post_items[0]['partitionKey'] == f'trending/{post_id_2}'
+
+
+def test_increment_scores_for_post(trending_manager, user, post_manager, real_user):
+    # check initial state
+    assert list(trending_manager.dynamo.generate_trendings('post')) == []
+    assert list(trending_manager.dynamo.generate_trendings('user')) == []
+
+    # verify no trending for non-original posts
+    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post.item['originalPostId'] = 'pid-other'
+    trending_manager.increment_scores_for_post(post)
+    assert list(trending_manager.dynamo.generate_trendings('post')) == []
+    assert list(trending_manager.dynamo.generate_trendings('user')) == []
+
+    # verify no trending for post older than 24 hours
+    posted_at = pendulum.now('utc') - pendulum.duration(hours=25)
+    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t', now=posted_at)
+    trending_manager.increment_scores_for_post(post)
+    assert list(trending_manager.dynamo.generate_trendings('post')) == []
+    assert list(trending_manager.dynamo.generate_trendings('user')) == []
+
+    # verify no trending for posts that fail verification
+    post = post_manager.add_post(real_user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    trending_manager.increment_scores_for_post(post)
+    assert list(trending_manager.dynamo.generate_trendings('post')) == []
+    assert list(trending_manager.dynamo.generate_trendings('user')) == []
+
+    # verify trending works for a normal post
+    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    trending_manager.increment_scores_for_post(post)
+    assert [i['partitionKey'][9:] for i in trending_manager.dynamo.generate_trendings('post')] == [post.id]
+    assert [i['partitionKey'][9:] for i in trending_manager.dynamo.generate_trendings('user')] == [user.id]

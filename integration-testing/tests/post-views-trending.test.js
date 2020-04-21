@@ -775,3 +775,36 @@ test('Posts that fail verification do not show up in trending', async () => {
   expect(resp['data']['trendingPosts']['items']).toHaveLength(1)
   expect(resp['data']['trendingPosts']['items'][0]['postId']).toBe(postId2)
 })
+
+
+test('Views of our own posts count for trending', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // add a post
+  const postId = uuidv4()
+  let variables = {postId, imageData: imageData1B64, takenInReal: true}
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // verify nothing in trending
+  resp = await ourClient.query({query: queries.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(0)
+
+  // we view our own post
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // verify the post is now in trending
+  resp = await ourClient.query({query: queries.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(1)
+  expect(resp['data']['trendingPosts']['items'][0]['postId']).toBe(postId)
+
+  // verify we are now in trending
+  resp = await ourClient.query({query: queries.trendingUsers})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingUsers']['items']).toHaveLength(1)
+  expect(resp['data']['trendingUsers']['items'][0]['userId']).toBe(ourUserId)
+})
