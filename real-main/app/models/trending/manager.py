@@ -50,8 +50,7 @@ class TrendingManager:
             return
 
         # don't add posts that failed verification
-        # TODO: remove the reference to post.media here after isVerified is migrated from media to post
-        if post.item.get('isVerified', post.media.item.get('isVerified') if post.media else None) is False:
+        if post.item.get('isVerified') is False:
             return
 
         # don't add real user or their posts to trending indexes
