@@ -314,7 +314,7 @@ class Post:
             try:
                 self.user.update_photo(self.id)
             except self.user.exceptions.UserException as err:
-                logger.warning('Unable to set user photo with post `{self.id}`: {err}')
+                logger.warning(f'Unable to set user photo with post `{self.id}`: {err}')
 
         # update the first story if needed
         if self.item.get('expiresAt'):
