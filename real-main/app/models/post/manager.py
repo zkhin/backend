@@ -4,11 +4,11 @@ import uuid
 
 import pendulum
 
-from app.models import album, comment, feed, flag, followed_first_story, like, media, trending, user, view
+from app.models import album, block, comment, feed, follow, followed_first_story, like, media, trending, user, view
 
 from . import enums, exceptions
 from .appsync import PostAppSync
-from .dynamo import PostDynamo
+from .dynamo import PostDynamo, PostFlagDynamo, PostOriginalMetadataDynamo
 from .model import Post
 
 logger = logging.getLogger()
@@ -23,16 +23,20 @@ class PostManager:
         managers = managers or {}
         managers['post'] = self
         self.album_manager = managers.get('album') or album.AlbumManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
         self.comment_manager = managers.get('comment') or comment.CommentManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
-        self.flag_manager = managers.get('flag') or flag.FlagManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
         self.followed_first_story_manager = (
             managers.get('followed_first_story')
             or followed_first_story.FollowedFirstStoryManager(clients, managers=managers)
         )
         self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
         self.media_manager = managers.get('media') or media.MediaManager(clients, managers=managers)
-        self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
+        self.trending_manager = (
+            managers.get('trending')
+            or trending.TrendingManager(clients, managers=managers)
+        )
         self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
         self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
 
@@ -41,6 +45,8 @@ class PostManager:
             self.appsync = PostAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
+            self.flag_dynamo = PostFlagDynamo(clients['dynamo'])
+            self.original_metadata_dynamo = PostOriginalMetadataDynamo(clients['dynamo'])
 
     def get_post(self, post_id, strongly_consistent=False):
         post_item = self.dynamo.get_post(post_id, strongly_consistent=strongly_consistent)
@@ -50,14 +56,17 @@ class PostManager:
         kwargs = {
             'post_appsync': getattr(self, 'appsync', None),
             'post_dynamo': getattr(self, 'dynamo', None),
+            'post_flag_dynamo': getattr(self, 'flag_dynamo', None),
+            'post_original_metadata_dynamo': getattr(self, 'original_metadata_dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
             'post_verification_client': self.clients.get('post_verification'),
             's3_uploads_client': self.clients.get('s3_uploads'),
             'album_manager': self.album_manager,
+            'block_manager': self.block_manager,
             'comment_manager': self.comment_manager,
             'feed_manager': self.feed_manager,
-            'flag_manager': self.flag_manager,
+            'follow_manager': self.follow_manager,
             'followed_first_story_manager': self.followed_first_story_manager,
             'like_manager': self.like_manager,
             'media_manager': self.media_manager,
@@ -124,7 +133,7 @@ class PostManager:
                 image_format=image_input.get('imageFormat'),
             ))
             if original_metadata := image_input.get('originalMetadata'):
-                transacts.append(self.dynamo.transact_add_original_metadata(post_id, original_metadata))
+                transacts.append(self.original_metadata_dynamo.transact_add(post_id, original_metadata))
         self.dynamo.client.transact_write_items(transacts)
 
         post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
@@ -176,3 +185,8 @@ class PostManager:
             logger.warning(f'Deleting expired post with pk ({post_pk["partitionKey"]}, {post_pk["sortKey"]})')
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
+
+    def unflag_all_by_user(self, user_id):
+        for post_id in self.flag_dynamo.generate_post_ids_by_user(user_id):
+            # this could be performance and edge-case optimized
+            self.get_post(post_id).unflag(user_id)

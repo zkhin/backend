@@ -13,7 +13,6 @@ from app.models.chat import ChatManager
 from app.models.chat_message import ChatMessageManager
 from app.models.comment import CommentManager
 from app.models.feed import FeedManager
-from app.models.flag import FlagManager
 from app.models.follow import FollowManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
@@ -151,11 +150,6 @@ def comment_manager(dynamo_client, user_manager):
 @pytest.fixture
 def feed_manager(dynamo_client):
     yield FeedManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
-def flag_manager(dynamo_client):
-    yield FlagManager({'dynamo': dynamo_client})
 
 
 @pytest.fixture

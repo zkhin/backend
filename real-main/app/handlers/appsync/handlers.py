@@ -10,7 +10,6 @@ from app.models.block import BlockManager
 from app.models.chat import ChatManager
 from app.models.chat_message import ChatMessageManager
 from app.models.comment import CommentManager
-from app.models.flag import FlagManager
 from app.models.follow import FollowManager
 from app.models.follow.enums import FollowStatus
 from app.models.followed_first_story import FollowedFirstStoryManager
@@ -52,7 +51,6 @@ chat_manager = managers.get('chat') or ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or CommentManager(clients, managers=managers)
 ffs_manager = managers.get('followed_first_story') or FollowedFirstStoryManager(clients, managers=managers)
-flag_manager = managers.get('flag') or FlagManager(clients, managers=managers)
 follow_manager = managers.get('follow') or FollowManager(clients, managers=managers)
 like_manager = managers.get('like') or LikeManager(clients, managers=managers)
 media_manager = managers.get('media') or MediaManager(clients, managers=managers)
@@ -231,7 +229,7 @@ def reset_user(caller_user_id, arguments, source, context):
     follow_manager.reset_follower_items(caller_user_id)
 
     # unflag everything we've flagged
-    flag_manager.unflag_all_by_user(caller_user_id)
+    post_manager.unflag_all_by_user(caller_user_id)
 
     # delete all our likes & comments & albums
     like_manager.dislike_all_by_user(caller_user_id)
@@ -648,12 +646,12 @@ def flag_post(caller_user_id, arguments, source, context):
         raise ClientException(f'Post `{post_id}` does not exist')
 
     try:
-        post = flag_manager.flag_post(caller_user_id, post)
-    except (flag_manager.exceptions.FlagException, post_manager.exceptions.PostException) as err:
+        post.flag(caller_user_id)
+    except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
     resp = post.serialize(caller_user_id)
-    resp['flagStatus'] = flag_manager.enums.FlagStatus.FLAGGED
+    resp['flagStatus'] = post_manager.enums.FlagStatus.FLAGGED
     return resp
 
 

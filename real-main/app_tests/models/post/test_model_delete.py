@@ -1,11 +1,11 @@
 from unittest.mock import call, Mock
+import uuid
 
 import pendulum
 import pytest
 
 from app.models.comment import CommentManager
 from app.models.feed import FeedManager
-from app.models.flag import FlagManager
 from app.models.followed_first_story import FollowedFirstStoryManager
 from app.models.like import LikeManager
 from app.models.post.enums import PostStatus, PostType
@@ -16,8 +16,13 @@ from app.utils import image_size
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid2')
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+    user_id = str(uuid.uuid4())
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+
+
+user2 = user
+user3 = user
 
 
 @pytest.fixture
@@ -57,7 +62,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # mock out some calls to far-flung other managers
     post.comment_manager = Mock(CommentManager({}))
     post.feed_manager = Mock(FeedManager({}))
-    post.flag_manager = Mock(FlagManager({}))
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
     post.like_manager = Mock(LikeManager({}))
     post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
@@ -79,9 +83,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
         call.delete_all_on_post(post.id),
-    ]
-    assert post.flag_manager.mock_calls == [
-        call.unflag_all_on_post(post.id),
     ]
     assert post.feed_manager.mock_calls == [
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
@@ -106,7 +107,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
     assert post_manager.dynamo.get_post(post_with_media.id)
-    assert post_manager.dynamo.get_original_metadata(post_with_media.id)
+    assert post_manager.original_metadata_dynamo.get(post_with_media.id)
 
     # check our starting post count
     posted_by_user.refresh_item()
@@ -130,7 +131,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.item is None
     media.refresh_item()
     assert media.item is None
-    assert post_manager.dynamo.get_original_metadata(post_with_media.id) is None
+    assert post_manager.original_metadata_dynamo.get(post_with_media.id) is None
 
     # check our post count - should not have changed
     posted_by_user.refresh_item()
@@ -271,3 +272,16 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
     ]
+
+
+def test_delete_flags(album_manager, post_manager, completed_post_with_media, user2, user3):
+    post = completed_post_with_media
+
+    # flag the post, verify those flags are in the db
+    post.flag(user2.id)
+    post.flag(user3.id)
+    assert len(list(post_manager.flag_dynamo.generate_by_post(post.id))) == 2
+
+    # delete the post, verify the flags are also deleted
+    post.delete()
+    assert len(list(post_manager.flag_dynamo.generate_by_post(post.id))) == 0

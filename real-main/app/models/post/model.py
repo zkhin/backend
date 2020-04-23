@@ -8,7 +8,7 @@ from PIL import Image, ImageOps
 from app.utils import image_size
 
 from . import enums, exceptions
-from .enums import FlagStatus, PostStatus, PostType, PostNotificationType
+from .enums import PostStatus, PostType, PostNotificationType
 from .text_image import generate_text_image
 
 logger = logging.getLogger()
@@ -20,16 +20,21 @@ class Post:
 
     enums = enums
     exceptions = exceptions
-    FlagStatus = FlagStatus
 
-    def __init__(self, item, post_dynamo=None, post_appsync=None, cloudfront_client=None, mediaconvert_client=None,
-                 post_verification_client=None, s3_uploads_client=None, feed_manager=None, like_manager=None,
-                 media_manager=None, view_manager=None, user_manager=None, comment_manager=None, flag_manager=None,
-                 album_manager=None, followed_first_story_manager=None, trending_manager=None, post_manager=None):
-        if post_dynamo:
-            self.dynamo = post_dynamo
+    def __init__(self, item, post_appsync=None, post_dynamo=None, post_flag_dynamo=None,
+                 post_original_metadata_dynamo=None, cloudfront_client=None, mediaconvert_client=None,
+                 post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
+                 comment_manager=None, feed_manager=None, follow_manager=None, followed_first_story_manager=None,
+                 like_manager=None, media_manager=None, post_manager=None, trending_manager=None, user_manager=None,
+                 view_manager=None):
         if post_appsync:
             self.appsync = post_appsync
+        if post_dynamo:
+            self.dynamo = post_dynamo
+        if post_flag_dynamo:
+            self.flag_dynamo = post_flag_dynamo
+        if post_original_metadata_dynamo:
+            self.original_metadata_dynamo = post_original_metadata_dynamo
 
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client
@@ -42,12 +47,14 @@ class Post:
 
         if album_manager:
             self.album_manager = album_manager
+        if block_manager:
+            self.block_manager = block_manager
         if comment_manager:
             self.comment_manager = comment_manager
         if feed_manager:
             self.feed_manager = feed_manager
-        if flag_manager:
-            self.flag_manager = flag_manager
+        if follow_manager:
+            self.follow_manager = follow_manager
         if followed_first_story_manager:
             self.followed_first_story_manager = followed_first_story_manager
         if like_manager:
@@ -427,9 +434,6 @@ class Post:
         # delete all comments on the post
         self.comment_manager.delete_all_on_post(self.id)
 
-        # unflag all flags of the post
-        self.flag_manager.unflag_all_on_post(self.id)
-
         # if it was the first followed story, refresh that
         if self.item.get('expiresAt'):
             self.followed_first_story_manager.refresh_after_story_change(story_prev=self.item)
@@ -452,7 +456,8 @@ class Post:
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
         if self.media:
             self.dynamo.client.delete_item_by_pk(self.media.item)
-        self.dynamo.delete_original_metadata(self.id)
+        self.flag_dynamo.delete_all_for_post(self.id)
+        self.original_metadata_dynamo.delete(self.id)
         self.dynamo.delete_post(self.id)
 
         return self
@@ -612,3 +617,64 @@ class Post:
 
         album.update_art_if_needed()
         return self
+
+    def flag(self, user_id):
+        # can't flag a post of a user that has blocked us
+        if self.block_manager.is_blocked(self.user_id, user_id):
+            raise exceptions.PostException(f'User has been blocked by owner of post `{self.id}`')
+
+        # can't flag a post of a user we have blocked
+        if self.block_manager.is_blocked(user_id, self.user_id):
+            raise exceptions.PostException(f'User has blocked owner of post `{self.id}`')
+
+        # cant flag our own post
+        if user_id == self.user_id:
+            raise exceptions.PostException(f'User cant flag their own post `{self.id}`')
+
+        # if the post is from a private user then we must be a follower to flag the post
+        posted_by_user = self.user_manager.get_user(self.user_id)
+        if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
+            follow = self.follow_manager.get_follow(user_id, self.user_id)
+            if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
+                raise exceptions.PostException(f'User does not have access to post `{self.id}`')
+
+        transacts = [
+            self.flag_dynamo.transact_add(self.id, user_id),
+            self.dynamo.transact_increment_flag_count(self.id),
+        ]
+        transact_exceptions = [exceptions.AlreadyFlagged(self.id, user_id), exceptions.PostDoesNotExist(self.id)]
+        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        self.item['flagCount'] = self.item.get('flagCount', 0) + 1
+
+        if self.should_auto_archive(user_id):
+            self.archive()
+
+        return self
+
+    def unflag(self, user_id):
+        transacts = [
+            self.flag_dynamo.transact_delete(self.id, user_id),
+            self.dynamo.transact_decrement_flag_count(self.id),
+        ]
+        transact_exceptions = [
+            exceptions.NotFlagged(self.id, user_id),
+            exceptions.PostException(f'Post `{self.id}` does not exist or has no flagCount'),
+        ]
+        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+
+        self.item['flagCount'] = self.item.get('flagCount', 0) - 1
+        return self
+
+    def should_auto_archive(self, flagger_user_id):
+        # auto archive the post if it was flagged by 'real' or 'ian' users
+        if flagger_user_id in (self.user_manager.real_user_id, self.user_manager.ian_user_id):
+            return True
+
+        # auto archive the post if over 5 users have viewed the post and
+        # more than 10% of them have flagged it
+        viewed_by_count = self.item.get('viewedByCount', 0)
+        flag_count = self.item.get('flagCount', 0)
+        if viewed_by_count > 5 and flag_count > viewed_by_count / 10:
+            return True
+
+        return False

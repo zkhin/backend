@@ -8,7 +8,7 @@ import pendulum
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostStatus
 
-from . import exceptions, enums
+from .. import exceptions, enums
 
 logger = logging.getLogger()
 
@@ -24,23 +24,10 @@ class PostDynamo:
             'sortKey': '-',
         }, strongly_consistent=strongly_consistent)
 
-    def get_original_metadata(self, post_id):
-        return self.client.get_item({
-            'partitionKey': f'post/{post_id}',
-            'sortKey': 'originalMetadata',
-        })
-
     def delete_post(self, post_id):
         query_kwargs = {'Key': {
             'partitionKey': f'post/{post_id}',
             'sortKey': '-',
-        }}
-        return self.client.delete_item(query_kwargs)
-
-    def delete_original_metadata(self, post_id):
-        query_kwargs = {'Key': {
-            'partitionKey': f'post/{post_id}',
-            'sortKey': 'originalMetadata',
         }}
         return self.client.delete_item(query_kwargs)
 
@@ -158,17 +145,6 @@ class PostDynamo:
 
         return {'Put': {
             'Item': post_item,
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-        }}
-
-    def transact_add_original_metadata(self, post_id, original_metadata):
-        return {'Put': {
-            'Item': {
-                'schemaVersion': {'N': '0'},
-                'partitionKey': {'S': f'post/{post_id}'},
-                'sortKey': {'S': 'originalMetadata'},
-                'originalMetadata': {'S': original_metadata},
-            },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 

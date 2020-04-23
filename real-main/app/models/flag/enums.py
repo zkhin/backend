@@ -1,5 +1,0 @@
-class FlagStatus:
-    FLAGGED = 'FLAGGED'
-    NOT_FLAGGED = 'NOT_FLAGGED'
-
-    _ALL = (FLAGGED, NOT_FLAGGED)

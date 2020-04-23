@@ -39,6 +39,22 @@ class UserManager:
         self.validate = UserValidate()
         self.placeholder_photos_directory = placeholder_photos_directory
 
+    @property
+    def real_user_id(self):
+        "The userId of the 'real' user, if they exist"
+        if not hasattr(self, '_real_user_id'):
+            real_user = self.get_user_by_username('real')
+            self._real_user_id = real_user.id if real_user else None
+        return self._real_user_id
+
+    @property
+    def ian_user_id(self):
+        "The userId of the 'ian' user, if they exist"
+        if not hasattr(self, '_ian_user_id'):
+            ian_user = self.get_user_by_username('ian')
+            self._ian_user_id = ian_user.id if ian_user else None
+        return self._ian_user_id
+
     def get_user(self, user_id, strongly_consistent=False):
         user_item = self.dynamo.get_user(user_id, strongly_consistent=strongly_consistent)
         return self.init_user(user_item) if user_item else None

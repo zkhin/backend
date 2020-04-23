@@ -20,6 +20,29 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
+test('Cant flag our own post', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['flagStatus']).toBe('NOT_FLAGGED')
+
+  // verify we cant flag that post
+  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: .* their own post /)
+
+  // check we did not flag the post is not flagged
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['flagStatus']).toBe('NOT_FLAGGED')
+})
+
+
+
 test('Anybody can flag post of public user', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -97,6 +120,7 @@ test('Cannot flag post that does not exist', async () => {
 
 test('Post.flagStatus changes correctly when post is flagged', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -105,20 +129,20 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
-  // check the post is not already flagged
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  // check they have not flagged the post
+  resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['flagStatus']).toBe('NOT_FLAGGED')
 
-  // flag the post
-  resp = await ourClient.mutate({mutation: mutations.flagPost, variables: {postId}})
+  // they flag the post
+  resp = await theirClient.mutate({mutation: mutations.flagPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['flagPost']['postId']).toBe(postId)
   expect(resp['data']['flagPost']['flagStatus']).toBe('FLAGGED')
 
   // double check that was saved
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['flagStatus']).toBe('FLAGGED')
@@ -127,6 +151,7 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
 
 test('Cannot double-flag a post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -135,12 +160,12 @@ test('Cannot double-flag a post', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
 
-  // flag the post
-  resp = await ourClient.mutate({mutation: mutations.flagPost, variables: {postId}})
+  // they flag the post
+  resp = await theirClient.mutate({mutation: mutations.flagPost, variables: {postId}})
   expect(resp['errors']).toBeUndefined()
 
   // try to flag it a second time
-  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+  await expect(theirClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
     .rejects.toThrow(/ClientError: .* has already been flagged /)
 })
 

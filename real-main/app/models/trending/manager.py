@@ -30,14 +30,6 @@ class TrendingManager:
         if 'dynamo' in clients:
             self.dynamo = dynamo.TrendingDynamo(clients['dynamo'])
 
-    @property
-    def real_user_id(self):
-        "The userId of the 'real' user, if they exist"
-        if not hasattr(self, '_real_user_id'):
-            real_user = self.user_manager.get_user_by_username('real')
-            self._real_user_id = real_user.id if real_user else None
-        return self._real_user_id
-
     def increment_scores_for_post(self, post, now=None):
         now = now or pendulum.now('utc')
 
@@ -54,7 +46,7 @@ class TrendingManager:
             return
 
         # don't add real user or their posts to trending indexes
-        if post.user_id == self.real_user_id:
+        if post.user_id == self.user_manager.real_user_id:
             return
 
         self.increment_score(enums.TrendingItemType.POST, post.id, now=now)

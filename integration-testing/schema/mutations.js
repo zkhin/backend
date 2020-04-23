@@ -289,6 +289,7 @@ module.exports.addPostMediaUploads = gql`
       sharingDisabled
       verificationHidden
       hasNewCommentActivity
+      flagStatus
     }
   }
   ${fragments.comment}
@@ -376,6 +377,7 @@ module.exports.addPost = gql`
       sharingDisabled
       verificationHidden
       hasNewCommentActivity
+      flagStatus
     }
   }
   ${fragments.comment}
@@ -467,6 +469,7 @@ module.exports.flagPost = gql`
   mutation FlagPost ($postId: ID!) {
     flagPost(postId: $postId) {
       postId
+      postStatus
       flagStatus
     }
   }

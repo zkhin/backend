@@ -135,35 +135,6 @@ def test_transact_add_post_already_exists(post_dynamo):
         post_dynamo.client.transact_write_items(transacts)
 
 
-def test_transact_add_original_metadata_and_delete(post_dynamo):
-    post_id = 'pid'
-    original_metadata = 'stringified json'
-    assert post_dynamo.get_original_metadata(post_id) is None
-
-    # set the original metadata
-    transacts = [post_dynamo.transact_add_original_metadata(post_id, original_metadata)]
-    post_dynamo.client.transact_write_items(transacts)
-
-    # verify format in DB
-    item = post_dynamo.get_original_metadata(post_id)
-    assert item['originalMetadata'] == original_metadata
-    assert item['schemaVersion'] == 0
-
-    # verify can't set it again
-    transacts = [post_dynamo.transact_add_original_metadata(post_id, 'new value')]
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
-        post_dynamo.client.transact_write_items(transacts)
-    assert post_dynamo.get_original_metadata(post_id)
-
-    # delete the original metadata, verify it disappears
-    post_dynamo.delete_original_metadata(post_id)
-    assert post_dynamo.get_original_metadata(post_id) is None
-
-    # verify a no-op delete is ok
-    post_dynamo.delete_original_metadata(post_id)
-    assert post_dynamo.get_original_metadata(post_id) is None
-
-
 def test_generate_posts_by_user(post_dynamo):
     user_id = 'uid'
 
