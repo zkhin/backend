@@ -3,23 +3,9 @@ import os
 
 import pendulum
 
-from app.clients import (AppSyncClient, CloudFrontClient, CognitoClient, DynamoClient, FacebookClient, GoogleClient,
-                         PostVerificationClient, SecretsManagerClient, S3Client)
-from app.models.album import AlbumManager
-from app.models.block import BlockManager
-from app.models.chat import ChatManager
-from app.models.chat_message import ChatMessageManager
-from app.models.comment import CommentManager
-from app.models.follow import FollowManager
-from app.models.follow.enums import FollowStatus
-from app.models.followed_first_story import FollowedFirstStoryManager
-from app.models.like import LikeManager
+from app import clients, models
 from app.models.like.enums import LikeStatus
-from app.models.media import MediaManager
-from app.models.post import PostManager
 from app.models.post.enums import PostStatus, PostType
-from app.models.user import UserManager
-from app.models.view import ViewManager
 from app.utils import image_size
 
 from . import routes
@@ -30,33 +16,33 @@ S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
 
 logger = logging.getLogger()
 
-secrets_manager_client = SecretsManagerClient()
+secrets_manager_client = clients.SecretsManagerClient()
 clients = {
-    'appsync': AppSyncClient(),
-    'cloudfront': CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
-    'cognito': CognitoClient(),
-    'dynamo': DynamoClient(),
-    'facebook': FacebookClient(),
-    'google': GoogleClient(secrets_manager_client.get_google_client_ids),
-    'post_verification': PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
-    's3_uploads': S3Client(S3_UPLOADS_BUCKET),
-    's3_placeholder_photos': S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
+    'appsync': clients.AppSyncClient(),
+    'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
+    'cognito': clients.CognitoClient(),
+    'dynamo': clients.DynamoClient(),
+    'facebook': clients.FacebookClient(),
+    'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
+    'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
+    's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
+    's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
 }
 
 # shared hash of all managers, allows inter-manager communication
 managers = {}
-album_manager = managers.get('album') or AlbumManager(clients, managers=managers)
-block_manager = managers.get('block') or BlockManager(clients, managers=managers)
-chat_manager = managers.get('chat') or ChatManager(clients, managers=managers)
-chat_message_manager = managers.get('chat_message') or ChatMessageManager(clients, managers=managers)
-comment_manager = managers.get('comment') or CommentManager(clients, managers=managers)
-ffs_manager = managers.get('followed_first_story') or FollowedFirstStoryManager(clients, managers=managers)
-follow_manager = managers.get('follow') or FollowManager(clients, managers=managers)
-like_manager = managers.get('like') or LikeManager(clients, managers=managers)
-media_manager = managers.get('media') or MediaManager(clients, managers=managers)
-post_manager = managers.get('post') or PostManager(clients, managers=managers)
-user_manager = managers.get('user') or UserManager(clients, managers=managers)
-view_manager = managers.get('view') or ViewManager(clients, managers=managers)
+album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
+block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
+chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
+comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
+ffs_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
+follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
+media_manager = managers.get('media') or models.MediaManager(clients, managers=managers)
+post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
 
 @routes.register('Mutation.createCognitoOnlyUser')
@@ -302,7 +288,7 @@ def follow_user(caller_user_id, arguments, source, context):
 
     resp = followed_user.serialize(caller_user_id)
     resp['followedStatus'] = follow.status
-    if follow.status == FollowStatus.FOLLOWING:
+    if follow.status == follow_manager.enums.FollowStatus.FOLLOWING:
         resp['followerCount'] = followed_user.item.get('followerCount', 0) + 1
     return resp
 

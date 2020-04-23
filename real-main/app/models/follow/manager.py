@@ -1,6 +1,6 @@
 import logging
 
-from app.models import block, feed, followed_first_story, like, post, user
+from app import models
 from app.models.user.enums import UserPrivacyStatus
 
 from . import enums, exceptions
@@ -19,15 +19,14 @@ class FollowManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['follow'] = self
-        self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
+        self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.ffs_manager = (
-            managers.get('followed_first_story')
-            or followed_first_story.FollowedFirstStoryManager(clients, managers=managers)
+            managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
         )
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
-        self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

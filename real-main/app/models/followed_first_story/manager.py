@@ -2,7 +2,7 @@ import logging
 
 import more_itertools
 
-from app.models import follow, post
+from app import models
 from app.models.follow.enums import FollowStatus
 
 from .dynamo import FollowedFirstStoryDynamo
@@ -15,8 +15,8 @@ class FollowedFirstStoryManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['followed_first_story'] = self
-        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

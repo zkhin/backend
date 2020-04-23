@@ -4,7 +4,7 @@ import uuid
 
 import pendulum
 
-from app.models import album, block, comment, feed, follow, followed_first_story, like, media, trending, user, view
+from app import models
 
 from . import enums, exceptions
 from .appsync import PostAppSync
@@ -22,23 +22,19 @@ class PostManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['post'] = self
-        self.album_manager = managers.get('album') or album.AlbumManager(clients, managers=managers)
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
-        self.comment_manager = managers.get('comment') or comment.CommentManager(clients, managers=managers)
-        self.feed_manager = managers.get('feed') or feed.FeedManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
+        self.album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
+        self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
         self.followed_first_story_manager = (
-            managers.get('followed_first_story')
-            or followed_first_story.FollowedFirstStoryManager(clients, managers=managers)
+            managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
         )
-        self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
-        self.media_manager = managers.get('media') or media.MediaManager(clients, managers=managers)
-        self.trending_manager = (
-            managers.get('trending')
-            or trending.TrendingManager(clients, managers=managers)
-        )
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
-        self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
+        self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
+        self.media_manager = managers.get('media') or models.MediaManager(clients, managers=managers)
+        self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+        self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:

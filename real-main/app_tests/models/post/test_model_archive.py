@@ -3,9 +3,7 @@ from unittest.mock import call, Mock
 import pendulum
 import pytest
 
-from app.models.feed import FeedManager
-from app.models.followed_first_story import FollowedFirstStoryManager
-from app.models.like import LikeManager
+from app.models import FeedManager, FollowedFirstStoryManager, LikeManager
 from app.models.post.enums import PostStatus, PostType
 
 

@@ -3,17 +3,15 @@ import os
 
 import pendulum
 
-from app.clients import CognitoClient, DynamoClient, S3Client
-from app.models.post import PostManager
-from app.models.trending import TrendingManager
+from app import clients, models
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
 
-cognito_client = CognitoClient()
-dynamo_client = DynamoClient()
-s3_uploads_client = S3Client(S3_UPLOADS_BUCKET)
+cognito_client = clients.CognitoClient()
+dynamo_client = clients.DynamoClient()
+s3_uploads_client = clients.S3Client(S3_UPLOADS_BUCKET)
 clients = {
     'dynamo': dynamo_client,
     'cognito': cognito_client,
@@ -21,8 +19,8 @@ clients = {
 }
 
 managers = {}
-post_manager = managers.get('post') or PostManager(clients, managers=managers)
-trending_manager = managers.get('trending') or TrendingManager(clients, managers=managers)
+post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
 
 def reindex_trending_users(event, context):

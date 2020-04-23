@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models import block, chat_message, user
+from app import models
 
 from . import enums, exceptions
 from .dynamo import ChatDynamo
@@ -19,12 +19,11 @@ class ChatManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['chat'] = self
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
         self.chat_message_manager = (
-            managers.get('chat_message')
-            or chat_message.ChatMessageManager(clients, managers=managers)
+            managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
         )
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

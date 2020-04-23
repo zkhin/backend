@@ -2,30 +2,27 @@ import logging
 import os
 import urllib
 
-from app.clients import (AppSyncClient, CloudFrontClient, DynamoClient, MediaConvertClient, PostVerificationClient,
-                         S3Client, SecretsManagerClient)
+from app import clients, models
 from app.logging import LogLevelContext
-from app.models.media import MediaManager
-from app.models.post import PostManager
 from app.models.post.enums import PostStatus, PostType
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
 
-secrets_manager_client = SecretsManagerClient()
+secrets_manager_client = clients.SecretsManagerClient()
 clients = {
-    'appsync': AppSyncClient(),
-    'cloudfront': CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
-    'dynamo': DynamoClient(),
-    'mediaconvert': MediaConvertClient(),
-    'post_verification': PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
-    's3_uploads': S3Client(S3_UPLOADS_BUCKET),
+    'appsync': clients.AppSyncClient(),
+    'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
+    'dynamo': clients.DynamoClient(),
+    'mediaconvert': clients.MediaConvertClient(),
+    'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
+    's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
 }
 
 managers = {}
-media_manager = managers.get('media') or MediaManager(clients, managers=managers)
-post_manager = managers.get('post') or PostManager(clients, managers=managers)
+media_manager = managers.get('media') or models.MediaManager(clients, managers=managers)
+post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
 
 def image_post_uploaded(event, context):

@@ -1,6 +1,6 @@
 import logging
 
-from app.models import chat, follow, like
+from app import models
 
 from . import enums, exceptions
 from .dynamo import BlockDynamo
@@ -16,9 +16,9 @@ class BlockManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['block'] = self
-        self.chat_manager = managers.get('chat') or chat.ChatManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
-        self.like_manager = managers.get('like') or like.LikeManager(clients, managers=managers)
+        self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

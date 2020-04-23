@@ -5,8 +5,7 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.feed import FeedManager
-from app.models.followed_first_story import FollowedFirstStoryManager
+from app.models import FeedManager, FollowedFirstStoryManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.utils import image_size

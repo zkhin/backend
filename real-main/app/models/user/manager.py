@@ -3,7 +3,7 @@ import os
 import random
 import re
 
-from app.models import block, follow, post, trending
+from app import models
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -25,10 +25,10 @@ class UserManager:
     def __init__(self, clients, managers=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY):
         managers = managers or {}
         managers['user'] = self
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
         self.clients = clients
         for client_name in self.client_names:

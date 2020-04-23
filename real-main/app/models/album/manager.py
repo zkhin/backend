@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models import post, user
+from app import models
 
 from . import exceptions
 from .dynamo import AlbumDynamo
@@ -18,8 +18,8 @@ class AlbumManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['album'] = self
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

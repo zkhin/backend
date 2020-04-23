@@ -1,7 +1,5 @@
 import logging
 
-from app.models import post
-
 from . import enums, exceptions
 
 logger = logging.getLogger()
@@ -28,6 +26,6 @@ class Like:
         ]
         exceptions = [
             self.exceptions.NotLikedWithStatus(self.liked_by_user_id, self.post_id, like_status),
-            post.exceptions.UnableToDecrementPostLikeCounter(self.post_id),
+            self.post_manager.exceptions.UnableToDecrementPostLikeCounter(self.post_id),
         ]
         self.dynamo.client.transact_write_items(transacts, exceptions)

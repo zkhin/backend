@@ -4,13 +4,9 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.comment import CommentManager
-from app.models.feed import FeedManager
-from app.models.followed_first_story import FollowedFirstStoryManager
-from app.models.like import LikeManager
+from app.models import (CommentManager, FeedManager, FollowedFirstStoryManager, LikeManager, TrendingManager,
+                        ViewManager)
 from app.models.post.enums import PostStatus, PostType
-from app.models.trending import TrendingManager
-from app.models.view import ViewManager
 from app.utils import image_size
 
 

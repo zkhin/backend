@@ -7,9 +7,9 @@ import uuid
 import pendulum
 import pytest
 
+from app.models import FollowedFirstStoryManager
 from app.models.post.enums import PostType, PostStatus
 from app.models.post.model import Post
-from app.models.followed_first_story import FollowedFirstStoryManager
 from app.utils import image_size
 
 

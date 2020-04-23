@@ -1,6 +1,6 @@
 import logging
 
-from app.models import block, follow, post, user
+from app import models
 
 from . import enums, exceptions
 from .dynamo import LikeDynamo
@@ -17,10 +17,10 @@ class LikeManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['like'] = self
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

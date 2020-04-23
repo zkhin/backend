@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models import block, follow, post, user, view
+from app import models
 
 from . import exceptions
 from .dynamo import CommentDynamo
@@ -18,11 +18,11 @@ class CommentManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['comment'] = self
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or follow.FollowManager(clients, managers=managers)
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
-        self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+        self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
@@ -60,7 +60,7 @@ class CommentManager:
 
             # if post owner is private, must be a follower to comment
             poster = self.user_manager.get_user(post.user_id)
-            if poster.item['privacyStatus'] == user.enums.UserPrivacyStatus.PRIVATE:
+            if poster.item['privacyStatus'] == poster.enums.UserPrivacyStatus.PRIVATE:
                 follow = self.follow_manager.get_follow(user_id, post.user_id)
                 if not follow or follow.status != follow.enums.FollowStatus.FOLLOWING:
                     msg = f'Post owner `{post.user_id}` is private and user `{user_id}` is not a follower'

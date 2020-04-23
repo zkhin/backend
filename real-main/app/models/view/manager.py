@@ -3,7 +3,7 @@ import logging
 
 import pendulum
 
-from app.models import comment, chat_message, post, trending, user
+from app import models
 
 from . import enums, exceptions
 from .dynamo import ViewDynamo
@@ -20,12 +20,12 @@ class ViewManager:
         managers = managers or {}
         managers['view'] = self
         self.chat_message_manager = (
-            managers.get('chat_message') or chat_message.ChatMessageManager(clients, managers=managers)
+            managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
         )
-        self.comment_manager = managers.get('comment') or comment.CommentManager(clients, managers=managers)
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
-        self.trending_manager = managers.get('trending') or trending.TrendingManager(clients, managers=managers)
+        self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+        self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

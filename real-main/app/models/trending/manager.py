@@ -4,7 +4,7 @@ import math
 
 import pendulum
 
-from app.models import post, user
+from app import models
 
 from . import dynamo, enums, exceptions
 
@@ -23,8 +23,8 @@ class TrendingManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['trending'] = self
-        self.post_manager = managers.get('post') or post.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:

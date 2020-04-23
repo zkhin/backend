@@ -3,7 +3,7 @@ import logging
 import pendulum
 import uuid
 
-from app.models import block, chat, user, view
+from app import models
 
 from . import exceptions
 from .appsync import ChatMessageAppSync
@@ -20,10 +20,10 @@ class ChatMessageManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['chat_message'] = self
-        self.block_manager = managers.get('block') or block.BlockManager(clients, managers=managers)
-        self.chat_manager = managers.get('chat') or chat.ChatManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or user.UserManager(clients, managers=managers)
-        self.view_manager = managers.get('view') or view.ViewManager(clients, managers=managers)
+        self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+        self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:
