@@ -177,6 +177,42 @@ test('Creating a group chat with our userId in the listed userIds has no affect'
 })
 
 
+test('Cannot create, edit, add others to or leave a group chat if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // we create a group chat with just us in it
+  const chatId = uuidv4()
+  let variables = {chatId, userIds: [], messageId: uuidv4(), messageText: 'm1'}
+  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createGroupChat']['chatId']).toBe(chatId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we cannot create another group chat
+  variables = {chatId: uuidv4(), userIds: [], messageId: uuidv4(), messageText: 'm1'}
+  await expect(ourClient.mutate({mutation: mutations.createGroupChat, variables}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we cannot add someone else to our existing group chat
+  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables: {chatId, userIds: [theirUserId]}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we cannot edit our existing group chat
+  await expect(ourClient.mutate({mutation: mutations.editGroupChat, variables: {chatId, name: 'new'}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we cannot leave our existing group chat
+  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables: {chatId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Exclude users from list of users in a chat', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()

@@ -33,6 +33,47 @@ test('Cannot like/dislike posts that do not exist', async () => {
 })
 
 
+test('Cannot like or dislike posts if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // we add a second post
+  const postId2 = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // we onymously like the second post
+  resp = await ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId: postId2}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['onymouslyLikePost']['postId']).toBe(postId2)
+  expect(resp['data']['onymouslyLikePost']['likeStatus']).toBe('ONYMOUSLY_LIKED')
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't like the first post
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we can't dislike the second post
+  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId: postId2}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Cannot like PENDING posts', async () => {
   // we add an image post, but don't upload the image
   const [ourClient] = await loginCache.getCleanLogin()

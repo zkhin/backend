@@ -21,6 +21,9 @@ class Post:
     enums = enums
     exceptions = exceptions
 
+    # users that have flag admin power: posts they flag are immediately archived
+    flag_admin_usernames = ('real', 'ian')
+
     def __init__(self, item, post_appsync=None, post_dynamo=None, post_flag_dynamo=None,
                  post_original_metadata_dynamo=None, cloudfront_client=None, mediaconvert_client=None,
                  post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
@@ -618,35 +621,35 @@ class Post:
         album.update_art_if_needed()
         return self
 
-    def flag(self, user_id):
+    def flag(self, user):
         # can't flag a post of a user that has blocked us
-        if self.block_manager.is_blocked(self.user_id, user_id):
+        if self.block_manager.is_blocked(self.user_id, user.id):
             raise exceptions.PostException(f'User has been blocked by owner of post `{self.id}`')
 
         # can't flag a post of a user we have blocked
-        if self.block_manager.is_blocked(user_id, self.user_id):
+        if self.block_manager.is_blocked(user.id, self.user_id):
             raise exceptions.PostException(f'User has blocked owner of post `{self.id}`')
 
         # cant flag our own post
-        if user_id == self.user_id:
+        if user.id == self.user_id:
             raise exceptions.PostException(f'User cant flag their own post `{self.id}`')
 
         # if the post is from a private user then we must be a follower to flag the post
         posted_by_user = self.user_manager.get_user(self.user_id)
         if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
-            follow = self.follow_manager.get_follow(user_id, self.user_id)
+            follow = self.follow_manager.get_follow(user.id, self.user_id)
             if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
                 raise exceptions.PostException(f'User does not have access to post `{self.id}`')
 
         transacts = [
-            self.flag_dynamo.transact_add(self.id, user_id),
+            self.flag_dynamo.transact_add(self.id, user.id),
             self.dynamo.transact_increment_flag_count(self.id),
         ]
-        transact_exceptions = [exceptions.AlreadyFlagged(self.id, user_id), exceptions.PostDoesNotExist(self.id)]
+        transact_exceptions = [exceptions.AlreadyFlagged(self.id, user.id), exceptions.PostDoesNotExist(self.id)]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         self.item['flagCount'] = self.item.get('flagCount', 0) + 1
 
-        if self.should_auto_archive(user_id):
+        if user.username in self.flag_admin_usernames or self.should_archive_by_popular_demand():
             self.archive()
 
         return self
@@ -665,16 +668,11 @@ class Post:
         self.item['flagCount'] = self.item.get('flagCount', 0) - 1
         return self
 
-    def should_auto_archive(self, flagger_user_id):
-        # auto archive the post if it was flagged by 'real' or 'ian' users
-        if flagger_user_id in (self.user_manager.real_user_id, self.user_manager.ian_user_id):
-            return True
-
+    def should_archive_by_popular_demand(self):
         # auto archive the post if over 5 users have viewed the post and
         # more than 10% of them have flagged it
         viewed_by_count = self.item.get('viewedByCount', 0)
         flag_count = self.item.get('flagCount', 0)
         if viewed_by_count > 5 and flag_count > viewed_by_count / 10:
             return True
-
         return False

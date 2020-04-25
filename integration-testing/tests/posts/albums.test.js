@@ -725,3 +725,43 @@ test('Edit album post order', async () => {
   expect(prevAlbum['art']['url480p'].split('?')[0]).toBe(album['art']['url480p'].split('?')[0])
   expect(prevAlbum['art']['url64p'].split('?')[0]).toBe(album['art']['url64p'].split('?')[0])
 })
+
+
+test('Cannot edit post album if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we add an album
+  const albumId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n1'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addAlbum']['albumId']).toBe(albumId)
+
+  // we add a post in that album
+  const postId = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
+
+  // we another post in that album
+  const postId2 = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData, albumId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  expect(resp['data']['addPost']['album']['albumId']).toBe(albumId)
+
+  // disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't edit the album in that post
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: ''}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we can't edit the order of psots in that album
+  let variables = {postId: postId, precedingPostId: postId2}
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})

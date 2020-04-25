@@ -86,10 +86,10 @@ def test_trigger_notification_blocking_relationship(chat_message_appsync, chat_m
 
 def test_trigger_notification_system_message(chat_message_appsync, chat_manager, chat_message_manager, user1,
                                              appsync_client):
-    group_chat = chat_manager.add_group_chat('cid', user1.id)
+    group_chat = chat_manager.add_group_chat('cid', user1)
     appsync_client.reset_mock()
     # adding a system message triggers the notifcations automatically
-    message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user1.id, 'cname')
+    message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user1, 'cname')
     assert len(appsync_client.mock_calls) == 1
     assert len(appsync_client.send.call_args.kwargs) == 0
     assert len(appsync_client.send.call_args.args) == 2

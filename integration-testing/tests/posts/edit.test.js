@@ -57,7 +57,7 @@ test('Edit post', async () => {
 
 
 test('Edit post failures for for various scenarios', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // verify we can't edit a post that doesn't exist
@@ -89,6 +89,16 @@ test('Edit post failures for for various scenarios', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, text}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['editPost']['text']).toBe(text)
+
+  // disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't edit
+  await expect(ourClient.mutate({mutation: mutations.editPost, variables: {postId, text: 'new2'}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 

@@ -104,6 +104,28 @@ test('Cant add comments to post that doesnt exist', async () => {
 })
 
 
+test('Cant add comments if our user is disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // check we cannot comment
+  let variables = {commentId: uuidv4(), postId, text: 'no way'}
+  await expect(ourClient.mutate({mutation: mutations.addComment, variables}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Cant add comments to post with comments disabled', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

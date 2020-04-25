@@ -26,7 +26,7 @@ def direct_chat(chat_manager, user1, user2):
 
 @pytest.fixture
 def group_chat(chat_manager, user1):
-    yield chat_manager.add_group_chat('cid2', user1.id)
+    yield chat_manager.add_group_chat('cid2', user1)
 
 
 def test_is_member(direct_chat, user1, user2, user3):
@@ -91,7 +91,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
 
     # add user2 to the chat
     group_chat.chat_message_manager.reset_mock()
-    group_chat.add(user1.id, [user2.id], now=now)
+    group_chat.add(user1, [user2.id], now=now)
     assert group_chat.item['userCount'] == 2
     group_chat.refresh_item()
     assert group_chat.item['userCount'] == 2
@@ -101,7 +101,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     assert len(msg_mock.mock_calls) == 1
     assert len(msg_mock.call_args.args) == 3
     assert msg_mock.call_args.args[0] == group_chat.id
-    assert msg_mock.call_args.args[1] == user1.id
+    assert msg_mock.call_args.args[1] == user1
     assert len(msg_mock.call_args.args[2]) == 1
     assert msg_mock.call_args.args[2][0].id == user2.id  # Note: comparing user instances doesn't work
     assert msg_mock.call_args.kwargs == {'now': now}
@@ -117,7 +117,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     # user2 adds user3 and user4, and a bunch of fluff that should get filtered out
     group_chat.chat_message_manager.reset_mock()
     user_ids = [user3.id, user4.id, user1.id, user2.id, user4.id, user_blocker.id, user_blocked.id, 'uid-dne']
-    group_chat.add(user2.id, user_ids, now=now)
+    group_chat.add(user2, user_ids, now=now)
     assert group_chat.item['userCount'] == 4
     group_chat.refresh_item()
     assert group_chat.item['userCount'] == 4
@@ -127,7 +127,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     assert len(msg_mock.mock_calls) == 1
     assert len(msg_mock.call_args.args) == 3
     assert msg_mock.call_args.args[0] == group_chat.id
-    assert msg_mock.call_args.args[1] == user2.id
+    assert msg_mock.call_args.args[1] == user2
     assert len(msg_mock.call_args.args[2]) == 2
     # Note: comparing user instances doesn't work
     assert sorted(u.id for u in msg_mock.call_args.args[2]) == sorted([user3.id, user4.id])
@@ -148,24 +148,24 @@ def test_leave(group_chat, user1, user2):
     assert member_user_ids == [user1.id]
 
     # user1 adds user2 to the chat
-    group_chat.add(user1.id, [user2.id])
+    group_chat.add(user1, [user2.id])
     assert group_chat.item['userCount'] == 2
     member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
     assert sorted(member_user_ids) == sorted([user1.id, user2.id])
 
     # user1 leaves the chat
     group_chat.chat_message_manager.reset_mock()
-    group_chat.leave(user1.id)
+    group_chat.leave(user1)
     assert group_chat.item['userCount'] == 1
     member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
     assert member_user_ids == [user2.id]
     assert group_chat.chat_message_manager.mock_calls == [
-        call.add_system_message_left_group(group_chat.id, user1.id)
+        call.add_system_message_left_group(group_chat.id, user1)
     ]
 
     # user2 leaves the chat, should trigger the deletion of the chat, and hence no need for new system message
     group_chat.chat_message_manager.reset_mock()
-    group_chat.leave(user2.id)
+    group_chat.leave(user2)
     assert group_chat.item['userCount'] == 0
     group_chat.refresh_item()
     assert group_chat.item is None
@@ -178,7 +178,7 @@ def test_leave(group_chat, user1, user2):
 
 def test_cant_leave_group_chat_were_not_in(group_chat, user2):
     with pytest.raises(ChatException, match='delete chat membership'):
-        group_chat.leave(user2.id)
+        group_chat.leave(user2)
 
 
 def test_cant_leave_non_group_chat(direct_chat):
@@ -195,7 +195,7 @@ def test_delete_group_chat(group_chat, user1, chat_message_manager):
 
     # user1 leaves the chat, but avoid the auto-deletion by faking another user in it
     group_chat.item['userCount'] += 1
-    group_chat.leave(user1.id)
+    group_chat.leave(user1)
     assert group_chat.item['userCount'] == 1
     group_chat.item['userCount'] -= 1
 

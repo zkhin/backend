@@ -148,12 +148,23 @@ module.exports.updateUserContactInfo = gql`
   }
 `
 
+module.exports.disableUser = gql`
+  mutation DisableUser {
+    disableUser {
+      userId
+      username
+      userStatus
+    }
+  }
+`
+
 module.exports.resetUser = gql`
   mutation ResetUser ($newUsername: String) {
     resetUser (newUsername: $newUsername) {
       userId
       username
       fullName
+      userStatus
     }
   }
 `

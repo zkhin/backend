@@ -274,8 +274,8 @@ def test_delete_flags(album_manager, post_manager, completed_post_with_media, us
     post = completed_post_with_media
 
     # flag the post, verify those flags are in the db
-    post.flag(user2.id)
-    post.flag(user3.id)
+    post.flag(user2)
+    post.flag(user3)
     assert len(list(post_manager.flag_dynamo.generate_by_post(post.id))) == 2
 
     # delete the post, verify the flags are also deleted

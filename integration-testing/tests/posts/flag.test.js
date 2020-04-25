@@ -61,6 +61,28 @@ test('Anybody can flag post of public user', async () => {
 })
 
 
+test('Cant flag a post if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // they add a post
+  const postId = uuidv4()
+  let resp = await theirClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't flag their post
+  await expect(ourClient.mutate({mutation: mutations.flagPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Follower can flag post of private user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

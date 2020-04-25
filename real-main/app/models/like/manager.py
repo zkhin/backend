@@ -34,25 +34,23 @@ class LikeManager:
         return Like(like_item, self.dynamo, post_manager=self.post_manager)
 
     def like_post(self, user, post, like_status, now=None):
-        posted_by_user = self.user_manager.get_user(post.user_id)
-
         # can't like a post of a user that has blocked us
-        if self.block_manager.is_blocked(posted_by_user.id, user.id):
+        if self.block_manager.is_blocked(post.user_id, user.id):
             raise exceptions.LikeException(f'User has been blocked by owner of post `{post.id}`')
 
         # can't like a post of a user we have blocked
-        if self.block_manager.is_blocked(user.id, posted_by_user.id):
+        if self.block_manager.is_blocked(user.id, post.user_id):
             raise exceptions.LikeException(f'User has blocked owner of post `{post.id}`')
 
         # if the post is from a private user (other than ourselves) then we must be a follower to like the post
+        posted_by_user = self.user_manager.get_user(post.user_id)
         if user.id != posted_by_user.id:
             if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
                 follow = self.follow_manager.get_follow(user.id, posted_by_user.id)
                 if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
                     raise exceptions.LikeException(f'User does not have access to post `{post.id}`')
 
-        required_status = self.post_manager.enums.PostStatus.COMPLETED
-        if post.status != required_status:
+        if post.status != self.post_manager.enums.PostStatus.COMPLETED:
             raise exceptions.LikeException(f'Cannot like posts with status `{post.status}`')
 
         if post.item.get('likesDisabled'):
@@ -61,7 +59,6 @@ class LikeManager:
         if posted_by_user.item.get('likesDisabled'):
             raise exceptions.LikeException(f'Owner of this post (user `{posted_by_user.id}` has disabled likes')
 
-        user = self.user_manager.get_user(user.id)
         if user.item.get('likesDisabled'):
             raise exceptions.LikeException(f'Caller `{user.id}` has disabled likes')
 

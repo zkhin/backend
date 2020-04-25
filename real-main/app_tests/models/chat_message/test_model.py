@@ -167,8 +167,8 @@ def test_trigger_notifications_user_ids(message, chat, user1, user2, user3, apps
 
 def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, user2, user3, appsync_client):
     # user1 creates a group chat with everyone in it
-    group_chat = chat_manager.add_group_chat('cid', user1.id)
-    group_chat.add(user1.id, [user2.id, user3.id])
+    group_chat = chat_manager.add_group_chat('cid', user1)
+    group_chat.add(user1, [user2.id, user3.id])
 
     # user2 creates a message, trigger notificaitons on it
     message_id = 'mid'
@@ -182,5 +182,5 @@ def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, 
 
     # add system message, notifications are triggered automatically
     appsync_client.reset_mock()
-    message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user3.id, 'cname')
+    message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user3, 'cname')
     assert len(appsync_client.send.mock_calls) == 3  # one for each member of the group chat

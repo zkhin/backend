@@ -92,7 +92,7 @@ def test_add_minimal_group_chat(chat_manager, user1):
     # add the chat, verify it looks ok
     chat_id = 'cid'
     before = pendulum.now('utc')
-    chat = chat_manager.add_group_chat(chat_id, user1.id)
+    chat = chat_manager.add_group_chat(chat_id, user1)
     after = pendulum.now('utc')
     assert chat.id == chat_id
     assert chat.type == ChatType.GROUP
@@ -113,7 +113,7 @@ def test_add_minimal_group_chat(chat_manager, user1):
 
     # verify the system chat message was triggered
     assert chat_manager.chat_message_manager.mock_calls == [
-        call.add_system_message_group_created(chat_id, user1.id, name=None, now=created_at),
+        call.add_system_message_group_created(chat_id, user1, name=None, now=created_at),
     ]
 
 
@@ -126,7 +126,7 @@ def test_add_maximal_group_chat(chat_manager, user1):
     chat_id = 'cid'
     name = 'lore'
     now = pendulum.now('utc')
-    chat = chat_manager.add_group_chat(chat_id, user1.id, name=name, now=now)
+    chat = chat_manager.add_group_chat(chat_id, user1, name=name, now=now)
     assert chat.id == chat_id
     assert chat.type == ChatType.GROUP
     assert chat.item.get('messageCount', 0) == 0
@@ -144,7 +144,7 @@ def test_add_maximal_group_chat(chat_manager, user1):
 
     # verify the system chat message was triggered
     assert chat_manager.chat_message_manager.mock_calls == [
-        call.add_system_message_group_created(chat_id, user1.id, name=name, now=now),
+        call.add_system_message_group_created(chat_id, user1, name=name, now=now),
     ]
 
 
@@ -158,8 +158,8 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     # user1 sets up a group chat with only themselves in it, and another with user2
     chat_id_3 = 'cid3'
     chat_id_4 = 'cid4'
-    chat_manager.add_group_chat(chat_id_3, user1.id)
-    chat_manager.add_group_chat(chat_id_4, user1.id).add(user1.id, [user2.id])
+    chat_manager.add_group_chat(chat_id_3, user1)
+    chat_manager.add_group_chat(chat_id_4, user1).add(user1, [user2.id])
 
     # verify that's reflected in the user totals
     user1.refresh_item()

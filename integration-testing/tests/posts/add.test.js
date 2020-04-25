@@ -574,3 +574,18 @@ test('Add post setAsUserPhoto success', async () => {
   expect(resp['data']['self']['userId']).toBe(ourUserId)
   expect(resp['data']['self']['photo']['url']).toContain(postId2)
 })
+
+
+test('Disabled user cannot add a post', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we disable ourselves
+  let resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't add a post
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})

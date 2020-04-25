@@ -4,7 +4,7 @@ import logging
 from boto3.dynamodb.conditions import Key
 import pendulum
 
-from .enums import UserPrivacyStatus
+from .enums import UserPrivacyStatus, UserStatus
 from .exceptions import UserAlreadyExists, UserDoesNotExist
 
 logger = logging.getLogger()
@@ -101,6 +101,21 @@ class UserDynamo:
         else:
             query_kwargs['UpdateExpression'] = 'REMOVE photoPostId'
 
+        return self.client.update_item(query_kwargs)
+
+    def set_user_status(self, user_id, status):
+        assert status in UserStatus._ALL, f'Invalid UserStatus `{status}`'
+        query_kwargs = {
+            'Key': {
+                'partitionKey': f'user/{user_id}',
+                'sortKey': 'profile',
+            },
+        }
+        if status == UserStatus.ACTIVE:  # default value
+            query_kwargs['UpdateExpression'] = 'REMOVE userStatus'
+        else:
+            query_kwargs['UpdateExpression'] = 'SET userStatus = :s'
+            query_kwargs['ExpressionAttributeValues'] = {':s': status}
         return self.client.update_item(query_kwargs)
 
     def set_user_privacy_status(self, user_id, privacy_status):

@@ -93,6 +93,12 @@ class User:
         resp['followedStatus'] = self.follow_manager.get_follow_status(caller_user_id, self.id)
         return resp
 
+    def set_user_status(self, status):
+        if status == self.item.get('userStatus', enums.UserStatus.ACTIVE):
+            return self
+        self.item = self.dynamo.set_user_status(self.id, status)
+        return self
+
     def set_accepted_eula_version(self, version):
         if version == self.item.get('acceptedEULAVersion'):
             return self

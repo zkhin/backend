@@ -84,26 +84,27 @@ class ChatManager:
 
         return self.get_chat(chat_id, strongly_consistent=True)
 
-    def add_group_chat(self, chat_id, created_by_user_id, name=None, now=None):
+    def add_group_chat(self, chat_id, created_by_user, name=None, now=None):
         now = now or pendulum.now('utc')
 
         # create the group chat with just caller in it
         transacts = [
-            self.dynamo.transact_add_chat(chat_id, enums.ChatType.GROUP, created_by_user_id, name=name, now=now),
-            self.dynamo.transact_add_chat_membership(chat_id, created_by_user_id, now=now),
-            self.user_manager.dynamo.transact_increment_chat_count(created_by_user_id),
+            self.dynamo.transact_add_chat(chat_id, enums.ChatType.GROUP, created_by_user.id, name=name, now=now),
+            self.dynamo.transact_add_chat_membership(chat_id, created_by_user.id, now=now),
+            self.user_manager.dynamo.transact_increment_chat_count(created_by_user.id),
         ]
         transact_exceptions = [
             exceptions.ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
-            exceptions.ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
-            exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
+            exceptions.ChatException(f'Unable to add user `{created_by_user.id}` to chat `{chat_id}`'),
+            exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user.id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 
-        self.chat_message_manager.add_system_message_group_created(chat_id, created_by_user_id, name=name, now=now)
+        self.chat_message_manager.add_system_message_group_created(chat_id, created_by_user, name=name, now=now)
         return self.get_chat(chat_id, strongly_consistent=True)
 
     def leave_all_chats(self, user_id):
+        user = None
         for chat_id in self.dynamo.generate_chat_membership_chat_ids_by_user(user_id):
             chat = self.get_chat(chat_id)
             if not chat:
@@ -112,4 +113,5 @@ class ChatManager:
             if chat.type == enums.ChatType.DIRECT:
                 chat.delete_direct_chat()
             else:
-                chat.leave(user_id)
+                user = user or self.user_manager.get_user(user_id)
+                chat.leave(user)

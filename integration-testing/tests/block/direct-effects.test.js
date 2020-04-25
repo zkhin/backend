@@ -147,3 +147,41 @@ test('We can block & unblock a user that has blocked us', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['unblockUser']['userId']).toBe(theirUserId)
 })
+
+
+test('We cannot block a user if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // we disable ourselves
+  let resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't block them
+  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
+test('We cannot unblock a user if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // we block them
+  let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['blockUser']['userId']).toBe(theirUserId)
+  expect(resp['data']['blockUser']['blockedStatus']).toBe('BLOCKING')
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't unblock them
+  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})

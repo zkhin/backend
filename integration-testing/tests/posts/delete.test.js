@@ -156,6 +156,28 @@ test('Invalid attempts to delete posts', async () => {
 })
 
 
+test('Cant delete a post if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we create a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't delete that post
+  await expect(ourClient.mutate({mutation: mutations.deletePost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('When a post is deleted, any likes of it disappear', async () => {
   // us and them, they add a post
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

@@ -101,6 +101,28 @@ test('Report post views', async () => {
 })
 
 
+test('Cannot report post views if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData: imageData1B64}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we cannot report post views
+  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Post.viewedStatus', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

@@ -200,6 +200,41 @@ test('Report message views', async () => {
 })
 
 
+test('Disabled user cannot add, edit, delete or report views of chat messages', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we create a group chat with just us in it
+  const chatId = uuidv4()
+  const messageId = uuidv4()
+  let variables = {chatId, userIds: [], messageId, messageText: 'm1'}
+  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['createGroupChat']['chatId']).toBe(chatId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we cannot add a message to that chat
+  variables = {chatId, messageId: uuidv4(), text: 'lore'}
+  await expect(ourClient.mutate({mutation: mutations.addChatMessage, variables}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we cannot edit our chat message
+  await expect(ourClient.mutate({mutation: mutations.editChatMessage, variables: {messageId, text: 'lore new'}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we cannot edit our chat message
+  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  await expect(ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId]}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Cant add a message to a chat we are not in', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

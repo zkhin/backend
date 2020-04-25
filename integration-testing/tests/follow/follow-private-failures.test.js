@@ -14,6 +14,36 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
 
 
+test('Cant accept or deny a follow request if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // they go private
+  const privacyStatus = 'PRIVATE'
+  let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['userId']).toBe(theirUserId)
+  expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
+
+  // we request to follow them
+  resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['followUser']['followedStatus']).toBe('REQUESTED')
+
+  // they disable themselves
+  resp = await theirClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(theirUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify they can't deny or accept the following
+  await expect(theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Try to double-accept a follow request', async () => {
   // us and a private user
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

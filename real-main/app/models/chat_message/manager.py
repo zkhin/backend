@@ -68,17 +68,15 @@ class ChatMessageManager:
                     batch.delete_item(Key=view_pk)
                 batch.delete_item(Key=chat_message_pk)
 
-    def add_system_message_group_created(self, chat_id, created_by_user_id, name=None, now=None):
-        user = self.user_manager.get_user(created_by_user_id)
-        text = f'@{user.username} created the group'
+    def add_system_message_group_created(self, chat_id, created_by_user, name=None, now=None):
+        text = f'@{created_by_user.username} created the group'
         if name:
             text += f' "{name}"'
-        return self.add_system_message(chat_id, text, user_ids=[created_by_user_id], now=now)
+        return self.add_system_message(chat_id, text, user_ids=[created_by_user.id], now=now)
 
-    def add_system_message_added_to_group(self, chat_id, added_by_user_id, users, now=None):
+    def add_system_message_added_to_group(self, chat_id, added_by_user, users, now=None):
         assert users, 'No system message should be sent if no users added to group'
-        user = self.user_manager.get_user(added_by_user_id)
-        text = f'@{user.username} added '
+        text = f'@{added_by_user.username} added '
         user_1 = users.pop()
         if users:
             text += ', '.join(f'@{u.username}' for u in users)
@@ -86,14 +84,12 @@ class ChatMessageManager:
         text += f'@{user_1.username} to the group'
         return self.add_system_message(chat_id, text, user_ids=[u.id for u in users], now=now)
 
-    def add_system_message_left_group(self, chat_id, user_id):
-        user = self.user_manager.get_user(user_id)
+    def add_system_message_left_group(self, chat_id, user):
         text = f'@{user.username} left the group'
         return self.add_system_message(chat_id, text)
 
-    def add_system_message_group_name_edited(self, chat_id, changed_by_user_id, new_name):
-        user = self.user_manager.get_user(changed_by_user_id)
-        text = f'@{user.username} '
+    def add_system_message_group_name_edited(self, chat_id, changed_by_user, new_name):
+        text = f'@{changed_by_user.username} '
         if new_name:
             text += f'changed the name of the group to "{new_name}"'
         else:

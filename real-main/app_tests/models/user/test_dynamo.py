@@ -2,7 +2,7 @@ import pendulum
 import pytest
 
 from app.models.user.dynamo import UserDynamo
-from app.models.user.enums import UserPrivacyStatus
+from app.models.user.enums import UserPrivacyStatus, UserStatus
 from app.models.user.exceptions import UserAlreadyExists, UserDoesNotExist
 
 
@@ -320,6 +320,28 @@ def test_set_user_accepted_eula_version(user_dynamo):
     # delete it
     user_item = user_dynamo.set_user_accepted_eula_version(user_id, None)
     assert 'acceptedEULAVersion' not in user_item
+
+
+def test_set_user_status(user_dynamo):
+    # create the user, verify user starts as ACTIVE as default
+    user_id = 'my-user-id'
+    user_item = user_dynamo.add_user(user_id, 'thebestuser')
+    assert user_item['userId'] == user_id
+    assert 'userStatus' not in user_item
+
+    # can't set it to an invalid value
+    with pytest.raises(AssertionError, match='Invalid UserStatus'):
+        user_dynamo.set_user_status(user_id, 'nopenope')
+
+    # set it, check
+    item = user_dynamo.set_user_status(user_id, UserStatus.DELETING)
+    assert item['userStatus'] == UserStatus.DELETING
+    assert user_dynamo.get_user(user_id)['userStatus'] == UserStatus.DELETING
+
+    # set it to the default, check
+    item = user_dynamo.set_user_status(user_id, UserStatus.ACTIVE)
+    assert 'userStatus' not in item
+    assert 'userStatus' not in user_dynamo.get_user(user_id)
 
 
 def test_set_user_privacy_status(user_dynamo):

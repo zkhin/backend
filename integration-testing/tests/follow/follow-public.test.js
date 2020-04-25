@@ -60,6 +60,43 @@ test('Follow & unfollow a public user', async () => {
 })
 
 
+test('Cant follow someone if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // disable ourselves
+  let resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't follow them
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
+test('Cant unfollow someone if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // we follow them
+  let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['followUser']['followedStatus']).toBe('FOLLOWING')
+
+  // disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't unfollow them
+  await expect(ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Try to double follow a user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()

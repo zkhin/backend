@@ -85,6 +85,45 @@ test('Cant archive a post in PENDING status', async () => {
 })
 
 
+test('Cant archive a post or restore an archived post if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we create a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // we archive that post
+  resp = await ourClient.mutate({mutation: mutations.archivePost, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['archivePost']['postId']).toBe(postId)
+  expect(resp['data']['archivePost']['postStatus']).toBe('ARCHIVED')
+
+  // we create a second post
+  const postId2 = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't archive the second post
+  await expect(ourClient.mutate({mutation: mutations.archivePost, variables: {postId: postId2}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we can't restore the first post
+  await expect(ourClient.mutate({mutation: mutations.restoreArchivedPost, variables: {postId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Archiving an image post does not affect image urls', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 

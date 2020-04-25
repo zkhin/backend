@@ -3,6 +3,7 @@ from unittest.mock import call, Mock
 import pytest
 
 from app.models.follow.enums import FollowStatus
+from app.models.user.enums import UserStatus
 from app.utils import image_size
 
 
@@ -140,6 +141,26 @@ def test_delete_all_details(user):
     assert 'themeCode' not in user.item
     assert 'followCountsHidden' not in user.item
     assert 'viewCountsHidden' not in user.item
+
+
+def test_set_user_status(user):
+    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.ACTIVE
+
+    # no op
+    user.set_user_status(UserStatus.ACTIVE)
+    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.ACTIVE
+
+    # change it
+    user.set_user_status(UserStatus.DELETING)
+    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.DELETING
+
+    # change it again
+    user.set_user_status(UserStatus.DISABLED)
+    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.DISABLED
+
+    # change it back
+    user.set_user_status(UserStatus.ACTIVE)
+    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.ACTIVE
 
 
 def test_set_privacy_status_no_change(user):

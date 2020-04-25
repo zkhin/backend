@@ -185,6 +185,11 @@ custom:
         response: PassThru.response.vtl
 
       - type: User
+        field: userStatus
+        dataSource: NoneDataSource
+        response: PassThru.response.vtl
+
+      - type: User
         field: languageCode
         dataSource: NoneDataSource
         response: PassThru.response.vtl
@@ -394,6 +399,12 @@ custom:
 
       - type: Mutation
         field: resetUser
+        dataSource: LambdaDataSource
+        request: Lambda.request.vtl
+        response: Lambda.response.vtl
+
+      - type: Mutation
+        field: disableUser
         dataSource: LambdaDataSource
         request: Lambda.request.vtl
         response: Lambda.response.vtl

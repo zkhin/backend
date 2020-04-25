@@ -465,3 +465,50 @@ test('resetUser causes us to leave group chats', async () => {
   expect(resp['data']['chat']['messages']['items'][2]['author']).toBeNull()
   expect(resp['data']['chat']['messages']['items'][3]['authorUserId']).toBeNull()
 })
+
+
+test('resetUser changes userStatus', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // check our status
+  let resp = await ourClient.query({query: queries.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['userStatus']).toBe('ACTIVE')
+
+  // reset our user
+  resp = await ourClient.mutate({mutation: mutations.resetUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['resetUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['resetUser']['userStatus']).toBe('DELETING')
+})
+
+
+test('Can reset a disabled user', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // disable ourselves
+  let resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // double check our status
+  resp = await ourClient.query({query: queries.self})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['self']['userId']).toBe(ourUserId)
+  expect(resp['data']['self']['userStatus']).toBe('DISABLED')
+
+  // reset our account
+  resp = await ourClient.mutate({mutation: mutations.resetUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['resetUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['resetUser']['userStatus']).toBe('DELETING')
+
+  // verify that worked
+  await ourClient.resetStore()
+  resp = await ourClient.query({query: queries.self})
+  expect(resp['data']).toBeNull()
+  expect(resp['errors']).toHaveLength(1)
+  expect(resp['errors'][0]['message']).toBe('User does not exist')
+})

@@ -68,6 +68,29 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
 })
 
 
+test('Cant edit Post.expiresAt if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const postId = uuidv4()
+
+  // we add a post
+  let variables = {postId, imageData}
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can't edit the expires at
+  variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Cant set Post.expiresAt with datetime without timezone info', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()

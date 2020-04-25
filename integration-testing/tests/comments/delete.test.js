@@ -135,6 +135,33 @@ test('Cant delete a comment that doesnt exist', async () => {
 })
 
 
+test('Cant delete comments if our user is disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // we add a comment on our post
+  const commentId = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 't'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addComment']['commentId']).toBe(commentId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // check we cannot delete that comment
+  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Cant delete someone elses comment on someone elses post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

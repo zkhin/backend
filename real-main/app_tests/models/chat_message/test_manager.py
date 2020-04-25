@@ -133,7 +133,7 @@ def test_add_system_message_group_created(chat_message_manager, chat, user):
     assert 'messageCount' not in chat.item
 
     # add the message, check it looks ok
-    message = chat_message_manager.add_system_message_group_created(chat.id, user.id)
+    message = chat_message_manager.add_system_message_group_created(chat.id, user)
     assert message.item['text'] == f'@{user.username} created the group'
     assert message.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
 
@@ -142,7 +142,7 @@ def test_add_system_message_group_created(chat_message_manager, chat, user):
     assert chat.item['messageCount'] == 1
 
     # add another message, check it looks ok
-    message = chat_message_manager.add_system_message_group_created(chat.id, user.id, name='group name')
+    message = chat_message_manager.add_system_message_group_created(chat.id, user, name='group name')
     assert message.item['text'] == f'@{user.username} created the group "group name"'
     assert message.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
 
@@ -161,20 +161,20 @@ def test_add_system_message_added_to_group(chat_message_manager, chat, user, use
 
     # can't add no users
     with pytest.raises(AssertionError):
-        chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [])
+        chat_message_manager.add_system_message_added_to_group(chat.id, user, [])
 
     # add one user
-    message = chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [user2])
+    message = chat_message_manager.add_system_message_added_to_group(chat.id, user, [user2])
     assert message.item['text'] == f'@{user.username} added @{user2.username} to the group'
     assert len(message.item['textTags']) == 2
 
     # add two users
-    message = chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [user2, user3])
+    message = chat_message_manager.add_system_message_added_to_group(chat.id, user, [user2, user3])
     assert message.item['text'] == f'@{user.username} added @{user2.username} and @{user3.username} to the group'
     assert len(message.item['textTags']) == 3
 
     # add three users
-    message = chat_message_manager.add_system_message_added_to_group(chat.id, user.id, [user2, user3, user])
+    message = chat_message_manager.add_system_message_added_to_group(chat.id, user, [user2, user3, user])
     assert message.item['text'] == \
         f'@{user.username} added @{user2.username}, @{user3.username} and @{user.username} to the group'
     assert len(message.item['textTags']) == 3
@@ -191,7 +191,7 @@ def test_add_system_message_left_group(chat_message_manager, chat, user):
     assert 'messageCount' not in chat.item
 
     # user leaves
-    message = chat_message_manager.add_system_message_left_group(chat.id, user.id)
+    message = chat_message_manager.add_system_message_left_group(chat.id, user)
     assert message.item['text'] == f'@{user.username} left the group'
     assert len(message.item['textTags']) == 1
 
@@ -207,12 +207,12 @@ def test_add_system_message_group_name_edited(chat_message_manager, chat, user):
     assert 'messageCount' not in chat.item
 
     # user changes the name
-    message = chat_message_manager.add_system_message_group_name_edited(chat.id, user.id, '4eva')
+    message = chat_message_manager.add_system_message_group_name_edited(chat.id, user, '4eva')
     assert message.item['text'] == f'@{user.username} changed the name of the group to "4eva"'
     assert len(message.item['textTags']) == 1
 
     # user deletes the name the name
-    message = chat_message_manager.add_system_message_group_name_edited(chat.id, user.id, None)
+    message = chat_message_manager.add_system_message_group_name_edited(chat.id, user, None)
     assert message.item['text'] == f'@{user.username} deleted the name of the group'
     assert len(message.item['textTags']) == 1
 

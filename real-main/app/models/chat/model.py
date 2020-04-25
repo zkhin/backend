@@ -33,18 +33,18 @@ class Chat:
     def is_member(self, user_id):
         return bool(self.dynamo.get_chat_membership(self.id, user_id))
 
-    def edit(self, edited_by_user_id, name=None):
+    def edit(self, edited_by_user, name=None):
         if self.type != enums.ChatType.GROUP:
             raise exceptions.ChatException(f'Cannot edit non-GROUP chat `{self.id}`')
 
         if name is None:
             return
         self.item = self.dynamo.update_name(self.id, name)
-        self.chat_message_manager.add_system_message_group_name_edited(self.id, edited_by_user_id, name)
+        self.chat_message_manager.add_system_message_group_name_edited(self.id, edited_by_user, name)
         self.item['messageCount'] = self.item.get('messageCount', 0) + 1
         return self
 
-    def add(self, added_by_user_id, user_ids, now=None):
+    def add(self, added_by_user, user_ids, now=None):
         now = now or pendulum.now('utc')
         if self.type != enums.ChatType.GROUP:
             raise exceptions.ChatException(f'Cannot add users to non-GROUP chat `{self.id}`')
@@ -57,14 +57,14 @@ class Chat:
             if not user:
                 continue
 
-            if added_by_user_id is not None:
-                if user_id == added_by_user_id:
+            if added_by_user.id is not None:
+                if user_id == added_by_user.id:
                     continue  # must already be in the chat
 
-                if self.block_manager.is_blocked(added_by_user_id, user_id):
+                if self.block_manager.is_blocked(added_by_user.id, user_id):
                     continue  # can't add a user you're blocking
 
-                if self.block_manager.is_blocked(user_id, added_by_user_id):
+                if self.block_manager.is_blocked(user_id, added_by_user.id):
                     continue  # can't add a user who is blocking you
 
             transacts = [
@@ -87,23 +87,23 @@ class Chat:
                 users.append(user)
 
         if users:
-            self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user_id, users, now=now)
+            self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user, users, now=now)
             self.item['messageCount'] = self.item.get('messageCount', 0) + 1
 
-    def leave(self, user_id):
+    def leave(self, user):
         if self.type != enums.ChatType.GROUP:
             raise exceptions.ChatException(f'Cannot leave non-GROUP chat `{self.id}`')
 
         # leave the chat
         transacts = [
-            self.dynamo.transact_delete_chat_membership(self.id, user_id),
+            self.dynamo.transact_delete_chat_membership(self.id, user.id),
             self.dynamo.transact_decrement_chat_user_count(self.id),
-            self.user_manager.dynamo.transact_decrement_chat_count(user_id),
+            self.user_manager.dynamo.transact_decrement_chat_count(user.id),
         ]
         transact_exceptions = [
-            exceptions.ChatException(f'Unable to delete chat membership of user `{user_id}` in chat `{self.id}`'),
+            exceptions.ChatException(f'Unable to delete chat membership of user `{user.id}` in chat `{self.id}`'),
             Exception(f'Unable to decrement Chat.userCount for chat `{self.id}`'),
-            Exception(f'Unable to decrement User.chatCount for chat `{user_id}`'),
+            Exception(f'Unable to decrement User.chatCount for chat `{user.id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         self.item['userCount'] -= 1
@@ -112,7 +112,7 @@ class Chat:
         if self.item['userCount'] <= 0:
             self.delete_group_chat()
         else:
-            self.chat_message_manager.add_system_message_left_group(self.id, user_id)
+            self.chat_message_manager.add_system_message_left_group(self.id, user)
             self.item['messageCount'] = self.item.get('messageCount', 0) + 1
 
         return self

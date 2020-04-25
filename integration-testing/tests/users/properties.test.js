@@ -92,6 +92,20 @@ describe('Read and write properties our our own profile', () => {
 })
 
 
+test('Disabled user cannot setUserDetails', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // disable ourselves
+  let resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify can't edit our details
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
 test('setUserDetails without any arguments returns an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   await expect(ourClient.mutate({mutation: mutations.setUserDetails}))
@@ -477,6 +491,16 @@ test('User accepted EULA version - get, set, privacy', async () => {
   resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: ''}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['setUserAcceptedEULAVersion']['acceptedEULAVersion']).toBeNull()
+
+  // disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we can no longer edit the EULA
+  await expect(ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '42'}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 

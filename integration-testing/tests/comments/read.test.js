@@ -89,6 +89,33 @@ test('Cant report no comment views, or more than 100', async () => {
 })
 
 
+test('Cant report comment views if our user is diabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+
+  // we add a comment on the post
+  const commentId = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addComment']['commentId']).toBe(commentId)
+
+  // we disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify can't report a view of a comment
+  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Comment report views, viewed status tracked correctly', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()

@@ -75,6 +75,9 @@ type Mutation {
   #     This is equivalent to calling Mutation.createCognitoOnlyUser(username: $newUsername) directly after this call.
   resetUser(newUsername: String): User
 
+  # Disable user account. Cannot be resevered via GQL api.
+  disableUser: User
+
   # Set optional user details.
   # Only the specified arguments will be set.
   # To delete an String/ID argument, set it to the empty string (ie bio="").
@@ -251,6 +254,7 @@ type User {
   username: String!
 
   # public info, readable by all logged-in non-blocked users
+  userStatus: UserStatus
   privacyStatus: PrivacyStatus
   followedStatus: FollowStatus!  # is the caller following them?
   followerStatus: FollowStatus!  # are they following the caller?
@@ -423,6 +427,12 @@ input ChatMessageNotificationInput {
   # Stringified JSON of the author's serialized representation
   #   - null for system messages or when caller has blocking relationship with author
   authorEncoded : String
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  DELETING
 }
 
 enum PrivacyStatus {

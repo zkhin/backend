@@ -155,5 +155,6 @@ module.exports.simpleUserFields = gql`
     postHasNewCommentActivity
     viewCountsHidden
     signedUpAt
+    userStatus
   }
 `

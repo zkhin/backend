@@ -152,6 +152,23 @@ test('Cannot create a direct chat if one already exists', async () => {
 })
 
 
+test('Cannot create a direct chat if we are disabled', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [, theirUserId] = await loginCache.getCleanLogin()
+
+  // we disable ourselves
+  let resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
+  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+
+  // verify we cannot open up another direct chat with them
+  let variables = {userId: theirUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
+    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+
 test('Cannot open direct chat with self', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
