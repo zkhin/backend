@@ -41,38 +41,3 @@ def delete_recently_expired_posts(event, context):
 def delete_older_expired_posts(event, context):
     now = pendulum.now('utc')
     post_manager.delete_older_expired_posts(now=now)
-
-
-def delete_unconfirmed_expired_users_in_cognito(event, context):
-    """
-    Delete all unconfirmed users in the cognito user and identity pools for which their confirmation code
-    has expired.
-    """
-    now = pendulum.now('utc')
-    # confirmation code lasts 24 hours
-    # https://docs.aws.amazon.com/cognito/latest/developerguide/limits.html#limits-hard
-    lifetime = pendulum.duration(hours=24)
-    cutoff = now - lifetime
-
-    # iterate over unconfirmed entries in the user pool
-    for item in cognito_client.list_unconfirmed_users_pool_entries():
-        # boto returns these datetimes in the machine's local TZ
-        last_modified_at = pendulum.instance(item['UserLastModifiedDate']).in_tz('utc')
-        if last_modified_at > cutoff:
-            continue
-        user_id = item['Username']
-
-        # do another request to be absolutely sure this user is unconfirmed before we delete them
-        user_status = cognito_client.get_user_status(user_id)
-        if user_status != 'UNCONFIRMED':
-            logger.error(f'Cognito user pool entry changed from UNCONFIRMED to `{user_status}`, not deleting')
-            continue
-
-        # delete them
-        msg = f'Deleting user pool entry for unconfirmed user `{user_id}`'
-        if 'email' in item:
-            msg += f' with email `{item["email"]}`'
-        if 'phone_number' in item:
-            msg += f' with phone number `{item["phone_number"]}`'
-        logger.warning(msg)
-        cognito_client.delete_user_pool_entry(user_id)

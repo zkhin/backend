@@ -1700,17 +1700,6 @@ functions:
       - functionErrors
       - functionThrottles
 
-  deleteUnconfirmedExpiredUsers:
-    name: ${self:provider.stackName}-deleteUnconfirmedExpiredUsers
-    handler: app.handlers.cron.delete_unconfirmed_expired_users_in_cognito
-    layers:
-      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
-    events:
-      - schedule: rate(1 hour)
-    alarms:
-      - functionErrors
-      - functionThrottles
-
   cognitoPreSignUp:
     name: ${self:provider.stackName}-cognitoPreSignUp
     handler: app.handlers.cognito.pre_sign_up
