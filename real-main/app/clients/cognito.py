@@ -122,7 +122,7 @@ class CognitoClient:
         )
         return boto_resp['UserStatus']
 
-    def list_unconfirmed_users_pool_entries(self):
+    def list_unconfirmed_user_pool_entries(self):
         boto_resp = self.boto_client.list_users(
             UserPoolId=self.user_pool_id,
             Filter='cognito:user_status = "UNCONFIRMED"'

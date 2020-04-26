@@ -66,7 +66,7 @@ def cognito_client():
         cognito_client = clients.CognitoClient('dummy', 'my-client-id')
         resp = cognito_client.boto_client.create_user_pool(
             PoolName='user-pool-name',
-            AliasAttributes=['phone_number', 'email', 'preferred_username'],  # but doesnt appear to force uniqueness
+            AliasAttributes=['phone_number', 'email', 'preferred_username'],  # seems moto doesn't enforce uniqueness
         )
         cognito_client.user_pool_id = resp['UserPool']['Id']
         yield cognito_client
