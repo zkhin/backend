@@ -143,24 +143,26 @@ def test_delete_all_details(user):
     assert 'viewCountsHidden' not in user.item
 
 
-def test_set_user_status(user):
-    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.ACTIVE
+def test_get_set_user_status(user):
+    assert user.status == UserStatus.ACTIVE
+    assert 'userStatus' not in user.item
 
     # no op
     user.set_user_status(UserStatus.ACTIVE)
-    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.ACTIVE
+    assert user.status == UserStatus.ACTIVE
 
     # change it
     user.set_user_status(UserStatus.DELETING)
-    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.DELETING
+    assert user.status == UserStatus.DELETING
+    assert user.item['userStatus'] == UserStatus.DELETING
 
     # change it again
     user.set_user_status(UserStatus.DISABLED)
-    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.DISABLED
+    assert user.status == UserStatus.DISABLED
 
     # change it back
     user.set_user_status(UserStatus.ACTIVE)
-    assert user.item.get('userStatus', 'ACTIVE') == UserStatus.ACTIVE
+    assert user.status == UserStatus.ACTIVE
 
 
 def test_set_privacy_status_no_change(user):
@@ -493,3 +495,40 @@ def test_serailize_followed(user, user2, follow_manager):
     assert resp.pop('blockerStatus') == 'NOT_BLOCKING'
     assert resp.pop('followedStatus') == 'FOLLOWING'
     assert resp == user.item
+
+
+def test_is_forced_disabling_criteria_met(user):
+    # check starting state
+    assert user.item.get('postCount', 0) == 0
+    assert user.item.get('postForcedArchivingCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met() is False
+
+    # first post was force-disabled, shouldn't disable the user
+    user.item['postCount'] = 1
+    user.item['postArchivedCount'] = 0
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is False
+
+    # just below criteria cutoff
+    user.item['postCount'] = 5
+    user.item['postArchivedCount'] = 0
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is False
+    user.item['postCount'] = 3
+    user.item['postArchivedCount'] = 3
+    user.item['postForcedArchivingCount'] = 0
+    assert user.is_forced_disabling_criteria_met() is False
+
+    # just above criteria cutoff
+    user.item['postCount'] = 6
+    user.item['postArchivedCount'] = 0
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
+    user.item['postCount'] = 0
+    user.item['postArchivedCount'] = 6
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
+    user.item['postCount'] = 2
+    user.item['postArchivedCount'] = 4
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True

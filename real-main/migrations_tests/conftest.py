@@ -7,7 +7,12 @@ from .table_schema import table_schema
 
 
 @pytest.fixture
-def dynamo_client():
+def dynamo_client_and_table():
+    """
+    Both the dynamo_client and dynamo_table must be generated under the same mock_dynamodb2
+    instance in order for catching of exceptions thrown by operations with the table
+    using the error definitions on the client to work.
+    """
     with moto.mock_dynamodb2():
         client = boto3.client('dynamodb')
 
@@ -29,14 +34,21 @@ def dynamo_client():
                 operation(**kwargs)
 
         client.transact_write_items = types.MethodType(transact_write_items, client)
-        yield client
+
+        dynamo_resource = boto3.resource('dynamodb')
+        table = dynamo_resource.create_table(TableName='test-table', BillingMode='PAY_PER_REQUEST', **table_schema)
+
+        yield client, table
 
 
 @pytest.fixture
-def dynamo_table():
-    with moto.mock_dynamodb2():
-        dynamo_resource = boto3.resource('dynamodb')
-        yield dynamo_resource.create_table(TableName='test-table', BillingMode='PAY_PER_REQUEST', **table_schema)
+def dynamo_client(dynamo_client_and_table):
+    yield dynamo_client_and_table[0]
+
+
+@pytest.fixture
+def dynamo_table(dynamo_client_and_table):
+    yield dynamo_client_and_table[1]
 
 
 @pytest.fixture

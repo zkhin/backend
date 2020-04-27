@@ -5,7 +5,7 @@ from app.utils import image_size
 from app.models.post.enums import PostStatus, PostType
 
 from . import enums, exceptions
-from .enums import UserPrivacyStatus
+from .enums import UserPrivacyStatus, UserStatus
 from .dynamo import UserDynamo
 from .validate import UserValidate
 
@@ -62,6 +62,10 @@ class User:
     def username(self):
         return self.item['username']
 
+    @property
+    def status(self):
+        return self.item.get('userStatus', UserStatus.ACTIVE)
+
     def get_photo_path(self, size, photo_post_id=None):
         photo_post_id = photo_post_id or self.item.get('photoPostId')
         if not photo_post_id:
@@ -83,8 +87,18 @@ class User:
             return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
-    def refresh_item(self):
-        self.item = self.dynamo.get_user(self.id)
+    def is_forced_disabling_criteria_met(self):
+        # forced disabling criteria, (directly from spec):
+        #   - user has over 5 posts
+        #   - their forced post archivings is at least 10% of their total post count
+        total_post_count = self.item.get('postCount', 0) + self.item.get('postArchivedCount', 0)
+        forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
+        if total_post_count > 5 and forced_archiving_count > total_post_count / 10:
+            return True
+        return False
+
+    def refresh_item(self, strongly_consistent=False):
+        self.item = self.dynamo.get_user(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def serialize(self, caller_user_id):
@@ -94,7 +108,7 @@ class User:
         return resp
 
     def set_user_status(self, status):
-        if status == self.item.get('userStatus', enums.UserStatus.ACTIVE):
+        if status == self.item.get('userStatus', UserStatus.ACTIVE):
             return self
         self.item = self.dynamo.set_user_status(self.id, status)
         return self

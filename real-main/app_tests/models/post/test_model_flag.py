@@ -1,9 +1,12 @@
+import logging
 from unittest.mock import Mock
 import uuid
 
+import pendulum
 import pytest
 
 from app.models.post.enums import PostType
+from app.models.user.enums import UserStatus
 
 
 @pytest.fixture
@@ -44,25 +47,77 @@ def test_flag_success(post, user2):
     assert post.refresh_item().item.get('flagCount', 0) == 1
 
 
-def test_flag_autoarchive_by_popular_demand(post, user2, user3):
-    # test without auto-archiving
-    post.should_archive_by_popular_demand = Mock(return_value=False)
-    post.flag(user2)
+def test_flag_force_archive_by_crowdsourced_criteria(post, user2, user3, caplog):
+    # test without force-archiving
+    post.is_crowdsourced_forced_archiving_criteria_met = Mock(return_value=False)
+    with caplog.at_level(logging.WARNING):
+        post.flag(user2)
+    assert len(caplog.records) == 0
     assert post.status == post.enums.PostStatus.COMPLETED
     assert post.refresh_item().status == post.enums.PostStatus.COMPLETED
 
-    # test with auto-archiving
-    post.should_archive_by_popular_demand = Mock(return_value=True)
-    post.flag(user3)
+    # test with force-archiving
+    post.is_crowdsourced_forced_archiving_criteria_met = Mock(return_value=True)
+    with caplog.at_level(logging.WARNING):
+        post.flag(user3)
+    assert len(caplog.records) == 1
+    assert 'Force archiving' in caplog.records[0].msg
+    assert post.id in caplog.records[0].msg
     assert post.status == post.enums.PostStatus.ARCHIVED
     assert post.refresh_item().status == post.enums.PostStatus.ARCHIVED
 
 
-def test_flag_autoarchive_by_admin(post, user2):
+def test_flag_force_archive_by_admin(post, user2, caplog):
     post.flag_admin_usernames = (user2.username,)
-    post.flag(user2)
+    with caplog.at_level(logging.WARNING):
+        post.flag(user2)
+    assert len(caplog.records) == 1
+    assert 'Force archiving' in caplog.records[0].msg
+    assert post.id in caplog.records[0].msg
     assert post.status == post.enums.PostStatus.ARCHIVED
     assert post.refresh_item().status == post.enums.PostStatus.ARCHIVED
+
+
+def test_flag_force_disable_user(post, user2, caplog):
+    # artificially boost the user's counts so their into the auto-disabling realm
+    cnt = 15
+    while (cnt := cnt - 1) > 0:
+        post.dynamo.client.transact_write_items([post.user.dynamo.transact_post_completed(post.user_id)])
+    cnt = 5
+    while (cnt := cnt - 1) > 0:
+        post.dynamo.client.transact_write_items([post.user.dynamo.transact_post_archived(post.user_id, forced=True)])
+    post.user.refresh_item()
+
+    # check starting state
+    assert post.item.get('flagCount', 0) == 0
+    assert post.user.status == UserStatus.ACTIVE
+    assert post.user.item.get('postCount', 0) == 11
+    assert post.user.item.get('postForcedArchivingCount', 0) == 4
+
+    # flag the post as an admin
+    post.flag_admin_usernames = (user2.username,)
+    before = pendulum.now('utc')
+    with caplog.at_level(logging.WARNING):
+        post.flag(user2)
+    after = pendulum.now('utc')
+
+    # check the logs
+    assert len(caplog.records) == 3
+    assert 'Force archiving' in caplog.records[0].msg
+    assert post.id in caplog.records[0].msg
+    assert 'Force disabling' in caplog.records[1].msg
+    assert post.user_id in caplog.records[1].msg
+    assert 'USER_FORCE_DISABLED' in caplog.records[2].msg
+    assert post.user_id in caplog.records[2].msg
+    assert post.user.username in caplog.records[2].msg
+
+    # check the post and user state in DB
+    post.refresh_item()
+    assert post.item.get('flagCount', 0) == 1
+    post.user.refresh_item()
+    assert post.user.status == UserStatus.DISABLED
+    assert pendulum.parse(post.user.item['lastDisabledAt']) > before
+    assert pendulum.parse(post.user.item['lastDisabledAt']) < after
 
 
 def test_cant_flag_our_own_post(post, user):
@@ -140,22 +195,22 @@ def test_unflag(post, user2):
         post.unflag(user2.id)
 
 
-def test_should_archive_by_popular_demand(post, user2, user3, user4, user5, user6, user7, view_manager):
+def test_is_crowdsourced_forced_archiving_criteria_met(post, user2, user3, user4, user5, user6, user7, view_manager):
     # should archive if over 5 users have viewed the post and more than 10% have flagged it
-    # one flag, verify shouldn't auto-archive
+    # one flag, verify shouldn't force-archive
     post.flag(user2)
-    assert post.should_archive_by_popular_demand() is False
+    assert post.is_crowdsourced_forced_archiving_criteria_met() is False
 
-    # get 5 views, verify still shouldn't auto-archive
+    # get 5 views, verify still shouldn't force-archive
     view_manager.record_views('post', [post.id], user2.id)
     view_manager.record_views('post', [post.id], user3.id)
     view_manager.record_views('post', [post.id], user4.id)
     view_manager.record_views('post', [post.id], user5.id)
     view_manager.record_views('post', [post.id], user6.id)
     post.refresh_item()
-    assert post.should_archive_by_popular_demand() is False
+    assert post.is_crowdsourced_forced_archiving_criteria_met() is False
 
-    # get a 6th view, verify should auto-archive now
+    # get a 6th view, verify should force-archive now
     view_manager.record_views('post', [post.id], user7.id)
     post.refresh_item()
-    assert post.should_archive_by_popular_demand() is True
+    assert post.is_crowdsourced_forced_archiving_criteria_met() is True

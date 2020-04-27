@@ -65,7 +65,9 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
 
     # check our starting post count
     posted_by_user.refresh_item()
-    assert posted_by_user.item['postCount'] == 1
+    assert posted_by_user.item.get('postCount', 0) == 1
+    assert posted_by_user.item.get('postArchivedCount', 0) == 0
+    assert posted_by_user.item.get('postForcedArchivingCount', 0) == 0
 
     # mock out some calls to far-flung other managers
     post.like_manager = Mock(LikeManager({}))
@@ -79,6 +81,8 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
     # check the post count decremented
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 0
+    assert posted_by_user.item.get('postArchivedCount', 0) == 1
+    assert posted_by_user.item.get('postForcedArchivingCount', 0) == 0
 
     # check calls to mocked out managers
     assert post.like_manager.mock_calls == [
@@ -96,7 +100,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     post = post_with_album
     posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
-    posted_by_user = user_manager.get_user(posted_by_user_id)
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == 0
 
@@ -105,8 +108,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert album.item['postCount'] == 1
     assert album.item['rankCount'] == 1
     assert album.item['artHash']
-    posted_by_user.refresh_item()
-    assert posted_by_user.item['postCount'] == 1
 
     # mock out some calls to far-flung other managers
     post.like_manager = Mock(LikeManager({}))
@@ -126,10 +127,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert album.item['rankCount'] == 1
     assert 'artHash' not in album.item
 
-    # check the user post count decremented
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
     # check calls to mocked out managers
     assert post.like_manager.mock_calls == [
         call.dislike_all_of_post(post.id),
@@ -138,3 +135,21 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert post.feed_manager.mock_calls == [
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
+
+
+def test_forced_archive(post, caplog):
+    # check starting state
+    assert post.status == PostStatus.COMPLETED
+    assert post.user.item.get('postCount', 0) == 1
+    assert post.user.item.get('postArchivedCount', 0) == 0
+    assert post.user.item.get('postForcedArchivingCount', 0) == 0
+
+    # archive
+    post.archive(forced=True)
+    post.user.refresh_item()
+
+    # check final state
+    assert post.status == PostStatus.ARCHIVED
+    assert post.user.item.get('postCount', 0) == 0
+    assert post.user.item.get('postArchivedCount', 0) == 1
+    assert post.user.item.get('postForcedArchivingCount', 0) == 1

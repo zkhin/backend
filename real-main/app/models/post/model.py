@@ -5,6 +5,7 @@ import logging
 import pendulum
 from PIL import Image, ImageOps
 
+from app.models.user.enums import UserStatus
 from app.utils import image_size
 
 from . import enums, exceptions
@@ -310,7 +311,7 @@ class Post:
             self.dynamo.transact_set_post_status(
                 self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
             ),
-            self.user_manager.dynamo.transact_increment_post_count(self.user_id),
+            self.user_manager.dynamo.transact_post_completed(self.user_id),
         ]
         if album:
             old_rank_count = album.item.get('rankCount')
@@ -342,7 +343,7 @@ class Post:
 
         return self
 
-    def archive(self):
+    def archive(self, forced=False):
         "Transition the post to ARCHIVED status"
         if self.status != PostStatus.COMPLETED:
             raise exceptions.PostException(f'Cannot archive post with status `{self.status}`')
@@ -353,7 +354,7 @@ class Post:
         # set the post as archived
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
-            self.user_manager.dynamo.transact_decrement_post_count(self.user_id),
+            self.user_manager.dynamo.transact_post_archived(self.user_id, forced=forced),
         ]
         if album:
             transacts.append(album.dynamo.transact_remove_post(album.id))
@@ -391,7 +392,7 @@ class Post:
         # restore the post
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
-            self.user_manager.dynamo.transact_increment_post_count(self.user_id),
+            self.user_manager.dynamo.transact_post_restored(self.user_id),
         ]
         if album:
             old_rank_count = album.item.get('rankCount')
@@ -423,11 +424,12 @@ class Post:
 
         # mark the post and the media as in the deleting process
         prev_post_status = self.status
-        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING)]
-        if self.status == PostStatus.COMPLETED:
-            transacts.append(self.user_manager.dynamo.transact_decrement_post_count(self.user_id))
-            if album:
-                transacts.append(album.dynamo.transact_remove_post(album.id))
+        transacts = [
+            self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING),
+            self.user_manager.dynamo.transact_post_deleted(self.user_id, prev_status=self.status),
+        ]
+        if self.status == PostStatus.COMPLETED and album:
+            transacts.append(album.dynamo.transact_remove_post(album.id))
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
@@ -649,8 +651,18 @@ class Post:
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         self.item['flagCount'] = self.item.get('flagCount', 0) + 1
 
-        if user.username in self.flag_admin_usernames or self.should_archive_by_popular_demand():
-            self.archive()
+        # force archive the post?
+        if user.username in self.flag_admin_usernames or self.is_crowdsourced_forced_archiving_criteria_met():
+            logger.warning(f'Force archiving post `{self.id}`')
+            self.archive(forced=True)
+
+            # force disable the user?
+            self.user.refresh_item(strongly_consistent=True)
+            if self.user.is_forced_disabling_criteria_met():
+                logger.warning(f'Force disabling user `{self.user.id}`')
+                self.user.set_user_status(UserStatus.DISABLED)
+                # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
+                logger.warning(f'USER_FORCE_DISABLED: user `{self.user.id}` with username `{self.user.username}`')
 
         return self
 
@@ -668,9 +680,10 @@ class Post:
         self.item['flagCount'] = self.item.get('flagCount', 0) - 1
         return self
 
-    def should_archive_by_popular_demand(self):
-        # auto archive the post if over 5 users have viewed the post and
-        # more than 10% of them have flagged it
+    def is_crowdsourced_forced_archiving_criteria_met(self):
+        # the post should be force-archived if (directly from spec):
+        #   - over 5 users have viewed the post and
+        #   - at least 10% of them have flagged it
         viewed_by_count = self.item.get('viewedByCount', 0)
         flag_count = self.item.get('flagCount', 0)
         if viewed_by_count > 5 and flag_count > viewed_by_count / 10:

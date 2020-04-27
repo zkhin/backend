@@ -52,7 +52,7 @@ def validate_caller(func):
         caller_user = user_manager.get_user(caller_user_id)
         if not caller_user:
             raise ClientException(f'User `{caller_user_id}` does not exist')
-        if caller_user.item.get('userStatus', UserStatus.ACTIVE) != UserStatus.ACTIVE:
+        if caller_user.status != UserStatus.ACTIVE:
             raise ClientException(f'User `{caller_user_id}` is not ACTIVE')
         return func(caller_user, arguments, source, context)
     return wrapper

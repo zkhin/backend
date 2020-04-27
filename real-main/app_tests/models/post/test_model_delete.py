@@ -54,6 +54,7 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # check our starting post count
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
+    assert posted_by_user.item.get('postDeletedCount', 0) == 0
 
     # mock out some calls to far-flung other managers
     post.comment_manager = Mock(CommentManager({}))
@@ -75,6 +76,7 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # check our post count - should have decremented
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 0
+    assert posted_by_user.item.get('postDeletedCount', 0) == 1
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
@@ -281,3 +283,25 @@ def test_delete_flags(album_manager, post_manager, completed_post_with_media, us
     # delete the post, verify the flags are also deleted
     post.delete()
     assert len(list(post_manager.flag_dynamo.generate_by_post(post.id))) == 0
+
+
+def test_delete_archived_post(completed_post_with_media):
+    post = completed_post_with_media
+    post.archive()
+    post.user.refresh_item()
+
+    # check starting state
+    assert post.status == PostStatus.ARCHIVED
+    assert post.user.item.get('postCount', 0) == 0
+    assert post.user.item.get('postArchivedCount', 0) == 1
+    assert post.user.item.get('postDeletedCount', 0) == 0
+
+    # delete the post
+    post.delete()
+    post.user.refresh_item()
+
+    # check final state
+    assert post.status == PostStatus.DELETING
+    assert post.user.item.get('postCount', 0) == 0
+    assert post.user.item.get('postArchivedCount', 0) == 0
+    assert post.user.item.get('postDeletedCount', 0) == 1

@@ -43,6 +43,7 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
     # check our starting post count
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 0
+    assert posted_by_user.item.get('postArchivedCount', 0) == 1
 
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
@@ -59,6 +60,7 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
     # check our post count - should have incremented
     posted_by_user.refresh_item()
     assert posted_by_user.item.get('postCount', 0) == 1
+    assert posted_by_user.item.get('postArchivedCount', 0) == 0
 
     # check calls to mocked out managers
     assert post.followed_first_story_manager.mock_calls == [
@@ -107,8 +109,7 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
 
 def test_restore_completed_post_in_album(album_manager, post_manager, post_with_media_completed, user_manager):
     post = post_with_media_completed
-    posted_by_user = user_manager.get_user(post.item['postedByUserId'])
-    album = album_manager.add_album(posted_by_user.id, 'aid', 'album name')
+    album = album_manager.add_album(post.user_id, 'aid', 'album name')
     post.set_album(album.id)
 
     # archive the post
@@ -121,8 +122,6 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     album.refresh_item()
     assert album.item.get('postCount', 0) == 0
     assert album.item.get('rankCount', 0) == 1
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
     post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
@@ -146,11 +145,9 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     album.refresh_item()
     assert album.item.get('postCount', 0) == 1
     assert album.item.get('rankCount', 0) == 2
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # check calls to mocked out managers
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(posted_by_user.id, post.item),
+        call.add_post_to_followers_feeds(post.user_id, post.item),
     ]

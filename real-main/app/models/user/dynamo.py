@@ -4,6 +4,8 @@ import logging
 from boto3.dynamodb.conditions import Key
 import pendulum
 
+from app.models.post.enums import PostStatus
+
 from .enums import UserPrivacyStatus, UserStatus
 from .exceptions import UserAlreadyExists, UserDoesNotExist
 
@@ -103,8 +105,9 @@ class UserDynamo:
 
         return self.client.update_item(query_kwargs)
 
-    def set_user_status(self, user_id, status):
+    def set_user_status(self, user_id, status, now=None):
         assert status in UserStatus._ALL, f'Invalid UserStatus `{status}`'
+        now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': {
                 'partitionKey': f'user/{user_id}',
@@ -116,6 +119,9 @@ class UserDynamo:
         else:
             query_kwargs['UpdateExpression'] = 'SET userStatus = :s'
             query_kwargs['ExpressionAttributeValues'] = {':s': status}
+        if status == UserStatus.DISABLED:
+            query_kwargs['UpdateExpression'] += ', lastDisabledAt = :lda'
+            query_kwargs['ExpressionAttributeValues'][':lda'] = now.to_iso8601_string()
         return self.client.update_item(query_kwargs)
 
     def set_user_privacy_status(self, user_id, privacy_status):
@@ -249,12 +255,6 @@ class UserDynamo:
     def transact_decrement_follower_count(self, user_id):
         return self._transact_decrement_count(user_id, 'followerCount')
 
-    def transact_increment_post_count(self, user_id):
-        return self._transact_increment_count(user_id, 'postCount')
-
-    def transact_decrement_post_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'postCount')
-
     def transact_increment_post_has_new_comment_activity_count(self, user_id):
         return self._transact_increment_count(user_id, 'postHasNewCommentActivityCount')
 
@@ -274,3 +274,76 @@ class UserDynamo:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
             raise UserDoesNotExist(user_id)
+
+    def transact_post_completed(self, user_id):
+        kwargs = {
+            'Key': {
+                'partitionKey': {'S': f'user/{user_id}'},
+                'sortKey': {'S': 'profile'},
+            },
+            'UpdateExpression': 'ADD postCount :positive_one',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+            'ExpressionAttributeValues': {
+                ':positive_one': {'N': '1'},
+            },
+        }
+        return {'Update': kwargs}
+
+    def transact_post_archived(self, user_id, forced=False):
+        kwargs = {
+            'Key': {
+                'partitionKey': {'S': f'user/{user_id}'},
+                'sortKey': {'S': 'profile'},
+            },
+            'UpdateExpression': 'ADD postCount :negative_one, postArchivedCount :positive_one',
+            'ConditionExpression': 'attribute_exists(partitionKey) and postCount > :zero',
+            'ExpressionAttributeValues': {
+                ':negative_one': {'N': '-1'},
+                ':positive_one': {'N': '1'},
+                ':zero': {'N': '0'},
+            },
+        }
+        if forced:
+            kwargs['UpdateExpression'] += ', postForcedArchivingCount :positive_one'
+            kwargs['ExpressionAttributeValues'][':positive_one'] = {'N': '1'}
+        return {'Update': kwargs}
+
+    def transact_post_restored(self, user_id):
+        kwargs = {
+            'Key': {
+                'partitionKey': {'S': f'user/{user_id}'},
+                'sortKey': {'S': 'profile'},
+            },
+            'UpdateExpression': 'ADD postCount :positive_one, postArchivedCount :negative_one',
+            'ConditionExpression': 'attribute_exists(partitionKey) and postArchivedCount > :zero',
+            'ExpressionAttributeValues': {
+                ':negative_one': {'N': '-1'},
+                ':positive_one': {'N': '1'},
+                ':zero': {'N': '0'},
+            },
+        }
+        return {'Update': kwargs}
+
+    def transact_post_deleted(self, user_id, prev_status):
+        kwargs = {
+            'Key': {
+                'partitionKey': {'S': f'user/{user_id}'},
+                'sortKey': {'S': 'profile'},
+            },
+            'UpdateExpression': 'ADD postDeletedCount :positive_one',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+            'ExpressionAttributeValues': {
+                ':positive_one': {'N': '1'},
+            },
+        }
+        count_to_decrement = {
+            PostStatus.COMPLETED: 'postCount',
+            PostStatus.ARCHIVED: 'postArchivedCount',
+        }.get(prev_status)
+        if count_to_decrement:
+            kwargs['UpdateExpression'] += ', #ctd :negative_one'
+            kwargs['ExpressionAttributeNames'] = {'#ctd': count_to_decrement}
+            kwargs['ExpressionAttributeValues'][':negative_one'] = {'N': '-1'}
+            kwargs['ExpressionAttributeValues'][':zero'] = {'N': '0'}
+            kwargs['ConditionExpression'] += ' and #ctd > :zero'
+        return {'Update': kwargs}

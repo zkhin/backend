@@ -39,9 +39,6 @@ provider:
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
 
-    # avoid alerts when running integration test suite in dev env
-    FLAGGED_ALERT_THRESHOLD: ${self:custom.envvars.FLAGGED_ALERT_THRESHOLD.${self:provider.stage}, '3'}
-
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -97,10 +94,6 @@ provider:
       Resource: !Join [ ':', [ 'arn:aws:logs', '#{AWS::Region}', '#{AWS::AccountId}', 'log-group', '/aws/lambda/*' ] ]
 
 custom:
-  envvars:
-    FLAGGED_ALERT_THRESHOLD:
-      production: 1
-
   splitStacks:
     perType: false
 
@@ -1031,8 +1024,8 @@ custom:
           - protocol: email
             endpoint: mike+${self:provider.stage}-#{AWS::AccountId}@real.app
     definitions:
-      functionFlagged:
-        metric: postsFlagged
+      functionUsersForceDisabled:
+        metric: usersForceDisabled
         threshold: 1
         statistic: Sum
         period: 60
@@ -1040,7 +1033,7 @@ custom:
         datapointsToAlarm: 1
         comparisonOperator: GreaterThanOrEqualToThreshold
         treatMissingData: missing
-        pattern: 'FLAGGED'
+        pattern: 'USER_FORCE_DISABLED'
       functionCognitoServerErrors:
         metric: cognitoServerErrors
         threshold: 1
@@ -1602,7 +1595,7 @@ functions:
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     alarms:
-      - functionFlagged
+      - functionUsersForceDisabled
       - functionErrors
       - functionThrottles
 
