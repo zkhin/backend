@@ -1493,12 +1493,6 @@ resources:
       Properties:
         Name: REAL-${self:provider.stage}
 
-    FrontendLogGroup:
-      Type: AWS::Logs::LogGroup
-      Properties:
-        LogGroupName: /frontend/real-${self:provider.stage}-frontend
-        RetentionInDays: 7
-
     FrontendIAMUser:
       Type: AWS::IAM::User
       Properties:
@@ -1508,17 +1502,6 @@ resources:
             PolicyDocument:
               Version: '2012-10-17'
               Statement:
-                - Effect: Allow
-                  Action:
-                    - logs:DescribeLogStreams
-                    - logs:CreateLogStream
-                  Resource:
-                    - !GetAtt FrontendLogGroup.Arn
-                - Effect: Allow
-                  Action:
-                    - logs:PutLogEvents
-                  Resource:
-                    - !Join [ /, [ !GetAtt FrontendLogGroup.Arn, '*' ] ]
                 # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
                 - Effect: Allow
                   Action: mobiletargeting:UpdateEndpoint
