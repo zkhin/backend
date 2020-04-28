@@ -46,6 +46,11 @@ In the AWS SecretsManager:
 
 Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
 
+In the AWS SNS Console (after first deployment, only once per AWS account):
+
+- Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
+- Note this functionality [isn't yet available via cloudfront](https://stackoverflow.com/a/59188488), but once it is, it can be integrated into our standard deploy
+
 ### Updates to an existing deployment
 
 In general, only stacks that have been changed since the last deployment need to be redeployed.
