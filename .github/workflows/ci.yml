@@ -6,7 +6,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: us-east-1
-      PIPENV_PIPFILE: real-main/Pipfile
 
     steps:
     - name: Git checkout

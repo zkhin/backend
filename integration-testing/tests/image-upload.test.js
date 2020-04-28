@@ -117,6 +117,7 @@ test('Upload heic image', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['post']['postId']).toBe(postId)
   expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
+  expect(resp['data']['post']['isVerified']).toBe(true)
   const image = resp['data']['post']['image']
   expect(image).toBeTruthy()
 

@@ -18,6 +18,7 @@ logger = logging.getLogger()
 class Post:
 
     jpeg_content_type = 'image/jpeg'
+    heic_content_type = 'image/heic'
 
     enums = enums
     exceptions = exceptions
@@ -242,9 +243,15 @@ class Post:
 
     def upload_native_image_data_base64(self, image_data):
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
-        self._native_image_data = base64.b64decode(image_data)
-        path = self.get_image_path(image_size.NATIVE)
-        self.s3_uploads_client.put_object(path, self.get_native_image_buffer(), self.jpeg_content_type)
+        content_type = self.jpeg_content_type
+        size = image_size.NATIVE
+        if self.media.item.get('imageFormat') == 'HEIC':
+            content_type = self.heic_content_type
+            size = image_size.NATIVE_HEIC
+
+        path = self.get_image_path(size)
+        image_buffer = BytesIO(base64.b64decode(image_data))
+        self.s3_uploads_client.put_object(path, image_buffer, content_type)
 
     def start_processing_video_upload(self):
         assert self.type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
@@ -495,8 +502,8 @@ class Post:
         path = self.get_image_path(image_size.NATIVE)
         image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
         is_verified = self.post_verification_client.verify_image(
-            image_url, taken_in_real=self.media.item.get('takenInReal'),
-            original_format=self.media.item.get('originalFormat'),
+            image_url, image_format=self.media.item.get('imageFormat'),
+            original_format=self.media.item.get('originalFormat'), taken_in_real=self.media.item.get('takenInReal'),
         )
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self

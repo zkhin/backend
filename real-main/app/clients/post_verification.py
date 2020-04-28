@@ -12,7 +12,7 @@ class PostVerificationClient:
             self._api_creds = self.api_creds_getter()
         return self._api_creds
 
-    def verify_image(self, image_url, taken_in_real=None, original_format=None):
+    def verify_image(self, image_url, image_format=None, original_format=None, taken_in_real=None):
         headers = {'x-api-key': self.api_creds['key']}
         api_url = self.api_creds['root'] + 'verify/image'
 
@@ -20,10 +20,12 @@ class PostVerificationClient:
             'url': image_url,
             'metadata': {},
         }
-        if taken_in_real:
-            data['metadata']['takenInReal'] = taken_in_real
+        if image_format:
+            data['metadata']['imageFormat'] = image_format
         if original_format:
             data['metadata']['originalFormat'] = original_format
+        if taken_in_real:
+            data['metadata']['takenInReal'] = taken_in_real
 
         # synchronous for now. Note this generally runs in an async env already: an s3-object-created handler
         resp = requests.post(api_url, headers=headers, json=data)

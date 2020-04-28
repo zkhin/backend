@@ -258,7 +258,8 @@ def test_set_is_verified_minimal(pending_image_post):
 
     # check mock called correctly
     assert post.post_verification_client.mock_calls == [
-        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=None, original_format=None),
+        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), image_format=None, original_format=None,
+                          taken_in_real=None),
     ]
 
 
@@ -267,8 +268,9 @@ def test_set_is_verified_maximal(pending_image_post):
     post = pending_image_post
     assert 'isVerified' not in post.item
     post.post_verification_client = Mock(**{'verify_image.return_value': True})
-    post.media.item['takenInReal'] = False
+    post.media.item['imageFormat'] = 'ii'
     post.media.item['originalFormat'] = 'oo'
+    post.media.item['takenInReal'] = False
 
     # do the call, check final state
     post.set_is_verified()
@@ -278,7 +280,8 @@ def test_set_is_verified_maximal(pending_image_post):
 
     # check mock called correctly
     assert post.post_verification_client.mock_calls == [
-        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), taken_in_real=False, original_format='oo'),
+        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), image_format='ii', original_format='oo',
+                          taken_in_real=False),
     ]
 
 

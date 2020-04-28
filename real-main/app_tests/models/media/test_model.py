@@ -103,3 +103,22 @@ def test_set_native_jpeg(media_awaiting_upload, s3_uploads_client):
     # verify there is now a native jpeg, of the correct size
     image = Image.open(media.get_native_image_buffer())
     assert image.size == (heic_width, heic_height)
+
+
+def test_set_native_jpeg_bad_heic_data(media_awaiting_upload, s3_uploads_client, image_data):
+    media = media_awaiting_upload
+
+    # put the a jpeg image in the heic spot
+    s3_heic_path = media.get_s3_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(s3_heic_path, b'notheicdata', 'image/heic')
+
+    # verify there's no native jpeg
+    s3_jpeg_path = media.get_s3_path(image_size.NATIVE)
+    assert not s3_uploads_client.exists(s3_jpeg_path)
+
+    with pytest.raises(media.exceptions.MediaException, match='Unable to read HEIC'):
+        media.set_native_jpeg()
+
+    # verify there's still no native jpeg
+    s3_jpeg_path = media.get_s3_path(image_size.NATIVE)
+    assert not s3_uploads_client.exists(s3_jpeg_path)

@@ -12,6 +12,7 @@ const imageBytes = misc.generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageBytes2 = misc.generateRandomJpeg(300, 200)
 const imageHeaders = {'Content-Type': 'image/jpeg'}
+const heicHeaders = {'Content-Type': 'image/heic'}
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -22,6 +23,35 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.clean())
+
+
+test('Cant use jpeg data for an HEIC image', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  // add a post as HEIC, but actually send up jpeg data
+  let variables = {postId: uuidv4(), imageData, imageFormat: 'HEIC'}
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
+    .rejects.toThrow(/ClientError: Unable to read HEIC file /)
+
+  // add a post as HEIC, but actually send up jpeg data
+  const postId = uuidv4()
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  let uploadUrl = resp['data']['addPost']['imageUploadUrl']
+
+  // upload some jpeg data pretending to be heic, let the s3 trigger fire
+  await rp.put({url: uploadUrl, headers: heicHeaders, body: imageData})
+  await misc.sleep(3000)
+
+  // check the post, make sure it error'd out
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['postStatus']).toBe('ERROR')
+  expect(resp['data']['post']['isVerified']).toBeNull()
+  expect(resp['data']['post']['image']).toBeNull()
+})
 
 
 test('Add post no expiration', async () => {

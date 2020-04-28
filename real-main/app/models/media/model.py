@@ -73,8 +73,11 @@ class Media:
 
     def set_native_jpeg(self):
         "From a native HEIC, upload a native jpeg"
-        heic_path = self.get_s3_path(image_size.NATIVE_HEIC)
-        heif_file = pyheif.read_heif(self.s3_uploads_client.get_object_data_stream(heic_path))
+        heic_data_stream = self.s3_uploads_client.get_object_data_stream(self.get_s3_path(image_size.NATIVE_HEIC))
+        try:
+            heif_file = pyheif.read_heif(heic_data_stream)
+        except pyheif.error.HeifError as err:
+            raise exceptions.MediaException(f'Unable to read HEIC file for media `{self.id}`: {err}')
         image = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
         in_mem_file = BytesIO()
         image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
