@@ -22,8 +22,6 @@ if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL
 const userPoolId = process.env.COGNITO_USER_POOL_ID
 if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must be defined')
 
-const accessKeyId = process.env.FRONTEND_IAM_USER_ACCESS_KEY_ID
-const secretAccessKey = process.env.FRONTEND_IAM_USER_SECRET_ACCESS_KEY
 const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 
 const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
@@ -31,7 +29,7 @@ const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
   Region: awsRegion,
 }})
 
-const cognitoIndentityPoolClient = new AWS.CognitoIdentity({params: {
+const cognitoIdentityPoolClient = new AWS.CognitoIdentity({params: {
   IdentityPoolId: identityPoolId,
 }})
 
@@ -66,13 +64,13 @@ prmt.get(prmtSchema, async (err, result) => {
     return 1
   }
   const tokens = await generateTokens(result.username, result.password)
-  if (result.pinpointEndpointId) trackWithPinpoint(result.pinpointEndpointId, tokens)
+  const creds = await generateCredentials(tokens)
+  if (result.pinpointEndpointId) trackWithPinpoint(result.pinpointEndpointId, tokens, creds)
   if (tokens) {
-    const gqlCreds = await generateGQLCredentials(tokens['IdToken'])
     const output = JSON.stringify({
       authProvider: 'COGNITO',
       tokens: tokens,
-      credentials: gqlCreds,
+      credentials: creds,
     }, null, 2)
     if (result.destination) fs.writeFileSync(result.destination, output + '\n')
     else console.log(output)
@@ -93,18 +91,31 @@ const generateTokens = async (username, password) => {
   }
 }
 
-const generateGQLCredentials = async (idToken) => {
-  const userId = jwtDecode(idToken)['cognito:username']
-  const Logins = {[`cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`]: idToken}
-  const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
+const generateCredentials = async (tokens) => {
+  let resp
+  if (tokens) {
+    // generate authenticated credentials
+    const idToken = tokens['IdToken']
+    const userId = jwtDecode(idToken)['cognito:username']
+    const Logins = {[`cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`]: idToken}
+    resp = await cognitoIdentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
+  }
+  else {
+    // generate unauthenticated credentials
+    // get a throwaway userId to use to generate credentials to record this event to pinpoint
+    // note the frontend should make every effort to not generate a throwawy identity like this
+    // if there is any userId cached on the device, it should be ok to use to get unauthenticated credentials
+    resp = await cognitoIdentityPoolClient.getId().promise()
+    resp = await cognitoIdentityPoolClient.getCredentialsForIdentity(resp).promise()
+  }
   return resp['Credentials']
 }
 
-const trackWithPinpoint = async (endpointId, tokens) => {
-  if (accessKeyId === undefined) throw new Error('Env var FRONTEND_IAM_USER_ACCESS_KEY_ID must be defined')
-  if (secretAccessKey === undefined) throw new Error('Env var FRONTEND_IAM_USER_SECRET_ACCESS_KEY must be defined')
+const trackWithPinpoint = async (endpointId, tokens, creds) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
-  const pinpoint = new AWS.Pinpoint({accessKeyId, secretAccessKey, params: {ApplicationId: pinpointAppId}})
+
+  const credentials = new AWS.Credentials(creds['AccessKeyId'], creds['SecretKey'], creds['SessionToken'])
+  const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
   const eventType = tokens ? '_userauth.sign_in' : '_userauth.auth_fail'

@@ -1226,8 +1226,14 @@ resources:
                   Resource:
                     # 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
                     - !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
+                # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
+                - Effect: Allow
+                  Action: mobiletargeting:UpdateEndpoint
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
+                - Effect: Allow
+                  Action: mobiletargeting:PutEvents
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
 
-    # Empty IAM role used for unauthenticated users
     CognitoIdentityPoolUnauthenticatedAuthRole:
       Type: AWS::IAM::Role
       Properties:
@@ -1243,6 +1249,18 @@ resources:
                 StringEquals:
                   cognito-identity.amazonaws.com:aud:
                     Ref: CognitoIdentityPool
+        Policies:
+          - PolicyName: CognitoIdentityPoolUnauthenticatedPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
+                - Effect: Allow
+                  Action: mobiletargeting:UpdateEndpoint
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
+                - Effect: Allow
+                  Action: mobiletargeting:PutEvents
+                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
 
     # IAM role for Cognito to send SMS's
     CognitoSNSRole:
@@ -1493,29 +1511,6 @@ resources:
       Properties:
         Name: REAL-${self:provider.stage}
 
-    FrontendIAMUser:
-      Type: AWS::IAM::User
-      Properties:
-        UserName: REAL-frontend-${self:provider.stage}
-        Policies:
-          - PolicyName: FrontendUserPolicy-${self:provider.stage}
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
-                - Effect: Allow
-                  Action: mobiletargeting:UpdateEndpoint
-                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
-                - Effect: Allow
-                  Action: mobiletargeting:PutEvents
-                  Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
-
-    FrontendIAMUserAccessKey:
-      Type: AWS::IAM::AccessKey
-      Properties:
-        UserName:
-          Ref: FrontendIAMUser
-
   Outputs:
 
     CognitoUserPoolId:
@@ -1540,13 +1535,6 @@ resources:
 
     ElasticSearchEndpoint:
       Value: !GetAtt ElasticSearchDomain.DomainEndpoint
-
-    FrontendIAMUserAccessKeyId:
-      Value:
-        Ref: FrontendIAMUserAccessKey
-
-    FrontendIAMUserSecretAccessKey:
-      Value: !GetAtt FrontendIAMUserAccessKey.SecretAccessKey
 
     GitBranch:
       Value: ${git:branch}

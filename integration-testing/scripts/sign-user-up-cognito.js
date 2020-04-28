@@ -6,6 +6,7 @@ const moment = require('moment')
 const prmt = require('prompt')
 const pwdGenerator = require('generate-password')
 const util = require('util')
+const uuidv4 = require('uuid/v4')
 
 dotenv.config()
 
@@ -21,14 +22,14 @@ if (testingCognitoClientId === undefined) throw new Error('Env var COGNITO_TESTI
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
 
-const accessKeyId = process.env.FRONTEND_IAM_USER_ACCESS_KEY_ID
-const secretAccessKey = process.env.FRONTEND_IAM_USER_SECRET_ACCESS_KEY
 const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 
 
 // All users the test client creates must have this family name (or the sign up
 // will be rejected). This is to make it easier to clean them out later.
 const familyName = 'TESTER'
+
+const identityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
 
 prmt.message = ''
 prmt.start()
@@ -54,8 +55,12 @@ const prmtSchema = {
       type: 'boolean',
       required: true,
     },
-    pinpointEndpointId: {
-      description: 'Pinpoint endpoint for analytics tracking? Leave blank to skip',
+    pinpoint: {
+      description: 'Track analytics with Pinpoint? Creates a new endpoint',
+      default: 'false',
+      message: 'Please enter "t" or "f"',
+      type: 'boolean',
+      required: true,
     },
   },
 }
@@ -69,7 +74,7 @@ prmt.get(prmtSchema, async (err, result) => {
   }
   if (! result.email && ! result.phone) throw 'At least one of email or phone is required'
   const userId = await signUserUp(result.email, result.phone, result.password, result.autoconfirm)
-  if (result.pinpointEndpointId) await trackWithPinpoint(result.pinpointEndpointId, userId, result.autoconfirm)
+  if (result.pinpoint) await trackWithPinpoint(userId, result.autoconfirm)
 })
 
 const signUserUp = async (email, phone, password, autoconfirm) => {
@@ -98,9 +103,6 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
   }
 
   // get a new un-authenticated ID from the identity pool
-  const identityPoolClient = new AWS.CognitoIdentity({params: {
-    IdentityPoolId: identityPoolId,
-  }})
   const idResp = await identityPoolClient.getId().promise()
   const userId = idResp['IdentityId']
 
@@ -119,24 +121,30 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
   return userId
 }
 
-const trackWithPinpoint = async (endpointId, userId, autoconfirm) => {
-  if (accessKeyId === undefined) throw new Error('Env var FRONTEND_IAM_USER_ACCESS_KEY_ID must be defined')
-  if (secretAccessKey === undefined) throw new Error('Env var FRONTEND_IAM_USER_SECRET_ACCESS_KEY must be defined')
+const trackWithPinpoint = async (userId, autoconfirm) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
-  const pinpoint = new AWS.Pinpoint({accessKeyId, secretAccessKey, params: {ApplicationId: pinpointAppId}})
 
+  let resp = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
+  const credentials = new AWS.Credentials(
+    resp['Credentials']['AccessKeyId'],
+    resp['Credentials']['SecretKey'],
+    resp['Credentials']['SessionToken'],
+  )
+  const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
+
+  const endpointId = uuidv4()
   await pinpoint.updateEndpoint({
     EndpointId: endpointId,
     EndpointRequest: {User: {UserId: userId}},
   }).promise()
-  console.log(`Pinpoint endpoint '${endpointId}' updated with userId '${userId}'`)
+  console.log(`Pinpoint endpoint '${endpointId}' generated for userId '${userId}'`)
 
   // if we're autoconfirming, then signup is done here
   // else, it is done and recorded when the confirmation code is submitted
   if (autoconfirm) {
     // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
     const eventType = '_userauth.sign_up'
-    let resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
+    resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
       Endpoint: {},
       Events: {[eventType]:{
         EventType: eventType,

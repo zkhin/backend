@@ -14,8 +14,9 @@ if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined
 const frontendCognitoClientId = process.env.COGNITO_FRONTEND_CLIENT_ID
 if (frontendCognitoClientId === undefined) throw new Error('Env var COGNITO_FRONTEND_CLIENT_ID must be defined')
 
-const accessKeyId = process.env.FRONTEND_IAM_USER_ACCESS_KEY_ID
-const secretAccessKey = process.env.FRONTEND_IAM_USER_SECRET_ACCESS_KEY
+const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
+if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
+
 const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 
 
@@ -44,7 +45,7 @@ prmt.get(prmtSchema, async (err, result) => {
     return 1
   }
   await confirmUser(result.userId, result.confirmationCode, result.pinpointEndpointId)
-  if (result.pinpointEndpointId) await trackWithPinpoint(result.pinpointEndpointId)
+  if (result.pinpointEndpointId) await trackWithPinpoint(result.pinpointEndpointId, result.userId)
 })
 
 const confirmUser = async (userId, confirmationCode) => {
@@ -62,15 +63,21 @@ const confirmUser = async (userId, confirmationCode) => {
   console.log('User confirmed.')
 }
 
-const trackWithPinpoint = async (endpointId) => {
-  if (accessKeyId === undefined) throw new Error('Env var FRONTEND_IAM_USER_ACCESS_KEY_ID must be defined')
-  if (secretAccessKey === undefined) throw new Error('Env var FRONTEND_IAM_USER_SECRET_ACCESS_KEY must be defined')
+const trackWithPinpoint = async (endpointId, userId) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
-  const pinpoint = new AWS.Pinpoint({accessKeyId, secretAccessKey, params: {ApplicationId: pinpointAppId}})
+
+  const identityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
+  let resp = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
+  const credentials = new AWS.Credentials(
+    resp['Credentials']['AccessKeyId'],
+    resp['Credentials']['SecretKey'],
+    resp['Credentials']['SessionToken'],
+  )
+  const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
   const eventType = '_userauth.sign_up'
-  let resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
+  resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
     Endpoint: {},
     Events: {[eventType]:{
       EventType: eventType,
