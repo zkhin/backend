@@ -1148,6 +1148,8 @@ resources:
 
     ElasticSearchDomain:
       Type: AWS::Elasticsearch::Domain
+      UpdatePolicy:
+        EnableVersionUpgrade: true
       Properties:
         DomainName: ${self:provider.stackName}
         EBSOptions:
@@ -1159,7 +1161,7 @@ resources:
           InstanceCount: 2
           DedicatedMasterEnabled: false
           ZoneAwarenessEnabled: false
-        ElasticsearchVersion: 7.1
+        ElasticsearchVersion: 7.4
 
     CognitoIdentityPool:
       Type: AWS::Cognito::IdentityPool
