@@ -39,26 +39,26 @@ test('Exact match search on username', async () => {
 })
 
 
-test('Search works on username, white space in token is handled', async () => {
+test('Prefix match on username', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // change our username to something random and hopefully unique
-  const newUsername = 'TESTER' + misc.shortRandomString() + misc.shortRandomString() + 'yesyes'
+  const newUsernameFirstHalf = 'TESTER' + misc.shortRandomString()
+  const newUsername = newUsernameFirstHalf + misc.shortRandomString() + 'yesyes'
   let resp = await ourClient.mutate({mutation: mutations.setUsername, variables: {username: newUsername}})
   expect(resp['errors']).toBeUndefined()
 
   // give the search index a good chunk of time to update
   await misc.sleep(3000)
 
+  // verify exact match works
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: newUsername}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
 
-  // breack the search query into two words
-  const index = newUsername.length / 2
-  const newToken = [newUsername.substring(0, index), newUsername.substring(index)].join(' ')
-  resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: newToken}})
+  // verify the prefix match works
+  resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: newUsernameFirstHalf}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
@@ -158,7 +158,7 @@ test('Search works on fullName, omitting middle name', async () => {
 })
 
 
-test('Search works on fullName with part of a name', async () => {
+test('Search works on fullName with prefix of name', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // change our fullName to something random and hopefully unique
@@ -172,15 +172,15 @@ test('Search works on fullName with part of a name', async () => {
   // give the search index a good chunk of time to update
   await misc.sleep(3000)
 
-  // search with part of first name
-  const partOfFirstName = firstName.substring(3, 8)
+  // search with prefix of first name
+  const partOfFirstName = firstName.substring(0, 8)
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: partOfFirstName}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
   expect(resp['data']['searchUsers']['items'][0]['userId']).toBe(ourUserId)
 
-  // search with part of last name
-  const partOfLastName = lastName.substring(3, 8)
+  // search with preifx of last name
+  const partOfLastName = lastName.substring(0, 8)
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: partOfLastName}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['searchUsers']['items']).toHaveLength(1)
@@ -210,30 +210,35 @@ test('Cant do blank searches', async () => {
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '\n'}})
   expect(resp['errors'].length).toBeTruthy()
   expect(resp['data']).toBeNull()
+})
 
-  resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '+'}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+
+test('Doesnt crash on special characters', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+
+  let resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '+'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '*'}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '/'}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '\\'}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '"'}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: '?'}})
-  expect(resp['errors'].length).toBeTruthy()
-  expect(resp['data']).toBeNull()
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['searchUsers']['items']).toHaveLength(0)
 })
 
 

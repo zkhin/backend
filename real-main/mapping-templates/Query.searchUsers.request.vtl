@@ -7,17 +7,11 @@
   #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 #end
 
-## allow only a whitelist of characters
-#set ($query = $ctx.args.searchToken.replaceAll('[^a-zA-Z0-9 ._''-]', '').trim())
+#set ($query = $ctx.args.searchToken.trim())
 
 #if ($query.isEmpty())
   $util.error('Empty queries are not allowed', 'ClientError')
 #end
-
-## Allow leading and trailing characters on each search term.
-## The leading wildcard has a high computational cost, will have
-## to change this at some point (prob to using an ngrams tokenizer).
-#set ($query = '*' + $query.replace(' ', '*  *') + '*')
 
 {
   "version": "2017-02-28",
@@ -30,9 +24,11 @@
       "from": $util.defaultIfNull($ctx.args.nextToken, 0),
       "size": $limit,
       "query": {
-        "query_string": {
-          "query" : "$query",
-          "fields": ["username", "fullName"],
+        "multi_match": {
+          "query": $util.toJson($query),
+          "fields": ["username^2", "fullName"],
+          "slop": 2,
+          "type": "phrase_prefix"
         }
       }
     }
