@@ -8,7 +8,6 @@ __all__ = [
     'FollowManager',
     'FollowedFirstStoryManager',
     'LikeManager',
-    'MediaManager',
     'PostManager',
     'TrendingManager',
     'UserManager',
@@ -24,7 +23,6 @@ from .feed.manager import FeedManager
 from .follow.manager import FollowManager
 from .followed_first_story.manager import FollowedFirstStoryManager
 from .like.manager import LikeManager
-from .media.manager import MediaManager
 from .post.manager import PostManager
 from .trending.manager import TrendingManager
 from .user.manager import UserManager

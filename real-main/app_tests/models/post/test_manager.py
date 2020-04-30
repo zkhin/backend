@@ -95,7 +95,7 @@ def test_add_text_only_post(post_manager, user):
     assert post.item['textTags'] == []
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert 'expiresAt' not in post.item
-    assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
+    assert post.image_item is None
 
 
 def test_add_text_with_tags_post(post_manager, user):
@@ -191,7 +191,7 @@ def test_add_video_post_minimal(post_manager, user):
     assert 'text' not in post.item
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
-    assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
+    assert post.image_item is None
 
 
 def test_add_video_post_maximal(post_manager, user):
@@ -222,7 +222,7 @@ def test_add_video_post_maximal(post_manager, user):
     assert post.item['text'] == text
     assert len(post.item['textTags']) == 1
     assert post.item['expiresAt'] == expires_at.to_iso8601_string()
-    assert list(post_manager.media_manager.dynamo.generate_by_post(post_id)) == []
+    assert post.image_item is None
     assert post.item['commentsDisabled'] is True
     assert post.item['likesDisabled'] is True
     assert post.item['sharingDisabled'] is True
@@ -248,10 +248,10 @@ def test_add_image_post(post_manager, user):
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
 
-    assert post.media.item['mediaId'] == media_id
-    assert post.media.item['mediaType'] == 'IMAGE'
-    assert post.media.item['postedAt'] == now.to_iso8601_string()
-    assert 'expiresAt' not in post.media.item
+    assert post.image_item['mediaId'] == media_id
+    assert post.image_item['mediaType'] == 'IMAGE'
+    assert post.image_item['postedAt'] == now.to_iso8601_string()
+    assert 'expiresAt' not in post.image_item
 
 
 def test_add_image_post_text_empty_string(post_manager, user):
@@ -289,10 +289,10 @@ def test_add_image_post_with_image_data(user, post_manager, grant_data_b64):
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
 
-    assert post.media.item['mediaId'] == media_id
-    assert post.media.item['mediaType'] == 'IMAGE'
-    assert post.media.item['postedAt'] == now.to_iso8601_string()
-    assert 'expiresAt' not in post.media.item
+    assert post.image_item['mediaId'] == media_id
+    assert post.image_item['mediaType'] == 'IMAGE'
+    assert post.image_item['postedAt'] == now.to_iso8601_string()
+    assert 'expiresAt' not in post.image_item
 
 
 def test_add_image_post_with_options(post_manager, album, user):
@@ -333,11 +333,11 @@ def test_add_image_post_with_options(post_manager, album, user):
     post_original_metadata = post_manager.original_metadata_dynamo.get(post_id)
     assert post_original_metadata['originalMetadata'] == 'org-metadata'
 
-    assert post.media.item['mediaId'] == media_id
-    assert post.media.item['mediaType'] == 'IMAGE'
-    assert post.media.item['postedAt'] == now.to_iso8601_string()
-    assert post.media.item['takenInReal'] is False
-    assert post.media.item['originalFormat'] == 'org-format'
+    assert post.image_item['mediaId'] == media_id
+    assert post.image_item['mediaType'] == 'IMAGE'
+    assert post.image_item['postedAt'] == now.to_iso8601_string()
+    assert post.image_item['takenInReal'] is False
+    assert post.image_item['originalFormat'] == 'org-format'
 
 
 def test_delete_recently_expired_posts(post_manager, user, caplog):

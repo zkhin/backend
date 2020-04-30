@@ -500,10 +500,10 @@ def post_image(caller_user_id, arguments, source, context):
         'url4k': post.get_image_readonly_url(image_size.K4),
     }
 
-    if post.media:
-        image_item['width'] = post.media.item.get('width')
-        image_item['height'] = post.media.item.get('height')
-        image_item['colors'] = post.media.item.get('colors')
+    if post.image_item:
+        image_item['width'] = post.image_item.get('width')
+        image_item['height'] = post.image_item.get('height')
+        image_item['colors'] = post.image_item.get('colors')
 
     return image_item
 

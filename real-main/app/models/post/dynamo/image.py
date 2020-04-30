@@ -6,22 +6,22 @@ import pendulum
 logger = logging.getLogger()
 
 
-class MediaDynamo:
+class PostImageDynamo:
 
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_media(self, media_id, strongly_consistent=False):
+    def get(self, media_id):
         return self.client.get_item({
             'partitionKey': f'media/{media_id}',
             'sortKey': '-',
-        }, strongly_consistent=strongly_consistent)
+        })
 
-    def transact_add_media(self, posted_by_user_id, post_id, media_id,
-                           posted_at=None, taken_in_real=None, original_format=None, image_format=None):
+    def transact_add(self, posted_by_user_id, post_id, media_id, posted_at=None, taken_in_real=None,
+                     original_format=None, image_format=None):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
-        media_item = {
+        item = {
             'schemaVersion': {'N': '2'},
             'partitionKey': {'S': f'media/{media_id}'},
             'sortKey': {'S': '-'},
@@ -34,13 +34,13 @@ class MediaDynamo:
             'mediaType': {'S': 'IMAGE'},
         }
         if taken_in_real is not None:
-            media_item['takenInReal'] = {'BOOL': taken_in_real}
+            item['takenInReal'] = {'BOOL': taken_in_real}
         if original_format is not None:
-            media_item['originalFormat'] = {'S': original_format}
+            item['originalFormat'] = {'S': original_format}
         if image_format is not None:
-            media_item['imageFormat'] = {'S': image_format}
+            item['imageFormat'] = {'S': image_format}
         return {'Put': {
-            'Item': media_item,
+            'Item': item,
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 

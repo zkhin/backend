@@ -101,9 +101,10 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
 
 def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post = post_with_media
-    media = post.media
+    post_pk = post.item['partitionKey']
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
+    assert post.image_item
     assert post_manager.dynamo.get_post(post_with_media.id)
     assert post_manager.original_metadata_dynamo.get(post_with_media.id)
 
@@ -124,11 +125,11 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.item['postStatus'] == PostStatus.DELETING
 
     # check the db again
-    post_item = post.item
     post.refresh_item()
+    post.refresh_image_item()
+
     assert post.item is None
-    media.refresh_item()
-    assert media.item is None
+    assert post.image_item is None
     assert post_manager.original_metadata_dynamo.get(post_with_media.id) is None
 
     # check our post count - should not have changed
@@ -145,7 +146,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
     assert post.view_manager.mock_calls == [
-        call.delete_views(post_item['partitionKey']),
+        call.delete_views(post_pk),
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),
@@ -154,7 +155,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
 
 def test_delete_completed_media_post(post_manager, completed_post_with_media, user_manager):
     post = completed_post_with_media
-    media = post.media
+    post_pk = post.item['partitionKey']
     posted_by_user_id = post.item['postedByUserId']
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
@@ -180,11 +181,11 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
         assert post_manager.clients['s3_uploads'].exists(path) is False
 
     # check the DB again
-    post_item = post.item
     post.refresh_item()
+    post.refresh_image_item()
+
     assert post.item is None
-    media.refresh_item()
-    assert media.item is None
+    assert post.image_item is None
 
     # check our post count - should have decremented
     posted_by_user.refresh_item()
@@ -202,7 +203,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
         call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
     assert post.view_manager.mock_calls == [
-        call.delete_views(post_item['partitionKey']),
+        call.delete_views(post_pk),
     ]
     assert post.trending_manager.mock_calls == [
         call.dynamo.delete_trending(post.id),

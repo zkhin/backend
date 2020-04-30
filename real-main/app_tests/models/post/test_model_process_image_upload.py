@@ -49,7 +49,7 @@ def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
 
 def test_process_image_upload_success_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
-    assert 'imageFormat' not in pending_post.media.item
+    assert 'imageFormat' not in pending_post.image_item
 
     # mock out a bunch of methods
     pending_post.set_height_and_width = Mock()
@@ -80,7 +80,7 @@ def test_process_image_upload_success_jpeg(pending_post):
 
 def test_process_image_upload_success_heic(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
-    pending_post.media.item['imageFormat'] = 'HEIC'
+    pending_post.image_item['imageFormat'] = 'HEIC'
 
     # mock out a bunch of methods
     pending_post.set_height_and_width = Mock()

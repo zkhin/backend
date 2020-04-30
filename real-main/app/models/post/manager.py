@@ -8,7 +8,7 @@ from app import models
 
 from . import enums, exceptions
 from .appsync import PostAppSync
-from .dynamo import PostDynamo, PostFlagDynamo, PostOriginalMetadataDynamo
+from .dynamo import PostDynamo, PostFlagDynamo, PostImageDynamo, PostOriginalMetadataDynamo
 from .model import Post
 
 logger = logging.getLogger()
@@ -31,7 +31,6 @@ class PostManager:
             managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
         )
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
-        self.media_manager = managers.get('media') or models.MediaManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
         self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
@@ -42,6 +41,7 @@ class PostManager:
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
             self.flag_dynamo = PostFlagDynamo(clients['dynamo'])
+            self.image_dynamo = PostImageDynamo(clients['dynamo'])
             self.original_metadata_dynamo = PostOriginalMetadataDynamo(clients['dynamo'])
 
     def get_post(self, post_id, strongly_consistent=False):
@@ -53,6 +53,7 @@ class PostManager:
             'post_appsync': getattr(self, 'appsync', None),
             'post_dynamo': getattr(self, 'dynamo', None),
             'post_flag_dynamo': getattr(self, 'flag_dynamo', None),
+            'post_image_dynamo': getattr(self, 'image_dynamo', None),
             'post_original_metadata_dynamo': getattr(self, 'original_metadata_dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
@@ -65,7 +66,6 @@ class PostManager:
             'follow_manager': self.follow_manager,
             'followed_first_story_manager': self.followed_first_story_manager,
             'like_manager': self.like_manager,
-            'media_manager': self.media_manager,
             'post_manager': self,
             'trending_manager': self.trending_manager,
             'user_manager': self.user_manager,
@@ -122,7 +122,7 @@ class PostManager:
         )]
         if post_type == enums.PostType.IMAGE:
             # 'image_input' is straight from graphql, format dictated by schema
-            transacts.append(self.media_manager.dynamo.transact_add_media(
+            transacts.append(self.image_dynamo.transact_add(
                 posted_by_user_id, post_id, image_input['mediaId'],
                 posted_at=now, taken_in_real=image_input.get('takenInReal'),
                 original_format=image_input.get('originalFormat'),

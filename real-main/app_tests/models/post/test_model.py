@@ -298,9 +298,9 @@ def test_set_is_verified_maximal(pending_image_post):
     post = pending_image_post
     assert 'isVerified' not in post.item
     post.post_verification_client = Mock(**{'verify_image.return_value': True})
-    post.media.item['imageFormat'] = 'ii'
-    post.media.item['originalFormat'] = 'oo'
-    post.media.item['takenInReal'] = False
+    post.image_item['imageFormat'] = 'ii'
+    post.image_item['originalFormat'] = 'oo'
+    post.image_item['takenInReal'] = False
 
     # do the call, check final state
     post.set_is_verified()
@@ -436,7 +436,7 @@ def test_set_cant_create_contentless_post(post_manager, post):
 
     # verify the post is text-only
     assert org_text
-    assert list(post_manager.media_manager.dynamo.generate_by_post(post.id)) == []
+    assert post.image_item is None
 
     # verify we can't set the text to null on that post
     with pytest.raises(post_manager.exceptions.PostException):
@@ -454,7 +454,7 @@ def test_set_text_to_null_media_post(post_manager, post_with_media):
 
     # verify the post has media and text
     assert org_text
-    assert list(post_manager.media_manager.dynamo.generate_by_post(post.id))
+    assert post.image_item
 
     # verify we can null out the text on that post if we want
     post.set(text='')
@@ -852,7 +852,7 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
     assert 'native.heic' not in cloudfront_client.generate_presigned_url.call_args.args[0]
 
     # set the imageFormat to heic
-    media_id = next(post.media_manager.dynamo.generate_by_post(post.id), None)['mediaId']
+    media_id = post.image_item['mediaId']
     query_kwargs = {
         'Key': {
             'partitionKey': f'media/{media_id}',
@@ -862,7 +862,7 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
         'ExpressionAttributeValues': {':im': 'HEIC'},
     }
     dynamo_client.update_item(query_kwargs)
-    post.media.refresh_item()
+    post.refresh_image_item()
 
     # check a heic image post
     assert post.get_image_writeonly_url()
@@ -909,36 +909,36 @@ def test_set_native_jpeg_bad_heic_data(pending_image_post, s3_uploads_client):
 
 def test_set_height_and_width(s3_uploads_client, pending_image_post):
     post = pending_image_post
-    assert 'height' not in post.media.item
-    assert 'width' not in post.media.item
+    assert 'height' not in post.image_item
+    assert 'width' not in post.image_item
 
     # put an image in the bucket
     s3_path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(s3_path, open(grant_path, 'rb'), 'image/jpeg')
 
     post.set_height_and_width()
-    assert post.media.item['height'] == grant_height
-    assert post.media.item['width'] == grant_width
-    post.media.refresh_item()
-    assert post.media.item['height'] == grant_height
-    assert post.media.item['width'] == grant_width
+    assert post.image_item['height'] == grant_height
+    assert post.image_item['width'] == grant_width
+    post.refresh_image_item()
+    assert post.image_item['height'] == grant_height
+    assert post.image_item['width'] == grant_width
 
 
 def test_set_colors(s3_uploads_client, pending_image_post):
     post = pending_image_post
-    assert 'colors' not in post.media.item
+    assert 'colors' not in post.image_item
 
     # put an image in the bucket
     s3_path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(s3_path, open(grant_path, 'rb'), 'image/jpeg')
 
     post.set_colors()
-    assert post.media.item['colors'] == grant_colors
+    assert post.image_item['colors'] == grant_colors
 
 
 def test_set_colors_colortheif_fails(s3_uploads_client, pending_image_post, caplog):
     post = pending_image_post
-    assert 'colors' not in post.media.item
+    assert 'colors' not in post.image_item
 
     # put an image in the bucket
     s3_path = post.get_image_path(image_size.NATIVE)
@@ -947,7 +947,7 @@ def test_set_colors_colortheif_fails(s3_uploads_client, pending_image_post, capl
     assert len(caplog.records) == 0
     with caplog.at_level(logging.WARNING):
         post.set_colors()
-        assert 'colors' not in post.media.item
+        assert 'colors' not in post.image_item
 
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'

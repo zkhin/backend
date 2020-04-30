@@ -28,11 +28,11 @@ class Post:
     # users that have flag admin power: posts they flag are immediately archived
     flag_admin_usernames = ('real', 'ian')
 
-    def __init__(self, item, post_appsync=None, post_dynamo=None, post_flag_dynamo=None,
+    def __init__(self, item, post_appsync=None, post_dynamo=None, post_flag_dynamo=None, post_image_dynamo=None,
                  post_original_metadata_dynamo=None, cloudfront_client=None, mediaconvert_client=None,
                  post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
                  comment_manager=None, feed_manager=None, follow_manager=None, followed_first_story_manager=None,
-                 like_manager=None, media_manager=None, post_manager=None, trending_manager=None, user_manager=None,
+                 like_manager=None, post_manager=None, trending_manager=None, user_manager=None,
                  view_manager=None):
         if post_appsync:
             self.appsync = post_appsync
@@ -40,6 +40,8 @@ class Post:
             self.dynamo = post_dynamo
         if post_flag_dynamo:
             self.flag_dynamo = post_flag_dynamo
+        if post_image_dynamo:
+            self.image_dynamo = post_image_dynamo
         if post_original_metadata_dynamo:
             self.original_metadata_dynamo = post_original_metadata_dynamo
 
@@ -66,8 +68,6 @@ class Post:
             self.followed_first_story_manager = followed_first_story_manager
         if like_manager:
             self.like_manager = like_manager
-        if media_manager:
-            self.media_manager = media_manager
         if post_manager:
             self.post_manager = post_manager
         if trending_manager:
@@ -96,11 +96,9 @@ class Post:
         return '/'.join([self.user_id, 'post', self.id])
 
     @property
-    def media(self):
-        if not hasattr(self, '_media'):
-            media_item = next(self.media_manager.dynamo.generate_by_post(self.id), None)
-            self._media = self.media_manager.init_media(media_item) if media_item else None
-        return self._media
+    def image_item(self):
+        this = self if hasattr(self, '_image_item') else self.refresh_image_item()
+        return this._image_item
 
     @property
     def user(self):
@@ -110,6 +108,10 @@ class Post:
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
+        return self
+
+    def refresh_image_item(self):
+        self._image_item = next(self.image_dynamo.generate_by_post(self.id), None)
         return self
 
     def get_s3_image_path(self, size):
@@ -197,9 +199,9 @@ class Post:
     def get_image_writeonly_url(self):
         assert self.type == PostType.IMAGE
         # protect against this being called before dynamo index has converged
-        if not self.media:
+        if not self.image_item:
             return None
-        size = image_size.NATIVE_HEIC if self.media.item.get('imageFormat') == 'HEIC' else image_size.NATIVE
+        size = image_size.NATIVE_HEIC if self.image_item.get('imageFormat') == 'HEIC' else image_size.NATIVE
         path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
@@ -244,7 +246,7 @@ class Post:
             # s3 trigger is a no-op because we are already in PROCESSING
             self.upload_native_image_data_base64(image_data)
 
-        if self.media.item.get('imageFormat') == 'HEIC':
+        if self.image_item.get('imageFormat') == 'HEIC':
             self.set_native_jpeg()
 
         self.build_image_thumbnails()
@@ -258,7 +260,7 @@ class Post:
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
         content_type = self.jpeg_content_type
         size = image_size.NATIVE
-        if self.media.item.get('imageFormat') == 'HEIC':
+        if self.image_item.get('imageFormat') == 'HEIC':
             content_type = self.heic_content_type
             size = image_size.NATIVE_HEIC
 
@@ -479,8 +481,8 @@ class Post:
 
         # do the deletes for real
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
-        if self.media:
-            self.dynamo.client.delete_item_by_pk(self.media.item)
+        if self.image_item:
+            self.dynamo.client.delete_item_by_pk(self.image_item)
         self.flag_dynamo.delete_all_for_post(self.id)
         self.original_metadata_dynamo.delete(self.id)
         self.dynamo.delete_post(self.id)
@@ -522,7 +524,7 @@ class Post:
     def set_height_and_width(self):
         image = Image.open(self.get_native_image_buffer())
         width, height = image.size
-        self.media.item = self.media.dynamo.set_height_and_width(self.media.id, height, width)
+        self._image_item = self.image_dynamo.set_height_and_width(self.image_item['mediaId'], height, width)
         return self
 
     def set_colors(self):
@@ -532,7 +534,7 @@ class Post:
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
         else:
-            self.media.item = self.media.dynamo.set_colors(self.media.id, colors)
+            self._image_item = self.image_dynamo.set_colors(self.image_item['mediaId'], colors)
         return self
 
     def set_checksum(self):
@@ -542,12 +544,12 @@ class Post:
         return self
 
     def set_is_verified(self):
-        assert self.media
+        assert self.image_item
         path = self.get_image_path(image_size.NATIVE)
         image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
         is_verified = self.post_verification_client.verify_image(
-            image_url, image_format=self.media.item.get('imageFormat'),
-            original_format=self.media.item.get('originalFormat'), taken_in_real=self.media.item.get('takenInReal'),
+            image_url, image_format=self.image_item.get('imageFormat'),
+            original_format=self.image_item.get('originalFormat'), taken_in_real=self.image_item.get('takenInReal'),
         )
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
