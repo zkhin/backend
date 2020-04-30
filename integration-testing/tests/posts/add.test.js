@@ -531,7 +531,7 @@ test('Add post setAsUserPhoto failures', async () => {
   // verify doesn't set user photo if uploaded image can't be processed (image data included with upload)
   variables = {postId: uuidv4(), postType: 'IMAGE', setAsUserPhoto: true, imageData: 'notimagedata'}
   await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: .* thumbnails /)
+    .rejects.toThrow(/ClientError: Unable to open image data as jpeg /)
 
   // add a pending post with setAsUserPhoto
   const postId = uuidv4()

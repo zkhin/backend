@@ -21,7 +21,6 @@ clients = {
 }
 
 managers = {}
-media_manager = managers.get('media') or models.MediaManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
 
@@ -63,7 +62,7 @@ def image_post_uploaded(event, context):
 
     try:
         post.process_image_upload()
-    except (post_manager.exceptions.PostException, media_manager.exceptions.MediaException) as err:
+    except post_manager.exceptions.PostException as err:
         logger.warning(str(err))
         post.error()
 

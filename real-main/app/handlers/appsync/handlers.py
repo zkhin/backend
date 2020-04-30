@@ -40,7 +40,6 @@ comment_manager = managers.get('comment') or models.CommentManager(clients, mana
 ffs_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
 follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
 like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
-media_manager = managers.get('media') or models.MediaManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
@@ -468,7 +467,7 @@ def add_post(caller_user, arguments, source, context):
             likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden, set_as_user_photo=set_as_user_photo,
         )
-    except (post_manager.exceptions.PostException, media_manager.exceptions.MediaException) as err:
+    except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
 
     resp = post.serialize(caller_user.id)

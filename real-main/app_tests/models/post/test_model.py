@@ -1,16 +1,37 @@
 import base64
 from decimal import Decimal
 from io import BytesIO
+import logging
+from os import path
 from unittest.mock import call, Mock
 import uuid
 
 import pendulum
+from PIL import Image
 import pytest
 
 from app.models import FollowedFirstStoryManager
 from app.models.post.enums import PostType, PostStatus
 from app.models.post.model import Post
 from app.utils import image_size
+
+
+grant_height = 320
+grant_width = 240
+grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
+blank_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'big-blank.jpg')
+
+heic_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'IMG_0265.HEIC')
+heic_width = 4032
+heic_height = 3024
+
+grant_colors = [
+    {'r': 51, 'g': 58, 'b': 45},
+    {'r': 186, 'g': 206, 'b': 228},
+    {'r': 145, 'g': 154, 'b': 169},
+    {'r': 158, 'g': 180, 'b': 205},
+    {'r': 130, 'g': 123, 'b': 125},
+]
 
 
 @pytest.fixture
@@ -36,6 +57,11 @@ def pending_video_post(post_manager, user2):
 @pytest.fixture
 def pending_image_post(post_manager, user2):
     yield post_manager.add_post(user2.id, 'pidi1', PostType.IMAGE)
+
+
+@pytest.fixture
+def pending_image_post_heic(post_manager, user2):
+    yield post_manager.add_post(user2.id, 'pid2', PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
 
 
 @pytest.fixture
@@ -97,9 +123,11 @@ def test_get_native_image_buffer(post, post_with_media):
     assert isinstance(buf, BytesIO)
     assert buf.read()
 
-    # verify raises exception for non-completed image post
-    post_with_media.item['postStatus'] = PostStatus.PENDING  # in mem is sufficient
-    with pytest.raises(post.exceptions.PostException, match='PENDING'):
+    # verify raise exception for image post without item in s3
+    del post_with_media._native_image_data
+    path = post_with_media.get_image_path(image_size.NATIVE)
+    post_with_media.s3_uploads_client.delete_object(path)
+    with pytest.raises(post.exceptions.PostException, match='Native image buffer not found'):
         post_with_media.get_native_image_buffer()
 
 
@@ -114,9 +142,11 @@ def test_get_1080p_image_buffer(post, post_with_media):
     assert isinstance(buf, BytesIO)
     assert buf.read()
 
-    # verify raises exception for non-completed image post
-    post_with_media.item['postStatus'] = PostStatus.PENDING  # in mem is sufficient
-    with pytest.raises(post.exceptions.PostException, match='PENDING'):
+    # verify raise exception for image post without item in s3
+    path = post_with_media.get_image_path(image_size.P1080)
+    del post_with_media._1080p_image_data
+    post_with_media.s3_uploads_client.delete_object(path)
+    with pytest.raises(post.exceptions.PostException, match='1080p image buffer not found'):
         post_with_media.get_1080p_image_buffer()
 
 
@@ -791,7 +821,7 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(4 / 6))
 
 
-def test_build_image_thumbnails(user, processing_video_post, s3_uploads_client):
+def test_build_image_thumbnails_video_post(user, processing_video_post, s3_uploads_client):
     post = processing_video_post
 
     # check starting state
@@ -838,3 +868,88 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
     assert post.get_image_writeonly_url()
     assert 'native.jpg' not in cloudfront_client.generate_presigned_url.call_args.args[0]
     assert 'native.heic' in cloudfront_client.generate_presigned_url.call_args.args[0]
+
+
+def test_set_native_jpeg(pending_image_post, s3_uploads_client):
+    post = pending_image_post
+
+    # put the heic image in the bucket
+    s3_heic_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(s3_heic_path, open(heic_path, 'rb'), 'image/heic')
+
+    # verify there's no native jpeg
+    s3_jpeg_path = post.get_image_path(image_size.NATIVE)
+    assert not s3_uploads_client.exists(s3_jpeg_path)
+
+    post.set_native_jpeg()
+
+    # verify there is now a native jpeg, of the correct size
+    assert s3_uploads_client.exists(s3_jpeg_path)
+    image = Image.open(post.get_native_image_buffer())
+    assert image.size == (heic_width, heic_height)
+
+
+def test_set_native_jpeg_bad_heic_data(pending_image_post, s3_uploads_client):
+    post = pending_image_post
+
+    # put some non-heic data in the heic spot
+    s3_heic_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(s3_heic_path, b'notheicdata', 'image/heic')
+
+    # verify there's no native jpeg
+    s3_jpeg_path = post.get_image_path(image_size.NATIVE)
+    assert not s3_uploads_client.exists(s3_jpeg_path)
+
+    with pytest.raises(post.exceptions.PostException, match='Unable to read HEIC'):
+        post.set_native_jpeg()
+
+    # verify there's still no native jpeg
+    assert not s3_uploads_client.exists(s3_jpeg_path)
+
+
+def test_set_height_and_width(s3_uploads_client, pending_image_post):
+    post = pending_image_post
+    assert 'height' not in post.media.item
+    assert 'width' not in post.media.item
+
+    # put an image in the bucket
+    s3_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(s3_path, open(grant_path, 'rb'), 'image/jpeg')
+
+    post.set_height_and_width()
+    assert post.media.item['height'] == grant_height
+    assert post.media.item['width'] == grant_width
+    post.media.refresh_item()
+    assert post.media.item['height'] == grant_height
+    assert post.media.item['width'] == grant_width
+
+
+def test_set_colors(s3_uploads_client, pending_image_post):
+    post = pending_image_post
+    assert 'colors' not in post.media.item
+
+    # put an image in the bucket
+    s3_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(s3_path, open(grant_path, 'rb'), 'image/jpeg')
+
+    post.set_colors()
+    assert post.media.item['colors'] == grant_colors
+
+
+def test_set_colors_colortheif_fails(s3_uploads_client, pending_image_post, caplog):
+    post = pending_image_post
+    assert 'colors' not in post.media.item
+
+    # put an image in the bucket
+    s3_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(s3_path, open(blank_path, 'rb'), 'image/jpeg')
+
+    assert len(caplog.records) == 0
+    with caplog.at_level(logging.WARNING):
+        post.set_colors()
+        assert 'colors' not in post.media.item
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert 'ColorTheif' in caplog.records[0].msg
+    assert f'`{post.id}`' in caplog.records[0].msg

@@ -2,8 +2,10 @@ import base64
 from io import BytesIO
 import logging
 
+from colorthief import ColorThief
 import pendulum
 from PIL import Image, ImageOps
+import pyheif
 
 from app.models.user.enums import UserStatus
 from app.utils import image_size
@@ -115,9 +117,6 @@ class Post:
         return '/'.join([self.item['postedByUserId'], 'post', self.item['postId'], 'image', size.filename])
 
     def get_native_image_buffer(self):
-        if self.status == PostStatus.PENDING:
-            raise exceptions.PostException(f'No native image buffer for {PostStatus.PENDING} post `{self.id}``')
-
         if not hasattr(self, '_native_image_data'):
             if self.type == PostType.TEXT_ONLY:
                 max_dims = image_size.K4.max_dimensions
@@ -125,7 +124,10 @@ class Post:
 
             elif self.type in (PostType.IMAGE, PostType.VIDEO):
                 path = self.get_image_path(image_size.NATIVE)
-                self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+                try:
+                    self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+                except self.s3_uploads_client.exceptions.NoSuchKey:
+                    raise exceptions.PostException(f'Native image buffer not found for post `{self.id}`')
 
             else:
                 raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
@@ -133,9 +135,6 @@ class Post:
         return BytesIO(self._native_image_data)
 
     def get_1080p_image_buffer(self):
-        if self.status == PostStatus.PENDING:
-            raise exceptions.PostException(f'No 1080p image buffer for {PostStatus.PENDING} post `{self.id}``')
-
         if not hasattr(self, '_1080p_image_data'):
             if self.type == PostType.TEXT_ONLY:
                 max_dims = image_size.P1080.max_dimensions
@@ -143,7 +142,10 @@ class Post:
 
             elif self.type in (PostType.IMAGE, PostType.VIDEO):
                 path = self.get_image_path(image_size.P1080)
-                self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+                try:
+                    self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+                except self.s3_uploads_client.exceptions.NoSuchKey:
+                    raise exceptions.PostException(f'1080p image buffer not found for post `{self.id}`')
 
             else:
                 raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
@@ -211,12 +213,18 @@ class Post:
         return resp
 
     def build_image_thumbnails(self):
-        image = Image.open(self.get_native_image_buffer())
-        image = ImageOps.exif_transpose(image)
+        native_buffer = self.get_native_image_buffer()
+        try:
+            image = ImageOps.exif_transpose(Image.open(native_buffer))
+        except Exception as err:
+            raise exceptions.PostException(f'Unable to open image data as jpeg for post `{self.id}`: {err}')
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
-            image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
             in_mem_file = BytesIO()
-            image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
+            try:
+                image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
+                image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
+            except Exception as err:
+                raise exceptions.PostException(f'Unable to thumbnail image data as jpeg for post `{self.id}`: {err}')
             in_mem_file.seek(0)
             path = self.get_image_path(size)
             self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
@@ -236,7 +244,12 @@ class Post:
             # s3 trigger is a no-op because we are already in PROCESSING
             self.upload_native_image_data_base64(image_data)
 
-        self.media.process_upload()
+        if self.media.item.get('imageFormat') == 'HEIC':
+            self.set_native_jpeg()
+
+        self.build_image_thumbnails()
+        self.set_height_and_width()
+        self.set_colors()
         self.set_is_verified()
         self.set_checksum()
         self.complete(now=now)
@@ -489,6 +502,37 @@ class Post:
             likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
         )
+        return self
+
+    def set_native_jpeg(self):
+        "From a native HEIC, upload a native jpeg"
+        heic_path = self.get_image_path(image_size.NATIVE_HEIC)
+        heic_data_stream = self.s3_uploads_client.get_object_data_stream(heic_path)
+        try:
+            heif_file = pyheif.read_heif(heic_data_stream)
+        except pyheif.error.HeifError as err:
+            raise exceptions.PostException(f'Unable to read HEIC file for post `{self.id}`: {err}')
+        image = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
+        in_mem_file = BytesIO()
+        image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
+        in_mem_file.seek(0)
+        jpeg_path = self.get_image_path(image_size.NATIVE)
+        self.s3_uploads_client.put_object(jpeg_path, in_mem_file.read(), self.jpeg_content_type)
+
+    def set_height_and_width(self):
+        image = Image.open(self.get_native_image_buffer())
+        width, height = image.size
+        self.media.item = self.media.dynamo.set_height_and_width(self.media.id, height, width)
+        return self
+
+    def set_colors(self):
+        native_buffer = self.get_native_image_buffer()
+        try:
+            colors = ColorThief(native_buffer).get_palette(color_count=5)
+        except Exception as err:
+            logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
+        else:
+            self.media.item = self.media.dynamo.set_colors(self.media.id, colors)
         return self
 
     def set_checksum(self):

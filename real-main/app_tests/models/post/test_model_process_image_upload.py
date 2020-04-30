@@ -3,7 +3,7 @@ from unittest.mock import Mock, call
 import pendulum
 import pytest
 
-from app.models.media.exceptions import MediaException
+from app.models.post.exceptions import PostException
 from app.models.post.enums import PostStatus, PostType
 
 
@@ -39,7 +39,7 @@ def test_cant_process_image_upload_various_errors(post_manager, user, pending_po
 def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
-    with pytest.raises(MediaException, match='does not exist'):
+    with pytest.raises(PostException, match='Native image buffer not found'):
         pending_post.process_image_upload()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
@@ -47,14 +47,16 @@ def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
 
-def test_process_image_upload_success(pending_post):
+def test_process_image_upload_success_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
+    assert 'imageFormat' not in pending_post.media.item
 
     # mock out a bunch of methods
-    pending_post.media.set_height_and_width = Mock()
-    pending_post.media.set_colors = Mock()
-    pending_post.media.set_thumbnails = Mock()
+    pending_post.set_height_and_width = Mock()
+    pending_post.set_colors = Mock()
+    pending_post.build_image_thumbnails = Mock()
     pending_post.is_native_image_jpeg = Mock(return_value=True)
+    pending_post.set_native_jpeg = Mock()
     pending_post.set_is_verified = Mock()
     pending_post.set_checksum = Mock()
     pending_post.complete = Mock()
@@ -63,9 +65,10 @@ def test_process_image_upload_success(pending_post):
     pending_post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert pending_post.media.set_height_and_width.mock_calls == [call()]
-    assert pending_post.media.set_colors.mock_calls == [call()]
-    assert pending_post.media.set_thumbnails.mock_calls == [call()]
+    assert pending_post.set_height_and_width.mock_calls == [call()]
+    assert pending_post.set_colors.mock_calls == [call()]
+    assert pending_post.build_image_thumbnails.mock_calls == [call()]
+    assert pending_post.set_native_jpeg.mock_calls == []
     assert pending_post.set_is_verified.mock_calls == [call()]
     assert pending_post.set_checksum.mock_calls == [call()]
     assert pending_post.complete.mock_calls == [call(now=now)]
@@ -73,3 +76,30 @@ def test_process_image_upload_success(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING  # we mocked out the call to complete()
     pending_post.refresh_item()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING  # we mocked out the call to complete()
+
+
+def test_process_image_upload_success_heic(pending_post):
+    assert pending_post.item['postStatus'] == PostStatus.PENDING
+    pending_post.media.item['imageFormat'] = 'HEIC'
+
+    # mock out a bunch of methods
+    pending_post.set_height_and_width = Mock()
+    pending_post.set_colors = Mock()
+    pending_post.build_image_thumbnails = Mock()
+    pending_post.is_native_image_jpeg = Mock(return_value=True)
+    pending_post.set_native_jpeg = Mock()
+    pending_post.set_is_verified = Mock()
+    pending_post.set_checksum = Mock()
+    pending_post.complete = Mock()
+
+    now = pendulum.now('utc')
+    pending_post.process_image_upload(now=now)
+
+    # check the mocks were called correctly
+    assert pending_post.set_height_and_width.mock_calls == [call()]
+    assert pending_post.set_colors.mock_calls == [call()]
+    assert pending_post.build_image_thumbnails.mock_calls == [call()]
+    assert pending_post.set_native_jpeg.mock_calls == [call()]
+    assert pending_post.set_is_verified.mock_calls == [call()]
+    assert pending_post.set_checksum.mock_calls == [call()]
+    assert pending_post.complete.mock_calls == [call(now=now)]
