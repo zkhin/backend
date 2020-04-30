@@ -114,7 +114,7 @@ type Mutation {
   unblockUser(userId: ID!): User
 
   # Add a Post
-  #   - postId and the mediaId's should be random v4 uuid's generated client-side.
+  #   - postId should be a random v4 uuid generated client-side
   #   - lifetime should be a ISO Duration string. Ex: 1 day: 'P1D', 1 week: 'P7D', 1 month: 'P1M', 1 year: 'P1Y'
   #   - if lifetime is unset, defaults to infinite
   #   - setAsUserPhoto:
@@ -126,7 +126,6 @@ type Mutation {
     albumId: ID,
     lifetime: String,
     text: String,
-    mediaObjectUploads: [MediaObjectUpload!],  # DEPRECATED. Use imageInput instead
     imageInput: ImageInput,
     commentsDisabled: Boolean,
     likesDisabled: Boolean,
@@ -465,11 +464,6 @@ enum BlockStatus {
   SELF
 }
 
-# DEPRECATED
-enum MediaObjectType {
-  IMAGE
-}
-
 enum PostStatus {
   PENDING
   PROCESSING
@@ -499,19 +493,6 @@ enum FlagStatus {
 enum ImageFormat {
   HEIC
   JPEG
-}
-
-# DEPRECATED: use ImageInput
-input MediaObjectUpload {
-  mediaId: ID!
-  mediaType: MediaObjectType = IMAGE
-  takenInReal: Boolean
-  originalFormat: String
-
-  # There are two ways to upload image data:
-  #   - by http PUTing image data to MediaObject.uploadUrl, after creating the post OR
-  #   - by including image data here, as a base64-encoded string (intended for small images)
-  imageData: String
 }
 
 input ImageInput {

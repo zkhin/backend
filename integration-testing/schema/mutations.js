@@ -227,87 +227,6 @@ module.exports.unblockUser = gql`
   }
 `
 
-// DEPRECATED
-module.exports.addPostMediaUploads = gql`
-  mutation AddPostMediaUploads (
-    $postId: ID!,
-    $postType: PostType,
-    $mediaId: ID!,
-    $imageData: String,
-    $albumId: ID,
-    $text: String,
-    $lifetime: String
-    $takenInReal: Boolean
-    $originalFormat: String,
-    $commentsDisabled: Boolean,
-    $likesDisabled: Boolean,
-    $sharingDisabled: Boolean,
-    $verificationHidden: Boolean,
-  ) {
-    addPost (
-      postId: $postId,
-      postType: $postType,
-      albumId: $albumId,
-      text: $text,
-      lifetime: $lifetime,
-      commentsDisabled: $commentsDisabled,
-      likesDisabled: $likesDisabled,
-      sharingDisabled: $sharingDisabled,
-      verificationHidden: $verificationHidden,
-      mediaObjectUploads: [{
-        mediaId: $mediaId,
-        takenInReal: $takenInReal,
-        originalFormat: $originalFormat,
-        imageData: $imageData,
-      }],
-    ) {
-      postId
-      postedAt
-      postType
-      postStatus
-      expiresAt
-      verificationHidden
-      text
-      textTaggedUsers {
-        ...TextTaggedUserFragment
-      }
-      image {
-        ...ImageFragment
-      }
-      imageUploadUrl
-      isVerified
-      viewedStatus
-      album {
-        albumId
-      }
-      originalPost {
-        postId
-      }
-      postedBy {
-        userId
-        postCount
-        blockerStatus
-        followedStatus
-      }
-      commentsDisabled
-      commentCount
-      comments {
-        items {
-          ...CommentFragment
-        }
-      }
-      likesDisabled
-      sharingDisabled
-      verificationHidden
-      hasNewCommentActivity
-      flagStatus
-    }
-  }
-  ${fragments.comment}
-  ${fragments.image}
-  ${fragments.textTaggedUser}
-`
-
 module.exports.addPost = gql`
   mutation AddPost (
     $postId: ID!,
@@ -394,14 +313,6 @@ module.exports.addPost = gql`
   ${fragments.comment}
   ${fragments.image}
   ${fragments.textTaggedUser}
-`
-
-module.exports.addPostTwoMedia = gql`
-  mutation AddPostTwoMedia ($postId: ID!, $mediaId1: ID!, $mediaId2: ID!) {
-    addPost (postId: $postId, mediaObjectUploads: [{mediaId: $mediaId1}, {mediaId: $mediaId2}]) {
-      postId
-    }
-  }
 `
 
 module.exports.editPost = gql`
