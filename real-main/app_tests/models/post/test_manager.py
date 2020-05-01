@@ -232,11 +232,9 @@ def test_add_video_post_maximal(post_manager, user):
 def test_add_image_post(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
-    media_id = 'mid'
-    image_input = {'mediaId': media_id}
 
     # add the post (& media)
-    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input)
+    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now)
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
@@ -247,34 +245,30 @@ def test_add_image_post(post_manager, user):
     assert 'text' not in post.item
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
-
-    assert post.image_item['mediaId'] == media_id
-    assert post.image_item['mediaType'] == 'IMAGE'
-    assert post.image_item['postedAt'] == now.to_iso8601_string()
-    assert 'expiresAt' not in post.image_item
+    assert post.image_item['partitionKey'] == post.item['partitionKey']
+    assert post.image_item['sortKey'] == 'image'
 
 
 def test_add_image_post_text_empty_string(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
-    media_id = 'mid'
-    image_input = {'mediaId': media_id}
 
     # add the post (& media)
-    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input, text='')
+    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, text='')
 
     # retrieve the post & media, check it
     post = post_manager.get_post(post_id)
     assert post.id == post_id
     assert 'text' not in post.item
     assert 'textTags' not in post.item
+    assert post.image_item['partitionKey'] == post.item['partitionKey']
+    assert post.image_item['sortKey'] == 'image'
 
 
 def test_add_image_post_with_image_data(user, post_manager, grant_data_b64):
     post_id = 'pid'
     now = pendulum.now('utc')
-    media_id = 'mid'
-    image_input = {'mediaId': media_id, 'imageData': grant_data_b64}
+    image_input = {'imageData': grant_data_b64}
 
     # add the post (& media)
     post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input)
@@ -288,20 +282,15 @@ def test_add_image_post_with_image_data(user, post_manager, grant_data_b64):
     assert 'text' not in post.item
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
-
-    assert post.image_item['mediaId'] == media_id
-    assert post.image_item['mediaType'] == 'IMAGE'
-    assert post.image_item['postedAt'] == now.to_iso8601_string()
-    assert 'expiresAt' not in post.image_item
+    assert post.image_item['partitionKey'] == post.item['partitionKey']
+    assert post.image_item['sortKey'] == 'image'
 
 
 def test_add_image_post_with_options(post_manager, album, user):
     post_id = 'pid'
     text = 'lore ipsum'
     now = pendulum.now('utc')
-    media_id = 'mid'
     image_input = {
-        'mediaId': media_id,
         'takenInReal': False,
         'originalFormat': 'org-format',
         'originalMetadata': 'org-metadata',
@@ -333,9 +322,6 @@ def test_add_image_post_with_options(post_manager, album, user):
     post_original_metadata = post_manager.original_metadata_dynamo.get(post_id)
     assert post_original_metadata['originalMetadata'] == 'org-metadata'
 
-    assert post.image_item['mediaId'] == media_id
-    assert post.image_item['mediaType'] == 'IMAGE'
-    assert post.image_item['postedAt'] == now.to_iso8601_string()
     assert post.image_item['takenInReal'] is False
     assert post.image_item['originalFormat'] == 'org-format'
 

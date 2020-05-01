@@ -430,12 +430,6 @@ def add_post(caller_user, arguments, source, context):
     album_id = arguments.get('albumId')
     set_as_user_photo = arguments.get('setAsUserPhoto')
 
-    media_uploads = arguments.get('mediaObjectUploads', [])
-    if not image_input and media_uploads:
-        if len(media_uploads) > 1:
-            raise ClientException('Refusing to add post with more than one media')
-        image_input = media_uploads[0]
-
     def argument_with_user_level_default(name):
         value = arguments.get(name)
         if value is not None:

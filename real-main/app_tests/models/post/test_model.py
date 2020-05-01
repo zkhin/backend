@@ -852,11 +852,10 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
     assert 'native.heic' not in cloudfront_client.generate_presigned_url.call_args.args[0]
 
     # set the imageFormat to heic
-    media_id = post.image_item['mediaId']
     query_kwargs = {
         'Key': {
-            'partitionKey': f'media/{media_id}',
-            'sortKey': '-',
+            'partitionKey': f'post/{post.id}',
+            'sortKey': 'image',
         },
         'UpdateExpression': 'SET imageFormat = :im',
         'ExpressionAttributeValues': {':im': 'HEIC'},

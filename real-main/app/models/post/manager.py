@@ -1,6 +1,5 @@
 import itertools
 import logging
-import uuid
 
 import pendulum
 
@@ -79,10 +78,6 @@ class PostManager:
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
 
-        image_input = image_input or {}
-        if post_type == enums.PostType.IMAGE and 'mediaId' not in image_input:
-            image_input['mediaId'] = str(uuid.uuid4())
-
         if post_type == enums.PostType.TEXT_ONLY:
             if not text:
                 raise exceptions.PostException('Cannot add text-only post without text')
@@ -122,11 +117,10 @@ class PostManager:
         )]
         if post_type == enums.PostType.IMAGE:
             # 'image_input' is straight from graphql, format dictated by schema
+            image_input = image_input or {}
             transacts.append(self.image_dynamo.transact_add(
-                posted_by_user_id, post_id, image_input['mediaId'],
-                posted_at=now, taken_in_real=image_input.get('takenInReal'),
-                original_format=image_input.get('originalFormat'),
-                image_format=image_input.get('imageFormat'),
+                post_id, taken_in_real=image_input.get('takenInReal'),
+                original_format=image_input.get('originalFormat'), image_format=image_input.get('imageFormat'),
             ))
             if original_metadata := image_input.get('originalMetadata'):
                 transacts.append(self.original_metadata_dynamo.transact_add(post_id, original_metadata))

@@ -111,7 +111,7 @@ class Post:
         return self
 
     def refresh_image_item(self):
-        self._image_item = next(self.image_dynamo.generate_by_post(self.id), None)
+        self._image_item = self.image_dynamo.get(self.id) or next(self.image_dynamo.generate_by_post(self.id), None)
         return self
 
     def get_s3_image_path(self, size):
@@ -524,7 +524,8 @@ class Post:
     def set_height_and_width(self):
         image = Image.open(self.get_native_image_buffer())
         width, height = image.size
-        self._image_item = self.image_dynamo.set_height_and_width(self.image_item['mediaId'], height, width)
+        self._image_item = self.image_dynamo.set_height_and_width(self.id, self.image_item.get('mediaId'), height,
+                                                                  width)
         return self
 
     def set_colors(self):
@@ -534,7 +535,7 @@ class Post:
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
         else:
-            self._image_item = self.image_dynamo.set_colors(self.image_item['mediaId'], colors)
+            self._image_item = self.image_dynamo.set_colors(self.id, self.image_item.get('mediaId'), colors)
         return self
 
     def set_checksum(self):
