@@ -486,19 +486,14 @@ def post_image(caller_user_id, arguments, source, context):
     if post.status not in (PostStatus.COMPLETED, PostStatus.ARCHIVED):
         return None
 
-    image_item = {
+    image_item = post.image_item.copy() if post.image_item else {}
+    image_item.update({
         'url': post.get_image_readonly_url(image_size.NATIVE),
         'url64p': post.get_image_readonly_url(image_size.P64),
         'url480p': post.get_image_readonly_url(image_size.P480),
         'url1080p': post.get_image_readonly_url(image_size.P1080),
         'url4k': post.get_image_readonly_url(image_size.K4),
-    }
-
-    if post.image_item:
-        image_item['width'] = post.image_item.get('width')
-        image_item['height'] = post.image_item.get('height')
-        image_item['colors'] = post.image_item.get('colors')
-
+    })
     return image_item
 
 

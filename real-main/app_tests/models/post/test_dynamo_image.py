@@ -51,60 +51,47 @@ def test_transact_add_maximal(post_image_dynamo):
     assert item == {}
 
 
+def test_delete(post_image_dynamo):
+    post_id = 'pid1'
+    assert post_image_dynamo.get(post_id) is None
+
+    # deleting an item that doesn't exist fails softly
+    post_image_dynamo.delete(post_id)
+    assert post_image_dynamo.get(post_id) is None
+
+    # add the post image, verify
+    transact = post_image_dynamo.transact_add(post_id)
+    post_image_dynamo.client.transact_write_items([transact])
+    assert post_image_dynamo.get(post_id)
+
+    # delete it, verify
+    post_image_dynamo.delete(post_id)
+    assert post_image_dynamo.get(post_id) is None
+
+
 def test_media_set_height_and_width(post_image_dynamo, image_item):
     post_id = image_item['partitionKey'][5:]
-    media_id = image_item.get('mediaId')
     assert 'height' not in image_item
     assert 'width' not in image_item
 
-    item = post_image_dynamo.set_height_and_width(post_id, media_id, 4, 2)
+    item = post_image_dynamo.set_height_and_width(post_id, 4, 2)
     assert item['height'] == 4
     assert item['width'] == 2
 
-    item = post_image_dynamo.set_height_and_width(post_id, media_id, 120, 2000)
+    item = post_image_dynamo.set_height_and_width(post_id, 120, 2000)
     assert item['height'] == 120
     assert item['width'] == 2000
 
 
-def test_generate_by_post(post_image_dynamo):
-    media_id = 'mid'
-    post_id = 'pid'
-
-    # test none
-    assert list(post_image_dynamo.generate_by_post(post_id)) == []
-
-    # add an old-style media item to the db
-    item = {
-        'partitionKey': {'S': f'media/{media_id}'},
-        'sortKey': {'S': '-'},
-        'gsiA1PartitionKey': {'S': f'media/{post_id}'},
-        'gsiA1SortKey': {'S': '-'},
-        'mediaId': {'S': media_id},
-        'postId': {'S': post_id},
-    }
-    transact = {'Put': {
-        'Item': item,
-        'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-    }}
-    post_image_dynamo.client.transact_write_items([transact])
-
-    # generate it
-    items = list(post_image_dynamo.generate_by_post(post_id))
-    assert len(items) == 1
-    assert items[0]['mediaId'] == media_id
-    assert items[0]['postId'] == post_id
-
-
 def test_set_colors(post_image_dynamo, image_item):
     post_id = image_item['partitionKey'][5:]
-    media_id = image_item.get('mediaId')
     assert 'colors' not in image_item
 
     # no support for deleting colors
     with pytest.raises(AssertionError):
-        post_image_dynamo.set_colors(post_id, media_id, None)
+        post_image_dynamo.set_colors(post_id, None)
     with pytest.raises(AssertionError):
-        post_image_dynamo.set_colors(post_id, media_id, ())
+        post_image_dynamo.set_colors(post_id, ())
     assert post_image_dynamo.get(post_id) == image_item
 
     # sample output from ColorTheif
@@ -116,7 +103,7 @@ def test_set_colors(post_image_dynamo, image_item):
         (131, 125, 125),
     ]
 
-    new_item = post_image_dynamo.set_colors(post_id, media_id, colors)
+    new_item = post_image_dynamo.set_colors(post_id, colors)
     assert post_image_dynamo.get(post_id) == new_item
     assert new_item['colors'] == [
         {'r': 52, 'g': 58, 'b': 46},

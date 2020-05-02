@@ -80,18 +80,6 @@ class DynamoClient:
         # return None if nothing was deleted, rather than an empty dict
         return self.table.delete_item(**query_kwargs).get('Attributes') or None
 
-    # TODO: remove me when Media model is removed, it's the only place this is used
-    def delete_item_by_pk(self, pk):
-        "Delete an item by its primary key"
-        kwargs = {
-            'Key': {
-                'partitionKey': pk['partitionKey'],
-                'sortKey': pk['sortKey'],
-            },
-            'ReturnValues': 'ALL_OLD',
-        }
-        return self.delete_item(kwargs)
-
     def encode_pagination_token(self, last_evaluated_key):
         "From a LastEvaluatedKey to a obfucated string"
         # https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.html#Query.Pagination

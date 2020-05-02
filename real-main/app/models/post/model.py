@@ -111,7 +111,7 @@ class Post:
         return self
 
     def refresh_image_item(self):
-        self._image_item = self.image_dynamo.get(self.id) or next(self.image_dynamo.generate_by_post(self.id), None)
+        self._image_item = self.image_dynamo.get(self.id)
         return self
 
     def get_s3_image_path(self, size):
@@ -482,7 +482,7 @@ class Post:
         # do the deletes for real
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
         if self.image_item:
-            self.dynamo.client.delete_item_by_pk(self.image_item)
+            self.image_dynamo.delete(self.id)
         self.flag_dynamo.delete_all_for_post(self.id)
         self.original_metadata_dynamo.delete(self.id)
         self.dynamo.delete_post(self.id)
@@ -524,8 +524,7 @@ class Post:
     def set_height_and_width(self):
         image = Image.open(self.get_native_image_buffer())
         width, height = image.size
-        self._image_item = self.image_dynamo.set_height_and_width(self.id, self.image_item.get('mediaId'), height,
-                                                                  width)
+        self._image_item = self.image_dynamo.set_height_and_width(self.id, height, width)
         return self
 
     def set_colors(self):
@@ -535,7 +534,7 @@ class Post:
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
         else:
-            self._image_item = self.image_dynamo.set_colors(self.id, self.image_item.get('mediaId'), colors)
+            self._image_item = self.image_dynamo.set_colors(self.id, colors)
         return self
 
     def set_checksum(self):

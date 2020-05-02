@@ -1,7 +1,5 @@
 import logging
 
-from boto3.dynamodb.conditions import Key
-
 logger = logging.getLogger()
 
 
@@ -15,6 +13,13 @@ class PostImageDynamo:
             'partitionKey': f'post/{post_id}',
             'sortKey': 'image',
         })
+
+    def delete(self, post_id):
+        query_kwargs = {'Key': {
+            'partitionKey': f'post/{post_id}',
+            'sortKey': 'image',
+        }}
+        return self.client.delete_item(query_kwargs)
 
     def transact_add(self, post_id, taken_in_real=None, original_format=None, image_format=None):
         item = {
@@ -33,14 +38,9 @@ class PostImageDynamo:
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }}
 
-    def set_height_and_width(self, post_id, media_id, height, width):
-        # if passed a media_id then our item is assumed to be a media item, else, it's a post_image
-        pk = (
-            {'partitionKey': f'media/{media_id}', 'sortKey': '-'} if media_id else
-            {'partitionKey': f'post/{post_id}', 'sortKey': 'image'}
-        )
+    def set_height_and_width(self, post_id, height, width):
         query_kwargs = {
-            'Key': pk,
+            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': 'image'},
             'UpdateExpression': 'SET height = :height, width = :width',
             'ExpressionAttributeValues': {
                 ':height': height,
@@ -49,13 +49,8 @@ class PostImageDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def set_colors(self, post_id, media_id, color_tuples):
+    def set_colors(self, post_id, color_tuples):
         assert color_tuples, 'No support for deleting colors, yet'
-        # if passed a media_id then our item is assumed to be a media item, else, it's a post_image
-        pk = (
-            {'partitionKey': f'media/{media_id}', 'sortKey': '-'} if media_id else
-            {'partitionKey': f'post/{post_id}', 'sortKey': 'image'}
-        )
 
         # transform to map before saving
         color_maps = [{
@@ -65,15 +60,8 @@ class PostImageDynamo:
         } for ct in color_tuples]
 
         query_kwargs = {
-            'Key': pk,
+            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': 'image'},
             'UpdateExpression': 'SET colors = :colors',
             'ExpressionAttributeValues': {':colors': color_maps},
         }
         return self.client.update_item(query_kwargs)
-
-    def generate_by_post(self, post_id):
-        query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'media/{post_id}'),
-            'IndexName': 'GSI-A1',
-        }
-        return self.client.generate_all_query(query_kwargs)
