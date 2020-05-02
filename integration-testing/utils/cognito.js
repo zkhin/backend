@@ -49,20 +49,13 @@ const familyName = 'TESTER'
 
 const AuthFlow = 'USER_PASSWORD_AUTH'
 
-const cognitoSymbols = new Set('^$*.[]{}()?-"!@#%&/\\,><\':;|_~`')
-
 // To be used in the `Logins` parameter when calling the identity pool
 const userPoolLoginsKey = `cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`
 const googleLoginsKey = 'accounts.google.com'
 const facebookLoginsKey = 'graph.facebook.com'
 
 const generatePassword = () => {
-  while (true) {
-    // cognito's list of symbols is slightly smaller than password-generator's
-    let candidate = pwdGenerator.generate({numbers: true, symbols: true, strict: true})
-    let numSymbols = candidate.split('').filter(c => cognitoSymbols.has(c)).length
-    if (numSymbols > 0) return candidate
-  }
+  return pwdGenerator.generate({length: 8})
 }
 
 const generateUsername = () => familyName + uuidv4().substring(24)

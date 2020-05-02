@@ -1302,6 +1302,9 @@ resources:
         EmailConfiguration:
           EmailSendingAccount: DEVELOPER
           SourceArn: arn:aws:ses:us-east-1:#{AWS::AccountId}:identity/no-reply@real.app
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
         SmsConfiguration:
           SnsCallerArn: !GetAtt CognitoSNSRole.Arn
         Schema:

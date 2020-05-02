@@ -26,9 +26,7 @@ const familyName = 'TESTER'
 
 
 function generatePassword() {
-  // pwd generator and cognito have slightly different ideas of what special characters
-  // are, so always add a cognito special character to make sure the pwd isn't rejected
-  return pwdGenerator.generate({numbers: true, symbols: true, strict: true}) + '!'
+  return pwdGenerator.generate({length: 8})
 }
 
 // TODO: make an effort to clean up after ourselves and not leave testing users in cognito
