@@ -106,6 +106,44 @@ class Post:
             self._user = self.user_manager.get_user(self.user_id)
         return self._user
 
+    @property
+    def native_image_data(self):
+        if not hasattr(self, '_native_image_data'):
+            if self.type == PostType.TEXT_ONLY:
+                max_dims = image_size.K4.max_dimensions
+                self._native_image_data = generate_text_image(self.item['text'], max_dims).read()
+
+            elif self.type in (PostType.IMAGE, PostType.VIDEO):
+                path = self.get_image_path(image_size.NATIVE)
+                try:
+                    self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+                except self.s3_uploads_client.exceptions.NoSuchKey:
+                    raise exceptions.PostException(f'Native image data not found for post `{self.id}`')
+
+            else:
+                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
+
+        return self._native_image_data
+
+    @property
+    def p1080_image_data(self):
+        if not hasattr(self, '_p1080_image_data'):
+            if self.type == PostType.TEXT_ONLY:
+                max_dims = image_size.P1080.max_dimensions
+                self._p1080_image_data = generate_text_image(self.item['text'], max_dims).read()
+
+            elif self.type in (PostType.IMAGE, PostType.VIDEO):
+                path = self.get_image_path(image_size.P1080)
+                try:
+                    self._p1080_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
+                except self.s3_uploads_client.exceptions.NoSuchKey:
+                    raise exceptions.PostException(f'1080p image data not found for post `{self.id}`')
+
+            else:
+                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
+
+        return self._p1080_image_data
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -118,41 +156,11 @@ class Post:
         "From within the user's directory, return the path to the s3 object of the requested size"
         return '/'.join([self.item['postedByUserId'], 'post', self.item['postId'], 'image', size.filename])
 
-    def get_native_image_buffer(self):
-        if not hasattr(self, '_native_image_data'):
-            if self.type == PostType.TEXT_ONLY:
-                max_dims = image_size.K4.max_dimensions
-                self._native_image_data = generate_text_image(self.item['text'], max_dims).read()
-
-            elif self.type in (PostType.IMAGE, PostType.VIDEO):
-                path = self.get_image_path(image_size.NATIVE)
-                try:
-                    self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-                except self.s3_uploads_client.exceptions.NoSuchKey:
-                    raise exceptions.PostException(f'Native image buffer not found for post `{self.id}`')
-
-            else:
-                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
-
-        return BytesIO(self._native_image_data)
-
-    def get_1080p_image_buffer(self):
-        if not hasattr(self, '_1080p_image_data'):
-            if self.type == PostType.TEXT_ONLY:
-                max_dims = image_size.P1080.max_dimensions
-                self._1080p_image_data = generate_text_image(self.item['text'], max_dims).read()
-
-            elif self.type in (PostType.IMAGE, PostType.VIDEO):
-                path = self.get_image_path(image_size.P1080)
-                try:
-                    self._1080p_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-                except self.s3_uploads_client.exceptions.NoSuchKey:
-                    raise exceptions.PostException(f'1080p image buffer not found for post `{self.id}`')
-
-            else:
-                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
-
-        return BytesIO(self._1080p_image_data)
+    def get_native_pil_image(self):
+        try:
+            return ImageOps.exif_transpose(Image.open(BytesIO(self.native_image_data)))
+        except Exception as err:
+            raise exceptions.PostException(f'Unable to decode native image data as jpeg for post `{self.id}`: {err}')
 
     def get_original_video_path(self):
         return f'{self.s3_prefix}/{enums.VIDEO_ORIGINAL_FILENAME}'
@@ -215,11 +223,7 @@ class Post:
         return resp
 
     def build_image_thumbnails(self):
-        native_buffer = self.get_native_image_buffer()
-        try:
-            image = ImageOps.exif_transpose(Image.open(native_buffer))
-        except Exception as err:
-            raise exceptions.PostException(f'Unable to open image data as jpeg for post `{self.id}`: {err}')
+        image = self.get_native_pil_image()
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
             in_mem_file = BytesIO()
             try:
@@ -522,15 +526,14 @@ class Post:
         self.s3_uploads_client.put_object(jpeg_path, in_mem_file.read(), self.jpeg_content_type)
 
     def set_height_and_width(self):
-        image = Image.open(self.get_native_image_buffer())
+        image = self.get_native_pil_image()
         width, height = image.size
         self._image_item = self.image_dynamo.set_height_and_width(self.id, height, width)
         return self
 
     def set_colors(self):
-        native_buffer = self.get_native_image_buffer()
         try:
-            colors = ColorThief(native_buffer).get_palette(color_count=5)
+            colors = ColorThief(BytesIO(self.native_image_data)).get_palette(color_count=5)
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
         else:

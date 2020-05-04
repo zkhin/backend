@@ -112,42 +112,30 @@ def test_refresh_item(post):
     assert new_post_item == post.item
 
 
-def test_get_native_image_buffer(post, post_with_media):
-    # verify works for text post
-    buf = post.get_native_image_buffer()
-    assert isinstance(buf, BytesIO)
-    assert buf.read()
-
-    # verify works for completed image post
-    buf = post_with_media.get_native_image_buffer()
-    assert isinstance(buf, BytesIO)
-    assert buf.read()
+def test_native_image_data(post, post_with_media):
+    # verify exists works for text post, image post
+    assert post.native_image_data
+    assert post_with_media.native_image_data
 
     # verify raise exception for image post without item in s3
     del post_with_media._native_image_data
     path = post_with_media.get_image_path(image_size.NATIVE)
     post_with_media.s3_uploads_client.delete_object(path)
-    with pytest.raises(post.exceptions.PostException, match='Native image buffer not found'):
-        post_with_media.get_native_image_buffer()
+    with pytest.raises(post.exceptions.PostException, match='Native image data not found'):
+        post_with_media.native_image_data
 
 
-def test_get_1080p_image_buffer(post, post_with_media):
+def test_p1080_image_data(post, post_with_media):
     # verify works for text post
-    buf = post.get_1080p_image_buffer()
-    assert isinstance(buf, BytesIO)
-    assert buf.read()
-
-    # verify works for completed image post
-    buf = post_with_media.get_1080p_image_buffer()
-    assert isinstance(buf, BytesIO)
-    assert buf.read()
+    assert post.p1080_image_data
+    assert post_with_media.p1080_image_data
 
     # verify raise exception for image post without item in s3
     path = post_with_media.get_image_path(image_size.P1080)
-    del post_with_media._1080p_image_data
+    del post_with_media._p1080_image_data
     post_with_media.s3_uploads_client.delete_object(path)
-    with pytest.raises(post.exceptions.PostException, match='1080p image buffer not found'):
-        post_with_media.get_1080p_image_buffer()
+    with pytest.raises(post.exceptions.PostException, match='1080p image data not found'):
+        post_with_media.p1080_image_data
 
 
 def test_get_original_video_path(post):
@@ -390,7 +378,7 @@ def test_upload_native_image_data_base64(pending_image_post):
     post.upload_native_image_data_base64(image_data_b64)
 
     # check it was placed in mem and in s3
-    assert post.get_native_image_buffer().read() == image_data
+    assert post.native_image_data == image_data
     assert post.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
@@ -884,7 +872,7 @@ def test_set_native_jpeg(pending_image_post, s3_uploads_client):
 
     # verify there is now a native jpeg, of the correct size
     assert s3_uploads_client.exists(s3_jpeg_path)
-    image = Image.open(post.get_native_image_buffer())
+    image = Image.open(BytesIO(post.native_image_data))
     assert image.size == (heic_width, heic_height)
 
 

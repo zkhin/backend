@@ -30,7 +30,7 @@ def test_build_image_thumbnails_not_jpeg_data(s3_uploads_client, processing_imag
     path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(path, b'aintnojpeg', 'image/jpeg')
 
-    with pytest.raises(PostException, match='Unable to open image data as jpeg'):
+    with pytest.raises(PostException, match='Unable to decode native image data as jpeg'):
         post.build_image_thumbnails()
 
 

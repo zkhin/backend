@@ -123,9 +123,9 @@ class Album:
         if len(posts) == 0:
             new_native_buf = None
         elif len(posts) == 1:
-            new_native_buf = posts[0].get_native_image_buffer()
+            new_native_buf = BytesIO(posts[0].native_image_data)
         else:
-            image_data_buffers = [post.get_1080p_image_buffer() for post in posts]
+            image_data_buffers = [BytesIO(post.p1080_image_data) for post in posts]
             new_native_buf = art.generate_zoomed_grid(image_data_buffers)
 
         if new_native_buf:

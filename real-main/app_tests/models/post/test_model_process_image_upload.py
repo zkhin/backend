@@ -39,7 +39,7 @@ def test_cant_process_image_upload_various_errors(post_manager, user, pending_po
 def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
-    with pytest.raises(PostException, match='Native image buffer not found'):
+    with pytest.raises(PostException, match='Native image data not found'):
         pending_post.process_image_upload()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
