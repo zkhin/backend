@@ -185,34 +185,6 @@ def test_reindex_deletes_as_needed_from_score_decay(trending_manager, post_manag
     assert post_items[0]['partitionKey'] == f'trending/{post_id_2}'
 
 
-def test_reindex_deletes_posts_older_than_24_hours(trending_manager, user, post_manager):
-    # add one post just over a day ago
-    posted_at_1 = pendulum.now('utc') - pendulum.duration(hours=25)
-    post_id_1 = 'post-id-over'
-    post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t', now=posted_at_1)
-    trending_manager.increment_score(TrendingItemType.POST, post_id_1, amount=10)
-
-    # add nother post just under a day ago
-    post_id_2 = 'post-id-under'
-    posted_at_2 = pendulum.now('utc') - pendulum.duration(hours=23)
-    post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t', now=posted_at_2)
-    trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=10)
-
-    # check we can see those post items
-    post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
-    assert len(post_items) == 2
-    assert post_items[0]['partitionKey'] == f'trending/{post_id_1}'
-    assert post_items[1]['partitionKey'] == f'trending/{post_id_2}'
-
-    # reindex
-    trending_manager.reindex(TrendingItemType.POST)
-
-    # check that one post item has disappeared, and the other has not
-    post_items = list(trending_manager.dynamo.generate_trendings(TrendingItemType.POST))
-    assert len(post_items) == 1
-    assert post_items[0]['partitionKey'] == f'trending/{post_id_2}'
-
-
 def test_increment_scores_for_post(trending_manager, user, post_manager, real_user):
     # check initial state
     assert list(trending_manager.dynamo.generate_trendings('post')) == []
