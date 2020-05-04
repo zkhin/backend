@@ -49,8 +49,7 @@ def cloudfront_client():
 def mediaconvert_client():
     endpoint = 'https://my-media-convert-endpoint.com'
     yield Mock(clients.MediaConvertClient(
-        endpoint=endpoint, aws_region='aws-region', aws_account_id='aws-aid', role_arn='role-arn',
-        uploads_bucket='uploads-bucket'
+        endpoint=endpoint, aws_account_id='aws-aid', role_arn='role-arn', uploads_bucket='uploads-bucket'
     ))
 
 

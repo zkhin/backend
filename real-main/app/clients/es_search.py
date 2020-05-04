@@ -8,7 +8,6 @@ from requests_aws4auth import AWS4Auth
 
 logger = logging.getLogger()
 
-AWS_REGION = os.environ.get('AWS_REGION')
 ES_SEARCH_DOMAIN = os.environ.get('ES_SEARCH_DOMAIN')
 
 
@@ -26,18 +25,17 @@ class ESSearchClient:
         'bio',
     ]
 
-    def __init__(self, region=AWS_REGION, domain=ES_SEARCH_DOMAIN):
-        assert region, '`region` is required'
+    def __init__(self, domain=ES_SEARCH_DOMAIN):
         assert domain, '`domain` is required'
-        self.region = region
         self.domain = domain
 
     @property
     def awsauth(self):
         if not hasattr(self, '_awsauth'):
-            credentials = boto3.Session().get_credentials()
+            session = boto3.Session()
+            credentials = session.get_credentials().get_frozen_credentials()
             self._awsauth = AWS4Auth(
-                credentials.access_key, credentials.secret_key, self.region, self.service,
+                credentials.access_key, credentials.secret_key, session.region_name, self.service,
                 session_token=credentials.token,
             )
         return self._awsauth

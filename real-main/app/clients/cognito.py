@@ -5,7 +5,6 @@ import string
 
 import boto3
 
-AWS_REGION = os.environ.get('AWS_REGION')
 COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
 COGNITO_BACKEND_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_BACKEND_CLIENT_ID')
 
@@ -14,8 +13,7 @@ logger = logging.getLogger()
 
 class CognitoClient:
 
-    def __init__(self, user_pool_id=COGNITO_USER_POOL_ID, client_id=COGNITO_BACKEND_CLIENT_ID,
-                 aws_region=AWS_REGION):
+    def __init__(self, user_pool_id=COGNITO_USER_POOL_ID, client_id=COGNITO_BACKEND_CLIENT_ID):
         assert user_pool_id, "Cognito user pool id is required"
         assert client_id, "Cognito user pool client id is required"
 
@@ -23,6 +21,7 @@ class CognitoClient:
         self.client_id = client_id
         self.boto_client = boto3.client('cognito-idp')
 
+        aws_region = boto3.Session().region_name
         self.userPoolLoginsKey = f'cognito-idp.{aws_region}.amazonaws.com/{user_pool_id}'
         self.googleLoginsKey = 'accounts.google.com'
         self.facebookLoginsKey = 'graph.facebook.com'

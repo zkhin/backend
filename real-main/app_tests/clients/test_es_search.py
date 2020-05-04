@@ -9,7 +9,7 @@ from app.clients import ESSearchClient
 
 @pytest.fixture
 def elasticsearch_client():
-    yield ESSearchClient(region='our-region', domain='real.es.amazonaws.com')
+    yield ESSearchClient(domain='real.es.amazonaws.com')
 
 
 def test_build_user_url(elasticsearch_client):

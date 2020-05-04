@@ -2,7 +2,6 @@ import os
 
 import boto3
 
-AWS_REGION = os.environ.get('AWS_REGION')
 AWS_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID')
 MEDIACONVERT_ROLE_ARN = os.environ.get('MEDIACONVERT_ROLE_ARN')
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
@@ -12,12 +11,13 @@ class MediaConvertClient:
 
     job_template = 'System-Ott_Hls_Ts_Avc_Aac'
 
-    def __init__(self, endpoint=None, aws_region=AWS_REGION, aws_account_id=AWS_ACCOUNT_ID,
-                 role_arn=MEDIACONVERT_ROLE_ARN, uploads_bucket=S3_UPLOADS_BUCKET):
+    def __init__(self, endpoint=None, aws_account_id=AWS_ACCOUNT_ID, role_arn=MEDIACONVERT_ROLE_ARN,
+                 uploads_bucket=S3_UPLOADS_BUCKET):
         assert role_arn, "MediaConvert role ARN is required"
         assert uploads_bucket, "S3 uploads bucket name is required"
         self.role_arn = role_arn
         self.uploads_bucket = uploads_bucket
+        aws_region = boto3.Session().region_name
         self.job_template_arn = (
             f'arn:aws:mediaconvert:{aws_region}:{aws_account_id}:jobTemplates/{self.job_template}'
         )
