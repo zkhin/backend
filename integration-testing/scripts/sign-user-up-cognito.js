@@ -79,7 +79,7 @@ prmt.get(prmtSchema, async (err, result) => {
 
 const signUserUp = async (email, phone, password, autoconfirm) => {
   if (! password) {
-    password = pwdGenerator.generate({numbers: true, symbols: true, strict: true})
+    password = pwdGenerator.generate({length: 8})
     console.log(`Auto-generated password: ${password}`)
   }
   const userAttrs = []
