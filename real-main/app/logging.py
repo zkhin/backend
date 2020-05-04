@@ -52,6 +52,7 @@ class CloudWatchFormatter(logging.Formatter):
         data = {
             'level': record.levelname,
             'requestId': record.request_id,
+            'event': getattr(record, 'event', None),
             'gqlField': record.gql_field,
             'gqlCallerUserId': record.gql_caller_user_id,
             'gqlArguments': record.gql_arguments,

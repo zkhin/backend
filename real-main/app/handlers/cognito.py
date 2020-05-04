@@ -2,6 +2,8 @@ import logging
 import os
 import re
 
+from app.logging import LogLevelContext
+
 logger = logging.getLogger()
 
 COGNITO_TESTING_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_TESTING_CLIENT_ID')
@@ -14,6 +16,9 @@ class CognitoClientException(Exception):
 
 
 def pre_sign_up(event, context):
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('BEGIN: Handling Cognito PreSignUp event', extra={'event': event})
+
     validate_username_format(event)
     validate_user_attribute_lowercase(event, 'email')
 
@@ -48,6 +53,9 @@ def pre_auth(event, context):
 
 
 def custom_message(event, context):
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('BEGIN: Handling Cognito CustomMessage event', extra={'event': event})
+
     if event['triggerSource'] == 'CustomMessage_SignUp':
         username = event['userName']
         code = event['request']['codeParameter']
