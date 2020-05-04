@@ -1335,6 +1335,7 @@ resources:
         ExplicitAuthFlows:
           - USER_PASSWORD_AUTH
         GenerateSecret: false
+        PreventUserExistenceErrors: ENABLED
         SupportedIdentityProviders:
           - COGNITO
         CallbackURLs:
@@ -1370,6 +1371,7 @@ resources:
         ExplicitAuthFlows:
           - USER_PASSWORD_AUTH
         GenerateSecret: false
+        PreventUserExistenceErrors: ENABLED
         SupportedIdentityProviders:
           - COGNITO
         CallbackURLs:
