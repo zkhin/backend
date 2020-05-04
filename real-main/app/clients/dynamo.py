@@ -144,10 +144,6 @@ class DynamoClient:
 
         If one of the transact_item's conditional expressions fails, then the corresponding entry in
         trasact_exceptions will be raised, if it was provided.
-
-        To support moto, if 'transact_write_items' is not defined, then the operations are just done sequentially.
-        Obviously this isn't great to have the unit tests going on a different code path than the live system,
-        but it's better than no unit tests at all.
         """
         if transact_exceptions is None:
             transact_exceptions = [None] * len(transact_items)
@@ -157,44 +153,16 @@ class DynamoClient:
         for ti in transact_items:
             list(ti.values()).pop()['TableName'] = self.table_name
 
-        # TODO: is there a way to tell when we're running under moto, other than this try-and-fail?
         try:
-            try:
-                self.boto3_client.transact_write_items(TransactItems=transact_items)
-            except self.boto3_client.exceptions.TransactionCanceledException as err:
-                # we want to raise a more specific error than 'the whole transaction failed'
-                # there is no way to get the CancellationReasons in boto3, so this is the best we can do
-                # https://github.com/aws/aws-sdk-go/issues/2318#issuecomment-443039745
-                reasons = re.search(r'\[(.*)\]$', err.response['Error']['Message']).group(1).split(', ')
-                for reason, transact_exception in zip(reasons, transact_exceptions):
-                    if reason == 'ConditionalCheckFailed':
-                        # the transact_item with this transaction_exception failed
-                        if transact_exception is not None:
-                            raise transact_exception
-                raise err
-
-        except AttributeError:
-            # we're running under moto, ie, in the test suite
-            for transact_item, transact_exception in zip(transact_items, transact_exceptions):
-                assert len(transact_item) == 1
-                key, kwargs = next(iter(transact_item.items()))
-
-                if key == 'Put':
-                    operation = self.boto3_client.put_item
-                elif key == 'Delete':
-                    operation = self.boto3_client.delete_item
-                elif key == 'Update':
-                    operation = self.boto3_client.update_item
-                elif key == 'ConditionCheck':
-                    # There is no corresponding operation we can do here, AFAIK
-                    # Thus we can't test write failures due to ConditionChecks in test suite
-                    continue
-                else:
-                    raise ValueError(f"Unrecognized transaction key '{key}'")
-
-                try:
-                    operation(**kwargs)
-                except self.exceptions.ConditionalCheckFailedException as err:
+            self.boto3_client.transact_write_items(TransactItems=transact_items)
+        except self.boto3_client.exceptions.TransactionCanceledException as err:
+            # we want to raise a more specific error than 'the whole transaction failed'
+            # there is no way to get the CancellationReasons in boto3, so this is the best we can do
+            # https://github.com/aws/aws-sdk-go/issues/2318#issuecomment-443039745
+            reasons = re.search(r'\[(.*)\]$', err.response['Error']['Message']).group(1).split(', ')
+            for reason, transact_exception in zip(reasons, transact_exceptions):
+                if reason == 'ConditionalCheckFailed':
+                    # the transact_item with this transaction_exception failed
                     if transact_exception is not None:
                         raise transact_exception
-                    raise err
+            raise err
