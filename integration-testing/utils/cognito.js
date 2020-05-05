@@ -130,7 +130,7 @@ const getAppSyncLogin = async (newUserPhone) => {
     userNeedsReset = true
     userId = jwtDecode(idToken)['cognito:username']
   } catch (err) {
-    if (err.code !== 'UserNotFoundException') throw(err)
+    if (err.code !== 'UserLambdaValidationException') throw(err)
     // user does not exist, we must create them. No need to reset it later on, as new user starts fresh
     userNeedsReset = false
 
