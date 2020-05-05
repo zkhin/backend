@@ -7,8 +7,9 @@
 The backend is organized as a series of cloudformation stacks to speed up the standard deploy and to help protect stateful resources. The stacks so far are:
 
 - `real-main`
-- `real-lambda-layers`
+- `real-auth`
 - `real-cloudfront`
+- `real-lambda-layers`
 
 ## Getting started
 
@@ -37,6 +38,7 @@ Resource dependencies between the stacks make initial deployment tricky. Stacks 
 - `real-main`, with resources that depend on `real-cloudfront` commented out in serverless.yml
 - `real-cloudfront`
 - `real-main` again, with nothing commented out
+- `real-auth`
 
 In the AWS SecretsManager:
 
@@ -100,9 +102,14 @@ This is the primary stack, it holds everything not explicitly relegated to one o
 
 Most development takes place here. To initialize the development environment, run `poetry install` in the stack root directory.
 
-#### `real-lambda-layers`
+#### `real-auth`
 
-Holds the [lambda layers](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html). The python packages which the lambda handlers in the primary stack depend on are stored in a layer. This reduces the size of the deployment package of the primary stack from several megabytes to several kilobytes, making deploys of the primary stack much faster.
+Holds:
+
+- Api endpoints to asist in sign up / sign in process
+- Planned: Cognito resources will be moved in here (they are still in `real-main` at the moment)
+
+Please see the [real-auth README](./real-auth/README.md) for further details.
 
 #### `real-cloudfront`
 
@@ -120,6 +127,10 @@ CloudFront is included because:
 
 - changes to the CloudFront config, while somewhat uncommon, also trigger a ~20 minute deploy
 - separating the CloudFront config and the Lambda@Edge handlers into separate stacks isn't supported by the [cloudfront-lambda-edge serverless plugin](https://github.com/silvermine/serverless-plugin-cloudfront-lambda-edge/)
+
+#### `real-lambda-layers`
+
+Holds the [lambda layers](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html). The python packages which the lambda handlers in the primary stack depend on are stored in a layer. This reduces the size of the deployment package of the primary stack from several megabytes to several kilobytes, making deploys of the primary stack much faster.
 
 ### Adding new python dependencies
 

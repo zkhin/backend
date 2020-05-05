@@ -1,0 +1,12 @@
+{
+  "name": "real-auth",
+  "description": "",
+  "version": "0.1.0",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless": "^1.69.0",
+    "serverless-plugin-aws-alerts": "^1.4.0",
+    "serverless-plugin-git-variables": "^4.0.0",
+    "serverless-pseudo-parameters": "^2.5.0"
+  }
+}

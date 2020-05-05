@@ -2,6 +2,29 @@ name: Continuous Integration
 on: [push]
 jobs:
 
+  real-auth-pytest:
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+    - name: Git checkout
+      uses: actions/checkout@v1
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install Poetry
+      uses: dschep/install-poetry-action@v1.3
+
+    - name: Install dependencies
+      run: cd real-auth && poetry install
+
+    - name: Test with pytest
+      run: cd real-auth && poetry run pytest tests
+
   real-main-pytest:
     runs-on: ubuntu-latest
     env:
@@ -25,7 +48,7 @@ jobs:
     - name: Test with pytest
       run: cd real-main && poetry run pytest -n auto app_tests migrations_tests
 
-  real-main-flake8:
+  flake8:
     runs-on: ubuntu-latest
     steps:
     - name: Git checkout
@@ -45,36 +68,19 @@ jobs:
         pip install pyflakes==2.2.0
         pip install --upgrade git+https://github.com/PyCQA/pycodestyle.git
 
-    - name: Lint with flake8
+    - name: Lint real-auth with flake8
+      run: |
+        flake8 real-auth/real_auth real-auth/tests
+
+    - name: Lint real-main with flake8
       run: |
         flake8 real-main/app real-main/app_tests real-main/migrations real-main/migrations_tests
 
-  real-cloudfront-flake8:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Git checkout
-      uses: actions/checkout@v1
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.8
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        # waiting on a new release of pycodestyle, then flake8 to come out (with py3.8 feature support)
-        # https://github.com/PyCQA/pycodestyle/pull/922
-        # https://gitlab.com/pycqa/flake8/-/merge_requests/417
-        pip install flake8==3.7.9
-        pip install pyflakes==2.2.0
-        pip install --upgrade git+https://github.com/PyCQA/pycodestyle.git
-
-    - name: Lint with flake8
+    - name: Lint real-cloudfornt with flake8
       run: |
         flake8 real-cloudfront/edge_app
 
-  integration-testing-eslint:
+  eslint:
     runs-on: ubuntu-latest
     steps:
     - name: Git checkout
