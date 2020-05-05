@@ -1,0 +1,23 @@
+Resources:
+
+  ElasticSearchDomain:
+    Type: AWS::Elasticsearch::Domain
+    UpdatePolicy:
+      EnableVersionUpgrade: true
+    Properties:
+      DomainName: ${self:provider.stackName}
+      EBSOptions:
+        EBSEnabled: true
+        VolumeType: gp2
+        VolumeSize: 10
+      ElasticsearchClusterConfig:
+        InstanceType: t2.small.elasticsearch
+        InstanceCount: 2
+        DedicatedMasterEnabled: false
+        ZoneAwarenessEnabled: false
+      ElasticsearchVersion: 7.4
+
+Outputs:
+
+  ElasticSearchEndpoint:
+    Value: !GetAtt ElasticSearchDomain.DomainEndpoint

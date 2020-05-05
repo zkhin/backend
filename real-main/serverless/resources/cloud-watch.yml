@@ -1,0 +1,37 @@
+Resources:
+
+  # Based off the cloudformation template output of serverless-plugin-aws-alerts
+  AppSyncServerErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: ${self:provider.stackName}
+      MetricName: AppSyncServerErrors
+      Threshold: 1
+      Period: 60
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - Ref: AwsAlertsAlarm
+      TreatMissingData: missing
+      Statistic: Sum
+
+  AppSyncServerErrorLogMetricFilterALERT:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: '{ $.fieldInError IS TRUE && $.errors[0] != "* errorType=ClientError, *" }'
+      LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
+      MetricTransformations:
+        - MetricValue: 1
+          MetricNamespace: ${self:provider.stackName}
+          MetricName: AppSyncServerErrors
+
+  AppSyncServerErrorLogMetricFilterOK:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: ''
+      LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
+      MetricTransformations:
+        - MetricValue: 0
+          MetricNamespace: ${self:provider.stackName}
+          MetricName: AppSyncServerErrors

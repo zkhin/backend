@@ -1,0 +1,11 @@
+Resources:
+
+  PinpointApp:
+    Type: AWS::Pinpoint::App
+    Properties:
+      Name: REAL-${self:provider.stage}
+
+Outputs:
+  
+  PinpointApplicationId:
+    Value: !Ref PinpointApp
