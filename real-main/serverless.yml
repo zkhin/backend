@@ -1050,6 +1050,7 @@ resources:
   - ${file(./serverless/resources/cognito.yml)}
   - ${file(./serverless/resources/dynamo.yml)}
   - ${file(./serverless/resources/elastic-search.yml)}
+  - ${file(./serverless/resources/git.yml)}
   - ${file(./serverless/resources/media-convert.yml)}
   - ${file(./serverless/resources/pinpoint.yml)}
   - ${file(./serverless/resources/s3.yml)}
