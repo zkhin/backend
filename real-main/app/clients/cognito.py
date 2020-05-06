@@ -1,7 +1,5 @@
 import logging
 import os
-import random
-import string
 
 import boto3
 
@@ -27,10 +25,6 @@ class CognitoClient:
         self.facebookLoginsKey = 'graph.facebook.com'
 
     def create_user_pool_entry(self, user_id, email, username):
-        cognito_special_chars = '^$*.[]{}()?-"!@#%&/\\,><\':;|_~`'
-        characters = string.ascii_uppercase + string.ascii_lowercase + string.digits + cognito_special_chars
-        password = ''.join(random.choices(characters, k=95)) + 'Aa1!'
-
         # set them up in the user pool
         self.boto_client.admin_create_user(
             UserPoolId=self.user_pool_id,
@@ -47,22 +41,13 @@ class CognitoClient:
                 'Value': username.lower(),
             }],
         )
-        self.boto_client.admin_set_user_password(
-            UserPoolId=self.user_pool_id,
-            Username=user_id,
-            Password=password,
-            Permanent=True,
-        )
 
         # login as them
         resp = self.boto_client.admin_initiate_auth(
             UserPoolId=self.user_pool_id,
             ClientId=self.client_id,
-            AuthFlow='ADMIN_USER_PASSWORD_AUTH',
-            AuthParameters={
-                'USERNAME': user_id,
-                'PASSWORD': password,
-            },
+            AuthFlow='CUSTOM_AUTH',
+            AuthParameters={'USERNAME': user_id},
         )
         return resp['AuthenticationResult']['IdToken']
 

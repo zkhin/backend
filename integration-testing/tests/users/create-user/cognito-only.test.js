@@ -38,6 +38,7 @@ describe('cognito-only user', () => {
         Name: 'email',
         Value: email,
       }],
+      ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
 
     // sign the user in
@@ -87,6 +88,7 @@ describe('cognito-only user', () => {
           Name: 'email',
           Value: email,
         }],
+        ClientMetadata: {autoConfirmUser: 'true'},
       }).promise()
 
       // sign the user in

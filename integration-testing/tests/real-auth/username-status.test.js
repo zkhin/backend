@@ -4,7 +4,7 @@ const dotenv = require('dotenv')
 const flipPromise = require('flip-promise').default
 const rp = require('request-promise-native')
 
-const cognito = require('../utils/cognito.js')
+const cognito = require('../../utils/cognito.js')
 
 dotenv.config()
 

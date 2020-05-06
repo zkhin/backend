@@ -1,32 +1,38 @@
 import json
 import logging
 
+from .exceptions import ClientException
 from .logging import logger, LogLevelContext
 
 
-class ClientException(Exception):
-    "Any error attributable to the api client"
-    pass
-
-
-def handler(func):
+def handler(required_query_params=[]):
     "Decorator to simplify handlers"
+    def decorator(func):
 
-    def inner(event, context):
-        with LogLevelContext(logger, logging.INFO):
-            logger.info(f'Handling `{func.__name__}` event', extra={'event': event})
+        def inner(event, context):
+            extra_args = []
+            query_string_params = event.get('queryStringParameters') or {}
+            for qp in required_query_params:
+                if qp not in query_string_params:
+                    raise ClientException(f'Query parameter `{qp}` is required')
+                extra_args.append(query_string_params[qp])
+            return func(event, context, *extra_args)
 
-        try:
-            data = func(event, context)
-        except ClientException as err:
+        def outer(event, context):
+            with LogLevelContext(logger, logging.INFO):
+                logger.info(f'Handling `{func.__name__}` event', extra={'event': event})
+            try:
+                data = inner(event, context)
+            except ClientException as err:
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({'message': str(err)}, default=str)
+                }
             return {
-                'statusCode': 400,
-                'body': json.dumps({'message': str(err)})
+                'statusCode': 200,
+                'body': json.dumps(data, default=str),
             }
 
-        return {
-            'statusCode': 200,
-            'body': json.dumps(data),
-        }
+        return outer
 
-    return inner
+    return decorator

@@ -31,22 +31,23 @@ def pre_sign_up(event, context):
         # so they can be identified and deleted later on, if testing cleanup doesn't catch them
         family_name = get_user_attribute(event, 'family_name')
         if family_name != 'TESTER':
-            logger.warning(f"The testing client tried to create a user with family_name: '{family_name}'")
-            return {}
+            raise CognitoClientException(f'Invalid family_name: `{family_name}`')
 
-        # auto-confirm & verify users created by the testing client
+        # testing client is allowed to optionally auto-confirm & verify users
         # so they can login without receiving an email/text
-        event['response']['autoConfirmUser'] = True
-        if get_user_attribute(event, 'email'):
-            event['response']['autoVerifyEmail'] = True
-        if get_user_attribute(event, 'phone_number'):
-            event['response']['autoVerifyPhone'] = True
+        if (event['request'].get('clientMetadata') or {}).get('autoConfirmUser'):
+            event['response']['autoConfirmUser'] = True
+            if get_user_attribute(event, 'email'):
+                event['response']['autoVerifyEmail'] = True
+            if get_user_attribute(event, 'phone_number'):
+                event['response']['autoVerifyPhone'] = True
 
     return event
 
 
 def pre_auth(event, context):
-    validate_username_format(event)
+    # if the user doesn't exist in the user pool or is unconfirmed
+    # cognito appears to create a random uuid as their 'userName'
     validate_user_attribute_lowercase(event, 'email')
     validate_user_attribute_lowercase(event, 'preferred_username')
     return event
@@ -68,8 +69,15 @@ def custom_message(event, context):
     return event
 
 
+def define_auth_challenge(event, context):
+    # Log the user in, no need to challenge them. Note that
+    # custom auth is restricted to only the backend user pool client
+    event['response']['issueTokens'] = True
+    return event
+
+
 def get_user_attribute(event, attr_name):
-    return (event['request']['userAttributes'] or {}).get(attr_name)
+    return (event['request'].get('userAttributes') or {}).get(attr_name)
 
 
 def validate_username_format(event):

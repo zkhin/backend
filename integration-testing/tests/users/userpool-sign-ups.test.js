@@ -44,7 +44,7 @@ describe('Test sign-ups to cognito user pool', () => {
         Name: 'family_name',
         Value: familyName,
       }],
-    }).promise()).rejects.toBeDefined()
+    }).promise()).rejects.toThrow(/Invalid username format/)
   })
 
   test('cant sign up with uppercase characters in email', async () => {
@@ -62,7 +62,7 @@ describe('Test sign-ups to cognito user pool', () => {
         Name: 'email',
         Value: email,
       }],
-    }).promise()).rejects.toBeDefined()
+    }).promise()).rejects.toThrow(/User's email .* has upper case characters/)
   })
 
   test('cant sign up with testing client without setting family name to correct value', async () => {
@@ -72,7 +72,7 @@ describe('Test sign-ups to cognito user pool', () => {
     await expect(cognitoClient.signUp({
       Username: username,
       Password: password,
-    }).promise()).rejects.toBeDefined()
+    }).promise()).rejects.toThrow(/Invalid family_name/)
 
     await expect(cognitoClient.signUp({
       Username: username,
@@ -81,7 +81,7 @@ describe('Test sign-ups to cognito user pool', () => {
         Name: 'family_name',
         Value: 'thefailers',
       }],
-    }).promise()).rejects.toBeDefined()
+    }).promise()).rejects.toThrow(/Invalid family_name/)
   })
 
   test('users signed up with testing client can sign in and have expected properties', async () => {
@@ -95,6 +95,7 @@ describe('Test sign-ups to cognito user pool', () => {
         Name: 'family_name',
         Value: familyName,
       }],
+      ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
     expect(respSignUp['UserConfirmed']).toBe(true)
 
@@ -109,7 +110,7 @@ describe('Test sign-ups to cognito user pool', () => {
     const user = await cognitoClient.getUser({AccessToken: accessToken}).promise()
     expect(user['Username']).toBe(username)
     const userAttrs = new Map(user['UserAttributes'].map(ua => [ua['Name'], ua['Value']]))
-    expect(userAttrs.get('sub')).toBeDefined()
+    expect(userAttrs.get('sub')).toBeTruthy()
     expect(userAttrs.get('family_name')).toBe(familyName)
   })
 
@@ -132,6 +133,7 @@ describe('Test sign-ups to cognito user pool', () => {
         Name: 'phone_number',
         Value: phone,
       }],
+      ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
 
     // sign in to get an access token
@@ -170,10 +172,11 @@ describe('Test sign-ups to cognito user pool', () => {
         Name: 'phone_number',
         Value: phone,
       }],
+      ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
     expect(respSignUp['UserConfirmed']).toBe(true)
 
-    // test signing in with username (not really a normal use case, but useful when testing)
+    // test signing in with userId (aka cognito 'username') (not really a normal use case, but useful when testing)
     const respUsername = await cognitoClient.initiateAuth({
       AuthFlow: 'USER_PASSWORD_AUTH',
       AuthParameters: {USERNAME: username, PASSWORD: password},
@@ -204,4 +207,43 @@ describe('Test sign-ups to cognito user pool', () => {
     expect(respPhone).toHaveProperty('AuthenticationResult.IdToken')
   })
 
+  test('Cant use CUSTOM_AUTH AuthFlow', async () => {
+    const username = 'us-east-1:' + uuidv4()
+    const password = generatePassword()
+    const email = 'success+any@simulator.amazonses.com'
+
+    let resp = await cognitoClient.signUp({
+      Username: username,
+      Password: password,
+      UserAttributes: [{
+        Name: 'family_name',
+        Value: familyName,
+      }, {
+        Name: 'email',
+        Value: email,
+      }],
+      ClientMetadata: {autoConfirmUser: 'true'},
+    }).promise()
+    expect(resp['UserConfirmed']).toBe(true)
+
+    // verify we can't use the custom auth flow
+    await expect(cognitoClient.initiateAuth({
+      AuthFlow: 'CUSTOM_AUTH',
+      AuthParameters: {USERNAME: username, PASSWORD: password},
+    }).promise()).rejects.toThrow(/CUSTOM_AUTH is not enabled/)
+    await expect(cognitoClient.initiateAuth({
+      AuthFlow: 'CUSTOM_AUTH',
+      AuthParameters: {USERNAME: email, PASSWORD: password},
+    }).promise()).rejects.toThrow(/CUSTOM_AUTH is not enabled/)
+
+    // verify we can't use the custom auth flow
+    resp = await cognitoClient.initiateAuth({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      AuthParameters: {USERNAME: email, PASSWORD: password},
+    }).promise()
+    expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
+    expect(resp).toHaveProperty('AuthenticationResult.ExpiresIn')
+    expect(resp).toHaveProperty('AuthenticationResult.RefreshToken')
+    expect(resp).toHaveProperty('AuthenticationResult.IdToken')
+  })
 })

@@ -38,6 +38,7 @@ test('Cant use jpeg data for an HEIC image', async () => {
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['addPost']['postId']).toBe(postId)
   let uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(uploadUrl).toBeTruthy()
 
   // upload some jpeg data pretending to be heic, let the s3 trigger fire
   await rp.put({url: uploadUrl, headers: heicHeaders, body: imageData})

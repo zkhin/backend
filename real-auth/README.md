@@ -32,10 +32,37 @@ Responses to server-side errors will have status code of `5XX`, and body of unde
 
 Example request/response cycles are provided below for each resource.
 
+#### POST `user/confirm`
+
+```sh
+curl -H 'x-api-key: <the-api-key>' -X POST \
+  'https://<the-api-root>/user/confirm?userId=<user-id>&code=<confirmation-code>'
+```
+
+```sh
+200 OK
+{
+  "tokens": {
+    "AccessToken": <string>,
+    "ExpiresIn": 3600,
+    "TokenType": "Bearer",
+    "RefreshToken": <string>,
+    "IdToken": <string>,
+  },
+  "credentials": {
+    "AccessKeyId": <string>,
+    "SecretKey": <string>,
+    "SessionToken": <string>,
+    "Expiration": <string>
+  }
+}
+```
+
 #### GET `username/status`
 
-```
-curl -H 'x-api-key: <the-api-key>' https://<the-api-root>/username/status?username=<username-to-check>
+```sh
+curl -H 'x-api-key: <the-api-key>' \
+  'https://<the-api-root>/username/status?username=<username-to-check>'
 ```
 
 ```sh

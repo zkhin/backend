@@ -83,11 +83,13 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
     console.log(`Auto-generated password: ${password}`)
   }
   const userAttrs = []
+  const clientMetadata = {}
   if (autoconfirm) {
     userAttrs.push({
       Name: 'family_name',
       Value: familyName,
     })
+    clientMetadata['autoConfirmUser'] = 'true'
   }
   if (email) {
     userAttrs.push({
@@ -116,6 +118,7 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
     Username: userId,
     Password: password,
     UserAttributes: userAttrs,
+    ClientMetadata: clientMetadata,
   }).promise()
   console.log(`User signed up with auto-generated userId: '${userId}'`)
   return userId

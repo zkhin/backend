@@ -130,7 +130,7 @@ const getAppSyncLogin = async (newUserPhone) => {
     userNeedsReset = true
     userId = jwtDecode(idToken)['cognito:username']
   } catch (err) {
-    if (err.code !== 'UserLambdaValidationException') throw(err)
+    if (err.code !== 'NotAuthorizedException') throw(err)
     // user does not exist, we must create them. No need to reset it later on, as new user starts fresh
     userNeedsReset = false
 
@@ -144,7 +144,8 @@ const getAppSyncLogin = async (newUserPhone) => {
       {Name: 'email', Value: email},
     ]
     if (newUserPhone) UserAttributes.push({Name: 'phone_number', Value: newUserPhone})
-    await userPoolClient.signUp({Username: userId, Password: password, UserAttributes}).promise()
+    const ClientMetadata = {autoConfirmUser: 'true'}
+    await userPoolClient.signUp({Username: userId, Password: password, UserAttributes, ClientMetadata}).promise()
 
     // sign the user in
     const authResp = await userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()

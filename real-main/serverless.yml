@@ -1184,6 +1184,17 @@ functions:
       - functionCognitoServerErrors
       - functionThrottles
 
+  cognitoDefineAuthChallenge:
+    name: ${self:provider.stackName}-cognitoDefineAuthChallenge
+    handler: app.handlers.cognito.define_auth_challenge
+    events:
+      - cognitoUserPool:
+          pool: '-' # translated to `CognitoUserPool` by serveless
+          trigger: DefineAuthChallenge
+    alarms:
+      - functionCognitoServerErrors
+      - functionThrottles
+
   cognitoCustomMessage:
     name: ${self:provider.stackName}-cognitoCustomMessage
     handler: app.handlers.cognito.custom_message
