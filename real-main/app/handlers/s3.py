@@ -29,16 +29,16 @@ def image_post_uploaded(event, context):
     # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
     path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
 
+    # we suppress INFO logging, except this message
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'BEGIN: Handling object created event for key `{path}`')
+
     # Avoid firing on creation of other images (profile photo, album art)
     # Once images are moved to their new path at {userId}/post/{postId}/image/{size}.jpg,
     # the s3 object created event suffix filter should be expaneded to '/image/native.jpg'
     # and this check removed (currently set to '/native.jpg').
     if 'post' not in path:
         return
-
-    # we suppress INFO logging, except this message
-    with LogLevelContext(logger, logging.INFO):
-        logger.info(f'BEGIN: Handling object created event for key `{path}`')
 
     # At this point we have triggered this event because of:
     #   - video post poster images
