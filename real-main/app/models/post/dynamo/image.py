@@ -8,11 +8,11 @@ class PostImageDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get(self, post_id):
+    def get(self, post_id, strongly_consistent=False):
         return self.client.get_item({
             'partitionKey': f'post/{post_id}',
             'sortKey': 'image',
-        })
+        }, strongly_consistent=strongly_consistent)
 
     def delete(self, post_id):
         query_kwargs = {'Key': {

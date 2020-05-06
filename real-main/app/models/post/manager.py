@@ -135,6 +135,7 @@ class PostManager:
 
         if post.type == enums.PostType.IMAGE:
             if image_data := image_input.get('imageData'):
+                post.refresh_image_item(strongly_consistent=True)
                 post.process_image_upload(image_data=image_data, now=now)
 
         return post

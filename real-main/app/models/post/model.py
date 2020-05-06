@@ -148,8 +148,8 @@ class Post:
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
 
-    def refresh_image_item(self):
-        self._image_item = self.image_dynamo.get(self.id)
+    def refresh_image_item(self, strongly_consistent=False):
+        self._image_item = self.image_dynamo.get(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def get_s3_image_path(self, size):
