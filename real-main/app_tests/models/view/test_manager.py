@@ -79,36 +79,60 @@ def test_delete_views(view_manager, posts):
 
 def test_record_views(view_manager):
     # catch any calls to 'record_view'
-    view_manager.record_view_for_comment = Mock()
-    view_manager.record_view_for_chat_message = Mock()
-    view_manager.record_view_for_post = Mock()
+    view_manager.record_views_for_comments = Mock()
+    view_manager.record_views_for_chat_messages = Mock()
+    view_manager.record_views_for_posts = Mock()
 
     # call with no ids
     viewed_at = pendulum.now('utc')
     view_manager.record_views('chat_message', [], 'vuid', viewed_at)
-    assert view_manager.record_view_for_comment.mock_calls == []
-    assert view_manager.record_view_for_chat_message.mock_calls == []
-    assert view_manager.record_view_for_post.mock_calls == []
+    assert view_manager.record_views_for_comments.mock_calls == []
+    assert view_manager.record_views_for_chat_messages.mock_calls == []
+    assert view_manager.record_views_for_posts.mock_calls == []
 
     # do some meaningfull calls
     view_manager.record_views('chat_message', ['chid2', 'chid2'], 'vuid', viewed_at)
     view_manager.record_views('comment', ['cid1'], 'vuid', viewed_at)
     view_manager.record_views('post', ['pid1', 'pid2', 'pid1'], 'vuid', viewed_at)
-    assert view_manager.record_view_for_chat_message.mock_calls == [
-        call('chid2', 'vuid', 2, viewed_at),
+    assert view_manager.record_views_for_chat_messages.mock_calls == [
+        call({'chid2': 2}, 'vuid', viewed_at),
     ]
-    assert view_manager.record_view_for_comment.mock_calls == [
-        call('cid1', 'vuid', 1, viewed_at),
+    assert view_manager.record_views_for_comments.mock_calls == [
+        call({'cid1': 1}, 'vuid', viewed_at),
     ]
-    assert view_manager.record_view_for_post.mock_calls == [
-        call('pid1', 'vuid', 2, viewed_at),
-        call('pid2', 'vuid', 1, viewed_at),
+    assert view_manager.record_views_for_posts.mock_calls == [
+        call({'pid1': 2, 'pid2': 1}, 'vuid', viewed_at),
     ]
 
 
 def test_cant_record_view_bad_item_type(view_manager):
-    with pytest.raises(AssertionError, match='item type'):
-        view_manager.record_views('DNE-item-type', [], None)
+    with pytest.raises(AssertionError, match='Unknown item type'):
+        view_manager.record_views('DNE-item-type', ['an-id'], None)
+
+
+def test_record_views_for_chat_messages(view_manager, chat_message, user2, caplog):
+    grouped_message_ids = {'cmid-dne': 1, chat_message.id: 2}
+    now = pendulum.now('utc')
+    view_manager.record_view_for_chat_message = Mock()
+
+    with caplog.at_level(logging.WARNING):
+        # logs warning for chat_message that DNE
+        view_manager.record_views_for_chat_messages(grouped_message_ids, user2.id, now)
+
+    # check logging
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert f'`{user2.id}`' in caplog.records[0].msg
+    assert f'`cmid-dne`' in caplog.records[0].msg
+    assert 'DNE' in caplog.records[0].msg
+
+    # check calls to Mock
+    assert len(view_manager.record_view_for_chat_message.call_args_list) == 1
+    assert view_manager.record_view_for_chat_message.call_args_list[0].kwargs == {}
+    assert view_manager.record_view_for_chat_message.call_args_list[0].args[0].id == chat_message.id
+    assert view_manager.record_view_for_chat_message.call_args_list[0].args[1] == user2.id
+    assert view_manager.record_view_for_chat_message.call_args_list[0].args[2] == 2
+    assert view_manager.record_view_for_chat_message.call_args_list[0].args[3] == now
 
 
 def test_record_view_chat_message(view_manager, chat_message, user2):
@@ -116,7 +140,8 @@ def test_record_view_chat_message(view_manager, chat_message, user2):
     assert view_manager.get_viewed_status(chat_message, user2.id) == 'NOT_VIEWED'
 
     # add a view, check that it worked
-    view_manager.record_view_for_chat_message(chat_message.id, user2.id, 2, pendulum.now('utc'))
+    resp = view_manager.record_view_for_chat_message(chat_message, user2.id, 2, pendulum.now('utc'))
+    assert resp is True
     assert view_manager.get_viewed_status(chat_message, user2.id) == 'VIEWED'
 
 
@@ -125,11 +150,12 @@ def test_record_view_comment(view_manager, comment, user2):
     assert view_manager.get_viewed_status(comment, user2.id) == 'NOT_VIEWED'
 
     # add a view, check that it worked
-    view_manager.record_view_for_comment(comment.id, user2.id, 2, pendulum.now('utc'))
+    resp = view_manager.record_view_for_comment(comment, user2.id, 2, pendulum.now('utc'))
+    assert resp is True
     assert view_manager.get_viewed_status(comment, user2.id) == 'VIEWED'
 
 
-def test_record_view_comment_clears_new_comment_activity(view_manager, comment_manager, posts, user, user2, user3):
+def test_record_views_comments_clears_new_comment_activity(view_manager, comment_manager, posts, user, user2, user3):
     post, _ = posts
 
     # add a comment by a different user to get some activity on the post
@@ -140,7 +166,7 @@ def test_record_view_comment_clears_new_comment_activity(view_manager, comment_m
     assert user.item.get('postHasNewCommentActivityCount', 0) == 1
 
     # record a view of that comment by a user that is not the post owner
-    view_manager.record_view_for_comment(comment.id, user3.id, 2, pendulum.now('utc'))
+    view_manager.record_views_for_comments({comment.id: 2}, user3.id, pendulum.now('utc'))
 
     # verify the post still has comment activity
     post.refresh_item()
@@ -149,13 +175,87 @@ def test_record_view_comment_clears_new_comment_activity(view_manager, comment_m
     assert user.item.get('postHasNewCommentActivityCount', 0) == 1
 
     # record a view of that comment by the post owner
-    view_manager.record_view_for_comment(comment.id, user.id, 2, pendulum.now('utc'))
+    view_manager.record_views_for_comments({comment.id: 2}, user.id, pendulum.now('utc'))
 
     # verify the post now has no comment activity
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is False
     user.refresh_item()
     assert user.item.get('postHasNewCommentActivityCount', 0) == 0
+
+
+def test_record_views_for_comments(view_manager, comment_manager, posts, user, user2, caplog):
+    post, _ = posts
+
+    # two comments by a different user
+    comment1 = comment_manager.add_comment('cmid2', post.id, user2.id, 'witty comment')
+    comment2 = comment_manager.add_comment('cmid3', post.id, user2.id, 'witty comment')
+
+    # Mock methods we want to verify called correctly
+    view_manager.record_view_for_comment = Mock()
+    view_manager.post_manager.get_post = Mock(return_value=post)
+    post.set_new_comment_activity = Mock()
+
+    # post owner views both comments, including one that doesn't exist
+    now = pendulum.now('utc')
+    grouped_comment_ids = {'cid-dne': 1, comment1.id: 2, comment2.id: 1}
+    with caplog.at_level(logging.WARNING):
+        view_manager.record_views_for_comments(grouped_comment_ids, user.id, now)
+
+    # check logging
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert f'`{user.id}`' in caplog.records[0].msg
+    assert f'`cid-dne`' in caplog.records[0].msg
+    assert 'DNE' in caplog.records[0].msg
+
+    # check calls to Mock
+    assert len(view_manager.record_view_for_comment.call_args_list) == 2
+    assert view_manager.record_view_for_comment.call_args_list[0].kwargs == {}
+    assert view_manager.record_view_for_comment.call_args_list[1].kwargs == {}
+    assert view_manager.record_view_for_comment.call_args_list[0].args[0].id == comment1.id
+    assert view_manager.record_view_for_comment.call_args_list[1].args[0].id == comment2.id
+    assert view_manager.record_view_for_comment.call_args_list[0].args[1] == user.id
+    assert view_manager.record_view_for_comment.call_args_list[1].args[1] == user.id
+    assert view_manager.record_view_for_comment.call_args_list[0].args[2] == 2
+    assert view_manager.record_view_for_comment.call_args_list[1].args[2] == 1
+    assert view_manager.record_view_for_comment.call_args_list[0].args[3] == now
+    assert view_manager.record_view_for_comment.call_args_list[1].args[3] == now
+
+    # verify post set comment activity called only once
+    assert view_manager.post_manager.get_post.mock_calls == [call(post.id)]
+    assert post.set_new_comment_activity.mock_calls == [call(False)]
+
+
+def test_record_views_for_posts(view_manager, posts, caplog):
+    user_id = 'vuid'
+    post_ids = {'pid-dne': 1, posts[0].id: 1, posts[1].id: 2}
+    now = pendulum.now('utc')
+    view_manager.record_view_for_post = Mock()
+
+    with caplog.at_level(logging.WARNING):
+        # logs warning for post that DNE
+        view_manager.record_views_for_posts(post_ids, user_id, now)
+
+    # check logging
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert f'`{user_id}`' in caplog.records[0].msg
+    assert f'`pid-dne`' in caplog.records[0].msg
+    assert 'DNE' in caplog.records[0].msg
+
+    # check calls to Mock
+    assert len(view_manager.record_view_for_post.call_args_list) == 2
+    assert view_manager.record_view_for_post.call_args_list[0].kwargs == {}
+    assert view_manager.record_view_for_post.call_args_list[1].kwargs == {}
+    assert view_manager.record_view_for_post.call_args_list[0].args[0].id == posts[0].id
+    assert view_manager.record_view_for_post.call_args_list[1].args[0].id == posts[1].id
+    assert view_manager.record_view_for_post.call_args_list[0].args[1] == user_id
+    assert view_manager.record_view_for_post.call_args_list[1].args[1] == user_id
+    assert view_manager.record_view_for_post.call_args_list[0].args[2] == 1
+    assert view_manager.record_view_for_post.call_args_list[1].args[2] == 2
+    assert view_manager.record_view_for_post.call_args_list[0].args[3] == now
+    assert view_manager.record_view_for_post.call_args_list[1].args[3] == now
 
 
 def test_record_view_post_not_completed(view_manager, posts, caplog, post_manager, user_manager, trending_manager):
@@ -168,7 +268,8 @@ def test_record_view_post_not_completed(view_manager, posts, caplog, post_manage
     # try to record a view on it
     with caplog.at_level(logging.WARNING):
         # fails with logged warning
-        view_manager.record_view_for_post(post.id, user_id, 3, pendulum.now('utc'))
+        resp = view_manager.record_view_for_post(post, user_id, 3, pendulum.now('utc'))
+        assert resp is False
 
     # check the logging
     assert len(caplog.records) == 1
@@ -185,21 +286,6 @@ def test_record_view_post_not_completed(view_manager, posts, caplog, post_manage
     assert trending_manager.dynamo.get_trending(posted_by_user_id) is None
 
 
-def test_record_view_post_does_not_exist(view_manager, caplog):
-    user_id = 'vuid'
-    post_id = 'pid-dne'
-
-    with caplog.at_level(logging.WARNING):
-        # fails with logged warning
-        view_manager.record_view_for_post(post_id, user_id, 3, pendulum.now('utc'))
-
-    assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'WARNING'
-    assert f'`{user_id}`' in caplog.records[0].msg
-    assert f'`{post_id}`' in caplog.records[0].msg
-    assert 'DNE' in caplog.records[0].msg
-
-
 def test_record_view_post_success(view_manager, posts, post_manager, user_manager, trending_manager):
     post, _ = posts
     viewed_by_user_id = 'vuid'
@@ -212,7 +298,8 @@ def test_record_view_post_success(view_manager, posts, post_manager, user_manage
     assert trending_manager.dynamo.get_trending(post.user_id) is None
 
     # record the first post view
-    view_manager.record_view_for_post(post.id, viewed_by_user_id, 2, pendulum.now('utc'))
+    resp = view_manager.record_view_for_post(post, viewed_by_user_id, 2, pendulum.now('utc'))
+    assert resp is True
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'VIEWED'
 
     # check the viewedByCounts and the trending indexes all incremented
@@ -222,7 +309,8 @@ def test_record_view_post_success(view_manager, posts, post_manager, user_manage
     assert trending_manager.dynamo.get_trending(post.user_id).get('gsiK3SortKey', 0) == 1
 
     # record a second post view for this user on this post
-    view_manager.record_view_for_post(post.id, viewed_by_user_id, 1, pendulum.now('utc'))
+    resp = view_manager.record_view_for_post(post, viewed_by_user_id, 1, pendulum.now('utc'))
+    assert resp is True
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'VIEWED'
 
     # check the viewedByCounts and the trending indexes all did not change
@@ -246,7 +334,8 @@ def test_record_view_by_post_owner_not_recorded(view_manager, posts, post_manage
     assert trending_manager.dynamo.get_trending(post.user_id) is None
 
     # record the first post view, should be ignored
-    view_manager.record_view_for_post(post.id, post.user_id, 1, pendulum.now('utc'))
+    resp = view_manager.record_view_for_post(post, post.user_id, 1, pendulum.now('utc'))
+    assert resp is False
     assert view_manager.get_viewed_status(post, post.user_id) == 'VIEWED'
     assert view_manager.dynamo.get_view(post.item['partitionKey'], post.user_id) is None
 
@@ -287,7 +376,8 @@ def test_record_view_for_non_original_post(view_manager, user, posts, post_manag
     view_count = 3
     viewed_at = pendulum.now('utc')
     viewed_at_str = viewed_at.to_iso8601_string()
-    view_manager.record_view_for_post(non_org_post.id, viewed_by_user_id, view_count, viewed_at)
+    resp = view_manager.record_view_for_post(non_org_post, viewed_by_user_id, view_count, viewed_at)
+    assert resp is True
 
     # check two post view items were created, one for each post
     assert view_manager.get_viewed_status(org_post, viewed_by_user_id) == 'VIEWED'
@@ -315,7 +405,8 @@ def test_record_view_for_non_original_post(view_manager, user, posts, post_manag
     new_view_count = 5
     new_viewed_at = pendulum.now('utc')
     new_viewed_at_str = new_viewed_at.to_iso8601_string()
-    view_manager.record_view_for_post(org_post.id, viewed_by_user_id, new_view_count, new_viewed_at)
+    resp = view_manager.record_view_for_post(org_post, viewed_by_user_id, new_view_count, new_viewed_at)
+    assert resp is True
 
     # check the post view item for the original post was incremented correctly
     assert view_manager.get_viewed_status(org_post, viewed_by_user_id) == 'VIEWED'
@@ -352,7 +443,8 @@ def test_record_view_day_old_post_doesnt_trend(view_manager, post_manager, user_
     assert trending_manager.dynamo.get_trending(post.user_id) is None
 
     # record the first post view
-    view_manager.record_view_for_post(post.id, viewed_by_user_id, 2, pendulum.now('utc'))
+    resp = view_manager.record_view_for_post(post, viewed_by_user_id, 2, pendulum.now('utc'))
+    assert resp is True
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'VIEWED'
 
     # check the viewedByCounts incremented but the trending indexes did not
@@ -376,7 +468,8 @@ def test_record_view_real_user_doesnt_trend(view_manager, post_manager, user_man
     assert trending_manager.dynamo.get_trending(post.user_id) is None
 
     # record the first post view
-    view_manager.record_view_for_post(post.id, viewed_by_user_id, 2, pendulum.now('utc'))
+    resp = view_manager.record_view_for_post(post, viewed_by_user_id, 2, pendulum.now('utc'))
+    assert resp is True
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'VIEWED'
 
     # check the viewedByCounts incremented but the trending indexes did not
@@ -394,6 +487,7 @@ def test_record_view_post_failed_verif_doesnt_trend(view_manager, post_manager, 
     post1 = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
     post2 = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
     post2.dynamo.set_is_verified(post2.id, False)
+    post2.refresh_item()
 
     # check there is no trending for either post or the user
     assert trending_manager.dynamo.get_trending(post1.id) is None
@@ -401,8 +495,10 @@ def test_record_view_post_failed_verif_doesnt_trend(view_manager, post_manager, 
     assert trending_manager.dynamo.get_trending(user.id) is None
 
     # record a view on each post
-    view_manager.record_view_for_post(post1.id, viewed_by_user_id, 1, pendulum.now('utc'))
-    view_manager.record_view_for_post(post2.id, viewed_by_user_id, 1, pendulum.now('utc'))
+    resp = view_manager.record_view_for_post(post1, viewed_by_user_id, 1, pendulum.now('utc'))
+    assert resp is True
+    resp = view_manager.record_view_for_post(post2, viewed_by_user_id, 1, pendulum.now('utc'))
+    assert resp is True
 
     # check the verified post is trending but the non-verified isn't
     assert trending_manager.dynamo.get_trending(post1.id).get('gsiK3SortKey', 0) == 1
