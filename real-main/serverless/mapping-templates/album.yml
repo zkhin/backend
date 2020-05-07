@@ -1,0 +1,14 @@
+- type: Album
+  field: art
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Album
+  field: postCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: Album
+  field: posts
+  dataSource: DynamodbDataSource

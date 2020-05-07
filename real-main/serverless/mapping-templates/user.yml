@@ -1,0 +1,165 @@
+- type: User
+  field: photo
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: User
+  field: followerStatus
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: followCountsHidden
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: followedCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: followerCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: followedUsers
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: followedUsersWithStories
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: followerUsers
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: postCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: userStatus
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: languageCode
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: themeCode
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: bio
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: email
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: phoneNumber
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: acceptedEULAVersion
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: commentsDisabled
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: likesDisabled
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: sharingDisabled
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: verificationHidden
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: blockedStatus
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: viewCountsHidden
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: postHasNewCommentActivity
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: feed
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: stories
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: posts
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: postViewedByCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: onymouslyLikedPosts
+  dataSource: DynamodbDataSource
+  request: User.likedPosts.request.vtl
+  response: User.likedPosts.response.vtl
+
+- type: User
+  field: anonymouslyLikedPosts
+  dataSource: DynamodbDataSource
+  request: User.likedPosts.request.vtl
+  response: User.likedPosts.response.vtl
+
+- type: User
+  field: blockedUsers
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: albumCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: albums
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: chatCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: chats
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: directChat
+  dataSource: DynamodbDataSource
