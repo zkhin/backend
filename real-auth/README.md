@@ -30,9 +30,18 @@ Responses to server-side errors will have status code of `5XX`, and body of unde
 
 ### Resources
 
-Example request/response cycles are provided below for each resource.
-
 #### POST `user/confirm`
+
+##### Query Parameters
+
+  - `code`: _required_ The confirmation code
+  - `userId`: _optional_ The user's id
+  - `email`: _optional_ The user's email, url-encoded
+  - `phone`: _optional_ The user's phone number, without the leading `+`. Ex: `14151239876`
+
+Exactly one of `userId`, `email` or `phone` must be specified.
+
+##### Example Request
 
 ```sh
 curl -H 'x-api-key: <the-api-key>' -X POST \
@@ -59,6 +68,12 @@ curl -H 'x-api-key: <the-api-key>' -X POST \
 ```
 
 #### GET `username/status`
+
+##### Query Parameters
+
+  - `username`: _required_
+
+##### Example
 
 ```sh
 curl -H 'x-api-key: <the-api-key>' \
