@@ -123,7 +123,7 @@ def test_record_views_for_chat_messages(view_manager, chat_message, user2, caplo
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert f'`{user2.id}`' in caplog.records[0].msg
-    assert f'`cmid-dne`' in caplog.records[0].msg
+    assert '`cmid-dne`' in caplog.records[0].msg
     assert 'DNE' in caplog.records[0].msg
 
     # check calls to Mock
@@ -206,7 +206,7 @@ def test_record_views_for_comments(view_manager, comment_manager, posts, user, u
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert f'`{user.id}`' in caplog.records[0].msg
-    assert f'`cid-dne`' in caplog.records[0].msg
+    assert '`cid-dne`' in caplog.records[0].msg
     assert 'DNE' in caplog.records[0].msg
 
     # check calls to Mock
@@ -241,7 +241,7 @@ def test_record_views_for_posts(view_manager, posts, caplog):
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert f'`{user_id}`' in caplog.records[0].msg
-    assert f'`pid-dne`' in caplog.records[0].msg
+    assert '`pid-dne`' in caplog.records[0].msg
     assert 'DNE' in caplog.records[0].msg
 
     # check calls to Mock
