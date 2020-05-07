@@ -48,7 +48,7 @@ def test_trigger_notification(chat_message_appsync, message, chat, user1, user2,
     assert len(appsync_client.send.call_args.kwargs) == 0
     assert len(appsync_client.send.call_args.args) == 2
     mutation, variables = appsync_client.send.call_args.args
-    assert 'triggerChatMessageNotification' in mutation
+    assert 'triggerChatMessageNotification' in str(mutation)
     assert list(variables.keys()) == ['input']
     assert len(variables['input']) == 10
     assert variables['input']['userId'] == user2.id
@@ -94,7 +94,7 @@ def test_trigger_notification_system_message(chat_message_appsync, chat_manager,
     assert len(appsync_client.send.call_args.kwargs) == 0
     assert len(appsync_client.send.call_args.args) == 2
     mutation, variables = appsync_client.send.call_args.args
-    assert 'triggerChatMessageNotification' in mutation
+    assert 'triggerChatMessageNotification' in str(mutation)
     assert list(variables.keys()) == ['input']
     assert len(variables['input']) == 10
     assert variables['input']['userId'] == user1.id

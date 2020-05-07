@@ -113,7 +113,7 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
 
     # check the subscription was triggered
     assert len(appsync_client.mock_calls) == 1
-    assert 'triggerPostNotification' in appsync_client.send.call_args.args[0]
+    assert 'triggerPostNotification' in str(appsync_client.send.call_args.args[0])
     assert appsync_client.send.call_args.args[1]['input']['postId'] == post.id
 
 

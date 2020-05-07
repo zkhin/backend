@@ -112,28 +112,38 @@ six = ">=1.9.0"
 
 [[package]]
 category = "main"
-description = "GraphQL Client for Pythonistas"
-name = "gql-py"
+description = "GraphQL client for Python"
+name = "gql"
 optional = false
 python-versions = "*"
-version = "0.6.0"
+version = "0.4.0"
 
 [package.dependencies]
-graphql-core-next = "1.0.5"
-requests = ">=2.19.1,<3"
+graphql-core = ">=2,<3"
+promise = ">=2.0,<3"
+requests = ">=2.12,<3"
+six = ">=1.10.0"
 
-[package.source]
-reference = "6ce342140cefe3d61b85a1a8b1351e2b8fca1403"
-type = "git"
-url = "https://github.com/mfogel/gql_py.git"
+[package.extras]
+dev = ["flake8 (3.7.9)", "check-manifest (>=0.40,<1)", "coveralls (1.11.1)", "pytest (4.6.9)", "pytest-cov (2.8.1)", "mock (3.0.5)", "vcrpy (3.0.0)"]
+test = ["coveralls (1.11.1)", "pytest (4.6.9)", "pytest-cov (2.8.1)", "mock (3.0.5)", "vcrpy (3.0.0)"]
 
 [[package]]
 category = "main"
-description = "GraphQL-core-next is a Python port of GraphQL.js, the JavaScript reference implementation for GraphQL."
-name = "graphql-core-next"
+description = "GraphQL implementation for Python"
+name = "graphql-core"
 optional = false
-python-versions = ">=3.6"
-version = "1.0.5"
+python-versions = "*"
+version = "2.3.1"
+
+[package.dependencies]
+promise = ">=2.3,<3"
+rx = ">=1.6,<2"
+six = ">=1.10.0"
+
+[package.extras]
+gevent = ["gevent (>=1.1)"]
+test = ["pytest (4.6.9)", "pytest-django (3.8.0)", "pytest-cov (2.8.1)", "coveralls (1.10.0)", "gevent (1.4.0)", "six (>=1.10.0)", "pytest-benchmark (3.2.3)", "pytest-mock (2.0.0)"]
 
 [[package]]
 category = "main"
@@ -189,6 +199,20 @@ name = "pillow"
 optional = false
 python-versions = ">=3.5"
 version = "7.0.0"
+
+[[package]]
+category = "main"
+description = "Promises/A+ implementation for Python"
+name = "promise"
+optional = false
+python-versions = "*"
+version = "2.3"
+
+[package.dependencies]
+six = "*"
+
+[package.extras]
+test = ["pytest (>=2.7.3)", "pytest-cov", "coveralls", "futures", "pytest-benchmark", "mock"]
 
 [[package]]
 category = "main"
@@ -289,6 +313,14 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 category = "main"
+description = "Reactive Extensions (Rx) for Python"
+name = "rx"
+optional = false
+python-versions = "*"
+version = "1.6.1"
+
+[[package]]
+category = "main"
 description = "Python 2 and 3 compatibility utilities"
 name = "six"
 optional = false
@@ -309,7 +341,7 @@ secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "cer
 socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7,<2.0)"]
 
 [metadata]
-content-hash = "d5b6f5a7573e8fc84458392f6b2efce3e793670d25574f126912f027cd0f997e"
+content-hash = "86585ab17555e2dbcda25625883f8eeb1dd082f50467d5634756ae57fd9318e6"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -399,10 +431,12 @@ google-auth = [
     {file = "google-auth-1.13.1.tar.gz", hash = "sha256:a5ee4c40fef77ea756cf2f1c0adcf475ecb53af6700cf9c133354cdc9b267148"},
     {file = "google_auth-1.13.1-py2.py3-none-any.whl", hash = "sha256:cab6c707e6ee20e567e348168a5c69dc6480384f777a9e5159f4299ad177dcc0"},
 ]
-gql-py = []
-graphql-core-next = [
-    {file = "GraphQL-core-next-1.0.5.tar.gz", hash = "sha256:c663ccc36d9a5ece606b5b4f5509835f0ec8d6e6b941992ced67384edcbfd045"},
-    {file = "GraphQL_core_next-1.0.5-py3-none-any.whl", hash = "sha256:5a6cdf23a3b24fa738a903b9fcdaa1db2768a6552f8d1fb8fb79d9add16d090d"},
+gql = [
+    {file = "gql-0.4.0.tar.gz", hash = "sha256:259b0c66d8dfe61feb06fe45b57713da0fe2e5ca13fa500a1fafc9bf2f195e81"},
+]
+graphql-core = [
+    {file = "graphql-core-2.3.1.tar.gz", hash = "sha256:74a8f509ae8c4a58271f5d6b46d5c75b4aed116821ab62dea252d8041bfe057a"},
+    {file = "graphql_core-2.3.1-py2.py3-none-any.whl", hash = "sha256:c06e59153246dd48ddbf86ca94a8f045c1b71daf8154b4635e1a0e2e11d9b60b"},
 ]
 idna = [
     {file = "idna-2.8-py2.py3-none-any.whl", hash = "sha256:ea8b7f6188e6fa117537c3df7da9fc686d485087abf6ac197f9c46432f7e4a3c"},
@@ -481,6 +515,9 @@ pillow = [
     {file = "Pillow-7.0.0-pp373-pypy36_pp73-win32.whl", hash = "sha256:8453f914f4e5a3d828281a6628cf517832abfa13ff50679a4848926dac7c0358"},
     {file = "Pillow-7.0.0.tar.gz", hash = "sha256:4d9ed9a64095e031435af120d3c910148067087541131e82b3e8db302f4c8946"},
 ]
+promise = [
+    {file = "promise-2.3.tar.gz", hash = "sha256:dfd18337c523ba4b6a58801c164c1904a9d4d1b1747c7d5dbf45b693a49d93d0"},
+]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.4.egg", hash = "sha256:fec3e9d8e36808a28efb59b489e4528c10ad0f480e57dcc32b4de5c9d8c9fdf3"},
     {file = "pyasn1-0.4.8-py2.5.egg", hash = "sha256:0458773cfe65b153891ac249bcf1b5f8f320b7c2ce462151f8fa74de8934becf"},
@@ -539,6 +576,10 @@ requests-aws4auth = [
 rsa = [
     {file = "rsa-4.0-py2.py3-none-any.whl", hash = "sha256:14ba45700ff1ec9eeb206a2ce76b32814958a98e372006c8fb76ba820211be66"},
     {file = "rsa-4.0.tar.gz", hash = "sha256:1a836406405730121ae9823e19c6e806c62bbad73f890574fff50efa4122c487"},
+]
+rx = [
+    {file = "Rx-1.6.1-py2.py3-none-any.whl", hash = "sha256:7357592bc7e881a95e0c2013b73326f704953301ab551fbc8133a6fadab84105"},
+    {file = "Rx-1.6.1.tar.gz", hash = "sha256:13a1d8d9e252625c173dc795471e614eadfe1cf40ffc684e08b8fff0d9748c23"},
 ]
 six = [
     {file = "six-1.14.0-py2.py3-none-any.whl", hash = "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"},

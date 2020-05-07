@@ -1,5 +1,7 @@
 import logging
 
+from gql import gql
+
 logger = logging.getLogger()
 
 
@@ -9,7 +11,7 @@ class ChatMessageAppSync:
         self.client = appsync_client
 
     def trigger_notification(self, notification_type, user_id, message):
-        mutation = '''
+        mutation = gql('''
             mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
                 triggerChatMessageNotification (input: $input) {
                     userId
@@ -39,7 +41,7 @@ class ChatMessageAppSync:
                     }
                 }
             }
-        '''
+        ''')
         input_obj = {
             'userId': user_id,
             'messageId': message.id,

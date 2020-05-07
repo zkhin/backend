@@ -34,7 +34,7 @@ def test_trigger_notification_completed(post_appsync, user, completed_post, apps
     assert len(appsync_client.mock_calls) == 1
     assert len(appsync_client.send.call_args.kwargs) == 0
     assert len(appsync_client.send.call_args.args) == 2
-    assert 'triggerPostNotification' in appsync_client.send.call_args.args[0]
+    assert 'triggerPostNotification' in str(appsync_client.send.call_args.args[0])
     assert appsync_client.send.call_args.args[1] == {'input': {
         'userId': user.id,
         'type': 'COMPLETED',
@@ -52,7 +52,7 @@ def test_trigger_notification_completed(post_appsync, user, completed_post, apps
     assert len(appsync_client.mock_calls) == 1
     assert len(appsync_client.send.call_args.kwargs) == 0
     assert len(appsync_client.send.call_args.args) == 2
-    assert 'triggerPostNotification' in appsync_client.send.call_args.args[0]
+    assert 'triggerPostNotification' in str(appsync_client.send.call_args.args[0])
     assert appsync_client.send.call_args.args[1] == {'input': {
         'userId': user.id,
         'type': 'COMPLETED',

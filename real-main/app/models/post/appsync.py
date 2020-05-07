@@ -1,5 +1,7 @@
 import logging
 
+from gql import gql
+
 logger = logging.getLogger()
 
 
@@ -9,7 +11,7 @@ class PostAppSync:
         self.client = appsync_client
 
     def trigger_notification(self, notification_type, post):
-        mutation = '''
+        mutation = gql('''
             mutation TriggerPostNotification ($input: PostNotificationInput!) {
                 triggerPostNotification (input: $input) {
                     userId
@@ -21,7 +23,7 @@ class PostAppSync:
                     }
                 }
             }
-        '''
+        ''')
         input_obj = {
             'userId': post.user_id,
             'type': notification_type,
