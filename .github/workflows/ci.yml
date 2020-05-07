@@ -61,12 +61,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        # waiting on a new release of pycodestyle, then flake8 to come out (with py3.8 feature support)
-        # https://github.com/PyCQA/pycodestyle/pull/922
-        # https://gitlab.com/pycqa/flake8/-/merge_requests/417
-        pip install flake8==3.7.9
-        pip install pyflakes==2.2.0
-        pip install --upgrade git+https://github.com/PyCQA/pycodestyle.git
+        pip install flake8==3.8.0a2  # alpha for walrus operator support
 
     - name: Lint real-auth with flake8
       run: |
