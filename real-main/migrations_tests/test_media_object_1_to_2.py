@@ -16,8 +16,8 @@ def media_object_with_s3(request, dynamo_table, s3_bucket):
     post_id = 'pid' + ''.join(random.choices(string.digits, k=4))
     # put placeholders in S3, both old and new paths
     for size in SIZES:
-        old_path = f'/{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
-        new_path = f'/{user_id}/post/{post_id}/image/{size}.jpg'
+        old_path = f'{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
+        new_path = f'{user_id}/post/{post_id}/image/{size}.jpg'
         s3_bucket.put_object(Key=old_path, Body=bytes(size, encoding='utf8'), ContentType='application/octet-stream')
         s3_bucket.put_object(Key=new_path, Body=bytes(size, encoding='utf8'), ContentType='application/octet-stream')
     # add to dynamo
@@ -92,11 +92,11 @@ def test_migrate_media_object_old_s3_objects_deleted(dynamo_table, s3_bucket, ca
 
     # check starting state s3
     for size in SIZES:
-        old_path = f'/{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
+        old_path = f'{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
         old_data = s3_bucket.Object(old_path).get()['Body'].read()
         assert old_data == bytes(size, encoding='utf8')
 
-        new_path = f'/{user_id}/post/{post_id}/image/{size}.jpg'
+        new_path = f'{user_id}/post/{post_id}/image/{size}.jpg'
         new_data = s3_bucket.Object(old_path).get()['Body'].read()
         assert new_data == bytes(size, encoding='utf8')
 
@@ -120,11 +120,11 @@ def test_migrate_media_object_old_s3_objects_deleted(dynamo_table, s3_bucket, ca
 
     # check s3 deletes worked, just for the old paths
     for size in SIZES:
-        old_path = f'/{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
+        old_path = f'{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
         with pytest.raises(s3_bucket.meta.client.exceptions.NoSuchKey):
             s3_bucket.Object(old_path).get()
 
-        new_path = f'/{user_id}/post/{post_id}/image/{size}.jpg'
+        new_path = f'{user_id}/post/{post_id}/image/{size}.jpg'
         new_data = s3_bucket.Object(new_path).get()['Body'].read()
         assert new_data == bytes(size, encoding='utf8')
 

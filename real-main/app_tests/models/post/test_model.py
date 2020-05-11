@@ -739,14 +739,12 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
 
     # change first post, check order
     post1.set_album_order(None)
-    with pytest.raises(AssertionError):  # https://github.com/spulec/moto/issues/2760
-        assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
     assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(-3 / 5))
 
     # change first post, check order
     post2.set_album_order(None)
-    with pytest.raises(AssertionError):  # https://github.com/spulec/moto/issues/2760
-        assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
     assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-4 / 6))
 
 

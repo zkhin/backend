@@ -21,7 +21,7 @@ def image_data():
 def post_with_native_image(dynamo_table, s3_bucket, image_data):
     user_id = 'uid' + ''.join(random.choices(string.digits, k=4))
     post_id = 'pid' + ''.join(random.choices(string.digits, k=4))
-    native_path = f'/{user_id}/post/{post_id}/image/native.jpg'
+    native_path = f'{user_id}/post/{post_id}/image/native.jpg'
     s3_bucket.put_object(Key=native_path, Body=image_data, ContentType='image/jpeg')
     post_item = {
         'partitionKey': f'post/{post_id}',
@@ -38,7 +38,7 @@ def post_with_native_image(dynamo_table, s3_bucket, image_data):
 def post_with_broken_image(dynamo_table, s3_bucket, image_data):
     user_id = 'uid' + ''.join(random.choices(string.digits, k=4))
     post_id = 'pid' + ''.join(random.choices(string.digits, k=4))
-    native_path = f'/{user_id}/post/{post_id}/image/native.jpg'
+    native_path = f'{user_id}/post/{post_id}/image/native.jpg'
     s3_bucket.put_object(Key=native_path, Body='no an image', ContentType='image/jpeg')
     post_item = {
         'partitionKey': f'post/{post_id}',
@@ -95,11 +95,11 @@ def test_migrate_with_native_image(dynamo_table, s3_bucket, caplog, post_with_na
     post_id = post_with_native_image['postId']
     user_id = post_with_native_image['postedByUserId']
     dynamo_pk = {'partitionKey': f'post/{post_id}', 'sortKey': '-'}
-    s3_native_path = f'/{user_id}/post/{post_id}/image/native.jpg'
-    s3_4k_path = f'/{user_id}/post/{post_id}/image/4K.jpg'
-    s3_1080p_path = f'/{user_id}/post/{post_id}/image/1080p.jpg'
-    s3_480p_path = f'/{user_id}/post/{post_id}/image/480p.jpg'
-    s3_64p_path = f'/{user_id}/post/{post_id}/image/64p.jpg'
+    s3_native_path = f'{user_id}/post/{post_id}/image/native.jpg'
+    s3_4k_path = f'{user_id}/post/{post_id}/image/4K.jpg'
+    s3_1080p_path = f'{user_id}/post/{post_id}/image/1080p.jpg'
+    s3_480p_path = f'{user_id}/post/{post_id}/image/480p.jpg'
+    s3_64p_path = f'{user_id}/post/{post_id}/image/64p.jpg'
 
     # verify starting state
     assert dynamo_table.get_item(Key=dynamo_pk)['Item']['schemaVersion'] == 2

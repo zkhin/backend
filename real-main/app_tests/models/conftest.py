@@ -112,7 +112,7 @@ def dynamo_client():
                     raise err
 
         # replace transact_write_items, because the version in moto doesn't seem to be
-        # working for our unit tests, yet https://github.com/spulec/moto/pull/2879
+        # working for our unit tests, yet https://github.com/spulec/moto/pull/2985
         with patch.object(dynamo_client, 'transact_write_items', new=transact_write_items):
             yield dynamo_client
 
