@@ -375,20 +375,8 @@ test('Edit chat message', async () => {
   expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
   expect(resp['data']['chat']['messages']['items'][0]).toEqual(message)
 
-  // check when we see the message, the viewed status reflects that we have seen the message, but not the edit
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['chat']['chatId']).toBe(chatId)
-  expect(resp['data']['chat']['messages']['items']).toHaveLength(1)
-  expect(resp['data']['chat']['messages']['items'][0]['messageId']).toBe(messageId)
-  expect(resp['data']['chat']['messages']['items'][0]['viewedStatus']).toBe('NOT_VIEWED_SINCE_LAST_EDIT')
-
-  // we report another view of the message
-  variables = {messageIds: [messageId]}
-  resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables})
-  expect(resp['errors']).toBeUndefined()
-
-  // check when we see the message, the viewed status is correct
+  // check when we see the message, the viewed status still reflects that we have seen the message
+  // even though we haven't seen the edit
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['chat']['chatId']).toBe(chatId)

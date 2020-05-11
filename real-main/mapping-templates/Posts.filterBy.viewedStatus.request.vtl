@@ -1,0 +1,41 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+#set ($viewedStatus = $ctx.args.viewedStatus)
+
+#if ($util.isNull($viewedStatus))
+  ## not filtering on viewedStatus, so no need to pull it from db
+  #return ($ctx.prev.result)
+#end
+
+## BatchGetItem can't handle duplicates
+#set ($ctx.stash.postIdToIndex = {})
+#set ($keys = [])
+
+#foreach ($post in $ctx.prev.result)
+  #if ($util.isNull($post.viewedStatus))
+    #if ($post.postedByUserId == $callerUserId)
+      $util.qr($post.put('viewedStatus', 'VIEWED'))
+    #else
+      #if (! $ctx.stash.postIdToIndex.containsKey($post.postId))
+        $util.qr($ctx.stash.postIdToIndex.put($post.postId, $keys.size()))
+        $util.qr($keys.add({
+          'partitionKey': {'S': "post/$post.postId"},
+          'sortKey': {'S': "view/$callerUserId"}
+        }))
+      #end
+    #end
+  #end
+#end
+
+#if ($keys.isEmpty())
+  #return ($ctx.prev.result)
+#end
+
+{
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($keys)
+    }
+  }
+}

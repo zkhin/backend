@@ -5,12 +5,5 @@
 #if ($util.isNull($ctx.result))
   #return ('NOT_VIEWED')
 #end
-
-#set ($lastEditedAt = $ctx.source.lastEditedAt)
-#set ($lastViewedAt = $ctx.result.lastViewedAt)
-
-#if (! $util.isNull($lastEditedAt) and $lastViewedAt.compareTo($lastEditedAt) < 0)
-  #return ('NOT_VIEWED_SINCE_LAST_EDIT')
-#end
-
+#
 #return ('VIEWED')

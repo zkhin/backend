@@ -163,6 +163,7 @@ custom:
         functions:
           - Posts.batchGet
           - Posts.filterBy.postStatus
+          - Posts.filterBy.viewedStatus
           - Users.beginPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
@@ -215,6 +216,9 @@ custom:
       - dataSource: NoneDataSource
         name: Posts.filterBy.postStatus
         response: PassThru.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Posts.filterBy.viewedStatus
 
       - dataSource: DynamodbDataSource
         name: Albums.batchGet

@@ -446,7 +446,6 @@ enum ChatType {
 
 enum ViewedStatus {
   NOT_VIEWED
-  NOT_VIEWED_SINCE_LAST_EDIT
   VIEWED
 }
 
@@ -613,7 +612,8 @@ type Post {
 }
 
 type PaginatedPosts {
-  items: [Post!]!
+  # If `viewedStatus` is non-null, posts will be filtered down to just those with that `viewedStatus`
+  items(viewedStatus: ViewedStatus): [Post!]!
   nextToken: String
 }
 

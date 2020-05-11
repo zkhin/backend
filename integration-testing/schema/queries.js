@@ -402,9 +402,9 @@ module.exports.trendingUsers = gql`
 `
 
 module.exports.trendingPosts = gql`
-  query TrendingPosts ($limit: Int) {
+  query TrendingPosts ($limit: Int, $viewedStatus: ViewedStatus) {
     trendingPosts (limit: $limit) {
-      items {
+      items (viewedStatus: $viewedStatus) {
         postId
         postedBy {
           userId
@@ -412,6 +412,7 @@ module.exports.trendingPosts = gql`
           blockerStatus
           followedStatus
         }
+        viewedStatus
       }
     }
   }

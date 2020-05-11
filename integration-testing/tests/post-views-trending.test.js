@@ -454,6 +454,77 @@ test('We see our own trending posts correctly', async () => {
 })
 
 
+test('Filter trendingPosts on viewedStatus', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, imageData: imageData1B64, takenInReal: true}
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId1)
+
+  // they add a post
+  const postId2 = uuidv4()
+  variables = {postId: postId2, imageData: imageData2B64, takenInReal: true}
+  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId2)
+
+  // they view both posts
+  resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  expect(resp['errors']).toBeUndefined()
+
+  // check we see all trendingPosts by default, and ours appears viewed to us and theirs doesn't
+  resp = await ourClient.query({query: queries.trendingPosts})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(2)
+
+  // Note: no way to guarantee order in the trending post index,
+  // because only the first view is immediately incorporated into the score.
+  const firstPost = resp['data']['trendingPosts']['items'][0]
+  const secondPost = resp['data']['trendingPosts']['items'][1]
+  const post1 = firstPost['postId'] == postId1 ? firstPost : secondPost
+  const post2 = secondPost['postId'] == postId2 ? secondPost : firstPost
+  expect(post1['postId']).toBe(postId1)
+  expect(post2['postId']).toBe(postId2)
+  expect(post1['viewedStatus']).toBe('VIEWED')
+  expect(post2['viewedStatus']).toBe('NOT_VIEWED')
+
+  // check we can filter trending posts to just the ones we have viewed
+  resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(1)
+  expect(resp['data']['trendingPosts']['items'][0]['postId']).toBe(postId1)
+  expect(resp['data']['trendingPosts']['items'][0]['viewedStatus']).toBe('VIEWED')
+
+  // check we can filter trending posts to just the ones we have not viewed
+  resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(1)
+  expect(resp['data']['trendingPosts']['items'][0]['postId']).toBe(postId2)
+  expect(resp['data']['trendingPosts']['items'][0]['viewedStatus']).toBe('NOT_VIEWED')
+
+  // we report a view of the post we hadn't viewed
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
+  expect(resp['errors']).toBeUndefined()
+  await misc.sleep(2000)  // let dynamo converge
+
+  // check no posts now show up as not viewed
+  resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(0)
+
+  // check both posts now show up as viewed
+  resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['trendingPosts']['items']).toHaveLength(2)
+  expect(resp['data']['trendingPosts']['items'].map(p => p['postId']).sort()).toEqual([postId1, postId2].sort())
+  expect(resp['data']['trendingPosts']['items'][0]['viewedStatus']).toBe('VIEWED')
+  expect(resp['data']['trendingPosts']['items'][1]['viewedStatus']).toBe('VIEWED')
+})
+
 test('We see public users trending posts correctly', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [other1Client, other1UserId] = await loginCache.getCleanLogin()
