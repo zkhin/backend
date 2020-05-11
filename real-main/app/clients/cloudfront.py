@@ -15,6 +15,8 @@ CLOUDFRONT_UPLOADS_DOMAIN = os.environ.get('CLOUDFRONT_UPLOADS_DOMAIN')
 
 class CloudFrontClient:
 
+    lifetime = pendulum.duration(hours=48)
+
     def __init__(self, key_pair_getter, domain=CLOUDFRONT_UPLOADS_DOMAIN):
         assert domain, "CloudFront domain is required"
         self.domain = domain
@@ -49,18 +51,19 @@ class CloudFrontClient:
 
     def generate_presigned_url(self, path, methods, expires_at=None):
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudfront.html#examples
-        expires_at = expires_at or pendulum.now('utc') + pendulum.duration(hours=1)
+        expires_at = expires_at or pendulum.now('utc') + self.lifetime
         qs = urllib.parse.urlencode([('Method', m) for m in methods])
         url = f'https://{self.domain}/{path}?{qs}'
         return self.get_cloudfront_signer().generate_presigned_url(url, date_less_than=expires_at)
 
     def generate_presigned_cookies(self, path, expires_at=None):
         # https://gist.github.com/mjohnsullivan/31064b04707923f82484c54981e4749e
-        expires_at = expires_at or pendulum.now('utc') + pendulum.duration(hours=1)
+        expires_at = expires_at or pendulum.now('utc') + self.lifetime
         url = self.generate_unsigned_url(path)
         policy = self.generate_cookie_policy(url, expires_at)
         signature = self.get_private_key().sign(policy, padding.PKCS1v15(), hashes.SHA1())
         return {
+            'ExpiresAt': expires_at.to_iso8601_string(),
             'CloudFront-Policy': self._encode(policy),
             'CloudFront-Signature': self._encode(signature),
             'CloudFront-Key-Pair-Id': self.get_key_pair()['keyId'],

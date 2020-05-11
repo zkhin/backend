@@ -141,16 +141,15 @@ class Post:
         path = f'{self.s3_prefix}/{enums.VIDEO_HLS_PREFIX}.m3u8'
         return self.cloudfront_client.generate_unsigned_url(path)
 
-    def get_hls_access_cookies(self, expires_at=None):
-        expires_at = expires_at or pendulum.now('utc') + pendulum.duration(hours=1)
+    def get_hls_access_cookies(self):
         s3_path = self.get_hls_video_path_prefix()
         signature_path = s3_path + '*'
         cookie_path = '/' + '/'.join(s3_path.split('/')[:-1]) + '/'  # remove trailing partial filename
-        cookies = self.cloudfront_client.generate_presigned_cookies(signature_path, expires_at=expires_at)
+        cookies = self.cloudfront_client.generate_presigned_cookies(signature_path)
         return {
             'domain': self.cloudfront_client.domain,
             'path': cookie_path,
-            'expiresAt': expires_at.to_iso8601_string(),
+            'expiresAt': cookies['ExpiresAt'],
             'policy': cookies['CloudFront-Policy'],
             'signature': cookies['CloudFront-Signature'],
             'keyPairId': cookies['CloudFront-Key-Pair-Id'],

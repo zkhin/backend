@@ -168,7 +168,9 @@ def test_get_hls_access_cookies(cloudfront_client):
         'postStatus': PostStatus.COMPLETED,
     }
     domain = 'cf-domain'
+    expires_at = pendulum.now('utc')
     presigned_cookies = {
+        'ExpiresAt': expires_at.to_iso8601_string(),
         'CloudFront-Policy': 'cf-policy',
         'CloudFront-Signature': 'cf-signature',
         'CloudFront-Key-Pair-Id': 'cf-kpid',
@@ -179,8 +181,7 @@ def test_get_hls_access_cookies(cloudfront_client):
     })
 
     post = Post(item, cloudfront_client=cloudfront_client)
-    expires_at = pendulum.now('utc')
-    access_cookies = post.get_hls_access_cookies(expires_at=expires_at)
+    access_cookies = post.get_hls_access_cookies()
 
     assert access_cookies == {
         'domain': domain,
@@ -192,7 +193,7 @@ def test_get_hls_access_cookies(cloudfront_client):
     }
 
     cookie_path = f'{user_id}/post/{post_id}/video-hls/video*'
-    assert cloudfront_client.mock_calls == [call.generate_presigned_cookies(cookie_path, expires_at=expires_at)]
+    assert cloudfront_client.mock_calls == [call.generate_presigned_cookies(cookie_path)]
 
 
 def test_delete_s3_video(s3_uploads_client):
