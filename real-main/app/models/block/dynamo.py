@@ -13,15 +13,14 @@ class BlockDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_block(self, blocker_user_id, blocked_user_id):
-        pk = self.get_pk(blocker_user_id, blocked_user_id)
-        return self.client.get_item(pk)
-
-    def get_pk(self, blocker_user_id, blocked_user_id):
+    def pk(self, blocker_user_id, blocked_user_id):
         return {
             'partitionKey': f'block/{blocker_user_id}/{blocked_user_id}',
             'sortKey': '-',
         }
+
+    def get_block(self, blocker_user_id, blocked_user_id):
+        return self.client.get_item(self.pk(blocker_user_id, blocked_user_id))
 
     def add_block(self, blocker_user_id, blocked_user_id, now=None):
         now = now or pendulum.now('utc')
@@ -46,12 +45,10 @@ class BlockDynamo:
             raise exceptions.AlreadyBlocked(blocker_user_id, blocked_user_id)
 
     def delete_block(self, blocker_user_id, blocked_user_id):
-        query_kwargs = {
-            'Key': self.get_pk(blocker_user_id, blocked_user_id),
-            'ConditionExpression': 'attribute_exists(partitionKey)',  # fail if doesnt exist
-        }
+        pk = self.pk(blocker_user_id, blocked_user_id)
+        cond_exp = 'attribute_exists(partitionKey)'  # fail if doesnt exist
         try:
-            return self.client.delete_item(query_kwargs)
+            return self.client.delete_item(pk, ConditionExpression=cond_exp)
         except self.client.exceptions.ConditionalCheckFailedException:
             raise exceptions.NotBlocked(blocker_user_id, blocked_user_id)
 
@@ -72,11 +69,11 @@ class BlockDynamo:
     def delete_all_blocks_by_user(self, blocker_user_id):
         with self.client.table.batch_writer() as batch:
             for block_item in self.generate_blocks_by_blocker(blocker_user_id):
-                pk = self.get_pk(blocker_user_id, block_item['blockedUserId'])
+                pk = self.pk(blocker_user_id, block_item['blockedUserId'])
                 batch.delete_item(Key=pk)
 
     def delete_all_blocks_of_user(self, blocked_user_id):
         with self.client.table.batch_writer() as batch:
             for block_item in self.generate_blocks_by_blocked(blocked_user_id):
-                pk = self.get_pk(block_item['blockerUserId'], blocked_user_id)
+                pk = self.pk(block_item['blockerUserId'], blocked_user_id)
                 batch.delete_item(Key=pk)

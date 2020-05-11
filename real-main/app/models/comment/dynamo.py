@@ -11,15 +11,20 @@ class CommentDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_comment_pk(self, comment_id):
+    def pk(self, comment_id):
         return {
             'partitionKey': f'comment/{comment_id}',
             'sortKey': '-',
         }
 
+    def typed_pk(self, comment_id):
+        return {
+            'partitionKey': {'S': f'comment/{comment_id}'},
+            'sortKey': {'S': '-'},
+        }
+
     def get_comment(self, comment_id, strongly_consistent=False):
-        pk = self.get_comment_pk(comment_id)
-        return self.client.get_item(pk, strongly_consistent=strongly_consistent)
+        return self.client.get_item(self.pk(comment_id), ConsistentRead=strongly_consistent)
 
     def transact_add_comment(self, comment_id, post_id, user_id, text, text_tags, commented_at=None):
         commented_at = commented_at or pendulum.now('utc')
@@ -51,10 +56,7 @@ class CommentDynamo:
 
     def transact_delete_comment(self, comment_id):
         return {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'comment/{comment_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(comment_id),
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 

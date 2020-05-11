@@ -17,13 +17,13 @@ class ChatDynamo:
         return self.client.get_item({
             'partitionKey': f'chat/{chat_id}',
             'sortKey': '-',
-        }, strongly_consistent=strongly_consistent)
+        }, ConsistentRead=strongly_consistent)
 
     def get_chat_membership(self, chat_id, user_id, strongly_consistent=False):
         return self.client.get_item({
             'partitionKey': f'chat/{chat_id}',
             'sortKey': f'member/{user_id}',
-        }, strongly_consistent=strongly_consistent)
+        }, ConsistentRead=strongly_consistent)
 
     def get_direct_chat(self, user_id_1, user_id_2):
         user_ids = sorted([user_id_1, user_id_2])

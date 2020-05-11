@@ -8,18 +8,17 @@ class PostImageDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get(self, post_id, strongly_consistent=False):
-        return self.client.get_item({
+    def pk(self, post_id):
+        return {
             'partitionKey': f'post/{post_id}',
             'sortKey': 'image',
-        }, strongly_consistent=strongly_consistent)
+        }
+
+    def get(self, post_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(post_id), ConsistentRead=strongly_consistent)
 
     def delete(self, post_id):
-        query_kwargs = {'Key': {
-            'partitionKey': f'post/{post_id}',
-            'sortKey': 'image',
-        }}
-        return self.client.delete_item(query_kwargs)
+        return self.client.delete_item(self.pk(post_id))
 
     def transact_add(self, post_id, crop=None, image_format=None, original_format=None, taken_in_real=None):
         item = {
@@ -48,7 +47,7 @@ class PostImageDynamo:
 
     def set_height_and_width(self, post_id, height, width):
         query_kwargs = {
-            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': 'image'},
+            'Key': self.pk(post_id),
             'UpdateExpression': 'SET height = :height, width = :width',
             'ExpressionAttributeValues': {
                 ':height': height,
@@ -68,7 +67,7 @@ class PostImageDynamo:
         } for ct in color_tuples]
 
         query_kwargs = {
-            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': 'image'},
+            'Key': self.pk(post_id),
             'UpdateExpression': 'SET colors = :colors',
             'ExpressionAttributeValues': {':colors': color_maps},
         }

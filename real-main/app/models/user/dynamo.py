@@ -17,6 +17,31 @@ class UserDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
+    def pk(self, user_id):
+        return {
+            'partitionKey': f'user/{user_id}',
+            'sortKey': 'profile',
+        }
+
+    def typed_pk(self, user_id):
+        return {
+            'partitionKey': {'S': f'user/{user_id}'},
+            'sortKey': {'S': 'profile'},
+        }
+
+    def get_user(self, user_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(user_id), ConsistentRead=strongly_consistent)
+
+    def get_user_by_username(self, username):
+        query_kwargs = {
+            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'username/{username}'),
+            'IndexName': 'GSI-A1',
+        }
+        return self.client.query_head(query_kwargs)
+
+    def delete_user(self, user_id):
+        return self.client.delete_item(self.pk(user_id))
+
     def add_user(self, user_id, username, full_name=None, email=None, phone=None, placeholder_photo_code=None,
                  now=None):
         now = now or pendulum.now('utc')
@@ -46,33 +71,10 @@ class UserDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             raise UserAlreadyExists(user_id)
 
-    def get_user(self, user_id, strongly_consistent=False):
-        return self.client.get_item({
-            'partitionKey': f'user/{user_id}',
-            'sortKey': 'profile',
-        }, strongly_consistent=strongly_consistent)
-
-    def get_user_by_username(self, username):
-        query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'username/{username}'),
-            'IndexName': 'GSI-A1',
-        }
-        return self.client.query_head(query_kwargs)
-
-    def delete_user(self, user_id):
-        query_kwargs = {'Key': {
-            'partitionKey': f'user/{user_id}',
-            'sortKey': 'profile',
-        }}
-        return self.client.delete_item(query_kwargs)
-
     def update_user_username(self, user_id, username, old_username, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
             'UpdateExpression': 'SET ' + ', '.join([
                 'username = :un',
                 'usernameLastValue = :oldun',
@@ -91,10 +93,7 @@ class UserDynamo:
 
     def set_user_photo_post_id(self, user_id, photo_id):
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
         }
 
         if photo_id:
@@ -109,10 +108,7 @@ class UserDynamo:
         assert status in UserStatus._ALL, f'Invalid UserStatus `{status}`'
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
         }
         if status == UserStatus.ACTIVE:  # default value
             query_kwargs['UpdateExpression'] = 'REMOVE userStatus'
@@ -127,10 +123,7 @@ class UserDynamo:
     def set_user_privacy_status(self, user_id, privacy_status):
         assert privacy_status in UserPrivacyStatus._ALL, f'Invalid privacy_status `{privacy_status}`'
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
             'UpdateExpression': 'SET privacyStatus = :ps',
             'ExpressionAttributeValues': {':ps': privacy_status},
         }
@@ -170,10 +163,7 @@ class UserDynamo:
         process_attr('verificationHidden', verification_hidden)
 
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
             'UpdateExpression': ' '.join([f'{k} {", ".join(v)}' for k, v in expression_actions.items()]),
         }
         if expression_attribute_values:
@@ -183,10 +173,7 @@ class UserDynamo:
 
     def set_user_accepted_eula_version(self, user_id, version):
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
         }
         if version is None:
             query_kwargs['UpdateExpression'] = 'REMOVE acceptedEULAVersion'
@@ -198,10 +185,7 @@ class UserDynamo:
     def _transact_increment_count(self, user_id, count_name):
         transact = {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'user/{user_id}'},
-                    'sortKey': {'S': 'profile'},
-                },
+                'Key': self.typed_pk(user_id),
                 'UpdateExpression': 'ADD #count_name :one',
                 'ExpressionAttributeValues': {
                     ':one': {'N': '1'},
@@ -215,10 +199,7 @@ class UserDynamo:
     def _transact_decrement_count(self, user_id, count_name):
         transact = {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'user/{user_id}'},
-                    'sortKey': {'S': 'profile'},
-                },
+                'Key': self.typed_pk(user_id),
                 'UpdateExpression': 'ADD #count_name :negative_one',
                 # only updates, no creates and make sure it doesn't go negative
                 'ConditionExpression': 'attribute_exists(#count_name) and #count_name > :zero',
@@ -263,10 +244,7 @@ class UserDynamo:
 
     def increment_post_viewed_by_count(self, user_id):
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': self.pk(user_id),
             'UpdateExpression': 'ADD postViewedByCount :one',
             'ExpressionAttributeValues': {':one': 1},
         }
@@ -277,10 +255,7 @@ class UserDynamo:
 
     def transact_post_completed(self, user_id):
         kwargs = {
-            'Key': {
-                'partitionKey': {'S': f'user/{user_id}'},
-                'sortKey': {'S': 'profile'},
-            },
+            'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
             'ExpressionAttributeValues': {
@@ -291,10 +266,7 @@ class UserDynamo:
 
     def transact_post_archived(self, user_id, forced=False):
         kwargs = {
-            'Key': {
-                'partitionKey': {'S': f'user/{user_id}'},
-                'sortKey': {'S': 'profile'},
-            },
+            'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postCount :negative_one, postArchivedCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey) and postCount > :zero',
             'ExpressionAttributeValues': {
@@ -310,10 +282,7 @@ class UserDynamo:
 
     def transact_post_restored(self, user_id):
         kwargs = {
-            'Key': {
-                'partitionKey': {'S': f'user/{user_id}'},
-                'sortKey': {'S': 'profile'},
-            },
+            'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postCount :positive_one, postArchivedCount :negative_one',
             'ConditionExpression': 'attribute_exists(partitionKey) and postArchivedCount > :zero',
             'ExpressionAttributeValues': {
@@ -326,10 +295,7 @@ class UserDynamo:
 
     def transact_post_deleted(self, user_id, prev_status):
         kwargs = {
-            'Key': {
-                'partitionKey': {'S': f'user/{user_id}'},
-                'sortKey': {'S': 'profile'},
-            },
+            'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postDeletedCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
             'ExpressionAttributeValues': {

@@ -12,11 +12,20 @@ class AlbumDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_album(self, album_id, strongly_consistent=False):
-        return self.client.get_item({
+    def pk(self, album_id):
+        return {
             'partitionKey': f'album/{album_id}',
             'sortKey': '-',
-        }, strongly_consistent=strongly_consistent)
+        }
+
+    def typed_pk(self, album_id):
+        return {
+            'partitionKey': {'S': f'album/{album_id}'},
+            'sortKey': {'S': '-'},
+        }
+
+    def get_album(self, album_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(album_id), ConsistentRead=strongly_consistent)
 
     def transact_add_album(self, album_id, user_id, name, description=None, created_at=None):
         created_at = created_at or pendulum.now('utc')
@@ -61,10 +70,7 @@ class AlbumDynamo:
                 exp_values[':description'] = description
 
         update_query_kwargs = {
-            'Key': {
-                'partitionKey': f'album/{album_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(album_id),
             'UpdateExpression': ' '.join([f'{k} {", ".join(v)}' for k, v in exp_actions.items()]),
         }
         if exp_names:
@@ -75,10 +81,7 @@ class AlbumDynamo:
 
     def set_album_art_hash(self, album_id, art_hash):
         update_query_kwargs = {
-            'Key': {
-                'partitionKey': f'album/{album_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(album_id),
         }
 
         if art_hash:
@@ -91,10 +94,7 @@ class AlbumDynamo:
 
     def transact_delete_album(self, album_id):
         return {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'album/{album_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(album_id),
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
@@ -102,10 +102,7 @@ class AlbumDynamo:
         "Transaction to change album properties to reflect adding a post to the album"
         now = now or pendulum.now('utc')
         query_kwargs = {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'album/{album_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(album_id),
             'UpdateExpression': 'ADD postCount :one, rankCount :one SET postsLastUpdatedAt = :now',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},
@@ -126,10 +123,7 @@ class AlbumDynamo:
         "Transaction to change album properties to reflect removing a post from the album"
         now = now or pendulum.now('utc')
         query_kwargs = {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'album/{album_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(album_id),
             'UpdateExpression': 'ADD postCount :negative_one SET postsLastUpdatedAt = :now',
             'ExpressionAttributeValues': {
                 ':negative_one': {'N': '-1'},
@@ -144,10 +138,7 @@ class AlbumDynamo:
         "Transaction to change album properties to reflect adding a post to the album"
         now = now or pendulum.now('utc')
         query_kwargs = {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'album/{album_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(album_id),
             'UpdateExpression': 'ADD rankCount :one SET postsLastUpdatedAt = :now',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},

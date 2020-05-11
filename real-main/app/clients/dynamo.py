@@ -50,16 +50,9 @@ class DynamoClient:
         query_kwargs['ReturnValues'] = 'ALL_NEW'
         return self.table.update_item(**query_kwargs).get('Attributes')
 
-    def get_item(self, pk, strongly_consistent=False):
+    def get_item(self, pk, **kwargs):
         "Get an item by its primary key"
-        kwargs = {
-            'Key': {
-                'partitionKey': pk['partitionKey'],
-                'sortKey': pk['sortKey'],
-            },
-            'ConsistentRead': strongly_consistent,
-        }
-        return self.table.get_item(**kwargs).get('Item')
+        return self.table.get_item(Key=pk, **kwargs).get('Item')
 
     def batch_get_items(self, typed_keys, projection_expression=None):
         """
@@ -74,11 +67,11 @@ class DynamoClient:
             kwargs['RequestItems'][self.table_name]['ProjectionExpression'] = projection_expression
         return self.boto3_client.batch_get_item(**kwargs)['Responses'][self.table_name]
 
-    def delete_item(self, query_kwargs):
+    def delete_item(self, pk, **kwargs):
         "Delete an item and return what was deleted"
-        query_kwargs['ReturnValues'] = 'ALL_OLD'
+        return_values = kwargs.pop('ReturnValues', 'ALL_OLD')
         # return None if nothing was deleted, rather than an empty dict
-        return self.table.delete_item(**query_kwargs).get('Attributes') or None
+        return self.table.delete_item(Key=pk, ReturnValues=return_values, **kwargs).get('Attributes') or None
 
     def encode_pagination_token(self, last_evaluated_key):
         "From a LastEvaluatedKey to a obfucated string"

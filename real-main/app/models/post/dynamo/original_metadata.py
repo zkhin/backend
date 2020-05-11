@@ -15,11 +15,10 @@ class PostOriginalMetadataDynamo:
         })
 
     def delete(self, post_id):
-        query_kwargs = {'Key': {
+        return self.client.delete_item({
             'partitionKey': f'post/{post_id}',
             'sortKey': 'originalMetadata',
-        }}
-        return self.client.delete_item(query_kwargs)
+        })
 
     def transact_add(self, post_id, original_metadata):
         return {'Put': {

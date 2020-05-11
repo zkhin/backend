@@ -23,10 +23,8 @@ class TrendingDynamo:
     def delete_trending(self, item_id):
         "Delete a trending, if it exists. If it doesn't, no-op."
         return self.client.delete_item({
-            'Key': {
-                'partitionKey': f'trending/{item_id}',
-                'sortKey': '-',
-            },
+            'partitionKey': f'trending/{item_id}',
+            'sortKey': '-',
         })
 
     def create_trending(self, item_type, item_id, view_count, now=None):

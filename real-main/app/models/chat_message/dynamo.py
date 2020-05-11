@@ -10,11 +10,20 @@ class ChatMessageDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_chat_message(self, message_id, strongly_consistent=False):
-        return self.client.get_item({
+    def pk(self, message_id):
+        return {
             'partitionKey': f'chatMessage/{message_id}',
             'sortKey': '-',
-        }, strongly_consistent=strongly_consistent)
+        }
+
+    def typed_pk(self, message_id):
+        return {
+            'partitionKey': {'S': f'chatMessage/{message_id}'},
+            'sortKey': {'S': '-'},
+        }
+
+    def get_chat_message(self, message_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(message_id), ConsistentRead=strongly_consistent)
 
     def transact_add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now):
         created_at_str = now.to_iso8601_string()
@@ -45,10 +54,7 @@ class ChatMessageDynamo:
 
     def transact_edit_chat_message(self, message_id, text, text_tags, now):
         return {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'chatMessage/{message_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(message_id),
             'UpdateExpression': 'SET lastEditedAt = :at, #textName = :text, textTags = :textTags',
             'ExpressionAttributeNames': {
                 '#textName': 'text',
@@ -69,10 +75,7 @@ class ChatMessageDynamo:
 
     def transact_delete_chat_message(self, message_id):
         return {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'chatMessage/{message_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(message_id),
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 

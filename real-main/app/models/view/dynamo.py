@@ -16,7 +16,7 @@ class ViewDynamo:
         return self.client.get_item({
             'partitionKey': partition_key,
             'sortKey': f'view/{user_id}',
-        }, strongly_consistent=strongly_consistent)
+        }, ConsistentRead=strongly_consistent)
 
     def generate_views(self, partition_key, pks_only=False):
         # no ordering guarantees

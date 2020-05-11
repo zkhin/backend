@@ -18,18 +18,23 @@ class PostDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_post(self, post_id, strongly_consistent=False):
-        return self.client.get_item({
+    def pk(self, post_id):
+        return {
             'partitionKey': f'post/{post_id}',
             'sortKey': '-',
-        }, strongly_consistent=strongly_consistent)
+        }
+
+    def typed_pk(self, post_id):
+        return {
+            'partitionKey': {'S': f'post/{post_id}'},
+            'sortKey': {'S': '-'},
+        }
+
+    def get_post(self, post_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(post_id), ConsistentRead=strongly_consistent)
 
     def delete_post(self, post_id):
-        query_kwargs = {'Key': {
-            'partitionKey': f'post/{post_id}',
-            'sortKey': '-',
-        }}
-        return self.client.delete_item(query_kwargs)
+        return self.client.delete_item(self.pk(post_id))
 
     def get_next_completed_post_to_expire(self, user_id, exclude_post_id=None):
         query_kwargs = {
@@ -46,10 +51,7 @@ class PostDynamo:
     def batch_get_posted_by_user_ids(self, post_ids):
         "Given a list of post_ids, return a dict of post_id -> posted_by_user_id"
         projection_expression = 'postedByUserId'
-        typed_keys = [{
-            'partitionKey': {'S': f'post/{post_id}'},
-            'sortKey': {'S': '-'}
-        } for post_id in post_ids]
+        typed_keys = [self.typed_pk(post_id) for post_id in post_ids]
         typed_result = self.client.batch_get_items(typed_keys, projection_expression)
         return [r['postedByUserId']['S'] for r in typed_result]
 
@@ -151,10 +153,7 @@ class PostDynamo:
     def transact_increment_flag_count(self, post_id):
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD flagCount :one',
                 'ExpressionAttributeValues': {
                     ':one': {'N': '1'},
@@ -166,10 +165,7 @@ class PostDynamo:
     def transact_decrement_flag_count(self, post_id):
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD flagCount :neg_one',
                 'ExpressionAttributeValues': {
                     ':neg_one': {'N': '-1'},
@@ -207,10 +203,7 @@ class PostDynamo:
 
         transact = {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_item["postId"]}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_item['postId']),
                 'UpdateExpression': 'SET ' + ', '.join(exp_sets),
                 'ExpressionAttributeValues': exp_values,
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
@@ -225,10 +218,7 @@ class PostDynamo:
 
     def increment_viewed_by_count(self, post_id):
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(post_id),
             'UpdateExpression': 'ADD viewedByCount :one',
             'ExpressionAttributeValues': {':one': 1},
         }
@@ -279,10 +269,7 @@ class PostDynamo:
             exp_values[':vd'] = verification_hidden
 
         update_query_kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(post_id),
             'UpdateExpression': ' '.join([f'{k} {", ".join(v)}' for k, v in exp_actions.items()]),
         }
 
@@ -296,10 +283,7 @@ class PostDynamo:
     def set_checksum(self, post_id, posted_at_str, checksum):
         assert checksum  # no deletes
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(post_id),
             'UpdateExpression': 'SET checksum = :checksum, gsiK2PartitionKey = :pk, gsiK2SortKey = :sk',
             'ExpressionAttributeValues': {
                 ':checksum': checksum,
@@ -311,10 +295,7 @@ class PostDynamo:
 
     def set_is_verified(self, post_id, is_verified):
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(post_id),
             'UpdateExpression': 'SET isVerified = :iv',
             'ExpressionAttributeValues': {':iv': is_verified},
         }
@@ -341,10 +322,7 @@ class PostDynamo:
             cond_exp += ' AND hasNewCommentActivity = :ov'
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'SET hasNewCommentActivity = :nv',
                 'ExpressionAttributeValues': {
                     ':nv': {'BOOL': new_value},
@@ -357,10 +335,7 @@ class PostDynamo:
     def set_expires_at(self, post_item, expires_at):
         expires_at_str = expires_at.to_iso8601_string()
         update_query_kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_item["postId"]}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(post_item['postId']),
             'UpdateExpression': 'SET ' + ', '.join([
                 'expiresAt = :ea',
                 'gsiA1PartitionKey = :ga1pk',
@@ -382,10 +357,7 @@ class PostDynamo:
 
     def remove_expires_at(self, post_id):
         update_query_kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(post_id),
             'UpdateExpression': 'REMOVE expiresAt, gsiA1PartitionKey, gsiA1SortKey, gsiK1PartitionKey, gsiK1SortKey',
         }
         return self.client.update_item(update_query_kwargs)
@@ -400,10 +372,7 @@ class PostDynamo:
 
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD #count_name :one',
                 'ExpressionAttributeValues': {
                     ':one': {'N': '1'},
@@ -425,10 +394,7 @@ class PostDynamo:
 
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD #count_name :negative_one',
                 'ExpressionAttributeValues': {
                     ':negative_one': {'N': '-1'},
@@ -445,10 +411,7 @@ class PostDynamo:
     def transact_increment_comment_count(self, post_id):
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :one',
                 'ExpressionAttributeValues': {
                     ':one': {'N': '1'},
@@ -460,10 +423,7 @@ class PostDynamo:
     def transact_decrement_comment_count(self, post_id):
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :negative_one',
                 'ExpressionAttributeValues': {
                     ':negative_one': {'N': '-1'},
@@ -484,10 +444,7 @@ class PostDynamo:
 
         transact_item = {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
@@ -509,10 +466,7 @@ class PostDynamo:
     def transact_set_album_rank(self, post_id, album_rank):
         return {
             'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
+                'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'SET gsiK3SortKey = :ar',
                 'ExpressionAttributeValues': {':ar': {'N': str(album_rank)}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
