@@ -21,18 +21,26 @@ class PostImageDynamo:
         }}
         return self.client.delete_item(query_kwargs)
 
-    def transact_add(self, post_id, taken_in_real=None, original_format=None, image_format=None):
+    def transact_add(self, post_id, crop=None, image_format=None, original_format=None, taken_in_real=None):
         item = {
             'schemaVersion': {'N': '0'},
             'partitionKey': {'S': f'post/{post_id}'},
             'sortKey': {'S': 'image'},
         }
-        if taken_in_real is not None:
-            item['takenInReal'] = {'BOOL': taken_in_real}
-        if original_format is not None:
-            item['originalFormat'] = {'S': original_format}
+        if crop is not None:
+            item['crop'] = {'M': {
+                pt: {'M': {
+                    coord: {'N': str(crop[pt][coord])}
+                    for coord in ('x', 'y')
+                }}
+                for pt in ('upperLeft', 'lowerRight')
+            }}
         if image_format is not None:
             item['imageFormat'] = {'S': image_format}
+        if original_format is not None:
+            item['originalFormat'] = {'S': original_format}
+        if taken_in_real is not None:
+            item['takenInReal'] = {'BOOL': taken_in_real}
         return {'Put': {
             'Item': item,
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds

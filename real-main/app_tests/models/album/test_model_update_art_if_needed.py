@@ -94,7 +94,7 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
         path = album.get_art_image_path(size)
         assert album.s3_uploads_client.exists(path)
     native_path = album.get_art_image_path(image_size.NATIVE)
-    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.native_image_data
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.native_jpeg_cache.get_fh().read()
 
     # remove the post from the album directly in dynamo
     transacts = [post1.dynamo.transact_set_album_id(post1.item, None)]
@@ -124,7 +124,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
 
     # check the native art matches first post
     native_path = album.get_art_image_path(image_size.NATIVE)
-    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.native_image_data
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.native_jpeg_cache.get_fh().read()
 
     # put the other post in the album directly, ahead of the firs
     transacts = [post2.dynamo.transact_set_album_id(post2.item, album.id, album_rank=Decimal('0.2'))]
@@ -137,7 +137,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
 
     # check the native art now matches second post
     native_path = album.get_art_image_path(image_size.NATIVE)
-    assert s3_uploads_client.get_object_data_stream(native_path).read() == post2.native_image_data
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post2.native_jpeg_cache.get_fh().read()
 
     # now switch order, directly in dynsmo
     transacts = [post1.dynamo.transact_set_album_rank(post1.id, Decimal('0.1'))]
@@ -151,7 +151,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
 
     # check the native art now matches first post
     native_path = album.get_art_image_path(image_size.NATIVE)
-    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.native_image_data
+    assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.native_jpeg_cache.get_fh().read()
 
     # check the thumbnails are all in S3, and all the old thumbs have been removed
     for size in image_size.JPEGS:
@@ -178,7 +178,7 @@ def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6
     # check the native art matches first post
     native_path = album.get_art_image_path(image_size.NATIVE)
     first_native_image_data = album.s3_uploads_client.get_object_data_stream(native_path).read()
-    assert first_native_image_data == post1.native_image_data
+    assert first_native_image_data == post1.native_jpeg_cache.get_fh().read()
 
     # add three more posts to the album
     transacts = [

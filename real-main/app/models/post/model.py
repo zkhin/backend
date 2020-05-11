@@ -4,23 +4,19 @@ import logging
 
 from colorthief import ColorThief
 import pendulum
-from PIL import Image, ImageOps
-import pyheif
+from PIL import Image
 
 from app.models.user.enums import UserStatus
 from app.utils import image_size
 
 from . import enums, exceptions
+from .cached_image import CachedImage
 from .enums import PostStatus, PostType, PostNotificationType
-from .text_image import generate_text_image
 
 logger = logging.getLogger()
 
 
 class Post:
-
-    jpeg_content_type = 'image/jpeg'
-    heic_content_type = 'image/heic'
 
     enums = enums
     exceptions = exceptions
@@ -83,6 +79,14 @@ class Post:
         self.type = self.item['postType']
         self.user_id = item['postedByUserId']
 
+        # lazy caches
+        self.native_heic_cache = CachedImage(self, image_size.NATIVE_HEIC)
+        self.native_jpeg_cache = CachedImage(self, image_size.NATIVE)
+        self.k4_jpeg_cache = CachedImage(self, image_size.K4)
+        self.p1080_jpeg_cache = CachedImage(self, image_size.P1080)
+        self.p480_jpeg_cache = CachedImage(self, image_size.P480)
+        self.p64_jpeg_cache = CachedImage(self, image_size.P64)
+
     @property
     def status(self):
         return self.item['postStatus']
@@ -106,44 +110,6 @@ class Post:
             self._user = self.user_manager.get_user(self.user_id)
         return self._user
 
-    @property
-    def native_image_data(self):
-        if not hasattr(self, '_native_image_data'):
-            if self.type == PostType.TEXT_ONLY:
-                max_dims = image_size.K4.max_dimensions
-                self._native_image_data = generate_text_image(self.item['text'], max_dims).read()
-
-            elif self.type in (PostType.IMAGE, PostType.VIDEO):
-                path = self.get_image_path(image_size.NATIVE)
-                try:
-                    self._native_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-                except self.s3_uploads_client.exceptions.NoSuchKey:
-                    raise exceptions.PostException(f'Native image data not found for post `{self.id}`')
-
-            else:
-                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
-
-        return self._native_image_data
-
-    @property
-    def p1080_image_data(self):
-        if not hasattr(self, '_p1080_image_data'):
-            if self.type == PostType.TEXT_ONLY:
-                max_dims = image_size.P1080.max_dimensions
-                self._p1080_image_data = generate_text_image(self.item['text'], max_dims).read()
-
-            elif self.type in (PostType.IMAGE, PostType.VIDEO):
-                path = self.get_image_path(image_size.P1080)
-                try:
-                    self._p1080_image_data = self.s3_uploads_client.get_object_data_stream(path).read()
-                except self.s3_uploads_client.exceptions.NoSuchKey:
-                    raise exceptions.PostException(f'1080p image data not found for post `{self.id}`')
-
-            else:
-                raise Exception(f'Unexpected post type `{self.type}` for post `{self.id}`')
-
-        return self._p1080_image_data
-
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -155,12 +121,6 @@ class Post:
     def get_s3_image_path(self, size):
         "From within the user's directory, return the path to the s3 object of the requested size"
         return '/'.join([self.item['postedByUserId'], 'post', self.item['postId'], 'image', size.filename])
-
-    def get_native_pil_image(self):
-        try:
-            return ImageOps.exif_transpose(Image.open(BytesIO(self.native_image_data)))
-        except Exception as err:
-            raise exceptions.PostException(f'Unable to decode native image data as jpeg for post `{self.id}`: {err}')
 
     def get_original_video_path(self):
         return f'{self.s3_prefix}/{enums.VIDEO_ORIGINAL_FILENAME}'
@@ -223,17 +183,17 @@ class Post:
         return resp
 
     def build_image_thumbnails(self):
-        image = self.get_native_pil_image()
-        for size in image_size.THUMBNAILS:  # ordered by decreasing size
-            in_mem_file = BytesIO()
+        image = self.native_jpeg_cache.get_image()
+        # ordered by decreasing size
+        for cache in (self.k4_jpeg_cache, self.p1080_jpeg_cache, self.p480_jpeg_cache, self.p64_jpeg_cache):
+            fh = BytesIO()
             try:
-                image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
-                image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
+                image.thumbnail(cache.image_size.max_dimensions, resample=Image.LANCZOS)
+                image.save(fh, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             except Exception as err:
                 raise exceptions.PostException(f'Unable to thumbnail image data as jpeg for post `{self.id}`: {err}')
-            in_mem_file.seek(0)
-            path = self.get_image_path(size)
-            self.s3_uploads_client.put_object(path, in_mem_file.read(), self.jpeg_content_type)
+            cache.set(image=image)
+            cache.flush()
 
     def process_image_upload(self, image_data=None, now=None):
         assert self.type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
@@ -251,7 +211,10 @@ class Post:
             self.upload_native_image_data_base64(image_data)
 
         if self.image_item.get('imageFormat') == 'HEIC':
-            self.set_native_jpeg()
+            self.fill_native_jpeg_cache_from_heic()
+        if self.image_item.get('crop'):
+            self.crop_native_jpeg_cache()
+        self.native_jpeg_cache.flush()
 
         self.build_image_thumbnails()
         self.set_height_and_width()
@@ -260,17 +223,37 @@ class Post:
         self.set_checksum()
         self.complete(now=now)
 
+    def fill_native_jpeg_cache_from_heic(self):
+        assert self.type == PostType.IMAGE, 'Cannot operate on post of non-IMAGE post type'
+        image = self.native_heic_cache.get_image()
+        self.native_jpeg_cache.set(image=image)
+
+    def crop_native_jpeg_cache(self):
+        assert self.type == PostType.IMAGE, 'Cannot operate on post of non-IMAGE post type'
+        assert (crop := self.image_item.get('crop')), 'Cannot crop post with no crop specified'
+
+        image = self.native_jpeg_cache.get_image()
+        cur_width, cur_height = image.size
+        ul_x, ul_y = crop['upperLeft']['x'], crop['upperLeft']['y']
+        lr_x, lr_y = crop['lowerRight']['x'], crop['lowerRight']['y']
+
+        if lr_y > cur_height:
+            raise exceptions.PostException('Image not tall enough to crop as requested')
+        if lr_x > cur_width:
+            raise exceptions.PostException('Image not wide enough to crop as requested')
+
+        try:
+            image = image.crop((ul_x, ul_y, lr_x, lr_y))
+        except Exception as err:
+            raise exceptions.PostException(f'Unable to crop image for post `{self.id}`: {err}')
+
+        self.native_jpeg_cache.set(image=image)
+
     def upload_native_image_data_base64(self, image_data):
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
-        content_type = self.jpeg_content_type
-        size = image_size.NATIVE
-        if self.image_item.get('imageFormat') == 'HEIC':
-            content_type = self.heic_content_type
-            size = image_size.NATIVE_HEIC
-
-        path = self.get_image_path(size)
-        image_buffer = BytesIO(base64.b64decode(image_data))
-        self.s3_uploads_client.put_object(path, image_buffer, content_type)
+        cache = self.native_heic_cache if self.image_item.get('imageFormat') == 'HEIC' else self.native_jpeg_cache
+        cache.set(BytesIO(base64.b64decode(image_data)))
+        cache.flush()
 
     def start_processing_video_upload(self):
         assert self.type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
@@ -510,30 +493,14 @@ class Post:
         )
         return self
 
-    def set_native_jpeg(self):
-        "From a native HEIC, upload a native jpeg"
-        heic_path = self.get_image_path(image_size.NATIVE_HEIC)
-        heic_data_stream = self.s3_uploads_client.get_object_data_stream(heic_path)
-        try:
-            heif_file = pyheif.read_heif(heic_data_stream)
-        except pyheif.error.HeifError as err:
-            raise exceptions.PostException(f'Unable to read HEIC file for post `{self.id}`: {err}')
-        image = Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
-        in_mem_file = BytesIO()
-        image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
-        in_mem_file.seek(0)
-        jpeg_path = self.get_image_path(image_size.NATIVE)
-        self.s3_uploads_client.put_object(jpeg_path, in_mem_file.read(), self.jpeg_content_type)
-
     def set_height_and_width(self):
-        image = self.get_native_pil_image()
-        width, height = image.size
+        width, height = self.native_jpeg_cache.get_image().size
         self._image_item = self.image_dynamo.set_height_and_width(self.id, height, width)
         return self
 
     def set_colors(self):
         try:
-            colors = ColorThief(BytesIO(self.native_image_data)).get_palette(color_count=5)
+            colors = ColorThief(self.native_jpeg_cache.get_fh()).get_palette(color_count=5)
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
         else:

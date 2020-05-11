@@ -77,6 +77,30 @@ def test_add_post_errors(post_manager):
     with pytest.raises(post_manager.exceptions.PostException, match='with setAsUserPhoto'):
         post_manager.add_post('pbuid', 'pid', PostType.VIDEO, set_as_user_photo=True)
 
+    # try to add post with invalid post type
+    with pytest.raises(Exception, match='Invalid PostType'):
+        post_manager.add_post('pbuid', 'pid', 'notaposttype')
+
+
+@pytest.mark.parametrize('crop', [
+    {'upperLeft': {'x': -1, 'y': 0}, 'lowerRight': {'x': 100, 'y': 100}},
+    {'upperLeft': {'x': 0, 'y': -1}, 'lowerRight': {'x': 100, 'y': 100}},
+    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': -1, 'y': 100}},
+    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': 100, 'y': -1}},
+])
+def test_add_post_negative_crop_cordinate_errors(post_manager, crop):
+    with pytest.raises(post_manager.exceptions.PostException, match='cannot be negative'):
+        post_manager.add_post('pbuid', 'pid', PostType.IMAGE, image_input={'crop': crop})
+
+
+@pytest.mark.parametrize('crop', [
+    {'upperLeft': {'x': 0, 'y': 50}, 'lowerRight': {'x': 100, 'y': 50}},
+    {'upperLeft': {'x': 100, 'y': 0}, 'lowerRight': {'x': 10, 'y': 100}},
+])
+def test_add_post_emptry_crop_area_errors(post_manager, crop):
+    with pytest.raises(post_manager.exceptions.PostException, match='must be strictly greater than'):
+        post_manager.add_post('pbuid', 'pid', PostType.IMAGE, image_input={'crop': crop})
+
 
 def test_add_text_only_post(post_manager, user):
     post_id = 'pid'
@@ -290,7 +314,9 @@ def test_add_image_post_with_options(post_manager, album, user):
     post_id = 'pid'
     text = 'lore ipsum'
     now = pendulum.now('utc')
+    crop = {'upperLeft': {'x': 1, 'y': 2}, 'lowerRight': {'x': 4, 'y': 3}}
     image_input = {
+        'crop': crop,
         'takenInReal': False,
         'originalFormat': 'org-format',
         'originalMetadata': 'org-metadata',
@@ -322,6 +348,7 @@ def test_add_image_post_with_options(post_manager, album, user):
     post_original_metadata = post_manager.original_metadata_dynamo.get(post_id)
     assert post_original_metadata['originalMetadata'] == 'org-metadata'
 
+    assert post.image_item['crop'] == crop
     assert post.image_item['takenInReal'] is False
     assert post.image_item['originalFormat'] == 'org-format'
 

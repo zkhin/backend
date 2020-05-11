@@ -235,7 +235,7 @@ test('Add post setAsUserPhoto failures', async () => {
   // verify doesn't set user photo if uploaded image can't be processed (image data included with upload)
   let variables = {postId: uuidv4(), postType: 'IMAGE', setAsUserPhoto: true, imageData: 'notimagedata'}
   await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Unable to decode native image data as jpeg /)
+    .rejects.toThrow(/ClientError: Unable to decode native jpeg data /)
 
   // add a pending post with setAsUserPhoto
   const postId = uuidv4()

@@ -39,7 +39,7 @@ def test_cant_process_image_upload_various_errors(post_manager, user, pending_po
 def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
-    with pytest.raises(PostException, match='Native image data not found'):
+    with pytest.raises(PostException, match='native.jpg image data not found'):
         pending_post.process_image_upload()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
@@ -52,11 +52,12 @@ def test_process_image_upload_success_jpeg(pending_post):
     assert 'imageFormat' not in pending_post.image_item
 
     # mock out a bunch of methods
+    pending_post.fill_native_jpeg_cache_from_heic = Mock()
+    pending_post.crop_native_jpeg_cache = Mock()
+    pending_post.native_jpeg_cache.flush = Mock()
+    pending_post.build_image_thumbnails = Mock()
     pending_post.set_height_and_width = Mock()
     pending_post.set_colors = Mock()
-    pending_post.build_image_thumbnails = Mock()
-    pending_post.is_native_image_jpeg = Mock(return_value=True)
-    pending_post.set_native_jpeg = Mock()
     pending_post.set_is_verified = Mock()
     pending_post.set_checksum = Mock()
     pending_post.complete = Mock()
@@ -65,10 +66,12 @@ def test_process_image_upload_success_jpeg(pending_post):
     pending_post.process_image_upload(now=now)
 
     # check the mocks were called correctly
+    assert pending_post.fill_native_jpeg_cache_from_heic.mock_calls == []
+    assert pending_post.crop_native_jpeg_cache.mock_calls == []
+    assert pending_post.native_jpeg_cache.flush.mock_calls == [call()]
+    assert pending_post.build_image_thumbnails.mock_calls == [call()]
     assert pending_post.set_height_and_width.mock_calls == [call()]
     assert pending_post.set_colors.mock_calls == [call()]
-    assert pending_post.build_image_thumbnails.mock_calls == [call()]
-    assert pending_post.set_native_jpeg.mock_calls == []
     assert pending_post.set_is_verified.mock_calls == [call()]
     assert pending_post.set_checksum.mock_calls == [call()]
     assert pending_post.complete.mock_calls == [call(now=now)]
@@ -83,11 +86,12 @@ def test_process_image_upload_success_heic(pending_post):
     pending_post.image_item['imageFormat'] = 'HEIC'
 
     # mock out a bunch of methods
+    pending_post.fill_native_jpeg_cache_from_heic = Mock()
+    pending_post.crop_native_jpeg_cache = Mock()
+    pending_post.native_jpeg_cache.flush = Mock()
+    pending_post.build_image_thumbnails = Mock()
     pending_post.set_height_and_width = Mock()
     pending_post.set_colors = Mock()
-    pending_post.build_image_thumbnails = Mock()
-    pending_post.is_native_image_jpeg = Mock(return_value=True)
-    pending_post.set_native_jpeg = Mock()
     pending_post.set_is_verified = Mock()
     pending_post.set_checksum = Mock()
     pending_post.complete = Mock()
@@ -96,10 +100,42 @@ def test_process_image_upload_success_heic(pending_post):
     pending_post.process_image_upload(now=now)
 
     # check the mocks were called correctly
+    assert pending_post.fill_native_jpeg_cache_from_heic.mock_calls == [call()]
+    assert pending_post.crop_native_jpeg_cache.mock_calls == []
+    assert pending_post.native_jpeg_cache.flush.mock_calls == [call()]
+    assert pending_post.build_image_thumbnails.mock_calls == [call()]
     assert pending_post.set_height_and_width.mock_calls == [call()]
     assert pending_post.set_colors.mock_calls == [call()]
+    assert pending_post.set_is_verified.mock_calls == [call()]
+    assert pending_post.set_checksum.mock_calls == [call()]
+    assert pending_post.complete.mock_calls == [call(now=now)]
+
+
+def test_process_image_upload_with_crop(pending_post):
+    assert pending_post.item['postStatus'] == PostStatus.PENDING
+    pending_post.image_item['crop'] = 'not none'
+
+    # mock out a bunch of methods
+    pending_post.fill_native_jpeg_cache_from_heic = Mock()
+    pending_post.crop_native_jpeg_cache = Mock()
+    pending_post.native_jpeg_cache.flush = Mock()
+    pending_post.build_image_thumbnails = Mock()
+    pending_post.set_height_and_width = Mock()
+    pending_post.set_colors = Mock()
+    pending_post.set_is_verified = Mock()
+    pending_post.set_checksum = Mock()
+    pending_post.complete = Mock()
+
+    now = pendulum.now('utc')
+    pending_post.process_image_upload(now=now)
+
+    # check the mocks were called correctly
+    assert pending_post.fill_native_jpeg_cache_from_heic.mock_calls == []
+    assert pending_post.crop_native_jpeg_cache.mock_calls == [call()]
+    assert pending_post.native_jpeg_cache.flush.mock_calls == [call()]
     assert pending_post.build_image_thumbnails.mock_calls == [call()]
-    assert pending_post.set_native_jpeg.mock_calls == [call()]
+    assert pending_post.set_height_and_width.mock_calls == [call()]
+    assert pending_post.set_colors.mock_calls == [call()]
     assert pending_post.set_is_verified.mock_calls == [call()]
     assert pending_post.set_checksum.mock_calls == [call()]
     assert pending_post.complete.mock_calls == [call(now=now)]

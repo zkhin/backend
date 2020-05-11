@@ -30,7 +30,7 @@ def test_build_image_thumbnails_not_jpeg_data(s3_uploads_client, processing_imag
     path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(path, b'aintnojpeg', 'image/jpeg')
 
-    with pytest.raises(PostException, match='Unable to decode native image data as jpeg'):
+    with pytest.raises(PostException, match='Unable to decode native jpeg data'):
         post.build_image_thumbnails()
 
 
@@ -125,6 +125,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
 
 
 @pytest.mark.filterwarnings("ignore:Metadata Warning, tag .* had too many entries.*:UserWarning")
+@pytest.mark.filterwarnings("ignore:Corrupt EXIF data.  Expecting to read .* bytes but only got .*:UserWarning")
 def test_build_image_thumbnails_respect_exif_orientation(s3_uploads_client, processing_image_post):
     post = processing_image_post
 

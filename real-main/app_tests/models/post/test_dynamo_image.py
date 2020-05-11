@@ -19,7 +19,7 @@ def image_item(post_image_dynamo):
 
 
 def test_transact_add_minimal(post_image_dynamo):
-    # add the post iamge
+    # add the post image
     transact = post_image_dynamo.transact_add('pid1')
     post_image_dynamo.client.transact_write_items([transact])
 
@@ -36,8 +36,10 @@ def test_transact_add_minimal(post_image_dynamo):
 
 
 def test_transact_add_maximal(post_image_dynamo):
-    # add the post iamge
-    transact = post_image_dynamo.transact_add('pid2', taken_in_real=True, original_format='of', image_format='if')
+    # add the post image
+    crop = {'upperLeft': {'x': 1, 'y': 2}, 'lowerRight': {'x': 3, 'y': 4}}
+    transact = post_image_dynamo.transact_add('pid2', crop=crop, image_format='if', original_format='of',
+                                              taken_in_real=True)
     post_image_dynamo.client.transact_write_items([transact])
 
     # check format
@@ -45,10 +47,32 @@ def test_transact_add_maximal(post_image_dynamo):
     assert item.pop('schemaVersion') == 0
     assert item.pop('partitionKey') == 'post/pid2'
     assert item.pop('sortKey') == 'image'
-    assert item.pop('takenInReal') is True
-    assert item.pop('originalFormat') == 'of'
+    assert item.pop('crop') == crop
     assert item.pop('imageFormat') == 'if'
+    assert item.pop('originalFormat') == 'of'
+    assert item.pop('takenInReal') is True
     assert item == {}
+
+
+def test_transact_add_doesnt_add_non_positive_crops(post_image_dynamo):
+    # add two post images with different crops
+    crop1 = {'upperLeft': {'x': -1, 'y': 0}, 'lowerRight': {'x': 1, 'y': 2}}
+    crop2 = {'upperLeft': {'x': 2, 'y': 1}, 'lowerRight': {'x': 0, 'y': -1}}
+
+    post_image_dynamo.client.transact_write_items([
+        post_image_dynamo.transact_add('pid1', crop=crop1),
+        post_image_dynamo.transact_add('pid2', crop=crop2),
+    ])
+
+    # check format first one
+    item = post_image_dynamo.get('pid1')
+    assert item['partitionKey'] == 'post/pid1'
+    assert item['crop'] == crop1
+
+    # check format second one
+    item = post_image_dynamo.get('pid2')
+    assert item['partitionKey'] == 'post/pid2'
+    assert item['crop'] == crop2
 
 
 def test_delete(post_image_dynamo):

@@ -505,6 +505,19 @@ input ImageInput {
   #   - by http PUTing image data to Post.imageUploadUrl, after creating the post OR
   #   - by including image data here, as a base64-encoded string (intended for small images)
   imageData: String
+
+  # Instruct the backend to crop off some of the image
+  crop: CropInput
+}
+
+input CropInput {
+  upperLeft: PointInput!
+  lowerRight: PointInput!
+}
+
+input PointInput {
+  x: Int!
+  y: Int!
 }
 
 type Color {

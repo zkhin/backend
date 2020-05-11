@@ -86,11 +86,24 @@ class PostManager:
             if set_as_user_photo:
                 raise exceptions.PostException('Cannot add text-only post with setAsUserPhoto')
 
-        if post_type == enums.PostType.VIDEO:
+        elif post_type == enums.PostType.VIDEO:
             if image_input:
                 raise exceptions.PostException('Cannot add video post with ImageInput')
             if set_as_user_photo:
                 raise exceptions.PostException('Cannot add video post with setAsUserPhoto')
+
+        elif post_type == enums.PostType.IMAGE:
+            if image_input and (crop := image_input.get('crop')):
+                for pt, coord in itertools.product(('upperLeft', 'lowerRight'), ('x', 'y')):
+                    if crop[pt][coord] < 0:
+                        raise exceptions.PostException(f'Image crop {pt}.{coord} cannot be negative')
+                for coord in ('x', 'y'):
+                    if crop['upperLeft'][coord] >= crop['lowerRight'][coord]:
+                        raise exceptions.PostException(
+                            f'Image crop lowerRight.{coord} must be strictly greater than upperLeft.{coord}',
+                        )
+        else:
+            raise Exception(f'Invalid PostType `{post_type}`')
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -119,8 +132,8 @@ class PostManager:
             # 'image_input' is straight from graphql, format dictated by schema
             image_input = image_input or {}
             transacts.append(self.image_dynamo.transact_add(
-                post_id, taken_in_real=image_input.get('takenInReal'),
-                original_format=image_input.get('originalFormat'), image_format=image_input.get('imageFormat'),
+                post_id, crop=image_input.get('crop'), image_format=image_input.get('imageFormat'),
+                original_format=image_input.get('originalFormat'), taken_in_real=image_input.get('takenInReal'),
             ))
             if original_metadata := image_input.get('originalMetadata'):
                 transacts.append(self.original_metadata_dynamo.transact_add(post_id, original_metadata))

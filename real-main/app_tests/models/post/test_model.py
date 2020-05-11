@@ -1,13 +1,11 @@
 import base64
 from decimal import Decimal
-from io import BytesIO
 import logging
 from os import path
 from unittest.mock import call, Mock
 import uuid
 
 import pendulum
-from PIL import Image
 import pytest
 
 from app.models import FollowedFirstStoryManager
@@ -110,32 +108,6 @@ def test_refresh_item(post):
     # now refresh the item, and check they now do match
     post.refresh_item()
     assert new_post_item == post.item
-
-
-def test_native_image_data(post, post_with_media):
-    # verify exists works for text post, image post
-    assert post.native_image_data
-    assert post_with_media.native_image_data
-
-    # verify raise exception for image post without item in s3
-    del post_with_media._native_image_data
-    path = post_with_media.get_image_path(image_size.NATIVE)
-    post_with_media.s3_uploads_client.delete_object(path)
-    with pytest.raises(post.exceptions.PostException, match='Native image data not found'):
-        post_with_media.native_image_data
-
-
-def test_p1080_image_data(post, post_with_media):
-    # verify works for text post
-    assert post.p1080_image_data
-    assert post_with_media.p1080_image_data
-
-    # verify raise exception for image post without item in s3
-    path = post_with_media.get_image_path(image_size.P1080)
-    del post_with_media._p1080_image_data
-    post_with_media.s3_uploads_client.delete_object(path)
-    with pytest.raises(post.exceptions.PostException, match='1080p image data not found'):
-        post_with_media.p1080_image_data
 
 
 def test_get_original_video_path(post):
@@ -370,7 +342,7 @@ def test_upload_native_image_data_base64(pending_image_post):
     post.item['postStatus'] = PostStatus.PROCESSING
 
     # check no data on post, nor in s3
-    assert not hasattr(post, '_native_image_data')
+    assert not hasattr(post, '_native_jpeg_data')
     with pytest.raises(post.s3_uploads_client.exceptions.NoSuchKey):
         assert post.s3_uploads_client.get_object_data_stream(native_path)
 
@@ -378,7 +350,7 @@ def test_upload_native_image_data_base64(pending_image_post):
     post.upload_native_image_data_base64(image_data_b64)
 
     # check it was placed in mem and in s3
-    assert post.native_image_data == image_data
+    assert post.native_jpeg_cache.get_fh().read() == image_data
     assert post.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
@@ -857,7 +829,7 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
     assert 'native.heic' in cloudfront_client.generate_presigned_url.call_args.args[0]
 
 
-def test_set_native_jpeg(pending_image_post, s3_uploads_client):
+def test_fill_native_jpeg_cache_from_heic(pending_image_post, s3_uploads_client):
     post = pending_image_post
 
     # put the heic image in the bucket
@@ -868,15 +840,16 @@ def test_set_native_jpeg(pending_image_post, s3_uploads_client):
     s3_jpeg_path = post.get_image_path(image_size.NATIVE)
     assert not s3_uploads_client.exists(s3_jpeg_path)
 
-    post.set_native_jpeg()
+    post.fill_native_jpeg_cache_from_heic()
 
-    # verify there is now a native jpeg, of the correct size
-    assert s3_uploads_client.exists(s3_jpeg_path)
-    image = Image.open(BytesIO(post.native_image_data))
-    assert image.size == (heic_width, heic_height)
+    # verify the jpeg cache is now full, of the correct size, and s3 has not been filled
+    assert not post.native_jpeg_cache.is_empty
+    assert post.native_jpeg_cache.is_dirty
+    assert post.native_jpeg_cache.get_image().size == (heic_width, heic_height)
+    assert not s3_uploads_client.exists(s3_jpeg_path)
 
 
-def test_set_native_jpeg_bad_heic_data(pending_image_post, s3_uploads_client):
+def test_fill_native_jpeg_cache_from_heic_bad_heic_data(pending_image_post, s3_uploads_client):
     post = pending_image_post
 
     # put some non-heic data in the heic spot
@@ -888,9 +861,10 @@ def test_set_native_jpeg_bad_heic_data(pending_image_post, s3_uploads_client):
     assert not s3_uploads_client.exists(s3_jpeg_path)
 
     with pytest.raises(post.exceptions.PostException, match='Unable to read HEIC'):
-        post.set_native_jpeg()
+        post.fill_native_jpeg_cache_from_heic()
 
     # verify there's still no native jpeg
+    assert post.native_jpeg_cache.is_empty
     assert not s3_uploads_client.exists(s3_jpeg_path)
 
 

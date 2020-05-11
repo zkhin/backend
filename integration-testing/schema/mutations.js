@@ -244,6 +244,7 @@ module.exports.addPost = gql`
     $sharingDisabled: Boolean,
     $verificationHidden: Boolean,
     $setAsUserPhoto: Boolean,
+    $crop: CropInput,
   ) {
     addPost (
       postId: $postId,
@@ -256,6 +257,7 @@ module.exports.addPost = gql`
         originalFormat: $originalFormat,
         originalMetadata: $originalMetadata,
         imageData: $imageData,
+        crop: $crop,
       },
       lifetime: $lifetime,
       commentsDisabled: $commentsDisabled,
@@ -272,6 +274,7 @@ module.exports.addPost = gql`
       verificationHidden
       image {
         url
+        url4k
       }
       imageUploadUrl
       videoUploadUrl
