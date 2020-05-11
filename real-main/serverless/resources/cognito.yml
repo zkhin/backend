@@ -164,6 +164,7 @@ Resources:
         - ALLOW_CUSTOM_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
       GenerateSecret: false
+      PreventUserExistenceErrors: LEGACY
 
   CognitoTestingUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -175,7 +176,7 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
       GenerateSecret: false
-      PreventUserExistenceErrors: ENABLED
+      PreventUserExistenceErrors: LEGACY
       SupportedIdentityProviders:
         - COGNITO
       CallbackURLs:
@@ -212,7 +213,7 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
       GenerateSecret: false
-      PreventUserExistenceErrors: ENABLED
+      PreventUserExistenceErrors: LEGACY
       SupportedIdentityProviders:
         - COGNITO
       CallbackURLs:
