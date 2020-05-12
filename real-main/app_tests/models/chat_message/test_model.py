@@ -65,8 +65,9 @@ def test_chat_message_edit(message, chat, user1, user2):
     assert 'lastEditedAt' not in message.item
 
     # check starting chat membership sort order state
-    assert chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
-    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
+    gsi_k2_sort_key = 'chat/' + message.item['createdAt']
+    assert chat.member_dynamo.get(chat.id, user1.id)['gsiK2SortKey'] == gsi_k2_sort_key
+    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == gsi_k2_sort_key
 
     # edit the message
     username = user1.item['username']
@@ -87,8 +88,10 @@ def test_chat_message_edit(message, chat, user1, user2):
     assert pendulum.parse(message.item['lastEditedAt']) == now
 
     # check final chat membership sort order state
-    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'][len('chat/'):]) == now
-    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'][len('chat/'):]) == now
+    membership_1 = chat.member_dynamo.get(chat.id, user1.id)
+    membership_2 = chat.member_dynamo.get(chat.id, user2.id)
+    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) == now
 
 
 def test_chat_message_delete(message, chat, user1, user2):
@@ -100,8 +103,9 @@ def test_chat_message_delete(message, chat, user1, user2):
     assert message.item
 
     # check starting chat membership sort order state
-    assert chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
-    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + message.item['createdAt']
+    gsi_k2_sort_key = 'chat/' + message.item['createdAt']
+    assert chat.member_dynamo.get(chat.id, user1.id)['gsiK2SortKey'] == gsi_k2_sort_key
+    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == gsi_k2_sort_key
 
     # delete the message
     now = pendulum.now('utc')
@@ -117,8 +121,10 @@ def test_chat_message_delete(message, chat, user1, user2):
     assert message.item is None
 
     # check final chat membership sort order state
-    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user1.id)['gsiK2SortKey'][len('chat/'):]) == now
-    assert pendulum.parse(chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'][len('chat/'):]) == now
+    membership_1 = chat.member_dynamo.get(chat.id, user1.id)
+    membership_2 = chat.member_dynamo.get(chat.id, user2.id)
+    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) == now
 
 
 def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, block_manager):

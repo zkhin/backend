@@ -5,7 +5,7 @@ import pendulum
 from app import models
 
 from . import enums, exceptions
-from .dynamo import ChatDynamo
+from .dynamo import ChatDynamo, ChatMemberDynamo
 from .model import Chat
 
 logger = logging.getLogger()
@@ -28,9 +28,10 @@ class ChatManager:
         self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = ChatDynamo(clients['dynamo'])
+            self.member_dynamo = ChatMemberDynamo(clients['dynamo'])
 
     def get_chat(self, chat_id, strongly_consistent=False):
-        item = self.dynamo.get_chat(chat_id, strongly_consistent=strongly_consistent)
+        item = self.dynamo.get(chat_id, strongly_consistent=strongly_consistent)
         return self.init_chat(item) if item else None
 
     def get_direct_chat(self, user_id_1, user_id_2):
@@ -39,11 +40,13 @@ class ChatManager:
 
     def init_chat(self, chat_item):
         kwargs = {
+            'dynamo': getattr(self, 'dynamo', None),
+            'member_dynamo': getattr(self, 'member_dynamo', None),
             'block_manager': self.block_manager,
             'chat_message_manager': self.chat_message_manager,
             'user_manager': self.user_manager,
         }
-        return Chat(chat_item, self.dynamo, **kwargs) if chat_item else None
+        return Chat(chat_item, **kwargs) if chat_item else None
 
     def add_direct_chat(self, chat_id, created_by_user_id, with_user_id, now=None):
         now = now or pendulum.now('utc')
@@ -65,11 +68,11 @@ class ChatManager:
             )
 
         transacts = [
-            self.dynamo.transact_add_chat(
+            self.dynamo.transact_add(
                 chat_id, enums.ChatType.DIRECT, created_by_user_id, with_user_id=with_user_id, now=now,
             ),
-            self.dynamo.transact_add_chat_membership(chat_id, created_by_user_id, now=now),
-            self.dynamo.transact_add_chat_membership(chat_id, with_user_id, now=now),
+            self.member_dynamo.transact_add(chat_id, created_by_user_id, now=now),
+            self.member_dynamo.transact_add(chat_id, with_user_id, now=now),
             self.user_manager.dynamo.transact_increment_chat_count(created_by_user_id),
             self.user_manager.dynamo.transact_increment_chat_count(with_user_id),
         ]
@@ -89,8 +92,8 @@ class ChatManager:
 
         # create the group chat with just caller in it
         transacts = [
-            self.dynamo.transact_add_chat(chat_id, enums.ChatType.GROUP, created_by_user.id, name=name, now=now),
-            self.dynamo.transact_add_chat_membership(chat_id, created_by_user.id, now=now),
+            self.dynamo.transact_add(chat_id, enums.ChatType.GROUP, created_by_user.id, name=name, now=now),
+            self.member_dynamo.transact_add(chat_id, created_by_user.id, now=now),
             self.user_manager.dynamo.transact_increment_chat_count(created_by_user.id),
         ]
         transact_exceptions = [
@@ -105,7 +108,7 @@ class ChatManager:
 
     def leave_all_chats(self, user_id):
         user = None
-        for chat_id in self.dynamo.generate_chat_membership_chat_ids_by_user(user_id):
+        for chat_id in self.member_dynamo.generate_chat_ids_by_user(user_id):
             chat = self.get_chat(chat_id)
             if not chat:
                 logger.warning(f'Unable to find chat `{chat_id}` that user `{user_id}` is member of, ignoring')

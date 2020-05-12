@@ -86,7 +86,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
 
     # check starting members
     assert group_chat.item['userCount'] == 1
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == [user1.id]
 
     # add user2 to the chat
@@ -95,7 +95,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     assert group_chat.item['userCount'] == 2
     group_chat.refresh_item()
     assert group_chat.item['userCount'] == 2
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert sorted(member_user_ids) == sorted([user1.id, user2.id])
     msg_mock = group_chat.chat_message_manager.add_system_message_added_to_group
     assert len(msg_mock.mock_calls) == 1
@@ -121,7 +121,7 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     assert group_chat.item['userCount'] == 4
     group_chat.refresh_item()
     assert group_chat.item['userCount'] == 4
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert sorted(member_user_ids) == sorted([user1.id, user2.id, user3.id, user4.id])
     msg_mock = group_chat.chat_message_manager.add_system_message_added_to_group
     assert len(msg_mock.mock_calls) == 1
@@ -144,20 +144,20 @@ def test_leave(group_chat, user1, user2):
 
     # check starting members
     assert group_chat.item['userCount'] == 1
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == [user1.id]
 
     # user1 adds user2 to the chat
     group_chat.add(user1, [user2.id])
     assert group_chat.item['userCount'] == 2
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert sorted(member_user_ids) == sorted([user1.id, user2.id])
 
     # user1 leaves the chat
     group_chat.chat_message_manager.reset_mock()
     group_chat.leave(user1)
     assert group_chat.item['userCount'] == 1
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == [user2.id]
     assert group_chat.chat_message_manager.mock_calls == [
         call.add_system_message_left_group(group_chat.id, user1)
@@ -169,7 +169,7 @@ def test_leave(group_chat, user1, user2):
     assert group_chat.item['userCount'] == 0
     group_chat.refresh_item()
     assert group_chat.item is None
-    member_user_ids = list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id))
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == []
     assert group_chat.chat_message_manager.mock_calls == [
         call.truncate_chat_messages(group_chat.id),
@@ -200,7 +200,7 @@ def test_delete_group_chat(group_chat, user1, chat_message_manager):
     group_chat.item['userCount'] -= 1
 
     # verify starting state
-    assert list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id)) == []
+    assert list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id)) == []
     message_items = list(chat_message_manager.dynamo.generate_chat_messages_by_chat(group_chat.id))
     assert len(message_items) == 3
     assert message_items[1]['messageId'] == message_id
@@ -209,8 +209,8 @@ def test_delete_group_chat(group_chat, user1, chat_message_manager):
     group_chat.delete_group_chat()
 
     # verify starting state
-    assert group_chat.dynamo.get_chat(group_chat.id) is None
-    assert list(group_chat.dynamo.generate_chat_membership_user_ids_by_chat(group_chat.id)) == []
+    assert group_chat.dynamo.get(group_chat.id) is None
+    assert list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id)) == []
     assert list(chat_message_manager.dynamo.generate_chat_messages_by_chat(group_chat.id)) == []
 
 
@@ -232,9 +232,9 @@ def test_delete_direct_chat(direct_chat, user1, user2):
     assert user2.item['chatCount'] == 1
 
     # verify we see the chat and chat_memberships in the DB
-    assert direct_chat.dynamo.get_chat(direct_chat.id)
-    assert direct_chat.dynamo.get_chat_membership(direct_chat.id, user1.id)
-    assert direct_chat.dynamo.get_chat_membership(direct_chat.id, user2.id)
+    assert direct_chat.dynamo.get(direct_chat.id)
+    assert direct_chat.member_dynamo.get(direct_chat.id, user1.id)
+    assert direct_chat.member_dynamo.get(direct_chat.id, user2.id)
 
     # delete the chat
     direct_chat.delete_direct_chat()
@@ -246,9 +246,9 @@ def test_delete_direct_chat(direct_chat, user1, user2):
     assert user2.item['chatCount'] == 0
 
     # verify we see the chat and chat_memberships have disapeared from DB
-    assert direct_chat.dynamo.get_chat(direct_chat.id) is None
-    assert direct_chat.dynamo.get_chat_membership(direct_chat.id, user1.id) is None
-    assert direct_chat.dynamo.get_chat_membership(direct_chat.id, user2.id) is None
+    assert direct_chat.dynamo.get(direct_chat.id) is None
+    assert direct_chat.member_dynamo.get(direct_chat.id, user1.id) is None
+    assert direct_chat.member_dynamo.get(direct_chat.id, user2.id) is None
 
 
 def test_cant_delete_direct_chat_non_direct_chat(group_chat):

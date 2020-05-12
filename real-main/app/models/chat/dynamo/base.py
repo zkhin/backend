@@ -3,7 +3,7 @@ import logging
 from boto3.dynamodb.conditions import Key
 import pendulum
 
-from .enums import ChatType
+from ..enums import ChatType
 
 logger = logging.getLogger()
 
@@ -13,17 +13,20 @@ class ChatDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def get_chat(self, chat_id, strongly_consistent=False):
-        return self.client.get_item({
+    def pk(self, chat_id):
+        return {
             'partitionKey': f'chat/{chat_id}',
             'sortKey': '-',
-        }, ConsistentRead=strongly_consistent)
+        }
 
-    def get_chat_membership(self, chat_id, user_id, strongly_consistent=False):
-        return self.client.get_item({
-            'partitionKey': f'chat/{chat_id}',
-            'sortKey': f'member/{user_id}',
-        }, ConsistentRead=strongly_consistent)
+    def typed_pk(self, chat_id):
+        return {
+            'partitionKey': {'S': f'chat/{chat_id}'},
+            'sortKey': {'S': '-'},
+        }
+
+    def get(self, chat_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(chat_id), ConsistentRead=strongly_consistent)
 
     def get_direct_chat(self, user_id_1, user_id_2):
         user_ids = sorted([user_id_1, user_id_2])
@@ -33,7 +36,7 @@ class ChatDynamo:
         }
         return self.client.query_head(query_kwargs)
 
-    def transact_add_chat(self, chat_id, chat_type, created_by_user_id, with_user_id=None, name=None, now=None):
+    def transact_add(self, chat_id, chat_type, created_by_user_id, with_user_id=None, name=None, now=None):
         # with_user_id parameter is required for direct chats, forbidden for group
         if (chat_type == ChatType.DIRECT):
             assert with_user_id, 'DIRECT chats require with_user_id kwarg'
@@ -68,10 +71,7 @@ class ChatDynamo:
     def update_name(self, chat_id, name):
         "Set `name` to empty string to delete"
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'chat/{chat_id}',
-                'sortKey': '-',
-            },
+            'Key': self.pk(chat_id),
             'ExpressionAttributeNames': {'#name': 'name'},
         }
         if name:
@@ -81,12 +81,9 @@ class ChatDynamo:
             query_kwargs['UpdateExpression'] = 'REMOVE #name'
         return self.client.update_item(query_kwargs)
 
-    def transact_delete_chat(self, chat_id, expected_user_count=None):
+    def transact_delete(self, chat_id, expected_user_count=None):
         query_kwargs = {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(chat_id),
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
         if expected_user_count is not None:
@@ -94,37 +91,9 @@ class ChatDynamo:
             query_kwargs['Delete']['ExpressionAttributeValues'] = {':uc': {'N': str(expected_user_count)}}
         return query_kwargs
 
-    def transact_add_chat_membership(self, chat_id, user_id, now=None):
-        now = now or pendulum.now('utc')
-        joined_at_str = now.to_iso8601_string()
-        return {'Put': {
-            'Item': {
-                'schemaVersion': {'N': '0'},
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': f'member/{user_id}'},
-                'gsiK1PartitionKey': {'S': f'chat/{chat_id}'},
-                'gsiK1SortKey': {'S': f'member/{joined_at_str}'},
-                'gsiK2PartitionKey': {'S': f'member/{user_id}'},
-                'gsiK2SortKey': {'S': f'chat/{joined_at_str}'},  # actually tracks lastMessageActivityAt
-            },
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-        }}
-
-    def transact_delete_chat_membership(self, chat_id, user_id):
-        return {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': f'member/{user_id}'},
-            },
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }}
-
-    def transact_increment_chat_user_count(self, chat_id):
+    def transact_increment_user_count(self, chat_id):
         return {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(chat_id),
             'UpdateExpression': 'ADD userCount :one',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},
@@ -132,12 +101,9 @@ class ChatDynamo:
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
-    def transact_decrement_chat_user_count(self, chat_id):
+    def transact_decrement_user_count(self, chat_id):
         return {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(chat_id),
             'UpdateExpression': 'ADD userCount :negOne',
             'ExpressionAttributeValues': {
                 ':negOne': {'N': '-1'},
@@ -148,10 +114,7 @@ class ChatDynamo:
 
     def transact_register_chat_message_added(self, chat_id, now):
         return {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(chat_id),
             'UpdateExpression': 'ADD messageCount :one SET lastMessageActivityAt = :at',
             'ExpressionAttributeValues': {
                 ':one': {'N': '1'},
@@ -162,10 +125,7 @@ class ChatDynamo:
 
     def transact_register_chat_message_edited(self, chat_id, now):
         return {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(chat_id),
             'UpdateExpression': 'SET lastMessageActivityAt = :at',
             'ExpressionAttributeValues': {
                 ':at': {'S': now.to_iso8601_string()}
@@ -175,10 +135,7 @@ class ChatDynamo:
 
     def transact_register_chat_message_deleted(self, chat_id, now):
         return {'Update': {
-            'Key': {
-                'partitionKey': {'S': f'chat/{chat_id}'},
-                'sortKey': {'S': '-'},
-            },
+            'Key': self.typed_pk(chat_id),
             'UpdateExpression': 'ADD messageCount :negOne SET lastMessageActivityAt = :at',
             'ExpressionAttributeValues': {
                 ':negOne': {'N': '-1'},
@@ -187,48 +144,3 @@ class ChatDynamo:
             },
             'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
         }}
-
-    def update_all_chat_memberships_last_message_activity_at(self, chat_id, now):
-        # Note that dynamo has no support for batch updates.
-        # This update will need to be made async at some scale (chats with 1000+ members?)
-        for user_id in self.generate_chat_membership_user_ids_by_chat(chat_id):
-            self.update_chat_membership_last_message_activity_at(chat_id, user_id, now)
-
-    def update_chat_membership_last_message_activity_at(self, chat_id, user_id, now):
-        query_kwargs = {
-            'Key': {
-                'partitionKey': f'chat/{chat_id}',
-                'sortKey': f'member/{user_id}',
-            },
-            'UpdateExpression': 'SET gsiK2SortKey = :gsik2sk',
-            'ExpressionAttributeValues': {
-                ':gsik2sk': 'chat/' + now.to_iso8601_string(),
-            },
-        }
-        return self.client.update_item(query_kwargs)
-
-    def generate_chat_membership_user_ids_by_chat(self, chat_id):
-        query_kwargs = {
-            'KeyConditionExpression': (
-                Key('gsiK1PartitionKey').eq(f'chat/{chat_id}')
-                & Key('gsiK1SortKey').begins_with('member/')
-            ),
-            'IndexName': 'GSI-K1',
-        }
-        return map(
-            lambda item: item['sortKey'][len('member/'):],
-            self.client.generate_all_query(query_kwargs),
-        )
-
-    def generate_chat_membership_chat_ids_by_user(self, user_id):
-        query_kwargs = {
-            'KeyConditionExpression': (
-                Key('gsiK2PartitionKey').eq(f'member/{user_id}')
-                & Key('gsiK2SortKey').begins_with('chat/')
-            ),
-            'IndexName': 'GSI-K2',
-        }
-        return map(
-            lambda item: item['partitionKey'][len('chat/'):],
-            self.client.generate_all_query(query_kwargs),
-        )

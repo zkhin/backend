@@ -31,8 +31,9 @@ def test_add_chat_message(chat_message_manager, user, chat, user2, user3):
     assert 'lastMessageActivityAt' not in chat.item
 
     # check the chat memberships start off with correct lastMessageActivityAt
-    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + chat.item['createdAt']
-    assert chat.dynamo.get_chat_membership(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + chat.item['createdAt']
+    gsi_k2_sort_key = 'chat/' + chat.item['createdAt']
+    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == gsi_k2_sort_key
+    assert chat.member_dynamo.get(chat.id, user3.id)['gsiK2SortKey'] == gsi_k2_sort_key
 
     # add the message, check it looks ok
     now = pendulum.now('utc')
@@ -50,8 +51,8 @@ def test_add_chat_message(chat_message_manager, user, chat, user2, user3):
     assert chat.item['lastMessageActivityAt'] == now_str
 
     # check the chat memberships lastMessageActivityAt was updated
-    assert chat.dynamo.get_chat_membership(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + now_str
-    assert chat.dynamo.get_chat_membership(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + now_str
+    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + now_str
+    assert chat.member_dynamo.get(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + now_str
 
 
 def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):

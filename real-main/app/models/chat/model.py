@@ -12,26 +12,31 @@ class Chat:
     enums = enums
     exceptions = exceptions
 
-    def __init__(self, item, chat_dynamo, block_manager=None, chat_message_manager=None, user_manager=None):
-        self.dynamo = chat_dynamo
-        self.item = item
+    def __init__(self, item, dynamo=None, member_dynamo=None, block_manager=None, chat_message_manager=None,
+                 user_manager=None):
+        if dynamo:
+            self.dynamo = dynamo
+        if member_dynamo:
+            self.member_dynamo = member_dynamo
         if block_manager:
             self.block_manager = block_manager
         if chat_message_manager:
             self.chat_message_manager = chat_message_manager
         if user_manager:
             self.user_manager = user_manager
+
+        self.item = item
         # immutables
         self.id = item['chatId']
         self.type = self.item['chatType']
         self.created_by_user_id = item['createdByUserId']
 
     def refresh_item(self, strongly_consistent=False):
-        self.item = self.dynamo.get_chat(self.id, strongly_consistent=strongly_consistent)
+        self.item = self.dynamo.get(self.id, strongly_consistent=strongly_consistent)
         return self
 
     def is_member(self, user_id):
-        return bool(self.dynamo.get_chat_membership(self.id, user_id))
+        return bool(self.member_dynamo.get(self.id, user_id))
 
     def edit(self, edited_by_user, name=None):
         if self.type != enums.ChatType.GROUP:
@@ -68,8 +73,8 @@ class Chat:
                     continue  # can't add a user who is blocking you
 
             transacts = [
-                self.dynamo.transact_add_chat_membership(self.id, user_id, now=now),
-                self.dynamo.transact_increment_chat_user_count(self.id),
+                self.member_dynamo.transact_add(self.id, user_id, now=now),
+                self.dynamo.transact_increment_user_count(self.id),
                 self.user_manager.dynamo.transact_increment_chat_count(user_id),
             ]
             transact_exceptions = [
@@ -96,8 +101,8 @@ class Chat:
 
         # leave the chat
         transacts = [
-            self.dynamo.transact_delete_chat_membership(self.id, user.id),
-            self.dynamo.transact_decrement_chat_user_count(self.id),
+            self.member_dynamo.transact_delete(self.id, user.id),
+            self.dynamo.transact_decrement_user_count(self.id),
             self.user_manager.dynamo.transact_decrement_chat_count(user.id),
         ]
         transact_exceptions = [
@@ -120,7 +125,7 @@ class Chat:
     def delete_group_chat(self):
         assert self.type == enums.ChatType.GROUP, 'may not be called for non-GROUP chats'
 
-        transacts = [self.dynamo.transact_delete_chat(self.id, expected_user_count=0)]
+        transacts = [self.dynamo.transact_delete(self.id, expected_user_count=0)]
         self.dynamo.client.transact_write_items(transacts)
         self.chat_message_manager.truncate_chat_messages(self.id)
 
@@ -130,9 +135,9 @@ class Chat:
 
         # first delete the chat and the memberships (so the chat never appears with no messages)
         transacts = [
-            self.dynamo.transact_delete_chat(self.id, expected_user_count=2),
-            self.dynamo.transact_delete_chat_membership(self.id, user_id_1),
-            self.dynamo.transact_delete_chat_membership(self.id, user_id_2),
+            self.dynamo.transact_delete(self.id, expected_user_count=2),
+            self.member_dynamo.transact_delete(self.id, user_id_1),
+            self.member_dynamo.transact_delete(self.id, user_id_2),
             self.user_manager.dynamo.transact_decrement_chat_count(user_id_1),
             self.user_manager.dynamo.transact_decrement_chat_count(user_id_2),
         ]
