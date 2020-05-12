@@ -84,15 +84,21 @@ class Post:
         if self.type == PostType.TEXT_ONLY:
             def upstream_source(dims):
                 return generate_text_image(self.item['text'], dims)
-            self.k4_jpeg_cache = CachedImage(self, image_size.K4, source=upstream_source)
-            self.p1080_jpeg_cache = CachedImage(self, image_size.P1080, source=upstream_source)
+            self.k4_jpeg_cache = CachedImage(self.id, image_size.K4, source=upstream_source)
+            self.p1080_jpeg_cache = CachedImage(self.id, image_size.P1080, source=upstream_source)
         else:
-            self.native_heic_cache = CachedImage(self, image_size.NATIVE_HEIC)
-            self.native_jpeg_cache = CachedImage(self, image_size.NATIVE)
-            self.k4_jpeg_cache = CachedImage(self, image_size.K4)
-            self.p1080_jpeg_cache = CachedImage(self, image_size.P1080)
-            self.p480_jpeg_cache = CachedImage(self, image_size.P480)
-            self.p64_jpeg_cache = CachedImage(self, image_size.P64)
+            self.native_heic_cache = CachedImage(self.id, image_size.NATIVE_HEIC, s3_client=s3_uploads_client,
+                                                 s3_path=self.get_image_path(image_size.NATIVE_HEIC))
+            self.native_jpeg_cache = CachedImage(self.id, image_size.NATIVE, s3_client=s3_uploads_client,
+                                                 s3_path=self.get_image_path(image_size.NATIVE))
+            self.k4_jpeg_cache = CachedImage(self.id, image_size.K4, s3_client=s3_uploads_client,
+                                             s3_path=self.get_image_path(image_size.K4))
+            self.p1080_jpeg_cache = CachedImage(self.id, image_size.P1080, s3_client=s3_uploads_client,
+                                                s3_path=self.get_image_path(image_size.P1080))
+            self.p480_jpeg_cache = CachedImage(self.id, image_size.P480, s3_client=s3_uploads_client,
+                                               s3_path=self.get_image_path(image_size.P480))
+            self.p64_jpeg_cache = CachedImage(self.id, image_size.P64, s3_client=s3_uploads_client,
+                                              s3_path=self.get_image_path(image_size.P64))
 
     @property
     def status(self):

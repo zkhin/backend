@@ -13,12 +13,13 @@ class CachedImage:
     jpeg_content_type = 'image/jpeg'
     heic_content_type = 'image/heic'
 
-    def __init__(self, post, image_size, source=None):
-        self.post = post
-        if hasattr(post, 's3_uploads_client'):
-            self.s3_client = post.s3_uploads_client
-        self.s3_path = post.get_image_path(image_size)
+    def __init__(self, post_id, image_size, s3_client=None, s3_path=None, source=None):
+        assert (s3_client and s3_path) or source, 'Either s3 kwargs or source required'
+
+        self.post_id = post_id
         self.image_size = image_size
+        self.s3_client = s3_client
+        self.s3_path = s3_path
         self.source = source
 
         self.is_synced = None
@@ -44,7 +45,7 @@ class CachedImage:
             try:
                 heif_file = pyheif.read_heif(fh)
             except pyheif.error.HeifError as err:
-                raise PostException(f'Unable to read HEIC file for post `{self.post.id}`: {err}')
+                raise PostException(f'Unable to read HEIC file for post `{self.post_id}`: {err}')
             return Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
 
         else:
@@ -53,7 +54,7 @@ class CachedImage:
             except PostException:
                 raise
             except Exception as err:
-                raise PostException(f'Unable to decode native jpeg data for post `{self.post.id}`: {err}')
+                raise PostException(f'Unable to decode native jpeg data for post `{self.post_id}`: {err}')
 
     def refresh(self):
         if self.source:
@@ -62,7 +63,7 @@ class CachedImage:
             try:
                 fh = self.s3_client.get_object_data_stream(self.s3_path)
             except self.s3_client.exceptions.NoSuchKey:
-                raise PostException(f'{self.image_size.filename} image data not found for post `{self.post.id}`')
+                raise PostException(f'{self.image_size.filename} image data not found for post `{self.post_id}`')
 
         self._data = fh.read()
         self.is_synced = True
@@ -85,7 +86,7 @@ class CachedImage:
             try:
                 image.save(fh, **kwargs)
             except Exception as err:
-                raise PostException(f'Unable to save pil image for post `{self.post.id}`: {err}')
+                raise PostException(f'Unable to save pil image for post `{self.post_id}`: {err}')
 
         fh.seek(0)
         self.is_synced = False

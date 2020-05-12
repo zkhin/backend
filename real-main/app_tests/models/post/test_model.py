@@ -119,7 +119,7 @@ def test_get_original_video_path(post):
     assert video_path == f'{user_id}/post/{post_id}/video-original.mov'
 
 
-def test_get_video_writeonly_url(cloudfront_client):
+def test_get_video_writeonly_url(cloudfront_client, s3_uploads_client):
     item = {
         'postedByUserId': 'user-id',
         'postId': 'post-id',
@@ -131,7 +131,7 @@ def test_get_video_writeonly_url(cloudfront_client):
         'generate_presigned_url.return_value': expected_url,
     })
 
-    post = Post(item, cloudfront_client=cloudfront_client)
+    post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     url = post.get_video_writeonly_url()
     assert url == expected_url
 
@@ -139,7 +139,7 @@ def test_get_video_writeonly_url(cloudfront_client):
     assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['PUT'])]
 
 
-def test_get_image_readonly_url(cloudfront_client):
+def test_get_image_readonly_url(cloudfront_client, s3_uploads_client):
     item = {
         'postedByUserId': 'user-id',
         'postId': 'post-id',
@@ -151,7 +151,7 @@ def test_get_image_readonly_url(cloudfront_client):
         'generate_presigned_url.return_value': expected_url,
     })
 
-    post = Post(item, cloudfront_client=cloudfront_client)
+    post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     url = post.get_image_readonly_url(image_size.NATIVE)
     assert url == expected_url
 
@@ -159,7 +159,7 @@ def test_get_image_readonly_url(cloudfront_client):
     assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['GET', 'HEAD'])]
 
 
-def test_get_hls_access_cookies(cloudfront_client):
+def test_get_hls_access_cookies(cloudfront_client, s3_uploads_client):
     user_id = 'uid'
     post_id = 'pid'
     item = {
@@ -181,7 +181,7 @@ def test_get_hls_access_cookies(cloudfront_client):
         'domain': domain,
     })
 
-    post = Post(item, cloudfront_client=cloudfront_client)
+    post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     access_cookies = post.get_hls_access_cookies()
 
     assert access_cookies == {
