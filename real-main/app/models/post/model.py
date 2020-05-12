@@ -12,6 +12,7 @@ from app.utils import image_size
 from . import enums, exceptions
 from .cached_image import CachedImage
 from .enums import PostStatus, PostType, PostNotificationType
+from .text_image import generate_text_image
 
 logger = logging.getLogger()
 
@@ -80,12 +81,18 @@ class Post:
         self.user_id = item['postedByUserId']
 
         # lazy caches
-        self.native_heic_cache = CachedImage(self, image_size.NATIVE_HEIC)
-        self.native_jpeg_cache = CachedImage(self, image_size.NATIVE)
-        self.k4_jpeg_cache = CachedImage(self, image_size.K4)
-        self.p1080_jpeg_cache = CachedImage(self, image_size.P1080)
-        self.p480_jpeg_cache = CachedImage(self, image_size.P480)
-        self.p64_jpeg_cache = CachedImage(self, image_size.P64)
+        if self.type == PostType.TEXT_ONLY:
+            def upstream_source(dims):
+                return generate_text_image(self.item['text'], dims)
+            self.k4_jpeg_cache = CachedImage(self, image_size.K4, source=upstream_source)
+            self.p1080_jpeg_cache = CachedImage(self, image_size.P1080, source=upstream_source)
+        else:
+            self.native_heic_cache = CachedImage(self, image_size.NATIVE_HEIC)
+            self.native_jpeg_cache = CachedImage(self, image_size.NATIVE)
+            self.k4_jpeg_cache = CachedImage(self, image_size.K4)
+            self.p1080_jpeg_cache = CachedImage(self, image_size.P1080)
+            self.p480_jpeg_cache = CachedImage(self, image_size.P480)
+            self.p64_jpeg_cache = CachedImage(self, image_size.P64)
 
     @property
     def status(self):
@@ -213,7 +220,12 @@ class Post:
             self.fill_native_jpeg_cache_from_heic()
         if self.image_item.get('crop'):
             self.crop_native_jpeg_cache()
-        self.native_jpeg_cache.flush()
+        if self.native_jpeg_cache.is_synced is False:
+            self.native_jpeg_cache.flush()
+
+        if self.image_item.get('imageFormat') == 'HEIC':
+            self.native_heic_cache.clear()
+            self.native_heic_cache.flush(include_deletes=True)
 
         self.build_image_thumbnails()
         self.set_height_and_width()

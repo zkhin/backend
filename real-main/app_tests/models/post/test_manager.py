@@ -186,6 +186,7 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant
     post.refresh_item()
     image_path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(image_path, grant_data, 'image/jpeg')
+    post.build_image_thumbnails()
     post.complete()
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3SortKey'] == 0   # album rank

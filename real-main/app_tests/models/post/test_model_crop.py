@@ -132,4 +132,4 @@ def test_cached_native_jpeg_cache_dirty_after_crop(user, jpeg_image_post, s3_upl
     # crop the image, check there is no cached data right after
     jpeg_image_post.image_item['crop'] = {'upperLeft': {'x': 8, 'y': 8}, 'lowerRight': {'x': 64, 'y': 64}}
     jpeg_image_post.crop_native_jpeg_cache()
-    assert jpeg_image_post.native_jpeg_cache.is_dirty
+    assert not jpeg_image_post.native_jpeg_cache.is_synced

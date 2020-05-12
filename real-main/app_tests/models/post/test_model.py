@@ -77,6 +77,7 @@ def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
 def completed_video_post(processing_video_post):
     # Note: lacks the actual video files
     post = processing_video_post
+    post.build_image_thumbnails()
     post.complete()
     yield post
 
@@ -843,7 +844,7 @@ def test_fill_native_jpeg_cache_from_heic(pending_image_post, s3_uploads_client)
 
     # verify the jpeg cache is now full, of the correct size, and s3 has not been filled
     assert not post.native_jpeg_cache.is_empty
-    assert post.native_jpeg_cache.is_dirty
+    assert not post.native_jpeg_cache.is_synced
     assert post.native_jpeg_cache.get_image().size == (heic_width, heic_height)
     assert not s3_uploads_client.exists(s3_jpeg_path)
 

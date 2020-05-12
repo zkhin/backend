@@ -5,6 +5,7 @@ import pytest
 
 from app.models.post.exceptions import PostException
 from app.models.post.enums import PostStatus, PostType
+from app.utils import image_size
 
 
 @pytest.fixture
@@ -47,95 +48,119 @@ def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
 
 
-def test_process_image_upload_success_jpeg(pending_post):
-    assert pending_post.item['postStatus'] == PostStatus.PENDING
-    assert 'imageFormat' not in pending_post.image_item
+def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, grant_data):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    assert 'imageFormat' not in post.image_item
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(native_path, grant_data, 'image/jpeg')
 
     # mock out a bunch of methods
-    pending_post.fill_native_jpeg_cache_from_heic = Mock()
-    pending_post.crop_native_jpeg_cache = Mock()
-    pending_post.native_jpeg_cache.flush = Mock()
-    pending_post.build_image_thumbnails = Mock()
-    pending_post.set_height_and_width = Mock()
-    pending_post.set_colors = Mock()
-    pending_post.set_is_verified = Mock()
-    pending_post.set_checksum = Mock()
-    pending_post.complete = Mock()
+    post.fill_native_jpeg_cache_from_heic = Mock(wraps=post.fill_native_jpeg_cache_from_heic)
+    post.crop_native_jpeg_cache = Mock(wraps=post.crop_native_jpeg_cache)
+    post.native_jpeg_cache.flush = Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = Mock(wraps=post.set_height_and_width)
+    post.set_colors = Mock(wraps=post.set_colors)
+    post.set_is_verified = Mock(wraps=post.set_is_verified)
+    post.set_checksum = Mock(wraps=post.set_checksum)
+    post.complete = Mock(wraps=post.complete)
 
     now = pendulum.now('utc')
-    pending_post.process_image_upload(now=now)
+    post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert pending_post.fill_native_jpeg_cache_from_heic.mock_calls == []
-    assert pending_post.crop_native_jpeg_cache.mock_calls == []
-    assert pending_post.native_jpeg_cache.flush.mock_calls == [call()]
-    assert pending_post.build_image_thumbnails.mock_calls == [call()]
-    assert pending_post.set_height_and_width.mock_calls == [call()]
-    assert pending_post.set_colors.mock_calls == [call()]
-    assert pending_post.set_is_verified.mock_calls == [call()]
-    assert pending_post.set_checksum.mock_calls == [call()]
-    assert pending_post.complete.mock_calls == [call(now=now)]
+    assert post.fill_native_jpeg_cache_from_heic.mock_calls == []
+    assert post.crop_native_jpeg_cache.mock_calls == []
+    assert post.native_jpeg_cache.flush.mock_calls == []
+    assert post.build_image_thumbnails.mock_calls == [call()]
+    assert post.set_height_and_width.mock_calls == [call()]
+    assert post.set_colors.mock_calls == [call()]
+    assert post.set_is_verified.mock_calls == [call()]
+    assert post.set_checksum.mock_calls == [call()]
+    assert post.complete.mock_calls == [call(now=now)]
 
-    assert pending_post.item['postStatus'] == PostStatus.PROCESSING  # we mocked out the call to complete()
-    pending_post.refresh_item()
-    assert pending_post.item['postStatus'] == PostStatus.PROCESSING  # we mocked out the call to complete()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    post.refresh_item()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
 
 
-def test_process_image_upload_success_heic(pending_post):
-    assert pending_post.item['postStatus'] == PostStatus.PENDING
-    pending_post.image_item['imageFormat'] = 'HEIC'
+def test_process_image_upload_with_crop(pending_post, s3_uploads_client, grant_data):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    post.image_item['crop'] = {'upperLeft': {'x': 4, 'y': 2}, 'lowerRight': {'x': 102, 'y': 104}}
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE)
+    s3_uploads_client.put_object(native_path, grant_data, 'image/jpeg')
 
     # mock out a bunch of methods
-    pending_post.fill_native_jpeg_cache_from_heic = Mock()
-    pending_post.crop_native_jpeg_cache = Mock()
-    pending_post.native_jpeg_cache.flush = Mock()
-    pending_post.build_image_thumbnails = Mock()
-    pending_post.set_height_and_width = Mock()
-    pending_post.set_colors = Mock()
-    pending_post.set_is_verified = Mock()
-    pending_post.set_checksum = Mock()
-    pending_post.complete = Mock()
+    post.fill_native_jpeg_cache_from_heic = Mock(wraps=post.fill_native_jpeg_cache_from_heic)
+    post.crop_native_jpeg_cache = Mock(wraps=post.crop_native_jpeg_cache)
+    post.native_jpeg_cache.flush = Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = Mock(wraps=post.set_height_and_width)
+    post.set_colors = Mock(wraps=post.set_colors)
+    post.set_is_verified = Mock(wraps=post.set_is_verified)
+    post.set_checksum = Mock(wraps=post.set_checksum)
+    post.complete = Mock(wraps=post.complete)
 
     now = pendulum.now('utc')
-    pending_post.process_image_upload(now=now)
+    post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert pending_post.fill_native_jpeg_cache_from_heic.mock_calls == [call()]
-    assert pending_post.crop_native_jpeg_cache.mock_calls == []
-    assert pending_post.native_jpeg_cache.flush.mock_calls == [call()]
-    assert pending_post.build_image_thumbnails.mock_calls == [call()]
-    assert pending_post.set_height_and_width.mock_calls == [call()]
-    assert pending_post.set_colors.mock_calls == [call()]
-    assert pending_post.set_is_verified.mock_calls == [call()]
-    assert pending_post.set_checksum.mock_calls == [call()]
-    assert pending_post.complete.mock_calls == [call(now=now)]
+    assert post.fill_native_jpeg_cache_from_heic.mock_calls == []
+    assert post.crop_native_jpeg_cache.mock_calls == [call()]
+    assert post.native_jpeg_cache.flush.mock_calls == [call()]
+    assert post.build_image_thumbnails.mock_calls == [call()]
+    assert post.set_height_and_width.mock_calls == [call()]
+    assert post.set_colors.mock_calls == [call()]
+    assert post.set_is_verified.mock_calls == [call()]
+    assert post.set_checksum.mock_calls == [call()]
+    assert post.complete.mock_calls == [call(now=now)]
+
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    post.refresh_item()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
 
 
-def test_process_image_upload_with_crop(pending_post):
-    assert pending_post.item['postStatus'] == PostStatus.PENDING
-    pending_post.image_item['crop'] = 'not none'
+def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_client, heic_data):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    post.image_item['imageFormat'] = 'HEIC'
+    post.image_item['crop'] = {'upperLeft': {'x': 4, 'y': 2}, 'lowerRight': {'x': 102, 'y': 104}}
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
 
     # mock out a bunch of methods
-    pending_post.fill_native_jpeg_cache_from_heic = Mock()
-    pending_post.crop_native_jpeg_cache = Mock()
-    pending_post.native_jpeg_cache.flush = Mock()
-    pending_post.build_image_thumbnails = Mock()
-    pending_post.set_height_and_width = Mock()
-    pending_post.set_colors = Mock()
-    pending_post.set_is_verified = Mock()
-    pending_post.set_checksum = Mock()
-    pending_post.complete = Mock()
+    post.fill_native_jpeg_cache_from_heic = Mock(wraps=post.fill_native_jpeg_cache_from_heic)
+    post.crop_native_jpeg_cache = Mock(wraps=post.crop_native_jpeg_cache)
+    post.native_jpeg_cache.flush = Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = Mock(wraps=post.set_height_and_width)
+    post.set_colors = Mock(wraps=post.set_colors)
+    post.set_is_verified = Mock(wraps=post.set_is_verified)
+    post.set_checksum = Mock(wraps=post.set_checksum)
+    post.complete = Mock(wraps=post.complete)
 
     now = pendulum.now('utc')
-    pending_post.process_image_upload(now=now)
+    post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert pending_post.fill_native_jpeg_cache_from_heic.mock_calls == []
-    assert pending_post.crop_native_jpeg_cache.mock_calls == [call()]
-    assert pending_post.native_jpeg_cache.flush.mock_calls == [call()]
-    assert pending_post.build_image_thumbnails.mock_calls == [call()]
-    assert pending_post.set_height_and_width.mock_calls == [call()]
-    assert pending_post.set_colors.mock_calls == [call()]
-    assert pending_post.set_is_verified.mock_calls == [call()]
-    assert pending_post.set_checksum.mock_calls == [call()]
-    assert pending_post.complete.mock_calls == [call(now=now)]
+    assert post.fill_native_jpeg_cache_from_heic.mock_calls == [call()]
+    assert post.crop_native_jpeg_cache.mock_calls == [call()]
+    assert post.native_jpeg_cache.flush.mock_calls == [call()]
+    assert post.build_image_thumbnails.mock_calls == [call()]
+    assert post.set_height_and_width.mock_calls == [call()]
+    assert post.set_colors.mock_calls == [call()]
+    assert post.set_is_verified.mock_calls == [call()]
+    assert post.set_checksum.mock_calls == [call()]
+    assert post.complete.mock_calls == [call(now=now)]
+
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    post.refresh_item()
+    assert post.item['postStatus'] == PostStatus.COMPLETED

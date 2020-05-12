@@ -154,7 +154,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.item['gsiK3SortKey'] == -1
 
     # put image out in mocked s3 for the post, so album art can be generated
-    path = post.get_image_path(image_size.NATIVE)
+    path = post.get_image_path(image_size.K4)
     post_manager.clients['s3_uploads'].put_object(path, image_data, 'application/octet-stream')
 
     # mock out some calls to far-flung other managers

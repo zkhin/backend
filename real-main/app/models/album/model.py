@@ -123,7 +123,7 @@ class Album:
         if len(posts) == 0:
             new_native_buf = None
         elif len(posts) == 1:
-            new_native_buf = posts[0].native_jpeg_cache.get_fh()
+            new_native_buf = posts[0].k4_jpeg_cache.get_fh()
         else:
             image_data_buffers = [post.p1080_jpeg_cache.get_fh() for post in posts]
             new_native_buf = art.generate_zoomed_grid(image_data_buffers)
