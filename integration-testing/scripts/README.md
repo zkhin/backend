@@ -9,14 +9,14 @@ The scripts require a number of access keys and IDs of the target AWS environmen
 ```sh
 # beta
 AWS_REGION=us-east-1
-APPSYNC_API_URL=https://somethingsomething
+APPSYNC_GRAPHQL_URL=https://somethingsomething
 COGNITO_TESTING_CLIENT_ID=something
 COGNITO_IDENTITY_POOL_ID=something
 COGNITO_USER_POOL_ID=something
 
 # production
 # AWS_REGION=us-east-1
-# APPSYNC_API_URL=https://somethingelsesomethingelse
+# APPSYNC_GRAPHQL_URL=https://somethingelsesomethingelse
 # COGNITO_TESTING_CLIENT_ID=somethingelse
 # COGNITO_IDENTITY_POOL_ID=somethingelse
 # COGNITO_USER_POOL_ID=somethingelse

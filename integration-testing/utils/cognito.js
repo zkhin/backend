@@ -24,8 +24,8 @@ if (cognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIE
 const awsRegion = process.env.AWS_REGION
 if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
 
-const appsyncApiUrl = process.env.APPSYNC_API_URL
-if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_API_URL must be defined')
+const appsyncApiUrl = process.env.APPSYNC_GRAPHQL_URL
+if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_GRAPHQL_URL must be defined')
 
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')

@@ -28,8 +28,8 @@ if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL
 const userPoolId = process.env.COGNITO_USER_POOL_ID
 if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must be defined')
 
-const appsyncApiUrl = process.env.APPSYNC_API_URL
-if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_API_URL must be defined')
+const appsyncApiUrl = process.env.APPSYNC_GRAPHQL_URL
+if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_GRAPHQL_URL must be defined')
 
 
 const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
