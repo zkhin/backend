@@ -60,7 +60,7 @@ def custom_message(event, context):
     if event['triggerSource'] == 'CustomMessage_SignUp':
         username = event['userName']
         code = event['request']['codeParameter']
-        deepurl = f'real.app://Auth?action=signupConfirm&username={username}&confirmationCode={code}'
+        deepurl = f'real.app://email/confirm/{username}/{code}'
         event['response']['smsMessage'] = f'Welcome to REAL. Your confirmation code is {code}'
         event['response']['emailSubject'] = 'Welcome to REAL'
         event['response']['emailMessage'] = (
