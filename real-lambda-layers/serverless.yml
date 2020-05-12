@@ -32,8 +32,7 @@ resources:
   Outputs:
 
     PythonRequirementsLambdaLayer:
-      Value:
-        Ref: PythonRequirementsLambdaLayer
+      Value: !Ref PythonRequirementsLambdaLayer
 
     GitBranch:
       Value: ${git:branch}

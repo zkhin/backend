@@ -12,7 +12,7 @@ Resources:
       DatapointsToAlarm: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
-        - Ref: AwsAlertsAlarm
+        - !Ref AwsAlertsAlarm
       TreatMissingData: missing
       Statistic: Sum
 

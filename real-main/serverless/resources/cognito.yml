@@ -7,16 +7,13 @@ Resources:
       IdentityPoolName: RealIdentityPool_${self:provider.stage}  # AWS validation doesn't allow dashes in this string
       AllowUnauthenticatedIdentities: true
       CognitoIdentityProviders:
-        - ClientId:
-            Ref: CognitoTestingUserPoolClient
+        - ClientId: !Ref CognitoTestingUserPoolClient
           ProviderName: !GetAtt CognitoUserPool.ProviderName
           ServerSideTokenCheck: true
-        - ClientId:
-            Ref: CognitoFrontendUserPoolClient
+        - ClientId: !Ref CognitoFrontendUserPoolClient
           ProviderName: !GetAtt CognitoUserPool.ProviderName
           ServerSideTokenCheck: true
-        - ClientId:
-            Ref: CognitoBackendUserPoolClient
+        - ClientId: !Ref CognitoBackendUserPoolClient
           ProviderName: !GetAtt CognitoUserPool.ProviderName
           ServerSideTokenCheck: true
       # Google should be set up as an OIDC provider before deploying
@@ -30,8 +27,7 @@ Resources:
   CognitoIdentityPoolRoles:
     Type: AWS::Cognito::IdentityPoolRoleAttachment
     Properties:
-      IdentityPoolId:
-        Ref: CognitoIdentityPool
+      IdentityPoolId: !Ref CognitoIdentityPool
       Roles:
         authenticated: !GetAtt CognitoIdentityPoolAuthRole.Arn
         unauthenticated: !GetAtt CognitoIdentityPoolUnauthenticatedAuthRole.Arn
@@ -52,8 +48,7 @@ Resources:
               - sts:AssumeRoleWithWebIdentity
             Condition:
               StringEquals:
-                cognito-identity.amazonaws.com:aud:
-                  Ref: CognitoIdentityPool
+                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
       Policies:
         - PolicyName: CognitoIdentityPoolAuthenticatedPolicy
           PolicyDocument:
@@ -86,8 +81,7 @@ Resources:
               - sts:AssumeRoleWithWebIdentity
             Condition:
               StringEquals:
-                cognito-identity.amazonaws.com:aud:
-                  Ref: CognitoIdentityPool
+                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
       Policies:
         - PolicyName: CognitoIdentityPoolUnauthenticatedPolicy
           PolicyDocument:
@@ -157,8 +151,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: RealBackendUserPoolClient-${self:provider.stage}
-      UserPoolId:
-        Ref: CognitoUserPool
+      UserPoolId: !Ref CognitoUserPool
       ExplicitAuthFlows:
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
         - ALLOW_CUSTOM_AUTH
@@ -170,8 +163,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: RealTestingUserPoolClient-${self:provider.stage}
-      UserPoolId:
-        Ref: CognitoUserPool
+      UserPoolId: !Ref CognitoUserPool
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
@@ -207,8 +199,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: RealFrontendUserPoolClient-${self:provider.stage}
-      UserPoolId:
-        Ref: CognitoUserPool
+      UserPoolId: !Ref CognitoUserPool
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
@@ -239,21 +230,16 @@ Resources:
 Outputs:
 
   CognitoUserPoolId:
-    Value:
-      Ref: CognitoUserPool
+    Value: !Ref CognitoUserPool
 
   CognitoBackendUserPoolClientId:
-    Value:
-      Ref: CognitoBackendUserPoolClient
+    Value: !Ref CognitoBackendUserPoolClient
 
   CognitoTestingUserPoolClientId:
-    Value:
-      Ref: CognitoTestingUserPoolClient
+    Value: !Ref CognitoTestingUserPoolClient
 
   CognitoFrontendUserPoolClientId:
-    Value:
-      Ref: CognitoFrontendUserPoolClient
+    Value: !Ref CognitoFrontendUserPoolClient
 
   CognitoIdentityPoolId:
-    Value:
-      Ref: CognitoIdentityPool
+    Value: !Ref CognitoIdentityPool
