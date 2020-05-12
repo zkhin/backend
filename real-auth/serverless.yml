@@ -8,6 +8,9 @@ provider:
   runtime: python3.8
   logRetentionInDays: 7
   timeout: 30
+  tracing:
+    apiGateway: true
+    lambda: PassThrough
 
   environment:
     AWS_ACCOUNT_ID: '#{AWS::AccountId}'
@@ -92,5 +95,6 @@ package:
 
 plugins:
   - serverless-pseudo-parameters
+  - serverless-python-requirements
   - serverless-plugin-aws-alerts
   - serverless-plugin-git-variables

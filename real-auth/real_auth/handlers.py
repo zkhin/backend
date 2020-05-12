@@ -2,8 +2,10 @@ from .dispatch import handler
 from .clients import CognitoClient
 from .enums import UsernameStatus
 from .exceptions import ClientException
+from .xray import patch_all
 from .validate import validate_username
 
+patch_all()
 cognito_client = CognitoClient()
 
 

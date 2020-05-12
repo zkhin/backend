@@ -2,8 +2,12 @@ import logging
 
 from app.clients import ESSearchClient
 
-elasticsearch_client = ESSearchClient()
+from . import xray
+
 logger = logging.getLogger()
+xray.patch_all()
+
+elasticsearch_client = ESSearchClient()
 
 
 def dynamodb_stream(event, context):

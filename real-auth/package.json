@@ -7,6 +7,7 @@
     "serverless": "^1.69.0",
     "serverless-plugin-aws-alerts": "^1.4.0",
     "serverless-plugin-git-variables": "^4.0.0",
-    "serverless-pseudo-parameters": "^2.5.0"
+    "serverless-pseudo-parameters": "^2.5.0",
+    "serverless-python-requirements": "^5.1.0"
   }
 }

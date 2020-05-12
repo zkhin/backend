@@ -6,9 +6,12 @@ from app import clients, models
 from app.logging import LogLevelContext
 from app.models.post.enums import PostStatus, PostType
 
+from . import xray
+
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
+xray.patch_all()
 
 secrets_manager_client = clients.SecretsManagerClient()
 clients = {

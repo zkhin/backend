@@ -6,6 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: us-east-1
+      AWS_XRAY_SDK_ENABLED: false
 
     steps:
     - name: Git checkout
@@ -29,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: us-east-1
+      AWS_XRAY_SDK_ENABLED: false
 
     steps:
     - name: Git checkout

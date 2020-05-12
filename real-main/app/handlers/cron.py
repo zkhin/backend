@@ -5,9 +5,12 @@ import pendulum
 
 from app import clients, models
 
+from . import xray
+
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
+xray.patch_all()
 
 cognito_client = clients.CognitoClient()
 dynamo_client = clients.DynamoClient()

@@ -13,6 +13,8 @@ provider:
   runtime: python3.8
   logRetentionInDays: 7
   timeout: 30
+  tracing:
+    lambda: true
 
   environment:
     # AWS_REGION is supplied by default by lambda
@@ -106,6 +108,7 @@ custom:
       table: ${self:provider.environment.DYNAMO_TABLE}
       frontendResourcesDomain: ${self:provider.environment.CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN}
       lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
+    xrayEnabled: true
 
     mappingTemplates:
       - ${file(./serverless/mapping-templates/album.yml)}
@@ -321,6 +324,7 @@ functions:
     name: ${self:provider.stackName}-appSyncDispatch
     handler: app.handlers.appsync.dispatch
     timeout: 10
+    tracing: PassThrough  # already initiated by appsync
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     alarms:
