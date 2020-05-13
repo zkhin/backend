@@ -155,7 +155,6 @@ custom:
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
-          - Users.filterBy.followedStatus
           - Users.endPipeline
 
       - type: PaginatedPosts

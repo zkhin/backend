@@ -205,3 +205,39 @@ test('Comment report views, viewed status tracked correctly', async () => {
   expect(resp['data']['post']['comments']['items'][1]['commentId']).toBe(commentId2)
   expect(resp['data']['post']['comments']['items'][1]['viewedStatus']).toBe('VIEWED')
 })
+
+
+test('Comments of private user on public post are visible to all', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // they go private
+  let variables = {privacyStatus: 'PRIVATE'}
+  let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['setUserDetails']['userId']).toBe(theirUserId)
+  expect(resp['data']['setUserDetails']['privacyStatus']).toBe('PRIVATE')
+
+  // we add a post
+  const postId = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addPost']['postId']).toBe(postId)
+  expect(resp['data']['addPost']['postedBy']['userId']).toBe(ourUserId)
+
+  // they comment on our post
+  let commentId = uuidv4()
+  resp = await theirClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore'}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['addComment']['commentId']).toBe(commentId)
+  expect(resp['data']['addComment']['commentedBy']['userId']).toBe(theirUserId)
+
+  // check we can see their comment on the post
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  expect(resp['errors']).toBeUndefined()
+  expect(resp['data']['post']['postId']).toBe(postId)
+  expect(resp['data']['post']['commentCount']).toBe(1)
+  expect(resp['data']['post']['comments']['items']).toHaveLength(1)
+  expect(resp['data']['post']['comments']['items'][0]['commentId']).toBe(commentId)
+  expect(resp['data']['post']['comments']['items'][0]['commentedBy']['userId']).toBe(theirUserId)
+})
