@@ -86,7 +86,7 @@ class Post:
                 return generate_text_image(self.item['text'], dims)
             self.k4_jpeg_cache = CachedImage(self.id, image_size.K4, source=upstream_source)
             self.p1080_jpeg_cache = CachedImage(self.id, image_size.P1080, source=upstream_source)
-        else:
+        elif s3_uploads_client:
             self.native_heic_cache = CachedImage(self.id, image_size.NATIVE_HEIC, s3_client=s3_uploads_client,
                                                  s3_path=self.get_image_path(image_size.NATIVE_HEIC))
             self.native_jpeg_cache = CachedImage(self.id, image_size.NATIVE, s3_client=s3_uploads_client,
