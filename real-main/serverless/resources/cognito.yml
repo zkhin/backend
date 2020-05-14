@@ -165,8 +165,9 @@ Resources:
       ClientName: RealTestingUserPoolClient-${self:provider.stage}
       UserPoolId: !Ref CognitoUserPool
       ExplicitAuthFlows:
-        - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
       GenerateSecret: false
       PreventUserExistenceErrors: ENABLED
       SupportedIdentityProviders:
@@ -201,8 +202,9 @@ Resources:
       ClientName: RealFrontendUserPoolClient-${self:provider.stage}
       UserPoolId: !Ref CognitoUserPool
       ExplicitAuthFlows:
-        - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
       GenerateSecret: false
       PreventUserExistenceErrors: ENABLED
       SupportedIdentityProviders:
