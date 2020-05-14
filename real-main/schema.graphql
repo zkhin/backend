@@ -585,15 +585,12 @@ type Post {
   #   - will be a copy of parent post if parent post is the first with this image
   originalPost: Post
 
-  # Count of unique users who have viewed this post
-  #   - null if user has viewCountsHidden set
-  viewedByCount: Int
-
   # Unique users who have viewed this post
   #   - ordered by when post was first viewed at
   #   - visible only to owner of the post
   #   - null if user has viewCountsHidden set
   viewedBy(limit: Int, nextToken: String): PaginatedUsers
+  viewedByCount: Int
 
   # Users that have onymously liked this post
   #   - ordered with first like first

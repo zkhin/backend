@@ -145,14 +145,46 @@ def test_record_view_chat_message(view_manager, chat_message, user2):
     assert view_manager.get_viewed_status(chat_message, user2.id) == 'VIEWED'
 
 
-def test_record_view_comment(view_manager, comment, user2):
+def test_record_view_comment(view_manager, comment, user2, user3):
     # check there is no view
     assert view_manager.get_viewed_status(comment, user2.id) == 'NOT_VIEWED'
+    assert view_manager.get_viewed_status(comment, user3.id) == 'NOT_VIEWED'
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 0
 
     # add a view, check that it worked
-    resp = view_manager.record_view_for_comment(comment, user2.id, 2, pendulum.now('utc'))
+    first_now = pendulum.now('utc')
+    resp = view_manager.record_view_for_comment(comment, user2.id, 2, first_now)
+    assert resp is True
+
+    view_record = view_manager.dynamo.get_view(comment.item['partitionKey'], user2.id)
+    assert view_record['viewCount'] == 2
+    assert pendulum.parse(view_record['firstViewedAt']) == first_now
+    assert pendulum.parse(view_record['lastViewedAt']) == first_now
+
+    assert view_manager.get_viewed_status(comment, user2.id) == 'VIEWED'
+    assert view_manager.get_viewed_status(comment, user3.id) == 'NOT_VIEWED'
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 1
+
+    # add another view by same user, check that it worked
+    second_now = pendulum.now('utc')
+    resp = view_manager.record_view_for_comment(comment, user2.id, 3, second_now)
+    assert resp is True
+
+    view_record = view_manager.dynamo.get_view(comment.item['partitionKey'], user2.id)
+    assert view_record['viewCount'] == 5
+    assert pendulum.parse(view_record['firstViewedAt']) == first_now
+    assert pendulum.parse(view_record['lastViewedAt']) == second_now
+
+    assert view_manager.get_viewed_status(comment, user2.id) == 'VIEWED'
+    assert view_manager.get_viewed_status(comment, user3.id) == 'NOT_VIEWED'
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 1
+
+    # add another view by a differnt user, check that it worked
+    resp = view_manager.record_view_for_comment(comment, user3.id, 2, pendulum.now('utc'))
     assert resp is True
     assert view_manager.get_viewed_status(comment, user2.id) == 'VIEWED'
+    assert view_manager.get_viewed_status(comment, user3.id) == 'VIEWED'
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 2
 
 
 def test_record_views_comments_clears_new_comment_activity(view_manager, comment_manager, posts, user, user2, user3):

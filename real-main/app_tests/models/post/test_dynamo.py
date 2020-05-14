@@ -444,15 +444,13 @@ def test_batch_get_posted_by_user_ids(post_dynamo):
     assert sorted(resp) == [user_id_1, user_id_1, user_id_2]
 
 
-def test_increment_viewed_by_count_doesnt_exist(post_dynamo):
-    post_id = 'doesnt-exist'
+def test_increment_viewed_by_count(post_dynamo):
+    # verify can't increment for post that doesnt exist
+    post_id = 'post-id'
     with pytest.raises(exceptions.PostDoesNotExist):
         post_dynamo.increment_viewed_by_count(post_id)
 
-
-def test_increment_viewed_by_counts(post_dynamo):
-    # create a post
-    post_id = 'post-id'
+    # create the post
     transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
     post_dynamo.client.transact_write_items(transacts)
 

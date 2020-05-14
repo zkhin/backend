@@ -2,6 +2,7 @@ import pendulum
 import pytest
 
 from app.models.comment.dynamo import CommentDynamo
+from app.models.comment.exceptions import CommentDoesNotExist
 
 
 @pytest.fixture
@@ -27,7 +28,7 @@ def test_transact_add_comment(comment_dynamo):
     assert comment_item == {
         'partitionKey': 'comment/cid',
         'sortKey': '-',
-        'schemaVersion': 0,
+        'schemaVersion': 1,
         'gsiA1PartitionKey': 'comment/pid',
         'gsiA1SortKey': commented_at_str,
         'gsiA2PartitionKey': 'comment/uid',
@@ -166,3 +167,38 @@ def test_transact_increment_decrement_flag_count(comment_dynamo):
     transacts = [comment_dynamo.transact_decrement_flag_count(comment_id)]
     with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
         comment_dynamo.client.transact_write_items(transacts)
+
+
+def test_increment_viewed_by_count(comment_dynamo):
+    # verify can't increment for comment that doesnt exist
+    comment_id = 'comment-id'
+    with pytest.raises(CommentDoesNotExist):
+        comment_dynamo.increment_viewed_by_count(comment_id)
+
+    # create the comment
+    transacts = [comment_dynamo.transact_add_comment(comment_id, 'pd', 'uid', 'lore ipsum', [])]
+    comment_dynamo.client.transact_write_items(transacts)
+
+    # verify it has no view count
+    comment_item = comment_dynamo.get_comment(comment_id)
+    assert comment_item.get('viewedByCount', 0) == 0
+
+    # record a view
+    comment_item = comment_dynamo.increment_viewed_by_count(comment_id)
+    assert comment_item['commentId'] == comment_id
+    assert comment_item['viewedByCount'] == 1
+
+    # verify it really got the view count
+    comment_item = comment_dynamo.get_comment(comment_id)
+    assert comment_item['commentId'] == comment_id
+    assert comment_item['viewedByCount'] == 1
+
+    # record another view
+    comment_item = comment_dynamo.increment_viewed_by_count(comment_id)
+    assert comment_item['commentId'] == comment_id
+    assert comment_item['viewedByCount'] == 2
+
+    # verify it really got the view count
+    comment_item = comment_dynamo.get_comment(comment_id)
+    assert comment_item['commentId'] == comment_id
+    assert comment_item['viewedByCount'] == 2

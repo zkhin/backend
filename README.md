@@ -180,7 +180,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `post/{postId}` | `image` | `0` | `takenInReal:Boolean`, `originalFormat`, `imageFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` |
 | `post/{postId}` | `originalMetadata` | `0` | `originalMetadata` |
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
-| `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
+| `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]`, `flagCount:Number`, `viewedByCount:Number` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `comment` |
 | `comment/{commentId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `comment/{commentId}` | `view/{firstViewedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |

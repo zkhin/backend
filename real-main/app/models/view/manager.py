@@ -80,7 +80,11 @@ class ViewManager:
         if comment.user_id == user_id:
             return False
 
-        self.write_view_to_dynamo(comment.item['partitionKey'], user_id, view_count, viewed_at)
+        is_new_view = self.write_view_to_dynamo(comment.item['partitionKey'], user_id, view_count, viewed_at)
+
+        if is_new_view:
+            self.comment_manager.dynamo.increment_viewed_by_count(comment.id)
+
         return True
 
     def record_views_for_chat_messages(self, grouped_message_ids, user_id, viewed_at):

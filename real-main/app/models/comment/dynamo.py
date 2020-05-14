@@ -3,6 +3,8 @@ import logging
 from boto3.dynamodb.conditions import Key
 import pendulum
 
+from . import exceptions
+
 logger = logging.getLogger()
 
 
@@ -31,7 +33,7 @@ class CommentDynamo:
         commented_at_str = commented_at.to_iso8601_string()
         return {'Put': {
             'Item': {
-                'schemaVersion': {'N': '0'},
+                'schemaVersion': {'N': '1'},
                 'partitionKey': {'S': f'comment/{comment_id}'},
                 'sortKey': {'S': '-'},
                 'gsiA1PartitionKey': {'S': f'comment/{post_id}'},
@@ -84,6 +86,17 @@ class CommentDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
             }
         }
+
+    def increment_viewed_by_count(self, comment_id):
+        query_kwargs = {
+            'Key': self.pk(comment_id),
+            'UpdateExpression': 'ADD viewedByCount :one',
+            'ExpressionAttributeValues': {':one': 1},
+        }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise exceptions.CommentDoesNotExist(comment_id)
 
     def generate_by_post(self, post_id):
         query_kwargs = {
