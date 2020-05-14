@@ -3,6 +3,7 @@ import logging
 import pendulum
 
 from app import models
+from app.mixins.flag.manager import FlagManagerMixin
 
 from . import exceptions
 from .dynamo import CommentDynamo
@@ -11,11 +12,13 @@ from .model import Comment
 logger = logging.getLogger()
 
 
-class CommentManager:
+class CommentManager(FlagManagerMixin):
 
     exceptions = exceptions
+    item_type = 'comment'
 
     def __init__(self, clients, managers=None):
+        super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['comment'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
@@ -28,17 +31,24 @@ class CommentManager:
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
 
+    def get_model(self, item_id):
+        return self.get_comment(item_id)
+
     def get_comment(self, comment_id):
         comment_item = self.dynamo.get_comment(comment_id)
         return self.init_comment(comment_item) if comment_item else None
 
     def init_comment(self, comment_item):
         kwargs = {
+            'dynamo': getattr(self, 'dynamo', None),
+            'flag_dynamo': getattr(self, 'flag_dynamo', None),
+            'block_manager': self.block_manager,
+            'follow_manager': self.follow_manager,
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
             'view_manager': self.view_manager,
         }
-        return Comment(comment_item, self.dynamo, **kwargs)
+        return Comment(comment_item, **kwargs)
 
     def add_comment(self, comment_id, post_id, user_id, text, now=None):
         now = now or pendulum.now('utc')

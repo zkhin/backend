@@ -525,6 +525,15 @@ module.exports.reportCommentViews = gql`
   }
 `
 
+module.exports.flagComment = gql`
+  mutation FlagComment ($commentId: ID!) {
+    flagComment(commentId: $commentId) {
+      commentId
+      flagStatus
+    }
+  }
+`
+
 module.exports.addAlbum = gql`
   mutation AddAlbum ($albumId: ID!, $name: String!, $description: String) {
     addAlbum (albumId: $albumId, name: $name, description: $description) {

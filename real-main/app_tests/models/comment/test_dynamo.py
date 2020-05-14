@@ -137,3 +137,32 @@ def test_generate_by_user(comment_dynamo):
     assert len(comment_items) == 2
     assert comment_items[0]['commentId'] == comment_id_1
     assert comment_items[1]['commentId'] == comment_id_2
+
+
+def test_transact_increment_decrement_flag_count(comment_dynamo):
+    comment_id = 'cid'
+
+    # add a comment
+    transacts = [comment_dynamo.transact_add_comment(comment_id, 'pid', 'uid', 'text', [])]
+    comment_dynamo.client.transact_write_items(transacts)
+
+    # check it has no flags
+    comment_item = comment_dynamo.get_comment(comment_id)
+    assert comment_item.get('flagCount', 0) == 0
+
+    # check first increment works
+    transacts = [comment_dynamo.transact_increment_flag_count(comment_id)]
+    comment_dynamo.client.transact_write_items(transacts)
+    comment_item = comment_dynamo.get_comment(comment_id)
+    assert comment_item.get('flagCount', 0) == 1
+
+    # check decrement works
+    transacts = [comment_dynamo.transact_decrement_flag_count(comment_id)]
+    comment_dynamo.client.transact_write_items(transacts)
+    comment_item = comment_dynamo.get_comment(comment_id)
+    assert comment_item.get('flagCount', 0) == 0
+
+    # check can't decrement below zero
+    transacts = [comment_dynamo.transact_decrement_flag_count(comment_id)]
+    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+        comment_dynamo.client.transact_write_items(transacts)

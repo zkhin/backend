@@ -197,6 +197,10 @@ type Mutation {
   #   - deleting a comment that is neither ours nor on a post of ours is an error
   deleteComment(commentId: ID!): Comment
 
+  # Flag a Comment as inappropriate
+  #   - trying to flag a comment we do not have access to is an error
+  flagComment(commentId: ID!): Comment
+
   # Report comment views
   reportCommentViews(commentIds: [ID!]!): Boolean
 
@@ -652,6 +656,7 @@ type Comment {
   text: String!
   textTaggedUsers: [TextTaggedUser!]!  # max of 100
   viewedStatus: ViewedStatus!  # has the caller viewed this comment?
+  flagStatus: FlagStatus!  # has the caller flagged this post?
 }
 
 type PaginatedComments {

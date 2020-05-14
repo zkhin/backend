@@ -29,24 +29,6 @@ def post(post_manager, user):
     yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
-def test_flag_success(post, user2):
-    # check starting state
-    assert post.item.get('flagCount', 0) == 0
-    assert len(list(post.flag_dynamo.generate_by_post(post.id))) == 0
-
-    # flag the post, verify
-    post.flag(user2)
-    assert post.item.get('flagCount', 0) == 1
-    assert post.refresh_item().item.get('flagCount', 0) == 1
-    assert len(list(post.flag_dynamo.generate_by_post(post.id))) == 1
-
-    # verify we can't flag the post second time
-    with pytest.raises(post.exceptions.PostException, match='already been flagged'):
-        post.flag(user2)
-    assert post.item.get('flagCount', 0) == 1
-    assert post.refresh_item().item.get('flagCount', 0) == 1
-
-
 def test_flag_force_archive_by_crowdsourced_criteria(post, user2, user3, caplog):
     # test without force-archiving
     post.is_crowdsourced_forced_archiving_criteria_met = Mock(return_value=False)
@@ -120,32 +102,6 @@ def test_flag_force_disable_user(post, user2, caplog):
     assert pendulum.parse(post.user.item['lastDisabledAt']) < after
 
 
-def test_cant_flag_our_own_post(post, user):
-    with pytest.raises(post.exceptions.PostException, match='flag their own'):
-        post.flag(user)
-    assert post.item.get('flagCount', 0) == 0
-    assert post.refresh_item().item.get('flagCount', 0) == 0
-    assert list(post.flag_dynamo.generate_by_post(post.id)) == []
-
-
-def test_cant_flag_post_of_user_thats_blocking_us(post, user, user2, block_manager):
-    block_manager.block(user, user2)
-    with pytest.raises(post.exceptions.PostException, match='has been blocked by owner'):
-        post.flag(user2)
-    assert post.item.get('flagCount', 0) == 0
-    assert post.refresh_item().item.get('flagCount', 0) == 0
-    assert list(post.flag_dynamo.generate_by_post(post.id)) == []
-
-
-def test_cant_flag_post_of_user_we_are_blocking(post, user, user2, block_manager):
-    block_manager.block(user2, user)
-    with pytest.raises(post.exceptions.PostException, match='has blocked owner'):
-        post.flag(user2)
-    assert post.item.get('flagCount', 0) == 0
-    assert post.refresh_item().item.get('flagCount', 0) == 0
-    assert list(post.flag_dynamo.generate_by_post(post.id)) == []
-
-
 def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, follow_manager):
     # can't flag post of private user we're not following
     user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
@@ -165,7 +121,7 @@ def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, 
     # check no flags
     assert post.item.get('flagCount', 0) == 0
     assert post.refresh_item().item.get('flagCount', 0) == 0
-    assert list(post.flag_dynamo.generate_by_post(post.id)) == []
+    assert list(post.flag_dynamo.generate_by_item(post.id)) == []
 
     # accept the follow request - now can flag
     following.accept()
@@ -174,25 +130,7 @@ def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, 
     # check the flag exists
     assert post.item.get('flagCount', 0) == 1
     assert post.refresh_item().item.get('flagCount', 0) == 1
-    assert len(list(post.flag_dynamo.generate_by_post(post.id))) == 1
-
-
-def test_unflag(post, user2):
-    # flag the post, verify worked
-    post.flag(user2)
-    assert post.item.get('flagCount', 0) == 1
-    assert post.refresh_item().item.get('flagCount', 0) == 1
-    assert len(list(post.flag_dynamo.generate_by_post(post.id))) == 1
-
-    # unflag, verify worked
-    post.unflag(user2.id)
-    assert post.item.get('flagCount', 0) == 0
-    assert post.refresh_item().item.get('flagCount', 0) == 0
-    assert len(list(post.flag_dynamo.generate_by_post(post.id))) == 0
-
-    # verify can't unflag if we haven't flagged
-    with pytest.raises(post.exceptions.PostException, match='not been flagged'):
-        post.unflag(user2.id)
+    assert len(list(post.flag_dynamo.generate_by_item(post.id))) == 1
 
 
 def test_is_crowdsourced_forced_archiving_criteria_met(post, user2, user3, user4, user5, user6, user7, view_manager):

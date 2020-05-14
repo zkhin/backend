@@ -4,21 +4,24 @@ import logging
 import pendulum
 
 from app import models
+from app.mixins.flag.manager import FlagManagerMixin
 
 from . import enums, exceptions
 from .appsync import PostAppSync
-from .dynamo import PostDynamo, PostFlagDynamo, PostImageDynamo, PostOriginalMetadataDynamo
+from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
 from .model import Post
 
 logger = logging.getLogger()
 
 
-class PostManager:
+class PostManager(FlagManagerMixin):
 
     enums = enums
     exceptions = exceptions
+    item_type = 'post'
 
     def __init__(self, clients, managers=None):
+        super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['post'] = self
         self.album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
@@ -39,9 +42,11 @@ class PostManager:
             self.appsync = PostAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
-            self.flag_dynamo = PostFlagDynamo(clients['dynamo'])
             self.image_dynamo = PostImageDynamo(clients['dynamo'])
             self.original_metadata_dynamo = PostOriginalMetadataDynamo(clients['dynamo'])
+
+    def get_model(self, item_id, strongly_consistent=False):
+        return self.get_post(item_id, strongly_consistent=strongly_consistent)
 
     def get_post(self, post_id, strongly_consistent=False):
         post_item = self.dynamo.get_post(post_id, strongly_consistent=strongly_consistent)
@@ -51,9 +56,9 @@ class PostManager:
         kwargs = {
             'post_appsync': getattr(self, 'appsync', None),
             'post_dynamo': getattr(self, 'dynamo', None),
-            'post_flag_dynamo': getattr(self, 'flag_dynamo', None),
             'post_image_dynamo': getattr(self, 'image_dynamo', None),
             'post_original_metadata_dynamo': getattr(self, 'original_metadata_dynamo', None),
+            'flag_dynamo': getattr(self, 'flag_dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
             'post_verification_client': self.clients.get('post_verification'),
@@ -189,8 +194,3 @@ class PostManager:
             logger.warning(f'Deleting expired post with pk ({post_pk["partitionKey"]}, {post_pk["sortKey"]})')
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
-
-    def unflag_all_by_user(self, user_id):
-        for post_id in self.flag_dynamo.generate_post_ids_by_user(user_id):
-            # this could be performance and edge-case optimized
-            self.get_post(post_id).unflag(user_id)

@@ -5,13 +5,6 @@ VIDEO_POSTER_PREFIX = 'video-poster/poster'
 IMAGE_DIR = 'image'
 
 
-class FlagStatus:
-    FLAGGED = 'FLAGGED'
-    NOT_FLAGGED = 'NOT_FLAGGED'
-
-    _ALL = (FLAGGED, NOT_FLAGGED)
-
-
 class PostStatus:
     PENDING = 'PENDING'
     PROCESSING = 'PROCESSING'

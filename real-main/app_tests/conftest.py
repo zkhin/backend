@@ -9,9 +9,9 @@ from app import clients, models
 
 from app_tests.dynamodb.table_schema import table_schema
 
-heic_path = path.join(path.dirname(__file__), '..', 'fixtures', 'IMG_0265.HEIC')
-grant_path = path.join(path.dirname(__file__), '..', 'fixtures', 'grant.jpg')
-tiny_path = path.join(path.dirname(__file__), '..', 'fixtures', 'tiny.jpg')
+heic_path = path.join(path.dirname(__file__), 'fixtures', 'IMG_0265.HEIC')
+grant_path = path.join(path.dirname(__file__), 'fixtures', 'grant.jpg')
+tiny_path = path.join(path.dirname(__file__), 'fixtures', 'tiny.jpg')
 
 
 @pytest.fixture

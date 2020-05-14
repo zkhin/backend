@@ -279,11 +279,11 @@ def test_delete_flags(album_manager, post_manager, completed_post_with_media, us
     # flag the post, verify those flags are in the db
     post.flag(user2)
     post.flag(user3)
-    assert len(list(post_manager.flag_dynamo.generate_by_post(post.id))) == 2
+    assert len(list(post_manager.flag_dynamo.generate_by_item(post.id))) == 2
 
     # delete the post, verify the flags are also deleted
     post.delete()
-    assert len(list(post_manager.flag_dynamo.generate_by_post(post.id))) == 0
+    assert len(list(post_manager.flag_dynamo.generate_by_item(post.id))) == 0
 
 
 def test_delete_archived_post(completed_post_with_media):

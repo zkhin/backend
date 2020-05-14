@@ -137,6 +137,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: flagComment
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: addAlbum
   dataSource: LambdaDataSource
   request: Lambda.request.vtl

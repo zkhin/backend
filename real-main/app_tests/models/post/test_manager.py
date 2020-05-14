@@ -448,25 +448,3 @@ def test_set_post_status_to_error(post_manager, user_manager, user):
     assert post.item['postStatus'] == PostStatus.ERROR
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.ERROR
-
-
-def test_unflag_all_by_user(post_manager, user2, posts):
-    # check we haven't flagged anything
-    assert list(post_manager.flag_dynamo.generate_post_ids_by_user(user2.id)) == []
-
-    # unflag all, check
-    post_manager.unflag_all_by_user(user2.id)
-    assert list(post_manager.flag_dynamo.generate_post_ids_by_user(user2.id)) == []
-
-    # user flags both those posts
-    posts[0].flag(user2)
-    posts[1].flag(user2)
-    assert list(post_manager.flag_dynamo.generate_post_ids_by_user(user2.id)) == [posts[0].id, posts[1].id]
-    assert posts[0].refresh_item().item['flagCount'] == 1
-    assert posts[1].refresh_item().item['flagCount'] == 1
-
-    # unflag all, check
-    post_manager.unflag_all_by_user(user2.id)
-    assert list(post_manager.flag_dynamo.generate_post_ids_by_user(user2.id)) == []
-    assert posts[0].refresh_item().item.get('flagCount', 0) == 0
-    assert posts[1].refresh_item().item.get('flagCount', 0) == 0

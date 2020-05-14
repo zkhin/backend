@@ -6,6 +6,7 @@ from colorthief import ColorThief
 import pendulum
 from PIL import Image
 
+from app.mixins.flag.model import FlagModelMixin
 from app.models.user.enums import UserStatus
 from app.utils import image_size
 
@@ -17,26 +18,24 @@ from .text_image import generate_text_image
 logger = logging.getLogger()
 
 
-class Post:
+class Post(FlagModelMixin):
 
     enums = enums
     exceptions = exceptions
+    item_type = 'post'
 
-    # users that have flag admin power: posts they flag are immediately archived
-    flag_admin_usernames = ('real', 'ian')
-
-    def __init__(self, item, post_appsync=None, post_dynamo=None, post_flag_dynamo=None, post_image_dynamo=None,
+    def __init__(self, item, post_appsync=None, post_dynamo=None, post_image_dynamo=None,
                  post_original_metadata_dynamo=None, cloudfront_client=None, mediaconvert_client=None,
                  post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
                  comment_manager=None, feed_manager=None, follow_manager=None, followed_first_story_manager=None,
                  like_manager=None, post_manager=None, trending_manager=None, user_manager=None,
-                 view_manager=None):
+                 view_manager=None, **kwargs):
+        super().__init__(**kwargs)
+
         if post_appsync:
             self.appsync = post_appsync
         if post_dynamo:
             self.dynamo = post_dynamo
-        if post_flag_dynamo:
-            self.flag_dynamo = post_flag_dynamo
         if post_image_dynamo:
             self.image_dynamo = post_image_dynamo
         if post_original_metadata_dynamo:
@@ -487,7 +486,7 @@ class Post:
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
         if self.image_item:
             self.image_dynamo.delete(self.id)
-        self.flag_dynamo.delete_all_for_post(self.id)
+        self.flag_dynamo.delete_all_for_item(self.id)
         self.original_metadata_dynamo.delete(self.id)
         self.dynamo.delete_post(self.id)
 
@@ -664,18 +663,6 @@ class Post:
         return self
 
     def flag(self, user):
-        # can't flag a post of a user that has blocked us
-        if self.block_manager.is_blocked(self.user_id, user.id):
-            raise exceptions.PostException(f'User has been blocked by owner of post `{self.id}`')
-
-        # can't flag a post of a user we have blocked
-        if self.block_manager.is_blocked(user.id, self.user_id):
-            raise exceptions.PostException(f'User has blocked owner of post `{self.id}`')
-
-        # cant flag our own post
-        if user.id == self.user_id:
-            raise exceptions.PostException(f'User cant flag their own post `{self.id}`')
-
         # if the post is from a private user then we must be a follower to flag the post
         posted_by_user = self.user_manager.get_user(self.user_id)
         if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
@@ -683,13 +670,7 @@ class Post:
             if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
                 raise exceptions.PostException(f'User does not have access to post `{self.id}`')
 
-        transacts = [
-            self.flag_dynamo.transact_add(self.id, user.id),
-            self.dynamo.transact_increment_flag_count(self.id),
-        ]
-        transact_exceptions = [exceptions.AlreadyFlagged(self.id, user.id), exceptions.PostDoesNotExist(self.id)]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-        self.item['flagCount'] = self.item.get('flagCount', 0) + 1
+        super().flag(user)
 
         # force archive the post?
         if user.username in self.flag_admin_usernames or self.is_crowdsourced_forced_archiving_criteria_met():
@@ -704,20 +685,6 @@ class Post:
                 # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
                 logger.warning(f'USER_FORCE_DISABLED: user `{self.user.id}` with username `{self.user.username}`')
 
-        return self
-
-    def unflag(self, user_id):
-        transacts = [
-            self.flag_dynamo.transact_delete(self.id, user_id),
-            self.dynamo.transact_decrement_flag_count(self.id),
-        ]
-        transact_exceptions = [
-            exceptions.NotFlagged(self.id, user_id),
-            exceptions.PostException(f'Post `{self.id}` does not exist or has no flagCount'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-
-        self.item['flagCount'] = self.item.get('flagCount', 0) - 1
         return self
 
     def is_crowdsourced_forced_archiving_criteria_met(self):

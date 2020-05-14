@@ -60,6 +60,31 @@ class CommentDynamo:
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
+    def transact_increment_flag_count(self, comment_id):
+        return {
+            'Update': {
+                'Key': self.typed_pk(comment_id),
+                'UpdateExpression': 'ADD flagCount :one',
+                'ExpressionAttributeValues': {
+                    ':one': {'N': '1'},
+                },
+                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
+            }
+        }
+
+    def transact_decrement_flag_count(self, comment_id):
+        return {
+            'Update': {
+                'Key': self.typed_pk(comment_id),
+                'UpdateExpression': 'ADD flagCount :neg_one',
+                'ExpressionAttributeValues': {
+                    ':neg_one': {'N': '-1'},
+                    ':zero': {'N': '0'},
+                },
+                'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
+            }
+        }
+
     def generate_by_post(self, post_id):
         query_kwargs = {
             'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'comment/{post_id}'),

@@ -12,3 +12,7 @@
 - type: Comment
   field: viewedStatus
   dataSource: DynamodbDataSource
+
+- type: Comment
+  field: flagStatus
+  dataSource: DynamodbDataSource

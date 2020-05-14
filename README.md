@@ -176,11 +176,12 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 | `followedFirstStory/{followerUserId}/{postedByUserId}` | `-`| `1` | `postId`, `postedAt`, `postedByUserId`, `expiresAt` | `followedFirstStory/{followerUserId}` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
 | `post/{postId}` | `-` | `3` | `postId`, `postedAt`, `postedByUserId`, `postType`, `postStatus`, `albumId`, `originalPostId`, `expiresAt`, `text`, `textTags:[{tag, userId}]`, `checksum`, `isVerified:Boolean`, `viewedByCount:Number`, `onymousLikeCount:Number`, `anonymousLikeCount:Number`, `flagCount:Number`, `commentCount:Number`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `hasNewCommentActivity:Boolean`, `setAsUserPhoto:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{postedByUserId}` | `{postStatus}/{postType}/{postedAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` | `postChecksum/{checksum}` | `{postedAt}` | `post/{albumId}` | `{albumRank:Number}` |
-| `post/{postId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `-` |
+| `post/{postId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `post` |
 | `post/{postId}` | `image` | `0` | `takenInReal:Boolean`, `originalFormat`, `imageFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` |
 | `post/{postId}` | `originalMetadata` | `0` | `originalMetadata` |
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
 | `comment/{commentId}` | `-` | `0` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
+| `comment/{commentId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `comment` |
 | `comment/{commentId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `comment/{commentId}` | `view/{firstViewedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |

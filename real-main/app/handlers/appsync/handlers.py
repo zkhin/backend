@@ -230,6 +230,7 @@ def reset_user(caller_user_id, arguments, source, context):
 
     # unflag everything we've flagged
     post_manager.unflag_all_by_user(caller_user_id)
+    comment_manager.unflag_all_by_user(caller_user_id)
 
     # delete all our likes & comments & albums
     like_manager.dislike_all_by_user(caller_user_id)
@@ -644,11 +645,11 @@ def flag_post(caller_user, arguments, source, context):
 
     try:
         post.flag(caller_user)
-    except post_manager.exceptions.PostException as err:
+    except (post_manager.exceptions.PostException, post_manager.flag_exceptions.FlagException) as err:
         raise ClientException(str(err))
 
     resp = post.serialize(caller_user.id)
-    resp['flagStatus'] = post_manager.enums.FlagStatus.FLAGGED
+    resp['flagStatus'] = post_manager.flag_enums.FlagStatus.FLAGGED
     return resp
 
 
@@ -829,6 +830,25 @@ def report_comment_views(caller_user, arguments, source, context):
 
     view_manager.record_views('comment', comment_ids, caller_user.id)
     return True
+
+
+@routes.register('Mutation.flagComment')
+@validate_caller
+def flag_comment(caller_user, arguments, source, context):
+    comment_id = arguments['commentId']
+
+    comment = comment_manager.get_comment(comment_id)
+    if not comment:
+        raise ClientException(f'Comment `{comment_id}` does not exist')
+
+    try:
+        comment.flag(caller_user)
+    except (comment_manager.exceptions.CommentException, comment_manager.flag_exceptions.FlagException) as err:
+        raise ClientException(str(err))
+
+    resp = comment.serialize(caller_user.id)
+    resp['flagStatus'] = comment_manager.flag_enums.FlagStatus.FLAGGED
+    return resp
 
 
 @routes.register('Mutation.addAlbum')
