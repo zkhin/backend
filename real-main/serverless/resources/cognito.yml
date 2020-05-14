@@ -169,7 +169,7 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: false
-      PreventUserExistenceErrors: LEGACY
+      PreventUserExistenceErrors: ENABLED
       SupportedIdentityProviders:
         - COGNITO
       CallbackURLs:
@@ -206,7 +206,7 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: false
-      PreventUserExistenceErrors: LEGACY
+      PreventUserExistenceErrors: ENABLED
       SupportedIdentityProviders:
         - COGNITO
       CallbackURLs:
