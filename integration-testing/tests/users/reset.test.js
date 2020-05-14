@@ -55,7 +55,7 @@ test("resetUser really releases the user's username", async () => {
   // verify we cannot login with our username anymore
   AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}
   await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise())
-    .rejects.toThrow(/Incorrect username or password/)
+    .rejects.toThrow(/User does not exist/)
 
   // verify that someone else can now claim our released username and then login with it
   await theirClient.mutate({
@@ -73,7 +73,7 @@ test("resetUser really releases the user's username", async () => {
 
   // verify they cannot login with their username anymore
   await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise())
-    .rejects.toThrow(/Incorrect username or password/)
+    .rejects.toThrow(/User does not exist/)
 })
 
 
