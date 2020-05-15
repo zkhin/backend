@@ -103,7 +103,7 @@ prmt.get(prmtSchema, async (err, result) => {
       process.stdout.write('Signing cognito user in...')
       const tokens = await generateCognitoTokens(result.username, result.password)
       process.stdout.write(' done.\n')
-      return tokens['IdToken']
+      return tokens.IdToken
     }
     if (result.authSource === 'f') return result.facebookAccessToken
     if (result.authSource === 'g') return result.googleIdToken
@@ -112,7 +112,7 @@ prmt.get(prmtSchema, async (err, result) => {
 
   process.stdout.write('Exchanging auth token for graphql-authorized JWT token...')
   const creds = await generateGQLCredentials(result.authSource, token)
-  const awsCredentials = new AWS.Credentials(creds['AccessKeyId'], creds['SecretKey'], creds['SessionToken'])
+  const awsCredentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const appsyncClient = new AWSAppSyncClient({
     url: appsyncApiUrl,
     region: awsRegion,
@@ -133,7 +133,7 @@ prmt.get(prmtSchema, async (err, result) => {
 
   process.stdout.write('Retrieving current username...')
   let resp = await appsyncClient.query({query: querySelf})
-  let curUsername = resp['data']['self']['username']
+  let curUsername = resp.data.self.username
   process.stdout.write(` '${curUsername}'.\n`)
 
   process.stdout.write(`Changing username to '${result.newUsername}'...`)
@@ -143,7 +143,7 @@ prmt.get(prmtSchema, async (err, result) => {
 
   process.stdout.write('Retrieving current username again...')
   resp = await appsyncClient.query({query: querySelf})
-  curUsername = resp['data']['self']['username']
+  curUsername = resp.data.self.username
   process.stdout.write(` '${curUsername}'.\n`)
 })
 
@@ -171,7 +171,7 @@ const generateCognitoTokens = async (username, password) => {
     AuthFlow: 'USER_PASSWORD_AUTH',
     AuthParameters: {USERNAME: username, PASSWORD: password},
   }).promise()
-  return resp['AuthenticationResult']
+  return resp.AuthenticationResult
 }
 
 const generateGQLCredentials = async (authSource, token) => {
@@ -185,9 +185,9 @@ const generateGQLCredentials = async (authSource, token) => {
 
   // add the user to the identity pool
   const idResp = await cognitoIndentityPoolClient.getId({Logins}).promise()
-  const userId = idResp['IdentityId']
+  const userId = idResp.IdentityId
 
   // get credentials for appsync from the identity pool
   const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  return resp['Credentials']
+  return resp.Credentials
 }

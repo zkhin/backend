@@ -25,39 +25,39 @@ test('Add post no expiration', async () => {
 
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp['errors']).toBeUndefined()
-  let post = resp['data']['addPost']
-  expect(post['postId']).toBe(postId)
-  expect(post['postType']).toBe('IMAGE')
-  expect(post['postStatus']).toBe('COMPLETED')
-  expect(post['expiresAt']).toBeNull()
-  expect(post['originalPost']['postId']).toBe(postId)
+  expect(resp.errors).toBeUndefined()
+  let post = resp.data.addPost
+  expect(post.postId).toBe(postId)
+  expect(post.postType).toBe('IMAGE')
+  expect(post.postStatus).toBe('COMPLETED')
+  expect(post.expiresAt).toBeNull()
+  expect(post.originalPost.postId).toBe(postId)
   await misc.sleep(2000)  // let dynamo converge
 
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  post = resp['data']['post']
-  expect(post['postId']).toBe(postId)
-  expect(post['postType']).toBe('IMAGE')
-  expect(post['postStatus']).toBe('COMPLETED')
-  expect(post['expiresAt']).toBeNull()
-  expect(post['originalPost']['postId']).toBe(postId)
+  expect(resp.errors).toBeUndefined()
+  post = resp.data.post
+  expect(post.postId).toBe(postId)
+  expect(post.postType).toBe('IMAGE')
+  expect(post.postStatus).toBe('COMPLETED')
+  expect(post.expiresAt).toBeNull()
+  expect(post.originalPost.postId).toBe(postId)
 
   resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['user']['posts']['items']).toHaveLength(1)
-  post = resp['data']['user']['posts']['items'][0]
-  expect(post['postId']).toBe(postId)
-  expect(post['postType']).toBe('IMAGE')
-  expect(post['postStatus']).toBe('COMPLETED')
-  expect(post['postedBy']['userId']).toBe(ourUserId)
-  expect(post['expiresAt']).toBeNull()
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.user.posts.items).toHaveLength(1)
+  post = resp.data.user.posts.items[0]
+  expect(post.postId).toBe(postId)
+  expect(post.postType).toBe('IMAGE')
+  expect(post.postStatus).toBe('COMPLETED')
+  expect(post.postedBy.userId).toBe(ourUserId)
+  expect(post.expiresAt).toBeNull()
 
   resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['feed']['items']).toHaveLength(1)
-  expect(resp['data']['self']['feed']['items'][0]['postId']).toEqual(postId)
-  expect(resp['data']['self']['feed']['items'][0]['postType']).toBe('IMAGE')
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.self.feed.items).toHaveLength(1)
+  expect(resp.data.self.feed.items[0].postId).toEqual(postId)
+  expect(resp.data.self.feed.items[0].postType).toBe('IMAGE')
 })
 
 
@@ -69,17 +69,17 @@ test('Add post with expiration', async () => {
   const lifetime = 'P7D'
   let variables = {postId, text, lifetime}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  const post = resp['data']['addPost']
-  expect(post['postId']).toBe(postId)
-  expect(post['postType']).toBe('IMAGE')
-  expect(post['postStatus']).toBe('PENDING')
-  expect(post['text']).toBe(text)
-  expect(post['postedAt']).toBeTruthy()
-  expect(post['expiresAt']).toBeTruthy()
-  const expected_expires_at = moment(post['postedAt'])
+  expect(resp.errors).toBeUndefined()
+  const post = resp.data.addPost
+  expect(post.postId).toBe(postId)
+  expect(post.postType).toBe('IMAGE')
+  expect(post.postStatus).toBe('PENDING')
+  expect(post.text).toBe(text)
+  expect(post.postedAt).toBeTruthy()
+  expect(post.expiresAt).toBeTruthy()
+  const expected_expires_at = moment(post.postedAt)
   expected_expires_at.add(moment.duration(lifetime))
-  const expires_at = moment(post['expiresAt'])
+  const expires_at = moment(post.expiresAt)
   expect(expires_at.isSame(expected_expires_at)).toBe(true)
 })
 
@@ -89,11 +89,11 @@ test('Add post with text of empty string same as null text', async () => {
   const postId = uuidv4()
   let variables = {postId, text: ''}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postType']).toBe('IMAGE')
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  expect(resp['data']['addPost']['text']).toBeNull()
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postType).toBe('IMAGE')
+  expect(resp.data.addPost.postStatus).toBe('PENDING')
+  expect(resp.data.addPost.text).toBeNull()
 })
 
 
@@ -119,7 +119,7 @@ test('Cannot add post with invalid lifetime', async () => {
   // success!
   variables.lifetime = 'P1D'
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
+  expect(resp.errors).toBeUndefined()
 })
 
 
@@ -129,52 +129,52 @@ test('Mental health settings default values', async () => {
   // no user-level settings set
   let variables = {postId: uuidv4()}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(variables.postId)
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(false)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(false)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(variables.postId)
+  expect(resp.data.addPost.commentsDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.sharingDisabled).toBe(false)
+  expect(resp.data.addPost.verificationHidden).toBe(false)
 
   // set user-level mental health settings to true (which provide the defaults)
   variables = {commentsDisabled: true, likesDisabled: true, sharingDisabled: true, verificationHidden: true}
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['userId']).toBe(ourUserId)
-  expect(resp['data']['setUserDetails']['commentsDisabled']).toBe(true)
-  expect(resp['data']['setUserDetails']['likesDisabled']).toBe(true)
-  expect(resp['data']['setUserDetails']['sharingDisabled']).toBe(true)
-  expect(resp['data']['setUserDetails']['verificationHidden']).toBe(true)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.setUserDetails.userId).toBe(ourUserId)
+  expect(resp.data.setUserDetails.commentsDisabled).toBe(true)
+  expect(resp.data.setUserDetails.likesDisabled).toBe(true)
+  expect(resp.data.setUserDetails.sharingDisabled).toBe(true)
+  expect(resp.data.setUserDetails.verificationHidden).toBe(true)
 
   // check those new user-level settings are used as defaults for a new post
   variables = {postId: uuidv4()}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(variables.postId)
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(true)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(true)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(true)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(variables.postId)
+  expect(resp.data.addPost.commentsDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
+  expect(resp.data.addPost.sharingDisabled).toBe(true)
+  expect(resp.data.addPost.verificationHidden).toBe(true)
 
   // change the user-level mental health setting defaults
   variables = {commentsDisabled: false, likesDisabled: false, sharingDisabled: false, verificationHidden: false}
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['setUserDetails']['userId']).toBe(ourUserId)
-  expect(resp['data']['setUserDetails']['commentsDisabled']).toBe(false)
-  expect(resp['data']['setUserDetails']['likesDisabled']).toBe(false)
-  expect(resp['data']['setUserDetails']['sharingDisabled']).toBe(false)
-  expect(resp['data']['setUserDetails']['verificationHidden']).toBe(false)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.setUserDetails.userId).toBe(ourUserId)
+  expect(resp.data.setUserDetails.commentsDisabled).toBe(false)
+  expect(resp.data.setUserDetails.likesDisabled).toBe(false)
+  expect(resp.data.setUserDetails.sharingDisabled).toBe(false)
+  expect(resp.data.setUserDetails.verificationHidden).toBe(false)
 
   // check those new user-level settings are used as defaults for a new post
   variables = {postId: uuidv4()}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(variables.postId)
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(false)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(false)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(variables.postId)
+  expect(resp.data.addPost.commentsDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.sharingDisabled).toBe(false)
+  expect(resp.data.addPost.verificationHidden).toBe(false)
 })
 
 
@@ -191,21 +191,21 @@ test('Mental health settings specify values', async () => {
     verificationHidden: false,
   }
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(false)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(false)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(false)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(false)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.commentsDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.sharingDisabled).toBe(false)
+  expect(resp.data.addPost.verificationHidden).toBe(false)
 
   // double check those values stuck
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['commentsDisabled']).toBe(false)
-  expect(resp['data']['post']['likesDisabled']).toBe(false)
-  expect(resp['data']['post']['sharingDisabled']).toBe(false)
-  expect(resp['data']['post']['verificationHidden']).toBe(false)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.commentsDisabled).toBe(false)
+  expect(resp.data.post.likesDisabled).toBe(false)
+  expect(resp.data.post.sharingDisabled).toBe(false)
+  expect(resp.data.post.verificationHidden).toBe(false)
 
   // create a post, specify both to true
   postId = uuidv4()
@@ -217,21 +217,21 @@ test('Mental health settings specify values', async () => {
     verificationHidden: true,
   }
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['commentsDisabled']).toBe(true)
-  expect(resp['data']['addPost']['likesDisabled']).toBe(true)
-  expect(resp['data']['addPost']['sharingDisabled']).toBe(true)
-  expect(resp['data']['addPost']['verificationHidden']).toBe(true)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.commentsDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
+  expect(resp.data.addPost.sharingDisabled).toBe(true)
+  expect(resp.data.addPost.verificationHidden).toBe(true)
 
   // double check those values stuck
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['commentsDisabled']).toBe(true)
-  expect(resp['data']['post']['likesDisabled']).toBe(true)
-  expect(resp['data']['post']['sharingDisabled']).toBe(true)
-  expect(resp['data']['post']['verificationHidden']).toBe(true)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.commentsDisabled).toBe(true)
+  expect(resp.data.post.likesDisabled).toBe(true)
+  expect(resp.data.post.sharingDisabled).toBe(true)
+  expect(resp.data.post.verificationHidden).toBe(true)
 })
 
 
@@ -240,9 +240,9 @@ test('Disabled user cannot add a post', async () => {
 
   // we disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['disableUser']['userId']).toBe(ourUserId)
-  expect(resp['data']['disableUser']['userStatus']).toBe('DISABLED')
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.disableUser.userId).toBe(ourUserId)
+  expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't add a post
   await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}))

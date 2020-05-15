@@ -29,8 +29,8 @@ test.skip('new users auto-follow a user with username `real`, if they exist', as
   // create a new user. Should not auto-follow anyone
   const [client, , , , username] = await loginCache.getCleanLogin()
   let resp = await client.query({query: queries.ourFollowedUsers})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['followedUsers']['items']).toHaveLength(0)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.self.followedUsers.items).toHaveLength(0)
 
   // set the real user's username to 'real', give dynamo a moment to sync
   const [realClient, realUserId] = await loginCache.getCleanLogin()
@@ -40,7 +40,7 @@ test.skip('new users auto-follow a user with username `real`, if they exist', as
   // reset that user as a new user. Should auto-follow the real user
   await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
   resp = await client.query({query: queries.ourFollowedUsers})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['self']['followedUsers']['items']).toHaveLength(1)
-  expect(resp['data']['self']['followedUsers']['items'][0]['userId']).toBe(realUserId)
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.self.followedUsers.items).toHaveLength(1)
+  expect(resp.data.self.followedUsers.items[0].userId).toBe(realUserId)
 })

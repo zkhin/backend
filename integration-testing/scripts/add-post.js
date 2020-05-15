@@ -127,7 +127,7 @@ prmt.get(prmtSchema, async (err, result) => {
       process.stdout.write('Signing cognito user in...')
       const tokens = await generateCognitoTokens(result.username, result.password)
       process.stdout.write(' done.\n')
-      return tokens['IdToken']
+      return tokens.IdToken
     }
     if (result.authSource === 'f') return result.facebookAccessToken
     if (result.authSource === 'g') return result.googleIdToken
@@ -136,7 +136,7 @@ prmt.get(prmtSchema, async (err, result) => {
 
   process.stdout.write('Exchanging auth token for graphql-authorized JWT token...')
   const creds = await generateGQLCredentials(result.authSource, token)
-  const awsCredentials = new AWS.Credentials(creds['AccessKeyId'], creds['SecretKey'], creds['SessionToken'])
+  const awsCredentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const appsyncClient = new AWSAppSyncClient({
     url: appsyncApiUrl,
     region: awsRegion,
@@ -182,12 +182,12 @@ prmt.get(prmtSchema, async (err, result) => {
       const imageFormat = result.imageFormat === 'h' ? 'HEIC' : 'JPEG'
       const variables = {postId, text: result.text, imageFormat}
       resp = await appsyncClient.mutate({ mutation: addImagePost, variables})
-      uploadUrl = resp['data']['addPost']['imageUploadUrl']
+      uploadUrl = resp.data.addPost.imageUploadUrl
     }
     if (result.postType === 'v') {
       const variables = {postId, text: result.text}
       resp = await appsyncClient.mutate({ mutation: addVideoPost, variables})
-      uploadUrl = resp['data']['addPost']['videoUploadUrl']
+      uploadUrl = resp.data.addPost.videoUploadUrl
     }
     process.stdout.write(' done.\n')
 
@@ -198,29 +198,29 @@ prmt.get(prmtSchema, async (err, result) => {
     process.stdout.write('Waiting for upload to be processed...')
     while (true) {
       resp = await appsyncClient.query({ query: getPost, variables: {postId}})
-      if (! ['PENDING', 'PROCESSING'].includes(resp['data']['post']['postStatus'])) break
+      if (! ['PENDING', 'PROCESSING'].includes(resp.data.post.postStatus)) break
       await new Promise(resolve => setTimeout(resolve, 1000))  // sleep one second
       process.stdout.write('.')
     }
     process.stdout.write(' done.\n')
   }
 
-  if (resp['data']['post']['postStatus'] === 'ERROR') {
+  if (resp.data.post.postStatus === 'ERROR') {
     process.stdout.write('Error processing upload. Invalid upload?\n')
   }
   else {
-    const post = resp['data']['post']
+    const post = resp.data.post
 
     // set up cookie jar if this is a video post
     const jar = request.jar()
-    if (post['postType'] === 'VIDEO') {
-      const url = post['video']['urlMasterM3U8']
-      const cookies = post['video']['accessCookies']
-      const expires = moment(cookies['expiresAt']).toDate().toUTCString()
-      const cookieProps = `Secure; Domain=${cookies['domain']}; Path=${cookies['path']}; Expires=${expires}`
-      jar.setCookie(`CloudFront-Policy=${cookies['policy']}; ${cookieProps}`, url)
-      jar.setCookie(`CloudFront-Signature=${cookies['signature']}; ${cookieProps}`, url)
-      jar.setCookie(`CloudFront-Key-Pair-Id=${cookies['keyPairId']}; ${cookieProps}`, url)
+    if (post.postType === 'VIDEO') {
+      const url = post.video.urlMasterM3U8
+      const cookies = post.video.accessCookies
+      const expires = moment(cookies.expiresAt).toDate().toUTCString()
+      const cookieProps = `Secure; Domain=${cookies.domain}; Path=${cookies.path}; Expires=${expires}`
+      jar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, url)
+      jar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, url)
+      jar.setCookie(`CloudFront-Key-Pair-Id=${cookies.keyPairId}; ${cookieProps}`, url)
     }
 
     process.stdout.write('Post successfully added.\n')
@@ -231,11 +231,11 @@ prmt.get(prmtSchema, async (err, result) => {
       if (req.url === '/') {
         process.stdout.write(`Serving url '${req.url}'\n`)
         res.write('<html><head></head><body>')
-        res.write(`<p>Post: <i>${post['postId']}</i> by user <i>${post['postedBy']['username']}</i></p>`)
-        res.write(`<p>At: ${post['postedAt']}</p>`)
-        res.write(`<p>Type: ${post['postType']}</p>`)
-        res.write(`<p>Text: ${post['text']}</p>`)
-        if (post['postType'] === 'VIDEO') {
+        res.write(`<p>Post: <i>${post.postId}</i> by user <i>${post.postedBy.username}</i></p>`)
+        res.write(`<p>At: ${post.postedAt}</p>`)
+        res.write(`<p>Type: ${post.postType}</p>`)
+        res.write(`<p>Text: ${post.text}</p>`)
+        if (post.postType === 'VIDEO') {
           // https://github.com/video-dev/hls.js/blob/v0.13.2/README.md
           const videoMasterM3U8 = '/video-hls/video.m3u8'
           const hlsType = 'application/vnd.apple.mpegurl'
@@ -248,7 +248,7 @@ prmt.get(prmtSchema, async (err, result) => {
           res.write(`else { var hls = new Hls(); hls.loadSource("${videoMasterM3U8}"); hls.attachMedia(video) }`)
           res.write('</script>')
         }
-        if (post['postType'] === 'IMAGE' || post['postType'] === 'VIDEO') {
+        if (post.postType === 'IMAGE' || post.postType === 'VIDEO') {
           res.write('<p>64p: <img src="/image/url64p"></p>')
           res.write('<p>480p: <img src="/image/url480p"></p>')
           res.write('<p>1080p: <img src="/image/url1080p"></p>')
@@ -262,14 +262,14 @@ prmt.get(prmtSchema, async (err, result) => {
       if (req.url.startsWith('/image/')) {
         process.stdout.write(`Proxing url '${req.url}'\n`)
         const filename = path.basename(req.url)
-        const cfUrl = post['image'][filename]
+        const cfUrl = post.image[filename]
         request.get(cfUrl).pipe(res)
       }
 
       // Proxying video files. Allows us to get around browser's same-origin policies as they apply to cookies
       if (req.url.startsWith('/video-hls/')) {
         process.stdout.write(`Proxing url '${req.url}'\n`)
-        const videoDir = path.dirname(post['video']['urlMasterM3U8'])
+        const videoDir = path.dirname(post.video.urlMasterM3U8)
         const filename = path.basename(req.url)
         const cfUrl = `${videoDir}/${filename}`
         request.get({url: cfUrl, jar}).pipe(res)
@@ -364,7 +364,7 @@ const generateCognitoTokens = async (username, password) => {
     AuthFlow: 'USER_PASSWORD_AUTH',
     AuthParameters: {USERNAME: username, PASSWORD: password},
   }).promise()
-  return resp['AuthenticationResult']
+  return resp.AuthenticationResult
 }
 
 
@@ -379,9 +379,9 @@ const generateGQLCredentials = async (authSource, token) => {
 
   // add the user to the identity pool
   const idResp = await cognitoIndentityPoolClient.getId({Logins}).promise()
-  const userId = idResp['IdentityId']
+  const userId = idResp.IdentityId
 
   // get credentials for appsync from the identity pool
   const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  return resp['Credentials']
+  return resp.Credentials
 }

@@ -70,9 +70,9 @@ const generateGQLCredentials = async (accessToken) => {
 
   // add the user to the identity pool
   const idResp = await cognitoIndentityPoolClient.getId({Logins}).promise()
-  const userId = idResp['IdentityId']
+  const userId = idResp.IdentityId
 
   // get credentials for appsync from the identity pool
   const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  return resp['Credentials']
+  return resp.Credentials
 }

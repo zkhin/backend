@@ -27,13 +27,13 @@ if (process.argv.length != 3) {
 }
 
 const tokensCreds = JSON.parse(fs.readFileSync(process.argv[2]))
-const cognitoAccessToken = tokensCreds['tokens']['AccessToken']
-const authProvider = tokensCreds['authProvider']
+const cognitoAccessToken = tokensCreds.tokens.AccessToken
+const authProvider = tokensCreds.authProvider
 
 const awsCredentials = new AWS.Credentials(
-  tokensCreds['credentials']['AccessKeyId'],
-  tokensCreds['credentials']['SecretKey'],
-  tokensCreds['credentials']['SessionToken'],
+  tokensCreds.credentials.AccessKeyId,
+  tokensCreds.credentials.SecretKey,
+  tokensCreds.credentials.SessionToken,
 )
 
 const appsyncClient = new AWSAppSyncClient({

@@ -89,7 +89,7 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
       Name: 'family_name',
       Value: familyName,
     })
-    clientMetadata['autoConfirmUser'] = 'true'
+    clientMetadata.autoConfirmUser = 'true'
   }
   if (email) {
     userAttrs.push({
@@ -106,7 +106,7 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
 
   // get a new un-authenticated ID from the identity pool
   const idResp = await identityPoolClient.getId().promise()
-  const userId = idResp['IdentityId']
+  const userId = idResp.IdentityId
 
   // create an entry in the user pool with matching 'cognito username'<->'identity id'
   const userPoolClientId = autoconfirm ? testingCognitoClientId : frontendCognitoClientId
@@ -129,9 +129,9 @@ const trackWithPinpoint = async (userId, autoconfirm) => {
 
   let resp = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
   const credentials = new AWS.Credentials(
-    resp['Credentials']['AccessKeyId'],
-    resp['Credentials']['SecretKey'],
-    resp['Credentials']['SessionToken'],
+    resp.Credentials.AccessKeyId,
+    resp.Credentials.SecretKey,
+    resp.Credentials.SessionToken,
   )
   const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
 
@@ -154,7 +154,7 @@ const trackWithPinpoint = async (userId, autoconfirm) => {
         Timestamp: moment().toISOString(),
       }},
     }}}}).promise()
-    if (resp['EventsResponse']['Results'][endpointId]['EventsItemResponse'][eventType]['StatusCode'] == 202) {
+    if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
       console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
     }
     else {

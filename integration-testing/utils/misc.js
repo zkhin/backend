@@ -33,7 +33,7 @@ const sleepUntilPostCompleted = async (gqlClient, postId, {maxWaitMs = 10*1000, 
   let waitedMs = 0
   while (waitedMs < maxWaitMs) {
     let resp = await gqlClient.query({query: queryPost, variables: {postId}})
-    if (resp['data']['post']['postStatus'] == 'COMPLETED') return
+    if (resp.data.post.postStatus == 'COMPLETED') return
     await sleep(pollingIntervalMs)
     waitedMs += pollingIntervalMs
   }

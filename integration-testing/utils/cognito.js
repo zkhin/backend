@@ -72,8 +72,8 @@ const generateEmail = (substr) => {
 const generateRRUuid = (callerData) => {
   // parse the caller data
   const repoRoot = path.dirname(path.dirname(__dirname))
-  const callerFilePath = path.relative(repoRoot, callerData['filePath'])
-  const callerOrigin = callerFilePath + '#L' + callerData['lineNumber']
+  const callerFilePath = path.relative(repoRoot, callerData.filePath)
+  const callerOrigin = callerFilePath + '#L' + callerData.lineNumber
   const callerHash = md5(callerOrigin)  // 32-char hex string
 
   // covert to an 16-element byte array https://stackoverflow.com/a/34356351
@@ -86,7 +86,7 @@ const generateRRUuid = (callerData) => {
 }
 
 const getAppSyncClient = async (creds) => {
-  const credsObj = new AWS.Credentials(creds['AccessKeyId'], creds['SecretKey'], creds['SessionToken'])
+  const credsObj = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const client = new AWSAppSyncClient({
     url: appsyncApiUrl,
     region: awsRegion,
@@ -126,7 +126,7 @@ const getAppSyncLogin = async (newUserPhone) => {
   try {
     // succeds if the user already exists
     const authResp = await userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-    idToken = authResp['AuthenticationResult']['IdToken']
+    idToken = authResp.AuthenticationResult.IdToken
     userNeedsReset = true
     userId = jwtDecode(idToken)['cognito:username']
   } catch (err) {
@@ -136,7 +136,7 @@ const getAppSyncLogin = async (newUserPhone) => {
 
     // get an unathenticated ID from the identity pool
     const idResp = await identityPoolClient.getId().promise()
-    userId = idResp['IdentityId']
+    userId = idResp.IdentityId
 
     // create user in the user pool, using the 'identity id' from the identity pool as the user pool 'username'
     const UserAttributes = [
@@ -149,7 +149,7 @@ const getAppSyncLogin = async (newUserPhone) => {
 
     // sign the user in
     const authResp = await userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-    idToken = authResp['AuthenticationResult']['IdToken']
+    idToken = authResp.AuthenticationResult.IdToken
   }
   const Logins = {[userPoolLoginsKey]: idToken}
 
@@ -157,7 +157,7 @@ const getAppSyncLogin = async (newUserPhone) => {
   // note that for a new user, this step also adds an entry in the 'Logins' array of the entry in
   // in the identity pool for the entry in the user pool.
   const credsResp = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  const appSyncClient = await getAppSyncClient(credsResp['Credentials'])
+  const appSyncClient = await getAppSyncClient(credsResp.Credentials)
 
   const username = familyName + myUuid.substring(24)
   if (userNeedsReset) {

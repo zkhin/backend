@@ -30,7 +30,7 @@ const main = async () => {
     },
   })
 
-  const totalHits = resp['hits']['total']['value']
+  const totalHits = resp.hits.total.value
   console.log(`About to bulk delete ${totalHits} documents...`)
 
   resp = await esClient.deleteByQuery({
@@ -40,7 +40,7 @@ const main = async () => {
     },
   })
 
-  const totalDeleted = resp['total']
+  const totalDeleted = resp.total
   console.log(`Deleted ${totalDeleted} documents.`)
 
 }

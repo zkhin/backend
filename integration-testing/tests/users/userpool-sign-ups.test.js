@@ -97,19 +97,19 @@ describe('Test sign-ups to cognito user pool', () => {
       }],
       ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
-    expect(respSignUp['UserConfirmed']).toBe(true)
+    expect(respSignUp.UserConfirmed).toBe(true)
 
     // sign in to get an access token
     const respSignIn = await cognitoClient.initiateAuth({
       AuthFlow: 'USER_PASSWORD_AUTH',
       AuthParameters: {USERNAME: username, PASSWORD: password},
     }).promise()
-    const accessToken = respSignIn['AuthenticationResult']['AccessToken']
+    const accessToken = respSignIn.AuthenticationResult.AccessToken
 
     // get the user details, check the email and phone were auto-verified
     const user = await cognitoClient.getUser({AccessToken: accessToken}).promise()
-    expect(user['Username']).toBe(username)
-    const userAttrs = new Map(user['UserAttributes'].map(ua => [ua['Name'], ua['Value']]))
+    expect(user.Username).toBe(username)
+    const userAttrs = new Map(user.UserAttributes.map(ua => [ua.Name, ua.Value]))
     expect(userAttrs.get('sub')).toBeTruthy()
     expect(userAttrs.get('family_name')).toBe(familyName)
   })
@@ -141,12 +141,12 @@ describe('Test sign-ups to cognito user pool', () => {
       AuthFlow: 'USER_PASSWORD_AUTH',
       AuthParameters: {USERNAME: username, PASSWORD: password},
     }).promise()
-    const accessToken = respSignIn['AuthenticationResult']['AccessToken']
+    const accessToken = respSignIn.AuthenticationResult.AccessToken
 
     // get the user details, check the email and phone were auto-verified
     const user = await cognitoClient.getUser({AccessToken: accessToken}).promise()
-    expect(user['Username']).toBe(username)
-    const userAttrs = new Map(user['UserAttributes'].map(ua => [ua['Name'], ua['Value']]))
+    expect(user.Username).toBe(username)
+    const userAttrs = new Map(user.UserAttributes.map(ua => [ua.Name, ua.Value]))
     expect(userAttrs.get('email')).toBe(email)
     expect(userAttrs.get('email_verified')).toBe('true')
     expect(userAttrs.get('phone_number')).toBe(phone)
@@ -174,7 +174,7 @@ describe('Test sign-ups to cognito user pool', () => {
       }],
       ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
-    expect(respSignUp['UserConfirmed']).toBe(true)
+    expect(respSignUp.UserConfirmed).toBe(true)
 
     // test signing in with userId (aka cognito 'username') (not really a normal use case, but useful when testing)
     const respUsername = await cognitoClient.initiateAuth({
@@ -224,7 +224,7 @@ describe('Test sign-ups to cognito user pool', () => {
       }],
       ClientMetadata: {autoConfirmUser: 'true'},
     }).promise()
-    expect(resp['UserConfirmed']).toBe(true)
+    expect(resp.UserConfirmed).toBe(true)
 
     // verify we can't use the custom auth flow
     await expect(cognitoClient.initiateAuth({

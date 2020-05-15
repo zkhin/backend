@@ -41,8 +41,8 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}))
     .rejects.toThrow(/ClientError: .* cannot be negative/)
   let resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toBeNull()
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post).toBeNull()
 
   // can't crop wider than post is
   postId = uuidv4()
@@ -50,9 +50,9 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}))
     .rejects.toThrow(/ClientError: .* not wide enough /)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['postStatus']).toBe('PROCESSING')  // TODO: fix - should be ERROR
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.postStatus).toBe('PROCESSING')  // TODO: fix - should be ERROR
 
   // can't down to zero area
   postId = uuidv4()
@@ -60,8 +60,8 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}))
     .rejects.toThrow(/ClientError: .* must be strictly greater than /)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toBeNull()
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post).toBeNull()
 })
 
 
@@ -74,17 +74,17 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
   await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}}))
     .rejects.toThrow(/ClientError: .* cannot be negative/)
   let resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']).toBeNull()
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post).toBeNull()
 
   // add a post that with a crop that's too wide
   postId = uuidv4()
   crop = {upperLeft: {x: 1, y: 1}, lowerRight: {x: jpegWidth + 1, y: jpegHeight - 1}}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  let uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postStatus).toBe('PENDING')
+  let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
 
   // upload the image data to cloudfront
@@ -93,9 +93,9 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
 
   // check the post is now in an error state
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['postStatus']).toBe('ERROR')
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.postStatus).toBe('ERROR')
 
   // can't down to zero area
   postId = uuidv4()
@@ -112,11 +112,11 @@ test('Valid jpeg crop, direct upload via gql', async () => {
   const postId = uuidv4()
   const crop = {upperLeft: {x: 1, y: 2}, lowerRight: {x: 3, y: 5}}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData: jpegData, crop}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  let urlNative = resp['data']['addPost']['image']['url']
-  let url4k = resp['data']['addPost']['image']['url4k']
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  let urlNative = resp.data.addPost.image.url
+  let url4k = resp.data.addPost.image.url4k
   expect(urlNative).toBeTruthy()
   expect(url4k).toBeTruthy()
 
@@ -139,10 +139,10 @@ test('Valid jpeg crop, upload via cloudfront', async () => {
   const postId = uuidv4()
   const crop = {upperLeft: {x: jpegWidth/4, y: jpegHeight/4}, lowerRight: {x: jpegWidth*3/4, y: jpegHeight*3/4}}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postStatus']).toBe('PENDING')
-  let uploadUrl = resp['data']['addPost']['imageUploadUrl']
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postStatus).toBe('PENDING')
+  let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
 
   // upload the image data to cloudfront
@@ -151,11 +151,11 @@ test('Valid jpeg crop, upload via cloudfront', async () => {
 
   // retrieve the post object
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['post']['postId']).toBe(postId)
-  expect(resp['data']['post']['postStatus']).toBe('COMPLETED')
-  let urlNative = resp['data']['post']['image']['url']
-  let url4k = resp['data']['post']['image']['url4k']
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.postStatus).toBe('COMPLETED')
+  let urlNative = resp.data.post.image.url
+  let url4k = resp.data.post.image.url4k
   expect(urlNative).toBeTruthy()
   expect(url4k).toBeTruthy()
 
@@ -184,10 +184,10 @@ test('Valid jpeg crop, metadata preserved', async () => {
   const postId = uuidv4()
   const crop = {upperLeft: {x: 10, y: 20}, lowerRight: {x: 30, y: 40}}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData: grantData, crop}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['addPost']['postId']).toBe(postId)
-  expect(resp['data']['addPost']['postStatus']).toBe('COMPLETED')
-  let urlNative = resp['data']['addPost']['image']['url']
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  let urlNative = resp.data.addPost.image.url
   expect(urlNative).toBeTruthy()
 
   // get the exif data of the cropped image

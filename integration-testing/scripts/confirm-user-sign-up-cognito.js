@@ -55,12 +55,12 @@ const confirmUser = async (userId, confirmationCode) => {
     qs: {userId, code: confirmationCode},
   })
   console.log('User confirmed.')
-  return resp['credentials']
+  return resp.credentials
 }
 
 const trackWithPinpoint = async (endpointId, userId, creds) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
-  const credentials = new AWS.Credentials(creds['AccessKeyId'], creds['SecretKey'], creds['SessionToken'])
+  const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
@@ -72,7 +72,7 @@ const trackWithPinpoint = async (endpointId, userId, creds) => {
       Timestamp: moment().toISOString(),
     }},
   }}}}).promise()
-  if (resp['EventsResponse']['Results'][endpointId]['EventsItemResponse'][eventType]['StatusCode'] == 202) {
+  if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
     console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
   }
   else {

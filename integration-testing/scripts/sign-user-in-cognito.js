@@ -83,7 +83,7 @@ const generateTokens = async (username, password) => {
     return await cognitoUserPoolClient.initiateAuth({
       AuthFlow: 'USER_PASSWORD_AUTH',
       AuthParameters: {USERNAME: username, PASSWORD: password},
-    }).promise().then(resp => resp['AuthenticationResult'])
+    }).promise().then(resp => resp.AuthenticationResult)
   }
   catch ( err ) {
     console.log(err)
@@ -95,7 +95,7 @@ const generateCredentials = async (tokens) => {
   let resp
   if (tokens) {
     // generate authenticated credentials
-    const idToken = tokens['IdToken']
+    const idToken = tokens.IdToken
     const userId = jwtDecode(idToken)['cognito:username']
     const Logins = {[`cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`]: idToken}
     resp = await cognitoIdentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
@@ -108,13 +108,13 @@ const generateCredentials = async (tokens) => {
     resp = await cognitoIdentityPoolClient.getId().promise()
     resp = await cognitoIdentityPoolClient.getCredentialsForIdentity(resp).promise()
   }
-  return resp['Credentials']
+  return resp.Credentials
 }
 
 const trackWithPinpoint = async (endpointId, tokens, creds) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
 
-  const credentials = new AWS.Credentials(creds['AccessKeyId'], creds['SecretKey'], creds['SessionToken'])
+  const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
@@ -126,7 +126,7 @@ const trackWithPinpoint = async (endpointId, tokens, creds) => {
       Timestamp: moment().toISOString(),
     }},
   }}}}).promise()
-  if (resp['EventsResponse']['Results'][endpointId]['EventsItemResponse'][eventType]['StatusCode'] == 202) {
+  if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
     console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
   }
   else {
