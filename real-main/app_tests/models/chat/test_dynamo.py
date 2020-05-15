@@ -37,7 +37,7 @@ def test_transact_add_group_chat_minimal(chat_dynamo):
     }
 
     # verify we can't add another chat with same id
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items([transact])
 
 
@@ -67,7 +67,7 @@ def test_transact_add_group_chat_maximal(chat_dynamo):
     }
 
     # verify we can't add another chat with same id
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items([transact])
 
 
@@ -155,7 +155,7 @@ def test_transact_delete_expected_user_count(chat_dynamo):
 
     # verify can't deleted with wrong userCount
     transact = chat_dynamo.transact_delete(chat_id, expected_user_count=0)
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items([transact])
 
     # delete it, verify it was removed from DB
@@ -191,7 +191,7 @@ def test_increment_decrement_user_count(chat_dynamo):
 
     # verify can't go below zero
     transacts = [chat_dynamo.transact_decrement_user_count(chat_id)]
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items(transacts)
 
 
@@ -201,7 +201,7 @@ def test_transact_register_chat_message_added(chat_dynamo):
     # verify can't register to non-existent chat
     now = pendulum.now('utc')
     transact = chat_dynamo.transact_register_chat_message_added(chat_id, now)
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items([transact])
 
     # add a chat
@@ -246,7 +246,7 @@ def test_transact_register_chat_message_edited(chat_dynamo):
     # verify can't register to non-existent chat
     now = pendulum.now('utc')
     transact = chat_dynamo.transact_register_chat_message_edited(chat_id, now)
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items([transact])
 
     # add a chat
@@ -280,7 +280,7 @@ def test_transact_register_chat_message_deleted(chat_dynamo):
     # verify can't register to non-existent chat
     now = pendulum.now('utc')
     transact = chat_dynamo.transact_register_chat_message_deleted(chat_id, now)
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
         chat_dynamo.client.transact_write_items([transact])
 
     # add a chat

@@ -34,7 +34,7 @@ def test_transact_add(flag_dynamo):
     }
 
     # check we can't re-add same flag item
-    with pytest.raises(flag_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(flag_dynamo.client.exceptions.TransactionCanceledException):
         flag_dynamo.client.transact_write_items(transacts)
 
     # check we can flag without specifying the timestamp
@@ -64,7 +64,7 @@ def test_transact_delete(flag_dynamo):
     assert flag_dynamo.get(item_id, user_id) is None
 
     # verify we can't delete a flag that isn't there
-    with pytest.raises(flag_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(flag_dynamo.client.exceptions.TransactionCanceledException):
         flag_dynamo.client.transact_write_items(transacts)
 
 

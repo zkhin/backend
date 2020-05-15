@@ -43,7 +43,7 @@ def test_transact_add_chat_message(chat_message_dynamo, user_id):
     assert item == expected_item
 
     # verify we can't add another chat with same id
-    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_message_dynamo.client.exceptions.TransactionCanceledException):
         chat_message_dynamo.client.transact_write_items([transact])
 
 
@@ -57,7 +57,7 @@ def test_transact_edit_chat_message(chat_message_dynamo):
     edit_transact = chat_message_dynamo.transact_edit_chat_message(message_id, new_text, new_text_tags, edited_at)
 
     # verify we can't edit message that doesn't exist
-    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_message_dynamo.client.exceptions.TransactionCanceledException):
         chat_message_dynamo.client.transact_write_items([edit_transact])
 
     # add the message
@@ -99,7 +99,7 @@ def test_transact_delete_chat_message(chat_message_dynamo):
     delete_transact = chat_message_dynamo.transact_delete_chat_message(message_id)
 
     # verify we can't delete message that doesn't exist
-    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(chat_message_dynamo.client.exceptions.TransactionCanceledException):
         chat_message_dynamo.client.transact_write_items([delete_transact])
 
     # add the message to the DB

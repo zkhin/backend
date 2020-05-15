@@ -31,7 +31,7 @@ def test_transact_add_minimal(post_image_dynamo):
     assert item == {}
 
     # verify we can't add it again
-    with pytest.raises(post_image_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_image_dynamo.client.exceptions.TransactionCanceledException):
         post_image_dynamo.client.transact_write_items([transact])
 
 

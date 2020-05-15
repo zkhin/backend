@@ -143,11 +143,12 @@ description = "Checks CloudFormation templates for practices and behaviour that 
 name = "cfn-lint"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.30.1"
+version = "0.31.1"
 
 [package.dependencies]
 aws-sam-translator = ">=1.21.0"
 jsonschema = ">=3.0,<4.0"
+junit-xml = ">=1.9,<2.0"
 six = ">=1.11,<2.0"
 
 [package.dependencies.jsonpatch]
@@ -471,6 +472,17 @@ format_nongpl = ["idna", "jsonpointer (>1.13)", "webcolors", "rfc3986-validator 
 
 [[package]]
 category = "dev"
+description = "Creates JUnit XML test result documents that can be read by tools such as Jenkins"
+name = "junit-xml"
+optional = false
+python-versions = "*"
+version = "1.9"
+
+[package.dependencies]
+six = "*"
+
+[[package]]
+category = "dev"
 description = "Safely add untrusted strings to HTML/XML markup."
 name = "markupsafe"
 optional = false
@@ -504,7 +516,7 @@ description = "A library that allows your python tests to easily mock out the bo
 name = "moto"
 optional = false
 python-versions = "*"
-version = "1.3.15.dev842"
+version = "1.3.15.dev859"
 
 [package.dependencies]
 Jinja2 = ">=2.10.1"
@@ -1050,7 +1062,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "55a31f61df59925ac7b78ca574317ae0c3789bdc5e5f703f276808ecb229be12"
+content-hash = "e0c1433bd514c10c054f8c14e397a5f83a5b65f45f54a0d25aa95b3229dbf8b2"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -1135,8 +1147,8 @@ cffi = [
     {file = "cffi-1.13.2.tar.gz", hash = "sha256:599a1e8ff057ac530c9ad1778293c665cb81a791421f46922d80a86473c13346"},
 ]
 cfn-lint = [
-    {file = "cfn-lint-0.30.1.tar.gz", hash = "sha256:5001d5fa0e1b255d546fe966c0111a6aeaf26dc583249df626488622929e419b"},
-    {file = "cfn_lint-0.30.1-py3-none-any.whl", hash = "sha256:6a1506d2b5859a8bbfa33864e96cd2599dc918038660000241087f22db29b0d0"},
+    {file = "cfn-lint-0.31.1.tar.gz", hash = "sha256:ef3a33a4df06b4955c938274e816a6ad16da5bf36abc9c80821b06d0ec9a340c"},
+    {file = "cfn_lint-0.31.1-py3-none-any.whl", hash = "sha256:b9947cc903da0fb977fac7ce803bcd3a5f4ac19f9dc9199b72b41eb89b2a00b6"},
 ]
 chardet = [
     {file = "chardet-3.0.4-py2.py3-none-any.whl", hash = "sha256:fc323ffcaeaed0e0a02bf4d117757b98aed530d9ed4531e3e15460124c106691"},
@@ -1280,6 +1292,9 @@ jsonschema = [
     {file = "jsonschema-3.2.0-py2.py3-none-any.whl", hash = "sha256:4e5b3cf8216f577bee9ce139cbe72eca3ea4f292ec60928ff24758ce626cd163"},
     {file = "jsonschema-3.2.0.tar.gz", hash = "sha256:c8a85b28d377cc7737e46e2d9f2b4f44ee3c0e1deac6bf46ddefc7187d30797a"},
 ]
+junit-xml = [
+    {file = "junit_xml-1.9-py2.py3-none-any.whl", hash = "sha256:ec5ca1a55aefdd76d28fcc0b135251d156c7106fa979686a4b48d62b761b4732"},
+]
 markupsafe = [
     {file = "MarkupSafe-1.1.1-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:09027a7803a62ca78792ad89403b1b7a73a01c8cb65909cd876f7fcebd79b161"},
     {file = "MarkupSafe-1.1.1-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:e249096428b3ae81b08327a63a485ad0878de3fb939049038579ac0ef61e17e7"},
@@ -1324,8 +1339,8 @@ more-itertools = [
     {file = "more_itertools-8.2.0-py3-none-any.whl", hash = "sha256:5dd8bcf33e5f9513ffa06d5ad33d78f31e1931ac9a18f33d37e77a180d393a7c"},
 ]
 moto = [
-    {file = "moto-1.3.15.dev842-py2.py3-none-any.whl", hash = "sha256:2319b3ce66b388ce0981cdd79ae4210933c1f471b69d4138194dd56225033857"},
-    {file = "moto-1.3.15.dev842.tar.gz", hash = "sha256:92f4987b4166ae77691eeb5f5194bdf8ffa900d3839f1134e2cc03a3b8b96d5c"},
+    {file = "moto-1.3.15.dev859-py2.py3-none-any.whl", hash = "sha256:976a7f31dff1d0ee508868a17b1bfa46700f6f64c8bcc11c7dc9f850d6807d3f"},
+    {file = "moto-1.3.15.dev859.tar.gz", hash = "sha256:b6cb08dc7924f047115b1ddb5e947e9022ead93b22a637512bcfce0fdac0b2bb"},
 ]
 msgpack = [
     {file = "msgpack-1.0.0-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:cec8bf10981ed70998d98431cd814db0ecf3384e6b113366e7f36af71a0fca08"},

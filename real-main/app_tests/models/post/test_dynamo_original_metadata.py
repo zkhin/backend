@@ -24,7 +24,7 @@ def test_transact_add_original_metadata_and_delete(pom_dynamo):
 
     # verify can't set it again
     transacts = [pom_dynamo.transact_add(post_id, 'new value')]
-    with pytest.raises(pom_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(pom_dynamo.client.exceptions.TransactionCanceledException):
         pom_dynamo.client.transact_write_items(transacts)
     assert pom_dynamo.get(post_id)
 

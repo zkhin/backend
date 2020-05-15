@@ -80,7 +80,7 @@ def test_cant_transact_add_album_same_album_id(album_dynamo, album_item):
 
     # verify we can't add another album with the same id
     transact = album_dynamo.transact_add_album(album_id, 'uid2', 'n2')
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
 
@@ -126,7 +126,7 @@ def test_set_errors(album_dynamo, album_item):
 def test_cant_transact_delete_album_doesnt_exist(album_dynamo):
     album_id = 'dne-cid'
     transact = album_dynamo.transact_delete_album(album_id)
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
 
@@ -181,7 +181,7 @@ def test_transact_add_post_failes_wrong_rank_count(album_dynamo, album_item):
 
     # can't specify a rank count when none exists
     transact = album_dynamo.transact_add_post(album_id, old_rank_count=1)
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
     # add a post, sets rank count
@@ -192,12 +192,12 @@ def test_transact_add_post_failes_wrong_rank_count(album_dynamo, album_item):
 
     # can't not specify a rank count when one exists
     transact = album_dynamo.transact_add_post(album_id)
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
     # can't specify wrong value for rank count
     transact = album_dynamo.transact_add_post(album_id, old_rank_count=2)
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
     # can specify correct rank count
@@ -227,7 +227,7 @@ def test_transact_remove_post(album_dynamo, album_item):
 
     # verify we can't remove another post
     transact = album_dynamo.transact_remove_post(album_id)
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
 
@@ -279,7 +279,7 @@ def test_increment_rank_count(album_dynamo, album_item):
     # verify can't increment rank count from starting point of none
     # (first a post has to be added to the album to initialize it)
     transact = album_dynamo.transact_increment_rank_count(album_id, None)
-    with pytest.raises(album_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
     # add a post to album (init's the rankCount)

@@ -215,7 +215,7 @@ def test_delete_group_chat(group_chat, user1, chat_message_manager):
 
 
 def test_cant_delete_group_chat_with_members(group_chat):
-    with pytest.raises(group_chat.dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(group_chat.dynamo.client.exceptions.TransactionCanceledException):
         group_chat.delete_group_chat()
 
 

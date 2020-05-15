@@ -82,7 +82,7 @@ def test_delete_cant_decrement_post_comment_count_below_zero(comment, post_manag
     post_manager.dynamo.client.transact_write_items(transacts)
 
     # deleting the comment should fail
-    with pytest.raises(comment.dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(comment.dynamo.client.exceptions.TransactionCanceledException):
         comment.delete(comment.user_id)
 
     # verify the comment is still in the DB

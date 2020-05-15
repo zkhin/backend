@@ -54,14 +54,14 @@ def test_cant_transact_add_comment_same_comment_id(comment_dynamo):
     comment_dynamo.client.transact_write_items([transact])
 
     # verify we can't add another comment with the same id
-    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(comment_dynamo.client.exceptions.TransactionCanceledException):
         comment_dynamo.client.transact_write_items([transact])
 
 
 def test_cant_transact_delete_comment_doesnt_exist(comment_dynamo):
     comment_id = 'dne-cid'
     transact = comment_dynamo.transact_delete_comment(comment_id)
-    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(comment_dynamo.client.exceptions.TransactionCanceledException):
         comment_dynamo.client.transact_write_items([transact])
 
 
@@ -165,7 +165,7 @@ def test_transact_increment_decrement_flag_count(comment_dynamo):
 
     # check can't decrement below zero
     transacts = [comment_dynamo.transact_decrement_flag_count(comment_id)]
-    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(comment_dynamo.client.exceptions.TransactionCanceledException):
         comment_dynamo.client.transact_write_items(transacts)
 
 

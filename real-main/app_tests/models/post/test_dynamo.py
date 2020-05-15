@@ -131,7 +131,7 @@ def test_transact_add_post_already_exists(post_dynamo):
     post_dynamo.client.transact_write_items(transacts)
 
     # try to add it again
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items(transacts)
 
 
@@ -414,7 +414,7 @@ def test_transact_increment_decrement_flag_count(post_dynamo):
 
     # check can't decrement below zero
     transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items(transacts)
 
 
@@ -812,7 +812,7 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
 
     # verify we can't decrement count below zero
     transact = post_dynamo.transact_decrement_comment_count(post_id)
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item.get('commentCount', 0) == 0
@@ -847,7 +847,7 @@ def test_transact_set_has_new_comment_activity(post_dynamo):
 
     # verify can't set missing to False
     transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert 'hasNewCommentActivity' not in post_item
@@ -860,7 +860,7 @@ def test_transact_set_has_new_comment_activity(post_dynamo):
 
     # verify can't set True to True
     transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item['hasNewCommentActivity'] is True
@@ -873,7 +873,7 @@ def test_transact_set_has_new_comment_activity(post_dynamo):
 
     # verify can't set False to False
     transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
     assert post_item['hasNewCommentActivity'] is False
@@ -1000,7 +1000,7 @@ def test_transact_set_album_id_fails_wrong_status(post_dynamo):
     # verify transaction fails rather than write conflicting data to db
     post_item['postStatus'] = 'ERROR'
     transact = post_dynamo.transact_set_album_id(post_item, 'aid2')
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
         post_dynamo.client.transact_write_items([transact])
 
     # verify nothing changed

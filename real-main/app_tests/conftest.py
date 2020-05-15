@@ -1,6 +1,6 @@
 import base64
 from os import path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from moto import mock_cognitoidp, mock_dynamodb2, mock_s3
 import pytest
@@ -86,47 +86,7 @@ def cognito_client():
 @pytest.fixture
 def dynamo_client():
     with mock_dynamodb2():
-        dynamo_client = clients.DynamoClient(table_name='my-table', create_table_schema=table_schema)
-
-        # set for scope within the mocked transact_write_items
-        # is there a better way to do this? the `new` and `side_effect` kwargs on path.object()
-        # don't seem to handle the `self` argument correctly
-        self = dynamo_client
-
-        # keep this in sync as much as possible with the actual implementation in app/clients/dynamo.py
-        def transact_write_items(transact_items, transact_exceptions=None):
-            if transact_exceptions is None:
-                transact_exceptions = [None] * len(transact_items)
-            else:
-                assert len(transact_items) == len(transact_exceptions)
-            for ti in transact_items:
-                list(ti.values()).pop()['TableName'] = self.table_name
-            for transact_item, transact_exception in zip(transact_items, transact_exceptions):
-                assert len(transact_item) == 1
-                key, kwargs = next(iter(transact_item.items()))
-                if key == 'Put':
-                    operation = self.boto3_client.put_item
-                elif key == 'Delete':
-                    operation = self.boto3_client.delete_item
-                elif key == 'Update':
-                    operation = self.boto3_client.update_item
-                elif key == 'ConditionCheck':
-                    # There is no corresponding operation we can do here, AFAIK
-                    # Thus we can't test write failures due to ConditionChecks in test suite
-                    continue
-                else:
-                    raise ValueError(f"Unrecognized transaction key '{key}'")
-                try:
-                    operation(**kwargs)
-                except self.exceptions.ConditionalCheckFailedException as err:
-                    if transact_exception is not None:
-                        raise transact_exception
-                    raise err
-
-        # replace transact_write_items, because the version in moto doesn't seem to be
-        # working for our unit tests, yet https://github.com/spulec/moto/pull/2985
-        with patch.object(dynamo_client, 'transact_write_items', new=transact_write_items):
-            yield dynamo_client
+        yield clients.DynamoClient(table_name='my-table', create_table_schema=table_schema)
 
 
 @pytest.fixture

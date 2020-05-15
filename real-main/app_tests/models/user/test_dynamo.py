@@ -392,7 +392,7 @@ def test_increment_decrement_follower_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_follower_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -419,7 +419,7 @@ def test_increment_decrement_followed_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_followed_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -446,7 +446,7 @@ def test_increment_decrement_album_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_album_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -473,7 +473,7 @@ def test_increment_decrement_chat_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_chat_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -500,7 +500,7 @@ def test_increment_decrement_post_has_new_comment_activity_count(user_dynamo):
 
     # verify can't go below zero
     transacts = [user_dynamo.transact_decrement_post_has_new_comment_activity_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(transacts)
 
     # increment
@@ -606,7 +606,7 @@ def test_transact_post_archived(user_dynamo):
     assert user_item.get('postForcedArchivingCount', 0) == 2
 
     # verify can't go negative
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id)])
 
 
@@ -636,7 +636,7 @@ def test_transact_post_restored(user_dynamo):
     assert user_item.get('postArchivedCount', 0) == 0
 
     # verify can't go negative
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items([user_dynamo.transact_post_restored(user_id)])
 
 
@@ -681,13 +681,13 @@ def test_transact_post_deleted(user_dynamo):
     assert user_item.get('postDeletedCount', 0) == 3
 
     # verify can't go negative for completed posts
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items([
             user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),
         ])
 
     # verify can't go negative for archived posts
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items([
             user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),
         ])

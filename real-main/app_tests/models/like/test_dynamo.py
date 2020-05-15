@@ -77,12 +77,12 @@ def test_transact_add_like_cant_relike_post(like_dynamo):
 
     # verify we can't add another like with the same status
     transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, first_like_status)
-    with pytest.raises(like_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(like_dynamo.client.exceptions.TransactionCanceledException):
         like_dynamo.client.transact_write_items([transact])
 
     # verify we can't add another like with different status
     transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, second_like_status)
-    with pytest.raises(like_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(like_dynamo.client.exceptions.TransactionCanceledException):
         like_dynamo.client.transact_write_items([transact])
 
 
