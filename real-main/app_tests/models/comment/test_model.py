@@ -47,14 +47,14 @@ def test_serialize(comment_manager, comment, user, view_manager):
     assert resp == comment.item
 
 
-def test_delete(comment, post_manager, comment_manager, user2, user3, view_manager):
+def test_delete(comment, post_manager, comment_manager, user, user2, user3, view_manager):
     # verify it's visible in the DB
     comment_item = comment.dynamo.get_comment(comment.id)
     assert comment_item['commentId'] == comment.id
 
-    # check the post's comment count
-    post = post_manager.get_post(comment.item['postId'])
-    assert post.item['commentCount'] == 1
+    # check the user & post's comment count
+    user.refresh_item().item.get('commentCount', 0) == 1
+    post_manager.get_post(comment.item['postId']).item.get('commentCount', 0) == 1
 
     # add two views to the comment, verify we see them
     view_manager.record_views('comment', [comment.id], user2.id)
@@ -68,9 +68,9 @@ def test_delete(comment, post_manager, comment_manager, user2, user3, view_manag
     assert comment.item['commentId'] == comment.id
     assert comment.dynamo.get_comment(comment.id) is None
 
-    # check the post's comment count has decremented
-    post = post_manager.get_post(comment.item['postId'])
-    assert post.item['commentCount'] == 0
+    # check the user & post's comment count have decremented
+    user.refresh_item().item.get('commentCount', 0) == 0
+    post_manager.get_post(comment.item['postId']).item.get('commentCount', 0) == 0
 
     # check the two comment views have also been deleted
     assert list(view_manager.dynamo.generate_views(comment.item['partitionKey'])) == []
@@ -80,6 +80,20 @@ def test_delete_cant_decrement_post_comment_count_below_zero(comment, post_manag
     # sneak behind the model and lower the post's comment count
     transacts = [post_manager.dynamo.transact_decrement_comment_count(comment.item['postId'])]
     post_manager.dynamo.client.transact_write_items(transacts)
+
+    # deleting the comment should fail
+    with pytest.raises(comment.dynamo.client.exceptions.TransactionCanceledException):
+        comment.delete(comment.user_id)
+
+    # verify the comment is still in the DB
+    comment_item = comment.dynamo.get_comment(comment.id)
+    assert comment_item['commentId'] == comment.id
+
+
+def test_delete_cant_decrement_user_comment_count_below_zero(comment, user_manager):
+    # sneak behind the model and lower the user's comment count
+    transacts = [user_manager.dynamo.transact_comment_deleted(comment.item['userId'])]
+    user_manager.dynamo.client.transact_write_items(transacts)
 
     # deleting the comment should fail
     with pytest.raises(comment.dynamo.client.exceptions.TransactionCanceledException):

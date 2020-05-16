@@ -8,12 +8,13 @@ from app.models.post.enums import PostType
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id = str(uuid.uuid4())
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
-    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 user2 = user
+user3 = user
 
 
 @pytest.fixture
@@ -25,6 +26,7 @@ def test_add_comment(comment_manager, user, post):
     comment_id = 'cid'
 
     # check our starting state
+    assert user.item.get('commentCount', 0) == 0
     assert post.item.get('commentCount', 0) == 0
     assert comment_manager.get_comment(comment_id) is None
 
@@ -45,6 +47,7 @@ def test_add_comment(comment_manager, user, post):
     assert post.item['commentCount'] == 1
     assert post.item.get('hasNewCommentActivity', False) is False
     user.refresh_item()
+    assert user.item['commentCount'] == 1
     assert user.item.get('postHasNewCommentActivityCount', 0) == 0
 
 
@@ -159,43 +162,44 @@ def test_private_user_can_comment_on_own_post(comment_manager, user, post):
     assert comment.id == comment_id
 
 
-def test_delete_all_by_user(comment_manager, user, post):
+def test_delete_all_by_user(comment_manager, user, post, user2, user3):
     # add a comment by an unrelated user for distraction
-    comment_other = comment_manager.add_comment('coid', post.id, '2uid', 'lore')
+    comment_other = comment_manager.add_comment('coid', post.id, user2.id, 'lore')
 
     # add two comments by our target user
-    comment_1 = comment_manager.add_comment('cid1', post.id, '3uid', 'lore')
-    comment_2 = comment_manager.add_comment('cid2', post.id, '3uid', 'lore')
+    comment_1 = comment_manager.add_comment('cid1', post.id, user3.id, 'lore')
+    comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
 
-    # check post comment count
-    post.refresh_item()
-    assert post.item['commentCount'] == 3
+    # check post comment count, their comment count
+    post.refresh_item().item.get('commentCount', 0) == 3
+    user3.refresh_item().item.get('commentCount', 0) == 2
 
     # delete all the comments by the user, verify it worked
-    comment_manager.delete_all_by_user('3uid')
+    comment_manager.delete_all_by_user(user3.id)
     assert comment_manager.get_comment(comment_1.id) is None
     assert comment_manager.get_comment(comment_2.id) is None
 
     # verify the unrelated comment was untouched
     assert comment_manager.get_comment(comment_other.id)
 
-    # check post comment count
-    post.refresh_item()
-    assert post.item['commentCount'] == 1
+    # check post & user comment count
+    post.refresh_item().item.get('commentCount', 0) == 1
+    user3.refresh_item().item.get('commentCount', 0) == 0
 
 
-def test_delete_all_on_post(comment_manager, user, post, post_manager):
+def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, user3):
     # add another post, add a comment on it for distraction
     post_other = post_manager.add_post(user.id, 'pid-other', PostType.TEXT_ONLY, text='go go')
     comment_other = comment_manager.add_comment('coid', post_other.id, user.id, 'lore')
 
     # add two comments on the target post
-    comment_1 = comment_manager.add_comment('cid1', post.id, '2uid', 'lore')
-    comment_2 = comment_manager.add_comment('cid2', post.id, '3uid', 'lore')
+    comment_1 = comment_manager.add_comment('cid1', post.id, user2.id, 'lore')
+    comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
 
-    # check post comment count
-    post.refresh_item()
-    assert post.item['commentCount'] == 2
+    # check post, user comment count
+    post.refresh_item().item.get('commentCount', 0) == 2
+    user2.refresh_item().item.get('commentCount', 0) == 1
+    user3.refresh_item().item.get('commentCount', 0) == 1
 
     # delete all the comments on the post, verify it worked
     comment_manager.delete_all_on_post(post.id)
@@ -206,5 +210,6 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager):
     assert comment_manager.get_comment(comment_other.id)
 
     # check post comment count
-    post.refresh_item()
-    assert post.item['commentCount'] == 0
+    post.refresh_item().item.get('commentCount', 0) == 0
+    user2.refresh_item().item.get('commentCount', 0) == 0
+    user3.refresh_item().item.get('commentCount', 0) == 0

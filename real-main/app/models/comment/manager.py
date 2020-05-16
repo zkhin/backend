@@ -80,10 +80,12 @@ class CommentManager(FlagManagerMixin):
         transacts = [
             self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
             self.post_manager.dynamo.transact_increment_comment_count(post_id),
+            self.user_manager.dynamo.transact_comment_added(user_id),
         ]
         transact_exceptions = [
             exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
             exceptions.CommentException('Unable to increment Post.commentCount'),
+            exceptions.CommentException('Unable to increment User.commentCount'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 

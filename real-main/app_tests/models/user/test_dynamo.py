@@ -25,7 +25,7 @@ def test_add_user_minimal(user_dynamo):
     assert after > now
 
     assert item == {
-        'schemaVersion': 7,
+        'schemaVersion': 8,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -58,7 +58,7 @@ def test_add_user_maximal(user_dynamo):
     assert after > now
 
     assert item == {
-        'schemaVersion': 7,
+        'schemaVersion': 8,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -93,7 +93,7 @@ def test_add_user_at_specific_time(user_dynamo):
 
     item = user_dynamo.add_user(user_id, username, now=now)
     assert item == {
-        'schemaVersion': 7,
+        'schemaVersion': 8,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -691,3 +691,44 @@ def test_transact_post_deleted(user_dynamo):
         user_dynamo.client.transact_write_items([
             user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),
         ])
+
+
+def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):
+    user_id = 'user-id'
+    transact_added = user_dynamo.transact_comment_added(user_id)
+    transact_deleted = user_dynamo.transact_comment_deleted(user_id)
+
+    # set up & verify starting state
+    user_dynamo.add_user(user_id, 'username')
+    user_item = user_dynamo.get_user(user_id)
+    assert user_item['userId'] == user_id
+    assert user_item.get('commentCount', 0) == 0
+    assert user_item.get('commentDeletedCount', 0) == 0
+
+    # add a comment
+    user_dynamo.client.transact_write_items([transact_added])
+    user_item = user_dynamo.get_user(user_id)
+    assert user_item.get('commentCount', 0) == 1
+    assert user_item.get('commentDeletedCount', 0) == 0
+
+    # add another comment
+    user_dynamo.client.transact_write_items([transact_added])
+    user_item = user_dynamo.get_user(user_id)
+    assert user_item.get('commentCount', 0) == 2
+    assert user_item.get('commentDeletedCount', 0) == 0
+
+    # delete one comment
+    user_dynamo.client.transact_write_items([transact_deleted])
+    user_item = user_dynamo.get_user(user_id)
+    assert user_item.get('commentCount', 0) == 1
+    assert user_item.get('commentDeletedCount', 0) == 1
+
+    # delete another comment
+    user_dynamo.client.transact_write_items([transact_deleted])
+    user_item = user_dynamo.get_user(user_id)
+    assert user_item.get('commentCount', 0) == 0
+    assert user_item.get('commentDeletedCount', 0) == 2
+
+    # verify can't go negative
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
+        user_dynamo.client.transact_write_items([transact_deleted])

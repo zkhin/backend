@@ -47,7 +47,7 @@ class UserDynamo:
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
-                'schemaVersion': 7,
+                'schemaVersion': 8,
                 'partitionKey': f'user/{user_id}',
                 'sortKey': 'profile',
                 'gsiA1PartitionKey': f'username/{username}',
@@ -312,4 +312,28 @@ class UserDynamo:
             kwargs['ExpressionAttributeValues'][':negative_one'] = {'N': '-1'}
             kwargs['ExpressionAttributeValues'][':zero'] = {'N': '0'}
             kwargs['ConditionExpression'] += ' and #ctd > :zero'
+        return {'Update': kwargs}
+
+    def transact_comment_added(self, user_id):
+        kwargs = {
+            'Key': self.typed_pk(user_id),
+            'UpdateExpression': 'ADD commentCount :positive_one',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+            'ExpressionAttributeValues': {
+                ':positive_one': {'N': '1'},
+            },
+        }
+        return {'Update': kwargs}
+
+    def transact_comment_deleted(self, user_id):
+        kwargs = {
+            'Key': self.typed_pk(user_id),
+            'UpdateExpression': 'ADD commentCount :negative_one, commentDeletedCount :positive_one',
+            'ConditionExpression': 'attribute_exists(partitionKey) AND commentCount > :zero',
+            'ExpressionAttributeValues': {
+                ':negative_one': {'N': '-1'},
+                ':positive_one': {'N': '1'},
+                ':zero': {'N': '0'},
+            },
+        }
         return {'Update': kwargs}

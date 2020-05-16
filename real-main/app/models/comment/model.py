@@ -56,6 +56,7 @@ class Comment(FlagModelMixin):
 
         # order matters to moto (in test suite), but not on dynamo
         transacts = [
+            self.user_manager.dynamo.transact_comment_deleted(self.user_id),
             self.post_manager.dynamo.transact_decrement_comment_count(self.post_id),
             self.dynamo.transact_delete_comment(self.id),
         ]
