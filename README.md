@@ -19,10 +19,14 @@ In each of the stack root directories, run `npm install` to install serverless a
 
 ## Deployment
 
-To deploy each serverless stack, run `sls deploy` in that stack's root directory. Note that:
+To deploy each serverless stack, run `sls deploy` in that stack's root directory.
 
-- unless given the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option, serverless will use the default AWS credentials to do the deployment (usually stored in `~/.aws/credentials`).
-- serverless expects the AWS credentials to have `AdministratorAccess` policy attached.
+### AWS Credentials
+
+By default, serverless will use aws credetials stored in the profile with name `real-{stage}` (ie: `real-dev`, `real-staging`, or `real-production`). This behavior can be overriden by using the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option.
+
+
+Serverless expects the AWS credentials to have `AdministratorAccess` policy attached.
 
 ### A brand-new deployment
 
