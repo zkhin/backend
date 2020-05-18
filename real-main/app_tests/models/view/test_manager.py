@@ -1,5 +1,5 @@
 import logging
-from unittest.mock import Mock, call
+import unittest.mock as mock
 import uuid
 
 import pendulum
@@ -79,9 +79,9 @@ def test_delete_views(view_manager, posts):
 
 def test_record_views(view_manager):
     # catch any calls to 'record_view'
-    view_manager.record_views_for_comments = Mock()
-    view_manager.record_views_for_chat_messages = Mock()
-    view_manager.record_views_for_posts = Mock()
+    view_manager.record_views_for_comments = mock.Mock()
+    view_manager.record_views_for_chat_messages = mock.Mock()
+    view_manager.record_views_for_posts = mock.Mock()
 
     # call with no ids
     viewed_at = pendulum.now('utc')
@@ -95,13 +95,13 @@ def test_record_views(view_manager):
     view_manager.record_views('comment', ['cid1'], 'vuid', viewed_at)
     view_manager.record_views('post', ['pid1', 'pid2', 'pid1'], 'vuid', viewed_at)
     assert view_manager.record_views_for_chat_messages.mock_calls == [
-        call({'chid2': 2}, 'vuid', viewed_at),
+        mock.call({'chid2': 2}, 'vuid', viewed_at),
     ]
     assert view_manager.record_views_for_comments.mock_calls == [
-        call({'cid1': 1}, 'vuid', viewed_at),
+        mock.call({'cid1': 1}, 'vuid', viewed_at),
     ]
     assert view_manager.record_views_for_posts.mock_calls == [
-        call({'pid1': 2, 'pid2': 1}, 'vuid', viewed_at),
+        mock.call({'pid1': 2, 'pid2': 1}, 'vuid', viewed_at),
     ]
 
 
@@ -113,7 +113,7 @@ def test_cant_record_view_bad_item_type(view_manager):
 def test_record_views_for_chat_messages(view_manager, chat_message, user2, caplog):
     grouped_message_ids = {'cmid-dne': 1, chat_message.id: 2}
     now = pendulum.now('utc')
-    view_manager.record_view_for_chat_message = Mock()
+    view_manager.record_view_for_chat_message = mock.Mock()
 
     with caplog.at_level(logging.WARNING):
         # logs warning for chat_message that DNE
@@ -126,7 +126,7 @@ def test_record_views_for_chat_messages(view_manager, chat_message, user2, caplo
     assert '`cmid-dne`' in caplog.records[0].msg
     assert 'DNE' in caplog.records[0].msg
 
-    # check calls to Mock
+    # check calls to mock.Mock
     assert len(view_manager.record_view_for_chat_message.call_args_list) == 1
     assert view_manager.record_view_for_chat_message.call_args_list[0].kwargs == {}
     assert view_manager.record_view_for_chat_message.call_args_list[0].args[0].id == chat_message.id
@@ -223,10 +223,10 @@ def test_record_views_for_comments(view_manager, comment_manager, posts, user, u
     comment1 = comment_manager.add_comment('cmid2', post.id, user2.id, 'witty comment')
     comment2 = comment_manager.add_comment('cmid3', post.id, user2.id, 'witty comment')
 
-    # Mock methods we want to verify called correctly
-    view_manager.record_view_for_comment = Mock()
-    view_manager.post_manager.get_post = Mock(return_value=post)
-    post.set_new_comment_activity = Mock()
+    # mock.Mock methods we want to verify called correctly
+    view_manager.record_view_for_comment = mock.Mock()
+    view_manager.post_manager.get_post = mock.Mock(return_value=post)
+    post.set_new_comment_activity = mock.Mock()
 
     # post owner views both comments, including one that doesn't exist
     now = pendulum.now('utc')
@@ -241,7 +241,7 @@ def test_record_views_for_comments(view_manager, comment_manager, posts, user, u
     assert '`cid-dne`' in caplog.records[0].msg
     assert 'DNE' in caplog.records[0].msg
 
-    # check calls to Mock
+    # check calls to mock.Mock
     assert len(view_manager.record_view_for_comment.call_args_list) == 2
     assert view_manager.record_view_for_comment.call_args_list[0].kwargs == {}
     assert view_manager.record_view_for_comment.call_args_list[1].kwargs == {}
@@ -255,15 +255,15 @@ def test_record_views_for_comments(view_manager, comment_manager, posts, user, u
     assert view_manager.record_view_for_comment.call_args_list[1].args[3] == now
 
     # verify post set comment activity called only once
-    assert view_manager.post_manager.get_post.mock_calls == [call(post.id)]
-    assert post.set_new_comment_activity.mock_calls == [call(False)]
+    assert view_manager.post_manager.get_post.mock_calls == [mock.call(post.id)]
+    assert post.set_new_comment_activity.mock_calls == [mock.call(False)]
 
 
 def test_record_views_for_posts(view_manager, posts, caplog):
     user_id = 'vuid'
     post_ids = {'pid-dne': 1, posts[0].id: 1, posts[1].id: 2}
     now = pendulum.now('utc')
-    view_manager.record_view_for_post = Mock()
+    view_manager.record_view_for_post = mock.Mock()
 
     with caplog.at_level(logging.WARNING):
         # logs warning for post that DNE
@@ -276,7 +276,7 @@ def test_record_views_for_posts(view_manager, posts, caplog):
     assert '`pid-dne`' in caplog.records[0].msg
     assert 'DNE' in caplog.records[0].msg
 
-    # check calls to Mock
+    # check calls to mock.Mock
     assert len(view_manager.record_view_for_post.call_args_list) == 2
     assert view_manager.record_view_for_post.call_args_list[0].kwargs == {}
     assert view_manager.record_view_for_post.call_args_list[1].kwargs == {}

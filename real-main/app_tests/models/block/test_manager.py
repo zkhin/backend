@@ -1,4 +1,4 @@
-from unittest.mock import call, Mock
+import unittest.mock as mock
 import uuid
 
 import pytest
@@ -21,7 +21,7 @@ blocked_user_2 = blocker_user
 
 def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_user):
     # mock out calls to the follow manager
-    block_manager.follow_manager = Mock(follow_manager)
+    block_manager.follow_manager = mock.Mock(follow_manager)
     block_manager.follow_manager.exceptions = follow_manager.exceptions
 
     block_item = block_manager.block(blocker_user, blocked_user)
@@ -34,10 +34,10 @@ def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_us
 
     # check following manager was called to clear any followings
     assert block_manager.follow_manager.mock_calls == [
-        call.get_follow(blocker_user.id, blocked_user.id),
-        call.get_follow().unfollow(force=True),
-        call.get_follow(blocked_user.id, blocker_user.id),
-        call.get_follow().unfollow(force=True),
+        mock.call.get_follow(blocker_user.id, blocked_user.id),
+        mock.call.get_follow().unfollow(force=True),
+        mock.call.get_follow(blocked_user.id, blocker_user.id),
+        mock.call.get_follow().unfollow(force=True),
     ]
 
 

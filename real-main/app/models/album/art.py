@@ -1,7 +1,7 @@
-from io import BytesIO
+import io
 import math
 
-from PIL import Image
+import PIL.Image as Image
 
 
 def generate_basic_grid(image_data_buffers):
@@ -34,7 +34,7 @@ def generate_basic_grid(image_data_buffers):
             target_image.paste(image, loc)
 
     # convert to jpeg
-    buf_out = BytesIO()
+    buf_out = io.BytesIO()
     target_image.save(buf_out, format='JPEG', quality=100)
     buf_out.seek(0)
     return buf_out
@@ -89,7 +89,7 @@ def generate_zoomed_grid(image_data_buffers):
             target_image.paste(image, loc)
 
     # convert to jpeg
-    buf_out = BytesIO()
+    buf_out = io.BytesIO()
     target_image.save(buf_out, format='JPEG', quality=100)
     buf_out.seek(0)
     return buf_out

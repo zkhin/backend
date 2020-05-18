@@ -1,4 +1,4 @@
-from decimal import Decimal
+import decimal
 import logging
 import math
 
@@ -95,5 +95,5 @@ class TrendingManager:
 
     def calculate_new_score(self, old_score, last_indexed_at, pending_view_count, now):
         "Calcualte the new score for the item, as a Decimal, because that's what dynamodb can consume"
-        coeff = Decimal(math.exp((now - last_indexed_at) / self.lifetime) ** -1)
+        coeff = decimal.Decimal(math.exp((now - last_indexed_at) / self.lifetime) ** -1)
         return old_score * coeff + pending_view_count

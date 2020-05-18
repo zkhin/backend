@@ -1,4 +1,4 @@
-from unittest.mock import call, Mock
+import unittest.mock as mock
 import uuid
 
 import pytest
@@ -22,14 +22,14 @@ def post(post_manager, user):
 
 
 def test_remove_from_flagging(post):
-    post.archive = Mock()
+    post.archive = mock.Mock()
     post.remove_from_flagging()
-    assert post.archive.mock_calls == [call(forced=True)]
+    assert post.archive.mock_calls == [mock.call(forced=True)]
 
 
 def test_is_user_forced_disabling_criteria_met(post):
     return_value = {}
-    post.user.is_forced_disabling_criteria_met_by_posts = Mock(return_value=return_value)
+    post.user.is_forced_disabling_criteria_met_by_posts = mock.Mock(return_value=return_value)
     assert post.is_user_forced_disabling_criteria_met() is return_value
 
 

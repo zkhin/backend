@@ -1,12 +1,11 @@
 import base64
-from os import path
-from unittest.mock import Mock
+import os.path as path
+import unittest.mock as mock
 
-from moto import mock_cognitoidp, mock_dynamodb2, mock_s3
+import moto
 import pytest
 
 from app import clients, models
-
 from app_tests.dynamodb.table_schema import table_schema
 
 heic_path = path.join(path.dirname(__file__), 'fixtures', 'IMG_0265.HEIC')
@@ -49,18 +48,18 @@ def heic_data_b64(heic_data):
 
 @pytest.fixture
 def appsync_client():
-    yield Mock(clients.AppSyncClient(appsync_graphql_url='my-graphql-url'))
+    yield mock.Mock(clients.AppSyncClient(appsync_graphql_url='my-graphql-url'))
 
 
 @pytest.fixture
 def cloudfront_client():
-    yield Mock(clients.CloudFrontClient(None, 'my-domain'))
+    yield mock.Mock(clients.CloudFrontClient(None, 'my-domain'))
 
 
 @pytest.fixture
 def mediaconvert_client():
     endpoint = 'https://my-media-convert-endpoint.com'
-    yield Mock(clients.MediaConvertClient(
+    yield mock.Mock(clients.MediaConvertClient(
         endpoint=endpoint, aws_account_id='aws-aid', role_arn='role-arn', uploads_bucket='uploads-bucket'
     ))
 
@@ -68,12 +67,12 @@ def mediaconvert_client():
 @pytest.fixture
 def post_verification_client():
     # by default, all images pass verification
-    yield Mock(clients.PostVerificationClient(lambda: None), **{'verify_image.return_value': True})
+    yield mock.Mock(clients.PostVerificationClient(lambda: None), **{'verify_image.return_value': True})
 
 
 @pytest.fixture
 def cognito_client():
-    with mock_cognitoidp():
+    with moto.mock_cognitoidp():
         cognito_client = clients.CognitoClient('dummy', 'my-client-id')
         resp = cognito_client.boto_client.create_user_pool(
             PoolName='user-pool-name',
@@ -85,25 +84,25 @@ def cognito_client():
 
 @pytest.fixture
 def dynamo_client():
-    with mock_dynamodb2():
+    with moto.mock_dynamodb2():
         yield clients.DynamoClient(table_name='my-table', create_table_schema=table_schema)
 
 
 @pytest.fixture
 def facebook_client():
-    yield Mock(clients.FacebookClient())
+    yield mock.Mock(clients.FacebookClient())
 
 
 @pytest.fixture
 def google_client():
-    yield Mock(clients.GoogleClient(lambda: {}))
+    yield mock.Mock(clients.GoogleClient(lambda: {}))
 
 
 # can't nest the moto context managers, it appears. To be able to use two mocked S3 buckets
 # they thus need to be yielded under the same context manager
 @pytest.fixture
 def s3_clients():
-    with mock_s3():
+    with moto.mock_s3():
         yield {
             'uploads': clients.S3Client(bucket_name='uploads-bucket', create_bucket=True),
             'placeholder-photos': clients.S3Client(bucket_name='placerholder-photos-bucket', create_bucket=True),

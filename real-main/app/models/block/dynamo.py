@@ -1,6 +1,6 @@
 import logging
 
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 import pendulum
 
 from . import exceptions
@@ -54,14 +54,14 @@ class BlockDynamo:
 
     def generate_blocks_by_blocker(self, blocker_user_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'block/{blocker_user_id}'),
+            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'block/{blocker_user_id}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.generate_all_query(query_kwargs)
 
     def generate_blocks_by_blocked(self, blocked_user_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'block/{blocked_user_id}'),
+            'KeyConditionExpression': conditions.Key('gsiA2PartitionKey').eq(f'block/{blocked_user_id}'),
             'IndexName': 'GSI-A2',
         }
         return self.client.generate_all_query(query_kwargs)

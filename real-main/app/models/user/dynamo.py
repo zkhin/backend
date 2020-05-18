@@ -1,7 +1,7 @@
-from collections import defaultdict
+import collections
 import logging
 
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 import pendulum
 
 from app.models.post.enums import PostStatus
@@ -34,7 +34,7 @@ class UserDynamo:
 
     def get_user_by_username(self, username):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'username/{username}'),
+            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'username/{username}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.query_head(query_kwargs)
@@ -138,7 +138,7 @@ class UserDynamo:
         To ignore an attribute, leave it set to None.
         To delete an attribute, set it to the empty string, other than the enums which may not be deleted.
         """
-        expression_actions = defaultdict(list)
+        expression_actions = collections.defaultdict(list)
         expression_attribute_values = {}
 
         def process_attr(name, value):

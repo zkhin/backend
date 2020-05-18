@@ -1,4 +1,4 @@
-from unittest.mock import call, Mock
+import unittest.mock as mock
 
 import pendulum
 import pytest
@@ -70,9 +70,9 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
     assert posted_by_user.item.get('postForcedArchivingCount', 0) == 0
 
     # mock out some calls to far-flung other managers
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.like_manager = mock.Mock(LikeManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # archive the post
     post.archive()
@@ -86,13 +86,13 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
 
     # check calls to mocked out managers
     assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+        mock.call.dislike_all_of_post(post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_prev=post.item),
+        mock.call.refresh_after_story_change(story_prev=post.item),
     ]
     assert post.feed_manager.mock_calls == [
-        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
 
 
@@ -110,9 +110,9 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert album.item['artHash']
 
     # mock out some calls to far-flung other managers
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.like_manager = mock.Mock(LikeManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # archive the post
     post.archive()
@@ -129,11 +129,11 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
 
     # check calls to mocked out managers
     assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+        mock.call.dislike_all_of_post(post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
 
 

@@ -1,6 +1,6 @@
 import cachecontrol
-from google.auth.transport import requests as google_requests
-from google.oauth2.id_token import verify_oauth2_token
+import google.auth.transport.requests as google_requests
+import google.oauth2.id_token as google_id_token
 import requests
 
 
@@ -22,7 +22,7 @@ class GoogleClient:
         # https://developers.google.com/identity/sign-in/web/backend-auth#calling-the-tokeninfo-endpoint
         # https://googleapis.dev/python/google-auth/latest/reference/google.oauth2.id_token.html
         # raises ValueError on expired token
-        id_info = verify_oauth2_token(id_token, google_requests.Request(session=self.cached_session))
+        id_info = google_id_token.verify_oauth2_token(id_token, google_requests.Request(session=self.cached_session))
         if id_info.get('aud') not in self.client_ids.values():
             raise ValueError(f'Token wrong audience: `{id_info["aud"]}`')
         if not id_info.get('email_verified') or not id_info.get('email'):

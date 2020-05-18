@@ -1,6 +1,6 @@
 import json
 
-from moto import mock_secretsmanager
+import moto
 import pytest
 
 from app.clients import SecretsManagerClient
@@ -12,7 +12,7 @@ google_client_ids_name = 'KeyForGoogleClientIds'
 
 @pytest.fixture
 def client():
-    with mock_secretsmanager():
+    with moto.mock_secretsmanager():
         yield SecretsManagerClient(cloudfront_key_pair_name=cloudfront_key_pair_name,
                                    post_verification_api_creds_name=post_verification_api_creds_name,
                                    google_client_ids_name=google_client_ids_name)

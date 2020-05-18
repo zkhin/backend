@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+import unittest.mock as mock
 
 import pytest
 
@@ -22,8 +22,8 @@ def post2(post_manager, user):
 
 
 def test_set_new_comment_activity_noop(post):
-    post.dynamo = Mock()
-    post.user_manager = Mock()
+    post.dynamo = mock.Mock()
+    post.user_manager = mock.Mock()
 
     # verify setting False when doesn't exist does nothing with dynamo
     post.set_new_comment_activity(False)

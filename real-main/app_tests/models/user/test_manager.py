@@ -1,6 +1,6 @@
 import logging
 import re
-from unittest.mock import Mock, call
+import unittest.mock as mock
 
 import pytest
 
@@ -206,7 +206,7 @@ def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user
     # moto doesn't seem to honor the 'make preferred usernames unique' setting (using it as an alias)
     # so mock it's response like to simulate that it does
     exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.set_user_attributes = Mock(side_effect=exception)
+    user_manager.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_cognito_only_user(user_id, username_1)
@@ -275,8 +275,8 @@ def test_create_facebook_user_success(user_manager, real_user):
 
     # set up our mocks to behave correctly
     user_manager.facebook_client.configure_mock(**{'get_verified_email.return_value': email})
-    user_manager.cognito_client.create_user_pool_entry = Mock(return_value=cognito_token)
-    user_manager.cognito_client.link_identity_pool_entries = Mock()
+    user_manager.cognito_client.create_user_pool_entry = mock.Mock(return_value=cognito_token)
+    user_manager.cognito_client.link_identity_pool_entries = mock.Mock()
 
     # create the facebook user, check it is as expected
     user = user_manager.create_facebook_user(user_id, username, fb_token, full_name=full_name)
@@ -286,10 +286,12 @@ def test_create_facebook_user_success(user_manager, real_user):
     assert user.item['email'] == email.lower()
 
     # check mocks called as expected
-    assert user_manager.facebook_client.mock_calls == [call.get_verified_email(fb_token)]
-    assert user_manager.cognito_client.create_user_pool_entry.mock_calls == [call(user_id, email.lower(), username)]
+    assert user_manager.facebook_client.mock_calls == [mock.call.get_verified_email(fb_token)]
+    assert user_manager.cognito_client.create_user_pool_entry.mock_calls == [
+        mock.call(user_id, email.lower(), username),
+    ]
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
-        call(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
+        mock.call(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
     ]
 
     # check we are following the real user
@@ -301,14 +303,14 @@ def test_create_facebook_user_success(user_manager, real_user):
 def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
     # configure cognito to respond as if username is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
+    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
+    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
@@ -324,8 +326,8 @@ def test_create_google_user_success(user_manager, real_user):
 
     # set up our mocks to behave correctly
     user_manager.google_client.configure_mock(**{'get_verified_email.return_value': email})
-    user_manager.cognito_client.create_user_pool_entry = Mock(return_value=cognito_token)
-    user_manager.cognito_client.link_identity_pool_entries = Mock()
+    user_manager.cognito_client.create_user_pool_entry = mock.Mock(return_value=cognito_token)
+    user_manager.cognito_client.link_identity_pool_entries = mock.Mock()
 
     # create the google user, check it is as expected
     user = user_manager.create_google_user(user_id, username, google_token, full_name=full_name)
@@ -335,10 +337,12 @@ def test_create_google_user_success(user_manager, real_user):
     assert user.item['email'] == email.lower()
 
     # check mocks called as expected
-    assert user_manager.google_client.mock_calls == [call.get_verified_email(google_token)]
-    assert user_manager.cognito_client.create_user_pool_entry.mock_calls == [call(user_id, email.lower(), username)]
+    assert user_manager.google_client.mock_calls == [mock.call.get_verified_email(google_token)]
+    assert user_manager.cognito_client.create_user_pool_entry.mock_calls == [
+        mock.call(user_id, email.lower(), username),
+    ]
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
-        call(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
+        mock.call(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
     ]
 
     # check we are following the real user
@@ -351,14 +355,14 @@ def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
 
     # configure cognito to respond as if username is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
+    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = Mock(side_effect=exception)
+    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')

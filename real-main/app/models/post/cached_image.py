@@ -1,6 +1,7 @@
-from io import BytesIO
+import io
 
-from PIL import Image, ImageOps
+import PIL.Image as Image
+import PIL.ImageOps as ImageOps
 import pyheif
 
 from app.utils import image_size
@@ -36,7 +37,7 @@ class CachedImage:
     def get_fh(self):
         if self.is_synced is None:
             self.refresh()
-        return BytesIO(self._data)
+        return io.BytesIO(self._data)
 
     def get_image(self):
         fh = self.get_fh()
@@ -73,7 +74,7 @@ class CachedImage:
         assert (fh is not None) != (image is not None)  # python has no logical xor infix operator :(
 
         if image:
-            fh = BytesIO()
+            fh = io.BytesIO()
             # Note that PIL/Pillow's save method treats None differently than not present for some kwargs
             kwargs = {
                 'format': 'JPEG',

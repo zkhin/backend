@@ -1,6 +1,6 @@
-from io import BytesIO
-from os import path
-from unittest.mock import Mock
+import io
+import os.path as path
+import unittest.mock as mock
 
 import pytest
 
@@ -198,7 +198,7 @@ def test_save_art_images(album):
     # save an image as the art
     with open(grant_horz_path, 'rb') as fh:
         image_data = fh.read()
-    album.save_art_images(art_hash, BytesIO(image_data))
+    album.save_art_images(art_hash, io.BytesIO(image_data))
 
     # check all sizes are in S3
     for size in image_size.JPEGS:
@@ -212,7 +212,7 @@ def test_save_art_images(album):
     # save an new image as the art
     with open(grant_vert_path, 'rb') as fh:
         image_data = fh.read()
-    album.save_art_images(art_hash, BytesIO(image_data))
+    album.save_art_images(art_hash, io.BytesIO(image_data))
 
     # check all sizes are in S3
     for size in image_size.JPEGS:
@@ -255,7 +255,7 @@ def test_rank_count(album):
 
 
 def test_get_post_ids_for_art(album):
-    album.post_manager.dynamo.generate_post_ids_in_album = Mock()
+    album.post_manager.dynamo.generate_post_ids_in_album = mock.Mock()
 
     # no post ids
     album.post_manager.dynamo.generate_post_ids_in_album.return_value = []

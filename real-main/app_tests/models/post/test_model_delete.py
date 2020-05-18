@@ -1,4 +1,4 @@
-from unittest.mock import call, Mock
+import unittest.mock as mock
 import uuid
 
 import pendulum
@@ -57,12 +57,12 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert posted_by_user.item.get('postDeletedCount', 0) == 0
 
     # mock out some calls to far-flung other managers
-    post.comment_manager = Mock(CommentManager({}))
-    post.feed_manager = Mock(FeedManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.like_manager = Mock(LikeManager({}))
-    post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
-    post.view_manager = Mock(ViewManager({}))
+    post.comment_manager = mock.Mock(CommentManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.like_manager = mock.Mock(LikeManager({}))
+    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
+    post.view_manager = mock.Mock(ViewManager({}))
 
     # delete the post
     post.delete()
@@ -80,22 +80,22 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
-        call.delete_all_on_post(post.id),
+        mock.call.delete_all_on_post(post.id),
     ]
     assert post.feed_manager.mock_calls == [
-        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_prev=post_item),
+        mock.call.refresh_after_story_change(story_prev=post_item),
     ]
     assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+        mock.call.dislike_all_of_post(post.id),
     ]
     assert post.view_manager.mock_calls == [
-        call.delete_views(post_item['partitionKey']),
+        mock.call.delete_views(post_item['partitionKey']),
     ]
     assert post.trending_manager.mock_calls == [
-        call.dynamo.delete_trending(post.id),
+        mock.call.dynamo.delete_trending(post.id),
     ]
 
 
@@ -113,12 +113,12 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
-    post.comment_manager = Mock(CommentManager({}))
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
-    post.view_manager = Mock(ViewManager({}))
-    post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
+    post.comment_manager = mock.Mock(CommentManager({}))
+    post.like_manager = mock.Mock(LikeManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
+    post.view_manager = mock.Mock(ViewManager({}))
+    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -138,18 +138,18 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
-        call.delete_all_on_post(post.id),
+        mock.call.delete_all_on_post(post.id),
     ]
     assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+        mock.call.dislike_all_of_post(post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
     assert post.view_manager.mock_calls == [
-        call.delete_views(post_pk),
+        mock.call.delete_views(post_pk),
     ]
     assert post.trending_manager.mock_calls == [
-        call.dynamo.delete_trending(post.id),
+        mock.call.dynamo.delete_trending(post.id),
     ]
 
 
@@ -164,12 +164,12 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
-    post.comment_manager = Mock(CommentManager({}))
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
-    post.view_manager = Mock(ViewManager({}))
-    post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
+    post.comment_manager = mock.Mock(CommentManager({}))
+    post.like_manager = mock.Mock(LikeManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
+    post.view_manager = mock.Mock(ViewManager({}))
+    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -193,20 +193,20 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
-        call.delete_all_on_post(post.id),
+        mock.call.delete_all_on_post(post.id),
     ]
     assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+        mock.call.dislike_all_of_post(post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
     assert post.view_manager.mock_calls == [
-        call.delete_views(post_pk),
+        mock.call.delete_views(post_pk),
     ]
     assert post.trending_manager.mock_calls == [
-        call.dynamo.delete_trending(post.id),
+        mock.call.dynamo.delete_trending(post.id),
     ]
 
 
@@ -228,12 +228,12 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
-    post.comment_manager = Mock(CommentManager({}))
-    post.like_manager = Mock(LikeManager({}))
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
-    post.view_manager = Mock(ViewManager({}))
-    post.trending_manager = Mock(TrendingManager({'dynamo': {}}))
+    post.comment_manager = mock.Mock(CommentManager({}))
+    post.like_manager = mock.Mock(LikeManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
+    post.view_manager = mock.Mock(ViewManager({}))
+    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -256,20 +256,20 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
-        call.delete_all_on_post(post.id),
+        mock.call.delete_all_on_post(post.id),
     ]
     assert post.like_manager.mock_calls == [
-        call.dislike_all_of_post(post.id),
+        mock.call.dislike_all_of_post(post.id),
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
+        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
     assert post.view_manager.mock_calls == [
-        call.delete_views(post_item['partitionKey']),
+        mock.call.delete_views(post_item['partitionKey']),
     ]
     assert post.trending_manager.mock_calls == [
-        call.dynamo.delete_trending(post.id),
+        mock.call.dynamo.delete_trending(post.id),
     ]
 
 

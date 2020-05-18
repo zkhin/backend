@@ -1,4 +1,4 @@
-from decimal import Decimal
+import decimal
 
 import pendulum
 import pytest
@@ -958,7 +958,7 @@ def test_transact_set_album_id_completed_post(post_dynamo):
     post_item = post_dynamo.get_post(post_id)
     assert post_item['albumId'] == 'aid'
     assert post_item['gsiK3PartitionKey'] == 'post/aid'
-    assert post_item['gsiK3SortKey'] == Decimal('-0.5')
+    assert post_item['gsiK3SortKey'] == decimal.Decimal('-0.5')
 
     # verify again must specify album rank when setting the album id, since this is a completed post
     with pytest.raises(AssertionError):
@@ -970,7 +970,7 @@ def test_transact_set_album_id_completed_post(post_dynamo):
     post_item = post_dynamo.get_post(post_id)
     assert post_item['albumId'] == 'aid2'
     assert post_item['gsiK3PartitionKey'] == 'post/aid2'
-    assert post_item['gsiK3SortKey'] == Decimal('0.8')
+    assert post_item['gsiK3SortKey'] == decimal.Decimal('0.8')
 
     # verify can't specify album rank when removing the album id
     with pytest.raises(AssertionError):
@@ -1062,7 +1062,7 @@ def test_generate_post_ids_in_album(post_dynamo):
 
     # verify we can't combine both completed and after_rank kwargs
     with pytest.raises(AssertionError):
-        post_dynamo.generate_post_ids_in_album(album_id, completed=True, after_rank=Decimal(0))
+        post_dynamo.generate_post_ids_in_album(album_id, completed=True, after_rank=decimal.Decimal(0))
 
     # mark the other post completed
     post_item_1 = post_dynamo.get_post(post_id_1)
@@ -1070,23 +1070,23 @@ def test_generate_post_ids_in_album(post_dynamo):
     post_dynamo.client.transact_write_items(transacts)
 
     # test generating with after_rank before both
-    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(-0.625)))
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=decimal.Decimal(-0.625)))
     assert len(post_ids) == 2
     assert post_id_1 in post_ids
     assert post_id_2 in post_ids
 
     # test generating with after_rank is exclusive first one
-    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(-0.5)))
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=decimal.Decimal(-0.5)))
     assert len(post_ids) == 1
     assert post_id_2 in post_ids
 
     # test generating with after_rank between
-    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(0)))
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=decimal.Decimal(0)))
     assert len(post_ids) == 1
     assert post_id_2 in post_ids
 
     # test generating with after_rank exclusive 2nd one
-    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=Decimal(0.5)))
+    post_ids = list(post_dynamo.generate_post_ids_in_album(album_id, after_rank=decimal.Decimal(0.5)))
     assert len(post_ids) == 0
 
 

@@ -1,5 +1,5 @@
-from decimal import Decimal
-from unittest.mock import call, Mock
+import decimal
+import unittest.mock as mock
 
 import pendulum
 import pytest
@@ -46,8 +46,8 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
     assert posted_by_user.item.get('postArchivedCount', 0) == 1
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # restore the post
     post.restore()
@@ -64,10 +64,10 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
 
     # check calls to mocked out managers
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_now=post.item),
+        mock.call.refresh_after_story_change(story_now=post.item),
     ]
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(posted_by_user_id, post.item),
+        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
 
 
@@ -85,8 +85,8 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
     assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # restore the post
     post.restore()
@@ -103,7 +103,7 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
     # check calls to mocked out managers
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(posted_by_user_id, post.item),
+        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
 
 
@@ -124,22 +124,22 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     assert album.item.get('rankCount', 0) == 1
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # restore the post
     post.restore()
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
-    assert post.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
+    assert post.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
 
     # check the post straight from the db
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
-    assert post.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
+    assert post.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
 
     # check our post count - should have incremented
     album.refresh_item()
@@ -149,5 +149,5 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
     # check calls to mocked out managers
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(post.user_id, post.item),
+        mock.call.add_post_to_followers_feeds(post.user_id, post.item),
     ]

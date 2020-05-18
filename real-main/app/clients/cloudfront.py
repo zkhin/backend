@@ -3,11 +3,11 @@ import json
 import os
 import urllib
 
-from botocore.signers import CloudFrontSigner
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+import botocore
+import cryptography.hazmat.backends as backends
+import cryptography.hazmat.primitives.asymmetric.padding as padding
+import cryptography.hazmat.primitives.hashes as hashes
+import cryptography.hazmat.primitives.serialization as serialization
 import pendulum
 
 CLOUDFRONT_UPLOADS_DOMAIN = os.environ.get('CLOUDFRONT_UPLOADS_DOMAIN')
@@ -36,14 +36,19 @@ class CloudFrontClient:
             # and the secrets manager doesn't seem to play well with newlines
             pk_string = f"-----BEGIN RSA PRIVATE KEY-----\n{private_key}\n-----END RSA PRIVATE KEY-----"
             pk_raw = bytearray(pk_string, 'utf-8')
-            self._private_key = serialization.load_pem_private_key(pk_raw, password=None, backend=default_backend())
+            backend = backends.default_backend()
+            self._private_key = serialization.load_pem_private_key(pk_raw, password=None, backend=backend)
         return self._private_key
 
     def get_cloudfront_signer(self):
         if not hasattr(self, '_cfsigner'):
             key_id = self.get_key_pair()['keyId']
             pk = self.get_private_key()
-            self._cfsigner = CloudFrontSigner(key_id, lambda msg: pk.sign(msg, padding.PKCS1v15(), hashes.SHA1()))
+
+            def sign(msg):
+                return pk.sign(msg, padding.PKCS1v15(), hashes.SHA1())
+
+            self._cfsigner = botocore.signers.CloudFrontSigner(key_id, sign)
         return self._cfsigner
 
     def generate_unsigned_url(self, path):

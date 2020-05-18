@@ -1,7 +1,7 @@
-from os import path
+import os.path as path
 import uuid
 
-from PIL import Image
+import PIL.Image as Image
 import pytest
 
 from app.models.post.enums import PostType

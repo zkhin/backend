@@ -1,4 +1,4 @@
-from uuid import uuid4
+import uuid
 
 import pendulum
 import pytest
@@ -12,8 +12,8 @@ from app.models.user.enums import UserPrivacyStatus
 @pytest.fixture
 def users(user_manager, cognito_client):
     "Us and them"
-    our_user_id = str(uuid4())
-    their_user_id = str(uuid4())
+    our_user_id = str(uuid.uuid4())
+    their_user_id = str(uuid.uuid4())
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=our_user_id)
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=their_user_id)
     our_user = user_manager.create_cognito_only_user(our_user_id, 'myUsername')
@@ -25,7 +25,7 @@ def users(user_manager, cognito_client):
 def their_post(follow_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
     post = post_manager.add_post(
-        users[1].id, str(uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
+        users[1].id, str(uuid.uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
     )
     yield post
 

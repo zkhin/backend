@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call
+import unittest.mock as mock
 
 import pendulum
 import pytest
@@ -58,15 +58,15 @@ def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, gran
     s3_uploads_client.put_object(native_path, grant_data, 'image/jpeg')
 
     # mock out a bunch of methods
-    post.fill_native_jpeg_cache_from_heic = Mock(wraps=post.fill_native_jpeg_cache_from_heic)
-    post.crop_native_jpeg_cache = Mock(wraps=post.crop_native_jpeg_cache)
-    post.native_jpeg_cache.flush = Mock(wraps=post.native_jpeg_cache.flush)
-    post.build_image_thumbnails = Mock(wraps=post.build_image_thumbnails)
-    post.set_height_and_width = Mock(wraps=post.set_height_and_width)
-    post.set_colors = Mock(wraps=post.set_colors)
-    post.set_is_verified = Mock(wraps=post.set_is_verified)
-    post.set_checksum = Mock(wraps=post.set_checksum)
-    post.complete = Mock(wraps=post.complete)
+    post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
+    post.crop_native_jpeg_cache = mock.Mock(wraps=post.crop_native_jpeg_cache)
+    post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
+    post.set_colors = mock.Mock(wraps=post.set_colors)
+    post.set_is_verified = mock.Mock(wraps=post.set_is_verified)
+    post.set_checksum = mock.Mock(wraps=post.set_checksum)
+    post.complete = mock.Mock(wraps=post.complete)
 
     now = pendulum.now('utc')
     post.process_image_upload(now=now)
@@ -75,12 +75,12 @@ def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, gran
     assert post.fill_native_jpeg_cache_from_heic.mock_calls == []
     assert post.crop_native_jpeg_cache.mock_calls == []
     assert post.native_jpeg_cache.flush.mock_calls == []
-    assert post.build_image_thumbnails.mock_calls == [call()]
-    assert post.set_height_and_width.mock_calls == [call()]
-    assert post.set_colors.mock_calls == [call()]
-    assert post.set_is_verified.mock_calls == [call()]
-    assert post.set_checksum.mock_calls == [call()]
-    assert post.complete.mock_calls == [call(now=now)]
+    assert post.build_image_thumbnails.mock_calls == [mock.call()]
+    assert post.set_height_and_width.mock_calls == [mock.call()]
+    assert post.set_colors.mock_calls == [mock.call()]
+    assert post.set_is_verified.mock_calls == [mock.call()]
+    assert post.set_checksum.mock_calls == [mock.call()]
+    assert post.complete.mock_calls == [mock.call(now=now)]
 
     assert post.item['postStatus'] == PostStatus.COMPLETED
     post.refresh_item()
@@ -97,29 +97,29 @@ def test_process_image_upload_with_crop(pending_post, s3_uploads_client, grant_d
     s3_uploads_client.put_object(native_path, grant_data, 'image/jpeg')
 
     # mock out a bunch of methods
-    post.fill_native_jpeg_cache_from_heic = Mock(wraps=post.fill_native_jpeg_cache_from_heic)
-    post.crop_native_jpeg_cache = Mock(wraps=post.crop_native_jpeg_cache)
-    post.native_jpeg_cache.flush = Mock(wraps=post.native_jpeg_cache.flush)
-    post.build_image_thumbnails = Mock(wraps=post.build_image_thumbnails)
-    post.set_height_and_width = Mock(wraps=post.set_height_and_width)
-    post.set_colors = Mock(wraps=post.set_colors)
-    post.set_is_verified = Mock(wraps=post.set_is_verified)
-    post.set_checksum = Mock(wraps=post.set_checksum)
-    post.complete = Mock(wraps=post.complete)
+    post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
+    post.crop_native_jpeg_cache = mock.Mock(wraps=post.crop_native_jpeg_cache)
+    post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
+    post.set_colors = mock.Mock(wraps=post.set_colors)
+    post.set_is_verified = mock.Mock(wraps=post.set_is_verified)
+    post.set_checksum = mock.Mock(wraps=post.set_checksum)
+    post.complete = mock.Mock(wraps=post.complete)
 
     now = pendulum.now('utc')
     post.process_image_upload(now=now)
 
     # check the mocks were called correctly
     assert post.fill_native_jpeg_cache_from_heic.mock_calls == []
-    assert post.crop_native_jpeg_cache.mock_calls == [call()]
-    assert post.native_jpeg_cache.flush.mock_calls == [call()]
-    assert post.build_image_thumbnails.mock_calls == [call()]
-    assert post.set_height_and_width.mock_calls == [call()]
-    assert post.set_colors.mock_calls == [call()]
-    assert post.set_is_verified.mock_calls == [call()]
-    assert post.set_checksum.mock_calls == [call()]
-    assert post.complete.mock_calls == [call(now=now)]
+    assert post.crop_native_jpeg_cache.mock_calls == [mock.call()]
+    assert post.native_jpeg_cache.flush.mock_calls == [mock.call()]
+    assert post.build_image_thumbnails.mock_calls == [mock.call()]
+    assert post.set_height_and_width.mock_calls == [mock.call()]
+    assert post.set_colors.mock_calls == [mock.call()]
+    assert post.set_is_verified.mock_calls == [mock.call()]
+    assert post.set_checksum.mock_calls == [mock.call()]
+    assert post.complete.mock_calls == [mock.call(now=now)]
 
     assert post.item['postStatus'] == PostStatus.COMPLETED
     post.refresh_item()
@@ -137,29 +137,29 @@ def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_cl
     s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
 
     # mock out a bunch of methods
-    post.fill_native_jpeg_cache_from_heic = Mock(wraps=post.fill_native_jpeg_cache_from_heic)
-    post.crop_native_jpeg_cache = Mock(wraps=post.crop_native_jpeg_cache)
-    post.native_jpeg_cache.flush = Mock(wraps=post.native_jpeg_cache.flush)
-    post.build_image_thumbnails = Mock(wraps=post.build_image_thumbnails)
-    post.set_height_and_width = Mock(wraps=post.set_height_and_width)
-    post.set_colors = Mock(wraps=post.set_colors)
-    post.set_is_verified = Mock(wraps=post.set_is_verified)
-    post.set_checksum = Mock(wraps=post.set_checksum)
-    post.complete = Mock(wraps=post.complete)
+    post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
+    post.crop_native_jpeg_cache = mock.Mock(wraps=post.crop_native_jpeg_cache)
+    post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
+    post.set_colors = mock.Mock(wraps=post.set_colors)
+    post.set_is_verified = mock.Mock(wraps=post.set_is_verified)
+    post.set_checksum = mock.Mock(wraps=post.set_checksum)
+    post.complete = mock.Mock(wraps=post.complete)
 
     now = pendulum.now('utc')
     post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert post.fill_native_jpeg_cache_from_heic.mock_calls == [call()]
-    assert post.crop_native_jpeg_cache.mock_calls == [call()]
-    assert post.native_jpeg_cache.flush.mock_calls == [call()]
-    assert post.build_image_thumbnails.mock_calls == [call()]
-    assert post.set_height_and_width.mock_calls == [call()]
-    assert post.set_colors.mock_calls == [call()]
-    assert post.set_is_verified.mock_calls == [call()]
-    assert post.set_checksum.mock_calls == [call()]
-    assert post.complete.mock_calls == [call(now=now)]
+    assert post.fill_native_jpeg_cache_from_heic.mock_calls == [mock.call()]
+    assert post.crop_native_jpeg_cache.mock_calls == [mock.call()]
+    assert post.native_jpeg_cache.flush.mock_calls == [mock.call()]
+    assert post.build_image_thumbnails.mock_calls == [mock.call()]
+    assert post.set_height_and_width.mock_calls == [mock.call()]
+    assert post.set_colors.mock_calls == [mock.call()]
+    assert post.set_is_verified.mock_calls == [mock.call()]
+    assert post.set_checksum.mock_calls == [mock.call()]
+    assert post.complete.mock_calls == [mock.call(now=now)]
 
     assert post.item['postStatus'] == PostStatus.COMPLETED
     post.refresh_item()

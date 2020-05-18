@@ -1,5 +1,5 @@
 import json
-from unittest.mock import Mock, call
+import unittest.mock as mock
 
 import pendulum
 import pytest
@@ -155,19 +155,19 @@ def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, blo
 
 
 def test_trigger_notifications_direct(message, chat, user1, user2, appsync_client):
-    message.appsync = Mock()
+    message.appsync = mock.Mock()
     message.trigger_notifications('ntype')
-    assert message.appsync.mock_calls == [call.trigger_notification('ntype', user2.id, message)]
+    assert message.appsync.mock_calls == [mock.call.trigger_notification('ntype', user2.id, message)]
 
 
 def test_trigger_notifications_user_ids(message, chat, user1, user2, user3, appsync_client):
     # trigger a notification and check that we can use user_ids param to push
     # the notifications to users that aren't found in dynamo
-    message.appsync = Mock()
+    message.appsync = mock.Mock()
     message.trigger_notifications('ntype', user_ids=[user2.id, user3.id])
     assert message.appsync.mock_calls == [
-        call.trigger_notification('ntype', user2.id, message),
-        call.trigger_notification('ntype', user3.id, message),
+        mock.call.trigger_notification('ntype', user2.id, message),
+        mock.call.trigger_notification('ntype', user3.id, message),
     ]
 
 
@@ -179,11 +179,11 @@ def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, 
     # user2 creates a message, trigger notificaitons on it
     message_id = 'mid'
     message = chat_message_manager.add_chat_message(message_id, 'lore', group_chat.id, user2.id)
-    message.appsync = Mock()
+    message.appsync = mock.Mock()
     message.trigger_notifications('ntype')
     assert message.appsync.mock_calls == [
-        call.trigger_notification('ntype', user1.id, message),
-        call.trigger_notification('ntype', user3.id, message),
+        mock.call.trigger_notification('ntype', user1.id, message),
+        mock.call.trigger_notification('ntype', user3.id, message),
     ]
 
     # add system message, notifications are triggered automatically

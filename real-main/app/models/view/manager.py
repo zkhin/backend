@@ -1,4 +1,4 @@
-from collections import Counter
+import collections
 import logging
 
 import pendulum
@@ -48,7 +48,7 @@ class ViewManager:
             return
 
         viewed_at = viewed_at or pendulum.now('utc')
-        grouped_item_ids = dict(Counter(item_ids))
+        grouped_item_ids = dict(collections.Counter(item_ids))
 
         if item_type == 'chat_message':
             self.record_views_for_chat_messages(grouped_item_ids, user_id, viewed_at)

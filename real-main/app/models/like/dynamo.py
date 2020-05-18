@@ -1,7 +1,7 @@
-from functools import reduce
+import functools
 import logging
 
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 import pendulum
 
 logger = logging.getLogger()
@@ -66,25 +66,25 @@ class LikeDynamo:
 
     def generate_of_post(self, post_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'like/{post_id}'),
+            'KeyConditionExpression': conditions.Key('gsiA2PartitionKey').eq(f'like/{post_id}'),
             'IndexName': 'GSI-A2',
         }
         return self.client.generate_all_query(query_kwargs)
 
     def generate_by_liked_by(self, liked_by_user_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'like/{liked_by_user_id}'),
+            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'like/{liked_by_user_id}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.generate_all_query(query_kwargs)
 
     def generate_pks_by_liked_by_for_posted_by(self, liked_by_user_id, posted_by_user_id):
         key_conditions = [
-            Key('gsiK2PartitionKey').eq(f'like/{posted_by_user_id}'),
-            Key('gsiK2SortKey').eq(liked_by_user_id),
+            conditions.Key('gsiK2PartitionKey').eq(f'like/{posted_by_user_id}'),
+            conditions.Key('gsiK2SortKey').eq(liked_by_user_id),
         ]
         query_kwargs = {
-            'KeyConditionExpression': reduce(lambda a, b: a & b, key_conditions),
+            'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-K2',
             # Note: moto (mocking framework used in test suite) needs this projection expression,
             #       else it returns the whole item even though the dynamo index is keys-only

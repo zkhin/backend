@@ -1,4 +1,4 @@
-from unittest.mock import call
+import unittest.mock as mock
 import uuid
 
 import pytest
@@ -106,7 +106,7 @@ def test_get_photo_url(user, uploaded_post, cloudfront_client):
         url = user.get_photo_url(size)
         assert url is presigned_url
         path = user.get_photo_path(size)
-        assert cloudfront_client.mock_calls == [call.generate_presigned_url(path, ['GET', 'HEAD'])]
+        assert cloudfront_client.mock_calls == [mock.call.generate_presigned_url(path, ['GET', 'HEAD'])]
         cloudfront_client.reset_mock()
 
 

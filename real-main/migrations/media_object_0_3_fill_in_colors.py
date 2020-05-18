@@ -1,8 +1,9 @@
-from io import BytesIO
+import io
 import os
+
 import boto3
 import botocore
-from colorthief import ColorThief
+import colorthief
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 if not S3_UPLOADS_BUCKET:
@@ -61,12 +62,12 @@ def get_path(item, size):
 
 
 def get_data(path):
-    return BytesIO(s3_bucket.Object(path).get()['Body'].read())
+    return io.BytesIO(s3_bucket.Object(path).get()['Body'].read())
 
 
 def get_colors(data):
     try:
-        return ColorThief(data).get_palette(color_count=5)
+        return colorthief.ColorThief(data).get_palette(color_count=5)
     except Exception:
         return None
 

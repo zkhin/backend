@@ -1,6 +1,6 @@
 import logging
 
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 
 logger = logging.getLogger()
 
@@ -81,7 +81,7 @@ class ChatMessageDynamo:
 
     def generate_chat_messages_by_chat(self, chat_id, pks_only=False):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'chatMessage/{chat_id}'),
+            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'chatMessage/{chat_id}'),
             'IndexName': 'GSI-A1',
         }
         gen = self.client.generate_all_query(query_kwargs)

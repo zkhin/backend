@@ -1,6 +1,6 @@
 import logging
 
-from gql import gql
+import gql
 
 logger = logging.getLogger()
 
@@ -11,7 +11,7 @@ class PostAppSync:
         self.client = appsync_client
 
     def trigger_notification(self, notification_type, post):
-        mutation = gql('''
+        mutation = gql.gql('''
             mutation TriggerPostNotification ($input: PostNotificationInput!) {
                 triggerPostNotification (input: $input) {
                     userId

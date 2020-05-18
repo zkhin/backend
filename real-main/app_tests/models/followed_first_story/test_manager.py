@@ -1,4 +1,4 @@
-from uuid import uuid4
+import uuid
 
 import pendulum
 import pytest
@@ -25,11 +25,11 @@ def followed_posts(post_manager, dynamo_client, following_user_ids):
     "A quintet of completed posts by the followed user in the DB, none of them with expiresAt"
     user_id = following_user_ids[1]
     posts = [
-        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
     ]
     yield [post.item for post in posts]
 
@@ -43,7 +43,7 @@ def test_generate_batched_follower_user_ids_none(ffs_manager):
 def test_generate_batched_follower_user_ids_filters_out_wrong_status(ffs_manager, follow_manager):
     followed_user_id = 'fid'
     follow_manager.dynamo.client.transact_write_items([
-        follow_manager.dynamo.transact_add_following(str(uuid4()), followed_user_id, FollowStatus.REQUESTED),
+        follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.REQUESTED),
     ])
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert resp == []
@@ -65,7 +65,7 @@ def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
     followed_user_id = 'fid'
 
     transact_items_5 = [
-        follow_manager.dynamo.transact_add_following(str(uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
         for i in range(0, 5)
     ]
     follow_manager.dynamo.client.transact_write_items(transact_items_5)
@@ -74,7 +74,7 @@ def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
     assert len(resp[0]) == 5
 
     transact_items_20 = [
-        follow_manager.dynamo.transact_add_following(str(uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
         for i in range(0, 20)
     ]
     follow_manager.dynamo.client.transact_write_items(transact_items_20)
@@ -83,7 +83,7 @@ def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
     assert len(resp[0]) == 25
 
     transact_items_1 = [
-        follow_manager.dynamo.transact_add_following(str(uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
         for i in range(0, 1)
     ]
     follow_manager.dynamo.client.transact_write_items(transact_items_1)
@@ -93,7 +93,7 @@ def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
     assert len(resp[1]) == 1
 
     transact_items_25 = [
-        follow_manager.dynamo.transact_add_following(str(uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
         for i in range(0, 25)
     ]
     follow_manager.dynamo.client.transact_write_items(transact_items_25)

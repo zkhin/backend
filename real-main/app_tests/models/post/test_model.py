@@ -1,8 +1,8 @@
 import base64
-from decimal import Decimal
+import decimal
 import logging
-from os import path
-from unittest.mock import call, Mock
+import os.path as path
+import unittest.mock as mock
 import uuid
 
 import pendulum
@@ -136,7 +136,7 @@ def test_get_video_writeonly_url(cloudfront_client, s3_uploads_client):
     assert url == expected_url
 
     expected_path = 'user-id/post/post-id/video-original.mov'
-    assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['PUT'])]
+    assert cloudfront_client.mock_calls == [mock.call.generate_presigned_url(expected_path, ['PUT'])]
 
 
 def test_get_image_readonly_url(cloudfront_client, s3_uploads_client):
@@ -156,7 +156,7 @@ def test_get_image_readonly_url(cloudfront_client, s3_uploads_client):
     assert url == expected_url
 
     expected_path = f'user-id/post/post-id/image/{image_size.NATIVE.filename}'
-    assert cloudfront_client.mock_calls == [call.generate_presigned_url(expected_path, ['GET', 'HEAD'])]
+    assert cloudfront_client.mock_calls == [mock.call.generate_presigned_url(expected_path, ['GET', 'HEAD'])]
 
 
 def test_get_hls_access_cookies(cloudfront_client, s3_uploads_client):
@@ -194,7 +194,7 @@ def test_get_hls_access_cookies(cloudfront_client, s3_uploads_client):
     }
 
     cookie_path = f'{user_id}/post/{post_id}/video-hls/video*'
-    assert cloudfront_client.mock_calls == [call.generate_presigned_cookies(cookie_path)]
+    assert cloudfront_client.mock_calls == [mock.call.generate_presigned_cookies(cookie_path)]
 
 
 def test_delete_s3_video(s3_uploads_client):
@@ -240,7 +240,7 @@ def test_set_is_verified_minimal(pending_image_post):
     # check initial state and configure mock
     post = pending_image_post
     assert 'isVerified' not in post.item
-    post.post_verification_client = Mock(**{'verify_image.return_value': False})
+    post.post_verification_client = mock.Mock(**{'verify_image.return_value': False})
 
     # do the call, check final state
     post.set_is_verified()
@@ -249,17 +249,16 @@ def test_set_is_verified_minimal(pending_image_post):
     assert post.item['isVerified'] is False
 
     # check mock called correctly
-    assert post.post_verification_client.mock_calls == [
-        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), image_format=None, original_format=None,
-                          taken_in_real=None),
-    ]
+    assert post.post_verification_client.mock_calls == [mock.call.verify_image(
+        post.get_image_readonly_url(image_size.NATIVE), image_format=None, original_format=None, taken_in_real=None
+    )]
 
 
 def test_set_is_verified_maximal(pending_image_post):
     # check initial state and configure mock
     post = pending_image_post
     assert 'isVerified' not in post.item
-    post.post_verification_client = Mock(**{'verify_image.return_value': True})
+    post.post_verification_client = mock.Mock(**{'verify_image.return_value': True})
     post.image_item['imageFormat'] = 'ii'
     post.image_item['originalFormat'] = 'oo'
     post.image_item['takenInReal'] = False
@@ -271,10 +270,9 @@ def test_set_is_verified_maximal(pending_image_post):
     assert post.item['isVerified'] is True
 
     # check mock called correctly
-    assert post.post_verification_client.mock_calls == [
-        call.verify_image(post.get_image_readonly_url(image_size.NATIVE), image_format='ii', original_format='oo',
-                          taken_in_real=False),
-    ]
+    assert post.post_verification_client.mock_calls == [mock.call.verify_image(
+        post.get_image_readonly_url(image_size.NATIVE), image_format='ii', original_format='oo', taken_in_real=False
+    )]
 
 
 def test_set_expires_at(post):
@@ -283,7 +281,7 @@ def test_set_expires_at(post):
 
     # set the expires at to something
     now = pendulum.now('utc')
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
     post.set_expires_at(now)
     assert post.item['expiresAt'] == now.to_iso8601_string()
 
@@ -293,7 +291,7 @@ def test_set_expires_at(post):
 
     # check that the followed_first_story_manager was called correctly
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_prev=None, story_now=post.item),
+        mock.call.refresh_after_story_change(story_prev=None, story_now=post.item),
     ]
 
     # set the expires at to something else
@@ -309,7 +307,7 @@ def test_set_expires_at(post):
 
     # check that the followed_first_story_manager was called correctly
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_prev=post_org_item, story_now=post.item),
+        mock.call.refresh_after_story_change(story_prev=post_org_item, story_now=post.item),
     ]
 
 
@@ -319,7 +317,7 @@ def test_clear_expires_at(post_with_expiration):
     assert 'expiresAt' in post.item
 
     # remove the expires at
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
     post_org_item = post.item.copy()
     post.set_expires_at(None)
     assert 'expiresAt' not in post.item
@@ -330,7 +328,7 @@ def test_clear_expires_at(post_with_expiration):
 
     # check that the followed_first_story_manager was called correctly
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_prev=post_org_item, story_now=None),
+        mock.call.refresh_after_story_change(story_prev=post_org_item, story_now=None),
     ]
 
 
@@ -650,7 +648,7 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
 
     post3.set_album(album1.id)
     assert post3.item['albumId'] == album1.id
-    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
+    assert post3.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
 
     # put post4 in second album
     post4.set_album(album2.id)
@@ -676,7 +674,7 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
     # verify *can* change order if everything correct
     post2.set_album_order(post3.id)
     assert post2.item['albumId'] == album1.id
-    assert post2.item['gsiK3SortKey'] == Decimal(0.5)
+    assert post2.item['gsiK3SortKey'] == decimal.Decimal(0.5)
 
 
 def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64):
@@ -695,28 +693,28 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     # check starting state
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
     assert post1.item['gsiK3SortKey'] == 0
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
-    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 2))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
+    assert post3.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 2))
 
     # change middle post, check order
     post3.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post3.id, post2.id]
-    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 6))
+    assert post3.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 6))
 
     # change middle post, check order
     post2.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 12))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 12))
 
     # change middle post, check order
     post3.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post3.id, post2.id]
-    assert post3.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 24))
+    assert post3.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 24))
 
     # change middle post, check order
     post2.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id, post3.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 48))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 48))
 
 
 def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_data_b64):
@@ -732,22 +730,22 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     # check starting state
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
     assert post1.item['gsiK3SortKey'] == 0
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
 
     # change first post, check order
     post2.set_album_order(None)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-2 / 4))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(-2 / 4))
 
     # change first post, check order
     post1.set_album_order(None)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
-    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(-3 / 5))
+    assert post1.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(-3 / 5))
 
     # change first post, check order
     post2.set_album_order(None)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(-4 / 6))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(-4 / 6))
 
 
 def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_data_b64):
@@ -763,22 +761,22 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     # check starting state
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
     assert post1.item['gsiK3SortKey'] == 0
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 3))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
 
     # change last post, check order
     post1.set_album_order(post2.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(2 / 4))
+    assert post1.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(2 / 4))
 
     # change last post, check order
     post2.set_album_order(post1.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
-    assert post2.item['gsiK3SortKey'] == pytest.approx(Decimal(3 / 5))
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(3 / 5))
 
     # change last post, check order
     post1.set_album_order(post2.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
-    assert post1.item['gsiK3SortKey'] == pytest.approx(Decimal(4 / 6))
+    assert post1.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(4 / 6))
 
 
 def test_build_image_thumbnails_video_post(user, processing_video_post, s3_uploads_client):

@@ -1,8 +1,10 @@
+import io
 import logging
-from io import BytesIO
-from os import path
+import os.path as path
 
-from PIL import Image, ImageDraw, ImageFont
+import PIL.Image as Image
+import PIL.ImageDraw as ImageDraw
+import PIL.ImageFont as ImageFont
 
 font_path = path.join(path.dirname(__file__), '..', '..', '..', 'fonts', 'OpenSans-Regular.ttf')
 logger = logging.getLogger()
@@ -51,7 +53,7 @@ def generate_text_image(text, dimensions, font_size=None):
     draw.text(xy, text, align='center', fill=(255, 255, 255), font=font)
 
     # save it as a jpeg
-    buf_out = BytesIO()
+    buf_out = io.BytesIO()
     img.save(buf_out, format='JPEG', quality=100)
     buf_out.seek(0)
     return buf_out

@@ -1,4 +1,4 @@
-from unittest.mock import call, Mock
+import unittest.mock as mock
 
 import pytest
 
@@ -45,7 +45,7 @@ def test_refresh(user):
 
 
 def test_invalid_username(user):
-    user.cognito_client = Mock()
+    user.cognito_client = mock.Mock()
 
     invalid_username = '-'
     with pytest.raises(user.exceptions.UserValidationException):
@@ -56,7 +56,7 @@ def test_invalid_username(user):
 
 
 def test_update_username_no_change(user):
-    user.cognito_client = Mock()
+    user.cognito_client = mock.Mock()
 
     org_user_item = user.item
     user.update_username(user.username)
@@ -83,7 +83,7 @@ def test_cant_update_username_to_one_already_taken(user, user2):
 
     # mock out the cognito backend so it behaves like the real thing
     exception = user.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user.cognito_client.set_user_attributes = Mock(side_effect=exception)
+    user.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
 
     # verify we can't update to that username
     with pytest.raises(user.exceptions.UserValidationException):
@@ -245,8 +245,8 @@ def test_finish_change_email(user):
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
     # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
-    user.cognito_client.verify_user_attribute = Mock()
-    user.cognito_client.clear_user_attribute = Mock()
+    user.cognito_client.verify_user_attribute = mock.Mock()
+    user.cognito_client.clear_user_attribute = mock.Mock()
 
     user.finish_change_contact_attribute('email', 'access_token', 'verification_code')
     assert user.item['email'] == new_email
@@ -256,9 +256,9 @@ def test_finish_change_email(user):
     assert attrs['email_verified'] == 'true'
 
     assert user.cognito_client.verify_user_attribute.mock_calls == [
-        call('access_token', 'email', 'verification_code'),
+        mock.call('access_token', 'email', 'verification_code'),
     ]
-    assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_email')]
+    assert user.cognito_client.clear_user_attribute.mock_calls == [mock.call(user.id, 'custom:unverified_email')]
 
 
 def test_start_change_phone(user):
@@ -291,8 +291,8 @@ def test_finish_change_phone(user):
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_phone': new_phone})
 
     # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
-    user.cognito_client.verify_user_attribute = Mock()
-    user.cognito_client.clear_user_attribute = Mock()
+    user.cognito_client.verify_user_attribute = mock.Mock()
+    user.cognito_client.clear_user_attribute = mock.Mock()
 
     user.finish_change_contact_attribute('phone', 'access_token', 'verification_code')
     assert user.item['phoneNumber'] == new_phone
@@ -302,9 +302,9 @@ def test_finish_change_phone(user):
     assert attrs['phone_number_verified'] == 'true'
 
     assert user.cognito_client.verify_user_attribute.mock_calls == [
-        call('access_token', 'phone_number', 'verification_code'),
+        mock.call('access_token', 'phone_number', 'verification_code'),
     ]
-    assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_phone')]
+    assert user.cognito_client.clear_user_attribute.mock_calls == [mock.call(user.id, 'custom:unverified_phone')]
 
 
 def test_start_change_email_same_as_existing(user):
@@ -348,7 +348,7 @@ def test_finish_change_email_wrong_verification_code(user):
 
     # moto has not yet implemented verify_user_attribute
     exception = user.cognito_client.boto_client.exceptions.CodeMismatchException({}, None)
-    user.cognito_client.boto_client.verify_user_attribute = Mock(side_effect=exception)
+    user.cognito_client.boto_client.verify_user_attribute = mock.Mock(side_effect=exception)
 
     access_token = {}
     verification_code = {}
@@ -359,7 +359,7 @@ def test_finish_change_email_wrong_verification_code(user):
 
 def test_delete_user_basic_flow(user):
     # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.clear_user_attribute = Mock()
+    user.cognito_client.clear_user_attribute = mock.Mock()
 
     # delete the user
     org_user_id = user.id
@@ -369,7 +369,7 @@ def test_delete_user_basic_flow(user):
 
     # verify cognito was called to release username over there
     assert user.cognito_client.clear_user_attribute.mock_calls == [
-        call(org_user_id, 'preferred_username'),
+        mock.call(org_user_id, 'preferred_username'),
     ]
 
     # verify it got removed from the db
@@ -390,7 +390,7 @@ def test_delete_user_deletes_trending(user):
     assert resp is not None
 
     # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.boto_client.admin_delete_user_attributes = Mock()
+    user.cognito_client.boto_client.admin_delete_user_attributes = mock.Mock()
 
     # delete the user
     user.delete()
@@ -402,7 +402,7 @@ def test_delete_user_deletes_trending(user):
 
 def test_delete_user_releases_username(user, user2):
     # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.boto_client.admin_delete_user_attributes = Mock()
+    user.cognito_client.boto_client.admin_delete_user_attributes = mock.Mock()
 
     # release our username by deleting our user
     username = user.item['username']
@@ -417,7 +417,7 @@ def test_delete_no_entry_in_user_pool(user, caplog):
     # configure the user pool to behave as if there is no entry for this user
     # note that moto cognito has not yet implemented admin_delete_user_attributes
     exception = user.cognito_client.boto_client.exceptions.UserNotFoundException({}, None)
-    user.cognito_client.clear_user_attribute = Mock(side_effect=exception)
+    user.cognito_client.clear_user_attribute = mock.Mock(side_effect=exception)
 
     # verify a delete works as usual
     user_id = user.id
@@ -451,7 +451,7 @@ def test_delete_user_with_profile_pic(user):
     assert 'photoPostId' in user.item
 
     # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.boto_client.admin_delete_user_attributes = Mock()
+    user.cognito_client.boto_client.admin_delete_user_attributes = mock.Mock()
 
     # delete the user
     user.delete()

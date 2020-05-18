@@ -2,7 +2,7 @@ import logging
 import os
 
 import boto3
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 
 logger = logging.getLogger()
 
@@ -84,8 +84,8 @@ class Migration:
         logger.warning(f'User `{user_id}`: counting archived posts')
         query_kwargs = {
             'KeyConditionExpression': (
-                Key('gsiA2PartitionKey').eq(f'post/{user_id}')
-                & Key('gsiA2SortKey').begins_with('ARCHIVED/')
+                conditions.Key('gsiA2PartitionKey').eq(f'post/{user_id}')
+                & conditions.Key('gsiA2SortKey').begins_with('ARCHIVED/')
             ),
             'IndexName': 'GSI-A2',
         }

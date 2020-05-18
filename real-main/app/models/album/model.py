@@ -1,10 +1,10 @@
 import hashlib
-from io import BytesIO
+import io
 import itertools
 import logging
 import os
 
-from PIL import Image
+import PIL.Image as Image
 
 from app.utils import image_size
 
@@ -154,7 +154,7 @@ class Album:
         image = Image.open(native_image_buf)
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
             image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
-            in_mem_file = BytesIO()
+            in_mem_file = io.BytesIO()
             image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             in_mem_file.seek(0)
             path = self.get_art_image_path(size, art_hash=art_hash)

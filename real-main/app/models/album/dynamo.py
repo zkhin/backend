@@ -1,7 +1,7 @@
-from collections import defaultdict
+import collections
 import logging
 
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 import pendulum
 
 logger = logging.getLogger()
@@ -52,7 +52,7 @@ class AlbumDynamo:
         assert name is not None or description is not None, 'Action-less post edit requested'
         assert name != '', 'All albums must have names'
 
-        exp_actions = defaultdict(list)
+        exp_actions = collections.defaultdict(list)
         exp_values = {}
         exp_names = {}
 
@@ -151,7 +151,7 @@ class AlbumDynamo:
 
     def generate_by_user(self, user_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'album/{user_id}'),
+            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'album/{user_id}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.generate_all_query(query_kwargs)

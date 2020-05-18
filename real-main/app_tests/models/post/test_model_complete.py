@@ -1,5 +1,5 @@
 import logging
-from unittest.mock import call, Mock
+import unittest.mock as mock
 import uuid
 
 import pendulum
@@ -90,8 +90,8 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
     assert posted_by_user.item.get('postCount', 0) == 0
@@ -108,7 +108,7 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     # check correct calls happened to far-flung other managers
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(posted_by_user_id, post.item),
+        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
 
     # check the subscription was triggered
@@ -123,8 +123,8 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
     assert posted_by_user.item.get('postCount', 0) == 0
@@ -138,10 +138,10 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
 
     # check correct calls happened to far-flung other managers
     assert post.followed_first_story_manager.mock_calls == [
-        call.refresh_after_story_change(story_now=post.item)
+        mock.call.refresh_after_story_change(story_now=post.item)
     ]
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(posted_by_user_id, post.item),
+        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
 
 
@@ -158,8 +158,8 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     post_manager.clients['s3_uploads'].put_object(path, image_data, 'application/octet-stream')
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post.feed_manager = Mock(FeedManager({}))
+    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
     assert album.item.get('postCount', 0) == 0
@@ -181,7 +181,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     # check correct calls happened to far-flung other managers
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
-        call.add_post_to_followers_feeds(posted_by_user_id, post.item),
+        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
 
 
@@ -195,10 +195,10 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     post2.s3_uploads_client.put_object(path2, b'anything', 'application/octet-stream')
 
     # mock out some calls to far-flung other managers
-    post1.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post1.feed_manager = Mock(FeedManager({}))
-    post2.followed_first_story_manager = Mock(FollowedFirstStoryManager({}))
-    post2.feed_manager = Mock(FeedManager({}))
+    post1.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post1.feed_manager = mock.Mock(FeedManager({}))
+    post2.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post2.feed_manager = mock.Mock(FeedManager({}))
 
     # complete the post that has the earlier postedAt, should not get an originalPostId
     post1.set_checksum()
@@ -221,20 +221,20 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
 
 def test_complete_with_set_as_user_photo(post_manager, user, post_with_media, post_set_as_user_photo):
     # complete the post without use_as_user_photo, verify user photo change api no called
-    post_with_media.user.update_photo = Mock()
+    post_with_media.user.update_photo = mock.Mock()
     post_with_media.complete()
     assert post_with_media.user.update_photo.mock_calls == []
 
     # complete the post with use_as_user_photo, verify user photo change api called
-    post_set_as_user_photo.user.update_photo = Mock()
+    post_set_as_user_photo.user.update_photo = mock.Mock()
     post_set_as_user_photo.complete()
-    assert post_set_as_user_photo.user.update_photo.mock_calls == [call(post_set_as_user_photo.id)]
+    assert post_set_as_user_photo.user.update_photo.mock_calls == [mock.call(post_set_as_user_photo.id)]
 
 
 def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, post_set_as_user_photo, caplog):
     # set up mocks
-    post_set_as_user_photo.user.update_photo = Mock(side_effect=user.exceptions.UserException('nope'))
-    post_set_as_user_photo.appsync.trigger_notification = Mock()
+    post_set_as_user_photo.user.update_photo = mock.Mock(side_effect=user.exceptions.UserException('nope'))
+    post_set_as_user_photo.appsync.trigger_notification = mock.Mock()
 
     # complete the post with use_as_user_photo with an exception throw from setting the photo, and
     # verify the rest of the post completion completes correctly
@@ -243,5 +243,5 @@ def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, p
     assert len(caplog.records) == 1
     assert 'Unable to set user photo' in str(caplog.records[0])
 
-    assert post_set_as_user_photo.user.update_photo.mock_calls == [call(post_set_as_user_photo.id)]
+    assert post_set_as_user_photo.user.update_photo.mock_calls == [mock.call(post_set_as_user_photo.id)]
     assert len(post_set_as_user_photo.appsync.trigger_notification.mock_calls) == 1

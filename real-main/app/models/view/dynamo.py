@@ -1,6 +1,6 @@
 import logging
 
-from boto3.dynamodb.conditions import Key
+import boto3.dynamodb.conditions as conditions
 
 from . import exceptions
 
@@ -21,7 +21,10 @@ class ViewDynamo:
     def generate_views(self, partition_key, pks_only=False):
         # no ordering guarantees
         query_kwargs = {
-            'KeyConditionExpression': Key('partitionKey').eq(partition_key) & Key('sortKey').begins_with('view/'),
+            'KeyConditionExpression': (
+                conditions.Key('partitionKey').eq(partition_key)
+                & conditions.Key('sortKey').begins_with('view/')
+            )
         }
         gen = self.client.generate_all_query(query_kwargs)
         if pks_only:

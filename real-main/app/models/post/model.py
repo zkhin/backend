@@ -1,10 +1,10 @@
 import base64
-from io import BytesIO
+import io
 import logging
 
-from colorthief import ColorThief
+import colorthief
 import pendulum
-from PIL import Image
+import PIL.Image as Image
 
 from app.mixins.flag.model import FlagModelMixin
 from app.utils import image_size
@@ -196,7 +196,7 @@ class Post(FlagModelMixin):
         image = self.native_jpeg_cache.get_image()
         # ordered by decreasing size
         for cache in (self.k4_jpeg_cache, self.p1080_jpeg_cache, self.p480_jpeg_cache, self.p64_jpeg_cache):
-            fh = BytesIO()
+            fh = io.BytesIO()
             try:
                 image.thumbnail(cache.image_size.max_dimensions, resample=Image.LANCZOS)
                 image.save(fh, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
@@ -267,7 +267,7 @@ class Post(FlagModelMixin):
     def upload_native_image_data_base64(self, image_data):
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
         cache = self.native_heic_cache if self.image_item.get('imageFormat') == 'HEIC' else self.native_jpeg_cache
-        cache.set(BytesIO(base64.b64decode(image_data)))
+        cache.set(io.BytesIO(base64.b64decode(image_data)))
         cache.flush()
 
     def start_processing_video_upload(self):
@@ -515,7 +515,7 @@ class Post(FlagModelMixin):
 
     def set_colors(self):
         try:
-            colors = ColorThief(self.native_jpeg_cache.get_fh()).get_palette(color_count=5)
+            colors = colorthief.ColorThief(self.native_jpeg_cache.get_fh()).get_palette(color_count=5)
         except Exception as err:
             logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
         else:

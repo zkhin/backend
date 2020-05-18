@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call
+import unittest.mock as mock
 import uuid
 
 import pendulum
@@ -87,7 +87,7 @@ def test_add_direct_chat(chat_manager, user1, user2):
 def test_add_minimal_group_chat(chat_manager, user1):
     # verify and set up starting state
     assert user1.item.get('chatCount', 0) == 0
-    chat_manager.chat_message_manager = Mock()
+    chat_manager.chat_message_manager = mock.Mock()
 
     # add the chat, verify it looks ok
     chat_id = 'cid'
@@ -113,14 +113,14 @@ def test_add_minimal_group_chat(chat_manager, user1):
 
     # verify the system chat message was triggered
     assert chat_manager.chat_message_manager.mock_calls == [
-        call.add_system_message_group_created(chat_id, user1, name=None, now=created_at),
+        mock.call.add_system_message_group_created(chat_id, user1, name=None, now=created_at),
     ]
 
 
 def test_add_maximal_group_chat(chat_manager, user1):
     # verify and set up starting state
     assert user1.item.get('chatCount', 0) == 0
-    chat_manager.chat_message_manager = Mock()
+    chat_manager.chat_message_manager = mock.Mock()
 
     # add the chat, verify it looks ok
     chat_id = 'cid'
@@ -144,7 +144,7 @@ def test_add_maximal_group_chat(chat_manager, user1):
 
     # verify the system chat message was triggered
     assert chat_manager.chat_message_manager.mock_calls == [
-        call.add_system_message_group_created(chat_id, user1, name=name, now=now),
+        mock.call.add_system_message_group_created(chat_id, user1, name=name, now=now),
     ]
 
 

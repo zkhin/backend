@@ -11,7 +11,7 @@ import io
 import os
 
 import boto3
-from PIL import Image
+import PIL.Image as Image
 
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')

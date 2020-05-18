@@ -1,8 +1,10 @@
-from io import BytesIO
+import io
 import os
+
 import boto3
 import botocore
-from PIL import Image, ImageOps
+import PIL.Image as Image
+import PIL.ImageOps as ImageOps
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 if not S3_UPLOADS_BUCKET:
@@ -66,14 +68,14 @@ def get_path(item, size):
 
 
 def get_data(path):
-    return BytesIO(s3_bucket.Object(path).get()['Body'].read())
+    return io.BytesIO(s3_bucket.Object(path).get()['Body'].read())
 
 
 def generate_thumbnail(data, dims):
     image = Image.open(data)
     image = ImageOps.exif_transpose(image)
     image.thumbnail(dims)
-    in_mem_file = BytesIO()
+    in_mem_file = io.BytesIO()
     image.save(in_mem_file, format='JPEG')
     in_mem_file.seek(0)
     return in_mem_file

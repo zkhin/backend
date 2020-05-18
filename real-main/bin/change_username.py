@@ -4,8 +4,8 @@ import argparse
 import os
 import sys
 
-from dotenv import load_dotenv
-load_dotenv()
+import dotenv
+dotenv.load_dotenv()
 
 # https://stackoverflow.com/questions/16981921
 SCRIPT_PATH = os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))

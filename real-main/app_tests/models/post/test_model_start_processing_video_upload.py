@@ -1,4 +1,4 @@
-from unittest.mock import call
+import unittest.mock as mock
 
 import pytest
 
@@ -63,7 +63,7 @@ def test_start_processing_video_upload_success(pending_video_post, mediaconvert_
     video_output_s3_key_prefix = pending_video_post.get_hls_video_path_prefix()
     image_output_s3_key_prefix = pending_video_post.get_poster_video_path_prefix()
     assert pending_video_post.mediaconvert_client.mock_calls == [
-        call.create_job(input_s3_key, video_output_s3_key_prefix, image_output_s3_key_prefix),
+        mock.call.create_job(input_s3_key, video_output_s3_key_prefix, image_output_s3_key_prefix),
     ]
 
     # check video post is left in 'processing' state

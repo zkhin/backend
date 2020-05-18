@@ -4,7 +4,7 @@ import os
 
 import boto3
 import requests
-from requests_aws4auth import AWS4Auth
+import requests_aws4auth
 
 logger = logging.getLogger()
 
@@ -34,7 +34,7 @@ class ESSearchClient:
         if not hasattr(self, '_awsauth'):
             session = boto3.Session()
             credentials = session.get_credentials().get_frozen_credentials()
-            self._awsauth = AWS4Auth(
+            self._awsauth = requests_aws4auth.AWS4Auth(
                 credentials.access_key, credentials.secret_key, session.region_name, self.service,
                 session_token=credentials.token,
             )

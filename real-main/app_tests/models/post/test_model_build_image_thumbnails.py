@@ -1,7 +1,7 @@
-from io import BytesIO
-from os import path
+import io
+import os.path as path
 
-from PIL import Image
+import PIL.Image as Image
 import pytest
 
 from app.models.post.enums import PostStatus, PostType
@@ -81,7 +81,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
 
     # rotate our wide image to make it tall
     image = Image.open(blank_path).rotate(90, expand=True)
-    in_mem_file = BytesIO()
+    in_mem_file = io.BytesIO()
     image.save(in_mem_file, format='JPEG')
     in_mem_file.seek(0)
 

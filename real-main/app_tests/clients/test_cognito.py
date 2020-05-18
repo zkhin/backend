@@ -1,4 +1,4 @@
-from moto import mock_cognitoidp
+import moto
 import pytest
 
 from app.clients.cognito import CognitoClient
@@ -6,7 +6,7 @@ from app.clients.cognito import CognitoClient
 
 @pytest.fixture
 def cognito_client():
-    with mock_cognitoidp():
+    with moto.mock_cognitoidp():
         cognito_client = CognitoClient('dummy', 'my-client-id')
         resp = cognito_client.boto_client.create_user_pool(
             PoolName='user-pool-name',

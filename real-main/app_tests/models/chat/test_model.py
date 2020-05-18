@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call
+import unittest.mock as mock
 import uuid
 
 import pendulum
@@ -48,7 +48,7 @@ def test_cant_edit_non_group_chat(direct_chat, user1):
 def test_edit_group_chat(group_chat, user1):
     # verify starting state
     assert 'name' not in group_chat.item
-    group_chat.chat_message_manager = Mock()
+    group_chat.chat_message_manager = mock.Mock()
 
     # set a name
     group_chat.edit(user1.id, name='name 1')
@@ -56,7 +56,7 @@ def test_edit_group_chat(group_chat, user1):
     group_chat.refresh_item()
     assert group_chat.item['name'] == 'name 1'
     assert group_chat.chat_message_manager.mock_calls == [
-        call.add_system_message_group_name_edited(group_chat.id, user1.id, 'name 1')
+        mock.call.add_system_message_group_name_edited(group_chat.id, user1.id, 'name 1')
     ]
     group_chat.chat_message_manager.reset_mock()
 
@@ -66,7 +66,7 @@ def test_edit_group_chat(group_chat, user1):
     group_chat.refresh_item()
     assert group_chat.item['name'] == 'name 2'
     assert group_chat.chat_message_manager.mock_calls == [
-        call.add_system_message_group_name_edited(group_chat.id, user1.id, 'name 2')
+        mock.call.add_system_message_group_name_edited(group_chat.id, user1.id, 'name 2')
     ]
     group_chat.chat_message_manager.reset_mock()
 
@@ -76,12 +76,12 @@ def test_edit_group_chat(group_chat, user1):
     group_chat.refresh_item()
     assert 'name' not in group_chat.item
     assert group_chat.chat_message_manager.mock_calls == [
-        call.add_system_message_group_name_edited(group_chat.id, user1.id, '')
+        mock.call.add_system_message_group_name_edited(group_chat.id, user1.id, '')
     ]
 
 
 def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager, cognito_client):
-    group_chat.chat_message_manager = Mock()
+    group_chat.chat_message_manager = mock.Mock()
     now = pendulum.now('utc')
 
     # check starting members
@@ -140,7 +140,7 @@ def test_cant_add_to_non_group_chat(direct_chat):
 
 
 def test_leave(group_chat, user1, user2):
-    group_chat.chat_message_manager = Mock()
+    group_chat.chat_message_manager = mock.Mock()
 
     # check starting members
     assert group_chat.item['userCount'] == 1
@@ -160,7 +160,7 @@ def test_leave(group_chat, user1, user2):
     member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == [user2.id]
     assert group_chat.chat_message_manager.mock_calls == [
-        call.add_system_message_left_group(group_chat.id, user1)
+        mock.call.add_system_message_left_group(group_chat.id, user1)
     ]
 
     # user2 leaves the chat, should trigger the deletion of the chat, and hence no need for new system message
@@ -172,7 +172,7 @@ def test_leave(group_chat, user1, user2):
     member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == []
     assert group_chat.chat_message_manager.mock_calls == [
-        call.truncate_chat_messages(group_chat.id),
+        mock.call.truncate_chat_messages(group_chat.id),
     ]
 
 

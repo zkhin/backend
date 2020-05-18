@@ -3,7 +3,9 @@ import logging
 import os
 
 import boto3
-from PIL import Image, ImageOps, UnidentifiedImageError
+import PIL
+import PIL.Image as Image
+import PIL.ImageOps as ImageOps
 
 logger = logging.getLogger()
 
@@ -73,7 +75,7 @@ class Migration:
         if native_data:
             try:
                 im = Image.open(io.BytesIO(native_data))
-            except UnidentifiedImageError:
+            except PIL.UnidentifiedImageError:
                 logger.warning(f'Post `{post_id}`: s3: native image appears corrupted')
             else:
                 im = ImageOps.exif_transpose(im)
