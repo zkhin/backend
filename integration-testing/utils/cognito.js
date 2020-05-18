@@ -14,7 +14,7 @@ const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
-const { mutations }= require('../schema')
+const { mutations } = require('../schema')
 
 dotenv.config()
 
