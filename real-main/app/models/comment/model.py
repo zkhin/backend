@@ -33,6 +33,18 @@ class Comment(FlagModelMixin):
         self.user_id = comment_item['userId']
         self.post_id = comment_item['postId']
 
+    @property
+    def post(self):
+        if not hasattr(self, '_post'):
+            self._post = self.post_manager.get_post(self.post_id)
+        return self._post
+
+    @property
+    def user(self):
+        if not hasattr(self, '_user'):
+            self._user = self.user_manager.get_user(self.user_id)
+        return self._user
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_comment(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -43,12 +55,9 @@ class Comment(FlagModelMixin):
         resp['viewedStatus'] = self.view_manager.get_viewed_status(self, caller_user_id)
         return resp
 
-    def delete(self, deleter_user_id):
-        "Delete the comment. Set `deleter_user_id` to `None` to override permission checks."
-        post = self.post_manager.get_post(self.post_id)
-
+    def delete(self, deleter_user_id=None, forced=False):
         # users may only delete their own comments or comments on their posts
-        if deleter_user_id and deleter_user_id not in (post.user_id, self.user_id):
+        if deleter_user_id and deleter_user_id not in (self.post.user_id, self.user_id):
             raise exceptions.CommentException(f'User is not authorized to delete comment `{self.id}`')
 
         # delete any flags of the comment
@@ -56,26 +65,31 @@ class Comment(FlagModelMixin):
 
         # order matters to moto (in test suite), but not on dynamo
         transacts = [
-            self.user_manager.dynamo.transact_comment_deleted(self.user_id),
+            self.user_manager.dynamo.transact_comment_deleted(self.user_id, forced=forced),
             self.post_manager.dynamo.transact_decrement_comment_count(self.post_id),
             self.dynamo.transact_delete_comment(self.id),
         ]
         self.dynamo.client.transact_write_items(transacts)
 
         # if this comment is being deleted by anyone other than post owner, count it as new comment activity
-        if deleter_user_id and deleter_user_id != post.user_id:
-            post.set_new_comment_activity(True)
+        if deleter_user_id and deleter_user_id != self.post.user_id:
+            self.post.set_new_comment_activity(True)
         # delete view records on the comment
         self.view_manager.delete_views(self.item['partitionKey'])
         return self
 
     def flag(self, user):
         # if comment is on a post is from a private user then we must be a follower of the post owner
-        post = self.post_manager.get_post(self.post_id)
-        posted_by_user = self.user_manager.get_user(post.user_id)
+        posted_by_user = self.user_manager.get_user(self.post.user_id)
         if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
             follow = self.follow_manager.get_follow(user.id, self.user_id)
             if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
                 raise exceptions.CommentException(f'User does not have access to comment `{self.id}`')
 
         super().flag(user)
+
+    def remove_from_flagging(self):
+        self.delete(forced=True)
+
+    def is_user_forced_disabling_criteria_met(self):
+        return self.user.is_forced_disabling_criteria_met_by_comments()

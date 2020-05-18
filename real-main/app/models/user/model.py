@@ -87,7 +87,15 @@ class User:
             return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
-    def is_forced_disabling_criteria_met(self):
+    def is_forced_disabling_criteria_met_by_comments(self):
+        # matching post criteria
+        total_comment_count = self.item.get('commentCount', 0) + self.item.get('commentDeletedCount', 0)
+        forced_deleted_count = self.item.get('commentForcedDeletionCount', 0)
+        if total_comment_count > 5 and forced_deleted_count > total_comment_count / 10:
+            return True
+        return False
+
+    def is_forced_disabling_criteria_met_by_posts(self):
         # forced disabling criteria, (directly from spec):
         #   - user has over 5 posts
         #   - their forced post archivings is at least 10% of their total post count

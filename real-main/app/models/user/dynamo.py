@@ -325,7 +325,7 @@ class UserDynamo:
         }
         return {'Update': kwargs}
 
-    def transact_comment_deleted(self, user_id):
+    def transact_comment_deleted(self, user_id, forced=False):
         kwargs = {
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD commentCount :negative_one, commentDeletedCount :positive_one',
@@ -336,4 +336,7 @@ class UserDynamo:
                 ':zero': {'N': '0'},
             },
         }
+        if forced:
+            kwargs['UpdateExpression'] += ', commentForcedDeletionCount :positive_one'
+            kwargs['ExpressionAttributeValues'][':positive_one'] = {'N': '1'}
         return {'Update': kwargs}

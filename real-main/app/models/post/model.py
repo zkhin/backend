@@ -7,7 +7,6 @@ import pendulum
 from PIL import Image
 
 from app.mixins.flag.model import FlagModelMixin
-from app.models.user.enums import UserStatus
 from app.utils import image_size
 
 from . import enums, exceptions
@@ -671,28 +670,10 @@ class Post(FlagModelMixin):
                 raise exceptions.PostException(f'User does not have access to post `{self.id}`')
 
         super().flag(user)
-
-        # force archive the post?
-        if user.username in self.flag_admin_usernames or self.is_crowdsourced_forced_archiving_criteria_met():
-            logger.warning(f'Force archiving post `{self.id}`')
-            self.archive(forced=True)
-
-            # force disable the user?
-            self.user.refresh_item(strongly_consistent=True)
-            if self.user.is_forced_disabling_criteria_met():
-                logger.warning(f'Force disabling user `{self.user.id}`')
-                self.user.set_user_status(UserStatus.DISABLED)
-                # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
-                logger.warning(f'USER_FORCE_DISABLED: user `{self.user.id}` with username `{self.user.username}`')
-
         return self
 
-    def is_crowdsourced_forced_archiving_criteria_met(self):
-        # the post should be force-archived if (directly from spec):
-        #   - over 5 users have viewed the post and
-        #   - at least 10% of them have flagged it
-        viewed_by_count = self.item.get('viewedByCount', 0)
-        flag_count = self.item.get('flagCount', 0)
-        if viewed_by_count > 5 and flag_count > viewed_by_count / 10:
-            return True
-        return False
+    def remove_from_flagging(self):
+        self.archive(forced=True)
+
+    def is_user_forced_disabling_criteria_met(self):
+        return self.user.is_forced_disabling_criteria_met_by_posts()

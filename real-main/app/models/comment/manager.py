@@ -98,8 +98,8 @@ class CommentManager(FlagManagerMixin):
 
     def delete_all_by_user(self, user_id):
         for comment_item in self.dynamo.generate_by_user(user_id):
-            self.init_comment(comment_item).delete(None)
+            self.init_comment(comment_item).delete()
 
     def delete_all_on_post(self, post_id):
         for comment_item in self.dynamo.generate_by_post(post_id):
-            self.init_comment(comment_item).delete(None)
+            self.init_comment(comment_item).delete()

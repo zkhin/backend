@@ -497,38 +497,77 @@ def test_serailize_followed(user, user2, follow_manager):
     assert resp == user.item
 
 
-def test_is_forced_disabling_criteria_met(user):
+def test_is_forced_disabling_criteria_met_by_posts(user):
     # check starting state
     assert user.item.get('postCount', 0) == 0
+    assert user.item.get('postArchivedCount', 0) == 0
     assert user.item.get('postForcedArchivingCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met() is False
+    assert user.is_forced_disabling_criteria_met_by_posts() is False
 
     # first post was force-disabled, shouldn't disable the user
     user.item['postCount'] = 1
     user.item['postArchivedCount'] = 0
     user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met() is False
+    assert user.is_forced_disabling_criteria_met_by_posts() is False
 
     # just below criteria cutoff
     user.item['postCount'] = 5
     user.item['postArchivedCount'] = 0
     user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met() is False
+    assert user.is_forced_disabling_criteria_met_by_posts() is False
     user.item['postCount'] = 3
     user.item['postArchivedCount'] = 3
     user.item['postForcedArchivingCount'] = 0
-    assert user.is_forced_disabling_criteria_met() is False
+    assert user.is_forced_disabling_criteria_met_by_posts() is False
 
     # just above criteria cutoff
     user.item['postCount'] = 6
     user.item['postArchivedCount'] = 0
     user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met() is True
+    assert user.is_forced_disabling_criteria_met_by_posts() is True
     user.item['postCount'] = 0
     user.item['postArchivedCount'] = 6
     user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met() is True
+    assert user.is_forced_disabling_criteria_met_by_posts() is True
     user.item['postCount'] = 2
     user.item['postArchivedCount'] = 4
     user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met() is True
+    assert user.is_forced_disabling_criteria_met_by_posts() is True
+
+
+def test_is_forced_disabling_criteria_met_by_comments(user):
+    # check starting state
+    assert user.item.get('commentCount', 0) == 0
+    assert user.item.get('commentDeletedCount', 0) == 0
+    assert user.item.get('commentForcedDeletionCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met_by_comments() is False
+
+    # first comment was force-disabled, shouldn't disable the user
+    user.item['commentCount'] = 1
+    user.item['commentDeletedCount'] = 0
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_comments() is False
+
+    # just below criteria cutoff
+    user.item['commentCount'] = 5
+    user.item['commentDeletedCount'] = 0
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_comments() is False
+    user.item['commentCount'] = 3
+    user.item['commentDeletedCount'] = 3
+    user.item['commentForcedDeletionCount'] = 0
+    assert user.is_forced_disabling_criteria_met_by_comments() is False
+
+    # just above criteria cutoff
+    user.item['commentCount'] = 6
+    user.item['commentDeletedCount'] = 0
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_comments() is True
+    user.item['commentCount'] = 0
+    user.item['commentDeletedCount'] = 6
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_comments() is True
+    user.item['commentCount'] = 2
+    user.item['commentDeletedCount'] = 4
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_comments() is True

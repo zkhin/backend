@@ -696,7 +696,8 @@ def test_transact_post_deleted(user_dynamo):
 def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):
     user_id = 'user-id'
     transact_added = user_dynamo.transact_comment_added(user_id)
-    transact_deleted = user_dynamo.transact_comment_deleted(user_id)
+    transact_deleted_willfull = user_dynamo.transact_comment_deleted(user_id)
+    transact_deleted_forced = user_dynamo.transact_comment_deleted(user_id, forced=True)
 
     # set up & verify starting state
     user_dynamo.add_user(user_id, 'username')
@@ -704,31 +705,42 @@ def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):
     assert user_item['userId'] == user_id
     assert user_item.get('commentCount', 0) == 0
     assert user_item.get('commentDeletedCount', 0) == 0
+    assert user_item.get('commentForcedDeletionCount', 0) == 0
 
-    # add a comment
+    # three comments, one by one
+    user_dynamo.client.transact_write_items([transact_added])
+    assert user_dynamo.get_user(user_id).get('commentCount', 0) == 1
+    user_dynamo.client.transact_write_items([transact_added])
+    assert user_dynamo.get_user(user_id).get('commentCount', 0) == 2
     user_dynamo.client.transact_write_items([transact_added])
     user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('commentCount', 0) == 1
+    assert user_item.get('commentCount', 0) == 3
     assert user_item.get('commentDeletedCount', 0) == 0
+    assert user_item.get('commentForcedDeletionCount', 0) == 0
 
-    # add another comment
-    user_dynamo.client.transact_write_items([transact_added])
+    # delete one comment, forced
+    user_dynamo.client.transact_write_items([transact_deleted_forced])
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('commentCount', 0) == 2
-    assert user_item.get('commentDeletedCount', 0) == 0
+    assert user_item.get('commentDeletedCount', 0) == 1
+    assert user_item.get('commentForcedDeletionCount', 0) == 1
 
-    # delete one comment
-    user_dynamo.client.transact_write_items([transact_deleted])
+    # delete another comment, not forced
+    user_dynamo.client.transact_write_items([transact_deleted_willfull])
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('commentCount', 0) == 1
-    assert user_item.get('commentDeletedCount', 0) == 1
+    assert user_item.get('commentDeletedCount', 0) == 2
+    assert user_item.get('commentForcedDeletionCount', 0) == 1
 
-    # delete another comment
-    user_dynamo.client.transact_write_items([transact_deleted])
+    # delete one comment, forced
+    user_dynamo.client.transact_write_items([transact_deleted_forced])
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('commentCount', 0) == 0
-    assert user_item.get('commentDeletedCount', 0) == 2
+    assert user_item.get('commentDeletedCount', 0) == 3
+    assert user_item.get('commentForcedDeletionCount', 0) == 2
 
     # verify can't go negative
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([transact_deleted])
+        user_dynamo.client.transact_write_items([transact_deleted_willfull])
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
+        user_dynamo.client.transact_write_items([transact_deleted_forced])
