@@ -23,39 +23,59 @@ To deploy each serverless stack, run `sls deploy` in that stack's root directory
 
 ### AWS Credentials
 
-By default, serverless will use aws credetials stored in the profile with name `real-{stage}` (ie: `real-dev`, `real-staging`, or `real-production`). This behavior can be overriden by using the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option.
+By default, serverless will use aws credentials stored in the profile with name `real-{stage}` (ie: `real-dev`, `real-staging`, or `real-production`). This behavior can be overridden by using the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option.
 
 
 Serverless expects the AWS credentials to have `AdministratorAccess` policy attached.
 
-### A brand-new deployment
+### First-time deployment manual steps
 
-Before first deployment in a new AWS account, there is some one-time set-up to do with [SES](https://console.aws.amazon.com/ses/home) so it can send transactional emails from Cognito:
+#### CloudWatch
+
+_Once per AWS Account, must be done before first deployment_
+
+Create a LogGroup with name `sns/<aws-region>/<aws-account-id>/DirectPublishToPhoneNumber/Failure`. This log group will be referenced by all deployments in the account, and used by SNS to log SMS delivery failures.
+
+#### IAM
+
+_Once per AWS Account_
+
+Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
+
+#### SecretsManager
+
+_Once per deployment_
+
+- A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
+- Credentials to access the post verification API must be added. Note these are stage-specific. Reference the environment variable in serverless.yml for required format.
+- Google OAuth Client Ids must be added. These are available from our google app's profile on the [google app console](https://console.developers.google.com/) and have format `{"ios": "***", "web": "***", ...}`. Reference the environment variable in serverless.yml for the proper naming.
+
+#### SES
+
+_Once per AWS Account_
+
+To allow [SES](https://console.aws.amazon.com/ses/home) to send transactional emails from Cognito:
 
 - add and verify the domain `real.app`
 - add and verify the email address `no-reply@real.app`.
 - optionally set up spf, dkim, dmarc and a MAIL FROM domain of `mail.real.app`
 
-Resource dependencies between the stacks make initial deployment tricky. Stacks must be deployed in this order:
+#### SNS
+
+_Once per AWS Account_
+
+- Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
+- Note this functionality [isn't yet available via cloudfront](https://stackoverflow.com/a/59188488), but once it is, it could be integrated into our standard deploy
+
+### First-time stack deployment order
+
+Resource dependencies between the stacks make initial deployment tricky. Stacks should be deployed in this order:
 
 - `real-lambda-layers`
 - `real-main`, with resources that depend on `real-cloudfront` commented out in serverless.yml
 - `real-cloudfront`
 - `real-main` again, with nothing commented out
 - `real-auth`
-
-In the AWS SecretsManager:
-
-- A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
-- Credentials to access the post vericiation API must be added. Note these are stage-specific. Reference the environment variable in serverless.yml for required format.
-- Google OAuth Client Ids must be added. These are available from our google app's profile on the [google app console](https://console.developers.google.com/) and have format `{"ios": "***", "web": "***", ...}`. Reference the enviornment variable in serverless.yml for the proper naming.
-
-Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
-
-In the AWS SNS Console (after first deployment, only once per AWS account):
-
-- Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
-- Note this functionality [isn't yet available via cloudfront](https://stackoverflow.com/a/59188488), but once it is, it can be integrated into our standard deploy
 
 ### Updates to an existing deployment
 
