@@ -9,12 +9,10 @@ const prmt = require('prompt')
 const util = require('util')
 
 dotenv.config()
+AWS.config = new AWS.Config()
 
 const cognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID
 if (cognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIENT_ID must be defined')
-
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
 
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
@@ -24,14 +22,8 @@ if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must
 
 const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 
-const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-  ClientId: cognitoClientId,
-  Region: awsRegion,
-}})
-
-const cognitoIdentityPoolClient = new AWS.CognitoIdentity({params: {
-  IdentityPoolId: identityPoolId,
-}})
+const cognitoIdentityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
+const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
 
 
 prmt.message = ''
@@ -97,7 +89,7 @@ const generateCredentials = async (tokens) => {
     // generate authenticated credentials
     const idToken = tokens.IdToken
     const userId = jwtDecode(idToken)['cognito:username']
-    const Logins = {[`cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`]: idToken}
+    const Logins = {[`cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`]: idToken}
     resp = await cognitoIdentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
   }
   else {

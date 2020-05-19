@@ -7,9 +7,6 @@ const pwdGenerator = require('generate-password')
 
 dotenv.config()
 
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
-
 const testingCognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID
 if (testingCognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIENT_ID must be defined')
 
@@ -46,10 +43,7 @@ const chooseNewPassword = async (usernameLike, confirmationCode, password) => {
     password = pwdGenerator.generate({length:8})
     console.log(`Auto generated password: ${password}`)
   }
-  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-    ClientId: testingCognitoClientId,
-    Region: awsRegion,
-  }})
+  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: testingCognitoClientId }})
 
   // empty response upon success
   await userPoolClient.confirmForgotPassword({

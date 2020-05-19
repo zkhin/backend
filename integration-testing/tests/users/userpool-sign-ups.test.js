@@ -10,20 +10,11 @@ dotenv.config()
 const cognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID
 if (cognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIENT_ID must be defined')
 
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
-
-
-const cognitoClient = new AWS.CognitoIdentityServiceProvider({params: {
-  ClientId: cognitoClientId,
-  Region: awsRegion,
-}})
-
+const cognitoClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
 
 // All users the test client creates must have this family name (or the sign up
 // will be rejected). This is to make it easier to clean them out later.
 const familyName = 'TESTER'
-
 
 function generatePassword() {
   return pwdGenerator.generate({length: 8})

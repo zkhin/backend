@@ -10,9 +10,6 @@ const uuidv4 = require('uuid/v4')
 
 dotenv.config()
 
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
-
 const frontendCognitoClientId = process.env.COGNITO_FRONTEND_CLIENT_ID
 if (frontendCognitoClientId === undefined) throw new Error('Env var COGNITO_FRONTEND_CLIENT_ID must be defined')
 
@@ -110,10 +107,7 @@ const signUserUp = async (email, phone, password, autoconfirm) => {
 
   // create an entry in the user pool with matching 'cognito username'<->'identity id'
   const userPoolClientId = autoconfirm ? testingCognitoClientId : frontendCognitoClientId
-  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-    ClientId: userPoolClientId,
-    Region: awsRegion,
-  }})
+  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: userPoolClientId}})
   await userPoolClient.signUp({
     Username: userId,
     Password: password,

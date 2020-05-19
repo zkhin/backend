@@ -8,12 +8,10 @@ const prmt = require('prompt')
 require('isomorphic-fetch')
 
 dotenv.config()
+AWS.config = new AWS.Config()
 
 const cognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID
 if (cognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIENT_ID must be defined')
-
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
 
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
@@ -24,14 +22,8 @@ if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must
 const appsyncApiUrl = process.env.APPSYNC_GRAPHQL_URL
 if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_GRAPHQL_URL must be defined')
 
-const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-  ClientId: cognitoClientId,
-  Region: awsRegion,
-}})
-
-const cognitoIndentityPoolClient = new AWS.CognitoIdentity({params: {
-  IdentityPoolId: identityPoolId,
-}})
+const cognitoIdentityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
+const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
 
 prmt.message = ''
 prmt.start()
@@ -115,7 +107,7 @@ prmt.get(prmtSchema, async (err, result) => {
   const awsCredentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const appsyncClient = new AWSAppSyncClient({
     url: appsyncApiUrl,
-    region: awsRegion,
+    region: AWS.config.region,
     auth: {
       type: 'AWS_IAM',
       credentials: awsCredentials,
@@ -176,7 +168,7 @@ const generateCognitoTokens = async (username, password) => {
 
 const generateGQLCredentials = async (authSource, token) => {
   const loginsKey = (() => {
-    if (authSource === 'c') return `cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`
+    if (authSource === 'c') return `cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`
     if (authSource === 'f') return 'graph.facebook.com'
     if (authSource === 'g') return 'accounts.google.com'
     throw `Unrecognized auth source '${authSource}'`
@@ -184,10 +176,10 @@ const generateGQLCredentials = async (authSource, token) => {
   const Logins = {[loginsKey]: token}
 
   // add the user to the identity pool
-  const idResp = await cognitoIndentityPoolClient.getId({Logins}).promise()
+  const idResp = await cognitoIdentityPoolClient.getId({Logins}).promise()
   const userId = idResp.IdentityId
 
   // get credentials for appsync from the identity pool
-  const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
+  const resp = await cognitoIdentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
   return resp.Credentials
 }

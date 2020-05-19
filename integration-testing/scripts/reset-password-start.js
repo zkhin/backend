@@ -6,9 +6,6 @@ const prmt = require('prompt')
 
 dotenv.config()
 
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
-
 const frontendCognitoClientId = process.env.COGNITO_FRONTEND_CLIENT_ID
 if (frontendCognitoClientId === undefined) throw new Error('Env var COGNITO_FRONTEND_CLIENT_ID must be defined')
 
@@ -40,12 +37,7 @@ prmt.get(prmtSchema, async (err, result) => {
 })
 
 const sendResetPassword = async (usernameLike) => {
-  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-    ClientId: testingCognitoClientId,
-    Region: awsRegion,
-  }})
-  const resp = await userPoolClient.forgotPassword({
-    Username: usernameLike,
-  }).promise()
+  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: testingCognitoClientId}})
+  const resp = await userPoolClient.forgotPassword({Username: usernameLike}).promise()
   console.log(resp)
 }

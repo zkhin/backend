@@ -14,9 +14,7 @@ require('isomorphic-fetch')
 const { mutations, queries } = require('../schema')
 
 dotenv.config()
-
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
+AWS.config = new AWS.Config()
 
 const appsyncApiUrl = process.env.APPSYNC_GRAPHQL_URL
 if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_GRAPHQL_URL must be defined')
@@ -38,7 +36,7 @@ const awsCredentials = new AWS.Credentials(
 
 const appsyncClient = new AWSAppSyncClient({
   url: appsyncApiUrl,
-  region: awsRegion,
+  region: AWS.config.region,
   auth: {
     type: 'AWS_IAM',
     credentials: awsCredentials,

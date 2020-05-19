@@ -17,12 +17,10 @@ require('isomorphic-fetch')
 const { mutations } = require('../schema')
 
 dotenv.config()
+AWS.config = new AWS.Config()
 
 const cognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID
 if (cognitoClientId === undefined) throw new Error('Env var COGNITO_TESTING_CLIENT_ID must be defined')
-
-const awsRegion = process.env.AWS_REGION
-if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
 
 const appsyncApiUrl = process.env.APPSYNC_GRAPHQL_URL
 if (appsyncApiUrl === undefined) throw new Error('Env var APPSYNC_GRAPHQL_URL must be defined')
@@ -33,15 +31,8 @@ if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL
 const userPoolId = process.env.COGNITO_USER_POOL_ID
 if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must be defined')
 
-
-const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {
-  ClientId: cognitoClientId,
-  Region: awsRegion,
-}})
-
-const identityPoolClient = new AWS.CognitoIdentity({params: {
-  IdentityPoolId: identityPoolId,
-}})
+const identityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
+const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
 
 // All users the test client creates must have this family name (or the sign up
 // will be rejected). This is to make it easier to clean them out later.
@@ -50,7 +41,7 @@ const familyName = 'TESTER'
 const AuthFlow = 'USER_PASSWORD_AUTH'
 
 // To be used in the `Logins` parameter when calling the identity pool
-const userPoolLoginsKey = `cognito-idp.${awsRegion}.amazonaws.com/${userPoolId}`
+const userPoolLoginsKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`
 const googleLoginsKey = 'accounts.google.com'
 const facebookLoginsKey = 'graph.facebook.com'
 
@@ -89,7 +80,7 @@ const getAppSyncClient = async (creds) => {
   const credsObj = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const client = new AWSAppSyncClient({
     url: appsyncApiUrl,
-    region: awsRegion,
+    region: AWS.config.region,
     auth: {
       type: 'AWS_IAM',
       credentials: credsObj,
