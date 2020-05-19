@@ -11,7 +11,7 @@ dotenv.load_dotenv()
 SCRIPT_PATH = os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
 sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_PATH)))
 from app.clients import CognitoClient, DynamoClient     # noqa E402
-from app.models.user import UserManager                 # noqa E402
+from app.models import UserManager                      # noqa E402
 
 
 def parse_args():
