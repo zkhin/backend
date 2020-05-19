@@ -34,7 +34,7 @@ def parse_args():
     return args.date, args.status
 
 
-def generate_users(client, attributes_to_get=None, user_filter=None):
+def generate_users(client, attributes_to_get=None, user_filter=None, progress_indicator=None):
     "Return a generator that generates all users in cognito matching the filter"
     kwargs = {'UserPoolId': COGNITO_USER_POOL_ID}
     if attributes_to_get:
@@ -44,6 +44,8 @@ def generate_users(client, attributes_to_get=None, user_filter=None):
 
     pagination_token = False
     while (pagination_token is not None):
+        if progress_indicator:
+            print(progress_indicator, end='', flush=True)
         if pagination_token:
             kwargs['PaginationToken'] = pagination_token
         resp = client.list_users(**kwargs)
@@ -101,7 +103,7 @@ def main():
     created_date, status = parse_args()
     client = boto3.client('cognito-idp')
 
-    gen = generate_users(client)
+    gen = generate_users(client, progress_indicator='.')
     gen = map(parse_user, gen)
     if created_date:
         gen = filter(lambda u: u['UserCreateDate'] == created_date, gen)
@@ -112,6 +114,7 @@ def main():
     for parsed_user in gen:
         stats.apply(parsed_user)
 
+    print()
     pprint.pprint(stats.serialize())
 
 
