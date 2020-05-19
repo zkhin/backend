@@ -24,7 +24,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Count users in each possible status in cognito")
     parser.add_argument(
         '-d', dest='date', type=lambda s: str(pendulum.parse(s).date()),
-        help='Only count users that where created in this date. Ex: 2020-05-19',
+        help='Only count users that were created in this date. Ex: 2020-05-19',
     )
     parser.add_argument(
         '-s', dest='status', choices=USER_STASTUSES,
@@ -72,11 +72,11 @@ class Stats:
 
     def __init__(self):
         self.total = 0
-        self.create_date = collections.defaultdict(lambda: 0)
-        self.enabled = collections.defaultdict(lambda: 0)
-        self.user_status = collections.defaultdict(lambda: 0)
-        self.email_verified = collections.defaultdict(lambda: 0)
-        self.phone_number_verified = collections.defaultdict(lambda: 0)
+        self.create_date = collections.defaultdict(int)
+        self.enabled = collections.defaultdict(int)
+        self.user_status = collections.defaultdict(int)
+        self.email_verified = collections.defaultdict(int)
+        self.phone_number_verified = collections.defaultdict(int)
 
     def apply(self, parsed_user):
         self.total += 1
