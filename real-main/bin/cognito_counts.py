@@ -62,6 +62,7 @@ def parse_user(user):
         if attr['Name'] == 'phone_number_verified' and attr['Value'] == 'true':
             phone_number_verified = True
     return {
+        'Username': user['Username'],
         'Enabled': user['Enabled'],
         'UserStatus': user['UserStatus'],
         'UserCreateDate': str(user['UserCreateDate'].astimezone(datetime.timezone.utc).date()),

@@ -1,22 +1,7 @@
-import moto
 import pytest
 
-from app.clients.cognito import CognitoClient
 
-
-@pytest.fixture
-def cognito_client():
-    with moto.mock_cognitoidp():
-        cognito_client = CognitoClient('dummy', 'my-client-id')
-        resp = cognito_client.boto_client.create_user_pool(
-            PoolName='user-pool-name',
-            AliasAttributes=['phone_number', 'email', 'preferred_username'],  # seems moto doesn't enforce uniqueness
-        )
-        cognito_client.user_pool_id = resp['UserPool']['Id']
-        yield cognito_client
-
-
-@pytest.mark.skip(reason='moto does not support admin_set_user_password yet')
+@pytest.mark.skip(reason='moto appears to not support CUSTOM_AUTH AuthFlow for admin_initiate_auth')
 def test_create_user_pool_entry(cognito_client):
     pass
 
