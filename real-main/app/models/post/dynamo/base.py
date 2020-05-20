@@ -61,9 +61,9 @@ class PostDynamo:
             'IndexName': 'GSI-A2',
         }
         if completed is not None:
-            comparison = '=' if completed else '<>'
-            query_kwargs['FilterExpression'] = f'postStatus {comparison} :status'
-            query_kwargs['ExpressionAttributeValues'] = {':status': PostStatus.COMPLETED}
+            filter_exp = conditions.Attr('postStatus')
+            filter_exp = filter_exp.eq if completed else filter_exp.ne
+            query_kwargs['FilterExpression'] = filter_exp(PostStatus.COMPLETED)
         return self.client.generate_all_query(query_kwargs)
 
     def generate_expired_post_pks_by_day(self, date, cut_off_time=None):
