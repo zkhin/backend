@@ -34,7 +34,7 @@ def image_post_uploaded(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'BEGIN: Handling object created event for key `{path}`')
+        logger.info(f'Begin handling object created event for key `{path}`')
 
     # Avoid firing on creation of other images (profile photo, album art)
     # Once images are moved to their new path at {userId}/post/{postId}/image/{size}.jpg,
@@ -78,7 +78,7 @@ def video_post_uploaded(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'BEGIN: Handling object created event for key `{path}`')
+        logger.info(f'Begin handling object created event for key `{path}`')
 
     _, _, post_id, _ = path.split('/')
 
@@ -111,7 +111,7 @@ def video_post_processed(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'BEGIN: Handling object created event for key `{path}`')
+        logger.info(f'Begin handling object created event for key `{path}`')
 
     _, _, post_id, _, _ = path.split('/')
 

@@ -5,12 +5,13 @@ import threading
 threadLocal = threading.local()
 
 
-def register_gql_details(request_id, field, caller_user_id, arguments, source):
-    threadLocal.request_id = request_id
-    threadLocal.gql_field = field
-    threadLocal.gql_caller_user_id = caller_user_id
-    threadLocal.gql_arguments = arguments
-    threadLocal.gql_source = source
+def register_gql_details(field, caller_user_id, arguments, source):
+    threadLocal.gql = {
+        'arguments': arguments,
+        'caller_user_id': caller_user_id,
+        'field': field,
+        'source': source,
+    }
 
 
 # https://docs.python.org/3/howto/logging-cookbook.html#using-a-context-manager-for-selective-logging
@@ -31,11 +32,7 @@ class AddRequestInfoFilter(logging.Formatter):
     "Logging filter that does not filter, but rather adds the graphql request info to the logging record"
 
     def filter(self, record):
-        record.request_id = getattr(threadLocal, 'request_id', None)
-        record.gql_field = getattr(threadLocal, 'gql_field', None)
-        record.gql_caller_user_id = getattr(threadLocal, 'gql_caller_user_id', None)
-        record.gql_arguments = getattr(threadLocal, 'gql_arguments', None)
-        record.gql_source = getattr(threadLocal, 'gql_source', None)
+        record.gql = getattr(threadLocal, 'gql', None)
         return True
 
 
@@ -49,14 +46,16 @@ class CloudWatchFormatter(logging.Formatter):
         start = len(prefix) if record.pathname.startswith(prefix) else 0
         path = record.pathname[start:]
 
+        # Undocumented feature: lambda adds the request_id to all log records, so we don't have to
+        # https://gist.github.com/alanjds/000b15f7dcd43d7646aab34fcd3cef8c#file-awslambda-bootstrap-py-L429
+        # Fail softly so we can still use this formatter outside the lambda exe context
+        request_id = getattr(record, 'aws_request_id', None)
+
         data = {
             'level': record.levelname,
-            'requestId': record.request_id,
+            'requestId': request_id,
             'event': getattr(record, 'event', None),
-            'gqlField': record.gql_field,
-            'gqlCallerUserId': record.gql_caller_user_id,
-            'gqlArguments': record.gql_arguments,
-            'gqlSource': record.gql_source,
+            'gql': getattr(record, 'gql', None),
             'message': record.getMessage(),
             'sourceFile': path,
             'sourceLine': record.lineno,
@@ -67,7 +66,7 @@ class CloudWatchFormatter(logging.Formatter):
             data['exceptionInfo'] = record.exc_text.split('\n')
         if record.stack_info:
             data['stackInfo'] = record.stack_info.split('\n')
-        return f'{record.levelname} RequestId: {record.request_id} Data: {json.dumps(data)}'
+        return f'{record.levelname} RequestId: {request_id} Data: {json.dumps(data)}'
 
 
 # configure the root logger

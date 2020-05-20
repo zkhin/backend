@@ -18,14 +18,15 @@ if route_path:
 def dispatch(event, context):
     "Top-level dispatch of appsync event to the correct handler"
 
-    req_id = getattr(context, 'aws_request_id', None)   # the RequestId that ends up in CloudWatch logs
-    field = event['field']                              # graphql field name in format 'ParentType.fieldName'
-    arguments = event['arguments']                      # graphql field arguments, if any
-    source = event.get('source')                        # result of parent resolver, if any
-    identity = event.get('identity')                    # AWS cognito identity, if the call was authenticated
+    field = event['field']          # graphql field name in format 'ParentType.fieldName'
+    arguments = event['arguments']  # graphql field arguments, if any
+    source = event.get('source')    # result of parent resolver, if any
 
-    # None when called by backend to trigger subscriptions
+    # identity.cognitoIdentityId is None when called by backend to trigger subscriptions
+    identity = event.get('identity')
     caller_user_id = identity.get('cognitoIdentityId') if identity else None
+
+    register_gql_details(field, caller_user_id, arguments, source)
 
     handler = routes.get_handler(field)
     if not handler:
@@ -34,11 +35,9 @@ def dispatch(event, context):
         logger.exception(msg)
         raise Exception(msg)
 
-    register_gql_details(req_id, field, caller_user_id, arguments, source)
-
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info('BEGIN: Resolving graphql field')
+        logger.info('Begin resolving graphql field')
 
     try:
         resp = handler(caller_user_id, arguments, source, context)

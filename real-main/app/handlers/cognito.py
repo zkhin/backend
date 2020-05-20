@@ -17,7 +17,7 @@ class CognitoClientException(Exception):
 
 def pre_sign_up(event, context):
     with LogLevelContext(logger, logging.INFO):
-        logger.info('BEGIN: Handling Cognito PreSignUp event', extra={'event': event})
+        logger.info('Begin handling Cognito PreSignUp event', extra={'event': event})
 
     validate_username_format(event)
     validate_user_attribute_lowercase(event, 'email')
@@ -55,7 +55,7 @@ def pre_auth(event, context):
 
 def custom_message(event, context):
     with LogLevelContext(logger, logging.INFO):
-        logger.info('BEGIN: Handling Cognito CustomMessage event', extra={'event': event})
+        logger.info('Begin handling Cognito CustomMessage event', extra={'event': event})
 
     if event['triggerSource'] == 'CustomMessage_SignUp':
         username = event['userName']
