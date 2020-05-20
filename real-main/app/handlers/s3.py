@@ -3,13 +3,14 @@ import os
 import urllib
 
 from app import clients, models
-from app.logging import LogLevelContext
+from app.logging import configure_logging, LogLevelContext
 from app.models.post.enums import PostStatus, PostType
 
 from . import xray
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
+configure_logging()
 logger = logging.getLogger()
 xray.patch_all()
 
@@ -34,7 +35,7 @@ def image_post_uploaded(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'Begin handling object created event for key `{path}`')
+        logger.info('Handling S3 Object Created (image post uploaded) event', extra={'s3_key': path})
 
     # Avoid firing on creation of other images (profile photo, album art)
     # Once images are moved to their new path at {userId}/post/{postId}/image/{size}.jpg,
@@ -78,7 +79,7 @@ def video_post_uploaded(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'Begin handling object created event for key `{path}`')
+        logger.info('Handling S3 Object Created (video post uploaded) event', extra={'s3_key': path})
 
     _, _, post_id, _ = path.split('/')
 
@@ -111,7 +112,7 @@ def video_post_processed(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'Begin handling object created event for key `{path}`')
+        logger.info('Handling S3 Object Created (video post processed) event', extra={'s3_key': path})
 
     _, _, post_id, _, _ = path.split('/')
 

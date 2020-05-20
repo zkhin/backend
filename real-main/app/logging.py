@@ -1,17 +1,5 @@
 import json
 import logging
-import threading
-
-threadLocal = threading.local()
-
-
-def register_gql_details(field, caller_user_id, arguments, source):
-    threadLocal.gql = {
-        'arguments': arguments,
-        'caller_user_id': caller_user_id,
-        'field': field,
-        'source': source,
-    }
 
 
 # https://docs.python.org/3/howto/logging-cookbook.html#using-a-context-manager-for-selective-logging
@@ -28,17 +16,11 @@ class LogLevelContext:
         self.logger.setLevel(self.old_level)
 
 
-class AddRequestInfoFilter(logging.Formatter):
-    "Logging filter that does not filter, but rather adds the graphql request info to the logging record"
-
-    def filter(self, record):
-        record.gql = getattr(threadLocal, 'gql', None)
-        return True
-
-
-# https://github.com/python/cpython/blob/master/Lib/logging/__init__.py#L510
+# https://github.com/python/cpython/blob/v3.8.3/Lib/logging/__init__.py#L510
 class CloudWatchFormatter(logging.Formatter):
     "Format logging records so they json and readable in CloudWatch"
+
+    extras = ('event', 'gql', 's3_key')
 
     def format(self, record):
         # clear away the lamba path prefix
@@ -54,12 +36,15 @@ class CloudWatchFormatter(logging.Formatter):
         data = {
             'level': record.levelname,
             'requestId': request_id,
-            'event': getattr(record, 'event', None),
-            'gql': getattr(record, 'gql', None),
             'message': record.getMessage(),
             'sourceFile': path,
             'sourceLine': record.lineno,
         }
+
+        for extra in self.extras:
+            if hasattr(record, extra):
+                data[extra] = getattr(record, extra)
+
         if record.exc_info:
             if not record.exc_text:
                 record.exc_text = self.formatException(record.exc_info)
@@ -69,8 +54,9 @@ class CloudWatchFormatter(logging.Formatter):
         return f'{record.levelname} RequestId: {request_id} Data: {json.dumps(data)}'
 
 
-# configure the root logger
-logger = logging.getLogger()
-logger.addFilter(AddRequestInfoFilter())
-for handler in logger.handlers:
-    handler.setFormatter(CloudWatchFormatter())
+def configure_logging():
+    # lambda already sets a handler for us
+    # https://gist.github.com/alanjds/000b15f7dcd43d7646aab34fcd3cef8c#file-awslambda-bootstrap-py-L463
+    logger = logging.getLogger()
+    for handler in logger.handlers:
+        handler.setFormatter(CloudWatchFormatter())

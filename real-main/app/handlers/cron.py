@@ -4,11 +4,13 @@ import os
 import pendulum
 
 from app import clients, models
+from app.logging import configure_logging
 
 from . import xray
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
+configure_logging()
 logger = logging.getLogger()
 xray.patch_all()
 

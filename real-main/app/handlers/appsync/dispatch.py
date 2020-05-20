@@ -2,11 +2,12 @@
 import logging
 import os
 
-from app.logging import LogLevelContext, register_gql_details
+from app.logging import configure_logging, LogLevelContext
 
 from . import routes
 from .exceptions import ClientException
 
+configure_logging()
 logger = logging.getLogger()
 
 # use this in the test suite to turn off auto-disocvery of routes
@@ -26,8 +27,6 @@ def dispatch(event, context):
     identity = event.get('identity')
     caller_user_id = identity.get('cognitoIdentityId') if identity else None
 
-    register_gql_details(field, caller_user_id, arguments, source)
-
     handler = routes.get_handler(field)
     if not handler:
         # should not be able to get here
@@ -37,7 +36,13 @@ def dispatch(event, context):
 
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Begin resolving graphql field')
+        gql_details = {
+            'field': field,
+            'caller_user_id': caller_user_id,
+            'arguments': arguments,
+            'source': source,
+        }
+        logger.info(f'Handling AppSync GQL resolution of `{field}`', extra={'gql': gql_details})
 
     try:
         resp = handler(caller_user_id, arguments, source, context)

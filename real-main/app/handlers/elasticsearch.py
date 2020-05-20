@@ -1,9 +1,11 @@
 import logging
 
 from app.clients import ESSearchClient
+from app.logging import configure_logging
 
 from . import xray
 
+configure_logging()
 logger = logging.getLogger()
 xray.patch_all()
 
