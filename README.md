@@ -34,13 +34,13 @@ Serverless expects the AWS credentials to have `AdministratorAccess` policy atta
 
 _Once per AWS Account, must be done before first deployment_
 
-Create a LogGroup with name `sns/<aws-region>/<aws-account-id>/DirectPublishToPhoneNumber/Failure`. This log group will be referenced by all deployments in the account, and used by SNS to log SMS delivery failures.
+- Create a LogGroup with name `sns/<aws-region>/<aws-account-id>/DirectPublishToPhoneNumber/Failure`. This log group will be referenced by all deployments in the account, and used by SNS to log SMS delivery failures.
 
 #### IAM
 
 _Once per AWS Account_
 
-Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
+- Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
 
 #### SecretsManager
 
@@ -56,23 +56,33 @@ _Once per AWS Account_
 
 To allow [SES](https://console.aws.amazon.com/ses/home) to send transactional emails from Cognito:
 
-- add and verify the domain `real.app`
-- add and verify the email address `no-reply@real.app`.
-- optionally set up spf, dkim, dmarc and a MAIL FROM domain of `mail.real.app`
+- Add and verify the domain `real.app`. To do this you will need to be able to add a code to a TXT record on the `real.app` domain.
+- Configure the MAIL FROM domain of `mail.real.app`
+- If this is a production account, you will also want to configure DKIM for `real.app` in the SES interface.
 
 #### SNS
 
 _Once per AWS Account_
 
 - Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
-- Note this functionality [isn't yet available via cloudfront](https://stackoverflow.com/a/59188488), but once it is, it could be integrated into our standard deploy
+
+### Other stacks outside this repo
+
+The stacks in the following repos will need to be deployed before these
+
+- `REAL-Post-Verification`
+- `themes`
+
+The `themes` stack will create an S3 bucket, within which there is a subdirectory `placeholder-photos`. The integration tests in this repo expect that subdirectory to be empty.
 
 ### First-time stack deployment order
 
 Resource dependencies between the stacks make initial deployment tricky. Stacks should be deployed in this order:
 
 - `real-lambda-layers`
-- `real-main`, with resources that depend on `real-cloudfront` commented out in serverless.yml
+- `real-main`, with the following commented out from `serverless.yml`
+  - the `AWS::S3::BucketPolicy` resource that depends on `real-cloudfront`
+  - the `AWS::Logs::MetricFilter`s and `AWS::CloudWatch::Alarm` that depend on a AppSync GraphQL LogGroup
 - `real-cloudfront`
 - `real-main` again, with nothing commented out
 - `real-auth`
@@ -173,7 +183,7 @@ After a deploy to a new account, a CloudFront key pair needs to be manually gene
 
 - the public and private parts of the generated key should be stored in an entry in the [AWS Secrets Manager](https://us-east-1.console.aws.amazon.com/secretsmanager/home)
 
-  - the name of the secret must match the value in the environment variable `SECRETS_MANAGER_CLOUDFRONT_KEY_PAIR_NAME` as defined in the `environment` section of [serverless.yml](./real-main/serverless.yml)
+  - the name of the secret must match the value in the environment variable `SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME` as defined in the `environment` section of [serverless.yml](./real-main/serverless.yml)
   - the `publicKey` and `privateKey` values in the secret must *not* contain the header and footer lines (ie the `----- BEGIN/END RSA PRIVATE KEY -----` lines)
   - the format of the secret should be
 

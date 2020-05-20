@@ -70,5 +70,5 @@ Outputs:
   UploadsBucket:
     Value: ${self:provider.environment.S3_UPLOADS_BUCKET}
 
-  UploadsBucketDomain:
+  UploadsBucketDomainName:
     Value: !GetAtt S3BucketUploads.DomainName
