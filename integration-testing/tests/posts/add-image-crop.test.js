@@ -44,16 +44,6 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
 
-  // can't crop wider than post is
-  postId = uuidv4()
-  crop = {upperLeft: {x: 1, y: 1}, lowerRight: {x: jpegWidth + 1, y: jpegHeight - 1}}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}))
-    .rejects.toThrow(/ClientError: .* not wide enough /)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.postStatus).toBe('PROCESSING')  // TODO: fix - should be ERROR
-
   // can't down to zero area
   postId = uuidv4()
   crop = {upperLeft: {x: 100, y: 1}, lowerRight: {x: 100, y: jpegHeight - 1}}
@@ -62,6 +52,19 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
+
+  // can't crop wider than post is. Post gets created and left in ERROR state in backend
+  postId = uuidv4()
+  crop = {upperLeft: {x: 1, y: 1}, lowerRight: {x: jpegWidth + 1, y: jpegHeight - 1}}
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postStatus).toBe('ERROR')
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.postStatus).toBe('ERROR')
+
 })
 
 

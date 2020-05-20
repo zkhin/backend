@@ -154,7 +154,11 @@ class PostManager(FlagManagerMixin):
         if post.type == enums.PostType.IMAGE:
             if image_data := image_input.get('imageData'):
                 post.refresh_image_item(strongly_consistent=True)
-                post.process_image_upload(image_data=image_data, now=now)
+                try:
+                    post.process_image_upload(image_data=image_data, now=now)
+                except exceptions.PostException as err:
+                    logger.warning(str(err))
+                    post.error()
 
         return post
 

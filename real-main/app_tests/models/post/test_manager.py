@@ -311,6 +311,22 @@ def test_add_image_post_with_image_data(user, post_manager, grant_data_b64):
     assert post.image_item['sortKey'] == 'image'
 
 
+def test_add_image_post_with_image_data_processing_error(user, post_manager, grant_data_b64):
+    post_id = 'pid'
+    now = pendulum.now('utc')
+    image_input = {'imageData': grant_data_b64[:12]}  # truncated jpeg data is invalid but correctly b64-encoded
+
+    # add the post (& media)
+    post_manager.add_post(user.id, post_id, PostType.IMAGE, now=now, image_input=image_input)
+
+    # retrieve the post & media, check it
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['postedByUserId'] == user.id
+    assert post.item['postedAt'] == now.to_iso8601_string()
+    assert post.item['postStatus'] == PostStatus.ERROR
+
+
 def test_add_image_post_with_options(post_manager, album, user):
     post_id = 'pid'
     text = 'lore ipsum'

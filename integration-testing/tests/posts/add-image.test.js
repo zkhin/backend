@@ -28,15 +28,28 @@ test('Cant use jpeg data for an HEIC image', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // add a post as HEIC, but actually send up jpeg data
-  let variables = {postId: uuidv4(), imageData, imageFormat: 'HEIC'}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Unable to read HEIC file /)
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, imageData, imageFormat: 'HEIC'}
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId1)
+  expect(resp.data.addPost.postStatus).toBe('ERROR')
+  expect(resp.data.addPost.image).toBeNull()
+  expect(resp.data.addPost.imageUploadUrl).toBeNull()
+
+  // check the post, make sure it error'd out
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.postId).toBe(postId1)
+  expect(resp.data.post.postStatus).toBe('ERROR')
+  expect(resp.data.post.isVerified).toBeNull()
+  expect(resp.data.post.image).toBeNull()
 
   // add a post as HEIC, but actually send up jpeg data
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
+  const postId2 = uuidv4()
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageFormat: 'HEIC'}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postId).toBe(postId2)
   let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
 
@@ -45,9 +58,9 @@ test('Cant use jpeg data for an HEIC image', async () => {
   await misc.sleep(3000)
 
   // check the post, make sure it error'd out
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.post.postId).toBe(postId)
+  expect(resp.data.post.postId).toBe(postId2)
   expect(resp.data.post.postStatus).toBe('ERROR')
   expect(resp.data.post.isVerified).toBeNull()
   expect(resp.data.post.image).toBeNull()
@@ -233,16 +246,19 @@ test('Add post setAsUserPhoto failures', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // verify doesn't set user photo if uploaded image can't be processed (image data included with upload)
-  let variables = {postId: uuidv4(), postType: 'IMAGE', setAsUserPhoto: true, imageData: 'notimagedata'}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Unable to decode native jpeg data /)
-
-  // add a pending post with setAsUserPhoto
-  const postId = uuidv4()
-  variables = {postId, postType: 'IMAGE', setAsUserPhoto: true}
+  const postId1 = uuidv4()
+  let variables = {postId: postId1, postType: 'IMAGE', setAsUserPhoto: true, imageData: 'notimagedata'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postId).toBe(postId1)
+  expect(resp.data.addPost.postStatus).toBe('ERROR')
+
+  // add a pending post with setAsUserPhoto
+  const postId2 = uuidv4()
+  variables = {postId: postId2, postType: 'IMAGE', setAsUserPhoto: true}
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
