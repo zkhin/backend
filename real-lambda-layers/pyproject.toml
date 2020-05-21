@@ -20,6 +20,7 @@ google-auth = "^1.13.1"
 CacheControl = "^0.12.6"
 pyheif = "^0.4"
 aws-xray-sdk = "^2.5.0"
+stringcase = "^1.2.0"
 
 [tool.poetry.dev-dependencies]
 

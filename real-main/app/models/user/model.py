@@ -1,6 +1,8 @@
 import logging
 import os
 
+import stringcase
+
 from app.utils import image_size
 from app.models.post.enums import PostStatus, PostType
 
@@ -196,39 +198,13 @@ class User:
     def update_details(self, full_name=None, bio=None, language_code=None, theme_code=None,
                        follow_counts_hidden=None, view_counts_hidden=None, comments_disabled=None,
                        likes_disabled=None, sharing_disabled=None, verification_hidden=None):
-        "To delete a detail, set it to the empty string. Ex: `full_name=''`"
-        kwargs = {}
-
-        if full_name is not None and full_name != self.item.get('fullName'):
-            kwargs['full_name'] = full_name
-
-        if bio is not None and bio != self.item.get('bio'):
-            kwargs['bio'] = bio
-
-        if language_code is not None and language_code != self.item.get('languageCode', 'en'):
-            kwargs['language_code'] = language_code
-
-        if theme_code is not None and theme_code != self.item.get('themeCode', 'black.green'):
-            kwargs['theme_code'] = theme_code
-
-        if follow_counts_hidden is not None and follow_counts_hidden != self.item.get('followCountsHidden', False):
-            kwargs['follow_counts_hidden'] = follow_counts_hidden
-
-        if view_counts_hidden is not None and view_counts_hidden != self.item.get('viewCountsHidden', False):
-            kwargs['view_counts_hidden'] = view_counts_hidden
-
-        if comments_disabled is not None and comments_disabled != self.item.get('commentsDisabled', False):
-            kwargs['comments_disabled'] = comments_disabled
-
-        if likes_disabled is not None and likes_disabled != self.item.get('likesDisabled', False):
-            kwargs['likes_disabled'] = likes_disabled
-
-        if sharing_disabled is not None and sharing_disabled != self.item.get('sharingDisabled', False):
-            kwargs['sharing_disabled'] = sharing_disabled
-
-        if verification_hidden is not None and verification_hidden != self.item.get('verificationHidden', False):
-            kwargs['verification_hidden'] = verification_hidden
-
+        "To delete details, set them to the empty string. Ex: `full_name=''`"
+        kwargs = {k: v for k, v in locals().items() if k != 'self' and v is not None}
+        # remove writes where requested value matches pre-existing value
+        kwargs = {
+            k: v for k, v in kwargs.items()
+            if v != self.item.get(stringcase.camelcase(k), '')
+        }
         if kwargs:
             self.item = self.dynamo.set_user_details(self.id, **kwargs)
         return self

@@ -97,9 +97,13 @@ def test_update_no_details(user):
     assert user.item is org_user_item
 
 
-def test_update_with_defaults_causes_no_update(user):
+def test_update_with_existing_values_causes_no_update(user):
+    user.update_details(language_code='en', likes_disabled=False)
+    assert user.item['languageCode'] == 'en'
+    assert user.item['likesDisabled'] is False
+    assert 'fullName' not in user.item
     org_user_item = user.item
-    user.update_details(language_code='en', theme_code='black.green')
+    user.update_details(language_code='en', likes_disabled=False, full_name='')
     # check the user_item has not been replaced
     assert user.item is org_user_item
 
@@ -131,8 +135,8 @@ def test_delete_all_details(user):
                         view_counts_hidden=True)
 
     # delete those details, all except for privacyStatus which can't be deleted
-    user.update_details(full_name='', bio='', language_code='', theme_code='', follow_counts_hidden=False,
-                        view_counts_hidden=False)
+    user.update_details(full_name='', bio='', language_code='', theme_code='', follow_counts_hidden='',
+                        view_counts_hidden='')
 
     # check the delete made it through
     assert 'fullName' not in user.item

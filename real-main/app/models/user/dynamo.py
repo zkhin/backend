@@ -133,17 +133,13 @@ class UserDynamo:
                          follow_counts_hidden=None, view_counts_hidden=None, email=None, phone=None,
                          comments_disabled=None, likes_disabled=None, sharing_disabled=None,
                          verification_hidden=None):
-        """
-        Update the user profile details.
-        To ignore an attribute, leave it set to None.
-        To delete an attribute, set it to the empty string, other than the enums which may not be deleted.
-        """
+        "To ignore an attribute, leave it set to None. To delete an attribute, set it to the empty string."
         expression_actions = collections.defaultdict(list)
         expression_attribute_values = {}
 
         def process_attr(name, value):
             if value is not None:
-                if value:
+                if value != '':
                     expression_actions['SET'].append(f'{name} = :{name}')
                     expression_attribute_values[f':{name}'] = value
                 else:

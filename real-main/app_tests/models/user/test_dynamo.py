@@ -253,7 +253,7 @@ def test_set_user_details(user_dynamo):
     assert resp == expected
 
 
-def test_set_user_details_delete_all_optional(user_dynamo):
+def test_set_user_details_delete_for_empty_string(user_dynamo):
     user_id = 'my-user-id'
     username = 'my-username'
 
@@ -261,7 +261,12 @@ def test_set_user_details_delete_all_optional(user_dynamo):
     expected_base_item = user_dynamo.add_user(user_id, username)
     assert expected_base_item['userId'] == user_id
 
-    expected_full_item = {
+    # set all optionals
+    resp = user_dynamo.set_user_details(user_id, full_name='f', bio='b', language_code='l', theme_code='tc',
+                                        follow_counts_hidden=True, view_counts_hidden=True,
+                                        email='e', phone='p', comments_disabled=True, likes_disabled=True,
+                                        sharing_disabled=True, verification_hidden=True)
+    assert resp == {
         **expected_base_item,
         **{
             'fullName': 'f',
@@ -279,18 +284,33 @@ def test_set_user_details_delete_all_optional(user_dynamo):
         },
     }
 
-    # set all optionals
-    resp = user_dynamo.set_user_details(user_id, full_name='f', bio='b', language_code='l', theme_code='tc',
-                                        follow_counts_hidden=True, view_counts_hidden=True,
-                                        email='e', phone='p', comments_disabled=True, likes_disabled=True,
-                                        sharing_disabled=True, verification_hidden=True)
-    assert resp == expected_full_item
+    # False does not mean delete anymore
+    resp = user_dynamo.set_user_details(user_id, follow_counts_hidden=False, view_counts_hidden=False,
+                                        comments_disabled=False, likes_disabled=False, sharing_disabled=False,
+                                        verification_hidden=False)
+    assert resp == {
+        **expected_base_item,
+        **{
+            'fullName': 'f',
+            'bio': 'b',
+            'languageCode': 'l',
+            'themeCode': 'tc',
+            'followCountsHidden': False,
+            'viewCountsHidden': False,
+            'email': 'e',
+            'phoneNumber': 'p',
+            'commentsDisabled': False,
+            'likesDisabled': False,
+            'sharingDisabled': False,
+            'verificationHidden': False,
+        },
+    }
 
-    # delete all optionals
+    # empty string means delete
     resp = user_dynamo.set_user_details(user_id, full_name='', bio='', language_code='', theme_code='',
-                                        follow_counts_hidden=False, view_counts_hidden=False,
-                                        email='', phone='', comments_disabled=False, likes_disabled=False,
-                                        sharing_disabled=False, verification_hidden=False)
+                                        follow_counts_hidden='', view_counts_hidden='', email='', phone='',
+                                        comments_disabled='', likes_disabled='', sharing_disabled='',
+                                        verification_hidden='')
     assert resp == expected_base_item
 
 
