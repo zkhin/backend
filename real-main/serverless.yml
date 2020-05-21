@@ -97,6 +97,10 @@ provider:
       Resource: !Join [ ':', [ 'arn:aws:logs', '#{AWS::Region}', '#{AWS::AccountId}', 'log-group', '/aws/lambda/*' ] ]
 
 custom:
+  sesFromAddr:
+    default: 'no-reply@real.app'
+    dev: ${env:SES_DEV_FROM_ADDR, self:custom.sesFromAddr.default}
+
   splitStacks:
     perType: false
 
@@ -495,6 +499,7 @@ package:
     - schema.graphql
 
 plugins:
+  - serverless-dotenv-plugin
   - serverless-appsync-plugin
   - serverless-pseudo-parameters
   - serverless-plugin-aws-alerts
