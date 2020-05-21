@@ -18,7 +18,7 @@ user3 = user
 
 @pytest.fixture
 def comment(user, post_manager, comment_manager):
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='go go')
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='go go')
     yield comment_manager.add_comment(str(uuid.uuid4()), post.id, user.id, 'run far')
 
 
@@ -126,7 +126,7 @@ def test_delete_cant_decrement_user_comment_count_below_zero(comment, user_manag
 
 
 def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, comment_manager, user, user2, user3):
-    post = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='go go')
+    post = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='go go')
     comment1 = comment_manager.add_comment('cid1', post.id, user2.id, 'run far')
     comment2 = comment_manager.add_comment('cid2', post.id, user2.id, 'run far')
     post.refresh_item()

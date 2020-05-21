@@ -44,22 +44,22 @@ user2 = user
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def pending_video_post(post_manager, user2):
-    yield post_manager.add_post(user2.id, 'pidv1', PostType.VIDEO)
+    yield post_manager.add_post(user2, 'pidv1', PostType.VIDEO)
 
 
 @pytest.fixture
 def pending_image_post(post_manager, user2):
-    yield post_manager.add_post(user2.id, 'pidi1', PostType.IMAGE)
+    yield post_manager.add_post(user2, 'pidi1', PostType.IMAGE)
 
 
 @pytest.fixture
 def pending_image_post_heic(post_manager, user2):
-    yield post_manager.add_post(user2.id, 'pid2', PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
+    yield post_manager.add_post(user2, 'pid2', PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
 
 
 @pytest.fixture
@@ -92,13 +92,13 @@ def albums(album_manager, user2):
 @pytest.fixture
 def post_with_expiration(post_manager, user2):
     yield post_manager.add_post(
-        user2.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user2, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user2, image_data_b64):
-    yield post_manager.add_post(user2.id, 'pid', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
+    yield post_manager.add_post(user2, 'pid', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
 
 
 def test_refresh_item(post):
@@ -439,7 +439,7 @@ def test_error_failure(post_manager, post):
 
 def test_error_pending_post(post_manager, user):
     # create a pending post
-    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE)
+    post = post_manager.add_post(user, 'pid2', PostType.IMAGE)
     assert post.item['postStatus'] == PostStatus.PENDING
 
     # error it out, verify in-mem copy got marked as such
@@ -453,7 +453,7 @@ def test_error_pending_post(post_manager, user):
 
 def test_error_processing_post(post_manager, user):
     # create a pending post
-    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE)
+    post = post_manager.add_post(user, 'pid2', PostType.IMAGE)
 
     # manually mark the Post as being processed
     transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
@@ -562,7 +562,7 @@ def test_set_album_completed_post(albums, post_with_media):
 
 def test_set_album_text_post(post_manager, albums, user2):
     album1, album2 = albums
-    post = post_manager.add_post(user2.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
+    post = post_manager.add_post(user2, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
 
     # verify starting state
     assert 'albumId' not in post.item
@@ -635,10 +635,10 @@ def test_set_album_video_post(albums, user2, completed_video_post):
 
 
 def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64):
-    post1 = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
-    post2 = post_manager.add_post(user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64})
-    post3 = post_manager.add_post(user2.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
-    post4 = post_manager.add_post(user2.id, 'pid4', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post1 = post_manager.add_post(user, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post2 = post_manager.add_post(user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post3 = post_manager.add_post(user2, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post4 = post_manager.add_post(user2, 'pid4', PostType.IMAGE, image_input={'imageData': image_data_b64})
     album1, album2 = albums
 
     # put post2 & post3 in first album
@@ -681,13 +681,13 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     # album with three posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post3 = post_manager.add_post(
-        user2.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # check starting state
@@ -721,10 +721,10 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # check starting state
@@ -752,10 +752,10 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # check starting state

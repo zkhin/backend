@@ -16,17 +16,17 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def text_only_post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def pending_post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, text='t')
+    yield post_manager.add_post(user, 'pid2', PostType.IMAGE, text='t')
 
 
 @pytest.fixture
 def completed_post(post_manager, user, image_data_b64):
-    yield post_manager.add_post(user.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    yield post_manager.add_post(user, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 def test_cant_process_image_upload_various_errors(post_manager, user, pending_post, text_only_post, completed_post):

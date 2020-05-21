@@ -110,13 +110,13 @@ def test_reindex_all_operates_on_correct_items(trending_manager, user, post_mana
 
     # add one post item in the future a second
     post_id_1 = 'post-id-1'
-    post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t')
+    post_manager.add_post(user, post_id_1, PostType.TEXT_ONLY, text='t')
     viewed_at = now + pendulum.duration(seconds=1)
     trending_manager.increment_score(TrendingItemType.POST, post_id_1, amount=9, now=viewed_at)
 
     # add one post item a day ago, give it some pending views
     post_id_2 = 'post-id-2'
-    post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t')
+    post_manager.add_post(user, post_id_2, PostType.TEXT_ONLY, text='t')
     post_at_2 = now - pendulum.duration(days=1)
     trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=10, now=post_at_2)
     trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=5)
@@ -160,13 +160,13 @@ def test_reindex_deletes_as_needed_from_score_decay(trending_manager, post_manag
 
     # add one post item viewed just over a day ago
     post_id_1 = 'post-id-over'
-    post_manager.add_post(user.id, post_id_1, PostType.TEXT_ONLY, text='t')
+    post_manager.add_post(user, post_id_1, PostType.TEXT_ONLY, text='t')
     viewed_at = now - pendulum.duration(hours=25)
     trending_manager.increment_score(TrendingItemType.POST, post_id_1, amount=1, now=viewed_at)
 
     # add another post item viewed just under a day ago
     post_id_2 = 'post-id-under'
-    post_manager.add_post(user.id, post_id_2, PostType.TEXT_ONLY, text='t')
+    post_manager.add_post(user, post_id_2, PostType.TEXT_ONLY, text='t')
     viewed_at = now - pendulum.duration(hours=23)
     trending_manager.increment_score(TrendingItemType.POST, post_id_2, amount=1, now=viewed_at)
 
@@ -191,7 +191,7 @@ def test_increment_scores_for_post(trending_manager, user, post_manager, real_us
     assert list(trending_manager.dynamo.generate_trendings('user')) == []
 
     # verify no trending for non-original posts
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
     post.item['originalPostId'] = 'pid-other'
     trending_manager.increment_scores_for_post(post)
     assert list(trending_manager.dynamo.generate_trendings('post')) == []
@@ -199,19 +199,19 @@ def test_increment_scores_for_post(trending_manager, user, post_manager, real_us
 
     # verify no trending for post older than 24 hours
     posted_at = pendulum.now('utc') - pendulum.duration(hours=25)
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t', now=posted_at)
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t', now=posted_at)
     trending_manager.increment_scores_for_post(post)
     assert list(trending_manager.dynamo.generate_trendings('post')) == []
     assert list(trending_manager.dynamo.generate_trendings('user')) == []
 
     # verify no trending for posts that fail verification
-    post = post_manager.add_post(real_user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(real_user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
     trending_manager.increment_scores_for_post(post)
     assert list(trending_manager.dynamo.generate_trendings('post')) == []
     assert list(trending_manager.dynamo.generate_trendings('user')) == []
 
     # verify trending works for a normal post
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
     trending_manager.increment_scores_for_post(post)
     assert [i['partitionKey'][9:] for i in trending_manager.dynamo.generate_trendings('post')] == [post.id]
     assert [i['partitionKey'][9:] for i in trending_manager.dynamo.generate_trendings('user')] == [user.id]

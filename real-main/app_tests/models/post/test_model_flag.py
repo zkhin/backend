@@ -18,7 +18,7 @@ user2 = user
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 def test_remove_from_flagging(post):

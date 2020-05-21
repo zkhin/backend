@@ -77,7 +77,7 @@ class PostManager(FlagManagerMixin):
         }
         return Post(post_item, **kwargs) if post_item else None
 
-    def add_post(self, posted_by_user_id, post_id, post_type, image_input=None, text=None, lifetime_duration=None,
+    def add_post(self, posted_by_user, post_id, post_type, image_input=None, text=None, lifetime_duration=None,
                  album_id=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
                  verification_hidden=None, set_as_user_photo=None, now=None):
         now = now or pendulum.now('utc')
@@ -112,23 +112,33 @@ class PostManager(FlagManagerMixin):
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
-            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user_id}` with non-positive lifetime'
+            msg = f'Refusing to add post `{post_id}` for user `{posted_by_user.id}` with non-positive lifetime'
             raise exceptions.PostException(msg)
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
+
+        # pull in user-level defaults for settings as needed
+        if comments_disabled is None:
+            comments_disabled = posted_by_user.item.get('commentsDisabled')
+        if likes_disabled is None:
+            likes_disabled = posted_by_user.item.get('likesDisabled')
+        if sharing_disabled is None:
+            sharing_disabled = posted_by_user.item.get('sharingDisabled')
+        if verification_hidden is None:
+            verification_hidden = posted_by_user.item.get('verificationHidden')
 
         # if an album is specified, verify it exists and is ours
         if album_id:
             album = self.album_manager.get_album(album_id)
             if not album:
                 raise exceptions.PostException(f'Album `{album_id}` does not exist')
-            if album.user_id != posted_by_user_id:
-                msg = f'Album `{album_id}` does not belong to caller user `{posted_by_user_id}`'
+            if album.user_id != posted_by_user.id:
+                msg = f'Album `{album_id}` does not belong to caller user `{posted_by_user.id}`'
                 raise exceptions.PostException(msg)
 
         # add the pending post & media to dynamo in a transaction
         transacts = [self.dynamo.transact_add_pending_post(
-            posted_by_user_id, post_id, post_type, posted_at=now, expires_at=expires_at, text=text,
+            posted_by_user.id, post_id, post_type, posted_at=now, expires_at=expires_at, text=text,
             text_tags=text_tags, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled, verification_hidden=verification_hidden, album_id=album_id,
             set_as_user_photo=set_as_user_photo,

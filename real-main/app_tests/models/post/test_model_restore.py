@@ -17,18 +17,18 @@ def user(user_manager, cognito_client):
 @pytest.fixture
 def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, text='t')
+    yield post_manager.add_post(user, 'pid2', PostType.IMAGE, text='t')
 
 
 @pytest.fixture
 def post_with_media_completed(post_manager, user, image_data_b64):
-    yield post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
+    yield post_manager.add_post(user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
 
 
 def test_restore_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):

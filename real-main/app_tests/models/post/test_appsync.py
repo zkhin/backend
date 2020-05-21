@@ -21,7 +21,7 @@ def user(user_manager, cognito_client):
 @pytest.fixture
 def completed_post(post_manager, user, image_data_b64):
     post_id = str(uuid.uuid4())
-    yield post_manager.add_post(user.id, post_id, PostType.IMAGE, image_input={'imageData': image_data_b64})
+    yield post_manager.add_post(user, post_id, PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 def test_trigger_notification_completed(post_appsync, user, completed_post, appsync_client):

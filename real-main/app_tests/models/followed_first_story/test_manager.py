@@ -8,7 +8,7 @@ from app.models.post.enums import PostType
 
 
 @pytest.fixture
-def following_user_ids(user_manager, follow_manager, cognito_client):
+def following_users(user_manager, follow_manager, cognito_client):
     "A pair of user ids for which one follows the other"
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='fruid')
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='fduid')
@@ -17,19 +17,19 @@ def following_user_ids(user_manager, follow_manager, cognito_client):
     follow_manager.dynamo.client.transact_write_items([
         follow_manager.dynamo.transact_add_following(follower_user.id, followed_user.id, FollowStatus.FOLLOWING),
     ])
-    return (follower_user.id, followed_user.id)
+    return (follower_user, followed_user)
 
 
 @pytest.fixture
-def followed_posts(post_manager, dynamo_client, following_user_ids):
+def followed_posts(post_manager, dynamo_client, following_users):
     "A quintet of completed posts by the followed user in the DB, none of them with expiresAt"
-    user_id = following_user_ids[1]
+    user = following_users[1]
     posts = [
-        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
-        post_manager.add_post(user_id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
+        post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum'),
     ]
     yield [post.item for post in posts]
 
@@ -104,13 +104,13 @@ def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
     assert len(resp[2]) == 1
 
 
-def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_user_ids, followed_posts, dynamo_client):
-    follower_user_id, followed_user_id = following_user_ids
+def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, followed_posts, dynamo_client):
+    follower_user, followed_user = following_users
     post = followed_posts[0]
 
     # check no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
@@ -123,14 +123,14 @@ def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_user_id
 
     # check still no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
 
-def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_user_ids, followed_posts, dynamo_client):
-    follower_user_id, followed_user_id = following_user_ids
+def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_users, followed_posts, dynamo_client):
+    follower_user, followed_user = following_users
     post = followed_posts[0]
 
     # make that post into a story, but don't write that to the DB
@@ -138,7 +138,7 @@ def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_user_ids, 
 
     # check no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
@@ -149,13 +149,13 @@ def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_user_ids, 
     assert resp['postId'] == post['postId']
 
 
-def test_refresh_after_add_story_in_db(ffs_manager, following_user_ids, followed_posts, dynamo_client, post_manager):
-    follower_user_id, followed_user_id = following_user_ids
+def test_refresh_after_add_story_in_db(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+    follower_user, followed_user = following_users
     post = followed_posts[0]
 
     # check no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
@@ -167,8 +167,8 @@ def test_refresh_after_add_story_in_db(ffs_manager, following_user_ids, followed
     assert resp['postId'] == post['postId']
 
 
-def test_refresh_after_add_story_order(ffs_manager, following_user_ids, followed_posts, dynamo_client, post_manager):
-    follower_user_id, followed_user_id = following_user_ids
+def test_refresh_after_add_story_order(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+    follower_user, followed_user = following_users
     post1, post2, post3 = followed_posts[:3]
 
     now = pendulum.now('utc')
@@ -182,7 +182,7 @@ def test_refresh_after_add_story_order(ffs_manager, following_user_ids, followed
 
     # check ffs exists in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     resp = dynamo_client.get_item(followed_first_story_pk)
@@ -201,8 +201,8 @@ def test_refresh_after_add_story_order(ffs_manager, following_user_ids, followed
     assert resp['postId'] == post1['postId']
 
 
-def test_refresh_remove_story_order(ffs_manager, following_user_ids, followed_posts, dynamo_client, post_manager):
-    follower_user_id, followed_user_id = following_user_ids
+def test_refresh_remove_story_order(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+    follower_user, followed_user = following_users
     post1, post2, post3, post4, post5 = followed_posts
 
     now = pendulum.now('utc')
@@ -226,7 +226,7 @@ def test_refresh_remove_story_order(ffs_manager, following_user_ids, followed_po
 
     # refresh the ffs, make sure it's what we expect
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     resp = dynamo_client.get_item(followed_first_story_pk)
@@ -257,8 +257,8 @@ def test_refresh_remove_story_order(ffs_manager, following_user_ids, followed_po
     post_manager.dynamo.remove_expires_at(post2['postId'])
 
 
-def test_refresh_change_story_order(ffs_manager, following_user_ids, followed_posts, dynamo_client, post_manager):
-    follower_user_id, followed_user_id = following_user_ids
+def test_refresh_change_story_order(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+    follower_user, followed_user = following_users
     post1, post2 = followed_posts[:2]
 
     now = pendulum.now('utc')
@@ -276,7 +276,7 @@ def test_refresh_change_story_order(ffs_manager, following_user_ids, followed_po
 
     # refresh the ffs, make sure it's what we expect
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
         'sortKey': '-',
     }
     resp = dynamo_client.get_item(followed_first_story_pk)

@@ -20,7 +20,7 @@ other_user = user
 
 @pytest.fixture
 def post(dynamo_client, like_manager, user, post_manager):
-    yield post_manager.add_post(user.id, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
+    yield post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
 
 
 @pytest.fixture

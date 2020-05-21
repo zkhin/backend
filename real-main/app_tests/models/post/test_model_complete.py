@@ -20,19 +20,19 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def post_with_media(post_manager, user):
-    post = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, text='t')
+    post = post_manager.add_post(user, 'pid1', PostType.IMAGE, text='t')
     post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum1')
     yield post
 
 
 @pytest.fixture
 def post_set_as_user_photo(post_manager, user):
-    post = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, set_as_user_photo=True)
+    post = post_manager.add_post(user, 'pid2', PostType.IMAGE, set_as_user_photo=True)
     post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum2')
     post.dynamo.set_is_verified(post.id, True)
     yield post
@@ -41,7 +41,7 @@ def post_set_as_user_photo(post_manager, user):
 @pytest.fixture
 def post_with_media_with_expiration(post_manager, user):
     post = post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user, 'pid2', PostType.IMAGE, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
     post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum2')
     yield post
@@ -50,7 +50,7 @@ def post_with_media_with_expiration(post_manager, user):
 @pytest.fixture
 def post_with_media_with_album(album_manager, post_manager, user):
     album = album_manager.add_album(user.id, 'aid-3', 'album name 3')
-    post = post_manager.add_post(user.id, 'pid3', PostType.IMAGE, text='t', album_id=album.id)
+    post = post_manager.add_post(user, 'pid3', PostType.IMAGE, text='t', album_id=album.id)
     post.dynamo.set_checksum(post.id, post.item['postedAt'], 'checksum3')
     yield post
 

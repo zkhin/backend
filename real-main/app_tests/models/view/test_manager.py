@@ -28,8 +28,8 @@ def real_user(user_manager, cognito_client):
 
 @pytest.fixture
 def posts(post_manager, user):
-    post1 = post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
-    post2 = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t')
+    post1 = post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
+    post2 = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='t')
     yield (post1, post2)
 
 
@@ -465,7 +465,7 @@ def test_record_view_day_old_post_doesnt_trend(view_manager, post_manager, user_
 
     # add a post over a day ago
     posted_at = now - pendulum.duration(days=2)
-    post = post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t', now=posted_at)
+    post = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='t', now=posted_at)
 
     # check there is no post view yet recorded for this user on this post
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'NOT_VIEWED'
@@ -490,7 +490,7 @@ def test_record_view_real_user_doesnt_trend(view_manager, post_manager, user_man
     viewed_by_user_id = 'vuid'
 
     # real user adds a post
-    post = post_manager.add_post(real_user.id, 'pid2', PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(real_user, 'pid2', PostType.TEXT_ONLY, text='t')
 
     # check there is no post view yet recorded for this user on this post
     assert view_manager.get_viewed_status(post, viewed_by_user_id) == 'NOT_VIEWED'
@@ -516,8 +516,8 @@ def test_record_view_post_failed_verif_doesnt_trend(view_manager, post_manager, 
     viewed_by_user_id = 'vuid'
 
     # real user adds two identical image posts, mark one as failed verificaiton
-    post1 = post_manager.add_post(user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
-    post2 = post_manager.add_post(user.id, 'pid2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    post1 = post_manager.add_post(user, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post2 = post_manager.add_post(user, 'pid2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
     post2.dynamo.set_is_verified(post2.id, False)
     post2.refresh_item()
 

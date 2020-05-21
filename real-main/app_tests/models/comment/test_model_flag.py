@@ -16,7 +16,7 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def comment(post_manager, comment_manager, user):
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), post_enums.PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(user, str(uuid.uuid4()), post_enums.PostType.TEXT_ONLY, text='t')
     yield comment_manager.add_comment(str(uuid.uuid4()), post.id, user.id, 'lore ipsum')
 
 

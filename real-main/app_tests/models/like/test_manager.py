@@ -19,15 +19,15 @@ user2 = user1
 
 @pytest.fixture
 def user1_posts(post_manager, user1):
-    post1 = post_manager.add_post(user1.id, 'pid1', PostType.TEXT_ONLY, text='lore ipsum')
-    post2 = post_manager.add_post(user1.id, 'pid2', PostType.TEXT_ONLY, text='lore ipsum')
+    post1 = post_manager.add_post(user1, 'pid1', PostType.TEXT_ONLY, text='lore ipsum')
+    post2 = post_manager.add_post(user1, 'pid2', PostType.TEXT_ONLY, text='lore ipsum')
     yield (post1, post2)
 
 
 @pytest.fixture
 def user2_posts(post_manager, user2):
-    post1 = post_manager.add_post(user2.id, 'pid3', PostType.TEXT_ONLY, text='lore ipsum')
-    post2 = post_manager.add_post(user2.id, 'pid4', PostType.TEXT_ONLY, text='lore ipsum')
+    post1 = post_manager.add_post(user2, 'pid3', PostType.TEXT_ONLY, text='lore ipsum')
+    post2 = post_manager.add_post(user2, 'pid4', PostType.TEXT_ONLY, text='lore ipsum')
     yield (post1, post2)
 
 
@@ -104,7 +104,7 @@ def test_cant_like_post_of_private_user_without_following(like_manager, follow_m
 
 def test_cant_like_incomplete_post(like_manager, post_manager, user1, user2, grant_data_b64):
     # add a image post which will be left in a pending state
-    post = post_manager.add_post(user1.id, 'pid1', PostType.IMAGE)
+    post = post_manager.add_post(user1, 'pid1', PostType.IMAGE)
 
     # verify we can't like it
     with pytest.raises(LikeException):
@@ -121,7 +121,7 @@ def test_cant_like_incomplete_post(like_manager, post_manager, user1, user2, gra
 
 def test_cant_like_post_likes_disabled(like_manager, post_manager, user1, user2):
     # add a post with likes disabled
-    post = post_manager.add_post(user1.id, 'pid1', PostType.TEXT_ONLY, text='t', likes_disabled=True)
+    post = post_manager.add_post(user1, 'pid1', PostType.TEXT_ONLY, text='t', likes_disabled=True)
 
     # verify we can't like it
     with pytest.raises(LikeException):

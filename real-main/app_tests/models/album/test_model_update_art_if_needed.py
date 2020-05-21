@@ -29,26 +29,26 @@ def album(album_manager, user):
 def post1(post_manager, user):
     with open(grant_path, 'rb') as fh:
         image_data = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
+    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
 
 
 @pytest.fixture
 def post2(post_manager, user):
     with open(grant_horz_path, 'rb') as fh:
         image_data = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
+    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
 
 
 @pytest.fixture
 def post3(post_manager, user):
     with open(grant_vert_path, 'rb') as fh:
         image_data = base64.b64encode(fh.read())
-    yield post_manager.add_post(user.id, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
+    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data})
 
 
 @pytest.fixture
 def post4(post_manager, user):
-    yield post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum')
+    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum')
 
 
 post5 = post1

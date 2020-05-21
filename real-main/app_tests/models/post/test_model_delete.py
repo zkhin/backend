@@ -24,7 +24,7 @@ user3 = user
 @pytest.fixture
 def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
 
 
@@ -32,18 +32,18 @@ def post_with_expiration(post_manager, user):
 def post_with_album(album_manager, post_manager, user, image_data_b64):
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
 
 @pytest.fixture
 def completed_post_with_media(post_manager, user, image_data_b64):
-    yield post_manager.add_post(user.id, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    yield post_manager.add_post(user, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
 def post_with_media(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid4', PostType.IMAGE, text='t', image_input={'originalMetadata': '{}'})
+    yield post_manager.add_post(user, 'pid4', PostType.IMAGE, text='t', image_input={'originalMetadata': '{}'})
 
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):

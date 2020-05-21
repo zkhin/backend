@@ -432,18 +432,10 @@ def add_post(caller_user, arguments, source, context):
     image_input = arguments.get('imageInput')
     album_id = arguments.get('albumId')
     set_as_user_photo = arguments.get('setAsUserPhoto')
-
-    def argument_with_user_level_default(name):
-        value = arguments.get(name)
-        if value is not None:
-            return value
-        return caller_user.item.get(name)
-
-    # mental health settings: the user-level settings are defaults
-    comments_disabled = argument_with_user_level_default('commentsDisabled')
-    likes_disabled = argument_with_user_level_default('likesDisabled')
-    sharing_disabled = argument_with_user_level_default('sharingDisabled')
-    verification_hidden = argument_with_user_level_default('verificationHidden')
+    comments_disabled = arguments.get('commentsDisabled')
+    likes_disabled = arguments.get('likesDisabled')
+    sharing_disabled = arguments.get('sharingDisabled')
+    verification_hidden = arguments.get('verificationHidden')
 
     lifetime_iso = arguments.get('lifetime')
     if lifetime_iso:
@@ -459,7 +451,7 @@ def add_post(caller_user, arguments, source, context):
     org_post_count = caller_user.item.get('postCount', 0)
     try:
         post = post_manager.add_post(
-            caller_user.id, post_id, post_type, image_input=image_input, text=text,
+            caller_user, post_id, post_type, image_input=image_input, text=text,
             lifetime_duration=lifetime_duration, album_id=album_id, comments_disabled=comments_disabled,
             likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden, set_as_user_photo=set_as_user_photo,

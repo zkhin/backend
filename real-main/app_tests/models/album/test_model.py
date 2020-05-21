@@ -24,12 +24,12 @@ def album(album_manager, user):
 
 @pytest.fixture
 def completed_image_post(post_manager, user, image_data_b64, mock_post_verification_api):
-    yield post_manager.add_post(user.id, 'pid1', image_input={'imageData': image_data_b64})
+    yield post_manager.add_post(user, 'pid1', image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
 def text_only_post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 def test_serialize(user, album):
@@ -77,10 +77,10 @@ def test_delete_no_posts(user, album):
 def test_delete(user, album, post_manager, image_data_b64):
     # create two posts in the album
     post1 = post_manager.add_post(
-        user.id, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
     # verify starting state: can see album, posts are in it, user's albumCount, album art exists

@@ -15,13 +15,13 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
     )
 
 
@@ -29,13 +29,13 @@ def post_with_expiration(post_manager, user):
 def post_with_album(album_manager, post_manager, user, image_data_b64):
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user.id, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
 
 @pytest.fixture
 def post_with_media(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid2', text='t')
+    yield post_manager.add_post(user, 'pid2', text='t')
 
 
 def test_archive_post_wrong_status(post_manager, post):

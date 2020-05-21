@@ -25,7 +25,7 @@ def users(user_manager, cognito_client):
 def their_post(follow_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
     post = post_manager.add_post(
-        users[1].id, str(uuid.uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
+        users[1], str(uuid.uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
     )
     yield post
 

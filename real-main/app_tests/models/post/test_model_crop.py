@@ -27,7 +27,7 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def jpeg_image_post(post_manager, user, s3_uploads_client):
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageFormat': 'JPEG'})
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageFormat': 'JPEG'})
     s3_path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(s3_path, open(grant_path, 'rb'), 'image/jpeg')
     yield post
@@ -38,24 +38,24 @@ def heic_image_post(post_manager, user, s3_uploads_client):
         'imageFormat': 'HEIC',
         'crop': {'upperLeft': {'x': 42, 'y': 24}, 'lowerRight': {'x': 200, 'y': 150}},
     }
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.IMAGE, image_input=image_input)
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input=image_input)
     s3_path = post.get_image_path(image_size.NATIVE_HEIC)
     s3_uploads_client.put_object(s3_path, open(heic_path, 'rb'), 'image/jpeg')
     yield post
 
 
 def test_cannot_crop_wrong_post_type(post_manager, user):
-    text_only_post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    text_only_post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
     with pytest.raises(AssertionError, match='post type'):
         text_only_post.crop_native_jpeg_cache()
 
-    video_post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.VIDEO, text='t')
+    video_post = post_manager.add_post(user, str(uuid.uuid4()), PostType.VIDEO, text='t')
     with pytest.raises(AssertionError, match='post type'):
         video_post.crop_native_jpeg_cache()
 
 
 def test_cannot_crop_no_crop(post_manager, user):
-    post = post_manager.add_post(user.id, str(uuid.uuid4()), PostType.IMAGE)
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE)
     with pytest.raises(AssertionError, match='no crop specified'):
         post.crop_native_jpeg_cache()
 

@@ -12,7 +12,7 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def pending_video_post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid-v', PostType.VIDEO)
+    yield post_manager.add_post(user, 'pid-v', PostType.VIDEO)
 
 
 @pytest.fixture
@@ -27,11 +27,11 @@ def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
 
 
 def test_cant_finish_processing_video_upload_various_errors(post_manager, user, pending_video_post):
-    text_only_post = post_manager.add_post(user.id, 'pid-to', PostType.TEXT_ONLY, text='t')
+    text_only_post = post_manager.add_post(user, 'pid-to', PostType.TEXT_ONLY, text='t')
     with pytest.raises(AssertionError, match='VIDEO'):
         text_only_post.finish_processing_video_upload()
 
-    image_post = post_manager.add_post(user.id, 'pid-i', PostType.IMAGE)
+    image_post = post_manager.add_post(user, 'pid-i', PostType.IMAGE)
     with pytest.raises(AssertionError, match='VIDEO'):
         image_post.finish_processing_video_upload()
 

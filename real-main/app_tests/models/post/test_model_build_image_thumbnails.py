@@ -1,5 +1,6 @@
 import io
 import os.path as path
+import uuid
 
 import PIL.Image as Image
 import pytest
@@ -16,8 +17,15 @@ blank_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'big-blan
 
 
 @pytest.fixture
-def processing_image_post(post_manager):
-    post = post_manager.add_post('uid', 'pid', PostType.IMAGE)
+def user(user_manager, cognito_client):
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def processing_image_post(post_manager, user):
+    post = post_manager.add_post(user, 'pid', PostType.IMAGE)
     transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
     post.dynamo.client.transact_write_items(transacts)
     yield post.refresh_item()

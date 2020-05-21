@@ -13,12 +13,12 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid1', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def post2(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid2', PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='t')
 
 
 def test_set_new_comment_activity_noop(post):

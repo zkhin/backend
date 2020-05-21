@@ -21,27 +21,27 @@ user2 = user
 
 @pytest.fixture
 def pending_post(user, post_manager):
-    yield post_manager.add_post(user.id, 'pid-pend', PostType.IMAGE)
+    yield post_manager.add_post(user, 'pid-pend', PostType.IMAGE)
 
 
 @pytest.fixture
 def text_post(user, post_manager):
-    yield post_manager.add_post(user.id, 'pid-to', PostType.TEXT_ONLY, text='lore')
+    yield post_manager.add_post(user, 'pid-to', PostType.TEXT_ONLY, text='lore')
 
 
 @pytest.fixture
 def uploaded_post(user, post_manager, image_data_b64):
-    yield post_manager.add_post(user.id, 'post-id', PostType.IMAGE, image_input={'imageData': image_data_b64})
+    yield post_manager.add_post(user, 'post-id', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
 @pytest.fixture
 def another_uploaded_post(user, post_manager, grant_data_b64):
-    yield post_manager.add_post(user.id, 'post-id-2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    yield post_manager.add_post(user, 'post-id-2', PostType.IMAGE, image_input={'imageData': grant_data_b64})
 
 
 @pytest.fixture
 def another_users_post(user2, post_manager, grant_data_b64):
-    yield post_manager.add_post(user2.id, 'post-oid', PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    yield post_manager.add_post(user2, 'post-oid', PostType.IMAGE, image_input={'imageData': grant_data_b64})
 
 
 def test_get_photo_path(user, uploaded_post):

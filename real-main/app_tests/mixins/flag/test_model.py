@@ -16,7 +16,7 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, str(uuid.uuid4()), post_manager.enums.PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, str(uuid.uuid4()), post_manager.enums.PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture

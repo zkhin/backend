@@ -19,7 +19,7 @@ user3 = user
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user.id, 'pid', PostType.TEXT_ONLY, text='go go')
+    yield post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='go go')
 
 
 def test_add_comment(comment_manager, user, post):
@@ -189,7 +189,7 @@ def test_delete_all_by_user(comment_manager, user, post, user2, user3):
 
 def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, user3):
     # add another post, add a comment on it for distraction
-    post_other = post_manager.add_post(user.id, 'pid-other', PostType.TEXT_ONLY, text='go go')
+    post_other = post_manager.add_post(user, 'pid-other', PostType.TEXT_ONLY, text='go go')
     comment_other = comment_manager.add_comment('coid', post_other.id, user.id, 'lore')
 
     # add two comments on the target post
