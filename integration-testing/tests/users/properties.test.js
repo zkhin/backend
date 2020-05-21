@@ -534,20 +534,20 @@ test('User commentsDisabled - get, set, privacy', async () => {
 test('User likesDisabled - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  // we should default to false
+  // we should default to true
   let resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.self.likesDisabled).toBe(false)
+  expect(resp.data.self.likesDisabled).toBe(true)
 
   // we change it
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: true}})
+  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: false}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.setUserDetails.likesDisabled).toBe(true)
+  expect(resp.data.setUserDetails.likesDisabled).toBe(false)
 
   // check to make sure that version stuck
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.self.likesDisabled).toBe(true)
+  expect(resp.data.self.likesDisabled).toBe(false)
 
   // check another user can't see values
   const [theirClient] = await loginCache.getCleanLogin()

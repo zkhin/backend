@@ -126,23 +126,23 @@ test('Cannot add post with invalid lifetime', async () => {
 test('Mental health settings default values', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  // no user-level settings set
+  // no user-level settings set, system-level defaults should appear
   let variables = {postId: uuidv4()}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(variables.postId)
   expect(resp.data.addPost.commentsDisabled).toBe(false)
-  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
   expect(resp.data.addPost.sharingDisabled).toBe(false)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 
-  // set user-level mental health settings to true (which provide the defaults)
-  variables = {commentsDisabled: true, likesDisabled: true, sharingDisabled: true, verificationHidden: true}
+  // set user-level mental health settings to opposite of system defaults
+  variables = {commentsDisabled: true, likesDisabled: false, sharingDisabled: true, verificationHidden: true}
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.userId).toBe(ourUserId)
   expect(resp.data.setUserDetails.commentsDisabled).toBe(true)
-  expect(resp.data.setUserDetails.likesDisabled).toBe(true)
+  expect(resp.data.setUserDetails.likesDisabled).toBe(false)
   expect(resp.data.setUserDetails.sharingDisabled).toBe(true)
   expect(resp.data.setUserDetails.verificationHidden).toBe(true)
 
@@ -152,17 +152,17 @@ test('Mental health settings default values', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(variables.postId)
   expect(resp.data.addPost.commentsDisabled).toBe(true)
-  expect(resp.data.addPost.likesDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
   expect(resp.data.addPost.sharingDisabled).toBe(true)
   expect(resp.data.addPost.verificationHidden).toBe(true)
 
   // change the user-level mental health setting defaults
-  variables = {commentsDisabled: false, likesDisabled: false, sharingDisabled: false, verificationHidden: false}
+  variables = {commentsDisabled: false, likesDisabled: true, sharingDisabled: false, verificationHidden: false}
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.userId).toBe(ourUserId)
   expect(resp.data.setUserDetails.commentsDisabled).toBe(false)
-  expect(resp.data.setUserDetails.likesDisabled).toBe(false)
+  expect(resp.data.setUserDetails.likesDisabled).toBe(true)
   expect(resp.data.setUserDetails.sharingDisabled).toBe(false)
   expect(resp.data.setUserDetails.verificationHidden).toBe(false)
 
@@ -172,7 +172,7 @@ test('Mental health settings default values', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(variables.postId)
   expect(resp.data.addPost.commentsDisabled).toBe(false)
-  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
   expect(resp.data.addPost.sharingDisabled).toBe(false)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 })
@@ -181,12 +181,12 @@ test('Mental health settings default values', async () => {
 test('Mental health settings specify values', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
-  // create a post, specify both to false
+  // create a post, specify defaults
   let postId = uuidv4()
   let variables = {
     postId,
     commentsDisabled: false,
-    likesDisabled: false,
+    likesDisabled: true,
     sharingDisabled: false,
     verificationHidden: false,
   }
@@ -194,7 +194,7 @@ test('Mental health settings specify values', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentsDisabled).toBe(false)
-  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
   expect(resp.data.addPost.sharingDisabled).toBe(false)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 
@@ -203,16 +203,16 @@ test('Mental health settings specify values', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentsDisabled).toBe(false)
-  expect(resp.data.post.likesDisabled).toBe(false)
+  expect(resp.data.post.likesDisabled).toBe(true)
   expect(resp.data.post.sharingDisabled).toBe(false)
   expect(resp.data.post.verificationHidden).toBe(false)
 
-  // create a post, specify both to true
+  // create a post, specify opposite of defaults
   postId = uuidv4()
   variables = {
     postId,
     commentsDisabled: true,
-    likesDisabled: true,
+    likesDisabled: false,
     sharingDisabled: true,
     verificationHidden: true,
   }
@@ -220,7 +220,7 @@ test('Mental health settings specify values', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentsDisabled).toBe(true)
-  expect(resp.data.addPost.likesDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
   expect(resp.data.addPost.sharingDisabled).toBe(true)
   expect(resp.data.addPost.verificationHidden).toBe(true)
 
@@ -229,7 +229,7 @@ test('Mental health settings specify values', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentsDisabled).toBe(true)
-  expect(resp.data.post.likesDisabled).toBe(true)
+  expect(resp.data.post.likesDisabled).toBe(false)
   expect(resp.data.post.sharingDisabled).toBe(true)
   expect(resp.data.post.verificationHidden).toBe(true)
 })

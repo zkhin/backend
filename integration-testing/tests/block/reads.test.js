@@ -83,7 +83,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.followedUsersWithStories.items).toHaveLength(0)
   expect(ourUserFull.fullName).toBeTruthy()
   expect(ourUserFull.languageCode).toBeTruthy()
-  expect(ourUserFull.likesDisabled).toBe(false)
+  expect(ourUserFull.likesDisabled).toBe(true)
   expect(ourUserFull.onymouslyLikedPosts.items).toHaveLength(0)
   // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
   // expect(ourUserFull.phoneNumber).toBeTruthy()

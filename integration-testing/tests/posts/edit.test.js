@@ -200,22 +200,22 @@ test('Edit post set likesDisabled', async () => {
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postStatus).toBe('PENDING')
-  expect(resp.data.addPost.likesDisabled).toBe(false)
-
-  // edit the likes disabled status
-  resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, likesDisabled: true}})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.editPost.likesDisabled).toBe(true)
-
-  // check it saved to db
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.post.likesDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(true)  // global default
 
   // edit the likes disabled status
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, likesDisabled: false}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPost.likesDisabled).toBe(false)
+
+  // check it saved to db
+  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.post.likesDisabled).toBe(false)
+
+  // edit the likes disabled status
+  resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, likesDisabled: true}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.editPost.likesDisabled).toBe(true)
 })
 
 

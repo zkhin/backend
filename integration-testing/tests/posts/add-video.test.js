@@ -47,7 +47,7 @@ test('Add pending video post minimal', async () => {
   expect(resp.data.addPost.image).toBeNull()
   expect(resp.data.addPost.imageUploadUrl).toBeNull()
   expect(resp.data.addPost.commentsDisabled).toBe(false)
-  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
   expect(resp.data.addPost.sharingDisabled).toBe(false)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 })
@@ -63,7 +63,7 @@ test('Add pending video post maximal', async () => {
     postType: 'VIDEO',
     text,
     commentsDisabled: true,
-    likesDisabled: true,
+    likesDisabled: false,
     sharingDisabled: true,
     verificationHidden: true,
   }
@@ -78,7 +78,7 @@ test('Add pending video post maximal', async () => {
   expect(resp.data.addPost.image).toBeNull()
   expect(resp.data.addPost.imageUploadUrl).toBeNull()
   expect(resp.data.addPost.commentsDisabled).toBe(true)
-  expect(resp.data.addPost.likesDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
   expect(resp.data.addPost.sharingDisabled).toBe(true)
   expect(resp.data.addPost.verificationHidden).toBe(true)
 })

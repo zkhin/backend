@@ -62,7 +62,7 @@ test('Likes preservered through period with posts likes disabled', async () => {
   const postId = uuidv4()
 
   // we add a post with likes enabled
-  let variables = {postId, imageData}
+  let variables = {postId, imageData, likesDisabled: false}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
@@ -200,7 +200,7 @@ test('Verify likes preserved through period in which user disables their likes',
   const postId = uuidv4()
 
   // we add a post
-  const variables = {postId, imageData}
+  const variables = {postId, imageData, likesDisabled: false}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
