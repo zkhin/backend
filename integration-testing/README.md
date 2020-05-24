@@ -6,11 +6,11 @@ Running the integration tests requires a live, deployed copy of this project whi
 
 ## Quickstart
 
-- Run `npm install` in this directory to install needed pacakges.
+- Run `yarn install` in this directory to install needed pacakges.
 - Set up a `.env` file with required environment variables
   - Most of the values can be found in the 'Outputs' section of the CloudFormation stack in the AWS console
   - If a required environment variable is not defined, the tests will error out. Hence you can run the tests to discover what values are needed.
-- Run `npm test` to run the tests
+- Run `yarn test` to run the tests
 
 The tests don't clean up well after themselves. There are scripts in the `./clean` directory to help clean up.
 

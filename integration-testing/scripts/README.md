@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-You will need `npm` and `node` already installed on your system. Run `npm install` in this directory (or one level up) to install needed dependencies.
+You will need `yarn` and `node` already installed on your system. Run `yarn install` in this directory (or one level up) to install needed dependencies.
 
 The scripts require a number of access keys and IDs of the target AWS environment (ie beta or production) to be set as environment variables. The easiest way to do this is to create a `.env` file in this directory. Example `.env` file:
 

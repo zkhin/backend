@@ -2,6 +2,10 @@
   "name": "real-main",
   "description": "",
   "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "deploy": "serverless deploy"
+  },
   "dependencies": {},
   "devDependencies": {
     "serverless": "~1.62.0",

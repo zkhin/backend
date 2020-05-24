@@ -90,8 +90,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        npm --prefix integration-testing install eslint
+        yarn --cwd integration-testing add eslint
 
     - name: Lint with eslint
       run: |
-        npm --prefix integration-testing run lint
+        yarn --cwd integration-testing run lint
