@@ -3,6 +3,7 @@ frameworkVersion: '>=1.0.0 <2.0.0'
 
 provider:
   name: aws
+  profile: real-${self:provider.stage}
   stackName: real-${self:provider.stage}-auth
   stage: ${opt:stage, 'dev'}
   runtime: python3.8
