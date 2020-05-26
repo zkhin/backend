@@ -1,10 +1,13 @@
+import collections
 import itertools
 import logging
 
 import pendulum
 
 from app import models
+from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
+from app.mixins.view.manager import ViewManagerMixin
 
 from . import enums, exceptions
 from .appsync import PostAppSync
@@ -14,7 +17,7 @@ from .model import Post
 logger = logging.getLogger()
 
 
-class PostManager(FlagManagerMixin):
+class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
     enums = enums
     exceptions = exceptions
@@ -36,7 +39,6 @@ class PostManager(FlagManagerMixin):
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
-        self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:
@@ -60,6 +62,7 @@ class PostManager(FlagManagerMixin):
             'post_image_dynamo': getattr(self, 'image_dynamo', None),
             'post_original_metadata_dynamo': getattr(self, 'original_metadata_dynamo', None),
             'flag_dynamo': getattr(self, 'flag_dynamo', None),
+            'view_dynamo': getattr(self, 'view_dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
             'post_verification_client': self.clients.get('post_verification'),
@@ -75,7 +78,6 @@ class PostManager(FlagManagerMixin):
             'post_manager': self,
             'trending_manager': self.trending_manager,
             'user_manager': self.user_manager,
-            'view_manager': self.view_manager,
         }
         return Post(post_item, **kwargs) if post_item else None
 
@@ -173,6 +175,18 @@ class PostManager(FlagManagerMixin):
                     post.error()
 
         return post
+
+    def record_views(self, post_ids, user_id, viewed_at=None):
+        grouped_post_ids = dict(collections.Counter(post_ids))
+        if not grouped_post_ids:
+            return
+
+        for post_id, view_count in grouped_post_ids.items():
+            post = self.get_post(post_id)
+            if not post:
+                logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE post `{post_id}`')
+                continue
+            post.record_view_count(user_id, view_count, viewed_at=viewed_at)
 
     def delete_recently_expired_posts(self, now=None):
         "Delete posts that expired yesterday or today"

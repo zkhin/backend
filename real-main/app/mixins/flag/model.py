@@ -15,8 +15,8 @@ class FlagModelMixin:
     # users that have flagging superpowers
     flag_admin_usernames = ('real', 'ian')
 
-    def __init__(self, flag_dynamo=None):
-        # TODO: add a super().__init__()
+    def __init__(self, flag_dynamo=None, **kwargs):
+        super().__init__(**kwargs)
         if flag_dynamo:
             self.flag_dynamo = flag_dynamo
 

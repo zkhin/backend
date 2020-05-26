@@ -211,8 +211,3 @@ def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeho
         'facebook': facebook_client,
         'google': google_client,
     })
-
-
-@pytest.fixture
-def view_manager(dynamo_client):
-    yield models.ViewManager({'appsync': appsync_client, 'dynamo': dynamo_client})

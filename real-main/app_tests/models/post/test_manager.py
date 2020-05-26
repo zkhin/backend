@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 import pendulum
@@ -491,3 +492,28 @@ def test_set_post_status_to_error(post_manager, user_manager, user):
     assert post.item['postStatus'] == PostStatus.ERROR
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.ERROR
+
+
+def test_record_views(post_manager, user, user2, posts, caplog):
+    post1, post2 = posts
+
+    # cant record view to post that dne
+    with caplog.at_level(logging.WARNING):
+        post_manager.record_views(['pid-dne'], user2.id)
+    assert len(caplog.records) == 1
+    assert 'pid-dne' in caplog.records[0].msg
+    assert user2.id in caplog.records[0].msg
+
+    # no-op recording views to our own post
+    assert post_manager.view_dynamo.get_view(post1.id, user.id) is None
+    assert post_manager.view_dynamo.get_view(post2.id, user.id) is None
+    post_manager.record_views([post1.id, post2.id], user.id)
+    assert post_manager.view_dynamo.get_view(post1.id, user.id) is None
+    assert post_manager.view_dynamo.get_view(post2.id, user.id) is None
+
+    # another user can record views of our posts
+    assert post_manager.view_dynamo.get_view(post1.id, user2.id) is None
+    assert post_manager.view_dynamo.get_view(post2.id, user2.id) is None
+    post_manager.record_views([post1.id, post2.id, post1.id], user2.id)
+    assert post_manager.view_dynamo.get_view(post1.id, user2.id)['viewCount'] == 2
+    assert post_manager.view_dynamo.get_view(post2.id, user2.id)['viewCount'] == 1

@@ -7,6 +7,7 @@ import pendulum
 import PIL.Image as Image
 
 from app.mixins.flag.model import FlagModelMixin
+from app.mixins.view.model import ViewModelMixin
 from app.models.card.enums import COMMENT_ACTIVITY_CARD
 from app.utils import image_size
 
@@ -18,7 +19,7 @@ from .text_image import generate_text_image
 logger = logging.getLogger()
 
 
-class Post(FlagModelMixin):
+class Post(FlagModelMixin, ViewModelMixin):
 
     enums = enums
     exceptions = exceptions
@@ -29,7 +30,7 @@ class Post(FlagModelMixin):
                  post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
                  card_manager=None, comment_manager=None, feed_manager=None, follow_manager=None,
                  followed_first_story_manager=None, like_manager=None, post_manager=None, trending_manager=None,
-                 user_manager=None, view_manager=None, **kwargs):
+                 user_manager=None, **kwargs):
         super().__init__(**kwargs)
 
         if post_appsync:
@@ -72,8 +73,6 @@ class Post(FlagModelMixin):
             self.trending_manager = trending_manager
         if user_manager:
             self.user_manager = user_manager
-        if view_manager:
-            self.view_manager = view_manager
 
         self.item = item
         # immutables
@@ -475,7 +474,7 @@ class Post(FlagModelMixin):
             self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
 
         # delete any post views of it
-        self.view_manager.delete_views(self.item['partitionKey'])
+        self.delete_views()
 
         # delete the trending index, if it exists
         self.trending_manager.dynamo.delete_trending(self.id)
@@ -687,3 +686,31 @@ class Post(FlagModelMixin):
 
     def is_user_forced_disabling_criteria_met(self):
         return self.user.is_forced_disabling_criteria_met_by_posts()
+
+    def record_view_count(self, user_id, view_count, viewed_at=None):
+        if self.status != enums.PostStatus.COMPLETED:
+            logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{self.id}`')
+            return False
+
+        # give every post the chance to get into trending, so count post owner's own views for trending
+        self.trending_manager.increment_scores_for_post(self, now=viewed_at)
+
+        # don't count post owner's views
+        if self.user_id == user_id:
+            return False
+
+        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
+
+        # record the viewedBy on the post and user
+        if is_new_view:
+            self.dynamo.increment_viewed_by_count(self.id)
+            self.user_manager.dynamo.increment_post_viewed_by_count(self.user_id)
+
+        # If this is a non-original post, count this like a view of the original post as well
+        original_post_id = self.item.get('originalPostId', self.id)
+        if original_post_id != self.id:
+            original_post = self.post_manager.get_post(original_post_id)
+            if original_post:
+                original_post.record_view_count(user_id, view_count, viewed_at=viewed_at)
+
+        return True

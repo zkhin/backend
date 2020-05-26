@@ -6,7 +6,7 @@ import pytest
 
 from app.models.block.enums import BlockStatus
 from app.models.post.enums import PostType
-from app.models.view.enums import ViewedStatus
+from app.mixins.view.enums import ViewedStatus
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def message(chat_message_manager, chat, user1):
     yield chat_message_manager.add_chat_message(message_id, text, chat.id, user1.id)
 
 
-def test_chat_message_serialize(message, user1, user2, chat, view_manager):
+def test_chat_message_serialize(message, user1, user2, chat):
     # check that user1 has viewed it (since they wrote it) and user2 has not
     message.serialize(user1.id)['viewedStatus'] == ViewedStatus.VIEWED
     message.serialize(user1.id)['author']['blockerStatus'] == BlockStatus.SELF
@@ -51,7 +51,7 @@ def test_chat_message_serialize(message, user1, user2, chat, view_manager):
     message.serialize(user2.id)['author']['blockerStatus'] == BlockStatus.NOT_BLOCKING
 
     # user2 reports to have viewed it, check that reflects in the viewedStatus
-    view_manager.record_views('chat_message', [message.id], user2.id)
+    message.record_view_count(user2.id, 1)
     message.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED
 
 
@@ -208,3 +208,16 @@ def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, 
     appsync_client.reset_mock()
     message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user3, 'cname')
     assert len(appsync_client.send.mock_calls) == 3  # one for each member of the group chat
+
+
+def test_record_view_count(message, user1, user2):
+    assert message.get_viewed_status(user1.id) == ViewedStatus.VIEWED  # author
+    assert message.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
+
+    # author can't record views
+    assert message.record_view_count(user1.id, 2) is False
+    assert message.get_viewed_status(user1.id) == ViewedStatus.VIEWED
+
+    # rando can record views
+    assert message.record_view_count(user2.id, 2) is True
+    assert message.get_viewed_status(user2.id) == ViewedStatus.VIEWED

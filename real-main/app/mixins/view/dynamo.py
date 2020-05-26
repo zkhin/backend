@@ -9,20 +9,25 @@ logger = logging.getLogger()
 
 class ViewDynamo:
 
-    def __init__(self, dynamo_client):
+    def __init__(self, item_type, dynamo_client):
+        self.item_type = item_type
         self.client = dynamo_client
 
-    def get_view(self, partition_key, user_id, strongly_consistent=False):
-        return self.client.get_item({
-            'partitionKey': partition_key,
+    def pk(self, item_id, user_id):
+        return {
+            'partitionKey': f'{self.item_type}/{item_id}',
             'sortKey': f'view/{user_id}',
-        }, ConsistentRead=strongly_consistent)
+        }
 
-    def generate_views(self, partition_key, pks_only=False):
+    def get_view(self, item_id, user_id, strongly_consistent=False):
+        return self.client.get_item(self.pk(item_id, user_id), ConsistentRead=strongly_consistent)
+
+    def generate_views(self, item_id, pks_only=False):
         # no ordering guarantees
+        pk = self.pk(item_id, None)
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('partitionKey').eq(partition_key)
+                conditions.Key('partitionKey').eq(pk['partitionKey'])
                 & conditions.Key('sortKey').begins_with('view/')
             )
         }
@@ -31,22 +36,19 @@ class ViewDynamo:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
 
-    def delete_views(self, view_item_generator):
+    def delete_views(self, view_pk_generator):
         with self.client.table.batch_writer() as batch:
-            for item in view_item_generator:
-                pk = {
-                    'partitionKey': item['partitionKey'],
-                    'sortKey': item['sortKey'],
-                }
+            for pk in view_pk_generator:
                 batch.delete_item(Key=pk)
 
-    def add_view(self, partition_key, user_id, view_count, viewed_at):
+    def add_view(self, item_id, user_id, view_count, viewed_at):
+        pk = self.pk(item_id, user_id)
         viewed_at_str = viewed_at.to_iso8601_string()
         query_kwargs = {
             'Item': {
-                'partitionKey': partition_key,
-                'sortKey': f'view/{user_id}',
-                'gsiK1PartitionKey': partition_key,
+                'partitionKey': pk['partitionKey'],
+                'sortKey': pk['sortKey'],
+                'gsiK1PartitionKey': pk['partitionKey'],
                 'gsiK1SortKey': f'view/{viewed_at_str}',
                 'schemaVersion': 0,
                 'viewCount': view_count,
@@ -57,14 +59,12 @@ class ViewDynamo:
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.ViewAlreadyExists(partition_key, user_id)
+            raise exceptions.ViewAlreadyExists(self.item_type, item_id, user_id)
 
-    def increment_view(self, partition_key, user_id, view_count, viewed_at):
+    def increment_view_count(self, item_id, user_id, view_count, viewed_at):
+        pk = self.pk(item_id, user_id)
         query_kwargs = {
-            'Key': {
-                'partitionKey': partition_key,
-                'sortKey': f'view/{user_id}',
-            },
+            'Key': pk,
             'UpdateExpression': 'ADD viewCount :vc SET lastViewedAt = :lva',
             'ExpressionAttributeValues': {
                 ':vc': view_count,
@@ -74,4 +74,4 @@ class ViewDynamo:
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.ViewDoesNotExist(partition_key, user_id)
+            raise exceptions.ViewDoesNotExist(self.item_type, item_id, user_id)

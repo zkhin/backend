@@ -1,19 +1,20 @@
 import logging
 
 from app.mixins.flag.model import FlagModelMixin
+from app.mixins.view.model import ViewModelMixin
 
 from . import exceptions
 
 logger = logging.getLogger()
 
 
-class Comment(FlagModelMixin):
+class Comment(FlagModelMixin, ViewModelMixin):
 
     exceptions = exceptions
     item_type = 'comment'
 
     def __init__(self, comment_item, dynamo=None, block_manager=None, follow_manager=None, post_manager=None,
-                 user_manager=None, view_manager=None, **kwargs):
+                 user_manager=None, **kwargs):
         super().__init__(**kwargs)
         if dynamo:
             self.dynamo = dynamo
@@ -25,8 +26,6 @@ class Comment(FlagModelMixin):
             self.post_manager = post_manager
         if user_manager:
             self.user_manager = user_manager
-        if view_manager:
-            self.view_manager = view_manager
 
         self.item = comment_item
         self.id = comment_item['commentId']
@@ -52,7 +51,7 @@ class Comment(FlagModelMixin):
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         resp['commentedBy'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
-        resp['viewedStatus'] = self.view_manager.get_viewed_status(self, caller_user_id)
+        resp['viewedStatus'] = self.get_viewed_status(caller_user_id)
         return resp
 
     def delete(self, deleter_user_id=None, forced=False):
@@ -75,7 +74,7 @@ class Comment(FlagModelMixin):
         if deleter_user_id and deleter_user_id != self.post.user_id:
             self.post.set_new_comment_activity(True)
         # delete view records on the comment
-        self.view_manager.delete_views(self.item['partitionKey'])
+        self.delete_views()
         return self
 
     def flag(self, user):
@@ -93,3 +92,15 @@ class Comment(FlagModelMixin):
 
     def is_user_forced_disabling_criteria_met(self):
         return self.user.is_forced_disabling_criteria_met_by_comments()
+
+    def record_view_count(self, user_id, view_count, viewed_at=None):
+        # don't count views of user's own comments
+        if self.user_id == user_id:
+            return False
+
+        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
+
+        if is_new_view:
+            self.dynamo.increment_viewed_by_count(self.id)
+
+        return True

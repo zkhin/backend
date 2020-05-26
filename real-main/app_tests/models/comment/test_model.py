@@ -2,7 +2,7 @@ import pytest
 import uuid
 
 from app.models.post.enums import PostType
-from app.models.view.enums import ViewedStatus
+from app.mixins.view.enums import ViewedStatus
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def comment(user, post_manager, comment_manager):
 comment2 = comment
 
 
-def test_serialize(comment_manager, comment, user, view_manager):
+def test_serialize(comment_manager, comment, user):
     # serialize as the comment's author
     resp = comment.serialize(user.id)
     assert resp.pop('commentedBy')['userId'] == user.id
@@ -40,7 +40,7 @@ def test_serialize(comment_manager, comment, user, view_manager):
     assert resp == comment.item
 
     # the other user views the comment
-    view_manager.record_views('comment', [comment.id], other_user_id)
+    comment.record_view_count(other_user_id, 1)
 
     # serialize as another user that *has* viewed the comment
     other_user_id = 'ouid'
@@ -50,7 +50,7 @@ def test_serialize(comment_manager, comment, user, view_manager):
     assert resp == comment.item
 
 
-def test_delete(comment, post_manager, comment_manager, user, user2, user3, view_manager):
+def test_delete(comment, post_manager, comment_manager, user, user2, user3):
     # verify it's visible in the DB
     comment_item = comment.dynamo.get_comment(comment.id)
     assert comment_item['commentId'] == comment.id
@@ -60,9 +60,9 @@ def test_delete(comment, post_manager, comment_manager, user, user2, user3, view
     post_manager.get_post(comment.item['postId']).item.get('commentCount', 0) == 1
 
     # add two views to the comment, verify we see them
-    view_manager.record_views('comment', [comment.id], user2.id)
-    view_manager.record_views('comment', [comment.id], user3.id)
-    assert len(list(view_manager.dynamo.generate_views(comment.item['partitionKey']))) == 2
+    comment.record_view_count(user2.id, 1)
+    comment.record_view_count(user3.id, 1)
+    assert len(list(comment.view_dynamo.generate_views(comment.id))) == 2
 
     # comment owner deletes the comment
     comment.delete(deleter_user_id=comment.user_id)
@@ -76,7 +76,7 @@ def test_delete(comment, post_manager, comment_manager, user, user2, user3, view
     post_manager.get_post(comment.item['postId']).item.get('commentCount', 0) == 0
 
     # check the two comment views have also been deleted
-    assert list(view_manager.dynamo.generate_views(comment.item['partitionKey'])) == []
+    assert len(list(comment.view_dynamo.generate_views(comment.id))) == 0
 
 
 def test_forced_delete(comment, comment2, user):
@@ -162,3 +162,30 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, co
     assert post.item.get('hasNewCommentActivity', False) is True
     user.refresh_item()
     assert user.item.get('postHasNewCommentActivityCount', 0) == 1
+
+
+def test_record_view_count(comment, user, user2, user3):
+    assert comment.get_viewed_status(user.id) == ViewedStatus.VIEWED  # author
+    assert comment.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
+    assert comment.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 0
+
+    # author can't record views
+    assert comment.record_view_count(user.id, 2) is False
+    assert comment.get_viewed_status(user.id) == ViewedStatus.VIEWED
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 0
+
+    # rando can record views
+    assert comment.record_view_count(user2.id, 2) is True
+    assert comment.get_viewed_status(user2.id) == ViewedStatus.VIEWED
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 1
+
+    # a diff rando records views
+    assert comment.record_view_count(user3.id, 1) is True
+    assert comment.get_viewed_status(user3.id) == ViewedStatus.VIEWED
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 2
+
+    # same rando records views again, should not change status or viewedByCount
+    assert comment.record_view_count(user2.id, 2) is True
+    assert comment.get_viewed_status(user2.id) == ViewedStatus.VIEWED
+    assert comment.refresh_item().item.get('viewedByCount', 0) == 2

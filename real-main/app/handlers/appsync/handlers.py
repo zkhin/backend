@@ -45,7 +45,6 @@ follow_manager = managers.get('follow') or models.FollowManager(clients, manager
 like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
-view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
 
 def validate_caller(func):
@@ -779,7 +778,7 @@ def report_post_views(caller_user, arguments, source, context):
     if len(post_ids) > 100:
         raise ClientException('A max of 100 post ids may be reported at a time')
 
-    view_manager.record_views('post', post_ids, caller_user.id)
+    post_manager.record_views(post_ids, caller_user.id)
     return True
 
 
@@ -824,7 +823,7 @@ def report_comment_views(caller_user, arguments, source, context):
     if len(comment_ids) > 100:
         raise ClientException('A max of 100 comment ids may be reported at a time')
 
-    view_manager.record_views('comment', comment_ids, caller_user.id)
+    comment_manager.record_views(comment_ids, caller_user.id)
     return True
 
 
@@ -1094,7 +1093,7 @@ def report_chat_message_views(caller_user, arguments, source, context):
     if len(message_ids) > 100:
         raise ClientException('A max of 100 message ids may be reported at a time')
 
-    view_manager.record_views('chat_message', message_ids, caller_user.id)
+    chat_message_manager.record_views(message_ids, caller_user.id)
     return True
 
 

@@ -1,14 +1,17 @@
+import logging
 import uuid
 
 import pendulum
 import pytest
 
+from app.models.card.enums import CHAT_ACTIVITY_CARD
+
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id = str(uuid.uuid4())
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
-    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 user2 = user
@@ -55,7 +58,7 @@ def test_add_chat_message(chat_message_manager, user, chat, user2, user3):
     assert chat.member_dynamo.get(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + now_str
 
 
-def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):
+def test_truncate_chat_messages(chat_message_manager, user, chat):
     # add two messsages
     message_id_1, message_id_2 = 'mid1', 'mid2'
 
@@ -66,9 +69,9 @@ def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):
     assert message_2.id == message_id_2
 
     # add some views to the messsages, verify we see them in the db
-    view_manager.record_views('chat_message', ['mid1', 'mid2', 'mid1'], 'uid')
-    assert view_manager.dynamo.get_view('chatMessage/mid1', 'uid')
-    assert view_manager.dynamo.get_view('chatMessage/mid2', 'uid')
+    chat_message_manager.record_views(['mid1', 'mid2', 'mid1'], 'uid')
+    assert message_1.view_dynamo.get_view(message_1.id, 'uid')
+    assert message_2.view_dynamo.get_view(message_2.id, 'uid')
 
     # check the chat total is correct
     chat.refresh_item()
@@ -86,8 +89,8 @@ def test_truncate_chat_messages(chat_message_manager, user, chat, view_manager):
     assert chat_message_manager.get_chat_message(message_id_2) is None
 
     # check the message views have also been deleted
-    assert view_manager.dynamo.get_view('chatMessage/mid1', 'uid') is None
-    assert view_manager.dynamo.get_view('chatMessage/mid2', 'uid') is None
+    assert message_1.view_dynamo.get_view(message_1.id, 'uid') is None
+    assert message_2.view_dynamo.get_view(message_2.id, 'uid') is None
 
 
 def test_add_system_message(chat_message_manager, chat, appsync_client, user2, user3):
@@ -220,3 +223,53 @@ def test_add_system_message_group_name_edited(chat_message_manager, chat, user):
     # check the chat was altered correctly
     chat.refresh_item()
     assert chat.item['messageCount'] == 2
+
+
+def test_record_views(chat_message_manager, chat, user2, user3, caplog):
+    # add three messages to the chat
+    message1 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user2.id)
+    message2 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user3.id)
+    message3 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user3.id)
+
+    # user2 records on DNE message
+    with caplog.at_level(logging.WARNING):
+        chat_message_manager.record_views(['cid-dne'], user2.id)
+    assert len(caplog.records) == 1
+    assert 'cid-dne' in caplog.records[0].msg
+    assert user2.id in caplog.records[0].msg
+    assert message1.view_dynamo.get_view(message1.id, user2.id) is None
+    assert message2.view_dynamo.get_view(message2.id, user2.id) is None
+    assert message2.view_dynamo.get_view(message3.id, user2.id) is None
+
+    # user2 records views on two of them
+    assert message1.view_dynamo.get_view(message2.id, user2.id) is None
+    assert message2.view_dynamo.get_view(message3.id, user2.id) is None
+    chat_message_manager.record_views([message2.id, message2.id, message3.id], user2.id)
+    assert message1.view_dynamo.get_view(message2.id, user2.id)['viewCount'] == 2
+    assert message2.view_dynamo.get_view(message3.id, user2.id)['viewCount'] == 1
+
+    # user3 records views on one of them, only gets records for messages they aren't author
+    assert message1.view_dynamo.get_view(message1.id, user3.id) is None
+    chat_message_manager.record_views([message1.id, message1.id, message2.id], user3.id)
+    assert message1.view_dynamo.get_view(message1.id, user3.id)['viewCount'] == 2
+    assert message1.view_dynamo.get_view(message2.id, user3.id) is None
+
+
+def test_record_views_removes_card(chat_message_manager, chat, user2, user3, card_manager):
+    # add the well-known card for both users, check starting state
+    card_manager.add_well_known_card_if_dne(user2.id, CHAT_ACTIVITY_CARD)
+    card_manager.add_well_known_card_if_dne(user3.id, CHAT_ACTIVITY_CARD)
+    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user2.id))
+    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user3.id))
+
+    # user2 adds a message, both users views it, should remove user3's card but not user2's
+    message1 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user2.id)
+    chat_message_manager.record_views([message1.id], user2.id)
+    chat_message_manager.record_views([message1.id], user3.id)
+    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user2.id))
+    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user3.id)) is None
+
+    # user3 adds a message, user2 views it, should remove user2's card
+    message1 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user3.id)
+    chat_message_manager.record_views([message1.id], user2.id)
+    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user2.id)) is None

@@ -4,6 +4,7 @@ import logging
 
 import pendulum
 
+from app.mixins.view.model import ViewModelMixin
 from app.models.block.enums import BlockStatus
 
 from . import enums, exceptions
@@ -19,13 +20,15 @@ class DecimalJsonEncoder(json.JSONEncoder):
         return super(DecimalJsonEncoder, self).default(obj)
 
 
-class ChatMessage:
+class ChatMessage(ViewModelMixin):
 
     enums = enums
     exceptions = exceptions
+    item_type = 'chatMessage'
 
     def __init__(self, item, chat_message_dynamo=None, chat_message_appsync=None, block_manager=None,
-                 chat_manager=None, user_manager=None, view_manager=None):
+                 chat_manager=None, user_manager=None, **kwargs):
+        super().__init__(**kwargs)
         self.dynamo = chat_message_dynamo
         self.appsync = chat_message_appsync
 
@@ -33,7 +36,6 @@ class ChatMessage:
         self.block_manager = block_manager
         self.chat_manager = chat_manager
         self.user_manager = user_manager
-        self.view_manager = view_manager
         # immutables
         self.id = item['messageId']
         self.chat_id = self.item['chatId']
@@ -58,7 +60,7 @@ class ChatMessage:
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         resp['author'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
-        resp['viewedStatus'] = self.view_manager.get_viewed_status(self, caller_user_id)
+        resp['viewedStatus'] = self.get_viewed_status(caller_user_id)
         return resp
 
     def edit(self, text, now=None):
@@ -123,3 +125,11 @@ class ChatMessage:
         if serialized['blockedStatus'] == BlockStatus.BLOCKING:
             return None
         return json.dumps(serialized, cls=DecimalJsonEncoder)
+
+    def record_view_count(self, user_id, view_count, viewed_at=None):
+        # don't count views of user's own chat messages
+        if self.user_id == user_id:
+            return False
+
+        super().record_view_count(user_id, view_count, viewed_at=viewed_at)
+        return True

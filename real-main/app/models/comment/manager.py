@@ -1,9 +1,12 @@
+import collections
 import logging
 
 import pendulum
 
 from app import models
+from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
+from app.mixins.view.manager import ViewManagerMixin
 
 from . import exceptions
 from .dynamo import CommentDynamo
@@ -12,7 +15,7 @@ from .model import Comment
 logger = logging.getLogger()
 
 
-class CommentManager(FlagManagerMixin):
+class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
     exceptions = exceptions
     item_type = 'comment'
@@ -25,9 +28,7 @@ class CommentManager(FlagManagerMixin):
         self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
-        self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
-        self.clients = clients
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
 
@@ -42,11 +43,11 @@ class CommentManager(FlagManagerMixin):
         kwargs = {
             'dynamo': getattr(self, 'dynamo', None),
             'flag_dynamo': getattr(self, 'flag_dynamo', None),
+            'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
             'follow_manager': self.follow_manager,
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
-            'view_manager': self.view_manager,
         }
         return Comment(comment_item, **kwargs)
 
@@ -95,6 +96,26 @@ class CommentManager(FlagManagerMixin):
 
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)
+
+    def record_views(self, comment_ids, user_id, viewed_at=None):
+        grouped_comment_ids = dict(collections.Counter(comment_ids))
+        if not grouped_comment_ids:
+            return
+
+        post_ids = set()
+        for comment_id, view_count in grouped_comment_ids.items():
+            comment = self.get_comment(comment_id)
+            if not comment:
+                logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE comment `{comment_id}`')
+                continue
+            was_recorded = comment.record_view_count(user_id, view_count, viewed_at=viewed_at)
+            if was_recorded:
+                post_ids.add(comment.post_id)
+
+        for post_id in post_ids:
+            post = self.post_manager.get_post(comment.post_id)
+            if user_id == post.user_id:
+                post.set_new_comment_activity(False)
 
     def delete_all_by_user(self, user_id):
         for comment_item in self.dynamo.generate_by_user(user_id):

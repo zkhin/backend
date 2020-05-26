@@ -12,7 +12,7 @@ class FlagManagerMixin:
     flag_exceptions = exceptions
 
     def __init__(self, clients, managers=None):
-        # TODO: add a super().__init__()
+        super().__init__(clients, managers=managers)
         if 'dynamo' in clients:
             self.flag_dynamo = FlagDynamo(self.item_type, clients['dynamo'])
 

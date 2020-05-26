@@ -1,9 +1,12 @@
+import collections
 import logging
 
 import pendulum
 import uuid
 
 from app import models
+from app.mixins.base import ManagerBase
+from app.mixins.view.manager import ViewManagerMixin
 
 from . import exceptions
 from .appsync import ChatMessageAppSync
@@ -13,17 +16,19 @@ from .model import ChatMessage
 logger = logging.getLogger()
 
 
-class ChatMessageManager:
+class ChatMessageManager(ViewManagerMixin, ManagerBase):
 
     exceptions = exceptions
+    item_type = 'chatMessage'
 
     def __init__(self, clients, managers=None):
+        super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['chat_message'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
-        self.view_manager = managers.get('view') or models.ViewManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:
@@ -39,10 +44,10 @@ class ChatMessageManager:
         kwargs = {
             'chat_message_appsync': self.appsync,
             'chat_message_dynamo': self.dynamo,
+            'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
             'chat_manager': self.chat_manager,
             'user_manager': self.user_manager,
-            'view_manager': self.view_manager,
         }
         return ChatMessage(item, **kwargs)
 
@@ -64,8 +69,8 @@ class ChatMessageManager:
         # delete all chat messages for the chat without bothering to adjust Chat.messageCount
         with self.dynamo.client.table.batch_writer() as batch:
             for chat_message_pk in self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True):
-                partition_key = chat_message_pk['partitionKey']
-                for view_pk in self.view_manager.dynamo.generate_views(partition_key, pks_only=True):
+                chat_message_id = chat_message_pk['partitionKey'].split('/')[1]
+                for view_pk in self.view_dynamo.generate_views(chat_message_id, pks_only=True):
                     batch.delete_item(Key=view_pk)
                 batch.delete_item(Key=chat_message_pk)
 
@@ -103,3 +108,19 @@ class ChatMessageManager:
         message = self.add_chat_message(message_id, text, chat_id, user_id, now=now)
         message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED, user_ids=user_ids)
         return message
+
+    def record_views(self, message_ids, user_id, viewed_at=None):
+        grouped_message_ids = dict(collections.Counter(message_ids))
+        if not grouped_message_ids:
+            return
+
+        views_recorded = False
+        for message_id, view_count in grouped_message_ids.items():
+            message = self.get_chat_message(message_id)
+            if not message:
+                logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE message `{message_id}`')
+                continue
+            if (message.record_view_count(user_id, view_count, viewed_at=viewed_at)):
+                views_recorded = True
+        if views_recorded:
+            self.card_manager.remove_well_known_card_if_exists(user_id, self.card_manager.enums.CHAT_ACTIVITY_CARD)

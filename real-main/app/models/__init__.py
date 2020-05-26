@@ -12,7 +12,6 @@ __all__ = [
     'PostManager',
     'TrendingManager',
     'UserManager',
-    'ViewManager',
 ]
 
 from .album.manager import AlbumManager
@@ -28,4 +27,3 @@ from .like.manager import LikeManager
 from .post.manager import PostManager
 from .trending.manager import TrendingManager
 from .user.manager import UserManager
-from .view.manager import ViewManager

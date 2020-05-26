@@ -204,8 +204,15 @@ def test_increment_scores_for_post(trending_manager, user, post_manager, real_us
     assert list(trending_manager.dynamo.generate_trendings('post')) == []
     assert list(trending_manager.dynamo.generate_trendings('user')) == []
 
-    # verify no trending for posts that fail verification
+    # verify no trending for posts by the real user
     post = post_manager.add_post(real_user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    trending_manager.increment_scores_for_post(post)
+    assert list(trending_manager.dynamo.generate_trendings('post')) == []
+    assert list(trending_manager.dynamo.generate_trendings('user')) == []
+
+    # verify no trending for posts that fail verification
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post.item['isVerified'] = False
     trending_manager.increment_scores_for_post(post)
     assert list(trending_manager.dynamo.generate_trendings('post')) == []
     assert list(trending_manager.dynamo.generate_trendings('user')) == []
