@@ -26,6 +26,7 @@ class PostManager(FlagManagerMixin):
         managers['post'] = self
         self.album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
@@ -65,6 +66,7 @@ class PostManager(FlagManagerMixin):
             's3_uploads_client': self.clients.get('s3_uploads'),
             'album_manager': self.album_manager,
             'block_manager': self.block_manager,
+            'card_manager': self.card_manager,
             'comment_manager': self.comment_manager,
             'feed_manager': self.feed_manager,
             'follow_manager': self.follow_manager,

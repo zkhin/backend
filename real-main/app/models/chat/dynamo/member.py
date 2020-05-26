@@ -48,12 +48,6 @@ class ChatMemberDynamo:
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }}
 
-    def update_all_last_message_activity_at(self, chat_id, now):
-        # Note that dynamo has no support for batch updates.
-        # This update will need to be made async at some scale (chats with 1000+ members?)
-        for user_id in self.generate_user_ids_by_chat(chat_id):
-            self.update_last_message_activity_at(chat_id, user_id, now)
-
     def update_last_message_activity_at(self, chat_id, user_id, now):
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),

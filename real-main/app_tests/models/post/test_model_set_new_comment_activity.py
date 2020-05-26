@@ -46,7 +46,9 @@ def test_set_new_comment_activity_noop(post):
     assert post.user_manager.mock_calls == []
 
 
-def test_set_new_comment_activity_basic_add_remove(user, post, post2):
+def test_set_new_comment_activity_basic_add_remove(user, post, post2, card_manager):
+    card_id = f'{user.id}:{card_manager.enums.COMMENT_ACTIVITY_CARD.name}'
+    assert card_manager.get_card(card_id) is None
     assert 'postHasNewCommentActivityCount' not in user.item
     assert 'hasNewCommentActivity' not in post.item
     assert 'hasNewCommentActivity' not in post2.item
@@ -56,22 +58,26 @@ def test_set_new_comment_activity_basic_add_remove(user, post, post2):
     assert post.item['hasNewCommentActivity'] is True
     user.refresh_item()
     assert user.item['postHasNewCommentActivityCount'] == 1
+    assert card_manager.get_card(card_id)
 
     post2.set_new_comment_activity(True)
     assert post2.item['hasNewCommentActivity'] is True
     user.refresh_item()
     assert user.item['postHasNewCommentActivityCount'] == 2
+    assert card_manager.get_card(card_id)
 
     # verify we remove comment activity correctly
     post.set_new_comment_activity(False)
     assert post.item['hasNewCommentActivity'] is False
     user.refresh_item()
     assert user.item['postHasNewCommentActivityCount'] == 1
+    assert card_manager.get_card(card_id) is None
 
     post2.set_new_comment_activity(False)
     assert post2.item['hasNewCommentActivity'] is False
     user.refresh_item()
     assert user.item['postHasNewCommentActivityCount'] == 0
+    assert card_manager.get_card(card_id) is None
 
 
 def test_set_new_comment_activity_race_condition_new_activity(user, post):

@@ -764,3 +764,29 @@ def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):
         user_dynamo.client.transact_write_items([transact_deleted_willfull])
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items([transact_deleted_forced])
+
+
+def test_transact_card_added_and_transact_card_deleted(user_dynamo):
+    user_id = 'user-id'
+    transact_added = user_dynamo.transact_card_added(user_id)
+    transact_deleted = user_dynamo.transact_card_deleted(user_id)
+
+    # set up & verify starting state
+    user_dynamo.add_user(user_id, 'username')
+    assert user_dynamo.get_user(user_id).get('commentCount', 0) == 0
+
+    # two cards, one by one
+    user_dynamo.client.transact_write_items([transact_added])
+    assert user_dynamo.get_user(user_id).get('cardCount', 0) == 1
+    user_dynamo.client.transact_write_items([transact_added])
+    assert user_dynamo.get_user(user_id).get('cardCount', 0) == 2
+
+    # delete those cards, one by one
+    user_dynamo.client.transact_write_items([transact_deleted])
+    assert user_dynamo.get_user(user_id).get('cardCount', 0) == 1
+    user_dynamo.client.transact_write_items([transact_deleted])
+    assert user_dynamo.get_user(user_id).get('cardCount', 0) == 0
+
+    # verify can't go negative
+    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
+        user_dynamo.client.transact_write_items([transact_deleted])

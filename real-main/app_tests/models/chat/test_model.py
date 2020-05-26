@@ -139,6 +139,56 @@ def test_cant_add_to_non_group_chat(direct_chat):
         direct_chat.add('uid', ['new-uid'])
 
 
+def test_update_members_last_message_activity_at(direct_chat, user1, user2, card_manager):
+    user1_card_id = f'{user1.id}:{card_manager.enums.CHAT_ACTIVITY_CARD.name}'
+    user2_card_id = f'{user2.id}:{card_manager.enums.CHAT_ACTIVITY_CARD.name}'
+
+    # verify members start with same activity timestamp
+    user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
+    user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
+    user1_last_activity_at = pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/'):])
+    user2_last_activity_at = pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/'):])
+    assert user1_last_activity_at == user2_last_activity_at
+    last_activity_at = user1_last_activity_at
+
+    # no messages on the chat, so no cards
+    assert card_manager.get_card(user1_card_id) is None
+    assert card_manager.get_card(user2_card_id) is None
+
+    # update last activity for all by user1
+    now = pendulum.now('utc')
+    direct_chat.update_members_last_message_activity_at(user1.id, now)
+
+    # verify members start with same activity timestamp
+    user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
+    user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
+    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/'):]) == now
+    assert now > last_activity_at
+    last_activity_at = now
+
+    # check card state
+    assert card_manager.get_card(user1_card_id) is None
+    assert card_manager.get_card(user2_card_id)
+
+    # update last activity for all by user2
+    now = pendulum.now('utc')
+    direct_chat.update_members_last_message_activity_at(user2.id, now)
+    assert now > user1_last_activity_at
+
+    # verify members start with same activity timestamp
+    user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
+    user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
+    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/'):]) == now
+    assert now > last_activity_at
+    last_activity_at = now
+
+    # check card state
+    assert card_manager.get_card(user1_card_id)
+    assert card_manager.get_card(user2_card_id)
+
+
 def test_leave(group_chat, user1, user2):
     group_chat.chat_message_manager = mock.Mock()
 

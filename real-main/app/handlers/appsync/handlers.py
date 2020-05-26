@@ -36,6 +36,7 @@ clients = {
 managers = {}
 album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
 block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
@@ -240,6 +241,9 @@ def reset_user(caller_user_id, arguments, source, context):
     # delete all our posts, and all likes on those posts
     for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
         post_manager.init_post(post_item).delete()
+
+    # delete any cards we have
+    card_manager.truncate_cards(caller_user_id)
 
     # remove all blocks of and by us
     block_manager.unblock_all_blocks(caller_user_id)
@@ -841,6 +845,26 @@ def flag_comment(caller_user, arguments, source, context):
     resp = comment.serialize(caller_user.id)
     resp['flagStatus'] = comment_manager.flag_enums.FlagStatus.FLAGGED
     return resp
+
+
+@routes.register('Mutation.deleteCard')
+@validate_caller
+def delete_card(caller_user, arguments, source, context):
+    card_id = arguments['cardId']
+
+    card = card_manager.get_card(card_id)
+    if not card:
+        raise ClientException(f'No card with id `{card_id}` found')
+
+    if caller_user.id != card.user_id:
+        raise ClientException(f'Caller `{caller_user.id}` does not own Card `{card_id}`')
+
+    try:
+        card.delete()
+    except card_manager.exceptions.CardException as err:
+        raise ClientException(str(err))
+
+    return card.serialize(caller_user.id)
 
 
 @routes.register('Mutation.addAlbum')

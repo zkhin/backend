@@ -45,6 +45,12 @@ class ChatMessage:
             self._author = self.user_manager.get_user(self.user_id) if self.user_id else None
         return self._author
 
+    @property
+    def chat(self):
+        if not hasattr(self, '_chat'):
+            self._chat = self.chat_manager.get_chat(self.chat_id) if self.chat_id else None
+        return self._chat
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_chat_message(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -65,7 +71,7 @@ class ChatMessage:
         ]
         self.dynamo.client.transact_write_items(transacts)
 
-        self.chat_manager.member_dynamo.update_all_last_message_activity_at(self.chat_id, now)
+        self.chat.update_members_last_message_activity_at(self.user_id, now)
         self.refresh_item(strongly_consistent=True)
         return self
 
@@ -77,7 +83,7 @@ class ChatMessage:
         ]
         self.dynamo.client.transact_write_items(transacts)
 
-        self.chat_manager.member_dynamo.update_all_last_message_activity_at(self.chat_id, now)
+        self.chat.update_members_last_message_activity_at(self.user_id, now)
         return self
 
     def trigger_notifications(self, notification_type, user_ids=None):

@@ -47,42 +47,6 @@ def test_transact_delete(cm_dynamo):
     assert cm_dynamo.get(chat_id, user_id) is None
 
 
-def test_update_all_last_message_activity_at(cm_dynamo):
-    chat_id = 'cid'
-
-    # test with no members, should be no-op
-    now = pendulum.now('utc')
-    cm_dynamo.update_all_last_message_activity_at(chat_id, now)
-
-    # a add member to the chat, verify starting state
-    user_id_1 = 'uid1'
-    now = pendulum.now('utc')
-    transact = cm_dynamo.transact_add(chat_id, user_id_1, now)
-    cm_dynamo.client.transact_write_items([transact])
-    assert cm_dynamo.get(chat_id, user_id_1)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
-
-    # update with one member, verify final state
-    now = pendulum.now('utc')
-    cm_dynamo.update_all_last_message_activity_at(chat_id, now)
-    assert cm_dynamo.get(chat_id, user_id_1)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
-
-    # add another member to the chat
-    user_id_2 = 'uid2'
-    now = pendulum.now('utc')
-    transact = cm_dynamo.transact_add(chat_id, user_id_2, now)
-    cm_dynamo.client.transact_write_items([transact])
-
-    # verify starting state
-    now = pendulum.now('utc')
-    assert cm_dynamo.get(chat_id, user_id_1)['gsiK2SortKey'] < 'chat/' + now.to_iso8601_string()
-    assert cm_dynamo.get(chat_id, user_id_2)['gsiK2SortKey'] < 'chat/' + now.to_iso8601_string()
-
-    # do the update with two members, verify final state
-    cm_dynamo.update_all_last_message_activity_at(chat_id, now)
-    assert cm_dynamo.get(chat_id, user_id_1)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
-    assert cm_dynamo.get(chat_id, user_id_2)['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
-
-
 def test_update_last_message_activity_at(cm_dynamo):
     chat_id = 'cid'
 

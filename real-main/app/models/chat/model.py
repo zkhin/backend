@@ -2,6 +2,8 @@ import logging
 
 import pendulum
 
+from app.models.card.enums import CHAT_ACTIVITY_CARD
+
 from . import enums, exceptions
 
 logger = logging.getLogger()
@@ -12,14 +14,16 @@ class Chat:
     enums = enums
     exceptions = exceptions
 
-    def __init__(self, item, dynamo=None, member_dynamo=None, block_manager=None, chat_message_manager=None,
-                 user_manager=None):
+    def __init__(self, item, dynamo=None, member_dynamo=None, block_manager=None, card_manager=None,
+                 chat_message_manager=None, user_manager=None):
         if dynamo:
             self.dynamo = dynamo
         if member_dynamo:
             self.member_dynamo = member_dynamo
         if block_manager:
             self.block_manager = block_manager
+        if card_manager:
+            self.card_manager = card_manager
         if chat_message_manager:
             self.chat_message_manager = chat_message_manager
         if user_manager:
@@ -94,6 +98,14 @@ class Chat:
         if users:
             self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user, users, now=now)
             self.item['messageCount'] = self.item.get('messageCount', 0) + 1
+
+    def update_members_last_message_activity_at(self, activity_by_user_id, now):
+        # Note that dynamo has no support for batch updates.
+        # This update will need to be made async at some scale (chats with 1000+ members?)
+        for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
+            self.member_dynamo.update_last_message_activity_at(self.id, user_id, now)
+            if user_id != activity_by_user_id:
+                self.card_manager.add_well_known_card_if_dne(user_id, CHAT_ACTIVITY_CARD, now=now)
 
     def leave(self, user):
         if self.type != enums.ChatType.GROUP:

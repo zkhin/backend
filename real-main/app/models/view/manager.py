@@ -19,6 +19,7 @@ class ViewManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['view'] = self
+        self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.chat_message_manager = (
             managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
         )
@@ -88,12 +89,16 @@ class ViewManager:
         return True
 
     def record_views_for_chat_messages(self, grouped_message_ids, user_id, viewed_at):
+        views_recorded = False
         for message_id, view_count in grouped_message_ids.items():
             message = self.chat_message_manager.get_chat_message(message_id)
             if not message:
                 logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE message `{message_id}`')
                 continue
             self.record_view_for_chat_message(message, user_id, view_count, viewed_at)
+            views_recorded = True
+        if views_recorded:
+            self.card_manager.remove_well_known_card_if_exists(user_id, self.card_manager.enums.CHAT_ACTIVITY_CARD)
 
     def record_view_for_chat_message(self, message, user_id, view_count, viewed_at):
         # don't count views of user's own chat messages

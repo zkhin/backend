@@ -187,33 +187,37 @@ def test_record_view_comment(view_manager, comment, user2, user3):
     assert comment.refresh_item().item.get('viewedByCount', 0) == 2
 
 
-def test_record_views_comments_clears_new_comment_activity(view_manager, comment_manager, posts, user, user2, user3):
+def test_record_views_comments_clears_activity(view_manager, comment_manager, card_manager, posts, user, user2):
     post, _ = posts
+    card_id = f'{user.id}:{card_manager.enums.COMMENT_ACTIVITY_CARD.name}'
 
-    # add a comment by a different user to get some activity on the post
+    # add a comment by a different user to get some activity on the post, generate a card
     comment = comment_manager.add_comment('cmid2', post.id, user2.id, 'witty comment')
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is True
     user.refresh_item()
     assert user.item.get('postHasNewCommentActivityCount', 0) == 1
+    assert card_manager.get_card(card_id)
 
     # record a view of that comment by a user that is not the post owner
-    view_manager.record_views_for_comments({comment.id: 2}, user3.id, pendulum.now('utc'))
+    view_manager.record_views_for_comments({comment.id: 2}, user2.id, pendulum.now('utc'))
 
-    # verify the post still has comment activity
+    # verify the post still has comment activity, card still exists
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is True
     user.refresh_item()
     assert user.item.get('postHasNewCommentActivityCount', 0) == 1
+    assert card_manager.get_card(card_id)
 
     # record a view of that comment by the post owner
     view_manager.record_views_for_comments({comment.id: 2}, user.id, pendulum.now('utc'))
 
-    # verify the post now has no comment activity
+    # verify the post now has no comment activity, card no longer exists
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is False
     user.refresh_item()
     assert user.item.get('postHasNewCommentActivityCount', 0) == 0
+    assert card_manager.get_card(card_id) is None
 
 
 def test_record_views_for_comments(view_manager, comment_manager, posts, user, user2, caplog):

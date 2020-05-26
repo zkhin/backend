@@ -143,6 +143,15 @@
   dataSource: DynamodbDataSource
 
 - type: User
+  field: cardCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: cards
+  dataSource: DynamodbDataSource
+
+- type: User
   field: albumCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl

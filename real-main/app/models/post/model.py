@@ -7,6 +7,7 @@ import pendulum
 import PIL.Image as Image
 
 from app.mixins.flag.model import FlagModelMixin
+from app.models.card.enums import COMMENT_ACTIVITY_CARD
 from app.utils import image_size
 
 from . import enums, exceptions
@@ -26,9 +27,9 @@ class Post(FlagModelMixin):
     def __init__(self, item, post_appsync=None, post_dynamo=None, post_image_dynamo=None,
                  post_original_metadata_dynamo=None, cloudfront_client=None, mediaconvert_client=None,
                  post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
-                 comment_manager=None, feed_manager=None, follow_manager=None, followed_first_story_manager=None,
-                 like_manager=None, post_manager=None, trending_manager=None, user_manager=None,
-                 view_manager=None, **kwargs):
+                 card_manager=None, comment_manager=None, feed_manager=None, follow_manager=None,
+                 followed_first_story_manager=None, like_manager=None, post_manager=None, trending_manager=None,
+                 user_manager=None, view_manager=None, **kwargs):
         super().__init__(**kwargs)
 
         if post_appsync:
@@ -53,6 +54,8 @@ class Post(FlagModelMixin):
             self.album_manager = album_manager
         if block_manager:
             self.block_manager = block_manager
+        if card_manager:
+            self.card_manager = card_manager
         if comment_manager:
             self.comment_manager = comment_manager
         if feed_manager:
@@ -543,6 +546,13 @@ class Post(FlagModelMixin):
         old_value = self.item.get('hasNewCommentActivity', False)
         if old_value == new_value:
             return self
+
+        if new_value:
+            self.card_manager.add_well_known_card_if_dne(self.user_id, COMMENT_ACTIVITY_CARD)
+        else:
+            # once we've seen the new comment activity for *any* post, we remove the notification card,
+            # even if there are other posts with activity we have not seen
+            self.card_manager.remove_well_known_card_if_exists(self.user_id, COMMENT_ACTIVITY_CARD)
 
         # order matters to moto (in test suite), but not on dynamo
         transacts = [self.dynamo.transact_set_has_new_comment_activity(self.id, new_value)]

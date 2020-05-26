@@ -501,6 +501,15 @@ module.exports.reportPostViews = gql`
   }
 `
 
+module.exports.deleteCard = gql`
+  mutation DeleteCard ($cardId: ID!) {
+    deleteCard (cardId: $cardId) {
+      ...CardFragment
+    }
+  }
+  ${fragments.card}
+`
+
 module.exports.addComment = gql`
   mutation AddComment ($commentId: ID!, $postId: ID!, $text: String!) {
     addComment (commentId: $commentId, postId: $postId, text: $text) {

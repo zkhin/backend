@@ -140,6 +140,11 @@ def block_manager(dynamo_client):
 
 
 @pytest.fixture
+def card_manager(dynamo_client):
+    yield models.CardManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
 def chat_manager(dynamo_client, appsync_client):
     yield models.ChatManager({'appsync': appsync_client, 'dynamo': dynamo_client})
 

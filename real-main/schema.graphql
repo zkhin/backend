@@ -187,6 +187,9 @@ type Mutation {
   # Report post views
   reportPostViews(postIds: [ID!]!): Boolean
 
+  # Report a notification card was read
+  deleteCard(cardId: ID!): Card
+
   # Add a comment
   #   - trying to comment on a post we do not have access to is an error
   #   - trying to comment on a post that has comments disabled is an error
@@ -306,6 +309,12 @@ type User {
   posts(postStatus: PostStatus, postType: PostType, limit: Int, nextToken: String): PaginatedPosts
   postCount: Int  # only posts with COMPLETED status
 
+  # User's notification cards
+  #   - private to the user themselves
+  #   - ordered by most recently created first
+  cards(limit: Int, nextToken: String): PaginatedCards
+  cardCount: Int
+
   # Do any of the user's posts have Post.hasNewCommentActivity set?
   #   - private to user themselves only
   postHasNewCommentActivity: Boolean
@@ -365,6 +374,19 @@ type User {
 
 type PaginatedUsers {
   items: [User!]!
+  nextToken: String
+}
+
+type Card {
+  # cardId's will be re-used for well-known cards (ex: you have new comment activity)
+  cardId: ID!
+  title: String!
+  subTitle: String
+  action: AWSURL!
+}
+
+type PaginatedCards {
+  items: [Card!]!
   nextToken: String
 }
 

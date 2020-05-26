@@ -70,6 +70,12 @@ module.exports.self = gql`
           ...AlbumFragment
         }
       }
+      cardCount
+      cards {
+        items {
+          ...CardFragment
+        }
+      }
       chatCount
       chats {
         items {
@@ -82,6 +88,7 @@ module.exports.self = gql`
     }
   }
   ${fragments.album}
+  ${fragments.card}
   ${fragments.chat}
   ${fragments.image}
   ${fragments.simpleUserFields}
@@ -153,6 +160,12 @@ module.exports.user = gql`
           ...AlbumFragment
         }
       }
+      cardCount
+      cards {
+        items {
+          ...CardFragment
+        }
+      }
       chatCount
       chats {
         items {
@@ -165,6 +178,7 @@ module.exports.user = gql`
     }
   }
   ${fragments.album}
+  ${fragments.card}
   ${fragments.chat}
   ${fragments.image}
   ${fragments.simpleUserFields}

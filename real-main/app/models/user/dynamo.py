@@ -336,3 +336,26 @@ class UserDynamo:
             kwargs['UpdateExpression'] += ', commentForcedDeletionCount :positive_one'
             kwargs['ExpressionAttributeValues'][':positive_one'] = {'N': '1'}
         return {'Update': kwargs}
+
+    def transact_card_added(self, user_id):
+        kwargs = {
+            'Key': self.typed_pk(user_id),
+            'UpdateExpression': 'ADD cardCount :positive_one',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+            'ExpressionAttributeValues': {
+                ':positive_one': {'N': '1'},
+            },
+        }
+        return {'Update': kwargs}
+
+    def transact_card_deleted(self, user_id):
+        kwargs = {
+            'Key': self.typed_pk(user_id),
+            'UpdateExpression': 'ADD cardCount :negative_one',
+            'ConditionExpression': 'attribute_exists(partitionKey) AND cardCount > :zero',
+            'ExpressionAttributeValues': {
+                ':negative_one': {'N': '-1'},
+                ':zero': {'N': '0'},
+            },
+        }
+        return {'Update': kwargs}

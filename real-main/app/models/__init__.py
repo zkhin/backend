@@ -1,6 +1,7 @@
 __all__ = [
     'AlbumManager',
     'BlockManager',
+    'CardManager',
     'ChatManager',
     'ChatMessageManager',
     'CommentManager',
@@ -16,6 +17,7 @@ __all__ = [
 
 from .album.manager import AlbumManager
 from .block.manager import BlockManager
+from .card.manager import CardManager
 from .chat.manager import ChatManager
 from .chat_message.manager import ChatMessageManager
 from .comment.manager import CommentManager

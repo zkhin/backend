@@ -67,6 +67,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.blockedStatus).toBe('SELF')
   expect(ourUserFull.blockerStatus).toBe('SELF')
   expect(ourUserFull.blockedUsers.items).toHaveLength(1)
+  expect(ourUserFull.cardCount).toBe(0)
+  expect(ourUserFull.cards.items).toHaveLength(0)
   expect(ourUserFull.chatCount).toBe(0)
   expect(ourUserFull.chats.items).toHaveLength(0)
   expect(ourUserFull.commentsDisabled).toBe(false)
@@ -117,6 +119,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.blockerStatus = 'BLOCKING'
   ourUserFull.blockedStatus = 'NOT_BLOCKING'
   ourUserFull.blockedUsers = null
+  ourUserFull.cardCount = null
+  ourUserFull.cards = null
   ourUserFull.chatCount = null
   ourUserFull.chats = null
   ourUserFull.commentsDisabled = null
