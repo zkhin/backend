@@ -159,6 +159,11 @@ Resources:
       GenerateSecret: false
       PreventUserExistenceErrors: LEGACY
       RefreshTokenValidity: 3650
+      AnalyticsConfiguration:
+        ApplicationId: !Ref PinpointApp
+        ExternalId: 'real-backend-cognito-to-pinpoint-client-#{AWS::AccountId}-${self:provider.stage}'
+        RoleArn: !GetAtt CognitoToPinpointRole.Arn
+        UserDataShared: true
 
   CognitoTestingUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -187,12 +192,11 @@ Resources:
         - openid
         - phone
         - profile
-      ReadAttributes:
-        - email
-        - phone_number
-        - family_name
-        - email_verified
-        - phone_number_verified
+      AnalyticsConfiguration:
+        ApplicationId: !Ref PinpointApp
+        ExternalId: 'real-testing-cognito-to-pinpoint-client-#{AWS::AccountId}-${self:provider.stage}'
+        RoleArn: !GetAtt CognitoToPinpointRole.Arn
+        UserDataShared: true
       WriteAttributes:
         - email
         - phone_number
@@ -225,12 +229,36 @@ Resources:
         - openid
         - phone
         - profile
-      ReadAttributes:
-        - email
-        - phone_number
+      AnalyticsConfiguration:
+        ApplicationId: !Ref PinpointApp
+        ExternalId: 'real-frontend-cognito-to-pinpoint-client-#{AWS::AccountId}-${self:provider.stage}'
+        RoleArn: !GetAtt CognitoToPinpointRole.Arn
+        UserDataShared: true
       WriteAttributes:
         - email
         - phone_number
+
+  CognitoToPinpointRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cognito-idp.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      # configured to match the auto-generated role configuring via AWS console
+      Policies:
+        - PolicyName: CognitoToPinpointPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: mobiletargeting:UpdateEndpoint
+                Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
 
 Outputs:
 

@@ -70,90 +70,79 @@ prmt.get(prmtSchema, async (err, result) => {
     return 1
   }
   if (! result.email && ! result.phone) throw 'At least one of email or phone is required'
-  const userId = await signUserUp(result.email, result.phone, result.password, result.autoconfirm)
-  if (result.pinpoint) await trackWithPinpoint(userId, result.autoconfirm)
+  const endpointId = result.pinpoint ? uuidv4() : null
+  const userId = await signUserUp(result.email, result.phone, result.password, result.autoconfirm, endpointId)
+  if (result.pinpoint && result.autoconfirm) await trackWithPinpoint(userId, endpointId)
 })
 
-const signUserUp = async (email, phone, password, autoconfirm) => {
+const signUserUp = async (email, phone, password, autoconfirm, endpointId) => {
   if (! password) {
     password = pwdGenerator.generate({length: 8})
     console.log(`Auto-generated password: ${password}`)
-  }
-  const userAttrs = []
-  const clientMetadata = {}
-  if (autoconfirm) {
-    userAttrs.push({
-      Name: 'family_name',
-      Value: familyName,
-    })
-    clientMetadata.autoConfirmUser = 'true'
-  }
-  if (email) {
-    userAttrs.push({
-      Name: 'email',
-      Value: email,
-    })
-  }
-  if (phone) {
-    userAttrs.push({
-      Name: 'phone_number',
-      Value: phone,
-    })
   }
 
   // get a new un-authenticated ID from the identity pool
   const idResp = await identityPoolClient.getId().promise()
   const userId = idResp.IdentityId
 
+  const signUpOpts = {
+    Username: userId,
+    Password: password,
+    UserAttributes: [],
+  }
+  if (autoconfirm) {
+    signUpOpts.UserAttributes.push({
+      Name: 'family_name',
+      Value: familyName,
+    })
+    signUpOpts.ClientMetadata = {autoConfirmUser: 'true'}
+  }
+  if (email) {
+    signUpOpts.UserAttributes.push({
+      Name: 'email',
+      Value: email,
+    })
+  }
+  if (phone) {
+    signUpOpts.UserAttributes.push({
+      Name: 'phone_number',
+      Value: phone,
+    })
+  }
+  if (endpointId) signUpOpts.AnalyticsMetadata = {AnalyticsEndpointId: endpointId}
+
   // create an entry in the user pool with matching 'cognito username'<->'identity id'
   const userPoolClientId = autoconfirm ? testingCognitoClientId : frontendCognitoClientId
   const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: userPoolClientId}})
-  await userPoolClient.signUp({
-    Username: userId,
-    Password: password,
-    UserAttributes: userAttrs,
-    ClientMetadata: clientMetadata,
-  }).promise()
+  let resp = await userPoolClient.signUp(signUpOpts).promise()
   console.log(`User signed up with auto-generated userId: '${userId}'`)
+  if (endpointId) console.log(`Pinpoint userId (sub): '${resp.UserSub}', endpointId: '${endpointId}'`)
   return userId
 }
 
-const trackWithPinpoint = async (userId, autoconfirm) => {
+/* Only should be called if we're autoconfirming */
+const trackWithPinpoint = async (userId, endpointId) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
 
-  let resp = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
-  const credentials = new AWS.Credentials(
-    resp.Credentials.AccessKeyId,
-    resp.Credentials.SecretKey,
-    resp.Credentials.SessionToken,
-  )
-  const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
+  const pinpoint = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
+    .then(resp => resp.Credentials)
+    .then(creds => new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken))
+    .then(credentials => new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}}))
 
-  const endpointId = uuidv4()
-  await pinpoint.updateEndpoint({
-    EndpointId: endpointId,
-    EndpointRequest: {User: {UserId: userId}},
-  }).promise()
-  console.log(`Pinpoint endpoint '${endpointId}' generated for userId '${userId}'`)
-
-  // if we're autoconfirming, then signup is done here
-  // else, it is done and recorded when the confirmation code is submitted
-  if (autoconfirm) {
-    // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
-    const eventType = '_userauth.sign_up'
-    resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
-      Endpoint: {},
-      Events: {[eventType]:{
-        EventType: eventType,
-        Timestamp: moment().toISOString(),
-      }},
-    }}}}).promise()
-    if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
-      console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
-    }
-    else {
-      console.log(`Error recording pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
-      console.log(util.inspect(resp, {showHidden: false, depth: null}))
-    }
+  // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
+  const eventType = '_userauth.sign_up'
+  let resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
+    Endpoint: {},
+    Events: {[eventType]:{
+      EventType: eventType,
+      Timestamp: moment().toISOString(),
+    }},
+  }}}}).promise()
+  if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
+    console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
+  }
+  else {
+    console.log(`Error recording pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
+    console.log(util.inspect(resp, {showHidden: false, depth: null}))
   }
 }
