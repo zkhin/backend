@@ -2,9 +2,8 @@ import logging
 import os
 import re
 
-from app.logging import configure_logging, LogLevelContext
+from app.logging import handler_logging, LogLevelContext
 
-configure_logging()
 logger = logging.getLogger()
 
 COGNITO_TESTING_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_TESTING_CLIENT_ID')
@@ -16,6 +15,7 @@ class CognitoClientException(Exception):
     pass
 
 
+@handler_logging
 def pre_sign_up(event, context):
     with LogLevelContext(logger, logging.INFO):
         logger.info('Handling Cognito PreSignUp event', extra={'event': event})
@@ -46,6 +46,7 @@ def pre_sign_up(event, context):
     return event
 
 
+@handler_logging
 def pre_auth(event, context):
     with LogLevelContext(logger, logging.INFO):
         logger.info('Handling Cognito PreAuth event', extra={'event': event})
@@ -57,6 +58,7 @@ def pre_auth(event, context):
     return event
 
 
+@handler_logging
 def custom_message(event, context):
     with LogLevelContext(logger, logging.INFO):
         logger.info('Handling Cognito CustomMessage event', extra={'event': event})
@@ -73,6 +75,7 @@ def custom_message(event, context):
     return event
 
 
+@handler_logging
 def define_auth_challenge(event, context):
     with LogLevelContext(logger, logging.INFO):
         logger.info('Handling Cognito DefineAuthChallenge event', extra={'event': event})

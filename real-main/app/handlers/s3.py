@@ -3,14 +3,13 @@ import os
 import urllib
 
 from app import clients, models
-from app.logging import configure_logging, LogLevelContext
+from app.logging import handler_logging, LogLevelContext
 from app.models.post.enums import PostStatus, PostType
 
 from . import xray
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
-configure_logging()
 logger = logging.getLogger()
 xray.patch_all()
 
@@ -28,6 +27,7 @@ managers = {}
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
 
+@handler_logging
 def image_post_uploaded(event, context):
     # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
     # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
@@ -71,6 +71,7 @@ def image_post_uploaded(event, context):
         post.error()
 
 
+@handler_logging
 def video_post_uploaded(event, context):
     # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
     # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
@@ -105,6 +106,7 @@ def video_post_uploaded(event, context):
         post.error()
 
 
+@handler_logging
 def video_post_processed(event, context):
     # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
     # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.

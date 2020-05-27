@@ -2,12 +2,11 @@
 import logging
 import os
 
-from app.logging import configure_logging, LogLevelContext
+from app.logging import handler_logging, LogLevelContext
 
 from . import routes
 from .exceptions import ClientException
 
-configure_logging()
 logger = logging.getLogger()
 
 # use this in the test suite to turn off auto-disocvery of routes
@@ -16,6 +15,7 @@ if route_path:
     routes.discover(route_path)
 
 
+@handler_logging
 def dispatch(event, context):
     "Top-level dispatch of appsync event to the correct handler"
 
@@ -54,15 +54,5 @@ def dispatch(event, context):
             'data': err.data,
             'info': err.info,
         }}
-    except Exception as err:
-        # By logging the exception and then raising the error here, we:
-        #   1) get to log the error ourselves to CloudWatch in a nice json format with all the info we want
-        #   2) ensure an error is returned to the client
-        #   3) get the uncaught exception logged to CloudWatch in a format that that the built-in 'Errors'
-        #      metric will catch, thus triggering alerts
-        # Note that this means the error gets logged to CloudWatch twice, once with prefix `ERROR` (our json object)
-        # with prefix `[ERROR]` (the error message and traceback as a string)
-        logger.exception(str(err))
-        raise err
 
     return {'success': resp}

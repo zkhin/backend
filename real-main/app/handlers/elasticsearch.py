@@ -1,17 +1,17 @@
 import logging
 
 from app.clients import ESSearchClient
-from app.logging import configure_logging
+from app.logging import handler_logging
 
 from . import xray
 
-configure_logging()
 logger = logging.getLogger()
 xray.patch_all()
 
 elasticsearch_client = ESSearchClient()
 
 
+@handler_logging
 def dynamodb_stream(event, context):
     for record in event['Records']:
         # only user profile records
