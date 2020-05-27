@@ -19,7 +19,9 @@ class UserManager:
 
     enums = enums
     exceptions = exceptions
-    client_names = ['cloudfront', 'cognito', 'dynamo', 'facebook', 'google', 's3_uploads', 's3_placeholder_photos']
+    client_names = [
+        'cloudfront', 'cognito', 'dynamo', 'facebook', 'google', 'pinpoint', 's3_uploads', 's3_placeholder_photos',
+    ]
     username_tag_regex = re.compile('@' + UserValidate.username_regex.pattern)
 
     def __init__(self, clients, managers=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY):
@@ -114,6 +116,10 @@ class UserManager:
                 self.cognito_client.clear_user_attribute(user_id, 'preferred_username')
             raise
 
+        if email:
+            self.pinpoint_client.set_email_endpoint(user_id, email)
+        if phone:
+            self.pinpoint_client.set_sms_endpoint(user_id, phone)
         user = self.init_user(item)
         self.follow_real_user(user)
         return user
