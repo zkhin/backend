@@ -10,14 +10,16 @@ from app.models.post.enums import PostType
 @pytest.fixture
 def following_users(user_manager, follow_manager, cognito_client):
     "A pair of user ids for which one follows the other"
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='fruid')
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='fduid')
-    follower_user = user_manager.create_cognito_only_user('fruid', 'frUname')
-    followed_user = user_manager.create_cognito_only_user('fduid', 'fdUname')
+    our_user_id, our_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    their_user_id, their_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(our_user_id, our_username, f'{our_username}@real.app')
+    cognito_client.create_verified_user_pool_entry(their_user_id, their_username, f'{their_username}@real.app')
+    our_user = user_manager.create_cognito_only_user(our_user_id, our_username)
+    their_user = user_manager.create_cognito_only_user(their_user_id, their_username)
     follow_manager.dynamo.client.transact_write_items([
-        follow_manager.dynamo.transact_add_following(follower_user.id, followed_user.id, FollowStatus.FOLLOWING),
+        follow_manager.dynamo.transact_add_following(our_user.id, their_user.id, FollowStatus.FOLLOWING),
     ])
-    return (follower_user, followed_user)
+    yield (our_user, their_user)
 
 
 @pytest.fixture

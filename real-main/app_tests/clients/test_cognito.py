@@ -1,8 +1,10 @@
+import uuid
+
 import pytest
 
 
 @pytest.mark.skip(reason='moto appears to not support CUSTOM_AUTH AuthFlow for admin_initiate_auth')
-def test_create_user_pool_entry(cognito_client):
+def test_get_user_pool_id_token(cognito_client):
     pass
 
 
@@ -14,6 +16,27 @@ def test_clear_user_attribute(cognito_client):
 @pytest.mark.skip(reason='moto appears to have no implemented filters on list_users yet')
 def test_list_unconfirmed_user_pool_entries(cognito_client):
     pass
+
+
+def test_create_verified_user_pool_entry(cognito_client):
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())
+    email = f'{username}-test@real.app'
+
+    # check they aren't there
+    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+        cognito_client.get_user_attributes(user_id)
+
+    # create them, check they are there
+    cognito_client.create_verified_user_pool_entry(user_id, username, email)
+    attrs = cognito_client.get_user_attributes(user_id)
+    assert len(attrs) == 3
+    assert attrs['email'] == email
+    assert attrs['email_verified'] == 'true'
+    assert attrs['preferred_username'] == username
+
+    # verify we can't create them again
+    with pytest.raises(cognito_client.boto_client.exceptions.UsernameExistsException):
+        cognito_client.create_verified_user_pool_entry(user_id, username, email)
 
 
 def test_set_and_get_user_attributes(cognito_client):

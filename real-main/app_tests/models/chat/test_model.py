@@ -9,14 +9,16 @@ from app.models.chat.exceptions import ChatException
 
 @pytest.fixture
 def user1(user_manager, cognito_client):
-    user_id = str(uuid.uuid4())
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
-    yield user_manager.create_cognito_only_user(user_id, str(uuid.uuid4())[:8])
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 user2 = user1
 user3 = user1
 user4 = user1
+user5 = user1
+user6 = user1
 
 
 @pytest.fixture
@@ -80,7 +82,7 @@ def test_edit_group_chat(group_chat, user1):
     ]
 
 
-def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager, cognito_client):
+def test_add(group_chat, user1, user2, user3, user4, user5, user6, user_manager, block_manager, cognito_client):
     group_chat.chat_message_manager = mock.Mock()
     now = pendulum.now('utc')
 
@@ -106,11 +108,9 @@ def test_add(group_chat, user1, user2, user3, user4, user_manager, block_manager
     assert msg_mock.call_args.args[2][0].id == user2.id  # Note: comparing user instances doesn't work
     assert msg_mock.call_args.kwargs == {'now': now}
 
-    # create two users, one that blocks user2 and one that user2 blocks
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid-blocker')
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid-blocked')
-    user_blocker = user_manager.create_cognito_only_user('pbuid-blocker', 'pbUname_blocker')
-    user_blocked = user_manager.create_cognito_only_user('pbuid-blocked', 'pbUname_blocked')
+    # user 5 blocks user2 and user2 blocks user6
+    user_blocker = user5
+    user_blocked = user6
     block_manager.block(user_blocker, user2)
     block_manager.block(user2, user_blocked)
 

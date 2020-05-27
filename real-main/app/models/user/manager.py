@@ -86,9 +86,11 @@ class UserManager:
             raise self.exceptions.UserValidationException(
                 f'No entry found in cognito user pool with cognito username `{user_id}`'
             )
+        preferred_username = attrs.get('preferred_username', None)
         email = attrs.get('email') if attrs.get('email_verified', 'false') == 'true' else None
         phone = attrs.get('phone_number') if attrs.get('phone_number_verified', 'false') == 'true' else None
-        preferred_username = attrs.get('preferred_username', None)
+        if not email and not phone:
+            raise self.exceptions.UserValidationException(f'User `{user_id}` has neither verified email nor phone')
 
         # set the lowercased version of username in cognito
         # this is part of allowing case-insensitive logins
@@ -127,7 +129,8 @@ class UserManager:
 
         # set the user up in cognito, claims the username at the same time
         try:
-            cognito_id_token = self.cognito_client.create_user_pool_entry(user_id, email, username)
+            self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
+            cognito_id_token = self.cognito_client.get_user_pool_id_token(user_id)
             self.cognito_client.link_identity_pool_entries(user_id, cognito_id_token=cognito_id_token,
                                                            facebook_access_token=facebook_access_token)
         except (self.cognito_client.boto_client.exceptions.AliasExistsException,
@@ -158,7 +161,8 @@ class UserManager:
 
         # set the user up in cognito
         try:
-            cognito_id_token = self.cognito_client.create_user_pool_entry(user_id, email, username)
+            self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
+            cognito_id_token = self.cognito_client.get_user_pool_id_token(user_id)
             self.cognito_client.link_identity_pool_entries(user_id, cognito_id_token=cognito_id_token,
                                                            google_id_token=google_id_token)
         except (self.cognito_client.boto_client.exceptions.AliasExistsException,

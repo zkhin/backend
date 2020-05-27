@@ -1,4 +1,5 @@
 import json
+import uuid
 
 import pytest
 
@@ -13,8 +14,9 @@ def chat_message_appsync(appsync_client):
 
 @pytest.fixture
 def user1(user_manager, post_manager, image_data_b64, cognito_client):
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid')
-    user = user_manager.create_cognito_only_user('pbuid', 'pbUname')
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    user = user_manager.create_cognito_only_user(user_id, username)
     # give the user a profile photo so that it will show up in the message notification trigger calls
     post = post_manager.add_post(user, 'pid', PostType.IMAGE, image_input={'imageData': image_data_b64})
     user.update_photo(post.id)
@@ -23,8 +25,9 @@ def user1(user_manager, post_manager, image_data_b64, cognito_client):
 
 @pytest.fixture
 def user2(user_manager, cognito_client):
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username='pbuid2')
-    yield user_manager.create_cognito_only_user('pbuid2', 'pbUname2')
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture

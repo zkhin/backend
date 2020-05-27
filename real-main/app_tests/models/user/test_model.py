@@ -1,4 +1,5 @@
 import unittest.mock as mock
+import uuid
 
 import pytest
 
@@ -9,28 +10,44 @@ from app.utils import image_size
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id = 'my-user-id'
-    username = 'theREALuser'
-    # create the user in the userpool (frontend does this in live system)
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user2(user_manager, cognito_client):
-    user_id = 'my-user-id-2'
-    username = 'theREALuser2'
-    # create the user in the userpool (frontend does this in live system)
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user3(user_manager, cognito_client):
-    user_id = 'my-user-id-3'
-    username = 'theREALuser3'
-    # create the user in the userpool (frontend does this in live system)
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def user_verified_phone(user_manager, cognito_client):
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    phone = '+12125551212'
+    cognito_client.boto_client.admin_create_user(
+        UserPoolId=cognito_client.user_pool_id,
+        Username=user_id,
+        MessageAction='SUPPRESS',
+        UserAttributes=[{
+            'Name': 'phone_number',
+            'Value': phone,
+        }, {
+            'Name': 'phone_number_verified',
+            'Value': 'true',
+        }, {
+            'Name': 'preferred_username',
+            'Value': username.lower(),
+        }],
+    )
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
@@ -320,7 +337,9 @@ def test_start_change_email_same_as_existing(user):
         user.start_change_contact_attribute('email', new_email)
 
 
-def test_start_change_email_no_old_value(user):
+def test_start_change_email_no_old_value(user_verified_phone):
+    user = user_verified_phone
+
     # check starting state
     assert 'email' not in user.item
     user_attrs = user.cognito_client.get_user_attributes(user.id)
@@ -338,16 +357,19 @@ def test_start_change_email_no_old_value(user):
 
 
 def test_finish_change_email_no_unverified_email(user):
+    org_email = user.item['email']
     access_token = {}
     verification_code = {}
     with pytest.raises(user.exceptions.UserVerificationException):
         user.finish_change_contact_attribute('email', access_token, verification_code)
-    assert 'email' not in user.item
+    assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
+    assert user.item['email'] == org_email
 
 
 def test_finish_change_email_wrong_verification_code(user):
     # set attributes in cognito that would have been set when email change process started
     new_email = 'go@go.com'
+    org_email = user.item['email']
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
     # moto has not yet implemented verify_user_attribute
@@ -358,7 +380,8 @@ def test_finish_change_email_wrong_verification_code(user):
     verification_code = {}
     with pytest.raises(user.exceptions.UserVerificationException):
         user.finish_change_contact_attribute('email', access_token, verification_code)
-    assert 'email' not in user.item
+    assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
+    assert user.item['email'] == org_email
 
 
 def test_delete_user_basic_flow(user):

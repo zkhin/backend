@@ -24,7 +24,7 @@ class CognitoClient:
         self.googleLoginsKey = 'accounts.google.com'
         self.facebookLoginsKey = 'graph.facebook.com'
 
-    def create_user_pool_entry(self, user_id, email, username):
+    def create_verified_user_pool_entry(self, user_id, username, email):
         # set them up in the user pool
         self.boto_client.admin_create_user(
             UserPoolId=self.user_pool_id,
@@ -42,7 +42,7 @@ class CognitoClient:
             }],
         )
 
-        # login as them
+    def get_user_pool_id_token(self, user_id):
         resp = self.boto_client.admin_initiate_auth(
             UserPoolId=self.user_pool_id,
             ClientId=self.client_id,

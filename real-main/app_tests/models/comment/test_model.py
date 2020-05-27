@@ -8,7 +8,7 @@ from app.mixins.view.enums import ViewedStatus
 @pytest.fixture
 def user(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    cognito_client.boto_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
+    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
