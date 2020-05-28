@@ -62,9 +62,6 @@ Resources:
                   - !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
               # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
               - Effect: Allow
-                Action: mobiletargeting:UpdateEndpoint
-                Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
-              - Effect: Allow
                 Action: mobiletargeting:PutEvents
                 Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
 
@@ -88,9 +85,6 @@ Resources:
             Version: '2012-10-17'
             Statement:
               # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
-              - Effect: Allow
-                Action: mobiletargeting:UpdateEndpoint
-                Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'endpoints', '*' ] ]
               - Effect: Allow
                 Action: mobiletargeting:PutEvents
                 Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
