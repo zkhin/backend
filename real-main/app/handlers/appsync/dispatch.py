@@ -19,8 +19,9 @@ if route_path:
 def dispatch(event, context):
     "Top-level dispatch of appsync event to the correct handler"
 
-    field = event['field']          # graphql field name in format 'ParentType.fieldName'
     arguments = event['arguments']  # graphql field arguments, if any
+    field = event['field']          # graphql field name in format 'ParentType.fieldName'
+    headers = event['headers']      # most of the request headers
     source = event.get('source')    # result of parent resolver, if any
 
     # identity.cognitoIdentityId is None when called by backend to trigger subscriptions
@@ -34,15 +35,24 @@ def dispatch(event, context):
         logger.exception(msg)
         raise Exception(msg)
 
+    gql_details = {
+        'field': field,
+        'caller_user_id': caller_user_id,
+        'arguments': arguments,
+        'source': source,
+    }
+
+    client = {}
+    if (version := headers.get('x-real-version')):
+        client['version'] = version
+    if (device := headers.get('x-real-device')):
+        client['device'] = device
+    if (system := headers.get('x-real-system')):
+        client['system'] = system
+
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        gql_details = {
-            'field': field,
-            'caller_user_id': caller_user_id,
-            'arguments': arguments,
-            'source': source,
-        }
-        logger.info(f'Handling AppSync GQL resolution of `{field}`', extra={'gql': gql_details})
+        logger.info(f'Handling AppSync GQL resolution of `{field}`', extra={'gql': gql_details, 'client': client})
 
     try:
         resp = handler(caller_user_id, arguments, source, context)

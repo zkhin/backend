@@ -4,6 +4,10 @@
 
 const AWS = require('aws-sdk')
 const AWSAppSyncClient = require('aws-appsync').default
+const { createAppSyncLink } = require('aws-appsync')
+const { setContext } = require('apollo-link-context')
+const { ApolloLink } = require('apollo-link')
+const { createHttpLink } = require('apollo-link-http')
 const dotenv = require('dotenv')
 const fs = require('fs')
 const gql = require('graphql-tag')
@@ -34,7 +38,7 @@ const awsCredentials = new AWS.Credentials(
   tokensCreds.credentials.SessionToken,
 )
 
-const appsyncClient = new AWSAppSyncClient({
+const appsyncConfig = {
   url: appsyncApiUrl,
   region: AWS.config.region,
   auth: {
@@ -42,14 +46,32 @@ const appsyncClient = new AWSAppSyncClient({
     credentials: awsCredentials,
   },
   disableOffline: true,
-}, {
+}
+const appsyncOptions = {
   defaultOptions: {
     query: {
       fetchPolicy: 'network-only',
       errorPolicy: 'all',
     },
   },
-})
+  link: createAppSyncLink({
+    ...appsyncConfig,
+    resultsFetcherLink: ApolloLink.from([
+      setContext((request, previousContext) => ({
+        headers: {
+          ...previousContext.headers,
+          ['x-real-version']: '1.2.3(456)',
+          ['x-real-device']: 'iPhone7,2', // https://www.npmjs.com/package/react-native-device-info#getdeviceid
+          ['x-real-system']: 'iOS 11.0',  // https://www.npmjs.com/package/react-native-device-info#getsystemname
+        }
+      })),
+      createHttpLink({
+        uri: appsyncConfig.url
+      })
+    ])
+  })
+}
+const appsyncClient = new AWSAppSyncClient(appsyncConfig, appsyncOptions)
 
 const startChangeUserEmail = gql`
   mutation StartChangeUserEmail ($email: AWSEmail!) {

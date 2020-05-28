@@ -2,9 +2,10 @@
     "version": "2018-05-29",
     "operation": "Invoke",
     "payload": {
-      "field": "${ctx.info.parentTypeName}.${ctx.info.fieldName}",
-      "identity": $util.toJson($ctx.identity),
       "arguments": $util.toJson($ctx.args),
+      "field": "${ctx.info.parentTypeName}.${ctx.info.fieldName}",
+      "headers": $util.toJson($ctx.request.headers),
+      "identity": $util.toJson($ctx.identity),
       "source": $util.toJson($ctx.source)
     }
 }

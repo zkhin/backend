@@ -46,7 +46,7 @@ class LogLevelContext:
 class CloudWatchFormatter(logging.Formatter):
     "Format logging records so they json and readable in CloudWatch"
 
-    extras = ('event', 'gql', 's3_key')
+    extras = ('client', 'event', 'gql', 's3_key')
 
     def format(self, record):
         # clear away the lamba path prefix

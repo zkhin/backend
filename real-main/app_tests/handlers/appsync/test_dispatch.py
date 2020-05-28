@@ -13,6 +13,7 @@ def cognito_authed_event():
         'arguments': ['arg1', 'arg2'],
         'identity': {'cognitoIdentityId': '42-42'},
         'source': {'anotherField': 42},
+        'headers': {'x-real-version': '1.2.3(456)'},
     }
 
 
@@ -23,6 +24,7 @@ def api_key_authed_event():
         'arguments': ['arg1', 'arg2'],
         'identity': {},
         'source': {'anotherField': 42},
+        'headers': {},
     }
 
 
