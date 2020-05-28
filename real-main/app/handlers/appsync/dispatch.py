@@ -37,7 +37,7 @@ def dispatch(event, context):
 
     gql_details = {
         'field': field,
-        'caller_user_id': caller_user_id,
+        'callerUserId': caller_user_id,
         'arguments': arguments,
         'source': source,
     }
