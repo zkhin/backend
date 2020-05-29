@@ -129,6 +129,12 @@ class User:
         self.item = self.dynamo.set_user_accepted_eula_version(self.id, version)
         return self
 
+    def set_apns_token(self, token):
+        if token == self.item.get('apnsToken'):
+            return self
+        self.item = self.dynamo.set_user_apns_token(self.id, token)
+        return self
+
     def set_privacy_status(self, privacy_status):
         old_privacy_status = self.item.get('privacyStatus')
         if privacy_status == old_privacy_status:

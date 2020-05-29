@@ -598,3 +598,65 @@ def test_is_forced_disabling_criteria_met_by_comments(user):
     user.item['commentDeletedCount'] = 4
     user.item['commentForcedDeletionCount'] = 1
     assert user.is_forced_disabling_criteria_met_by_comments() is True
+
+
+def test_set_user_accepted_eula_version(user):
+    assert 'acceptedEULAVersion' not in user.item
+
+    # set it
+    user.set_accepted_eula_version('version-1')
+    assert user.item['acceptedEULAVersion'] == 'version-1'
+    assert user.refresh_item().item['acceptedEULAVersion'] == 'version-1'
+
+    # no-op set it to same value
+    org_item = user.item
+    user.set_accepted_eula_version('version-1')
+    assert user.item is org_item
+    assert user.refresh_item().item['acceptedEULAVersion'] == 'version-1'
+
+    # change value
+    user.set_accepted_eula_version('version-2')
+    assert user.item['acceptedEULAVersion'] == 'version-2'
+    assert user.refresh_item().item['acceptedEULAVersion'] == 'version-2'
+
+    # delete value
+    user.set_accepted_eula_version(None)
+    assert 'acceptedEULAVersion' not in user.item
+    assert 'acceptedEULAVersion' not in user.refresh_item().item
+
+    # no-op delete
+    org_item = user.item
+    user.set_accepted_eula_version(None)
+    assert user.item is org_item
+    assert 'acceptedEULAVersion' not in user.refresh_item().item
+
+
+def test_set_apns_token(user):
+    assert 'apnsToken' not in user.item
+
+    # set it
+    user.set_apns_token('token-1')
+    assert user.item['apnsToken'] == 'token-1'
+    assert user.refresh_item().item['apnsToken'] == 'token-1'
+
+    # no-op set it to same value
+    org_item = user.item
+    user.set_apns_token('token-1')
+    assert user.item is org_item
+    assert user.refresh_item().item['apnsToken'] == 'token-1'
+
+    # change value
+    user.set_apns_token('token-2')
+    assert user.item['apnsToken'] == 'token-2'
+    assert user.refresh_item().item['apnsToken'] == 'token-2'
+
+    # delete value
+    user.set_apns_token(None)
+    assert 'apnsToken' not in user.item
+    assert 'apnsToken' not in user.refresh_item().item
+
+    # no-op delete
+    org_item = user.item
+    user.set_apns_token(None)
+    assert user.item is org_item
+    assert 'apnsToken' not in user.refresh_item().item

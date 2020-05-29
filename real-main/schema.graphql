@@ -97,8 +97,10 @@ type Mutation {
     themeCode: String
   ): User
 
-  # Set the accepted version of the EULA
+  # Various one-off user property setters
+  # Set to the empty string to delete a property
   setUserAcceptedEULAVersion(version: String!): User
+  setUserAPNSToken(token: String!): User
 
   # Follow or unfollow a user
   # If the user has a private profile, followUser will create a follow request

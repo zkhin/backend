@@ -611,3 +611,25 @@ test('User verificationHidden - get, set, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.verificationHidden).toBeNull()
 })
+
+
+test('User setUserAPNSToken', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // reading the APNS token is purposefully left out of the api, so verification here is limited
+
+  // set it
+  let resp = await ourClient.mutate({mutation: mutations.setUserAPNSToken, variables: {token: 'apns-token'}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.setUserAPNSToken.userId).toBe(ourUserId)
+
+  // change it
+  resp = await ourClient.mutate({mutation: mutations.setUserAPNSToken, variables: {token: 'apns-token-other'}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.setUserAPNSToken.userId).toBe(ourUserId)
+
+  // delete it
+  resp = await ourClient.mutate({mutation: mutations.setUserAPNSToken, variables: {token: ''}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.setUserAPNSToken.userId).toBe(ourUserId)
+})

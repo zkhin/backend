@@ -213,6 +213,19 @@ def set_user_accepted_eula_version(caller_user, arguments, source, context):
     return caller_user.serialize(caller_user.id)
 
 
+@routes.register('Mutation.setUserAPNSToken')
+@validate_caller
+def set_user_apns_token(caller_user, arguments, source, context):
+    token = arguments['token']
+
+    # use the empty string to request deleting
+    if token == '':
+        token = None
+
+    caller_user.set_apns_token(token)
+    return caller_user.serialize(caller_user.id)
+
+
 @routes.register('Mutation.resetUser')
 def reset_user(caller_user_id, arguments, source, context):
     new_username = arguments.get('newUsername')

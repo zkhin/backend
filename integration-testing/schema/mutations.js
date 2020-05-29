@@ -66,6 +66,14 @@ module.exports.setUserAcceptedEULAVersion = gql`
   }
 `
 
+module.exports.setUserAPNSToken = gql`
+  mutation SetUserAPNSToken ($token: String!) {
+    setUserAPNSToken (token: $token) {
+      userId
+    }
+  }
+`
+
 module.exports.setUserFollowCountsHidden = gql`
   mutation SetUserFollowCountsHidden ($value: Boolean!) {
     setUserDetails (followCountsHidden: $value) {
