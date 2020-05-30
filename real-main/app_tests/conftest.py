@@ -104,6 +104,11 @@ def google_client():
     yield mock.Mock(clients.GoogleClient(lambda: {}))
 
 
+@pytest.fixture
+def pinpoint_client():
+    yield mock.Mock(clients.PinpointClient(app_id='my-app-id'))
+
+
 # can't nest the moto context managers, it appears. To be able to use two mocked S3 buckets
 # they thus need to be yielded under the same context manager
 @pytest.fixture
@@ -201,7 +206,7 @@ def trending_manager(dynamo_client):
 
 @pytest.fixture
 def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeholder_photos_client, cognito_client,
-                 facebook_client, google_client):
+                 facebook_client, google_client, pinpoint_client):
     yield models.UserManager({
         'cloudfront': cloudfront_client,
         'dynamo': dynamo_client,
@@ -210,4 +215,5 @@ def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeho
         'cognito': cognito_client,
         'facebook': facebook_client,
         'google': google_client,
+        'pinpoint': pinpoint_client,
     })
