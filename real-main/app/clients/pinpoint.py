@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 
 import boto3
 
@@ -14,36 +15,81 @@ class PinpointClient:
         self.app_id = app_id
         self.client = boto3.client('pinpoint')
 
-    def set_email_endpoint(self, user_id, email):
-        # call upon confirming an email
-        pass
+    def create_email_endpoint(self, user_id, email):
+        endpoint_id = str(uuid.uuid4())
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'EndpointId': endpoint_id,
+            'EndpointRequest': {
+                'Address': email,
+                'ChannelType': 'EMAIL',
+                'User': {
+                    'UserId': user_id,
+                }
+            }
+        }
+        self.client.update_endpoint(**kwargs)
+        return endpoint_id
 
-    def set_sms_endpoint(self, user_id, phone_number):
-        # call upon confirming a phone number
-        pass
+    def create_sms_endpoint(self, user_id, phone_number):
+        endpoint_id = str(uuid.uuid4())
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'EndpointId': endpoint_id,
+            'EndpointRequest': {
+                'Address': phone_number,
+                'ChannelType': 'SMS',
+                'User': {
+                    'UserId': user_id,
+                }
+            }
+        }
+        self.client.update_endpoint(**kwargs)
+        return endpoint_id
 
-    def disable_email_endpoint(self, user_id, email):
-        # call upon completing the 'change my email' flow
-        pass
+    def get_user_email_endpoints(self, user_id):
+        "A dict of {endpoint_id: email_address}"
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'UserId': user_id,
+        }
+        try:
+            resp = self.client.get_user_endpoints(**kwargs)
+        except self.client.exceptions.NotFoundException:
+            return {}
+        return {
+            item['Id']: item['Address']
+            for item in resp['EndpointsResponse']['Item']
+            if item['ChannelType'] == 'EMAIL' and item['EndpointStatus'] == 'ACTIVE'
+        }
 
-    def disable_sms_endpoint(self, user_id, email):
-        # call upon completing the 'change my phone number' flow
-        pass
+    def get_user_sms_endpoints(self, user_id):
+        "A dict of {endpoint_id: email_address}"
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'UserId': user_id,
+        }
+        try:
+            resp = self.client.get_user_endpoints(**kwargs)
+        except self.client.exceptions.NotFoundException:
+            return {}
+        return {
+            item['Id']: item['Address']
+            for item in resp['EndpointsResponse']['Item']
+            if item['ChannelType'] == 'SMS' and item['EndpointStatus'] == 'ACTIVE'
+        }
 
-    def disable_endpoints(self, user_id):
-        "Disable all of a user's endpoints"
-        # call when a user is disabled
-        pass
+    def delete_endpoint(self, endpoint_id):
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'EndpointId': endpoint_id,
+        }
+        self.client.delete_endpoint(**kwargs)
 
-    def delete_endpoints(self, user_id):
+    def delete_user_endpoints(self, user_id):
         "Delete all of a user's endpoints"
-        # call when a user is deleted/reset
-        pass
-
-    def get_user_addresses(self, user_id):
-        "A dict of ChannelType: Address, one for each active endpoint of the user"
-        # handle multiple endpoints of the same ChannelType?
-        pass  # TODO
-
-    def send_message(self, user_id, endpoint_id):  # specify channel_type instead of endpoint_id?
-        pass  # TODO
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'UserId': user_id,
+        }
+        self.client.delete_user_endpoints(**kwargs)
