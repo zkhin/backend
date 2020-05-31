@@ -22,11 +22,13 @@ CONTACT_ATTRIBUTE_NAMES = {
         'short': 'email',
         'cognito': 'email',
         'dynamo': 'email',
+        'pinpoint': 'EMAIL',
     },
     'phone': {
         'short': 'phone',
         'cognito': 'phone_number',
         'dynamo': 'phoneNumber',
+        'pinpoint': 'SMS',
     },
 }
 
@@ -294,4 +296,5 @@ class User:
         self.cognito_client.set_user_attributes(self.id, attrs)
         self.item = self.dynamo.set_user_details(self.id, **{names['short']: value})
         self.cognito_client.clear_user_attribute(self.id, f'custom:unverified_{names["short"]}')
+        self.pinpoint_client.update_user_endpoint(self.id, names['pinpoint'], value)
         return self
