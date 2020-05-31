@@ -632,31 +632,12 @@ def test_set_user_accepted_eula_version(user):
 
 
 def test_set_apns_token(user):
-    assert 'apnsToken' not in user.item
-
-    # set it
+    # set the token
+    user.pinpoint_client.reset_mock()
     user.set_apns_token('token-1')
-    assert user.item['apnsToken'] == 'token-1'
-    assert user.refresh_item().item['apnsToken'] == 'token-1'
+    assert user.pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user.id, 'APNS', 'token-1')]
 
-    # no-op set it to same value
-    org_item = user.item
-    user.set_apns_token('token-1')
-    assert user.item is org_item
-    assert user.refresh_item().item['apnsToken'] == 'token-1'
-
-    # change value
-    user.set_apns_token('token-2')
-    assert user.item['apnsToken'] == 'token-2'
-    assert user.refresh_item().item['apnsToken'] == 'token-2'
-
-    # delete value
+    # delete the token
+    user.pinpoint_client.reset_mock()
     user.set_apns_token(None)
-    assert 'apnsToken' not in user.item
-    assert 'apnsToken' not in user.refresh_item().item
-
-    # no-op delete
-    org_item = user.item
-    user.set_apns_token(None)
-    assert user.item is org_item
-    assert 'apnsToken' not in user.refresh_item().item
+    assert user.pinpoint_client.mock_calls == [mock.call.delete_user_endpoint(user.id, 'APNS')]

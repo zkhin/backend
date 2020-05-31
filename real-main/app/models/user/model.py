@@ -35,7 +35,7 @@ class User:
 
     enums = enums
     exceptions = exceptions
-    client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
+    client_names = ['cloudfront', 'cognito', 'dynamo', 'pinpoint', 's3_uploads']
 
     def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
                  post_manager=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
@@ -130,9 +130,10 @@ class User:
         return self
 
     def set_apns_token(self, token):
-        if token == self.item.get('apnsToken'):
-            return self
-        self.item = self.dynamo.set_user_apns_token(self.id, token)
+        if token is None:
+            self.pinpoint_client.delete_user_endpoint(self.id, 'APNS')
+        else:
+            self.pinpoint_client.update_user_endpoint(self.id, 'APNS', token)
         return self
 
     def set_privacy_status(self, privacy_status):
