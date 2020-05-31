@@ -70,7 +70,7 @@ def test_create_cognito_user(user_manager, cognito_client):
     assert 'phoneNumber' not in user.item
 
     # check pinpoint was set correctly
-    assert user_manager.pinpoint_client.mock_calls == [mock.call.create_email_endpoint(user_id, email)]
+    assert user_manager.pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user_id, 'EMAIL', email)]
 
     # check cognito was set correctly
     assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
@@ -146,8 +146,8 @@ def test_create_cognito_user_with_email_and_phone(user_manager, cognito_client):
 
     # check pinpoint was set correctly
     assert user_manager.pinpoint_client.mock_calls == [
-        mock.call.create_email_endpoint(user_id, email),
-        mock.call.create_sms_endpoint(user_id, phone),
+        mock.call.update_user_endpoint(user_id, 'EMAIL', email),
+        mock.call.update_user_endpoint(user_id, 'SMS', phone),
     ]
 
 
@@ -308,7 +308,9 @@ def test_create_facebook_user_success(user_manager, real_user):
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
         mock.call(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
     ]
-    assert user_manager.pinpoint_client.mock_calls == [mock.call.create_email_endpoint(user_id, email.lower())]
+    assert user_manager.pinpoint_client.mock_calls == [
+        mock.call.update_user_endpoint(user_id, 'EMAIL', email.lower()),
+    ]
 
     # check we are following the real user
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
@@ -364,7 +366,9 @@ def test_create_google_user_success(user_manager, real_user):
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
         mock.call(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
     ]
-    assert user_manager.pinpoint_client.mock_calls == [mock.call.create_email_endpoint(user_id, email.lower())]
+    assert user_manager.pinpoint_client.mock_calls == [
+        mock.call.update_user_endpoint(user_id, 'EMAIL', email.lower()),
+    ]
 
     # check we are following the real user
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))

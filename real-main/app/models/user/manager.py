@@ -117,9 +117,10 @@ class UserManager:
             raise
 
         if email:
-            self.pinpoint_client.create_email_endpoint(user_id, email)
+            self.pinpoint_client.update_user_endpoint(user_id, 'EMAIL', email)
         if phone:
-            self.pinpoint_client.create_sms_endpoint(user_id, phone)
+            self.pinpoint_client.update_user_endpoint(user_id, 'SMS', phone)
+
         user = self.init_user(item)
         self.follow_real_user(user)
         return user
@@ -149,7 +150,7 @@ class UserManager:
         photo_code = self.get_random_placeholder_photo_code()
         item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email,
                                     placeholder_photo_code=photo_code)
-        self.pinpoint_client.create_email_endpoint(user_id, email)
+        self.pinpoint_client.update_user_endpoint(user_id, 'EMAIL', email)
         user = self.init_user(item)
         self.follow_real_user(user)
         return user
@@ -182,7 +183,7 @@ class UserManager:
         photo_code = self.get_random_placeholder_photo_code()
         item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email,
                                     placeholder_photo_code=photo_code)
-        self.pinpoint_client.create_email_endpoint(user_id, email)
+        self.pinpoint_client.update_user_endpoint(user_id, 'EMAIL', email)
         user = self.init_user(item)
         self.follow_real_user(user)
         return user
