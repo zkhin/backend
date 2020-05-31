@@ -123,6 +123,15 @@ class User:
         if status == self.item.get('userStatus', UserStatus.ACTIVE):
             return self
         self.item = self.dynamo.set_user_status(self.id, status)
+
+        # update pinpoint
+        if status == UserStatus.ACTIVE:
+            self.pinpoint_client.enable_user_endpoints(self.id)
+        if status == UserStatus.DISABLED:
+            self.pinpoint_client.disable_user_endpoints(self.id)
+        if status == UserStatus.DELETING:
+            self.pinpoint_client.delete_user_endpoints(self.id)
+
         return self
 
     def set_accepted_eula_version(self, version):

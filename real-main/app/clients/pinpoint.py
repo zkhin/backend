@@ -25,9 +25,9 @@ class PinpointClient:
         """
         endpoints = self.get_user_endpoints(user_id, channel_type=channel_type)
         endpoint_ids = []
-        for this_endpoint_id, this_address in endpoints.items():
+        for this_endpoint_id, this_endpoint in endpoints.items():
             # put the endpoint to keep at the front
-            if this_address == address:
+            if this_endpoint.get('Address') == address:
                 endpoint_ids.insert(0, this_endpoint_id)
             else:
                 endpoint_ids.append(this_endpoint_id)
@@ -53,7 +53,11 @@ class PinpointClient:
         return endpoint_id
 
     def get_user_endpoints(self, user_id, channel_type=None):
-        "A dict of {endpoint_id: address}"
+        """
+        A dict of {endpoint_id: endpoint_details} where endpoint_details is
+        a EndpointsResponse.Item as returned by the boto lib
+        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/pinpoint.html#Pinpoint.Client.get_user_endpoints
+        """
         kwargs = {
             'ApplicationId': self.app_id,
             'UserId': user_id,
@@ -63,15 +67,37 @@ class PinpointClient:
         except self.client.exceptions.NotFoundException:
             return {}
 
-        conditions = [lambda item: item['EndpointStatus'] == 'ACTIVE']
-        if channel_type:
-            conditions.append(lambda item: item['ChannelType'] == channel_type)
-
         return {
-            item['Id']: item['Address']
+            item['Id']: item
             for item in resp['EndpointsResponse']['Item']
-            if all(condition(item) for condition in conditions)
+            if not channel_type or item['ChannelType'] == channel_type
         }
+
+    def enable_user_endpoints(self, user_id):
+        "Disable all of a user's endpoints"
+        endpoints = self.get_user_endpoints(user_id)
+        for endpoint_id in endpoints.keys():
+            kwargs = {
+                'ApplicationId': self.app_id,
+                'EndpointId': endpoint_id,
+                'EndpointRequest': {
+                    'EndpointStatus': 'ACTIVE',
+                }
+            }
+            self.client.update_endpoint(**kwargs)
+
+    def disable_user_endpoints(self, user_id):
+        "Disable all of a user's endpoints"
+        endpoints = self.get_user_endpoints(user_id)
+        for endpoint_id in endpoints.keys():
+            kwargs = {
+                'ApplicationId': self.app_id,
+                'EndpointId': endpoint_id,
+                'EndpointRequest': {
+                    'EndpointStatus': 'INACTIVE',
+                }
+            }
+            self.client.update_endpoint(**kwargs)
 
     def delete_endpoint(self, endpoint_id):
         "Delete a specific endpoint"
@@ -84,7 +110,7 @@ class PinpointClient:
     def delete_user_endpoint(self, user_id, channel_type):
         "Delete a user's endpoint of a specific `channel_type`"
         endpoints = self.get_user_endpoints(user_id, channel_type=channel_type)
-        for endpoint_id, _ in endpoints.items():
+        for endpoint_id in endpoints.keys():
             self.delete_endpoint(endpoint_id)
 
     def delete_user_endpoints(self, user_id):

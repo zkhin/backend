@@ -28,17 +28,19 @@ def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1
 
     # create an endpoint, verify it exists
     endpoint_id1 = pinpoint_client.update_user_endpoint(user_id, channel_type, address1)
-    assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {endpoint_id1: address1}
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type)
+    assert len(user_endpoints) == 1
+    assert user_endpoints[endpoint_id1]['Address'] == address1
 
     # no-op update the endpoint
-    resp = pinpoint_client.update_user_endpoint(user_id, channel_type, address1)
-    assert resp == endpoint_id1
-    assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {endpoint_id1: address1}
+    assert pinpoint_client.update_user_endpoint(user_id, channel_type, address1) == endpoint_id1
+    assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == user_endpoints
 
     # update the endpoint, to a new address
-    resp = pinpoint_client.update_user_endpoint(user_id, channel_type, address2)
-    assert resp == endpoint_id1
-    assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {endpoint_id1: address2}
+    assert pinpoint_client.update_user_endpoint(user_id, channel_type, address2) == endpoint_id1
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type)
+    assert len(user_endpoints) == 1
+    assert user_endpoints[endpoint_id1]['Address'] == address2
 
     # sneak behind our client's back and create a second endpoint of same type
     endpoint_id2 = str(uuid.uuid4())
@@ -54,15 +56,16 @@ def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1
         }
     }
     pinpoint_client.client.update_endpoint(**kwargs)
-    assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {
-        endpoint_id1: address2,
-        endpoint_id2: address1,
-    }
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type)
+    assert len(user_endpoints) == 2
+    assert user_endpoints[endpoint_id1]['Address'] == address2
+    assert user_endpoints[endpoint_id2]['Address'] == address1
 
     # update the endpoint again, verify that the extra endpoint is deleted as clean-up
-    resp = pinpoint_client.update_user_endpoint(user_id, channel_type, address1)
-    assert resp == endpoint_id2
-    assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {endpoint_id2: address1}
+    assert pinpoint_client.update_user_endpoint(user_id, channel_type, address1) == endpoint_id2
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type)
+    assert len(user_endpoints) == 1
+    assert user_endpoints[endpoint_id2]['Address'] == address1
 
     # delete all endpoints of that type
     pinpoint_client.delete_user_endpoint(user_id, channel_type)
@@ -70,7 +73,7 @@ def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1
 
 
 @pytest.mark.skip(reason='Requires live Pinpoint Application')
-def test_delete_user_endpoints(pinpoint_client):
+def test_enable_disable_and_delete_user_endpoints(pinpoint_client):
     user_id = str(uuid.uuid4())
     email = str(uuid.uuid4())[:8] + '-test@real.app'
     phone = '+14155551212'
@@ -78,8 +81,31 @@ def test_delete_user_endpoints(pinpoint_client):
     # create an sms endpoint and an email enpoint for the user, verify they exist
     endpoint_id1 = pinpoint_client.update_user_endpoint(user_id, 'EMAIL', email)
     endpoint_id2 = pinpoint_client.update_user_endpoint(user_id, 'SMS', phone)
-    assert pinpoint_client.get_user_endpoints(user_id) == {endpoint_id1: email, endpoint_id2: phone}
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id)
+    assert len(user_endpoints) == 2
+    assert user_endpoints[endpoint_id1]['Address'] == email
+    assert user_endpoints[endpoint_id2]['Address'] == phone
+    assert user_endpoints[endpoint_id1]['EndpointStatus'] == 'ACTIVE'
+    assert user_endpoints[endpoint_id2]['EndpointStatus'] == 'ACTIVE'
 
-    # delete them, verify they're gone
+    # disable them, verify
+    pinpoint_client.disable_user_endpoints(user_id)
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id)
+    assert len(user_endpoints) == 2
+    assert user_endpoints[endpoint_id1]['Address'] == email
+    assert user_endpoints[endpoint_id2]['Address'] == phone
+    assert user_endpoints[endpoint_id1]['EndpointStatus'] == 'INACTIVE'
+    assert user_endpoints[endpoint_id2]['EndpointStatus'] == 'INACTIVE'
+
+    # enable them, verify
+    pinpoint_client.enable_user_endpoints(user_id)
+    user_endpoints = pinpoint_client.get_user_endpoints(user_id)
+    assert len(user_endpoints) == 2
+    assert user_endpoints[endpoint_id1]['Address'] == email
+    assert user_endpoints[endpoint_id2]['Address'] == phone
+    assert user_endpoints[endpoint_id1]['EndpointStatus'] == 'ACTIVE'
+    assert user_endpoints[endpoint_id2]['EndpointStatus'] == 'ACTIVE'
+
+    # delete them, verify
     pinpoint_client.delete_user_endpoints(user_id)
     assert pinpoint_client.get_user_endpoints(user_id) == {}

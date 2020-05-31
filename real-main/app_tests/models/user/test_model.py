@@ -169,21 +169,29 @@ def test_get_set_user_status(user):
     assert 'userStatus' not in user.item
 
     # no op
+    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.ACTIVE)
     assert user.status == UserStatus.ACTIVE
+    assert user.pinpoint_client.mock_calls == []
 
     # change it
+    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.DELETING)
     assert user.status == UserStatus.DELETING
     assert user.item['userStatus'] == UserStatus.DELETING
+    assert user.pinpoint_client.mock_calls == [mock.call.delete_user_endpoints(user.id)]
 
     # change it again
+    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.DISABLED)
     assert user.status == UserStatus.DISABLED
+    assert user.pinpoint_client.mock_calls == [mock.call.disable_user_endpoints(user.id)]
 
     # change it back
+    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.ACTIVE)
     assert user.status == UserStatus.ACTIVE
+    assert user.pinpoint_client.mock_calls == [mock.call.enable_user_endpoints(user.id)]
 
 
 def test_set_privacy_status_no_change(user):
