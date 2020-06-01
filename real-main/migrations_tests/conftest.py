@@ -2,6 +2,7 @@ import boto3
 import moto
 import pytest
 import types
+import unittest.mock as mock
 
 from .table_schema import table_schema
 
@@ -55,3 +56,8 @@ def dynamo_table(dynamo_client_and_table):
 def s3_bucket():
     with moto.mock_s3():
         yield boto3.resource('s3').create_bucket(Bucket='test-bucket')
+
+
+@pytest.fixture
+def pinpoint_client():
+    yield mock.Mock(boto3.client('pinpoint'))
