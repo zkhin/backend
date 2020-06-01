@@ -47,7 +47,7 @@ class UserDynamo:
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
-                'schemaVersion': 8,
+                'schemaVersion': 9,
                 'partitionKey': f'user/{user_id}',
                 'sortKey': 'profile',
                 'gsiA1PartitionKey': f'username/{username}',
@@ -176,17 +176,6 @@ class UserDynamo:
         else:
             query_kwargs['UpdateExpression'] = 'SET acceptedEULAVersion = :aev'
             query_kwargs['ExpressionAttributeValues'] = {':aev': version}
-        return self.client.update_item(query_kwargs)
-
-    def set_user_apns_token(self, user_id, token):
-        query_kwargs = {
-            'Key': self.pk(user_id),
-        }
-        if token is None:
-            query_kwargs['UpdateExpression'] = 'REMOVE apnsToken'
-        else:
-            query_kwargs['UpdateExpression'] = 'SET apnsToken = :token'
-            query_kwargs['ExpressionAttributeValues'] = {':token': token}
         return self.client.update_item(query_kwargs)
 
     def _transact_increment_count(self, user_id, count_name):

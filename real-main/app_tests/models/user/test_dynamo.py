@@ -25,7 +25,7 @@ def test_add_user_minimal(user_dynamo):
     assert after > now
 
     assert item == {
-        'schemaVersion': 8,
+        'schemaVersion': 9,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -58,7 +58,7 @@ def test_add_user_maximal(user_dynamo):
     assert after > now
 
     assert item == {
-        'schemaVersion': 8,
+        'schemaVersion': 9,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -93,7 +93,7 @@ def test_add_user_at_specific_time(user_dynamo):
 
     item = user_dynamo.add_user(user_id, username, now=now)
     assert item == {
-        'schemaVersion': 8,
+        'schemaVersion': 9,
         'partitionKey': f'user/{user_id}',
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
@@ -341,30 +341,6 @@ def test_set_user_accepted_eula_version(user_dynamo):
     # delete it
     user_item = user_dynamo.set_user_accepted_eula_version(user_id, None)
     assert 'acceptedEULAVersion' not in user_item
-
-
-def test_set_user_apns_token(user_dynamo):
-    user_id = 'my-user-id'
-    username = 'my-username'
-
-    # create the user, verify user starts with no EULA token
-    user_item = user_dynamo.add_user(user_id, username)
-    assert user_item['userId'] == user_id
-    assert 'apnsToken' not in user_item
-
-    # set it
-    token_1 = 'apns-token-1'
-    user_item = user_dynamo.set_user_apns_token(user_id, token_1)
-    assert user_item['apnsToken'] == token_1
-
-    # set it again
-    token_2 = 'apns-token-2'
-    user_item = user_dynamo.set_user_apns_token(user_id, token_2)
-    assert user_item['apnsToken'] == token_2
-
-    # delete it
-    user_item = user_dynamo.set_user_apns_token(user_id, None)
-    assert 'apnsToken' not in user_item
 
 
 def test_set_user_status(user_dynamo):

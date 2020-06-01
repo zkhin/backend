@@ -22,11 +22,13 @@ CONTACT_ATTRIBUTE_NAMES = {
         'short': 'email',
         'cognito': 'email',
         'dynamo': 'email',
+        'pinpoint': 'EMAIL',
     },
     'phone': {
         'short': 'phone',
         'cognito': 'phone_number',
         'dynamo': 'phoneNumber',
+        'pinpoint': 'SMS',
     },
 }
 
@@ -35,7 +37,7 @@ class User:
 
     enums = enums
     exceptions = exceptions
-    client_names = ['cloudfront', 'cognito', 'dynamo', 's3_uploads']
+    client_names = ['cloudfront', 'cognito', 'dynamo', 'pinpoint', 's3_uploads']
 
     def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
                  post_manager=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
@@ -121,6 +123,15 @@ class User:
         if status == self.item.get('userStatus', UserStatus.ACTIVE):
             return self
         self.item = self.dynamo.set_user_status(self.id, status)
+
+        # update pinpoint
+        if status == UserStatus.ACTIVE:
+            self.pinpoint_client.enable_user_endpoints(self.id)
+        if status == UserStatus.DISABLED:
+            self.pinpoint_client.disable_user_endpoints(self.id)
+        if status == UserStatus.DELETING:
+            self.pinpoint_client.delete_user_endpoints(self.id)
+
         return self
 
     def set_accepted_eula_version(self, version):
@@ -130,9 +141,10 @@ class User:
         return self
 
     def set_apns_token(self, token):
-        if token == self.item.get('apnsToken'):
-            return self
-        self.item = self.dynamo.set_user_apns_token(self.id, token)
+        if token is None:
+            self.pinpoint_client.delete_user_endpoint(self.id, 'APNS')
+        else:
+            self.pinpoint_client.update_user_endpoint(self.id, 'APNS', token)
         return self
 
     def set_privacy_status(self, privacy_status):
@@ -293,4 +305,5 @@ class User:
         self.cognito_client.set_user_attributes(self.id, attrs)
         self.item = self.dynamo.set_user_details(self.id, **{names['short']: value})
         self.cognito_client.clear_user_attribute(self.id, f'custom:unverified_{names["short"]}')
+        self.pinpoint_client.update_user_endpoint(self.id, names['pinpoint'], value)
         return self
