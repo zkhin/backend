@@ -384,7 +384,7 @@ type Card {
   cardId: ID!
   title: String!
   subTitle: String
-  action: AWSURL!
+  action: String!  # an AWSURL, but AWS occasionally errors out trying to serialize our 'https://real.app' urls
 }
 
 type PaginatedCards {
