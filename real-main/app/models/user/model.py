@@ -22,13 +22,11 @@ CONTACT_ATTRIBUTE_NAMES = {
         'short': 'email',
         'cognito': 'email',
         'dynamo': 'email',
-        'pinpoint': 'EMAIL',
     },
     'phone': {
         'short': 'phone',
         'cognito': 'phone_number',
         'dynamo': 'phoneNumber',
-        'pinpoint': 'SMS',
     },
 }
 
@@ -123,15 +121,6 @@ class User:
         if status == self.item.get('userStatus', UserStatus.ACTIVE):
             return self
         self.item = self.dynamo.set_user_status(self.id, status)
-
-        # update pinpoint
-        if status == UserStatus.ACTIVE:
-            self.pinpoint_client.enable_user_endpoints(self.id)
-        if status == UserStatus.DISABLED:
-            self.pinpoint_client.disable_user_endpoints(self.id)
-        if status == UserStatus.DELETING:
-            self.pinpoint_client.delete_user_endpoints(self.id)
-
         return self
 
     def set_accepted_eula_version(self, version):
@@ -305,5 +294,4 @@ class User:
         self.cognito_client.set_user_attributes(self.id, attrs)
         self.item = self.dynamo.set_user_details(self.id, **{names['short']: value})
         self.cognito_client.clear_user_attribute(self.id, f'custom:unverified_{names["short"]}')
-        self.pinpoint_client.update_user_endpoint(self.id, names['pinpoint'], value)
         return self

@@ -169,29 +169,21 @@ def test_get_set_user_status(user):
     assert 'userStatus' not in user.item
 
     # no op
-    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.ACTIVE)
     assert user.status == UserStatus.ACTIVE
-    assert user.pinpoint_client.mock_calls == []
 
     # change it
-    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.DELETING)
     assert user.status == UserStatus.DELETING
     assert user.item['userStatus'] == UserStatus.DELETING
-    assert user.pinpoint_client.mock_calls == [mock.call.delete_user_endpoints(user.id)]
 
     # change it again
-    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.DISABLED)
     assert user.status == UserStatus.DISABLED
-    assert user.pinpoint_client.mock_calls == [mock.call.disable_user_endpoints(user.id)]
 
     # change it back
-    user.pinpoint_client.reset_mock()
     user.set_user_status(UserStatus.ACTIVE)
     assert user.status == UserStatus.ACTIVE
-    assert user.pinpoint_client.mock_calls == [mock.call.enable_user_endpoints(user.id)]
 
 
 def test_set_privacy_status_no_change(user):
@@ -276,7 +268,6 @@ def test_finish_change_email(user):
     # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
     user.cognito_client.verify_user_attribute = mock.Mock()
     user.cognito_client.clear_user_attribute = mock.Mock()
-    user.pinpoint_client.reset_mock()
 
     user.finish_change_contact_attribute('email', 'access_token', 'verification_code')
     assert user.item['email'] == new_email
@@ -289,7 +280,6 @@ def test_finish_change_email(user):
         mock.call('access_token', 'email', 'verification_code'),
     ]
     assert user.cognito_client.clear_user_attribute.mock_calls == [mock.call(user.id, 'custom:unverified_email')]
-    assert user.pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user.id, 'EMAIL', new_email)]
 
 
 def test_start_change_phone(user):
@@ -324,7 +314,6 @@ def test_finish_change_phone(user):
     # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
     user.cognito_client.verify_user_attribute = mock.Mock()
     user.cognito_client.clear_user_attribute = mock.Mock()
-    user.pinpoint_client.reset_mock()
 
     user.finish_change_contact_attribute('phone', 'access_token', 'verification_code')
     assert user.item['phoneNumber'] == new_phone
@@ -337,7 +326,6 @@ def test_finish_change_phone(user):
         mock.call('access_token', 'phone_number', 'verification_code'),
     ]
     assert user.cognito_client.clear_user_attribute.mock_calls == [mock.call(user.id, 'custom:unverified_phone')]
-    assert user.pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user.id, 'SMS', new_phone)]
 
 
 def test_start_change_email_same_as_existing(user):

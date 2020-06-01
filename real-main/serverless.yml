@@ -480,7 +480,7 @@ functions:
 
   dynamoStream:
     name: ${self:provider.stackName}-dynamoStream
-    handler: app.handlers.elasticsearch.dynamodb_stream
+    handler: app.handlers.dynamo.handlers.dynamo_stream
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:

@@ -69,9 +69,6 @@ def test_create_cognito_user(user_manager, cognito_client):
     assert user.item['email'] == email
     assert 'phoneNumber' not in user.item
 
-    # check pinpoint was set correctly
-    assert user_manager.pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user_id, 'EMAIL', email)]
-
     # check cognito was set correctly
     assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
 
@@ -88,7 +85,6 @@ def test_create_cognito_user_aleady_exists(user_manager, cognito_client):
     user = user_manager.create_cognito_only_user(user_id, username, full_name=full_name)
     assert user.id == user_id
     assert user.username == username
-    user_manager.pinpoint_client.reset_mock()
 
     # check their cognito username is as expected
     assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
@@ -101,7 +97,6 @@ def test_create_cognito_user_aleady_exists(user_manager, cognito_client):
     user = user_manager.get_user(user_id)
     assert user.username == username
     assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
-    assert user_manager.pinpoint_client.mock_calls == []
 
 
 def test_create_cognito_user_with_email_and_phone(user_manager, cognito_client):
@@ -144,12 +139,6 @@ def test_create_cognito_user_with_email_and_phone(user_manager, cognito_client):
     assert cognito_attrs['phone_number'] == phone
     assert cognito_attrs['phone_number_verified'] == 'true'
 
-    # check pinpoint was set correctly
-    assert user_manager.pinpoint_client.mock_calls == [
-        mock.call.update_user_endpoint(user_id, 'EMAIL', email),
-        mock.call.update_user_endpoint(user_id, 'SMS', phone),
-    ]
-
 
 def test_create_cognito_user_with_non_verified_email_and_phone(user_manager, cognito_client):
     user_id = 'my-user-id'
@@ -177,9 +166,6 @@ def test_create_cognito_user_with_non_verified_email_and_phone(user_manager, cog
     # check can't create the user
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_cognito_only_user(user_id, username, full_name=full_name)
-
-    # check pinpoint not set correctly
-    assert user_manager.pinpoint_client.mock_calls == []
 
 
 def test_create_cognito_only_user_invalid_username(user_manager):
@@ -284,7 +270,6 @@ def test_create_facebook_user_success(user_manager, real_user):
     username = 'my_username'
     full_name = 'my-full-name'
     email = 'My@email.com'
-    user_manager.pinpoint_client.reset_mock()
 
     # set up our mocks to behave correctly
     user_manager.facebook_client.configure_mock(**{'get_verified_email.return_value': email})
@@ -308,9 +293,6 @@ def test_create_facebook_user_success(user_manager, real_user):
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
         mock.call(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
     ]
-    assert user_manager.pinpoint_client.mock_calls == [
-        mock.call.update_user_endpoint(user_id, 'EMAIL', email.lower()),
-    ]
 
     # check we are following the real user
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
@@ -332,7 +314,6 @@ def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
-    assert user_manager.pinpoint_client.mock_calls == []
 
 
 def test_create_google_user_success(user_manager, real_user):
@@ -342,7 +323,6 @@ def test_create_google_user_success(user_manager, real_user):
     username = 'myusername'
     full_name = 'my-full-name'
     email = 'My@email.com'  # emails from google can have upper case characters in them
-    user_manager.pinpoint_client.reset_mock()
 
     # set up our mocks to behave correctly
     user_manager.google_client.configure_mock(**{'get_verified_email.return_value': email})
@@ -366,9 +346,6 @@ def test_create_google_user_success(user_manager, real_user):
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
         mock.call(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
     ]
-    assert user_manager.pinpoint_client.mock_calls == [
-        mock.call.update_user_endpoint(user_id, 'EMAIL', email.lower()),
-    ]
 
     # check we are following the real user
     followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
@@ -391,7 +368,6 @@ def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
 
     with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
-    assert user_manager.pinpoint_client.mock_calls == []
 
 
 def test_create_google_user_invalid_id_token(user_manager, caplog):

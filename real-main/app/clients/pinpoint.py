@@ -17,7 +17,7 @@ class PinpointClient:
 
     def update_user_endpoint(self, user_id, channel_type, address):
         """
-        Set the user's endpoint of type `channel_type` to `address.
+        Set the user's endpoint of type `channel_type` to `address`.
 
         The user should have at most one active endpoint of each `channel_type`.
         If this method finds more than one active endpoint for the given
