@@ -21,7 +21,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test("resetUser really releases the user's username", async () => {

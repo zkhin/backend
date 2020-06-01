@@ -17,7 +17,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('When followed user adds/deletes a post, our feed reacts', async () => {

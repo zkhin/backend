@@ -22,7 +22,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('Visiblity of post() and user.posts() for a public user', async () => {

@@ -12,7 +12,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('Follow a private user - approved', async () => {

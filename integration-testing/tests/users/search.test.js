@@ -18,7 +18,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('Exact match search on username', async () => {

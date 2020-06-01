@@ -19,7 +19,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('Cant edit Post.expiresAt for post that do not exist', async () => {

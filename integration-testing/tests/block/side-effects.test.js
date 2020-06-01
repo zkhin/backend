@@ -17,7 +17,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('Blocking a user causes their onymous likes on our posts to dissapear', async () => {

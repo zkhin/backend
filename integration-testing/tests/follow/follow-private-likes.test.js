@@ -17,7 +17,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('When we stop following a private user, any likes of ours on their posts disappear', async () => {

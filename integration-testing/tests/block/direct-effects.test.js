@@ -12,7 +12,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('User.blockedUsers, User.blockedStatus respond correctly to blocking and unblocking', async () => {

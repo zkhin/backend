@@ -18,7 +18,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 // expects the placeholder photos directory in the REAL-Themes bucket *not* to be set up

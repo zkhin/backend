@@ -14,7 +14,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('Blocking a user causes our direct chat with them to disappear to both of us', async () => {

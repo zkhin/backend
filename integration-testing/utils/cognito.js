@@ -187,12 +187,24 @@ class AppSyncLoginCache {
   }
 
   async clean() {
+    // purposefully avoiding parallelism here so we can run more test suites in parrellel
     let login = this.dirtyLogins.pop()
     while (login) {
-      const client = login[0]
-      const username = login[4]
+      const [client, , , , username] = login
       await client.clearStore()
       await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
+      this.cleanLogins.push(login)
+      login = this.dirtyLogins.pop()
+    }
+  }
+
+  async reset() {
+    // purposefully avoiding parallelism here so we can run more test suites in parrellel
+    this.cleanLogins.forEach(([client]) => client.mutate({mutation: mutations.resetUser}))
+    let login = this.dirtyLogins.pop()
+    while (login) {
+      const [client] = login
+      await client.mutate({mutation: mutations.resetUser})
       this.cleanLogins.push(login)
       login = this.dirtyLogins.pop()
     }

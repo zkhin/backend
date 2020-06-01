@@ -13,7 +13,7 @@ beforeAll(async () => {
 })
 
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.clean())
+afterAll(async () => await loginCache.reset())
 
 
 test('getFollowe[d|r]Users cant request NOT_FOLLOWING', async () => {
