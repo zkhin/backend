@@ -32,10 +32,7 @@ def generate_all_users(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'user/',
-            ':sv': version,
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version,},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -50,10 +47,9 @@ def copy_object(old_path, new_path):
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Object.copy
     print(f'Copying S3 object from {old_path} to {new_path} ...', end='')
     new_obj = s3_bucket.Object(new_path)
-    new_obj.copy({
-        'Bucket': S3_UPLOADS_BUCKET,
-        'Key': old_path,
-    })
+    new_obj.copy(
+        {'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path,}
+    )
     print(' done.')
 
 
@@ -94,18 +90,10 @@ def update_user(user_item):
 
     # finally, update dynamo to indicate all done
     kwargs = {
-        'Key': {
-            'partitionKey': user_item['partitionKey'],
-            'sortKey': user_item['sortKey'],
-        },
-        'UpdateExpression': ' '.join([
-            'SET schemaVersion = :five'
-        ]),
+        'Key': {'partitionKey': user_item['partitionKey'], 'sortKey': user_item['sortKey'],},
+        'UpdateExpression': ' '.join(['SET schemaVersion = :five']),
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :four',
-        'ExpressionAttributeValues': {
-            ':four': 4,
-            ':five': 5,
-        },
+        'ExpressionAttributeValues': {':four': 4, ':five': 5,},
     }
     update_item(kwargs)
 

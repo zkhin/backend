@@ -3,7 +3,6 @@ class BlockException(Exception):
 
 
 class AlreadyBlocked(BlockException):
-
     def __init__(self, blocker_user_id, blocked_user_id):
         self.blocker_user_id = blocker_user_id
         self.blocked_user_id = blocked_user_id
@@ -13,7 +12,6 @@ class AlreadyBlocked(BlockException):
 
 
 class NotBlocked(BlockException):
-
     def __init__(self, blocker_user_id, blocked_user_id):
         self.blocker_user_id = blocker_user_id
         self.blocked_user_id = blocked_user_id

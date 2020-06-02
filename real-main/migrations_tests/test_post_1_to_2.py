@@ -10,16 +10,18 @@ def test_basic(dynamo_client, dynamo_table, caplog):
         'partitionKey': f'post/{post_id_1}',
         'sortKey': '-',
     }
-    dynamo_table.put_item(Item={
-        **post_pk_1,
-        **{
-            'postId': post_id_1,
-            'postedByUserId': 'uid-1',
-            'postedAt': 'p-at-1',
-            'postStatus': 'p-s-1',
-            'schemaVersion': 1,
-        },
-    })
+    dynamo_table.put_item(
+        Item={
+            **post_pk_1,
+            **{
+                'postId': post_id_1,
+                'postedByUserId': 'uid-1',
+                'postedAt': 'p-at-1',
+                'postStatus': 'p-s-1',
+                'schemaVersion': 1,
+            },
+        }
+    )
 
     # create another minimal post
     post_id_2 = 'pid2'
@@ -27,16 +29,18 @@ def test_basic(dynamo_client, dynamo_table, caplog):
         'partitionKey': f'post/{post_id_2}',
         'sortKey': '-',
     }
-    dynamo_table.put_item(Item={
-        **post_pk_2,
-        **{
-            'postId': post_id_2,
-            'postedByUserId': 'uid-2',
-            'postedAt': 'p-at-2',
-            'postStatus': 'p-s-2',
-            'schemaVersion': 1,
-        },
-    })
+    dynamo_table.put_item(
+        Item={
+            **post_pk_2,
+            **{
+                'postId': post_id_2,
+                'postedByUserId': 'uid-2',
+                'postedAt': 'p-at-2',
+                'postStatus': 'p-s-2',
+                'schemaVersion': 1,
+            },
+        }
+    )
 
     # check both posts looks as expected
     post_1 = dynamo_table.get_item(Key=post_pk_1)['Item']

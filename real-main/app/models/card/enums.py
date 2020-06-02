@@ -1,5 +1,4 @@
 class _WellKnownCard:
-
     def __init__(self, name, title, action):
         self.name = name
         self.title = title
@@ -12,6 +11,4 @@ class _WellKnownCard:
 COMMENT_ACTIVITY_CARD = _WellKnownCard(
     'COMMENT_ACTIVITY', 'You have new comment activity', 'https://real.app/comment/',
 )
-CHAT_ACTIVITY_CARD = _WellKnownCard(
-    'CHAT_ACTIVITY', 'You have new chat activity', 'https://real.app/chat/'
-)
+CHAT_ACTIVITY_CARD = _WellKnownCard('CHAT_ACTIVITY', 'You have new chat activity', 'https://real.app/chat/')

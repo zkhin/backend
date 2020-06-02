@@ -179,8 +179,10 @@ def test_add_system_message_added_to_group(chat_message_manager, chat, user, use
 
     # add three users
     message = chat_message_manager.add_system_message_added_to_group(chat.id, user, [user2, user3, user])
-    assert message.item['text'] == \
-        f'@{user.username} added @{user2.username}, @{user3.username} and @{user.username} to the group'
+    assert (
+        message.item['text']
+        == f'@{user.username} added @{user2.username}, @{user3.username} and @{user.username} to the group'
+    )
     assert len(message.item['textTags']) == 3
 
     # check the chat was altered correctly

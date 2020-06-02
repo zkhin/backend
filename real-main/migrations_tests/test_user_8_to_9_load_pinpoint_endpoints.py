@@ -96,8 +96,9 @@ def test_migrate_no_users_to_migrate(dynamo_client, dynamo_table, pinpoint_clien
     assert dynamo_table.get_item(Key=user_pk)['Item'] == user
 
 
-def test_migrate_user_with_no_phone_or_email(dynamo_client, dynamo_table, pinpoint_client, caplog,
-                                             user_with_no_phone_or_email):
+def test_migrate_user_with_no_phone_or_email(
+    dynamo_client, dynamo_table, pinpoint_client, caplog, user_with_no_phone_or_email
+):
     user = user_with_no_phone_or_email
     user_pk = {k: user[k] for k in ('partitionKey', 'sortKey')}
 
@@ -145,17 +146,19 @@ def test_migrate_user_with_email(dynamo_client, dynamo_table, pinpoint_client, c
     # check final state
     endpoint_id = pinpoint_client.update_endpoint.call_args.kwargs['EndpointId']
     assert str(uuid.UUID(endpoint_id)) == endpoint_id
-    assert pinpoint_client.mock_calls == [mock.call.update_endpoint(**{
-        'ApplicationId': 'pnt-app-id',
-        'EndpointId': endpoint_id,
-        'EndpointRequest': {
-            'Address': user['email'],
-            'ChannelType': 'EMAIL',
-            'User': {
-                'UserId': user['userId'],
+    assert pinpoint_client.mock_calls == [
+        mock.call.update_endpoint(
+            **{
+                'ApplicationId': 'pnt-app-id',
+                'EndpointId': endpoint_id,
+                'EndpointRequest': {
+                    'Address': user['email'],
+                    'ChannelType': 'EMAIL',
+                    'User': {'UserId': user['userId'],},
+                },
             }
-        }
-    })]
+        )
+    ]
     new_user = dynamo_table.get_item(Key=user_pk)['Item']
     assert new_user.pop('schemaVersion') == 9
     assert user.pop('schemaVersion') == 8
@@ -184,25 +187,28 @@ def test_migrate_user_with_phone(dynamo_client, dynamo_table, pinpoint_client, c
     # check final state
     endpoint_id = pinpoint_client.update_endpoint.call_args.kwargs['EndpointId']
     assert str(uuid.UUID(endpoint_id)) == endpoint_id
-    assert pinpoint_client.mock_calls == [mock.call.update_endpoint(**{
-        'ApplicationId': 'pnt-app-id',
-        'EndpointId': endpoint_id,
-        'EndpointRequest': {
-            'Address': user['phoneNumber'],
-            'ChannelType': 'SMS',
-            'User': {
-                'UserId': user['userId'],
+    assert pinpoint_client.mock_calls == [
+        mock.call.update_endpoint(
+            **{
+                'ApplicationId': 'pnt-app-id',
+                'EndpointId': endpoint_id,
+                'EndpointRequest': {
+                    'Address': user['phoneNumber'],
+                    'ChannelType': 'SMS',
+                    'User': {'UserId': user['userId'],},
+                },
             }
-        }
-    })]
+        )
+    ]
     new_user = dynamo_table.get_item(Key=user_pk)['Item']
     assert new_user.pop('schemaVersion') == 9
     assert user.pop('schemaVersion') == 8
     assert new_user == user
 
 
-def test_migrate_user_with_phone_and_email(dynamo_client, dynamo_table, pinpoint_client, caplog,
-                                           user_with_phone_and_email):
+def test_migrate_user_with_phone_and_email(
+    dynamo_client, dynamo_table, pinpoint_client, caplog, user_with_phone_and_email
+):
     user = user_with_phone_and_email
     user_pk = {k: user[k] for k in ('partitionKey', 'sortKey')}
 
@@ -229,28 +235,28 @@ def test_migrate_user_with_phone_and_email(dynamo_client, dynamo_table, pinpoint
     assert str(uuid.UUID(endpoint_id_1)) == endpoint_id_1
     assert str(uuid.UUID(endpoint_id_2)) == endpoint_id_2
     assert pinpoint_client.mock_calls == [
-        mock.call.update_endpoint(**{
-            'ApplicationId': 'pnt-app-id',
-            'EndpointId': endpoint_id_1,
-            'EndpointRequest': {
-                'Address': user['email'],
-                'ChannelType': 'EMAIL',
-                'User': {
-                    'UserId': user['userId'],
-                }
+        mock.call.update_endpoint(
+            **{
+                'ApplicationId': 'pnt-app-id',
+                'EndpointId': endpoint_id_1,
+                'EndpointRequest': {
+                    'Address': user['email'],
+                    'ChannelType': 'EMAIL',
+                    'User': {'UserId': user['userId'],},
+                },
             }
-        }),
-        mock.call.update_endpoint(**{
-            'ApplicationId': 'pnt-app-id',
-            'EndpointId': endpoint_id_2,
-            'EndpointRequest': {
-                'Address': user['phoneNumber'],
-                'ChannelType': 'SMS',
-                'User': {
-                    'UserId': user['userId'],
-                }
+        ),
+        mock.call.update_endpoint(
+            **{
+                'ApplicationId': 'pnt-app-id',
+                'EndpointId': endpoint_id_2,
+                'EndpointRequest': {
+                    'Address': user['phoneNumber'],
+                    'ChannelType': 'SMS',
+                    'User': {'UserId': user['userId'],},
+                },
             }
-        })
+        ),
     ]
     new_user = dynamo_table.get_item(Key=user_pk)['Item']
     assert new_user.pop('schemaVersion') == 9
@@ -258,8 +264,16 @@ def test_migrate_user_with_phone_and_email(dynamo_client, dynamo_table, pinpoint
     assert new_user == user
 
 
-def test_migrate_multiple(dynamo_client, dynamo_table, pinpoint_client, caplog, user_with_no_phone_or_email,
-                          user_with_email, user_with_phone, user_with_phone_and_email):
+def test_migrate_multiple(
+    dynamo_client,
+    dynamo_table,
+    pinpoint_client,
+    caplog,
+    user_with_no_phone_or_email,
+    user_with_email,
+    user_with_phone,
+    user_with_phone_and_email,
+):
     users = [user_with_no_phone_or_email, user_with_email, user_with_phone, user_with_phone_and_email]
     user_pks = [{k: user[k] for k in ('partitionKey', 'sortKey')} for user in users]
     user_keys_to_items = list(zip(user_pks, users))

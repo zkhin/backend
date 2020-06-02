@@ -30,9 +30,14 @@ class AlbumManager:
         return self.init_album(album_item) if album_item else None
 
     def init_album(self, album_item):
-        return Album(album_item, self.dynamo, s3_uploads_client=self.clients.get('s3_uploads'),
-                     cloudfront_client=self.clients.get('cloudfront'), user_manager=self.user_manager,
-                     post_manager=self.post_manager)
+        return Album(
+            album_item,
+            self.dynamo,
+            s3_uploads_client=self.clients.get('s3_uploads'),
+            cloudfront_client=self.clients.get('cloudfront'),
+            user_manager=self.user_manager,
+            post_manager=self.post_manager,
+        )
 
     def add_album(self, caller_user_id, album_id, name, description=None, now=None):
         now = now or pendulum.now('utc')

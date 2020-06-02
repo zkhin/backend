@@ -9,7 +9,6 @@ logger = logging.getLogger()
 
 
 class CommentDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
@@ -31,45 +30,43 @@ class CommentDynamo:
     def transact_add_comment(self, comment_id, post_id, user_id, text, text_tags, commented_at=None):
         commented_at = commented_at or pendulum.now('utc')
         commented_at_str = commented_at.to_iso8601_string()
-        return {'Put': {
-            'Item': {
-                'schemaVersion': {'N': '1'},
-                'partitionKey': {'S': f'comment/{comment_id}'},
-                'sortKey': {'S': '-'},
-                'gsiA1PartitionKey': {'S': f'comment/{post_id}'},
-                'gsiA1SortKey': {'S': commented_at_str},
-                'gsiA2PartitionKey': {'S': f'comment/{user_id}'},
-                'gsiA2SortKey': {'S': commented_at_str},
-                'commentId': {'S': comment_id},
-                'postId': {'S': post_id},
-                'userId': {'S': user_id},
-                'commentedAt': {'S': commented_at_str},
-                'text': {'S': text},
-                'textTags': {'L': [
-                    {'M': {
-                        'tag': {'S': text_tag['tag']},
-                        'userId': {'S': text_tag['userId']},
-                    }}
-                    for text_tag in text_tags
-                ]},
-            },
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-        }}
+        return {
+            'Put': {
+                'Item': {
+                    'schemaVersion': {'N': '1'},
+                    'partitionKey': {'S': f'comment/{comment_id}'},
+                    'sortKey': {'S': '-'},
+                    'gsiA1PartitionKey': {'S': f'comment/{post_id}'},
+                    'gsiA1SortKey': {'S': commented_at_str},
+                    'gsiA2PartitionKey': {'S': f'comment/{user_id}'},
+                    'gsiA2SortKey': {'S': commented_at_str},
+                    'commentId': {'S': comment_id},
+                    'postId': {'S': post_id},
+                    'userId': {'S': user_id},
+                    'commentedAt': {'S': commented_at_str},
+                    'text': {'S': text},
+                    'textTags': {
+                        'L': [
+                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']},}}
+                            for text_tag in text_tags
+                        ]
+                    },
+                },
+                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
+            }
+        }
 
     def transact_delete_comment(self, comment_id):
-        return {'Delete': {
-            'Key': self.typed_pk(comment_id),
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }}
+        return {
+            'Delete': {'Key': self.typed_pk(comment_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}
+        }
 
     def transact_increment_flag_count(self, comment_id):
         return {
             'Update': {
                 'Key': self.typed_pk(comment_id),
                 'UpdateExpression': 'ADD flagCount :one',
-                'ExpressionAttributeValues': {
-                    ':one': {'N': '1'},
-                },
+                'ExpressionAttributeValues': {':one': {'N': '1'},},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             }
         }
@@ -79,10 +76,7 @@ class CommentDynamo:
             'Update': {
                 'Key': self.typed_pk(comment_id),
                 'UpdateExpression': 'ADD flagCount :neg_one',
-                'ExpressionAttributeValues': {
-                    ':neg_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
+                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'},},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
             }
         }

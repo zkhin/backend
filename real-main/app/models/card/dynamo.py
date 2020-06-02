@@ -7,7 +7,6 @@ logger = logging.getLogger()
 
 
 class CardDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
@@ -28,27 +27,26 @@ class CardDynamo:
 
     def transact_add_card(self, card_id, user_id, title, action, sub_title=None, now=None):
         created_at = now or pendulum.now('utc')
-        query_kwargs = {'Put': {
-            'Item': {
-                'schemaVersion': {'N': '0'},
-                'partitionKey': {'S': f'card/{card_id}'},
-                'sortKey': {'S': '-'},
-                'gsiA1PartitionKey': {'S': f'user/{user_id}'},
-                'gsiA1SortKey': {'S': f'card/{created_at.to_iso8601_string()}'},
-                'title': {'S': title},
-                'action': {'S': action},
-            },
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-        }}
+        query_kwargs = {
+            'Put': {
+                'Item': {
+                    'schemaVersion': {'N': '0'},
+                    'partitionKey': {'S': f'card/{card_id}'},
+                    'sortKey': {'S': '-'},
+                    'gsiA1PartitionKey': {'S': f'user/{user_id}'},
+                    'gsiA1SortKey': {'S': f'card/{created_at.to_iso8601_string()}'},
+                    'title': {'S': title},
+                    'action': {'S': action},
+                },
+                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
+            }
+        }
         if sub_title:
             query_kwargs['Put']['Item']['subTitle'] = {'S': sub_title}
         return query_kwargs
 
     def transact_delete_card(self, card_id):
-        return {'Delete': {
-            'Key': self.typed_pk(card_id),
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }}
+        return {'Delete': {'Key': self.typed_pk(card_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}}
 
     def generate_cards_by_user(self, user_id, pks_only=False):
         query_kwargs = {

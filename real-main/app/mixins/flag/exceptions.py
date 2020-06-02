@@ -3,7 +3,6 @@ class FlagException(Exception):
 
 
 class AlreadyFlagged(FlagException):
-
     def __init__(self, item_type, item_id, user_id):
         super().__init__()
         self.item_type = item_type
@@ -15,7 +14,6 @@ class AlreadyFlagged(FlagException):
 
 
 class NotFlagged(FlagException):
-
     def __init__(self, item_type, item_id, user_id):
         super().__init__()
         self.item_type = item_type

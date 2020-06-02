@@ -33,7 +33,7 @@ def test_add_user_minimal(user_dynamo):
         'userId': user_id,
         'username': username,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
-        'signedUpAt': now.to_iso8601_string()
+        'signedUpAt': now.to_iso8601_string(),
     }
 
 
@@ -46,8 +46,9 @@ def test_add_user_maximal(user_dynamo):
     photo_code = 'red-cat'
 
     before = pendulum.now('utc')
-    item = user_dynamo.add_user(user_id, username, full_name=full_name, email=email, phone=phone,
-                                placeholder_photo_code=photo_code)
+    item = user_dynamo.add_user(
+        user_id, username, full_name=full_name, email=email, phone=phone, placeholder_photo_code=photo_code
+    )
     after = pendulum.now('utc')
 
     now = pendulum.parse(item['signedUpAt'])
@@ -229,10 +230,21 @@ def test_set_user_details(user_dynamo):
     resp = user_dynamo.set_user_details(user_id, full_name='fn')
     assert resp == {**expected_base_item, **{'fullName': 'fn'}}
 
-    resp = user_dynamo.set_user_details(user_id, full_name='f', bio='b', language_code='l', theme_code='tc',
-                                        follow_counts_hidden=True, view_counts_hidden=True,
-                                        email='e', phone='p', comments_disabled=True, likes_disabled=True,
-                                        sharing_disabled=True, verification_hidden=True)
+    resp = user_dynamo.set_user_details(
+        user_id,
+        full_name='f',
+        bio='b',
+        language_code='l',
+        theme_code='tc',
+        follow_counts_hidden=True,
+        view_counts_hidden=True,
+        email='e',
+        phone='p',
+        comments_disabled=True,
+        likes_disabled=True,
+        sharing_disabled=True,
+        verification_hidden=True,
+    )
     expected = {
         **expected_base_item,
         **{
@@ -262,10 +274,21 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
     assert expected_base_item['userId'] == user_id
 
     # set all optionals
-    resp = user_dynamo.set_user_details(user_id, full_name='f', bio='b', language_code='l', theme_code='tc',
-                                        follow_counts_hidden=True, view_counts_hidden=True,
-                                        email='e', phone='p', comments_disabled=True, likes_disabled=True,
-                                        sharing_disabled=True, verification_hidden=True)
+    resp = user_dynamo.set_user_details(
+        user_id,
+        full_name='f',
+        bio='b',
+        language_code='l',
+        theme_code='tc',
+        follow_counts_hidden=True,
+        view_counts_hidden=True,
+        email='e',
+        phone='p',
+        comments_disabled=True,
+        likes_disabled=True,
+        sharing_disabled=True,
+        verification_hidden=True,
+    )
     assert resp == {
         **expected_base_item,
         **{
@@ -285,9 +308,15 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
     }
 
     # False does not mean delete anymore
-    resp = user_dynamo.set_user_details(user_id, follow_counts_hidden=False, view_counts_hidden=False,
-                                        comments_disabled=False, likes_disabled=False, sharing_disabled=False,
-                                        verification_hidden=False)
+    resp = user_dynamo.set_user_details(
+        user_id,
+        follow_counts_hidden=False,
+        view_counts_hidden=False,
+        comments_disabled=False,
+        likes_disabled=False,
+        sharing_disabled=False,
+        verification_hidden=False,
+    )
     assert resp == {
         **expected_base_item,
         **{
@@ -307,10 +336,21 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
     }
 
     # empty string means delete
-    resp = user_dynamo.set_user_details(user_id, full_name='', bio='', language_code='', theme_code='',
-                                        follow_counts_hidden='', view_counts_hidden='', email='', phone='',
-                                        comments_disabled='', likes_disabled='', sharing_disabled='',
-                                        verification_hidden='')
+    resp = user_dynamo.set_user_details(
+        user_id,
+        full_name='',
+        bio='',
+        language_code='',
+        theme_code='',
+        follow_counts_hidden='',
+        view_counts_hidden='',
+        email='',
+        phone='',
+        comments_disabled='',
+        likes_disabled='',
+        sharing_disabled='',
+        verification_hidden='',
+    )
     assert resp == expected_base_item
 
 
@@ -674,27 +714,27 @@ def test_transact_post_deleted(user_dynamo):
     assert user_item.get('postDeletedCount', 0) == 0
 
     # delete the archived post
-    user_dynamo.client.transact_write_items([
-        user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),
-    ])
+    user_dynamo.client.transact_write_items(
+        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),]
+    )
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('postCount', 0) == 1
     assert user_item.get('postArchivedCount', 0) == 0
     assert user_item.get('postDeletedCount', 0) == 1
 
     # delete the completed post
-    user_dynamo.client.transact_write_items([
-        user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),
-    ])
+    user_dynamo.client.transact_write_items(
+        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),]
+    )
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('postCount', 0) == 0
     assert user_item.get('postArchivedCount', 0) == 0
     assert user_item.get('postDeletedCount', 0) == 2
 
     # delete a pending post
-    user_dynamo.client.transact_write_items([
-        user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.PENDING),
-    ])
+    user_dynamo.client.transact_write_items(
+        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.PENDING),]
+    )
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('postCount', 0) == 0
     assert user_item.get('postArchivedCount', 0) == 0
@@ -702,15 +742,15 @@ def test_transact_post_deleted(user_dynamo):
 
     # verify can't go negative for completed posts
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([
-            user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),
-        ])
+        user_dynamo.client.transact_write_items(
+            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),]
+        )
 
     # verify can't go negative for archived posts
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([
-            user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),
-        ])
+        user_dynamo.client.transact_write_items(
+            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),]
+        )
 
 
 def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):

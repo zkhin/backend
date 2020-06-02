@@ -36,8 +36,9 @@ def generate_text_image(text, dimensions, font_size=None):
     # tokenize then wrap the text so it looks good
     raw_tokens = text.split()
     token_widths = [draw.textsize(raw_token, font=font)[0] for raw_token in raw_tokens]
-    text, text_width, text_height = rectangle_wrap(raw_tokens, token_widths, token_spacing, line_spacing,
-                                                   line_height, image_aspect_ratio)
+    text, text_width, text_height = rectangle_wrap(
+        raw_tokens, token_widths, token_spacing, line_spacing, line_height, image_aspect_ratio
+    )
 
     logger.debug(f'Computed text size: ({text_width}, {text_height})')
     logger.debug(f'Actual text size:   {draw.textsize(text, font=font)}')

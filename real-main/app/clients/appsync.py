@@ -25,7 +25,10 @@ class AppSyncClient:
         aws_session = boto3.session.Session()
         creds = aws_session.get_credentials().get_frozen_credentials()
         auth = requests_aws4auth.AWS4Auth(
-            creds.access_key, creds.secret_key, aws_session.region_name, self.service_name,
+            creds.access_key,
+            creds.secret_key,
+            aws_session.region_name,
+            self.service_name,
             session_token=creds.token,
         )
         transport = gql_requests.RequestsHTTPTransport(

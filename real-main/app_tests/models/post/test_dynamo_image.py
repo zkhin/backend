@@ -38,8 +38,9 @@ def test_transact_add_minimal(post_image_dynamo):
 def test_transact_add_maximal(post_image_dynamo):
     # add the post image
     crop = {'upperLeft': {'x': 1, 'y': 2}, 'lowerRight': {'x': 3, 'y': 4}}
-    transact = post_image_dynamo.transact_add('pid2', crop=crop, image_format='if', original_format='of',
-                                              taken_in_real=True)
+    transact = post_image_dynamo.transact_add(
+        'pid2', crop=crop, image_format='if', original_format='of', taken_in_real=True
+    )
     post_image_dynamo.client.transact_write_items([transact])
 
     # check format
@@ -59,10 +60,9 @@ def test_transact_add_doesnt_add_non_positive_crops(post_image_dynamo):
     crop1 = {'upperLeft': {'x': -1, 'y': 0}, 'lowerRight': {'x': 1, 'y': 2}}
     crop2 = {'upperLeft': {'x': 2, 'y': 1}, 'lowerRight': {'x': 0, 'y': -1}}
 
-    post_image_dynamo.client.transact_write_items([
-        post_image_dynamo.transact_add('pid1', crop=crop1),
-        post_image_dynamo.transact_add('pid2', crop=crop2),
-    ])
+    post_image_dynamo.client.transact_write_items(
+        [post_image_dynamo.transact_add('pid1', crop=crop1), post_image_dynamo.transact_add('pid2', crop=crop2),]
+    )
 
     # check format first one
     item = post_image_dynamo.get('pid1')

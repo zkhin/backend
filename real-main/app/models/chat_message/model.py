@@ -14,6 +14,7 @@ logger = logging.getLogger()
 
 class DecimalJsonEncoder(json.JSONEncoder):
     "Helper class that can handle encoding decimals into json (as floats, percision lost)"
+
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
             return float(obj)
@@ -26,8 +27,16 @@ class ChatMessage(ViewModelMixin):
     exceptions = exceptions
     item_type = 'chatMessage'
 
-    def __init__(self, item, chat_message_dynamo=None, chat_message_appsync=None, block_manager=None,
-                 chat_manager=None, user_manager=None, **kwargs):
+    def __init__(
+        self,
+        item,
+        chat_message_dynamo=None,
+        chat_message_appsync=None,
+        block_manager=None,
+        chat_manager=None,
+        user_manager=None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.dynamo = chat_message_dynamo
         self.appsync = chat_message_appsync

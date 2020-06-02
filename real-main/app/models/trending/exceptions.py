@@ -3,7 +3,6 @@ class TrendingException(Exception):
 
 
 class TrendingDoesNotExist(TrendingException):
-
     def __init__(self, item_id):
         self.item_id = item_id
 
@@ -12,7 +11,6 @@ class TrendingDoesNotExist(TrendingException):
 
 
 class TrendingAlreadyExists(TrendingException):
-
     def __init__(self, item_id):
         self.item_id = item_id
 

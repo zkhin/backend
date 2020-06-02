@@ -115,7 +115,7 @@ def test_create_cognito_user_with_email_and_phone(user_manager, cognito_client):
             {'Name': 'email_verified', 'Value': 'true'},
             {'Name': 'phone_number', 'Value': phone},
             {'Name': 'phone_number_verified', 'Value': 'true'},
-        ]
+        ],
     )
 
     # check the user doesn't already exist
@@ -156,7 +156,7 @@ def test_create_cognito_user_with_non_verified_email_and_phone(user_manager, cog
             {'Name': 'email_verified', 'Value': 'false'},
             {'Name': 'phone_number', 'Value': phone},
             {'Name': 'phone_number_verified', 'Value': 'false'},
-        ]
+        ],
     )
 
     # check the user doesn't already exist
@@ -184,8 +184,7 @@ def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user
 
     # frontend does this part out-of-band: creates the user in cognito, no preferred_username
     cognito_client.boto_client.admin_create_user(
-        UserPoolId=cognito_client.user_pool_id,
-        Username=user_id,
+        UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
 
     # moto doesn't seem to honor the 'make preferred usernames unique' setting (using it as an alias)
@@ -209,13 +208,7 @@ def test_create_cognito_only_user_username_released_if_user_not_found_in_user_po
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id_2,
         MessageAction='SUPPRESS',
-        UserAttributes=[{
-            'Name': 'email',
-            'Value': 'test@real.app',
-        }, {
-            'Name': 'email_verified',
-            'Value': 'true',
-        }]
+        UserAttributes=[{'Name': 'email', 'Value': 'test@real.app',}, {'Name': 'email_verified', 'Value': 'true',}],
     )
 
     # create the first user that doesn't exist in the user pool, should fail
@@ -449,10 +442,13 @@ def test_get_text_tags(user_manager, cognito_only_user1, cognito_only_user2):
     username1 = cognito_only_user1.username
     username2 = cognito_only_user2.username
     text = f'hey @{username1} and @nopenope and @{username2}'
-    assert sorted(user_manager.get_text_tags(text), key=lambda x: x['tag']) == sorted([
-        {'tag': f'@{username1}', 'userId': cognito_only_user1.id},
-        {'tag': f'@{username2}', 'userId': cognito_only_user2.id},
-    ], key=lambda x: x['tag'])
+    assert sorted(user_manager.get_text_tags(text), key=lambda x: x['tag']) == sorted(
+        [
+            {'tag': f'@{username1}', 'userId': cognito_only_user1.id},
+            {'tag': f'@{username2}', 'userId': cognito_only_user2.id},
+        ],
+        key=lambda x: x['tag'],
+    )
 
 
 def test_username_tag_regex(user_manager):

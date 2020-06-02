@@ -3,7 +3,6 @@ class ChatMessageException(Exception):
 
 
 class ChatMessageDoesNotExist(ChatMessageException):
-
     def __init__(self, message_id):
         self.message_id = message_id
 

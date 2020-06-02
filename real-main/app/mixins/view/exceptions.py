@@ -3,7 +3,6 @@ class ViewException(Exception):
 
 
 class ViewAlreadyExists(ViewException):
-
     def __init__(self, item_type, item_id, user_id):
         self.item_type = item_type
         self.item_id = item_id
@@ -14,7 +13,6 @@ class ViewAlreadyExists(ViewException):
 
 
 class ViewDoesNotExist(ViewException):
-
     def __init__(self, item_type, item_id, user_id):
         self.item_type = item_type
         self.item_id = item_id

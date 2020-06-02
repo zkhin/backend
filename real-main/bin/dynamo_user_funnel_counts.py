@@ -21,7 +21,10 @@ POST_COMPLETED_STATUSES = ['COMPLETED', 'ARCHIVED', 'DELETING']
 def parse_args():
     parser = argparse.ArgumentParser(description="Count users in each possible status in cognito")
     parser.add_argument(
-        '-d', dest='date', required=True, type=lambda s: str(pendulum.parse(s).date()),
+        '-d',
+        dest='date',
+        required=True,
+        type=lambda s: str(pendulum.parse(s).date()),
         help='Count users that signed up on this date. Ex: 2020-05-19',
     )
     args = parser.parse_args()
@@ -39,7 +42,7 @@ def generate_users(table, signed_up_date):
         ),
     }
     last_key = False
-    while (last_key is not None):
+    while last_key is not None:
         if last_key:
             kwargs['ExclusiveStartKey'] = last_key
         resp = table.scan(**kwargs)
@@ -56,7 +59,7 @@ def generate_posts(table, user_id):
         'IndexName': 'GSI-A2',
     }
     last_key = False
-    while (last_key is not None):
+    while last_key is not None:
         if last_key:
             kwargs['ExclusiveStartKey'] = last_key
         resp = table.query(**kwargs)

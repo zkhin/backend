@@ -67,8 +67,9 @@ def test_trigger_notification(chat_message_appsync, message, chat, user1, user2,
     assert variables['input']['lastEditedAt'] is None
 
 
-def test_trigger_notification_blocking_relationship(chat_message_appsync, chat_message_manager, chat, user1, user2,
-                                                    appsync_client, block_manager):
+def test_trigger_notification_blocking_relationship(
+    chat_message_appsync, chat_message_manager, chat, user1, user2, appsync_client, block_manager
+):
     # user1 triggers a message notification that user2 recieves (in a group chat)
     message1 = chat_message_manager.add_chat_message('mid3', 'lore', chat.id, user1.id)
     message2 = chat_message_manager.add_chat_message('mid4', 'lore', chat.id, user2.id)
@@ -87,8 +88,9 @@ def test_trigger_notification_blocking_relationship(chat_message_appsync, chat_m
     assert appsync_client.send.call_args.args[1]['input']['authorEncoded'] is None
 
 
-def test_trigger_notification_system_message(chat_message_appsync, chat_manager, chat_message_manager, user1,
-                                             appsync_client):
+def test_trigger_notification_system_message(
+    chat_message_appsync, chat_manager, chat_message_manager, user1, appsync_client
+):
     group_chat = chat_manager.add_group_chat('cid', user1)
     appsync_client.reset_mock()
     # adding a system message triggers the notifcations automatically

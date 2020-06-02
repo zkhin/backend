@@ -3,7 +3,6 @@ class AlbumException(Exception):
 
 
 class AlbumDoesNotExist(AlbumException):
-
     def __init__(self, album_id):
         self.album_id = album_id
 

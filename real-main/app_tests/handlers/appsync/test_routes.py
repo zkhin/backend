@@ -12,6 +12,7 @@ def test_graphql_adds_to_it():
     @routes.register('Mytype.myfield')
     def myfunc():
         pass
+
     assert routes.cache == {'Mytype.myfield': myfunc}
 
 
@@ -19,6 +20,7 @@ def test_clear_works():
     @routes.register('Mytype.myfield')
     def myfunc():
         pass
+
     assert routes.cache == {'Mytype.myfield': myfunc}
     routes.clear()
     assert routes.cache == {}

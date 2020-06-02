@@ -14,10 +14,7 @@ def generate_all_posts(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'post/',
-            ':sv': version,
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sv': version,},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -30,16 +27,10 @@ def generate_all_posts(version):
 
 def update_post_from_0_to_1(like):
     kwargs = {
-        'Key': {
-            'partitionKey': like['partitionKey'],
-            'sortKey': like['sortKey'],
-        },
+        'Key': {'partitionKey': like['partitionKey'], 'sortKey': like['sortKey'],},
         'UpdateExpression': 'SET postedByUserId = postedBy.userId, schemaVersion = :one REMOVE postedBy',
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :zero',
-        'ExpressionAttributeValues': {
-            ':zero': 0,
-            ':one': 1,
-        },
+        'ExpressionAttributeValues': {':zero': 0, ':one': 1,},
     }
     print(f'Updating item: {kwargs} ... ')
     boto_table.update_item(**kwargs)

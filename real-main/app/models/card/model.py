@@ -18,9 +18,9 @@ class Card:
 
         self.item = item
         # immutables
-        self.id = item['partitionKey'][len('card/'):]
-        self.user_id = item['gsiA1PartitionKey'][len('user/'):]
-        self.created_at = pendulum.parse(item['gsiA1SortKey'][len('card/'):])
+        self.id = item['partitionKey'][len('card/') :]
+        self.user_id = item['gsiA1PartitionKey'][len('user/') :]
+        self.created_at = pendulum.parse(item['gsiA1SortKey'][len('card/') :])
 
     @property
     def user(self):

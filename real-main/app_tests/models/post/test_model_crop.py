@@ -60,29 +60,32 @@ def test_cannot_crop_no_crop(post_manager, user):
         post.crop_native_jpeg_cache()
 
 
-@pytest.mark.parametrize('crop', [
-    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height + 1}},
-])
+@pytest.mark.parametrize(
+    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height + 1}},]
+)
 def test_cannot_overcrop_jpeg_post_height(user, jpeg_image_post, crop):
     jpeg_image_post.image_item['crop'] = crop
     with pytest.raises(PostException, match='not tall enough'):
         jpeg_image_post.crop_native_jpeg_cache()
 
 
-@pytest.mark.parametrize('crop', [
-    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width + 1, 'y': grant_height}},
-])
+@pytest.mark.parametrize(
+    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width + 1, 'y': grant_height}},]
+)
 def test_cannot_overcrop_jpeg_post_width(user, jpeg_image_post, crop):
     jpeg_image_post.image_item['crop'] = crop
     with pytest.raises(PostException, match='not wide enough'):
         jpeg_image_post.crop_native_jpeg_cache()
 
 
-@pytest.mark.parametrize('crop', [
-    {'upperLeft': {'x': 0, 'y': grant_height - 1}, 'lowerRight': {'x': 1, 'y': grant_height}},
-    {'upperLeft': {'x': grant_width - 1, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': 1}},
-    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': 1, 'y': 1}},
-])
+@pytest.mark.parametrize(
+    'crop',
+    [
+        {'upperLeft': {'x': 0, 'y': grant_height - 1}, 'lowerRight': {'x': 1, 'y': grant_height}},
+        {'upperLeft': {'x': grant_width - 1, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': 1}},
+        {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': 1, 'y': 1}},
+    ],
+)
 def test_successful_jpeg_crop_to_minimal_image(user, jpeg_image_post, crop, s3_uploads_client):
     # crop the image
     jpeg_image_post.image_item['crop'] = crop
@@ -95,9 +98,9 @@ def test_successful_jpeg_crop_to_minimal_image(user, jpeg_image_post, crop, s3_u
     assert height == 1
 
 
-@pytest.mark.parametrize('crop', [
-    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height}},
-])
+@pytest.mark.parametrize(
+    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height}},]
+)
 def test_successful_jpeg_crop_off_nothing(user, jpeg_image_post, crop, s3_uploads_client):
     # crop the image
     jpeg_image_post.image_item['crop'] = crop

@@ -12,8 +12,14 @@ import text_image
 def parse_args():
     parser = argparse.ArgumentParser(description='Generate image with text')
     parser.add_argument('-t', dest='text', required=True, help='text to render into an image')
-    parser.add_argument('-o', dest='output_file', metavar='outputfile', type=argparse.FileType('wb'), required=True,
-                        help='file to write output image to')
+    parser.add_argument(
+        '-o',
+        dest='output_file',
+        metavar='outputfile',
+        type=argparse.FileType('wb'),
+        required=True,
+        help='file to write output image to',
+    )
     parser.add_argument('-d', dest='debug', action='store_true', help='turn extra logging on')
     args = parser.parse_args()
     return args.output_file, args.text, args.debug

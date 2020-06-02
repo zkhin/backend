@@ -10,7 +10,6 @@ logger = logging.getLogger()
 
 
 class PinpointClient:
-
     def __init__(self, app_id=PINPOINT_APPLICATION_ID):
         self.app_id = app_id
         self.client = boto3.client('pinpoint')
@@ -33,7 +32,7 @@ class PinpointClient:
                 endpoint_ids.append(this_endpoint_id)
 
         # delete extras
-        while (len(endpoint_ids) > 1):
+        while len(endpoint_ids) > 1:
             self.delete_endpoint(endpoint_ids.pop())
 
         endpoint_id = endpoint_ids[0] if endpoint_ids else str(uuid.uuid4())
@@ -41,13 +40,7 @@ class PinpointClient:
             kwargs = {
                 'ApplicationId': self.app_id,
                 'EndpointId': endpoint_id,
-                'EndpointRequest': {
-                    'Address': address,
-                    'ChannelType': channel_type,
-                    'User': {
-                        'UserId': user_id,
-                    }
-                }
+                'EndpointRequest': {'Address': address, 'ChannelType': channel_type, 'User': {'UserId': user_id,}},
             }
             self.client.update_endpoint(**kwargs)
         return endpoint_id
@@ -80,9 +73,7 @@ class PinpointClient:
             kwargs = {
                 'ApplicationId': self.app_id,
                 'EndpointId': endpoint_id,
-                'EndpointRequest': {
-                    'EndpointStatus': 'ACTIVE',
-                }
+                'EndpointRequest': {'EndpointStatus': 'ACTIVE',},
             }
             self.client.update_endpoint(**kwargs)
 
@@ -93,9 +84,7 @@ class PinpointClient:
             kwargs = {
                 'ApplicationId': self.app_id,
                 'EndpointId': endpoint_id,
-                'EndpointRequest': {
-                    'EndpointStatus': 'INACTIVE',
-                }
+                'EndpointRequest': {'EndpointStatus': 'INACTIVE',},
             }
             self.client.update_endpoint(**kwargs)
 

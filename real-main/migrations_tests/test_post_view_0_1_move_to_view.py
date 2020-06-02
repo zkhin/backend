@@ -24,20 +24,22 @@ def test_one_post_view_creates_new_view(dynamo_client, dynamo_table, caplog):
         'partitionKey': f'postView/{post_id}/{user_id}',
         'sortKey': '-',
     }
-    dynamo_table.put_item(Item={
-        **post_view_pk,
-        **{
-            'schemaVersion': 0,
-            'gsiA1PartitionKey': f'postView/{post_id}',
-            'gsiA1SortKey': '{last_viewed_at_str}',
-            'postId': post_id,
-            'postedByUserId': 'uid-zz',
-            'viewedByUserId': user_id,
-            'viewCount': view_count,
-            'firstViewedAt': first_viewed_at_str,
-            'lastViewedAt': last_viewed_at_str,
-        },
-    })
+    dynamo_table.put_item(
+        Item={
+            **post_view_pk,
+            **{
+                'schemaVersion': 0,
+                'gsiA1PartitionKey': f'postView/{post_id}',
+                'gsiA1SortKey': '{last_viewed_at_str}',
+                'postId': post_id,
+                'postedByUserId': 'uid-zz',
+                'viewedByUserId': user_id,
+                'viewCount': view_count,
+                'firstViewedAt': first_viewed_at_str,
+                'lastViewedAt': last_viewed_at_str,
+            },
+        }
+    )
 
     # check we see the old post view
     assert dynamo_table.get_item(Key=post_view_pk)['Item']['postId'] == post_id
@@ -89,8 +91,14 @@ at_4_str = pendulum.datetime(2020, 4, 15, 16, 17, 27, 596673).to_iso8601_string(
 @pytest.mark.parametrize("pv_last_viewed_at_str", [at_3_str, at_4_str])
 @pytest.mark.parametrize("v_last_viewed_at_str", [at_3_str, at_4_str])
 def test_one_post_view_updates_existing_view(
-        dynamo_client, dynamo_table, caplog,
-        pv_first_viewed_at_str, v_first_viewed_at_str, pv_last_viewed_at_str, v_last_viewed_at_str):
+    dynamo_client,
+    dynamo_table,
+    caplog,
+    pv_first_viewed_at_str,
+    v_first_viewed_at_str,
+    pv_last_viewed_at_str,
+    v_last_viewed_at_str,
+):
 
     # create a post view to migrate
     post_id = 'pid-xx'
@@ -100,20 +108,22 @@ def test_one_post_view_updates_existing_view(
         'partitionKey': f'postView/{post_id}/{user_id}',
         'sortKey': '-',
     }
-    dynamo_table.put_item(Item={
-        **post_view_pk,
-        **{
-            'schemaVersion': 0,
-            'gsiA1PartitionKey': f'postView/{post_id}',
-            'gsiA1SortKey': '{last_viewed_at_str}',
-            'postId': post_id,
-            'postedByUserId': 'uid-zz',
-            'viewedByUserId': user_id,
-            'viewCount': pv_view_count,
-            'firstViewedAt': pv_first_viewed_at_str,
-            'lastViewedAt': pv_last_viewed_at_str,
-        },
-    })
+    dynamo_table.put_item(
+        Item={
+            **post_view_pk,
+            **{
+                'schemaVersion': 0,
+                'gsiA1PartitionKey': f'postView/{post_id}',
+                'gsiA1SortKey': '{last_viewed_at_str}',
+                'postId': post_id,
+                'postedByUserId': 'uid-zz',
+                'viewedByUserId': user_id,
+                'viewCount': pv_view_count,
+                'firstViewedAt': pv_first_viewed_at_str,
+                'lastViewedAt': pv_last_viewed_at_str,
+            },
+        }
+    )
 
     # check we see the old post view
     assert dynamo_table.get_item(Key=post_view_pk)['Item']['postId'] == post_id
@@ -125,17 +135,19 @@ def test_one_post_view_updates_existing_view(
         'partitionKey': f'post/{post_id}',
         'sortKey': f'view/{user_id}',
     }
-    dynamo_table.put_item(Item={
-        **view_pk,
-        **{
-            'schemaVersion': 0,
-            'gsiK1PartitionKey': f'post/{post_id}',
-            'gsiK1SortKey': f'view/{user_id}',
-            'viewCount': v_view_count,
-            'firstViewedAt': v_first_viewed_at_str,
-            'lastViewedAt': v_last_viewed_at_str,
-        },
-    })
+    dynamo_table.put_item(
+        Item={
+            **view_pk,
+            **{
+                'schemaVersion': 0,
+                'gsiK1PartitionKey': f'post/{post_id}',
+                'gsiK1SortKey': f'view/{user_id}',
+                'viewCount': v_view_count,
+                'firstViewedAt': v_first_viewed_at_str,
+                'lastViewedAt': v_last_viewed_at_str,
+            },
+        }
+    )
 
     # check we see the existing view
     assert dynamo_table.get_item(Key=view_pk)['Item']['partitionKey'] == f'post/{post_id}'

@@ -20,7 +20,14 @@ class UserManager:
     enums = enums
     exceptions = exceptions
     client_names = [
-        'cloudfront', 'cognito', 'dynamo', 'facebook', 'google', 'pinpoint', 's3_uploads', 's3_placeholder_photos',
+        'cloudfront',
+        'cognito',
+        'dynamo',
+        'facebook',
+        'google',
+        'pinpoint',
+        's3_uploads',
+        's3_placeholder_photos',
     ]
     username_tag_regex = re.compile('@' + UserValidate.username_regex.pattern)
 
@@ -106,8 +113,9 @@ class UserManager:
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
         try:
-            item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email, phone=phone,
-                                        placeholder_photo_code=photo_code)
+            item = self.dynamo.add_user(
+                user_id, username, full_name=full_name, email=email, phone=phone, placeholder_photo_code=photo_code
+            )
         except self.exceptions.UserAlreadyExists:
             # un-claim the username in cognito
             if preferred_username:
@@ -133,18 +141,22 @@ class UserManager:
         try:
             self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
             cognito_id_token = self.cognito_client.get_user_pool_id_token(user_id)
-            self.cognito_client.link_identity_pool_entries(user_id, cognito_id_token=cognito_id_token,
-                                                           facebook_access_token=facebook_access_token)
-        except (self.cognito_client.boto_client.exceptions.AliasExistsException,
-                self.cognito_client.boto_client.exceptions.UsernameExistsException):
+            self.cognito_client.link_identity_pool_entries(
+                user_id, cognito_id_token=cognito_id_token, facebook_access_token=facebook_access_token
+            )
+        except (
+            self.cognito_client.boto_client.exceptions.AliasExistsException,
+            self.cognito_client.boto_client.exceptions.UsernameExistsException,
+        ):
             raise self.exceptions.UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
             )
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
-        item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email,
-                                    placeholder_photo_code=photo_code)
+        item = self.dynamo.add_user(
+            user_id, username, full_name=full_name, email=email, placeholder_photo_code=photo_code
+        )
         user = self.init_user(item)
         self.follow_real_user(user)
         return user
@@ -165,18 +177,22 @@ class UserManager:
         try:
             self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
             cognito_id_token = self.cognito_client.get_user_pool_id_token(user_id)
-            self.cognito_client.link_identity_pool_entries(user_id, cognito_id_token=cognito_id_token,
-                                                           google_id_token=google_id_token)
-        except (self.cognito_client.boto_client.exceptions.AliasExistsException,
-                self.cognito_client.boto_client.exceptions.UsernameExistsException):
+            self.cognito_client.link_identity_pool_entries(
+                user_id, cognito_id_token=cognito_id_token, google_id_token=google_id_token
+            )
+        except (
+            self.cognito_client.boto_client.exceptions.AliasExistsException,
+            self.cognito_client.boto_client.exceptions.UsernameExistsException,
+        ):
             raise self.exceptions.UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
             )
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
-        item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email,
-                                    placeholder_photo_code=photo_code)
+        item = self.dynamo.add_user(
+            user_id, username, full_name=full_name, email=email, placeholder_photo_code=photo_code
+        )
         user = self.init_user(item)
         self.follow_real_user(user)
         return user

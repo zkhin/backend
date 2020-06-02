@@ -63,7 +63,7 @@ def test_transact_add_group_chat_maximal(chat_dynamo):
         'createdAt': now.to_iso8601_string(),
         'createdByUserId': 'cuid',
         'userCount': 1,
-        'name': 'group name'
+        'name': 'group name',
     }
 
     # verify we can't add another chat with same id

@@ -8,7 +8,6 @@ logger = logging.getLogger()
 
 
 class ViewDynamo:
-
     def __init__(self, item_type, dynamo_client):
         self.item_type = item_type
         self.client = dynamo_client
@@ -66,10 +65,7 @@ class ViewDynamo:
         query_kwargs = {
             'Key': pk,
             'UpdateExpression': 'ADD viewCount :vc SET lastViewedAt = :lva',
-            'ExpressionAttributeValues': {
-                ':vc': view_count,
-                ':lva': viewed_at.to_iso8601_string(),
-            },
+            'ExpressionAttributeValues': {':vc': view_count, ':lva': viewed_at.to_iso8601_string(),},
         }
         try:
             return self.client.update_item(query_kwargs)

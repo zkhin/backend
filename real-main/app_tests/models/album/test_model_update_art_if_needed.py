@@ -162,8 +162,25 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
         assert not s3_uploads_client.exists(old_path)
 
 
-def test_1_4_9_16_posts_in_album(album, post1, post2, post3, post4, post5, post6, post7, post8, post9, post10,
-                                 post11, post12, post13, post14, post15, post16):
+def test_1_4_9_16_posts_in_album(
+    album,
+    post1,
+    post2,
+    post3,
+    post4,
+    post5,
+    post6,
+    post7,
+    post8,
+    post9,
+    post10,
+    post11,
+    post12,
+    post13,
+    post14,
+    post15,
+    post16,
+):
     assert 'artHash' not in album.item
     post_dynamo = post1.dynamo
 

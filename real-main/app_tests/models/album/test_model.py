@@ -147,9 +147,9 @@ def test_get_art_image_path(album):
 
 def test_get_art_image_url(album):
     image_url = 'https://the-image.com'
-    album.cloudfront_client.configure_mock(**{
-        'generate_presigned_url.return_value': image_url,
-    })
+    album.cloudfront_client.configure_mock(
+        **{'generate_presigned_url.return_value': image_url,}
+    )
 
     # should get placeholder image when album has no artHash
     assert 'artHash' not in album.item

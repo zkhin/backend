@@ -10,7 +10,6 @@ logger = logging.getLogger()
 
 
 class CognitoClient:
-
     def __init__(self, client_id=COGNITO_BACKEND_CLIENT_ID, user_pool_id=COGNITO_USER_POOL_ID):
         assert client_id, "Cognito user pool client id is required"
         assert user_pool_id, "Cognito user pool id is required"
@@ -34,11 +33,7 @@ class CognitoClient:
     def confirm_user(self, user_id, code):
         "Confirm the user. Returns True for success, False for failure"
         try:
-            self.user_pool_client.confirm_sign_up(
-                ClientId=self.client_id,
-                Username=user_id,
-                ConfirmationCode=code,
-            )
+            self.user_pool_client.confirm_sign_up(ClientId=self.client_id, Username=user_id, ConfirmationCode=code)
         except Exception:
             return False
         return True

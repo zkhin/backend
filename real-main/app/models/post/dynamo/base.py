@@ -14,7 +14,6 @@ logger = logging.getLogger()
 
 
 class PostDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
@@ -88,10 +87,22 @@ class PostDynamo:
         }
         return self.client.generate_all_scan(query_kwargs)
 
-    def transact_add_pending_post(self, posted_by_user_id, post_id, post_type, posted_at=None, expires_at=None,
-                                  album_id=None, text=None, text_tags=None, comments_disabled=None,
-                                  likes_disabled=None, sharing_disabled=None, verification_hidden=None,
-                                  set_as_user_photo=None):
+    def transact_add_pending_post(
+        self,
+        posted_by_user_id,
+        post_id,
+        post_type,
+        posted_at=None,
+        expires_at=None,
+        album_id=None,
+        text=None,
+        text_tags=None,
+        comments_disabled=None,
+        likes_disabled=None,
+        sharing_disabled=None,
+        verification_hidden=None,
+        set_as_user_photo=None,
+    ):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         post_status = enums.PostStatus.PENDING
@@ -111,29 +122,32 @@ class PostDynamo:
         }
         if expires_at:
             expires_at_str = expires_at.to_iso8601_string()
-            post_item.update({
-                'expiresAt': {'S': expires_at_str},
-                'gsiA1PartitionKey': {'S': f'post/{posted_by_user_id}'},
-                'gsiA1SortKey': {'S': f'{post_status}/{expires_at_str}'},
-                'gsiK1PartitionKey': {'S': f'post/{expires_at.date()}'},
-                'gsiK1SortKey': {'S': str(expires_at.time())},
-            })
+            post_item.update(
+                {
+                    'expiresAt': {'S': expires_at_str},
+                    'gsiA1PartitionKey': {'S': f'post/{posted_by_user_id}'},
+                    'gsiA1SortKey': {'S': f'{post_status}/{expires_at_str}'},
+                    'gsiK1PartitionKey': {'S': f'post/{expires_at.date()}'},
+                    'gsiK1SortKey': {'S': str(expires_at.time())},
+                }
+            )
         if album_id:
-            post_item.update({
-                'albumId': {'S': album_id},
-                'gsiK3PartitionKey': {'S': f'post/{album_id}'},
-                'gsiK3SortKey': {'N': '-1'},  # all non-completed posts have a rank of -1
-            })
+            post_item.update(
+                {
+                    'albumId': {'S': album_id},
+                    'gsiK3PartitionKey': {'S': f'post/{album_id}'},
+                    'gsiK3SortKey': {'N': '-1'},  # all non-completed posts have a rank of -1
+                }
+            )
         if text:
             post_item['text'] = {'S': text}
         if text_tags is not None:
-            post_item['textTags'] = {'L': [
-                {'M': {
-                    'tag': {'S': text_tag['tag']},
-                    'userId': {'S': text_tag['userId']},
-                }}
-                for text_tag in text_tags
-            ]}
+            post_item['textTags'] = {
+                'L': [
+                    {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']},}}
+                    for text_tag in text_tags
+                ]
+            }
         if comments_disabled is not None:
             post_item['commentsDisabled'] = {'BOOL': comments_disabled}
         if likes_disabled is not None:
@@ -145,19 +159,19 @@ class PostDynamo:
         if set_as_user_photo is not None:
             post_item['setAsUserPhoto'] = {'BOOL': set_as_user_photo}
 
-        return {'Put': {
-            'Item': post_item,
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-        }}
+        return {
+            'Put': {
+                'Item': post_item,
+                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
+            }
+        }
 
     def transact_increment_flag_count(self, post_id):
         return {
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD flagCount :one',
-                'ExpressionAttributeValues': {
-                    ':one': {'N': '1'},
-                },
+                'ExpressionAttributeValues': {':one': {'N': '1'},},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             }
         }
@@ -167,10 +181,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD flagCount :neg_one',
-                'ExpressionAttributeValues': {
-                    ':neg_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
+                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'},},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
             }
         }
@@ -178,8 +189,9 @@ class PostDynamo:
     def transact_set_post_status(self, post_item, status, original_post_id=None, album_rank=None):
         album_id = post_item.get('albumId')
 
-        assert (album_rank is not None) is bool(album_id and status == PostStatus.COMPLETED), \
-            'album_rank must be specified only when completing a post in an album'
+        assert (album_rank is not None) is bool(
+            album_id and status == PostStatus.COMPLETED
+        ), 'album_rank must be specified only when completing a post in an album'
         album_rank = album_rank if album_rank is not None else -1
 
         exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsia2sk', 'gsiA3SortKey = :gsia3sk']
@@ -227,11 +239,19 @@ class PostDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             raise exceptions.PostDoesNotExist(post_id)
 
-    def set(self, post_id, text=None, text_tags=None, comments_disabled=None, likes_disabled=None,
-            sharing_disabled=None, verification_hidden=None):
-        assert any(k is not None for k in (
-            text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,
-        )), 'Action-less post edit requested'
+    def set(
+        self,
+        post_id,
+        text=None,
+        text_tags=None,
+        comments_disabled=None,
+        likes_disabled=None,
+        sharing_disabled=None,
+        verification_hidden=None,
+    ):
+        assert any(
+            k is not None for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,)
+        ), 'Action-less post edit requested'
 
         exp_actions = collections.defaultdict(list)
         exp_names = {}
@@ -324,10 +344,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'SET hasNewCommentActivity = :nv',
-                'ExpressionAttributeValues': {
-                    ':nv': {'BOOL': new_value},
-                    ':ov': {'BOOL': not new_value},
-                },
+                'ExpressionAttributeValues': {':nv': {'BOOL': new_value}, ':ov': {'BOOL': not new_value},},
                 'ConditionExpression': cond_exp,
             },
         }
@@ -336,13 +353,16 @@ class PostDynamo:
         expires_at_str = expires_at.to_iso8601_string()
         update_query_kwargs = {
             'Key': self.pk(post_item['postId']),
-            'UpdateExpression': 'SET ' + ', '.join([
-                'expiresAt = :ea',
-                'gsiA1PartitionKey = :ga1pk',
-                'gsiA1SortKey = :ga1sk',
-                'gsiK1PartitionKey = :gk1pk',
-                'gsiK1SortKey = :gk1sk',
-            ]),
+            'UpdateExpression': 'SET '
+            + ', '.join(
+                [
+                    'expiresAt = :ea',
+                    'gsiA1PartitionKey = :ga1pk',
+                    'gsiA1SortKey = :ga1sk',
+                    'gsiK1PartitionKey = :gk1pk',
+                    'gsiK1SortKey = :gk1sk',
+                ]
+            ),
             'ExpressionAttributeValues': {
                 ':ea': expires_at_str,
                 ':ga1pk': 'post/' + post_item['postedByUserId'],
@@ -374,12 +394,8 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD #count_name :one',
-                'ExpressionAttributeValues': {
-                    ':one': {'N': '1'},
-                },
-                'ExpressionAttributeNames': {
-                    '#count_name': like_count_attribute,
-                },
+                'ExpressionAttributeValues': {':one': {'N': '1'},},
+                'ExpressionAttributeNames': {'#count_name': like_count_attribute,},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
@@ -396,13 +412,8 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD #count_name :negative_one',
-                'ExpressionAttributeValues': {
-                    ':negative_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
-                'ExpressionAttributeNames': {
-                    '#count_name': like_count_attribute,
-                },
+                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                'ExpressionAttributeNames': {'#count_name': like_count_attribute,},
                 # only updates and no going below zero
                 'ConditionExpression': 'attribute_exists(partitionKey) and #count_name > :zero',
             },
@@ -413,9 +424,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :one',
-                'ExpressionAttributeValues': {
-                    ':one': {'N': '1'},
-                },
+                'ExpressionAttributeValues': {':one': {'N': '1'},},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
@@ -425,10 +434,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :negative_one',
-                'ExpressionAttributeValues': {
-                    ':negative_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
+                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
                 # only updates and no going below zero
                 'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
             },
@@ -438,8 +444,9 @@ class PostDynamo:
         post_id = post_item['postId']
         post_status = post_item['postStatus']
 
-        assert (album_rank is not None) is bool(album_id and post_status == PostStatus.COMPLETED), \
-            'album_rank must be specified only when setting album_id for a completed post'
+        assert (album_rank is not None) is bool(
+            album_id and post_status == PostStatus.COMPLETED
+        ), 'album_rank must be specified only when setting album_id for a completed post'
         album_rank = album_rank if album_rank is not None else -1
 
         transact_item = {
@@ -449,9 +456,9 @@ class PostDynamo:
             },
         }
         if album_id:
-            transact_item['Update']['UpdateExpression'] = (
-                'SET albumId = :aid, gsiK3PartitionKey = :pk, gsiK3SortKey = :ar'
-            )
+            transact_item['Update'][
+                'UpdateExpression'
+            ] = 'SET albumId = :aid, gsiK3PartitionKey = :pk, gsiK3SortKey = :ar'
             transact_item['Update']['ExpressionAttributeValues'] = {
                 ':aid': {'S': album_id},
                 ':pk': {'S': f'post/{album_id}'},
@@ -489,7 +496,4 @@ class PostDynamo:
             'IndexName': 'GSI-K3',
             'ProjectionExpression': 'partitionKey',
         }
-        return map(
-            lambda item: item['partitionKey'].split('/')[1],
-            self.client.generate_all_query(query_kwargs),
-        )
+        return map(lambda item: item['partitionKey'].split('/')[1], self.client.generate_all_query(query_kwargs),)

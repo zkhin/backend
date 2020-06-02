@@ -39,9 +39,9 @@ def test_start_processing_video_upload_exception_partway_thru(pending_video_post
 
     # mock the mediaconvert api so it throws an error
     pending_video_post.mediaconvert_client = mediaconvert_client
-    pending_video_post.mediaconvert_client.configure_mock(**{
-        'create_job.side_effect': Exception('stuff went wrong')
-    })
+    pending_video_post.mediaconvert_client.configure_mock(
+        **{'create_job.side_effect': Exception('stuff went wrong')}
+    )
 
     with pytest.raises(Exception):
         pending_video_post.start_processing_video_upload()

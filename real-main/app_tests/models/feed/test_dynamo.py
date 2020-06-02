@@ -18,10 +18,7 @@ def test_build_pk(feed_dynamo):
 
 
 def test_parse_pk(feed_dynamo):
-    user_id, post_id = feed_dynamo.parse_pk({
-        'partitionKey': 'feed/uid/pid',
-        'sortKey': '-',
-    })
+    user_id, post_id = feed_dynamo.parse_pk({'partitionKey': 'feed/uid/pid', 'sortKey': '-',})
     assert user_id == 'uid'
     assert post_id == 'pid'
 
@@ -65,15 +62,12 @@ def test_add_posts_to_feed(feed_dynamo):
 
     # add two posts to the feed
     posted_at = pendulum.now('utc').to_iso8601_string()
-    posts_generator = iter([{
-        'postId': 'pid1',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }, {
-        'postId': 'pid2',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }])
+    posts_generator = iter(
+        [
+            {'postId': 'pid1', 'postedByUserId': 'pbuid', 'postedAt': posted_at,},
+            {'postId': 'pid2', 'postedByUserId': 'pbuid', 'postedAt': posted_at,},
+        ]
+    )
     feed_dynamo.add_posts_to_feed(user_id, posts_generator)
 
     # check those two posts are in the feed
@@ -82,11 +76,7 @@ def test_add_posts_to_feed(feed_dynamo):
 
     # add another post to the feed
     posted_at = pendulum.now('utc').to_iso8601_string()
-    posts_generator = iter([{
-        'postId': 'pid3',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }])
+    posts_generator = iter([{'postId': 'pid3', 'postedByUserId': 'pbuid', 'postedAt': posted_at,}])
     feed_dynamo.add_posts_to_feed(user_id, posts_generator)
 
     # check all three posts are in the feed
@@ -109,19 +99,13 @@ def test_delete_posts_from_feed(feed_dynamo):
 
     # add three posts to the feed
     posted_at = pendulum.now('utc').to_iso8601_string()
-    posts_generator = iter([{
-        'postId': 'pid1',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }, {
-        'postId': 'pid2',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }, {
-        'postId': 'pid3',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }])
+    posts_generator = iter(
+        [
+            {'postId': 'pid1', 'postedByUserId': 'pbuid', 'postedAt': posted_at,},
+            {'postId': 'pid2', 'postedByUserId': 'pbuid', 'postedAt': posted_at,},
+            {'postId': 'pid3', 'postedByUserId': 'pbuid', 'postedAt': posted_at,},
+        ]
+    )
     feed_dynamo.add_posts_to_feed(user_id, posts_generator)
 
     # check those three posts are in the feed
@@ -241,19 +225,11 @@ def test_generate_feed_pks_by_posted_by_user(feed_dynamo):
 
     # add three posts by different users to the feed
     posted_at = pendulum.now('utc').to_iso8601_string()
-    post_items = [{
-        'postId': 'pid1',
-        'postedByUserId': pb_user_id_1,
-        'postedAt': posted_at,
-    }, {
-        'postId': 'pid2',
-        'postedByUserId': pb_user_id_2,
-        'postedAt': posted_at,
-    }, {
-        'postId': 'pid3',
-        'postedByUserId': pb_user_id_1,
-        'postedAt': posted_at,
-    }]
+    post_items = [
+        {'postId': 'pid1', 'postedByUserId': pb_user_id_1, 'postedAt': posted_at,},
+        {'postId': 'pid2', 'postedByUserId': pb_user_id_2, 'postedAt': posted_at,},
+        {'postId': 'pid3', 'postedByUserId': pb_user_id_1, 'postedAt': posted_at,},
+    ]
     feed_dynamo.add_posts_to_feed(feed_user_id, iter(post_items))
 
     # verify the feed looks as expected

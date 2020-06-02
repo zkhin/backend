@@ -20,9 +20,16 @@ class Album:
     exceptions = exceptions
     jpeg_content_type = 'image/jpeg'
 
-    def __init__(self, album_item, album_dynamo, cloudfront_client=None, s3_uploads_client=None,
-                 user_manager=None, post_manager=None,
-                 frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN):
+    def __init__(
+        self,
+        album_item,
+        album_dynamo,
+        cloudfront_client=None,
+        s3_uploads_client=None,
+        user_manager=None,
+        post_manager=None,
+        frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
+    ):
         self.dynamo = album_dynamo
         if cloudfront_client:
             self.cloudfront_client = cloudfront_client
@@ -59,7 +66,7 @@ class Album:
             post.set_album(None)
 
         # delete the album art
-        if (art_hash := self.item.get('artHash')):
+        if (art_hash := self.item.get('artHash')) :
             self.delete_art_images(art_hash)
 
         # order matters to moto (in test suite), but not on dynamo

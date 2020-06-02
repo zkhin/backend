@@ -7,8 +7,8 @@ from .logging import logger, LogLevelContext
 
 def handler(required_query_params=[]):
     "Decorator to simplify handlers"
-    def decorator(func):
 
+    def decorator(func):
         def inner(event, context):
             extra_args = []
             query_string_params = event.get('queryStringParameters') or {}
@@ -24,10 +24,7 @@ def handler(required_query_params=[]):
             try:
                 data = inner(event, context)
             except ClientException as err:
-                return {
-                    'statusCode': 400,
-                    'body': json.dumps({'message': str(err)}, default=str)
-                }
+                return {'statusCode': 400, 'body': json.dumps({'message': str(err)}, default=str)}
             return {
                 'statusCode': 200,
                 'body': json.dumps(data, default=str),

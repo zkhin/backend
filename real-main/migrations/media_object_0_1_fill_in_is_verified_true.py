@@ -15,11 +15,7 @@ def generate_all_media_objects_that_need_is_verified():
             'begins_with(partitionKey, :pk_prefix) and attribute_not_exists(isVerified)'
             + ' and (mediaStatus = :up or mediaStatus = :ar)'
         ),
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'media/',
-            ':up': 'UPLOADED',
-            ':ar': 'ARCHIVED',
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'media/', ':up': 'UPLOADED', ':ar': 'ARCHIVED',},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -38,10 +34,7 @@ def update_item(kwargs):
 
 def update_media(item):
     kwargs = {
-        'Key': {
-            'partitionKey': item['partitionKey'],
-            'sortKey': item['sortKey'],
-        },
+        'Key': {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey'],},
         'UpdateExpression': 'SET isVerified = :iv',
         'ConditionExpression': 'attribute_exists(partitionKey) and attribute_not_exists(isVerified)',
         'ExpressionAttributeValues': {':iv': True},

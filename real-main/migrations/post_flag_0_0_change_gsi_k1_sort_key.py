@@ -22,10 +22,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(gsiK1PartitionKey, :pk_prefix) AND gsiK1SortKey = :sk',
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'flag/',
-                ':sk': '-',
-            },
+            'ExpressionAttributeValues': {':pk_prefix': 'flag/', ':sk': '-',},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -44,9 +41,7 @@ class Migration:
             'Key': pk,
             'UpdateExpression': 'SET gsiK1SortKey = :new_sk',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {
-                ':new_sk': 'post',
-            },
+            'ExpressionAttributeValues': {':new_sk': 'post',},
         }
         logger.warning(f'Post Flag `{pk}`: migrating')
         self.dynamo_table.update_item(**kwargs)

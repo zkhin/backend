@@ -35,7 +35,10 @@ class ESSearchClient:
             session = boto3.Session()
             credentials = session.get_credentials().get_frozen_credentials()
             self._awsauth = requests_aws4auth.AWS4Auth(
-                credentials.access_key, credentials.secret_key, session.region_name, self.service,
+                credentials.access_key,
+                credentials.secret_key,
+                session.region_name,
+                self.service,
                 session_token=credentials.token,
             )
         return self._awsauth
@@ -52,9 +55,7 @@ class ESSearchClient:
         logging.info(f'ElasticSearch: Adding user to index at `{url}` ' + json.dumps(doc))
         resp = requests.put(url, auth=self.awsauth, json=doc, headers=self.headers)
         if resp.status_code != 201:
-            logging.warning(
-                f'ElasticSearch: Recieved non-201 response of {resp.status_code} when adding user'
-            )
+            logging.warning(f'ElasticSearch: Recieved non-201 response of {resp.status_code} when adding user')
 
     def update_user(self, dynamodb_old_user_item, dynamodb_new_user_item):
         assert dynamodb_old_user_item['userId'] == dynamodb_new_user_item['userId']

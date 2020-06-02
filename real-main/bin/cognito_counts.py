@@ -16,19 +16,26 @@ COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
 assert COGNITO_USER_POOL_ID, 'Environment variable COGNITO_USER_POOL_ID must be defined'
 
 USER_STASTUSES = [
-    'UNCONFIRMED', 'CONFIRMED', 'ARCHIVED', 'COMPROMISED', 'UNKNOWN', 'RESET_REQUIRED', 'FORCE_CHANGE_PASSWORD',
+    'UNCONFIRMED',
+    'CONFIRMED',
+    'ARCHIVED',
+    'COMPROMISED',
+    'UNKNOWN',
+    'RESET_REQUIRED',
+    'FORCE_CHANGE_PASSWORD',
 ]
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Count users in each possible status in cognito")
     parser.add_argument(
-        '-d', dest='date', type=lambda s: str(pendulum.parse(s).date()),
+        '-d',
+        dest='date',
+        type=lambda s: str(pendulum.parse(s).date()),
         help='Only count users that were created in this date. Ex: 2020-05-19',
     )
     parser.add_argument(
-        '-s', dest='status', choices=USER_STASTUSES,
-        help='Only count users with the given user status',
+        '-s', dest='status', choices=USER_STASTUSES, help='Only count users with the given user status',
     )
     args = parser.parse_args()
     return args.date, args.status
@@ -43,7 +50,7 @@ def generate_users(client, attributes_to_get=None, user_filter=None, progress_in
         kwargs['Filter'] = user_filter
 
     pagination_token = False
-    while (pagination_token is not None):
+    while pagination_token is not None:
         if progress_indicator:
             print(progress_indicator, end='', flush=True)
         if pagination_token:
@@ -72,7 +79,6 @@ def parse_user(user):
 
 
 class Stats:
-
     def __init__(self):
         self.total = 0
         self.create_date = collections.defaultdict(int)

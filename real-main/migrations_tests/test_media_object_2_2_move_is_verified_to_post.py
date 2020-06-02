@@ -131,8 +131,14 @@ def test_migrate_one(dynamo_client, dynamo_table, caplog, post_and_media_is_veri
     assert new_media == media
 
 
-def test_migrate_multiple(dynamo_client, dynamo_table, caplog, post_and_media_is_verified_false,
-                          post_and_media_is_verified_true, post_and_media_is_verified_none):
+def test_migrate_multiple(
+    dynamo_client,
+    dynamo_table,
+    caplog,
+    post_and_media_is_verified_false,
+    post_and_media_is_verified_true,
+    post_and_media_is_verified_none,
+):
     post_false, media_false = post_and_media_is_verified_false
     post_true, media_true = post_and_media_is_verified_true
     post_none, media_none = post_and_media_is_verified_none
@@ -154,14 +160,12 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, post_and_media_is
 
     # spot check result
     media_items = dynamo_table.scan(
-        FilterExpression='begins_with(partitionKey, :pk_prefix)',
-        ExpressionAttributeValues={':pk_prefix': 'media/'},
+        FilterExpression='begins_with(partitionKey, :pk_prefix)', ExpressionAttributeValues={':pk_prefix': 'media/'},
     )['Items']
     assert [m for m in media_items if 'isVerified' in m] == []
 
     post_items = dynamo_table.scan(
-        FilterExpression='begins_with(partitionKey, :pk_prefix)',
-        ExpressionAttributeValues={':pk_prefix': 'post/'},
+        FilterExpression='begins_with(partitionKey, :pk_prefix)', ExpressionAttributeValues={':pk_prefix': 'post/'},
     )['Items']
     assert [p['postId'] for p in post_items if p.get('isVerified') is True] == [post_id_true]
     assert [p['postId'] for p in post_items if p.get('isVerified') is False] == [post_id_false]

@@ -27,4 +27,4 @@ class PostType:
 class PostNotificationType:
     COMPLETED = 'COMPLETED'
 
-    _ALL = (COMPLETED)
+    _ALL = COMPLETED

@@ -50,10 +50,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND schemaVersion = :fsv',
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'media/',
-                ':fsv': self.from_schema_version,
-            },
+            'ExpressionAttributeValues': {':pk_prefix': 'media/', ':fsv': self.from_schema_version,},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -88,15 +85,9 @@ class Migration:
     def dynamo_update_schema_version(self, item):
         logger.warning(f'MediaObject `{item["mediaId"]}`: updating dynamo schema version')
         kwargs = {
-            'Key': {
-                'partitionKey': item['partitionKey'],
-                'sortKey': item['sortKey'],
-            },
+            'Key': {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey'],},
             'UpdateExpression': 'SET schemaVersion = :tsv',
-            'ExpressionAttributeValues': {
-                ':tsv': self.to_schema_version,
-                ':fsv': self.from_schema_version,
-            },
+            'ExpressionAttributeValues': {':tsv': self.to_schema_version, ':fsv': self.from_schema_version,},
             'ConditionExpression': 'attribute_exists(partitionKey) AND schemaVersion = :fsv',
         }
         self.boto_table.update_item(**kwargs)

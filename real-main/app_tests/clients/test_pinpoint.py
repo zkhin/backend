@@ -17,11 +17,14 @@ def pinpoint_client():
 
 
 @pytest.mark.skip(reason='Requires live Pinpoint Application')
-@pytest.mark.parametrize('channel_type, address1, address2', (
-    ('EMAIL', 'pinpoint-test@real.app', 'pinpoint-test2@real.app'),
-    ('SMS', '+14155551212', '+12125551212'),
-    ('APNS', 'apns-token-1', 'apns-token-2'),
-))
+@pytest.mark.parametrize(
+    'channel_type, address1, address2',
+    (
+        ('EMAIL', 'pinpoint-test@real.app', 'pinpoint-test2@real.app'),
+        ('SMS', '+14155551212', '+12125551212'),
+        ('APNS', 'apns-token-1', 'apns-token-2'),
+    ),
+)
 def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1, address2):
     user_id = str(uuid.uuid4())
     assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {}
@@ -47,13 +50,7 @@ def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1
     kwargs = {
         'ApplicationId': pinpoint_client.app_id,
         'EndpointId': endpoint_id2,
-        'EndpointRequest': {
-            'Address': address1,
-            'ChannelType': channel_type,
-            'User': {
-                'UserId': user_id,
-            }
-        }
+        'EndpointRequest': {'Address': address1, 'ChannelType': channel_type, 'User': {'UserId': user_id,}},
     }
     pinpoint_client.client.update_endpoint(**kwargs)
     user_endpoints = pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type)

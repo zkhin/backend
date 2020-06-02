@@ -30,13 +30,8 @@ class Migration:
     def generate_all_posts(self):
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
-            'FilterExpression': (
-                'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv'
-            ),
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'post/',
-                ':sv': self.from_version,
-            },
+            'FilterExpression': ('begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv'),
+            'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sv': self.from_version,},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -54,10 +49,7 @@ class Migration:
         posted_by_user_id = post['postedByUserId']
         posted_at_str = post['postedAt']
         kwargs = {
-            'Key': {
-                'partitionKey': f'post/{post_id}',
-                'sortKey': '-',
-            },
+            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': '-',},
             'UpdateExpression': (
                 'SET postType = :pt, schemaVersion = :toVersion, gsiA3PartitionKey = :gsipk, gsiA3SortKey = :gsisk'
             ),

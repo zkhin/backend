@@ -25,10 +25,13 @@ post2 = post
 comment2 = comment
 
 
-@pytest.mark.parametrize('manager, model1, model2', [
-    (pytest.lazy_fixture('post_manager'), pytest.lazy_fixture('post'), pytest.lazy_fixture('post2')),
-    (pytest.lazy_fixture('comment_manager'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('comment2')),
-])
+@pytest.mark.parametrize(
+    'manager, model1, model2',
+    [
+        (pytest.lazy_fixture('post_manager'), pytest.lazy_fixture('post'), pytest.lazy_fixture('post2')),
+        (pytest.lazy_fixture('comment_manager'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('comment2')),
+    ],
+)
 def test_unflag_all_by_user(manager, model1, model2, user2):
     # check we haven't flagged anything
     assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []

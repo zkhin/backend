@@ -3,7 +3,6 @@ class PostException(Exception):
 
 
 class PostDoesNotExist(PostException):
-
     def __init__(self, post_id):
         self.post_id = post_id
 
@@ -12,7 +11,6 @@ class PostDoesNotExist(PostException):
 
 
 class DuplicatePost(PostException):
-
     def __init__(self, post_id=None):
         self.post_id = post_id
 
@@ -21,7 +19,6 @@ class DuplicatePost(PostException):
 
 
 class UnableToDecrementPostLikeCounter(PostException):
-
     def __init__(self, post_id):
         self.post_id = post_id
         super().__init__()
@@ -31,7 +28,6 @@ class UnableToDecrementPostLikeCounter(PostException):
 
 
 class DoesNotHaveExpectedCommentActivity(PostException):
-
     def __init__(self, post_id, expected_value):
         self.post_id = post_id
         self.expected_value = expected_value

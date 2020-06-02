@@ -23,7 +23,6 @@ def flag(dynamo_table):
         'gsiA1SortKey': now_str,
         'gsiA2PartitionKey': f'flag/{post_id}',
         'gsiA2SortKey': now_str,
-
     }
     dynamo_table.put_item(Item=item)
     yield item

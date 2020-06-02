@@ -14,10 +14,7 @@ def generate_all_feed_items(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'feed/',
-            ':sv': version,
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'feed/', ':sv': version,},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -53,10 +50,7 @@ def update_feed_item(item):
         exp_values[':gsik1sk'] = expires_at[11:-1]
 
     kwargs = {
-        'Key': {
-            'partitionKey': item['partitionKey'],
-            'sortKey': item['sortKey'],
-        },
+        'Key': {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey'],},
         'UpdateExpression': 'REMOVE #text SET ' + ', '.join(set_exps),
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :one',
         'ExpressionAttributeValues': exp_values,

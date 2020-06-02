@@ -9,7 +9,6 @@ logger = logging.getLogger()
 
 
 class FeedManager:
-
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['feed'] = self
@@ -31,14 +30,12 @@ class FeedManager:
 
     def add_post_to_followers_feeds(self, followed_user_id, post_item):
         feed_user_id_generator = itertools.chain(
-            [followed_user_id],
-            self.follow_manager.generate_follower_user_ids(followed_user_id),
+            [followed_user_id], self.follow_manager.generate_follower_user_ids(followed_user_id),
         )
         self.dynamo.add_post_to_feeds(feed_user_id_generator, post_item)
 
     def delete_post_from_followers_feeds(self, followed_user_id, post_id):
         feed_user_id_generator = itertools.chain(
-            [followed_user_id],
-            self.follow_manager.generate_follower_user_ids(followed_user_id),
+            [followed_user_id], self.follow_manager.generate_follower_user_ids(followed_user_id),
         )
         self.dynamo.delete_post_from_feeds(feed_user_id_generator, post_id)

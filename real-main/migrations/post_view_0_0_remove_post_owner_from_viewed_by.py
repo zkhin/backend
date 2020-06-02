@@ -9,7 +9,6 @@ DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 
 
 class Migration:
-
     def __init__(self, boto_client, boto_table):
         self.boto_client = boto_client
         self.boto_table = boto_table
@@ -24,13 +23,8 @@ class Migration:
         "Return a generator of all items in the table that pass the filter"
         assert isinstance(version, int)
         scan_kwargs = {
-            'FilterExpression': (
-                'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv'
-            ),
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'postView/',
-                ':sv': version,
-            },
+            'FilterExpression': ('begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv'),
+            'ExpressionAttributeValues': {':pk_prefix': 'postView/', ':sv': version,},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -44,46 +38,34 @@ class Migration:
         user_id = post_view_item['postedByUserId']
         post_id = post_view_item['postId']
         transacts = [
-
             # Delete the PostView
-            {'Delete': {
-                'Key': {
-                    'partitionKey': {'S': f'postView/{post_id}/{user_id}'},
-                    'sortKey': {'S': '-'},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-                'TableName': self.table_name,
-            }},
-
+            {
+                'Delete': {
+                    'Key': {'partitionKey': {'S': f'postView/{post_id}/{user_id}'}, 'sortKey': {'S': '-'},},
+                    'ConditionExpression': 'attribute_exists(partitionKey)',
+                    'TableName': self.table_name,
+                }
+            },
             # Decrement the Post.piewedByCount
-            {'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': '-'},
-                },
-                'UpdateExpression': 'ADD viewedByCount :negative_one',
-                'ConditionExpression': 'attribute_exists(viewedByCount) and viewedByCount > :zero',
-                'ExpressionAttributeValues': {
-                    ':negative_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
-                'TableName': self.table_name,
-            }},
-
+            {
+                'Update': {
+                    'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'},},
+                    'UpdateExpression': 'ADD viewedByCount :negative_one',
+                    'ConditionExpression': 'attribute_exists(viewedByCount) and viewedByCount > :zero',
+                    'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                    'TableName': self.table_name,
+                }
+            },
             # Decrement the User.postViewedByCount
-            {'Update': {
-                'Key': {
-                    'partitionKey': {'S': f'user/{user_id}'},
-                    'sortKey': {'S': 'profile'},
-                },
-                'UpdateExpression': 'ADD postViewedByCount :negative_one',
-                'ConditionExpression': 'attribute_exists(postViewedByCount) and postViewedByCount > :zero',
-                'ExpressionAttributeValues': {
-                    ':negative_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
-                'TableName': self.table_name,
-            }},
+            {
+                'Update': {
+                    'Key': {'partitionKey': {'S': f'user/{user_id}'}, 'sortKey': {'S': 'profile'},},
+                    'UpdateExpression': 'ADD postViewedByCount :negative_one',
+                    'ConditionExpression': 'attribute_exists(postViewedByCount) and postViewedByCount > :zero',
+                    'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                    'TableName': self.table_name,
+                }
+            },
         ]
         logger.warning(f'Clearing post view for post `{post_id}`')
         self.boto_client.transact_write_items(TransactItems=transacts)

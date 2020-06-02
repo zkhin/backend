@@ -8,7 +8,6 @@ logger = logging.getLogger()
 
 
 class FollowDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 

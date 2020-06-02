@@ -187,8 +187,15 @@ def test_migrate_comment_multiple_views(dynamo_table, caplog, comment_multiple_v
     assert item == comment
 
 
-def test_migrate_multiple_item(dynamo_table, caplog, comment_already_migrated, comment_no_views,
-                               comment_one_unrecorded_view, comment_one_recorded_view, comment_multiple_views):
+def test_migrate_multiple_item(
+    dynamo_table,
+    caplog,
+    comment_already_migrated,
+    comment_no_views,
+    comment_one_unrecorded_view,
+    comment_one_recorded_view,
+    comment_multiple_views,
+):
     comment1 = comment_no_views
     comment2 = comment_one_unrecorded_view
     comment3 = comment_one_recorded_view

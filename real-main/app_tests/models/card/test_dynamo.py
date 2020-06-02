@@ -23,7 +23,7 @@ def test_transact_add_card_minimal(card_dynamo):
 
     # retrieve the card and verify the format is as we expect
     card_item = card_dynamo.get_card(card_id)
-    created_at_str = card_item['gsiA1SortKey'][len('card/'):]
+    created_at_str = card_item['gsiA1SortKey'][len('card/') :]
     assert before < pendulum.parse(created_at_str) < after
     assert card_item == {
         'partitionKey': 'card/cid',

@@ -146,8 +146,8 @@ def test_update_members_last_message_activity_at(direct_chat, user1, user2, card
     # verify members start with same activity timestamp
     user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
     user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-    user1_last_activity_at = pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/'):])
-    user2_last_activity_at = pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/'):])
+    user1_last_activity_at = pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :])
+    user2_last_activity_at = pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/') :])
     assert user1_last_activity_at == user2_last_activity_at
     last_activity_at = user1_last_activity_at
 
@@ -162,8 +162,8 @@ def test_update_members_last_message_activity_at(direct_chat, user1, user2, card
     # verify members start with same activity timestamp
     user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
     user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/'):]) == now
-    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :]) == now
+    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/') :]) == now
     assert now > last_activity_at
     last_activity_at = now
 
@@ -179,8 +179,8 @@ def test_update_members_last_message_activity_at(direct_chat, user1, user2, card
     # verify members start with same activity timestamp
     user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
     user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/'):]) == now
-    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :]) == now
+    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/') :]) == now
     assert now > last_activity_at
     last_activity_at = now
 

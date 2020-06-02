@@ -38,7 +38,7 @@ class TrendingManager:
             return
 
         # don't add the trending indexes if the post is more than a 24 hrs old
-        if (now - post.posted_at > pendulum.duration(hours=24)):
+        if now - post.posted_at > pendulum.duration(hours=24):
             return
 
         # don't add posts that failed verification

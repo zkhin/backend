@@ -103,8 +103,8 @@ def test_chat_message_edit(message, chat, user1, user2, card_manager):
     # check final chat membership sort order state
     membership_1 = chat.member_dynamo.get(chat.id, user1.id)
     membership_2 = chat.member_dynamo.get(chat.id, user2.id)
-    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) == now
-    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/') :]) == now
+    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/') :]) == now
 
 
 def test_chat_message_delete(message, chat, user1, user2, card_manager):
@@ -145,8 +145,8 @@ def test_chat_message_delete(message, chat, user1, user2, card_manager):
     # check final chat membership sort order state
     membership_1 = chat.member_dynamo.get(chat.id, user1.id)
     membership_2 = chat.member_dynamo.get(chat.id, user2.id)
-    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/'):]) == now
-    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/'):]) == now
+    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/') :]) == now
+    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/') :]) == now
 
 
 def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, block_manager):

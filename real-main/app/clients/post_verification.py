@@ -2,7 +2,6 @@ import requests
 
 
 class PostVerificationClient:
-
     def __init__(self, api_creds_getter):
         self.api_creds_getter = api_creds_getter
 

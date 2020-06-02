@@ -10,7 +10,6 @@ logger = logging.getLogger()
 
 
 class CognitoClient:
-
     def __init__(self, user_pool_id=COGNITO_USER_POOL_ID, client_id=COGNITO_BACKEND_CLIENT_ID):
         assert user_pool_id, "Cognito user pool id is required"
         assert client_id, "Cognito user pool client id is required"
@@ -30,16 +29,11 @@ class CognitoClient:
             UserPoolId=self.user_pool_id,
             Username=user_id,
             MessageAction='SUPPRESS',
-            UserAttributes=[{
-                'Name': 'email',
-                'Value': email,
-            }, {
-                'Name': 'email_verified',
-                'Value': 'true',
-            }, {
-                'Name': 'preferred_username',
-                'Value': username.lower(),
-            }],
+            UserAttributes=[
+                {'Name': 'email', 'Value': email,},
+                {'Name': 'email_verified', 'Value': 'true',},
+                {'Name': 'preferred_username', 'Value': username.lower(),},
+            ],
         )
 
     def get_user_pool_id_token(self, user_id):
@@ -51,8 +45,9 @@ class CognitoClient:
         )
         return resp['AuthenticationResult']['IdToken']
 
-    def link_identity_pool_entries(self, user_id, cognito_id_token=None, facebook_access_token=None,
-                                   google_id_token=None):
+    def link_identity_pool_entries(
+        self, user_id, cognito_id_token=None, facebook_access_token=None, google_id_token=None
+    ):
         identity_pool_client = boto3.client('cognito-identity')
         logins = {}
         if cognito_id_token:
@@ -71,45 +66,31 @@ class CognitoClient:
         self.boto_client.admin_update_user_attributes(
             UserPoolId=self.user_pool_id,
             Username=user_id,
-            UserAttributes=[{
-                'Name': name,
-                'Value': value,
-            } for name, value in attrs.items()],
+            UserAttributes=[{'Name': name, 'Value': value,} for name, value in attrs.items()],
         )
 
     def clear_user_attribute(self, user_id, name):
         self.boto_client.admin_delete_user_attributes(
-            UserPoolId=self.user_pool_id,
-            Username=user_id,
-            UserAttributeNames=[name],
+            UserPoolId=self.user_pool_id, Username=user_id, UserAttributeNames=[name],
         )
 
     def get_user_attributes(self, user_id):
-        boto_resp = self.boto_client.admin_get_user(
-            UserPoolId=self.user_pool_id,
-            Username=user_id,
-        )
+        boto_resp = self.boto_client.admin_get_user(UserPoolId=self.user_pool_id, Username=user_id,)
         return {ua['Name']: ua['Value'] for ua in boto_resp['UserAttributes']}
 
     def verify_user_attribute(self, access_token, attribute_name, code):
         "Raises an exception for failure, else success"
         self.boto_client.verify_user_attribute(
-            AccessToken=access_token,
-            AttributeName=attribute_name,
-            Code=code,
+            AccessToken=access_token, AttributeName=attribute_name, Code=code,
         )
 
     def get_user_status(self, user_id):
-        boto_resp = self.boto_client.admin_get_user(
-            UserPoolId=self.user_pool_id,
-            Username=user_id,
-        )
+        boto_resp = self.boto_client.admin_get_user(UserPoolId=self.user_pool_id, Username=user_id,)
         return boto_resp['UserStatus']
 
     def list_unconfirmed_user_pool_entries(self):
         boto_resp = self.boto_client.list_users(
-            UserPoolId=self.user_pool_id,
-            Filter='cognito:user_status = "UNCONFIRMED"'
+            UserPoolId=self.user_pool_id, Filter='cognito:user_status = "UNCONFIRMED"'
         )
         user_items = []
         for resp_item in boto_resp['Users']:
@@ -122,6 +103,5 @@ class CognitoClient:
 
     def delete_user_pool_entry(self, user_id):
         self.boto_client.admin_delete_user(
-            UserPoolId=self.user_pool_id,
-            Username=user_id,
+            UserPoolId=self.user_pool_id, Username=user_id,
         )

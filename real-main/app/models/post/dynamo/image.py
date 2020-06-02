@@ -4,7 +4,6 @@ logger = logging.getLogger()
 
 
 class PostImageDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
@@ -27,32 +26,30 @@ class PostImageDynamo:
             'sortKey': {'S': 'image'},
         }
         if crop is not None:
-            item['crop'] = {'M': {
-                pt: {'M': {
-                    coord: {'N': str(crop[pt][coord])}
-                    for coord in ('x', 'y')
-                }}
-                for pt in ('upperLeft', 'lowerRight')
-            }}
+            item['crop'] = {
+                'M': {
+                    pt: {'M': {coord: {'N': str(crop[pt][coord])} for coord in ('x', 'y')}}
+                    for pt in ('upperLeft', 'lowerRight')
+                }
+            }
         if image_format is not None:
             item['imageFormat'] = {'S': image_format}
         if original_format is not None:
             item['originalFormat'] = {'S': original_format}
         if taken_in_real is not None:
             item['takenInReal'] = {'BOOL': taken_in_real}
-        return {'Put': {
-            'Item': item,
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-        }}
+        return {
+            'Put': {
+                'Item': item,
+                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
+            }
+        }
 
     def set_height_and_width(self, post_id, height, width):
         query_kwargs = {
             'Key': self.pk(post_id),
             'UpdateExpression': 'SET height = :height, width = :width',
-            'ExpressionAttributeValues': {
-                ':height': height,
-                ':width': width,
-            },
+            'ExpressionAttributeValues': {':height': height, ':width': width,},
         }
         return self.client.update_item(query_kwargs)
 
@@ -60,11 +57,7 @@ class PostImageDynamo:
         assert color_tuples, 'No support for deleting colors, yet'
 
         # transform to map before saving
-        color_maps = [{
-            'r': ct[0],
-            'g': ct[1],
-            'b': ct[2],
-        } for ct in color_tuples]
+        color_maps = [{'r': ct[0], 'g': ct[1], 'b': ct[2],} for ct in color_tuples]
 
         query_kwargs = {
             'Key': self.pk(post_id),

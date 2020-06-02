@@ -5,7 +5,6 @@ import requests
 
 
 class GoogleClient:
-
     def __init__(self, client_ids_getter):
         self.client_ids_getter = client_ids_getter
         self.cached_session = cachecontrol.CacheControl(requests.session())

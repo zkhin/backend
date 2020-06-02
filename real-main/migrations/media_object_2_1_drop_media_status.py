@@ -22,9 +22,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND attribute_exists(mediaStatus)',
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'media/',
-            },
+            'ExpressionAttributeValues': {':pk_prefix': 'media/',},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -38,14 +36,9 @@ class Migration:
         media_id = item['mediaId']
         logger.warning(f'Migrating media `{media_id}`')
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'media/{media_id}',
-                'sortKey': '-',
-            },
+            'Key': {'partitionKey': f'media/{media_id}', 'sortKey': '-',},
             'UpdateExpression': 'REMOVE mediaStatus, gsiA2PartitionKey, gsiA2SortKey SET gsiA1SortKey = :sk',
-            'ExpressionAttributeValues': {
-                ':sk': '-',
-            },
+            'ExpressionAttributeValues': {':sk': '-',},
             'ConditionExpression': 'attribute_exists(mediaStatus)',
         }
         self.dynamo_table.update_item(**query_kwargs)

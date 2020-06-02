@@ -9,7 +9,6 @@ DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 
 
 class DynamoClient:
-
     def __init__(self, table_name=DYNAMO_TABLE, create_table_schema=None):
         """
         If create_table_schema is not None, then the table will be created
@@ -110,7 +109,7 @@ class DynamoClient:
     def generate_all_query(self, query_kwargs):
         "Return a generator that iterates over all results of the query"
         next_token = False
-        while (next_token is not None):
+        while next_token is not None:
             paginated = self.query(query_kwargs, next_token=next_token)
             for item in paginated['items']:
                 yield item
@@ -119,7 +118,7 @@ class DynamoClient:
     def generate_all_scan(self, scan_kwargs):
         "Return a generator that iterates over all results of the scan"
         last_key = False
-        while (last_key is not None):
+        while last_key is not None:
             if last_key:
                 scan_kwargs['ExclusiveStartKey'] = last_key
             resp = self.table.scan(**scan_kwargs)

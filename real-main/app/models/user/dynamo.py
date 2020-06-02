@@ -13,7 +13,6 @@ logger = logging.getLogger()
 
 
 class UserDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
@@ -42,8 +41,9 @@ class UserDynamo:
     def delete_user(self, user_id):
         return self.client.delete_item(self.pk(user_id))
 
-    def add_user(self, user_id, username, full_name=None, email=None, phone=None, placeholder_photo_code=None,
-                 now=None):
+    def add_user(
+        self, user_id, username, full_name=None, email=None, phone=None, placeholder_photo_code=None, now=None
+    ):
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
@@ -75,12 +75,15 @@ class UserDynamo:
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': self.pk(user_id),
-            'UpdateExpression': 'SET ' + ', '.join([
-                'username = :un',
-                'usernameLastValue = :oldun',
-                'usernameLastChangedAt = :ulca',
-                'gsiA1PartitionKey = :gsia1pk',
-            ]),
+            'UpdateExpression': 'SET '
+            + ', '.join(
+                [
+                    'username = :un',
+                    'usernameLastValue = :oldun',
+                    'usernameLastChangedAt = :ulca',
+                    'gsiA1PartitionKey = :gsia1pk',
+                ]
+            ),
             'ExpressionAttributeValues': {
                 ':un': username,
                 ':oldun': old_username,
@@ -129,10 +132,22 @@ class UserDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def set_user_details(self, user_id, full_name=None, bio=None, language_code=None, theme_code=None,
-                         follow_counts_hidden=None, view_counts_hidden=None, email=None, phone=None,
-                         comments_disabled=None, likes_disabled=None, sharing_disabled=None,
-                         verification_hidden=None):
+    def set_user_details(
+        self,
+        user_id,
+        full_name=None,
+        bio=None,
+        language_code=None,
+        theme_code=None,
+        follow_counts_hidden=None,
+        view_counts_hidden=None,
+        email=None,
+        phone=None,
+        comments_disabled=None,
+        likes_disabled=None,
+        sharing_disabled=None,
+        verification_hidden=None,
+    ):
         "To ignore an attribute, leave it set to None. To delete an attribute, set it to the empty string."
         expression_actions = collections.defaultdict(list)
         expression_attribute_values = {}
@@ -183,9 +198,7 @@ class UserDynamo:
             'Update': {
                 'Key': self.typed_pk(user_id),
                 'UpdateExpression': 'ADD #count_name :one',
-                'ExpressionAttributeValues': {
-                    ':one': {'N': '1'},
-                },
+                'ExpressionAttributeValues': {':one': {'N': '1'},},
                 'ExpressionAttributeNames': {'#count_name': count_name},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
@@ -200,10 +213,7 @@ class UserDynamo:
                 # only updates, no creates and make sure it doesn't go negative
                 'ConditionExpression': 'attribute_exists(#count_name) and #count_name > :zero',
                 'ExpressionAttributeNames': {'#count_name': count_name},
-                'ExpressionAttributeValues': {
-                    ':negative_one': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                },
+                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
             },
         }
         return transact
@@ -254,9 +264,7 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {
-                ':positive_one': {'N': '1'},
-            },
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
         }
         return {'Update': kwargs}
 
@@ -294,14 +302,11 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postDeletedCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {
-                ':positive_one': {'N': '1'},
-            },
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
         }
-        count_to_decrement = {
-            PostStatus.COMPLETED: 'postCount',
-            PostStatus.ARCHIVED: 'postArchivedCount',
-        }.get(prev_status)
+        count_to_decrement = {PostStatus.COMPLETED: 'postCount', PostStatus.ARCHIVED: 'postArchivedCount',}.get(
+            prev_status
+        )
         if count_to_decrement:
             kwargs['UpdateExpression'] += ', #ctd :negative_one'
             kwargs['ExpressionAttributeNames'] = {'#ctd': count_to_decrement}
@@ -315,9 +320,7 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD commentCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {
-                ':positive_one': {'N': '1'},
-            },
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
         }
         return {'Update': kwargs}
 
@@ -342,9 +345,7 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD cardCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {
-                ':positive_one': {'N': '1'},
-            },
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
         }
         return {'Update': kwargs}
 
@@ -353,9 +354,6 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD cardCount :negative_one',
             'ConditionExpression': 'attribute_exists(partitionKey) AND cardCount > :zero',
-            'ExpressionAttributeValues': {
-                ':negative_one': {'N': '-1'},
-                ':zero': {'N': '0'},
-            },
+            'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
         }
         return {'Update': kwargs}

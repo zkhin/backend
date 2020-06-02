@@ -25,14 +25,8 @@ class Migration:
     def generate_all_comments_to_migrate(self):
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
-            'FilterExpression': (
-                'begins_with(partitionKey, :pk_prefix) AND sortKey = :sk AND schemaVersion = :sv'
-            ),
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'comment/',
-                ':sk': '-',
-                ':sv': 0,
-            },
+            'FilterExpression': ('begins_with(partitionKey, :pk_prefix) AND sortKey = :sk AND schemaVersion = :sv'),
+            'ExpressionAttributeValues': {':pk_prefix': 'comment/', ':sk': '-', ':sv': 0,},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -49,8 +43,7 @@ class Migration:
         # count the existing views for that comment
         kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('partitionKey').eq(pk)
-                & conditions.Key('sortKey').begins_with('view/')
+                conditions.Key('partitionKey').eq(pk) & conditions.Key('sortKey').begins_with('view/')
             ),
             'Select': 'COUNT',
         }
@@ -64,9 +57,7 @@ class Migration:
             'Key': {'partitionKey': pk, 'sortKey': '-'},
             'UpdateExpression': 'SET schemaVersion = :tsv',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {
-                ':tsv': self.to_schema_version,
-            },
+            'ExpressionAttributeValues': {':tsv': self.to_schema_version,},
         }
         if new_count == 0:
             kwargs['UpdateExpression'] += ' REMOVE viewedByCount'

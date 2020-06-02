@@ -127,9 +127,9 @@ def test_get_video_writeonly_url(cloudfront_client, s3_uploads_client):
         'postStatus': PostStatus.PENDING,
     }
     expected_url = {}
-    cloudfront_client.configure_mock(**{
-        'generate_presigned_url.return_value': expected_url,
-    })
+    cloudfront_client.configure_mock(
+        **{'generate_presigned_url.return_value': expected_url,}
+    )
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     url = post.get_video_writeonly_url()
@@ -147,9 +147,9 @@ def test_get_image_readonly_url(cloudfront_client, s3_uploads_client):
         'postStatus': PostStatus.PENDING,
     }
     expected_url = {}
-    cloudfront_client.configure_mock(**{
-        'generate_presigned_url.return_value': expected_url,
-    })
+    cloudfront_client.configure_mock(
+        **{'generate_presigned_url.return_value': expected_url,}
+    )
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     url = post.get_image_readonly_url(image_size.NATIVE)
@@ -176,10 +176,9 @@ def test_get_hls_access_cookies(cloudfront_client, s3_uploads_client):
         'CloudFront-Signature': 'cf-signature',
         'CloudFront-Key-Pair-Id': 'cf-kpid',
     }
-    cloudfront_client.configure_mock(**{
-        'generate_presigned_cookies.return_value': presigned_cookies,
-        'domain': domain,
-    })
+    cloudfront_client.configure_mock(
+        **{'generate_presigned_cookies.return_value': presigned_cookies, 'domain': domain,}
+    )
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     access_cookies = post.get_hls_access_cookies()
@@ -249,9 +248,14 @@ def test_set_is_verified_minimal(pending_image_post):
     assert post.item['isVerified'] is False
 
     # check mock called correctly
-    assert post.post_verification_client.mock_calls == [mock.call.verify_image(
-        post.get_image_readonly_url(image_size.NATIVE), image_format=None, original_format=None, taken_in_real=None
-    )]
+    assert post.post_verification_client.mock_calls == [
+        mock.call.verify_image(
+            post.get_image_readonly_url(image_size.NATIVE),
+            image_format=None,
+            original_format=None,
+            taken_in_real=None,
+        )
+    ]
 
 
 def test_set_is_verified_maximal(pending_image_post):
@@ -270,9 +274,14 @@ def test_set_is_verified_maximal(pending_image_post):
     assert post.item['isVerified'] is True
 
     # check mock called correctly
-    assert post.post_verification_client.mock_calls == [mock.call.verify_image(
-        post.get_image_readonly_url(image_size.NATIVE), image_format='ii', original_format='oo', taken_in_real=False
-    )]
+    assert post.post_verification_client.mock_calls == [
+        mock.call.verify_image(
+            post.get_image_readonly_url(image_size.NATIVE),
+            image_format='ii',
+            original_format='oo',
+            taken_in_real=False,
+        )
+    ]
 
 
 def test_set_expires_at(post):
@@ -368,8 +377,9 @@ def test_set(post, user):
 
     # do some edits
     new_text = f'its a new dawn, right @{user.item["username"]}, its a new day'
-    post.set(text=new_text, comments_disabled=True, likes_disabled=True, sharing_disabled=True,
-             verification_hidden=True)
+    post.set(
+        text=new_text, comments_disabled=True, likes_disabled=True, sharing_disabled=True, verification_hidden=True
+    )
 
     # verify new values
     assert post.item['text'] == new_text
@@ -498,7 +508,7 @@ def test_set_album_completed_post(albums, post_with_media):
     # go from no album to an album
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 1
     assert album1.item.get('rankCount', 0) == 1
@@ -511,7 +521,7 @@ def test_set_album_completed_post(albums, post_with_media):
     # change the album
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
@@ -524,7 +534,7 @@ def test_set_album_completed_post(albums, post_with_media):
     # no-op
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
@@ -553,7 +563,7 @@ def test_set_album_completed_post(albums, post_with_media):
     # add it back to an album, should not increment counts
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
-    assert post.item['gsiK3SortKey'] == -1   # album rank
+    assert post.item['gsiK3SortKey'] == -1  # album rank
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
@@ -572,7 +582,7 @@ def test_set_album_text_post(post_manager, albums, user2):
     # go from no album to an album
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert album1.item['artHash']
     album2.refresh_item()
@@ -581,7 +591,7 @@ def test_set_album_text_post(post_manager, albums, user2):
     # change the album
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert 'artHash' not in album1.item
     album2.refresh_item()
@@ -609,7 +619,7 @@ def test_set_album_video_post(albums, user2, completed_video_post):
     # go from no album to an album
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert album1.item['artHash']
     album2.refresh_item()
@@ -618,7 +628,7 @@ def test_set_album_video_post(albums, user2, completed_video_post):
     # change the album
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
     album1.refresh_item()
     assert 'artHash' not in album1.item
     album2.refresh_item()
@@ -811,10 +821,7 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
 
     # set the imageFormat to heic
     query_kwargs = {
-        'Key': {
-            'partitionKey': f'post/{post.id}',
-            'sortKey': 'image',
-        },
+        'Key': {'partitionKey': f'post/{post.id}', 'sortKey': 'image',},
         'UpdateExpression': 'SET imageFormat = :im',
         'ExpressionAttributeValues': {':im': 'HEIC'},
     }

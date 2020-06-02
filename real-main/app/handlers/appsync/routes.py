@@ -13,9 +13,11 @@ def clear():
 
 def register(field):
     "Decorator to register a handler for an appsync graphql field"
+
     def inner(func):
         cache[field] = func
         return func
+
     return inner
 
 

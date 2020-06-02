@@ -43,8 +43,7 @@ def test_set_and_get_user_attributes(cognito_client):
     # create an entry in the user pool, check attributes
     user_id = 'uid'
     cognito_client.boto_client.admin_create_user(
-        UserPoolId=cognito_client.user_pool_id,
-        Username=user_id,
+        UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
     assert cognito_client.get_user_attributes(user_id) == {}
 
@@ -73,8 +72,7 @@ def test_get_user_by_status(cognito_client):
     # create an entry in the user pool, check status
     user_id = 'uid'
     cognito_client.boto_client.admin_create_user(
-        UserPoolId=cognito_client.user_pool_id,
-        Username=user_id,
+        UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
     assert cognito_client.get_user_status(user_id) == 'FORCE_CHANGE_PASSWORD'
 
@@ -90,8 +88,7 @@ def test_delete_user_pool_entry(cognito_client):
     # create a dummy profile, verify exists
     user_id = 'uid'
     cognito_client.boto_client.admin_create_user(
-        UserPoolId=cognito_client.user_pool_id,
-        Username=user_id,
+        UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
     assert cognito_client.get_user_status(user_id)
 

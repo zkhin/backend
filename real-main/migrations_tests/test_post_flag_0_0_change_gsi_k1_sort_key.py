@@ -76,8 +76,9 @@ def test_migrate_one_item(dynamo_table, caplog, post_flag):
     assert item == post_flag
 
 
-def test_migrate_multiple_item(dynamo_table, caplog, post_flag_1, post_flag_2, post_flag_3,
-                               post_flag_already_migrated):
+def test_migrate_multiple_item(
+    dynamo_table, caplog, post_flag_1, post_flag_2, post_flag_3, post_flag_already_migrated
+):
     pk_1 = {k: post_flag_1[k] for k in ('partitionKey', 'sortKey')}
     pk_2 = {k: post_flag_2[k] for k in ('partitionKey', 'sortKey')}
     pk_3 = {k: post_flag_3[k] for k in ('partitionKey', 'sortKey')}

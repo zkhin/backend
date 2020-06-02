@@ -31,8 +31,5 @@ def origin_request(event, context):
     request = event['Records'][0]['cf']['request']
     writes = ['PUT', 'POST', 'PATCH']
     if request['method'] in writes:
-        request['headers']['x-amz-acl'] = [{
-            'key': 'x-amz-acl',
-            'value': 'bucket-owner-full-control',
-        }]
+        request['headers']['x-amz-acl'] = [{'key': 'x-amz-acl', 'value': 'bucket-owner-full-control',}]
     return request

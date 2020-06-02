@@ -9,7 +9,6 @@ logger = logging.getLogger()
 
 
 class BlockDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 

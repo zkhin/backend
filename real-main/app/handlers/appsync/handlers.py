@@ -50,6 +50,7 @@ user_manager = managers.get('user') or models.UserManager(clients, managers=mana
 
 def validate_caller(func):
     "Decorator that inits a caller_user model and verifies the caller is ACTIVE"
+
     def wrapper(caller_user_id, arguments, source, context):
         caller_user = user_manager.get_user(caller_user_id)
         if not caller_user:
@@ -57,6 +58,7 @@ def validate_caller(func):
         if caller_user.status != UserStatus.ACTIVE:
             raise ClientException(f'User `{caller_user_id}` is not ACTIVE')
         return func(caller_user, arguments, source, context)
+
     return wrapper
 
 
@@ -159,8 +161,18 @@ def set_user_details(caller_user, arguments, source, context):
     verification_hidden = arguments.get('verificationHidden')
 
     args = (
-        username, full_name, bio, photo_post_id, privacy_status, follow_counts_hidden,
-        language_code, theme_code, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,
+        username,
+        full_name,
+        bio,
+        photo_post_id,
+        privacy_status,
+        follow_counts_hidden,
+        language_code,
+        theme_code,
+        comments_disabled,
+        likes_disabled,
+        sharing_disabled,
+        verification_hidden,
         view_counts_hidden,
     )
     if all(v is None for v in args):
@@ -468,10 +480,18 @@ def add_post(caller_user, arguments, source, context):
     org_post_count = caller_user.item.get('postCount', 0)
     try:
         post = post_manager.add_post(
-            caller_user, post_id, post_type, image_input=image_input, text=text,
-            lifetime_duration=lifetime_duration, album_id=album_id, comments_disabled=comments_disabled,
-            likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
-            verification_hidden=verification_hidden, set_as_user_photo=set_as_user_photo,
+            caller_user,
+            post_id,
+            post_type,
+            image_input=image_input,
+            text=text,
+            lifetime_duration=lifetime_duration,
+            album_id=album_id,
+            comments_disabled=comments_disabled,
+            likes_disabled=likes_disabled,
+            sharing_disabled=sharing_disabled,
+            verification_hidden=verification_hidden,
+            set_as_user_photo=set_as_user_photo,
         )
     except post_manager.exceptions.PostException as err:
         raise ClientException(str(err))
@@ -499,13 +519,15 @@ def post_image(caller_user_id, arguments, source, context):
         return None
 
     image_item = post.image_item.copy() if post.image_item else {}
-    image_item.update({
-        'url': post.get_image_readonly_url(image_size.NATIVE),
-        'url64p': post.get_image_readonly_url(image_size.P64),
-        'url480p': post.get_image_readonly_url(image_size.P480),
-        'url1080p': post.get_image_readonly_url(image_size.P1080),
-        'url4k': post.get_image_readonly_url(image_size.K4),
-    })
+    image_item.update(
+        {
+            'url': post.get_image_readonly_url(image_size.NATIVE),
+            'url64p': post.get_image_readonly_url(image_size.P64),
+            'url480p': post.get_image_readonly_url(image_size.P480),
+            'url1080p': post.get_image_readonly_url(image_size.P1080),
+            'url4k': post.get_image_readonly_url(image_size.K4),
+        }
+    )
     return image_item
 
 

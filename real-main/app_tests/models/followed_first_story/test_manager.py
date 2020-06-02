@@ -16,9 +16,9 @@ def following_users(user_manager, follow_manager, cognito_client):
     cognito_client.create_verified_user_pool_entry(their_user_id, their_username, f'{their_username}@real.app')
     our_user = user_manager.create_cognito_only_user(our_user_id, our_username)
     their_user = user_manager.create_cognito_only_user(their_user_id, their_username)
-    follow_manager.dynamo.client.transact_write_items([
-        follow_manager.dynamo.transact_add_following(our_user.id, their_user.id, FollowStatus.FOLLOWING),
-    ])
+    follow_manager.dynamo.client.transact_write_items(
+        [follow_manager.dynamo.transact_add_following(our_user.id, their_user.id, FollowStatus.FOLLOWING),]
+    )
     yield (our_user, their_user)
 
 
@@ -44,9 +44,9 @@ def test_generate_batched_follower_user_ids_none(ffs_manager):
 
 def test_generate_batched_follower_user_ids_filters_out_wrong_status(ffs_manager, follow_manager):
     followed_user_id = 'fid'
-    follow_manager.dynamo.client.transact_write_items([
-        follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.REQUESTED),
-    ])
+    follow_manager.dynamo.client.transact_write_items(
+        [follow_manager.dynamo.transact_add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.REQUESTED),]
+    )
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert resp == []
 
@@ -54,9 +54,9 @@ def test_generate_batched_follower_user_ids_filters_out_wrong_status(ffs_manager
 def test_generate_batched_follower_user_one(ffs_manager, follow_manager):
     followed_user_id = 'fid'
     follower_user_id = 'followeruid'
-    follow_manager.dynamo.client.transact_write_items([
-        follow_manager.dynamo.transact_add_following(follower_user_id, followed_user_id, FollowStatus.FOLLOWING),
-    ])
+    follow_manager.dynamo.client.transact_write_items(
+        [follow_manager.dynamo.transact_add_following(follower_user_id, followed_user_id, FollowStatus.FOLLOWING),]
+    )
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 1
     assert len(resp[0]) == 1

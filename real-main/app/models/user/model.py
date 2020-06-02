@@ -18,16 +18,8 @@ CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOU
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
-    'email': {
-        'short': 'email',
-        'cognito': 'email',
-        'dynamo': 'email',
-    },
-    'phone': {
-        'short': 'phone',
-        'cognito': 'phone_number',
-        'dynamo': 'phoneNumber',
-    },
+    'email': {'short': 'email', 'cognito': 'email', 'dynamo': 'email',},
+    'phone': {'short': 'phone', 'cognito': 'phone_number', 'dynamo': 'phoneNumber',},
 }
 
 
@@ -37,9 +29,17 @@ class User:
     exceptions = exceptions
     client_names = ['cloudfront', 'cognito', 'dynamo', 'pinpoint', 's3_uploads']
 
-    def __init__(self, user_item, clients, block_manager=None, follow_manager=None, trending_manager=None,
-                 post_manager=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
-                 frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN):
+    def __init__(
+        self,
+        user_item,
+        clients,
+        block_manager=None,
+        follow_manager=None,
+        trending_manager=None,
+        post_manager=None,
+        placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
+        frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
+    ):
         self.clients = clients
         for client_name in self.client_names:
             if client_name in clients:
@@ -202,16 +202,23 @@ class User:
             dest_path = self.get_photo_path(size, photo_post_id=post.id)
             self.s3_uploads_client.copy_object(source_path, dest_path)
 
-    def update_details(self, full_name=None, bio=None, language_code=None, theme_code=None,
-                       follow_counts_hidden=None, view_counts_hidden=None, comments_disabled=None,
-                       likes_disabled=None, sharing_disabled=None, verification_hidden=None):
+    def update_details(
+        self,
+        full_name=None,
+        bio=None,
+        language_code=None,
+        theme_code=None,
+        follow_counts_hidden=None,
+        view_counts_hidden=None,
+        comments_disabled=None,
+        likes_disabled=None,
+        sharing_disabled=None,
+        verification_hidden=None,
+    ):
         "To delete details, set them to the empty string. Ex: `full_name=''`"
         kwargs = {k: v for k, v in locals().items() if k != 'self' and v is not None}
         # remove writes where requested value matches pre-existing value
-        kwargs = {
-            k: v for k, v in kwargs.items()
-            if v != self.item.get(stringcase.camelcase(k), '')
-        }
+        kwargs = {k: v for k, v in kwargs.items() if v != self.item.get(stringcase.camelcase(k), '')}
         if kwargs:
             self.item = self.dynamo.set_user_details(self.id, **kwargs)
         return self

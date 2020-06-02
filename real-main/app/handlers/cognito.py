@@ -69,9 +69,9 @@ def custom_message(event, context):
         deepurl = f'real.app://email/confirm/{username}/{code}'
         event['response']['smsMessage'] = f'Welcome to REAL. Your confirmation code is {code}'
         event['response']['emailSubject'] = 'Welcome to REAL'
-        event['response']['emailMessage'] = (
-            f'Welcome to REAL. Your confirmation code is {code}. <a href="{deepurl}">{deepurl}</a>'
-        )
+        event['response'][
+            'emailMessage'
+        ] = f'Welcome to REAL. Your confirmation code is {code}. <a href="{deepurl}">{deepurl}</a>'
     return event
 
 

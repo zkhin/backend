@@ -29,12 +29,7 @@ def generate_all_media_objects_completed_or_archived(version):
             ' and schemaVersion = :sv'
             ' and (mediaStatus = :u or mediaStatus = :a)'
         ),
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'media/',
-            ':sv': version,
-            ':u': 'UPLOADED',
-            ':a': 'ARCHIVED',
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'media/', ':sv': version, ':u': 'UPLOADED', ':a': 'ARCHIVED',},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)

@@ -14,10 +14,7 @@ def generate_all_followings(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'following/',
-            ':sv': version,
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'following/', ':sv': version,},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -30,19 +27,13 @@ def generate_all_followings(version):
 
 def update_following_from_0_to_1(following):
     kwargs = {
-        'Key': {
-            'partitionKey': following['partitionKey'],
-            'sortKey': following['sortKey'],
-        },
+        'Key': {'partitionKey': following['partitionKey'], 'sortKey': following['sortKey'],},
         'UpdateExpression': (
             'SET followerUserId = follower.userId, followedUserId = followed.userId, schemaVersion = :one'
             + ' REMOVE follower, followed'
         ),
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :zero',
-        'ExpressionAttributeValues': {
-            ':zero': 0,
-            ':one': 1,
-        },
+        'ExpressionAttributeValues': {':zero': 0, ':one': 1,},
     }
     print(f'Updating item: {kwargs} ... ')
     boto_table.update_item(**kwargs)

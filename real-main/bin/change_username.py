@@ -5,13 +5,14 @@ import os
 import sys
 
 import dotenv
+
 dotenv.load_dotenv()
 
 # https://stackoverflow.com/questions/16981921
 SCRIPT_PATH = os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
 sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_PATH)))
-from app.clients import CognitoClient, DynamoClient     # noqa E402
-from app.models import UserManager                      # noqa E402
+from app.clients import CognitoClient, DynamoClient  # noqa E402
+from app.models import UserManager  # noqa E402
 
 
 def parse_args():
@@ -24,10 +25,7 @@ def parse_args():
 
 def main():
     current_username, new_username = parse_args()
-    clients = {
-        'cognito': CognitoClient(),
-        'dynamo': DynamoClient()
-    }
+    clients = {'cognito': CognitoClient(), 'dynamo': DynamoClient()}
     user_manager = UserManager(clients)
     user = user_manager.get_user_by_username(current_username)
     if not user:

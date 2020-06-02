@@ -12,17 +12,15 @@ exclude = '''
 '''
 
 [tool.poetry]
-name = "real-auth"
+name = "real-cloudfront"
 version = "0.1.0"
 description = ""
 authors = ["Mike Fogel <mike@real.app>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-aws-xray-sdk = "^2.5.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.4.1"
 black = "^19.10b0"
 
 [build-system]

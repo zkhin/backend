@@ -3,7 +3,6 @@ class CardException(Exception):
 
 
 class CardAlreadyExists(CardException):
-
     def __init__(self, card_id):
         self.card_id = card_id
 
@@ -12,7 +11,6 @@ class CardAlreadyExists(CardException):
 
 
 class CardDoesNotExist(CardException):
-
     def __init__(self, card_id):
         self.card_id = card_id
 

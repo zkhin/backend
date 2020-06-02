@@ -23,7 +23,7 @@ def dynamo_stream(event, context):
         if not pk.startswith('user/') or sk != 'profile':
             continue
 
-        user_id = pk[len('user/'):]
+        user_id = pk[len('user/') :]
         old_user_item = record['dynamodb'].get('OldImage', {})
         new_user_item = record['dynamodb'].get('NewImage', {})
 

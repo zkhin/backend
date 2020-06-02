@@ -23,9 +23,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix)',
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'flag/',
-            },
+            'ExpressionAttributeValues': {':pk_prefix': 'flag/',},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -41,26 +39,27 @@ class Migration:
         at_str = item['flaggedAt']
         logger.warning(f'Flag for post `{post_id}` by user `{user_id}`: migrating')
 
-        transact_add = {'Put': {
-            'Item': {
-                'schemaVersion': {'N': '0'},
-                'partitionKey': {'S': f'post/{post_id}'},
-                'sortKey': {'S': f'flag/{user_id}'},
-                'gsiK1PartitionKey': {'S': f'flag/{user_id}'},
-                'gsiK1SortKey': {'S': '-'},
-                'createdAt': {'S': at_str},
-            },
-            'ConditionExpression': 'attribute_not_exists(partitionKey)',
-            'TableName': self.dynamo_table.name,
-        }}
-        transact_delete = {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'flag/{user_id}/{post_id}'},
-                'sortKey': {'S': '-'},
-            },
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-            'TableName': self.dynamo_table.name,
-        }}
+        transact_add = {
+            'Put': {
+                'Item': {
+                    'schemaVersion': {'N': '0'},
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': f'flag/{user_id}'},
+                    'gsiK1PartitionKey': {'S': f'flag/{user_id}'},
+                    'gsiK1SortKey': {'S': '-'},
+                    'createdAt': {'S': at_str},
+                },
+                'ConditionExpression': 'attribute_not_exists(partitionKey)',
+                'TableName': self.dynamo_table.name,
+            }
+        }
+        transact_delete = {
+            'Delete': {
+                'Key': {'partitionKey': {'S': f'flag/{user_id}/{post_id}'}, 'sortKey': {'S': '-'},},
+                'ConditionExpression': 'attribute_exists(partitionKey)',
+                'TableName': self.dynamo_table.name,
+            }
+        }
         self.dynamo_client.transact_write_items(TransactItems=[transact_add, transact_delete])
 
 

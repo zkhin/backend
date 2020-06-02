@@ -84,21 +84,27 @@ def test_add_post_errors(post_manager, user):
         post_manager.add_post(user, 'pid', 'notaposttype')
 
 
-@pytest.mark.parametrize('crop', [
-    {'upperLeft': {'x': -1, 'y': 0}, 'lowerRight': {'x': 100, 'y': 100}},
-    {'upperLeft': {'x': 0, 'y': -1}, 'lowerRight': {'x': 100, 'y': 100}},
-    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': -1, 'y': 100}},
-    {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': 100, 'y': -1}},
-])
+@pytest.mark.parametrize(
+    'crop',
+    [
+        {'upperLeft': {'x': -1, 'y': 0}, 'lowerRight': {'x': 100, 'y': 100}},
+        {'upperLeft': {'x': 0, 'y': -1}, 'lowerRight': {'x': 100, 'y': 100}},
+        {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': -1, 'y': 100}},
+        {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': 100, 'y': -1}},
+    ],
+)
 def test_add_post_negative_crop_cordinate_errors(post_manager, crop, user):
     with pytest.raises(post_manager.exceptions.PostException, match='cannot be negative'):
         post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'crop': crop})
 
 
-@pytest.mark.parametrize('crop', [
-    {'upperLeft': {'x': 0, 'y': 50}, 'lowerRight': {'x': 100, 'y': 50}},
-    {'upperLeft': {'x': 100, 'y': 0}, 'lowerRight': {'x': 10, 'y': 100}},
-])
+@pytest.mark.parametrize(
+    'crop',
+    [
+        {'upperLeft': {'x': 0, 'y': 50}, 'lowerRight': {'x': 100, 'y': 50}},
+        {'upperLeft': {'x': 100, 'y': 0}, 'lowerRight': {'x': 10, 'y': 100}},
+    ],
+)
 def test_add_post_emptry_crop_area_errors(post_manager, crop, user):
     with pytest.raises(post_manager.exceptions.PostException, match='must be strictly greater than'):
         post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'crop': crop})
@@ -158,11 +164,11 @@ def test_add_text_only_post_to_album(post_manager, user, album):
     post = post_manager.add_post(user, post_id, PostType.TEXT_ONLY, text='t', album_id=album.id)
     assert post.id == post_id
     assert post.item['albumId'] == album.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
 
     post.refresh_item()
     assert post.item['albumId'] == album.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
 
     album.refresh_item()
     assert album.item['postCount'] == 1
@@ -176,7 +182,7 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant
     post = post_manager.add_post(user, post_id, PostType.VIDEO, album_id=album.id)
     assert post.id == post_id
     assert post.item['albumId'] == album.id
-    assert post.item['gsiK3SortKey'] == -1   # album rank
+    assert post.item['gsiK3SortKey'] == -1  # album rank
 
     album.refresh_item()
     assert 'postCount' not in album.item
@@ -191,11 +197,11 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant
     post.build_image_thumbnails()
     post.complete()
     assert post.item['albumId'] == album.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
 
     post.refresh_item()
     assert post.item['albumId'] == album.id
-    assert post.item['gsiK3SortKey'] == 0   # album rank
+    assert post.item['gsiK3SortKey'] == 0  # album rank
 
     album.refresh_item()
     assert album.item['postCount'] == 1
@@ -234,9 +240,16 @@ def test_add_video_post_maximal(post_manager, user):
 
     # add the post
     post_manager.add_post(
-        user, post_id, PostType.VIDEO, text=text, lifetime_duration=lifetime_duration,
-        comments_disabled=comments_disabled, likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
-        verification_hidden=verification_hidden, now=now,
+        user,
+        post_id,
+        PostType.VIDEO,
+        text=text,
+        lifetime_duration=lifetime_duration,
+        comments_disabled=comments_disabled,
+        likes_disabled=likes_disabled,
+        sharing_disabled=sharing_disabled,
+        verification_hidden=verification_hidden,
+        now=now,
     )
 
     # retrieve the post & media, check it
@@ -344,9 +357,18 @@ def test_add_image_post_with_options(post_manager, album, user):
 
     # add the post (& media)
     post_manager.add_post(
-        user, post_id, PostType.IMAGE, text=text, now=now, image_input=image_input,
-        lifetime_duration=lifetime_duration, album_id=album.id, comments_disabled=False, likes_disabled=True,
-        verification_hidden=False, set_as_user_photo=True,
+        user,
+        post_id,
+        PostType.IMAGE,
+        text=text,
+        now=now,
+        image_input=image_input,
+        lifetime_duration=lifetime_duration,
+        album_id=album.id,
+        comments_disabled=False,
+        likes_disabled=True,
+        verification_hidden=False,
+        set_as_user_photo=True,
     )
     expires_at = now + lifetime_duration
 
@@ -412,13 +434,21 @@ def test_delete_recently_expired_posts(post_manager, user, caplog):
 
     lifetime_duration = pendulum.duration(hours=now.hour, minutes=now.minute)
     post_expired_today = post_manager.add_post(
-        user, 'pid3', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration,
+        user,
+        'pid3',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=lifetime_duration,
         now=(now - lifetime_duration),
     )
     assert post_expired_today.item['expiresAt'] == now.to_iso8601_string()
 
     post_expired_last_week = post_manager.add_post(
-        user, 'pid4', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user,
+        'pid4',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=pendulum.duration(hours=1),
         now=(now - pendulum.duration(days=7)),
     )
     assert post_expired_last_week.item['expiresAt'] < (now - pendulum.duration(days=6)).to_iso8601_string()
@@ -453,13 +483,21 @@ def test_delete_older_expired_posts(post_manager, user, caplog):
 
     lifetime_duration = pendulum.duration(hours=now.hour, minutes=now.minute)
     post_expired_today = post_manager.add_post(
-        user, 'pid3', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration,
+        user,
+        'pid3',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=lifetime_duration,
         now=(now - lifetime_duration),
     )
     assert post_expired_today.item['expiresAt'] == now.to_iso8601_string()
 
     post_expired_last_week = post_manager.add_post(
-        user, 'pid4', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user,
+        'pid4',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=pendulum.duration(hours=1),
         now=(now - pendulum.duration(days=7)),
     )
     assert post_expired_last_week.item['expiresAt'] < (now - pendulum.duration(days=6)).to_iso8601_string()

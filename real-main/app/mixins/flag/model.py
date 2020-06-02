@@ -40,7 +40,7 @@ class FlagModelMixin:
         ]
         transact_exceptions = [
             exceptions.AlreadyFlagged(self.item_type, self.id, user.id),
-            self.exceptions.dne(self.id)
+            self.exceptions.dne(self.id),
         ]
         self.flag_dynamo.client.transact_write_items(transacts, transact_exceptions)
         self.item['flagCount'] = self.item.get('flagCount', 0) + 1

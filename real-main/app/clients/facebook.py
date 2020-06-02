@@ -2,7 +2,6 @@ import requests
 
 
 class FacebookClient:
-
     def __init__(self, api_root='https://graph.facebook.com'):
         self.api_root = api_root
 

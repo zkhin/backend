@@ -14,12 +14,24 @@ algorithims = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Generate album art')
-    parser.add_argument('-a', dest='algorithim', choices=['basic', 'zoomed'], required=True,
-                        help='generation algorithim to use')
-    parser.add_argument('-o', dest='output_file', metavar='outputfile', type=argparse.FileType('wb'), required=True,
-                        help='file to write output image to')
-    parser.add_argument('input_files', metavar='inputfile', type=argparse.FileType('rb'), nargs='+',
-                        help='file to read input image from')
+    parser.add_argument(
+        '-a', dest='algorithim', choices=['basic', 'zoomed'], required=True, help='generation algorithim to use'
+    )
+    parser.add_argument(
+        '-o',
+        dest='output_file',
+        metavar='outputfile',
+        type=argparse.FileType('wb'),
+        required=True,
+        help='file to write output image to',
+    )
+    parser.add_argument(
+        'input_files',
+        metavar='inputfile',
+        type=argparse.FileType('rb'),
+        nargs='+',
+        help='file to read input image from',
+    )
     args = parser.parse_args()
     return args.output_file, args.input_files, args.algorithim
 

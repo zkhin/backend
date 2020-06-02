@@ -33,8 +33,8 @@ class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
-        self.followed_first_story_manager = (
-            managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
+        self.followed_first_story_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(
+            clients, managers=managers
         )
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
@@ -81,9 +81,22 @@ class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         }
         return Post(post_item, **kwargs) if post_item else None
 
-    def add_post(self, posted_by_user, post_id, post_type, image_input=None, text=None, lifetime_duration=None,
-                 album_id=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
-                 verification_hidden=None, set_as_user_photo=None, now=None):
+    def add_post(
+        self,
+        posted_by_user,
+        post_id,
+        post_type,
+        image_input=None,
+        text=None,
+        lifetime_duration=None,
+        album_id=None,
+        comments_disabled=None,
+        likes_disabled=None,
+        sharing_disabled=None,
+        verification_hidden=None,
+        set_as_user_photo=None,
+        now=None,
+    ):
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
 
@@ -141,19 +154,35 @@ class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                 raise exceptions.PostException(msg)
 
         # add the pending post & media to dynamo in a transaction
-        transacts = [self.dynamo.transact_add_pending_post(
-            posted_by_user.id, post_id, post_type, posted_at=now, expires_at=expires_at, text=text,
-            text_tags=text_tags, comments_disabled=comments_disabled, likes_disabled=likes_disabled,
-            sharing_disabled=sharing_disabled, verification_hidden=verification_hidden, album_id=album_id,
-            set_as_user_photo=set_as_user_photo,
-        )]
+        transacts = [
+            self.dynamo.transact_add_pending_post(
+                posted_by_user.id,
+                post_id,
+                post_type,
+                posted_at=now,
+                expires_at=expires_at,
+                text=text,
+                text_tags=text_tags,
+                comments_disabled=comments_disabled,
+                likes_disabled=likes_disabled,
+                sharing_disabled=sharing_disabled,
+                verification_hidden=verification_hidden,
+                album_id=album_id,
+                set_as_user_photo=set_as_user_photo,
+            )
+        ]
         if post_type == enums.PostType.IMAGE:
             # 'image_input' is straight from graphql, format dictated by schema
             image_input = image_input or {}
-            transacts.append(self.image_dynamo.transact_add(
-                post_id, crop=image_input.get('crop'), image_format=image_input.get('imageFormat'),
-                original_format=image_input.get('originalFormat'), taken_in_real=image_input.get('takenInReal'),
-            ))
+            transacts.append(
+                self.image_dynamo.transact_add(
+                    post_id,
+                    crop=image_input.get('crop'),
+                    image_format=image_input.get('imageFormat'),
+                    original_format=image_input.get('originalFormat'),
+                    taken_in_real=image_input.get('takenInReal'),
+                )
+            )
             if original_metadata := image_input.get('originalMetadata'):
                 transacts.append(self.original_metadata_dynamo.transact_add(post_id, original_metadata))
         self.dynamo.client.transact_write_items(transacts)

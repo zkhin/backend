@@ -20,8 +20,8 @@ class FollowManager:
         managers = managers or {}
         managers['follow'] = self
         self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
-        self.ffs_manager = (
-            managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
+        self.ffs_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(
+            clients, managers=managers
         )
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
@@ -38,8 +38,13 @@ class FollowManager:
 
     def init_follow(self, follow_item):
         return Follow(
-            follow_item, self.dynamo, ffs_manager=self.ffs_manager, feed_manager=self.feed_manager,
-            like_manager=self.like_manager, post_manager=self.post_manager, user_manager=self.user_manager,
+            follow_item,
+            self.dynamo,
+            ffs_manager=self.ffs_manager,
+            feed_manager=self.feed_manager,
+            like_manager=self.like_manager,
+            post_manager=self.post_manager,
+            user_manager=self.user_manager,
         )
 
     def get_follow_status(self, follower_user_id, followed_user_id):
@@ -76,16 +81,19 @@ class FollowManager:
             raise exceptions.FollowException(f'User has blocked user `{followed_user.id}`')
 
         follow_status = (
-            enums.FollowStatus.REQUESTED if followed_user.item['privacyStatus'] == UserPrivacyStatus.PRIVATE
+            enums.FollowStatus.REQUESTED
+            if followed_user.item['privacyStatus'] == UserPrivacyStatus.PRIVATE
             else enums.FollowStatus.FOLLOWING
         )
 
         transacts = [self.dynamo.transact_add_following(follower_user.id, followed_user.id, follow_status)]
         if follow_status == enums.FollowStatus.FOLLOWING:
-            transacts.extend([
-                self.user_manager.dynamo.transact_increment_followed_count(follower_user.id),
-                self.user_manager.dynamo.transact_increment_follower_count(followed_user.id),
-            ])
+            transacts.extend(
+                [
+                    self.user_manager.dynamo.transact_increment_followed_count(follower_user.id),
+                    self.user_manager.dynamo.transact_increment_follower_count(followed_user.id),
+                ]
+            )
         self.dynamo.client.transact_write_items(transacts)
         follow = self.get_follow(follower_user.id, followed_user.id, strongly_consistent=True)
 

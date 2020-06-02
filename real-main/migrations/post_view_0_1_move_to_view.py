@@ -31,9 +31,7 @@ class Migration:
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix)',
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'postView/',
-            },
+            'ExpressionAttributeValues': {':pk_prefix': 'postView/',},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -76,36 +74,37 @@ class Migration:
         first_viewed_at_str = min(v['firstViewedAt'] for v in all_views)
         last_viewed_at_str = max(v['lastViewedAt'] for v in all_views)
 
-        transact_put = {'Put': {
-            'Item': {
-                'partitionKey': {'S': f'post/{post_id}'},
-                'sortKey': {'S': f'view/{user_id}'},
-                'gsiK1PartitionKey': {'S': f'post/{post_id}'},
-                'gsiK1SortKey': {'S': f'view/{first_viewed_at_str}'},
-                'schemaVersion': {'N': '0'},
-                'viewCount': {'N': str(view_count)},
-                'firstViewedAt': {'S': first_viewed_at_str},
-                'lastViewedAt': {'S': last_viewed_at_str},
-            },
-            'ConditionExpression': cond_exp,
-            'TableName': self.table_name,
-        }}
+        transact_put = {
+            'Put': {
+                'Item': {
+                    'partitionKey': {'S': f'post/{post_id}'},
+                    'sortKey': {'S': f'view/{user_id}'},
+                    'gsiK1PartitionKey': {'S': f'post/{post_id}'},
+                    'gsiK1SortKey': {'S': f'view/{first_viewed_at_str}'},
+                    'schemaVersion': {'N': '0'},
+                    'viewCount': {'N': str(view_count)},
+                    'firstViewedAt': {'S': first_viewed_at_str},
+                    'lastViewedAt': {'S': last_viewed_at_str},
+                },
+                'ConditionExpression': cond_exp,
+                'TableName': self.table_name,
+            }
+        }
         if exp_vals:
             transact_put['Put']['ExpressionAttributeValues'] = exp_vals
 
-        transact_delete = {'Delete': {
-            'Key': {
-                'partitionKey': {'S': f'postView/{post_id}/{user_id}'},
-                'sortKey': {'S': '-'},
-            },
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-            'TableName': self.table_name,
-        }}
+        transact_delete = {
+            'Delete': {
+                'Key': {'partitionKey': {'S': f'postView/{post_id}/{user_id}'}, 'sortKey': {'S': '-'},},
+                'ConditionExpression': 'attribute_exists(partitionKey)',
+                'TableName': self.table_name,
+            }
+        }
 
         # set the view item and delete the post_view item in one trasaction
         expected_exceptions = (
-            self.boto_client.exceptions.TransactionCanceledException,       # real dynamo table
-            self.boto_client.exceptions.ConditionalCheckFailedException,    # moto
+            self.boto_client.exceptions.TransactionCanceledException,  # real dynamo table
+            self.boto_client.exceptions.ConditionalCheckFailedException,  # moto
         )
         try:
             self.transact_write_items([transact_put, transact_delete])

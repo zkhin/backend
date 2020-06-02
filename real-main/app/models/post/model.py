@@ -25,12 +25,30 @@ class Post(FlagModelMixin, ViewModelMixin):
     exceptions = exceptions
     item_type = 'post'
 
-    def __init__(self, item, post_appsync=None, post_dynamo=None, post_image_dynamo=None,
-                 post_original_metadata_dynamo=None, cloudfront_client=None, mediaconvert_client=None,
-                 post_verification_client=None, s3_uploads_client=None, album_manager=None, block_manager=None,
-                 card_manager=None, comment_manager=None, feed_manager=None, follow_manager=None,
-                 followed_first_story_manager=None, like_manager=None, post_manager=None, trending_manager=None,
-                 user_manager=None, **kwargs):
+    def __init__(
+        self,
+        item,
+        post_appsync=None,
+        post_dynamo=None,
+        post_image_dynamo=None,
+        post_original_metadata_dynamo=None,
+        cloudfront_client=None,
+        mediaconvert_client=None,
+        post_verification_client=None,
+        s3_uploads_client=None,
+        album_manager=None,
+        block_manager=None,
+        card_manager=None,
+        comment_manager=None,
+        feed_manager=None,
+        follow_manager=None,
+        followed_first_story_manager=None,
+        like_manager=None,
+        post_manager=None,
+        trending_manager=None,
+        user_manager=None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         if post_appsync:
@@ -82,23 +100,37 @@ class Post(FlagModelMixin, ViewModelMixin):
 
         # lazy caches
         if self.type == PostType.TEXT_ONLY:
+
             def upstream_source(dims):
                 return generate_text_image(self.item['text'], dims)
+
             self.k4_jpeg_cache = CachedImage(self.id, image_size.K4, source=upstream_source)
             self.p1080_jpeg_cache = CachedImage(self.id, image_size.P1080, source=upstream_source)
         elif s3_uploads_client:
-            self.native_heic_cache = CachedImage(self.id, image_size.NATIVE_HEIC, s3_client=s3_uploads_client,
-                                                 s3_path=self.get_image_path(image_size.NATIVE_HEIC))
-            self.native_jpeg_cache = CachedImage(self.id, image_size.NATIVE, s3_client=s3_uploads_client,
-                                                 s3_path=self.get_image_path(image_size.NATIVE))
-            self.k4_jpeg_cache = CachedImage(self.id, image_size.K4, s3_client=s3_uploads_client,
-                                             s3_path=self.get_image_path(image_size.K4))
-            self.p1080_jpeg_cache = CachedImage(self.id, image_size.P1080, s3_client=s3_uploads_client,
-                                                s3_path=self.get_image_path(image_size.P1080))
-            self.p480_jpeg_cache = CachedImage(self.id, image_size.P480, s3_client=s3_uploads_client,
-                                               s3_path=self.get_image_path(image_size.P480))
-            self.p64_jpeg_cache = CachedImage(self.id, image_size.P64, s3_client=s3_uploads_client,
-                                              s3_path=self.get_image_path(image_size.P64))
+            self.native_heic_cache = CachedImage(
+                self.id,
+                image_size.NATIVE_HEIC,
+                s3_client=s3_uploads_client,
+                s3_path=self.get_image_path(image_size.NATIVE_HEIC),
+            )
+            self.native_jpeg_cache = CachedImage(
+                self.id,
+                image_size.NATIVE,
+                s3_client=s3_uploads_client,
+                s3_path=self.get_image_path(image_size.NATIVE),
+            )
+            self.k4_jpeg_cache = CachedImage(
+                self.id, image_size.K4, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.K4)
+            )
+            self.p1080_jpeg_cache = CachedImage(
+                self.id, image_size.P1080, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P1080)
+            )
+            self.p480_jpeg_cache = CachedImage(
+                self.id, image_size.P480, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P480)
+            )
+            self.p64_jpeg_cache = CachedImage(
+                self.id, image_size.P64, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P64)
+            )
 
     @property
     def status(self):
@@ -209,8 +241,10 @@ class Post(FlagModelMixin, ViewModelMixin):
 
     def process_image_upload(self, image_data=None, now=None):
         assert self.type == PostType.IMAGE, 'Can only process_image_upload() for IMAGE posts'
-        assert self.status in (PostStatus.PENDING, PostStatus.ERROR), \
-            'Can only process_image_upload() for PENDING & ERROR posts'
+        assert self.status in (
+            PostStatus.PENDING,
+            PostStatus.ERROR,
+        ), 'Can only process_image_upload() for PENDING & ERROR posts'
         now = now or pendulum.now('utc')
 
         # mark ourselves as processing
@@ -247,7 +281,7 @@ class Post(FlagModelMixin, ViewModelMixin):
 
     def crop_native_jpeg_cache(self):
         assert self.type == PostType.IMAGE, 'Cannot operate on post of non-IMAGE post type'
-        assert (crop := self.image_item.get('crop')), 'Cannot crop post with no crop specified'
+        assert (crop := self.image_item.get('crop')) , 'Cannot crop post with no crop specified'
 
         image = self.native_jpeg_cache.get_image()
         cur_width, cur_height = image.size
@@ -493,8 +527,9 @@ class Post(FlagModelMixin, ViewModelMixin):
 
         return self
 
-    def set(self, text=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None,
-            verification_hidden=None):
+    def set(
+        self, text=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None, verification_hidden=None
+    ):
         args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
         if all(v is None for v in args):
             raise exceptions.PostException('Empty edit requested')
@@ -504,8 +539,12 @@ class Post(FlagModelMixin, ViewModelMixin):
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
-            self.id, text=text, text_tags=text_tags, comments_disabled=comments_disabled,
-            likes_disabled=likes_disabled, sharing_disabled=sharing_disabled,
+            self.id,
+            text=text,
+            text_tags=text_tags,
+            comments_disabled=comments_disabled,
+            likes_disabled=likes_disabled,
+            sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
         )
         return self
@@ -535,8 +574,10 @@ class Post(FlagModelMixin, ViewModelMixin):
         path = self.get_image_path(image_size.NATIVE)
         image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
         is_verified = self.post_verification_client.verify_image(
-            image_url, image_format=self.image_item.get('imageFormat'),
-            original_format=self.image_item.get('originalFormat'), taken_in_real=self.image_item.get('takenInReal'),
+            image_url,
+            image_format=self.image_item.get('imageFormat'),
+            original_format=self.image_item.get('originalFormat'),
+            taken_in_real=self.image_item.get('takenInReal'),
         )
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
@@ -562,9 +603,11 @@ class Post(FlagModelMixin, ViewModelMixin):
             transacts.append(user_dyanmo.transact_increment_post_has_new_comment_activity_count(self.user_id))
         else:
             transacts.append(user_dyanmo.transact_decrement_post_has_new_comment_activity_count(self.user_id))
-        transact_exceptions.append(exceptions.PostException(
-            f'Unable to increment/decrement posts have new comment activity count for user `{self.user_id}`',
-        ))
+        transact_exceptions.append(
+            exceptions.PostException(
+                f'Unable to increment/decrement posts have new comment activity count for user `{self.user_id}`',
+            )
+        )
 
         try:
             self.dynamo.client.transact_write_items(transacts, transact_exceptions)

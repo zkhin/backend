@@ -9,10 +9,12 @@ GOOGLE_CLIENT_IDS_NAME = os.environ.get('SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME')
 
 
 class SecretsManagerClient:
-
-    def __init__(self, cloudfront_key_pair_name=CLOUDFRONT_KEY_PAIR_NAME,
-                 post_verification_api_creds_name=POST_VERIFICATION_API_CREDS_NAME,
-                 google_client_ids_name=GOOGLE_CLIENT_IDS_NAME):
+    def __init__(
+        self,
+        cloudfront_key_pair_name=CLOUDFRONT_KEY_PAIR_NAME,
+        post_verification_api_creds_name=POST_VERIFICATION_API_CREDS_NAME,
+        google_client_ids_name=GOOGLE_CLIENT_IDS_NAME,
+    ):
         self.boto_client = boto3.client('secretsmanager')
         self.exceptions = self.boto_client.exceptions
         self.cloudfront_key_pair_name = cloudfront_key_pair_name

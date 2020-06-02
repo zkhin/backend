@@ -10,22 +10,15 @@ logger = logging.getLogger()
 
 
 class TrendingDynamo:
-
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
     def get_trending(self, item_id):
-        return self.client.get_item({
-            'partitionKey': f'trending/{item_id}',
-            'sortKey': '-',
-        })
+        return self.client.get_item({'partitionKey': f'trending/{item_id}', 'sortKey': '-',})
 
     def delete_trending(self, item_id):
         "Delete a trending, if it exists. If it doesn't, no-op."
-        return self.client.delete_item({
-            'partitionKey': f'trending/{item_id}',
-            'sortKey': '-',
-        })
+        return self.client.delete_item({'partitionKey': f'trending/{item_id}', 'sortKey': '-',})
 
     def create_trending(self, item_type, item_id, view_count, now=None):
         now = now or pendulum.now('utc')
@@ -50,16 +43,10 @@ class TrendingDynamo:
         "Add view counts directly to the trending score"
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'trending/{item_id}',
-                'sortKey': '-',
-            },
+            'Key': {'partitionKey': f'trending/{item_id}', 'sortKey': '-',},
             'UpdateExpression': 'ADD gsiK3SortKey :cnt',
             'ConditionExpression': 'gsiA1SortKey >= :gsia1sk',
-            'ExpressionAttributeValues': {
-                ':cnt': view_count,
-                ':gsia1sk': now.to_iso8601_string(),
-            },
+            'ExpressionAttributeValues': {':cnt': view_count, ':gsia1sk': now.to_iso8601_string(),},
         }
         try:
             return self.client.update_item(query_kwargs)
@@ -70,16 +57,10 @@ class TrendingDynamo:
     def increment_trending_pending_view_count(self, item_id, view_count, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'trending/{item_id}',
-                'sortKey': '-',
-            },
+            'Key': {'partitionKey': f'trending/{item_id}', 'sortKey': '-',},
             'UpdateExpression': 'ADD pendingViewCount :cnt',
             'ConditionExpression': 'gsiA1SortKey < :gsia1sk',
-            'ExpressionAttributeValues': {
-                ':cnt': view_count,
-                ':gsia1sk': now.to_iso8601_string(),
-            },
+            'ExpressionAttributeValues': {':cnt': view_count, ':gsia1sk': now.to_iso8601_string(),},
         }
         try:
             return self.client.update_item(query_kwargs)
@@ -89,13 +70,8 @@ class TrendingDynamo:
 
     def update_trending_score(self, item_id, score, new_last_indexed_at, old_last_indexed_at, view_count_change_abs):
         query_kwargs = {
-            'Key': {
-                'partitionKey': f'trending/{item_id}',
-                'sortKey': '-',
-            },
-            'UpdateExpression': (
-                'SET gsiA1SortKey = :nslua, gsiK3SortKey = :score ADD pendingViewCount :npvc'
-            ),
+            'Key': {'partitionKey': f'trending/{item_id}', 'sortKey': '-',},
+            'UpdateExpression': ('SET gsiA1SortKey = :nslua, gsiK3SortKey = :score ADD pendingViewCount :npvc'),
             'ExpressionAttributeValues': {
                 ':nslua': new_last_indexed_at.to_iso8601_string(),
                 ':oslua': old_last_indexed_at.to_iso8601_string(),
@@ -103,9 +79,7 @@ class TrendingDynamo:
                 ':npvc': -view_count_change_abs,
                 ':ppvc': view_count_change_abs,
             },
-            'ConditionExpression': (
-                'gsiA1SortKey = :oslua and pendingViewCount >= :ppvc'
-            ),
+            'ConditionExpression': ('gsiA1SortKey = :oslua and pendingViewCount >= :ppvc'),
         }
         return self.client.update_item(query_kwargs)
 

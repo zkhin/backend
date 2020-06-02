@@ -14,7 +14,7 @@ def update_pinpoint(pinpoint_client, user_id, old_user_item, new_user_item):
     # check for a change of email, phone
     for dynamo_name, pinpoint_name in (('email', 'EMAIL'), ('phoneNumber', 'SMS')):
         value = new_user_item.get(dynamo_name, {}).get('S')
-        if (old_user_item.get(dynamo_name, {}).get('S') == value):
+        if old_user_item.get(dynamo_name, {}).get('S') == value:
             continue
         if value:
             pinpoint_client.update_user_endpoint(user_id, pinpoint_name, value)

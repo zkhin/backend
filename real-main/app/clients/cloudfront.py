@@ -76,14 +76,9 @@ class CloudFrontClient:
 
     def generate_cookie_policy(self, path, expires_at):
         policy_dict = {
-            'Statement': [{
-                'Resource': path,
-                'Condition': {
-                    'DateLessThan': {
-                        'AWS:EpochTime': expires_at.int_timestamp
-                    }
-                }
-            }]
+            'Statement': [
+                {'Resource': path, 'Condition': {'DateLessThan': {'AWS:EpochTime': expires_at.int_timestamp}}}
+            ]
         }
         # Using separators=(',', ':') removes seperator whitespace
         return json.dumps(policy_dict, separators=(',', ':')).encode('utf-8')

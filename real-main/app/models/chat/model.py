@@ -14,8 +14,16 @@ class Chat:
     enums = enums
     exceptions = exceptions
 
-    def __init__(self, item, dynamo=None, member_dynamo=None, block_manager=None, card_manager=None,
-                 chat_message_manager=None, user_manager=None):
+    def __init__(
+        self,
+        item,
+        dynamo=None,
+        member_dynamo=None,
+        block_manager=None,
+        card_manager=None,
+        chat_message_manager=None,
+        user_manager=None,
+    ):
         if dynamo:
             self.dynamo = dynamo
         if member_dynamo:

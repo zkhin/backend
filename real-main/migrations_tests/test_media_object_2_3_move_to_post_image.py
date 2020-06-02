@@ -45,11 +45,7 @@ def maximal_media(dynamo_table):
         'imageFormat': 'HEIC',
         'height': 42,
         'width': 4242,
-        'colors': [
-            {'r': 1, 'g': 2, 'b': 3},
-            {'r': 4, 'g': 5, 'b': 6},
-            {'r': 7, 'g': 8, 'b': 9},
-        ],
+        'colors': [{'r': 1, 'g': 2, 'b': 3}, {'r': 4, 'g': 5, 'b': 6}, {'r': 7, 'g': 8, 'b': 9},],
     }
     dynamo_table.put_item(Item=item)
     yield item

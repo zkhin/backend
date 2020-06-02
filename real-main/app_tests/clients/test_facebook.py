@@ -12,9 +12,7 @@ def test_get_verified_email_success(requests_mock):
 
     access_token = 'my-access-token'
     complete_url = f'{api_root}/me?fields=email&access_token={access_token}'
-    mocked_contact_info = {
-        "email": "mike@real.app"
-    }
+    mocked_contact_info = {"email": "mike@real.app"}
 
     requests_mock.get(complete_url, text=json.dumps(mocked_contact_info))
     email = client.get_verified_email(access_token)

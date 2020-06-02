@@ -27,10 +27,7 @@ def generate_all_users_with_photo(version):
         'FilterExpression': (
             'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv and attribute_exists(photoMediaId)'
         ),
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'user/',
-            ':sv': version,
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version,},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)

@@ -120,7 +120,7 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
             if not message:
                 logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE message `{message_id}`')
                 continue
-            if (message.record_view_count(user_id, view_count, viewed_at=viewed_at)):
+            if message.record_view_count(user_id, view_count, viewed_at=viewed_at):
                 views_recorded = True
         if views_recorded:
             self.card_manager.remove_well_known_card_if_exists(user_id, self.card_manager.enums.CHAT_ACTIVITY_CARD)

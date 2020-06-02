@@ -79,11 +79,23 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     text = 'lore @ipsum'
     text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
 
-    transacts = [post_dynamo.transact_add_pending_post(
-        user_id, post_id, post_type, posted_at=posted_at, expires_at=expires_at, text=text, text_tags=text_tags,
-        comments_disabled=True, likes_disabled=False, sharing_disabled=False, verification_hidden=True,
-        album_id=album_id, set_as_user_photo=True,
-    )]
+    transacts = [
+        post_dynamo.transact_add_pending_post(
+            user_id,
+            post_id,
+            post_type,
+            posted_at=posted_at,
+            expires_at=expires_at,
+            text=text,
+            text_tags=text_tags,
+            comments_disabled=True,
+            likes_disabled=False,
+            sharing_disabled=False,
+            verification_hidden=True,
+            album_id=album_id,
+            set_as_user_photo=True,
+        )
+    ]
     post_dynamo.client.transact_write_items(transacts)
 
     # retrieve post, check format
@@ -226,10 +238,13 @@ def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
 
     # add a post, verify starts pending
     expires_at = pendulum.now('utc') + pendulum.duration(days=1)
-    post_dynamo.client.transact_write_items([
-        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='l', expires_at=expires_at,
-                                              album_id='aid'),
-    ])
+    post_dynamo.client.transact_write_items(
+        [
+            post_dynamo.transact_add_pending_post(
+                user_id, post_id, 'ptype', text='l', expires_at=expires_at, album_id='aid'
+            ),
+        ]
+    )
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.PENDING
 
@@ -248,9 +263,9 @@ def test_transact_set_post_status_COMPLETED_clears_set_as_user_photo(post_dynamo
     user_id = 'my-user-id'
 
     # add a post, verify stating state
-    post_dynamo.client.transact_write_items([
-        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', set_as_user_photo=True),
-    ])
+    post_dynamo.client.transact_write_items(
+        [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', set_as_user_photo=True),]
+    )
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == PostStatus.PENDING
     assert post_item['setAsUserPhoto'] is True
@@ -346,9 +361,9 @@ def test_get_first_with_checksum(post_dynamo):
     # one post
     post_id_1 = 'pid'
     posted_at_1 = pendulum.now('utc')
-    post_dynamo.client.transact_write_items([
-        post_dynamo.transact_add_pending_post('uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1),
-    ])
+    post_dynamo.client.transact_write_items(
+        [post_dynamo.transact_add_pending_post('uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1),]
+    )
     posted_at_str_1 = posted_at_1.to_iso8601_string()
     post_dynamo.set_checksum(post_id_1, posted_at_str_1, checksum)
     assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
@@ -356,9 +371,9 @@ def test_get_first_with_checksum(post_dynamo):
     # two media, we should get the one with earliest postedAt
     post_id_2 = 'pid2'
     posted_at_2 = pendulum.now('utc')
-    post_dynamo.client.transact_write_items([
-        post_dynamo.transact_add_pending_post('uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2),
-    ])
+    post_dynamo.client.transact_write_items(
+        [post_dynamo.transact_add_pending_post('uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2),]
+    )
     posted_at_str_2 = posted_at_2.to_iso8601_string()
     post_dynamo.set_checksum(post_id_2, posted_at_str_2, checksum)
     assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
@@ -493,10 +508,9 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     assert org_post_item['expiresAt'] == expires_at.to_iso8601_string()
 
     # delete it from the DB
-    post_dynamo.client.delete_item({
-        'partitionKey': f'post/{post_id}',
-        'sortKey': '-',
-    })
+    post_dynamo.client.delete_item(
+        {'partitionKey': f'post/{post_id}', 'sortKey': '-',}
+    )
 
     # now add it to the DB, without a lifetime
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text)]
@@ -525,10 +539,9 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
     assert 'expiresAt' not in org_post_item
 
     # delete it from the DB
-    post_dynamo.client.delete_item({
-        'partitionKey': f'post/{post_id}',
-        'sortKey': '-',
-    })
+    post_dynamo.client.delete_item(
+        {'partitionKey': f'post/{post_id}', 'sortKey': '-',}
+    )
 
     # now add it to the DB, with a lifetime
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)

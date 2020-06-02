@@ -37,16 +37,11 @@ def user_verified_phone(user_manager, cognito_client):
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id,
         MessageAction='SUPPRESS',
-        UserAttributes=[{
-            'Name': 'phone_number',
-            'Value': phone,
-        }, {
-            'Name': 'phone_number_verified',
-            'Value': 'true',
-        }, {
-            'Name': 'preferred_username',
-            'Value': username.lower(),
-        }],
+        UserAttributes=[
+            {'Name': 'phone_number', 'Value': phone,},
+            {'Name': 'phone_number_verified', 'Value': 'true',},
+            {'Name': 'preferred_username', 'Value': username.lower(),},
+        ],
     )
     yield user_manager.create_cognito_only_user(user_id, username)
 
@@ -134,8 +129,14 @@ def test_update_all_details(user):
     assert 'followCountsHidden' not in user.item
     assert 'viewCountsHidden' not in user.item
 
-    user.update_details(full_name='f', bio='b', language_code='de', theme_code='orange', follow_counts_hidden=True,
-                        view_counts_hidden=True)
+    user.update_details(
+        full_name='f',
+        bio='b',
+        language_code='de',
+        theme_code='orange',
+        follow_counts_hidden=True,
+        view_counts_hidden=True,
+    )
 
     # check the user.item has not been replaced
     assert user.item['fullName'] == 'f'
@@ -148,12 +149,19 @@ def test_update_all_details(user):
 
 def test_delete_all_details(user):
     # set some details
-    user.update_details(full_name='f', bio='b', language_code='de', theme_code='orange', follow_counts_hidden=True,
-                        view_counts_hidden=True)
+    user.update_details(
+        full_name='f',
+        bio='b',
+        language_code='de',
+        theme_code='orange',
+        follow_counts_hidden=True,
+        view_counts_hidden=True,
+    )
 
     # delete those details, all except for privacyStatus which can't be deleted
-    user.update_details(full_name='', bio='', language_code='', theme_code='', follow_counts_hidden='',
-                        view_counts_hidden='')
+    user.update_details(
+        full_name='', bio='', language_code='', theme_code='', follow_counts_hidden='', view_counts_hidden=''
+    )
 
     # check the delete made it through
     assert 'fullName' not in user.item

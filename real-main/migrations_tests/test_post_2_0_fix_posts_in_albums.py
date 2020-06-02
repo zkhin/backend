@@ -12,16 +12,18 @@ def test_basic(dynamo_client, dynamo_table, caplog):
         'partitionKey': f'post/{post_id}',
         'sortKey': '-',
     }
-    dynamo_table.put_item(Item={
-        **post_pk,
-        **{
-            'postId': post_id,
-            'schemaVersion': 2,
-            'albumId': album_id,
-            'gsiK2PartitionKey': f'post/{album_id}',
-            'gsiK2SortKey': 'post/posted-at-str',
-        },
-    })
+    dynamo_table.put_item(
+        Item={
+            **post_pk,
+            **{
+                'postId': post_id,
+                'schemaVersion': 2,
+                'albumId': album_id,
+                'gsiK2PartitionKey': f'post/{album_id}',
+                'gsiK2SortKey': 'post/posted-at-str',
+            },
+        }
+    )
 
     # check the post looks as expected
     post_1 = dynamo_table.get_item(Key=post_pk)['Item']

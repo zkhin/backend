@@ -3,7 +3,6 @@ class FollowException(Exception):
 
 
 class AlreadyFollowing(FollowException):
-
     def __init__(self, follower_user_id, followed_user_id):
         self.follower_user_id = follower_user_id
         self.followed_user_id = followed_user_id
@@ -14,7 +13,6 @@ class AlreadyFollowing(FollowException):
 
 
 class FollowingDoesNotExist(FollowException):
-
     def __init__(self, follower_user_id, followed_user_id):
         self.follower_user_id = follower_user_id
         self.followed_user_id = followed_user_id
@@ -25,7 +23,6 @@ class FollowingDoesNotExist(FollowException):
 
 
 class AlreadyHasStatus(FollowException):
-
     def __init__(self, follower_user_id, followed_user_id, follow_status):
         self.follower_user_id = follower_user_id
         self.followed_user_id = followed_user_id

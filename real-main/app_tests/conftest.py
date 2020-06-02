@@ -60,9 +60,11 @@ def cloudfront_client():
 @pytest.fixture
 def mediaconvert_client():
     endpoint = 'https://my-media-convert-endpoint.com'
-    yield mock.Mock(clients.MediaConvertClient(
-        endpoint=endpoint, aws_account_id='aws-aid', role_arn='role-arn', uploads_bucket='uploads-bucket'
-    ))
+    yield mock.Mock(
+        clients.MediaConvertClient(
+            endpoint=endpoint, aws_account_id='aws-aid', role_arn='role-arn', uploads_bucket='uploads-bucket'
+        )
+    )
 
 
 @pytest.fixture
@@ -132,11 +134,9 @@ def s3_placeholder_photos_client(s3_clients):
 
 @pytest.fixture
 def album_manager(dynamo_client, s3_uploads_client, cloudfront_client):
-    yield models.AlbumManager({
-        'dynamo': dynamo_client,
-        's3_uploads': s3_uploads_client,
-        'cloudfront': cloudfront_client,
-    })
+    yield models.AlbumManager(
+        {'dynamo': dynamo_client, 's3_uploads': s3_uploads_client, 'cloudfront': cloudfront_client,}
+    )
 
 
 @pytest.fixture
@@ -156,11 +156,9 @@ def chat_manager(dynamo_client, appsync_client):
 
 @pytest.fixture
 def chat_message_manager(dynamo_client, appsync_client, cloudfront_client):
-    yield models.ChatMessageManager({
-        'appsync': appsync_client,
-        'cloudfront': cloudfront_client,
-        'dynamo': dynamo_client,
-    })
+    yield models.ChatMessageManager(
+        {'appsync': appsync_client, 'cloudfront': cloudfront_client, 'dynamo': dynamo_client,}
+    )
 
 
 @pytest.fixture
@@ -190,13 +188,15 @@ def like_manager(dynamo_client):
 
 @pytest.fixture
 def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_client, post_verification_client):
-    yield models.PostManager({
-        'appsync': appsync_client,
-        'dynamo': dynamo_client,
-        's3_uploads': s3_uploads_client,
-        'cloudfront': cloudfront_client,
-        'post_verification': post_verification_client,
-    })
+    yield models.PostManager(
+        {
+            'appsync': appsync_client,
+            'dynamo': dynamo_client,
+            's3_uploads': s3_uploads_client,
+            'cloudfront': cloudfront_client,
+            'post_verification': post_verification_client,
+        }
+    )
 
 
 @pytest.fixture
@@ -205,15 +205,25 @@ def trending_manager(dynamo_client):
 
 
 @pytest.fixture
-def user_manager(cloudfront_client, dynamo_client, s3_uploads_client, s3_placeholder_photos_client, cognito_client,
-                 facebook_client, google_client, pinpoint_client):
-    yield models.UserManager({
-        'cloudfront': cloudfront_client,
-        'dynamo': dynamo_client,
-        's3_uploads': s3_uploads_client,
-        's3_placeholder_photos': s3_placeholder_photos_client,
-        'cognito': cognito_client,
-        'facebook': facebook_client,
-        'google': google_client,
-        'pinpoint': pinpoint_client,
-    })
+def user_manager(
+    cloudfront_client,
+    dynamo_client,
+    s3_uploads_client,
+    s3_placeholder_photos_client,
+    cognito_client,
+    facebook_client,
+    google_client,
+    pinpoint_client,
+):
+    yield models.UserManager(
+        {
+            'cloudfront': cloudfront_client,
+            'dynamo': dynamo_client,
+            's3_uploads': s3_uploads_client,
+            's3_placeholder_photos': s3_placeholder_photos_client,
+            'cognito': cognito_client,
+            'facebook': facebook_client,
+            'google': google_client,
+            'pinpoint': pinpoint_client,
+        }
+    )

@@ -13,8 +13,16 @@ class Comment(FlagModelMixin, ViewModelMixin):
     exceptions = exceptions
     item_type = 'comment'
 
-    def __init__(self, comment_item, dynamo=None, block_manager=None, follow_manager=None, post_manager=None,
-                 user_manager=None, **kwargs):
+    def __init__(
+        self,
+        comment_item,
+        dynamo=None,
+        block_manager=None,
+        follow_manager=None,
+        post_manager=None,
+        user_manager=None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         if dynamo:
             self.dynamo = dynamo

@@ -15,10 +15,7 @@ def generate_all_users_with_post_view_count(version):
         'FilterExpression': (
             'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv and attribute_exists(postViewCount)'
         ),
-        'ExpressionAttributeValues': {
-            ':pk_prefix': 'user/',
-            ':sv': version,
-        },
+        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version,},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -32,15 +29,10 @@ def generate_all_users_with_post_view_count(version):
 def update_user(user_item):
     user_id = user_item['userId']
     kwargs = {
-        'Key': {
-            'partitionKey': f'user/{user_id}',
-            'sortKey': 'profile',
-        },
+        'Key': {'partitionKey': f'user/{user_id}', 'sortKey': 'profile',},
         'UpdateExpression': 'REMOVE postViewCount',
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :five',
-        'ExpressionAttributeValues': {
-            ':five': 5,
-        },
+        'ExpressionAttributeValues': {':five': 5,},
     }
     print(f'Updating item: {kwargs} ... ')
     boto_table.update_item(**kwargs)

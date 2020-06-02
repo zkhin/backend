@@ -104,7 +104,7 @@ def test_transact_update_following_status_doesnt_exist(follow_dynamo, user1, use
     dummy_follow_item = {
         'partitionKey': f'following/{user1.id}/{user2.id}',
         'sortKey': '-',
-        'followedAt': pendulum.now('utc').to_iso8601_string()
+        'followedAt': pendulum.now('utc').to_iso8601_string(),
     }
     transact = follow_dynamo.transact_update_following_status(dummy_follow_item, 'status')
     with pytest.raises(follow_dynamo.client.exceptions.TransactionCanceledException):
@@ -147,18 +147,18 @@ def test_generate_followers(follow_dynamo, user1, user2, user3):
     assert len(resp) == 0
 
     # one user follows us, check our generated followers
-    follow_dynamo.client.transact_write_items([
-        follow_dynamo.transact_add_following(other1_user.id, our_user.id, 'anything'),
-    ])
+    follow_dynamo.client.transact_write_items(
+        [follow_dynamo.transact_add_following(other1_user.id, our_user.id, 'anything'),]
+    )
     resp = list(follow_dynamo.generate_follower_items(our_user.id))
     assert len(resp) == 1
     assert resp[0]['followerUserId'] == other1_user.id
     assert resp[0]['followedUserId'] == our_user.id
 
     # the other user follows us, check our generated followers
-    follow_dynamo.client.transact_write_items([
-        follow_dynamo.transact_add_following(other2_user.id, our_user.id, 'anything'),
-    ])
+    follow_dynamo.client.transact_write_items(
+        [follow_dynamo.transact_add_following(other2_user.id, our_user.id, 'anything'),]
+    )
     resp = list(follow_dynamo.generate_follower_items(our_user.id))
     assert len(resp) == 2
     assert resp[0]['followerUserId'] == other1_user.id
@@ -177,18 +177,18 @@ def test_generate_followeds(follow_dynamo, user1, user2, user3):
     assert len(resp) == 0
 
     # we follow another user, check our generated followeds
-    follow_dynamo.client.transact_write_items([
-        follow_dynamo.transact_add_following(our_user.id, other1_user.id, 'anything'),
-    ])
+    follow_dynamo.client.transact_write_items(
+        [follow_dynamo.transact_add_following(our_user.id, other1_user.id, 'anything'),]
+    )
     resp = list(follow_dynamo.generate_followed_items(our_user.id))
     assert len(resp) == 1
     assert resp[0]['followerUserId'] == our_user.id
     assert resp[0]['followedUserId'] == other1_user.id
 
     # we follow the other user, check our generated followeds
-    follow_dynamo.client.transact_write_items([
-        follow_dynamo.transact_add_following(our_user.id, other2_user.id, 'anything'),
-    ])
+    follow_dynamo.client.transact_write_items(
+        [follow_dynamo.transact_add_following(our_user.id, other2_user.id, 'anything'),]
+    )
     resp = list(follow_dynamo.generate_followed_items(our_user.id))
     assert len(resp) == 2
     assert resp[0]['followerUserId'] == our_user.id

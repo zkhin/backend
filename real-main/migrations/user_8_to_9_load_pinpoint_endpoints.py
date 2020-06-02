@@ -30,10 +30,7 @@ class Migration:
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :fsv',
-            'ExpressionAttributeValues': {
-                ':pk_prefix': 'user/',
-                ':fsv': self.from_version,
-            },
+            'ExpressionAttributeValues': {':pk_prefix': 'user/', ':fsv': self.from_version,},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -46,25 +43,19 @@ class Migration:
     def migrate_user(self, user):
         user_id = user['userId']
         logger.warning(f'User `{user_id}`: starting migration')
-        if (email := user.get('email')):
+        if (email := user.get('email')) :
             self.pinpoint_update_endpoint(user_id, 'EMAIL', email)
-        if (phone := user.get('phoneNumber')):
+        if (phone := user.get('phoneNumber')) :
             self.pinpoint_update_endpoint(user_id, 'SMS', phone)
         self.dynamo_update_user(user_id)
 
     def dynamo_update_user(self, user_id):
         logger.warning(f'User `{user_id}`: marking migrated')
         kwargs = {
-            'Key': {
-                'partitionKey': f'user/{user_id}',
-                'sortKey': 'profile',
-            },
+            'Key': {'partitionKey': f'user/{user_id}', 'sortKey': 'profile',},
             'UpdateExpression': 'SET schemaVersion = :tsv',
             'ConditionExpression': 'schemaVersion = :fsv',
-            'ExpressionAttributeValues': {
-                ':tsv': self.to_version,
-                ':fsv': self.from_version,
-            },
+            'ExpressionAttributeValues': {':tsv': self.to_version, ':fsv': self.from_version,},
         }
         self.dynamo_table.update_item(**kwargs)
 
@@ -76,13 +67,7 @@ class Migration:
         kwargs = {
             'ApplicationId': self.pinpoint_app_id,
             'EndpointId': endpoint_id,
-            'EndpointRequest': {
-                'Address': address,
-                'ChannelType': channel_type,
-                'User': {
-                    'UserId': user_id,
-                }
-            }
+            'EndpointRequest': {'Address': address, 'ChannelType': channel_type, 'User': {'UserId': user_id,}},
         }
         self.pinpoint_client.update_endpoint(**kwargs)
 

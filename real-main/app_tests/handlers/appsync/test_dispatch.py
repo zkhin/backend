@@ -50,11 +50,7 @@ def test_unknown_field_raises_exception(setup_one_route, cognito_authed_event):
 def test_basic_success(setup_one_route, cognito_authed_event):
     resp = dispatch(cognito_authed_event, {})
     assert resp == {
-        'success': {
-            'caller_user_id': '42-42',
-            'arguments': ['arg1', 'arg2'],
-            'source': {'anotherField': 42},
-        },
+        'success': {'caller_user_id': '42-42', 'arguments': ['arg1', 'arg2'], 'source': {'anotherField': 42},},
     }
 
 
@@ -62,20 +58,12 @@ def test_no_source(setup_one_route, cognito_authed_event):
     cognito_authed_event['source'] = None
     resp = dispatch(cognito_authed_event, {})
     assert resp == {
-        'success': {
-            'caller_user_id': '42-42',
-            'arguments': ['arg1', 'arg2'],
-            'source': None,
-        },
+        'success': {'caller_user_id': '42-42', 'arguments': ['arg1', 'arg2'], 'source': None,},
     }
 
 
 def test_api_key_authenticated(setup_one_route, api_key_authed_event):
     resp = dispatch(api_key_authed_event, {})
     assert resp == {
-        'success': {
-            'caller_user_id': None,
-            'arguments': ['arg1', 'arg2'],
-            'source': {'anotherField': 42},
-        },
+        'success': {'caller_user_id': None, 'arguments': ['arg1', 'arg2'], 'source': {'anotherField': 42},},
     }

@@ -1,5 +1,5 @@
 name: Continuous Integration
-on: [push]
+on: [push, pull_request]
 jobs:
 
   real-auth-pytest:
@@ -50,7 +50,7 @@ jobs:
     - name: Test with pytest
       run: cd real-main && poetry run pytest -n auto app_tests migrations_tests
 
-  flake8:
+  python-lint:
     runs-on: ubuntu-latest
     steps:
     - name: Git checkout
@@ -61,23 +61,22 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: Install dependencies
-      run: |
-        pip install flake8==3.8.0a2  # alpha for walrus operator support
+    - name: Install black
+      run: pip install black
 
-    - name: Lint real-auth with flake8
-      run: |
-        flake8 real-auth/real_auth real-auth/tests
+    - name: Lint real-auth with black
+      working-directory: real-auth
+      run: black --check --diff .
 
-    - name: Lint real-main with flake8
-      run: |
-        flake8 real-main/app real-main/app_tests real-main/migrations real-main/migrations_tests
+    - name: Lint real-cloudfront with black
+      working-directory: real-cloudfront
+      run: black --check --diff .
 
-    - name: Lint real-cloudfornt with flake8
-      run: |
-        flake8 real-cloudfront/edge_app
+    - name: Lint real-main with black
+      working-directory: real-main
+      run: black --check --diff .
 
-  eslint:
+  javascript-lint:
     runs-on: ubuntu-latest
     steps:
     - name: Git checkout

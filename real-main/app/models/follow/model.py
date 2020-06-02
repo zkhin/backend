@@ -13,8 +13,16 @@ class Follow:
     enums = enums
     exceptions = exceptions
 
-    def __init__(self, follow_item, follow_dynamo, feed_manager=None, ffs_manager=None, like_manager=None,
-                 post_manager=None, user_manager=None):
+    def __init__(
+        self,
+        follow_item,
+        follow_dynamo,
+        feed_manager=None,
+        ffs_manager=None,
+        like_manager=None,
+        post_manager=None,
+        user_manager=None,
+    ):
         self.dynamo = follow_dynamo
         self.followed_user_id = follow_item['followedUserId']
         self.follower_user_id = follow_item['followerUserId']
@@ -45,10 +53,12 @@ class Follow:
 
         transacts = [self.dynamo.transact_delete_following(self.item)]
         if self.status == FollowStatus.FOLLOWING:
-            transacts.extend([
-                self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
-                self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
-            ])
+            transacts.extend(
+                [
+                    self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
+                    self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
+                ]
+            )
         self.dynamo.client.transact_write_items(transacts)
 
         if self.status == FollowStatus.FOLLOWING:
@@ -93,10 +103,12 @@ class Follow:
 
         transacts = [self.dynamo.transact_update_following_status(self.item, FollowStatus.DENIED)]
         if self.status == FollowStatus.FOLLOWING:
-            transacts.extend([
-                self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
-                self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
-            ])
+            transacts.extend(
+                [
+                    self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
+                    self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
+                ]
+            )
         self.dynamo.client.transact_write_items(transacts)
 
         if self.status == FollowStatus.FOLLOWING:

@@ -11,8 +11,13 @@ class MediaConvertClient:
 
     job_template = 'System-Ott_Hls_Ts_Avc_Aac'
 
-    def __init__(self, endpoint=None, aws_account_id=AWS_ACCOUNT_ID, role_arn=MEDIACONVERT_ROLE_ARN,
-                 uploads_bucket=S3_UPLOADS_BUCKET):
+    def __init__(
+        self,
+        endpoint=None,
+        aws_account_id=AWS_ACCOUNT_ID,
+        role_arn=MEDIACONVERT_ROLE_ARN,
+        uploads_bucket=S3_UPLOADS_BUCKET,
+    ):
         assert role_arn, "MediaConvert role ARN is required"
         assert uploads_bucket, "S3 uploads bucket name is required"
         self.role_arn = role_arn
@@ -50,64 +55,55 @@ class MediaConvertClient:
             "JobTemplate": self.job_template_arn,
             "Role": self.role_arn,
             "Settings": {
-                "OutputGroups": [{
-                    "Name": "Apple HLS",
-                    "OutputGroupSettings": {
-                        "HlsGroupSettings": {
-                            "Destination": video_output_url_prefix,
-                        }
-                    }
-                }, {
-                    "Name": "File Group",
-                    "OutputGroupSettings": {
-                        "Type": "FILE_GROUP_SETTINGS",
-                        "FileGroupSettings": {
-                            "Destination": image_output_url_prefix,
-                        }
+                "OutputGroups": [
+                    {
+                        "Name": "Apple HLS",
+                        "OutputGroupSettings": {"HlsGroupSettings": {"Destination": video_output_url_prefix,}},
                     },
-                    "Outputs": [{
-                        "ContainerSettings": {
-                            "Container": "RAW"
+                    {
+                        "Name": "File Group",
+                        "OutputGroupSettings": {
+                            "Type": "FILE_GROUP_SETTINGS",
+                            "FileGroupSettings": {"Destination": image_output_url_prefix,},
                         },
-                        "VideoDescription": {
-                            "ScalingBehavior": "DEFAULT",
-                            "TimecodeInsertion": "DISABLED",
-                            "AntiAlias": "ENABLED",
-                            "Sharpness": 50,
-                            "CodecSettings": {
-                                "Codec": "FRAME_CAPTURE",
-                                "FrameCaptureSettings": {
-                                    "FramerateNumerator": 1,
-                                    "FramerateDenominator": 5,
-                                    "MaxCaptures": 1,
-                                    "Quality": 80
-                                }
-                            },
-                            "DropFrameTimecode": "ENABLED",
-                            "ColorMetadata": "INSERT",
-                        }
-                    }],
-                }],
-                "Inputs": [{
-                    "AudioSelectors": {
-                        "Audio Selector 1": {
-                            "Offset": 0,
-                            "DefaultSelection": "DEFAULT",
-                            "ProgramSelection": 1
-                        }
+                        "Outputs": [
+                            {
+                                "ContainerSettings": {"Container": "RAW"},
+                                "VideoDescription": {
+                                    "ScalingBehavior": "DEFAULT",
+                                    "TimecodeInsertion": "DISABLED",
+                                    "AntiAlias": "ENABLED",
+                                    "Sharpness": 50,
+                                    "CodecSettings": {
+                                        "Codec": "FRAME_CAPTURE",
+                                        "FrameCaptureSettings": {
+                                            "FramerateNumerator": 1,
+                                            "FramerateDenominator": 5,
+                                            "MaxCaptures": 1,
+                                            "Quality": 80,
+                                        },
+                                    },
+                                    "DropFrameTimecode": "ENABLED",
+                                    "ColorMetadata": "INSERT",
+                                },
+                            }
+                        ],
                     },
-                    "VideoSelector": {
-                        "ColorSpace": "FOLLOW",
-                        "Rotate": "AUTO",
-                        "AlphaBehavior": "DISCARD"
-                    },
-                    "FilterEnable": "AUTO",
-                    "PsiControl": "USE_PSI",
-                    "FilterStrength": 0,
-                    "DeblockFilter": "DISABLED",
-                    "DenoiseFilter": "DISABLED",
-                    "TimecodeSource": "EMBEDDED",
-                    "FileInput": input_url,
-                }]
-            }
+                ],
+                "Inputs": [
+                    {
+                        "AudioSelectors": {
+                            "Audio Selector 1": {"Offset": 0, "DefaultSelection": "DEFAULT", "ProgramSelection": 1}
+                        },
+                        "VideoSelector": {"ColorSpace": "FOLLOW", "Rotate": "AUTO", "AlphaBehavior": "DISCARD"},
+                        "FilterEnable": "AUTO",
+                        "PsiControl": "USE_PSI",
+                        "FilterStrength": 0,
+                        "DeblockFilter": "DISABLED",
+                        "DenoiseFilter": "DISABLED",
+                        "TimecodeSource": "EMBEDDED",
+                        "FileInput": input_url,
+                    }
+                ],
+            },
         }

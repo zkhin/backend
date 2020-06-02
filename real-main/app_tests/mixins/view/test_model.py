@@ -34,11 +34,9 @@ def chat_message(chat_manager, chat_message_manager, user, user2):
     yield chat_message_manager.add_chat_message(str(uuid.uuid4()), 'heyya', chat.id, user.id)
 
 
-@pytest.mark.parametrize('model', (
-    pytest.lazy_fixture('post'),
-    pytest.lazy_fixture('comment'),
-    pytest.lazy_fixture('chat_message'),
-))
+@pytest.mark.parametrize(
+    'model', (pytest.lazy_fixture('post'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('chat_message'),)
+)
 def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     # check owner has always viewed it
     assert model.get_viewed_status(model.user_id) == ViewedStatus.VIEWED
@@ -49,11 +47,9 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     assert model.view_dynamo.get_view(model.id, model.user_id) is None
 
 
-@pytest.mark.parametrize('model', (
-    pytest.lazy_fixture('post'),
-    pytest.lazy_fixture('comment'),
-    pytest.lazy_fixture('chat_message'),
-))
+@pytest.mark.parametrize(
+    'model', (pytest.lazy_fixture('post'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('chat_message'),)
+)
 def test_record_get_and_delete_views(model, user2, user3):
     # check users have not viewed it
     assert model.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
