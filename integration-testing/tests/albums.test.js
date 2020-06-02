@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -20,7 +20,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Add, read, and delete an album', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -63,7 +62,6 @@ test('Add, read, and delete an album', async () => {
   expect(resp.data.album).toBeNull()
 })
 
-
 test('Cannot add, edit or delete an album if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -80,16 +78,18 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't add another album
-  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId: uuidv4(), name: 'n'}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId: uuidv4(), name: 'n'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 
   // verify we can't edit or delete the existing album
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'new'}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
-  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'new'}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Add album with empty string description, treated as null', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -99,7 +99,6 @@ test('Add album with empty string description, treated as null', async () => {
   expect(resp.data.addAlbum.albumId).toBe(albumId)
   expect(resp.data.addAlbum.description).toBeNull()
 })
-
 
 test('Edit an album', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -132,7 +131,7 @@ test('Edit an album', async () => {
   expect(editedAlbum.description).toBe(newDescription)
   expect({
     ...editedAlbum,
-    ...{name: orgAlbum.name, description: orgAlbum.description}
+    ...{name: orgAlbum.name, description: orgAlbum.description},
   }).toEqual(orgAlbum)
 
   // verify those stuck in the DB
@@ -149,7 +148,7 @@ test('Edit an album', async () => {
   expect(clearedAlbum.description).toBeNull()
   expect({
     ...clearedAlbum,
-    ...{description: editedAlbum.description}
+    ...{description: editedAlbum.description},
   }).toEqual(editedAlbum)
 
   // verify those stuck in the DB
@@ -159,10 +158,10 @@ test('Edit an album', async () => {
 
   // verify we can't null out the album name
   let variables = {albumId, name: ''}
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables}))
-    .rejects.toThrow(/ClientError: All albums must have names/)
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow(
+    /ClientError: All albums must have names/,
+  )
 })
-
 
 test('Cant create two albums with same id', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -176,12 +175,13 @@ test('Cant create two albums with same id', async () => {
 
   // verify neither us nor them can add another album with same id
   let variables = {albumId, name: 'r'}
-  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables}))
-    .rejects.toThrow(/ClientError: Unable to add album /)
-  await expect(theirClient.mutate({mutation: mutations.addAlbum, variables}))
-    .rejects.toThrow(/ClientError: Unable to add album /)
+  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow(
+    /ClientError: Unable to add album /,
+  )
+  await expect(theirClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow(
+    /ClientError: Unable to add album /,
+  )
 })
-
 
 test('Cant edit or delete somebody elses album', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -195,17 +195,18 @@ test('Cant edit or delete somebody elses album', async () => {
 
   // verify they can't edit it nor delete it
   let variables = {albumId, name: 'name'}
-  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables}))
-    .rejects.toThrow(/ClientError: Caller .* does not own Album /)
-  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables}))
-    .rejects.toThrow(/ClientError: Caller .* does not own Album /)
+  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow(
+    /ClientError: Caller .* does not own Album /,
+  )
+  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow(
+    /ClientError: Caller .* does not own Album /,
+  )
 
   // verify it's still there
   resp = await theirClient.query({query: queries.album, variables: {albumId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.album.albumId).toBe(albumId)
 })
-
 
 test('Empty album edit raises error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -217,23 +218,24 @@ test('Empty album edit raises error', async () => {
   expect(resp.data.addAlbum.albumId).toBe(albumId)
 
   // verify calling edit without specifying anything to edit is an error
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId}}))
-    .rejects.toThrow(/ClientError: Called without any arguments/)
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId}})).rejects.toThrow(
+    /ClientError: Called without any arguments/,
+  )
 })
-
 
 test('Cant edit, delete an album that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const albumId = uuidv4()  // doesnt exist
+  const albumId = uuidv4() // doesnt exist
 
   // cant edit or delete the non-existing album
   let variables = {albumId, name: 'name'}
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables}))
-    .rejects.toThrow(/ClientError: Album .* does not exist/)
-  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables}))
-    .rejects.toThrow(/ClientError: Album .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow(
+    /ClientError: Album .* does not exist/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow(
+    /ClientError: Album .* does not exist/,
+  )
 })
-
 
 test('User.albums and Query.album block privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -288,7 +290,6 @@ test('User.albums and Query.album block privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.album.albumId).toBe(albumId)
 })
-
 
 test('User.albums and Query.album private user privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -371,7 +372,6 @@ test('User.albums and Query.album private user privacy', async () => {
   expect(resp.data.album).toBeNull()
 })
 
-
 test('User.albums matches direct access, ordering', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -404,7 +404,6 @@ test('User.albums matches direct access, ordering', async () => {
   expect(resp.data.self.albums.items[1]).toEqual(album2)
 })
 
-
 test('Album art generated for 0, 1 and 4 posts in album', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -434,7 +433,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // check album has art urls and they have changed root
   resp = await ourClient.query({query: queries.album, variables: {albumId}})

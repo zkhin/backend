@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Delete comments', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -84,7 +83,6 @@ test('Delete comments', async () => {
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
 
-
 test('Delete someone elses comment on our post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -127,13 +125,12 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
 
-
 test('Cant delete a comment that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: uuidv4()}}))
-    .rejects.toThrow(/ClientError: No comment/)
+  await expect(
+    ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: uuidv4()}}),
+  ).rejects.toThrow(/ClientError: No comment/)
 })
-
 
 test('Cant delete comments if our user is disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -157,10 +154,10 @@ test('Cant delete comments if our user is disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // check we cannot delete that comment
-  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Cant delete someone elses comment on someone elses post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -183,8 +180,9 @@ test('Cant delete someone elses comment on someone elses post', async () => {
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
   // verify we can't delete their comment
-  await expect(ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: theirCommentId}}))
-    .rejects.toThrow(/ClientError: .* not authorized to delete/)
+  await expect(
+    ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: theirCommentId}}),
+  ).rejects.toThrow(/ClientError: .* not authorized to delete/)
 
   // check they can see that comment on the post
   resp = await theirClient.query({query: queries.post, variables: {postId}})
@@ -194,7 +192,6 @@ test('Cant delete someone elses comment on someone elses post', async () => {
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(theirCommentId)
 })
-
 
 test('Can delete comments even if we have comments disabled and the post has comments disabled', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

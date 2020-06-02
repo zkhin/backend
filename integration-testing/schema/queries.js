@@ -3,7 +3,7 @@ const gql = require('graphql-tag')
 const fragments = require('./fragments.js')
 
 module.exports.self = gql`
-  query Self ($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int) {
+  query Self($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int) {
     self {
       userId
       ...SimpleUserFields
@@ -25,7 +25,7 @@ module.exports.self = gql`
           postId
         }
       }
-      anonymouslyLikedPosts (limit: $anonymouslyLikedPostsLimit) {
+      anonymouslyLikedPosts(limit: $anonymouslyLikedPostsLimit) {
         items {
           postId
           image {
@@ -33,7 +33,7 @@ module.exports.self = gql`
           }
         }
       }
-      onymouslyLikedPosts (limit: $onymouslyLikedPostsLimit) {
+      onymouslyLikedPosts(limit: $onymouslyLikedPostsLimit) {
         items {
           postId
           image {
@@ -95,8 +95,8 @@ module.exports.self = gql`
 `
 
 module.exports.user = gql`
-  query User ($userId: ID!) {
-    user (userId: $userId) {
+  query User($userId: ID!) {
+    user(userId: $userId) {
       userId
       ...SimpleUserFields
       photo {
@@ -185,8 +185,8 @@ module.exports.user = gql`
 `
 
 module.exports.searchUsers = gql`
-  query SearchUsers ($searchToken: String!) {
-    searchUsers (searchToken: $searchToken) {
+  query SearchUsers($searchToken: String!) {
+    searchUsers(searchToken: $searchToken) {
       items {
         userId
         username
@@ -200,8 +200,8 @@ module.exports.searchUsers = gql`
 `
 
 module.exports.post = gql`
-  query Post ($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
-    post (postId: $postId) {
+  query Post($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
+    post(postId: $postId) {
       postId
       postType
       postStatus
@@ -238,7 +238,7 @@ module.exports.post = gql`
       viewedStatus
       commentsDisabled
       commentCount
-      comments (reverse: $commentsReverse) {
+      comments(reverse: $commentsReverse) {
         items {
           ...CommentFragment
         }
@@ -249,7 +249,7 @@ module.exports.post = gql`
       hasNewCommentActivity
       onymousLikeCount
       anonymousLikeCount
-      onymouslyLikedBy (limit: $onymouslyLikedByLimit) {
+      onymouslyLikedBy(limit: $onymouslyLikedByLimit) {
         items {
           userId
         }
@@ -269,9 +269,9 @@ module.exports.post = gql`
 `
 
 module.exports.userPosts = gql`
-  query UserPosts ($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
-    user (userId: $userId) {
-      posts (postStatus: $postStatus, postType: $postType) {
+  query UserPosts($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
+    user(userId: $userId) {
+      posts(postStatus: $postStatus, postType: $postType) {
         items {
           postId
           postedAt
@@ -295,9 +295,9 @@ module.exports.userPosts = gql`
 `
 
 module.exports.followedUsers = gql`
-  query FollowedUsers ($userId: ID!, $followStatus: FollowStatus) {
-    user (userId: $userId) {
-      followedUsers (followStatus: $followStatus) {
+  query FollowedUsers($userId: ID!, $followStatus: FollowStatus) {
+    user(userId: $userId) {
+      followedUsers(followStatus: $followStatus) {
         items {
           userId
           followedStatus
@@ -309,9 +309,9 @@ module.exports.followedUsers = gql`
 `
 
 module.exports.followerUsers = gql`
-  query FollowerUsers ($userId: ID!, $followStatus: FollowStatus) {
-    user (userId: $userId) {
-      followerUsers (followStatus: $followStatus) {
+  query FollowerUsers($userId: ID!, $followStatus: FollowStatus) {
+    user(userId: $userId) {
+      followerUsers(followStatus: $followStatus) {
         items {
           userId
           followedStatus
@@ -323,9 +323,9 @@ module.exports.followerUsers = gql`
 `
 
 module.exports.ourFollowedUsers = gql`
-  query OurFollowedUsers ($followStatus: FollowStatus) {
+  query OurFollowedUsers($followStatus: FollowStatus) {
     self {
-      followedUsers (followStatus: $followStatus) {
+      followedUsers(followStatus: $followStatus) {
         items {
           userId
           privacyStatus
@@ -342,9 +342,9 @@ module.exports.ourFollowedUsers = gql`
 `
 
 module.exports.ourFollowerUsers = gql`
-  query OurFollowerUsers ($followStatus: FollowStatus) {
+  query OurFollowerUsers($followStatus: FollowStatus) {
     self {
-      followerUsers (followStatus: $followStatus) {
+      followerUsers(followStatus: $followStatus) {
         items {
           userId
           followedStatus
@@ -356,8 +356,8 @@ module.exports.ourFollowerUsers = gql`
 `
 
 module.exports.userStories = gql`
-  query UserStories ($userId: ID!) {
-    user (userId: $userId) {
+  query UserStories($userId: ID!) {
+    user(userId: $userId) {
       stories {
         items {
           postId
@@ -379,9 +379,9 @@ module.exports.userStories = gql`
 `
 
 module.exports.selfFeed = gql`
-  query SelfFeed ($limit: Int) {
+  query SelfFeed($limit: Int) {
     self {
-      feed (limit: $limit) {
+      feed(limit: $limit) {
         items {
           postId
           postType
@@ -405,8 +405,8 @@ module.exports.selfFeed = gql`
 `
 
 module.exports.trendingUsers = gql`
-  query TrendingUsers ($limit: Int) {
-    trendingUsers (limit: $limit) {
+  query TrendingUsers($limit: Int) {
+    trendingUsers(limit: $limit) {
       items {
         userId
         blockerStatus
@@ -416,9 +416,9 @@ module.exports.trendingUsers = gql`
 `
 
 module.exports.trendingPosts = gql`
-  query TrendingPosts ($limit: Int, $viewedStatus: ViewedStatus) {
-    trendingPosts (limit: $limit) {
-      items (viewedStatus: $viewedStatus) {
+  query TrendingPosts($limit: Int, $viewedStatus: ViewedStatus) {
+    trendingPosts(limit: $limit) {
+      items(viewedStatus: $viewedStatus) {
         postId
         postedBy {
           userId
@@ -433,8 +433,8 @@ module.exports.trendingPosts = gql`
 `
 
 module.exports.album = gql`
-  query Album ($albumId: ID!) {
-    album (albumId: $albumId) {
+  query Album($albumId: ID!) {
+    album(albumId: $albumId) {
       ...AlbumFragment
     }
   }
@@ -442,11 +442,11 @@ module.exports.album = gql`
 `
 
 module.exports.chat = gql`
-  query Chat ($chatId: ID!, $reverse: Boolean) {
-    chat (chatId: $chatId) {
+  query Chat($chatId: ID!, $reverse: Boolean) {
+    chat(chatId: $chatId) {
       ...ChatFragment
       messageCount
-      messages (reverse: $reverse) {
+      messages(reverse: $reverse) {
         items {
           ...ChatMessageFragment
           viewedStatus
@@ -459,10 +459,10 @@ module.exports.chat = gql`
 `
 
 module.exports.chatUsers = gql`
-  query Chat ($chatId: ID!, $excludeUserId: ID) {
-    chat (chatId: $chatId) {
+  query Chat($chatId: ID!, $excludeUserId: ID) {
+    chat(chatId: $chatId) {
       chatId
-      users (excludeUserId: $excludeUserId) {
+      users(excludeUserId: $excludeUserId) {
         items {
           userId
         }

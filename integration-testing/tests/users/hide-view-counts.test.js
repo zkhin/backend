@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -44,7 +43,6 @@ test('Get, set, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.viewCountsHidden).toBeNull()
 })
-
 
 test('Verify it really hides view counts on user and post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

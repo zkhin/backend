@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -19,19 +19,20 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Cannot like/dislike posts that do not exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   let variables = {postId: uuidv4()}
 
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: Post .* does not exist/)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: Post .* does not exist/)
-  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables}))
-    .rejects.toThrow(/ClientError: Post .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: Post .* does not exist/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: Post .* does not exist/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables})).rejects.toThrow(
+    /ClientError: Post .* does not exist/,
+  )
 })
-
 
 test('Cannot like or dislike posts if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -63,16 +64,18 @@ test('Cannot like or dislike posts if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't like the first post
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 
   // verify we can't dislike the second post
-  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId: postId2}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId: postId2}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Cannot like PENDING posts', async () => {
   // we add an image post, but don't upload the image
@@ -85,12 +88,13 @@ test('Cannot like PENDING posts', async () => {
 
   // verify we can't like/dislike the post
   let variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: Cannot like posts with status/)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: Cannot like posts with status/)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: Cannot like posts with status/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: Cannot like posts with status/,
+  )
 })
-
 
 test('Cannot like ARCHIVED posts', async () => {
   // we add a post, and archive it
@@ -99,7 +103,7 @@ test('Cannot like ARCHIVED posts', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
   resp = await ourClient.mutate({mutation: mutations.archivePost, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.archivePost.postId).toBe(postId)
@@ -107,12 +111,13 @@ test('Cannot like ARCHIVED posts', async () => {
 
   // verify we can't like/dislike the post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: Cannot like posts with status/)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: Cannot like posts with status/)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: Cannot like posts with status/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: Cannot like posts with status/,
+  )
 })
-
 
 test('Cannot double like a post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -139,18 +144,21 @@ test('Cannot double like a post', async () => {
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 
   // verify we can't re-like the first post
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId: postId1}}))
-    .rejects.toThrow(/ClientError: .* already liked /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId: postId1}}))
-    .rejects.toThrow(/ClientError: .* already liked /)
+  await expect(
+    ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId: postId1}}),
+  ).rejects.toThrow(/ClientError: .* already liked /)
+  await expect(
+    ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId: postId1}}),
+  ).rejects.toThrow(/ClientError: .* already liked /)
 
   // verify we can't re-like the second post
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId: postId2}}))
-    .rejects.toThrow(/ClientError: .* already liked /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId: postId2}}))
-    .rejects.toThrow(/ClientError: .* already liked /)
+  await expect(
+    ourClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId: postId2}}),
+  ).rejects.toThrow(/ClientError: .* already liked /)
+  await expect(
+    ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId: postId2}}),
+  ).rejects.toThrow(/ClientError: .* already liked /)
 })
-
 
 test('Cannot dislike a post we have not liked', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -162,10 +170,10 @@ test('Cannot dislike a post we have not liked', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify we can't dislike it, since we haven't already liked it
-  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId}}))
-    .rejects.toThrow(/ClientError: .* has not liked post /)
+  await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId}})).rejects.toThrow(
+    /ClientError: .* has not liked post /,
+  )
 })
-
 
 test('Cannot like posts of a user that has blocked us', async () => {
   // us and them
@@ -184,10 +192,12 @@ test('Cannot like posts of a user that has blocked us', async () => {
 
   // verify we cannot like their post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* has been blocked by /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* has been blocked by /)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* has been blocked by /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* has been blocked by /,
+  )
 
   // they unblock us
   resp = await theirClient.mutate({mutation: mutations.unblockUser, variables: {userId: ourUserId}})
@@ -204,7 +214,6 @@ test('Cannot like posts of a user that has blocked us', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 })
-
 
 test('Cannot like posts of a user we have blocked', async () => {
   // us and them
@@ -223,10 +232,12 @@ test('Cannot like posts of a user we have blocked', async () => {
 
   // verify we cannot like their post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* has blocked /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* has blocked /)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* has blocked /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* has blocked /,
+  )
 
   // we unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
@@ -244,7 +255,6 @@ test('Cannot like posts of a user we have blocked', async () => {
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 })
 
-
 test('Can only like posts of private users if we are a follower of theirs', async () => {
   // us and another private user
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -261,21 +271,25 @@ test('Can only like posts of private users if we are a follower of theirs', asyn
 
   // verify we cannot like that post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* does not have access /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* does not have access /)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* does not have access /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* does not have access /,
+  )
 
   // we request to follow them
-  resp =  await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+  resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
 
   // verify we cannot like that post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* does not have access /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* does not have access /)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* does not have access /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* does not have access /,
+  )
 
   // they deny our follow request
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
@@ -283,10 +297,12 @@ test('Can only like posts of private users if we are a follower of theirs', asyn
 
   // verify we cannot like that post
   variables = {postId}
-  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* does not have access /)
-  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables}))
-    .rejects.toThrow(/ClientError: .* does not have access /)
+  await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* does not have access /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables})).rejects.toThrow(
+    /ClientError: .* does not have access /,
+  )
 
   // they accept our follow request
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
@@ -303,7 +319,6 @@ test('Can only like posts of private users if we are a follower of theirs', asyn
   expect(resp.errors).toBeUndefined()
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 })
-
 
 test('Onymously like, then dislike, a post', async () => {
   // we add a post
@@ -371,7 +386,6 @@ test('Onymously like, then dislike, a post', async () => {
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(0)
 })
 
-
 test('Anonymously like, then dislike, a post', async () => {
   // we add a post
   const [ourClient] = await loginCache.getCleanLogin()
@@ -436,7 +450,6 @@ test('Anonymously like, then dislike, a post', async () => {
   expect(resp.data.self.anonymouslyLikedPosts.items).toHaveLength(0)
 })
 
-
 test('Like counts show up for posts in feed', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -446,7 +459,7 @@ test('Like counts show up for posts in feed', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // get that post from our feed, check its like counts
   resp = await ourClient.query({query: queries.selfFeed})

@@ -15,7 +15,6 @@ if (testingCognitoClientId === undefined) throw new Error('Env var COGNITO_TESTI
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
 
-
 prmt.message = ''
 prmt.start()
 

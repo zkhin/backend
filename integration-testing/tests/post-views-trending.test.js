@@ -13,7 +13,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const imageData1 = misc.generateRandomJpeg(8, 8)
 const imageData2 = misc.generateRandomJpeg(8, 8)
@@ -32,7 +32,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Report post views', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -100,7 +99,6 @@ test('Report post views', async () => {
   expect(resp.data.post.viewedBy.items[1].userId).toBe(other2UserId)
 })
 
-
 test('Cannot report post views if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -118,10 +116,10 @@ test('Cannot report post views if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we cannot report post views
-  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
-
 
 test('Post.viewedStatus', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -151,7 +149,6 @@ test('Post.viewedStatus', async () => {
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.viewedStatus).toBe('VIEWED')
 })
-
 
 test('Report post views on non-completed posts are ignored', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -202,7 +199,6 @@ test('Report post views on non-completed posts are ignored', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 })
-
 
 test('Post views are de-duplicated by user', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -256,21 +252,25 @@ test('Post views are de-duplicated by user', async () => {
   expect(resp.data.post.viewedByCount).toBe(2)
 })
 
-
 test('Report post views error conditions', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // must report at least one view
   let variables = {postIds: []}
-  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables}))
-    .rejects.toThrow(/ClientError: A minimum of 1 post id /)
+  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables})).rejects.toThrow(
+    /ClientError: A minimum of 1 post id /,
+  )
 
   // can't report more than 100 views
-  variables = {postIds: Array(101).fill().map(() => uuidv4())}
-  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables}))
-    .rejects.toThrow(/ClientError: A max of 100 post ids /)
+  variables = {
+    postIds: Array(101)
+      .fill()
+      .map(() => uuidv4()),
+  }
+  await expect(ourClient.mutate({mutation: mutations.reportPostViews, variables})).rejects.toThrow(
+    /ClientError: A max of 100 post ids /,
+  )
 })
-
 
 test('resetUser deletes trending items', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -312,7 +312,6 @@ test('resetUser deletes trending items', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 })
-
 
 test('Order of trending users', async () => {
   /* Note that only the very first reporting of post views is immediately incoporated
@@ -360,7 +359,6 @@ test('Order of trending users', async () => {
   expect(resp.data.trendingUsers.items[1].userId).toBe(ourUserId)
 })
 
-
 test('We do not see trending users that have blocked us, but see all others', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [other1Client] = await loginCache.getCleanLogin()
@@ -401,7 +399,6 @@ test('We do not see trending users that have blocked us, but see all others', as
   expect(resp.data.trendingUsers.items[0].blockerStatus).toBe('SELF')
 })
 
-
 test('We see our own trending posts correctly', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -426,7 +423,7 @@ test('We see our own trending posts correctly', async () => {
   // both posts get viewed
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1, postId2]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // verify trending posts looks correct, including the items that are batch filled in
   resp = await ourClient.query({query: queries.trendingPosts})
@@ -452,7 +449,6 @@ test('We see our own trending posts correctly', async () => {
   expect(post2.postedBy.privacyStatus).toBe('PUBLIC')
   expect(post2.postedBy.followedStatus).toBe('SELF')
 })
-
 
 test('Filter trendingPosts on viewedStatus', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -509,7 +505,7 @@ test('Filter trendingPosts on viewedStatus', async () => {
   // we report a view of the post we hadn't viewed
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // check no posts now show up as not viewed
   resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
@@ -520,7 +516,7 @@ test('Filter trendingPosts on viewedStatus', async () => {
   resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
-  expect(resp.data.trendingPosts.items.map(p => p.postId).sort()).toEqual([postId1, postId2].sort())
+  expect(resp.data.trendingPosts.items.map((p) => p.postId).sort()).toEqual([postId1, postId2].sort())
   expect(resp.data.trendingPosts.items[0].viewedStatus).toBe('VIEWED')
   expect(resp.data.trendingPosts.items[1].viewedStatus).toBe('VIEWED')
 })
@@ -583,7 +579,6 @@ test('We see public users trending posts correctly', async () => {
   expect(post2.postedBy.followedStatus).toBe('NOT_FOLLOWING')
 })
 
-
 test('We see posts of private users in trending only if we are following them', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [other1Client, other1UserId] = await loginCache.getCleanLogin()
@@ -640,7 +635,6 @@ test('We see posts of private users in trending only if we are following them', 
   expect(firstPost.postedBy.followedStatus).toBe('FOLLOWING')
 })
 
-
 test('We do not see trending posts of users that have blocked us', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -685,7 +679,6 @@ test('We do not see trending posts of users that have blocked us', async () => {
   expect(firstPost.postedBy.followedStatus).toBe('SELF')
 })
 
-
 test('Post views on duplicate posts are viewed post and original post, only original get trending', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -699,7 +692,7 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp.data.addPost.postId).toBe(ourPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // they add an image post that's a duplicate of ours
   const theirPostId = uuidv4()
@@ -804,7 +797,6 @@ test('Post views on duplicate posts are viewed post and original post, only orig
   expect(resp.data.post.viewedBy.items[0].userId).toBe(otherUserId)
 })
 
-
 test('Archived posts do not show up as trending', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -837,7 +829,6 @@ test('Archived posts do not show up as trending', async () => {
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 })
 
-
 test('Posts that fail verification do not show up in trending', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -868,7 +859,6 @@ test('Posts that fail verification do not show up in trending', async () => {
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId2)
 })
-
 
 test('Views of our own posts count for trending', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

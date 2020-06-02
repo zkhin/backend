@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -21,7 +21,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Create a posts in an album, album post ordering', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -93,16 +92,16 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(resp.data.album.posts.items[2].postId).toBe(postId3)
 })
 
-
 test('Cant create post in or move post into album that doesnt exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  const albumId = uuidv4()  // doesn't exist
+  const albumId = uuidv4() // doesn't exist
 
   // verify we cannot create a post in that album
   const postId = uuidv4()
   let variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Album .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Album .* does not exist/,
+  )
 
   // make sure that post did not end making it into the DB
   let resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -117,8 +116,9 @@ test('Cant create post in or move post into album that doesnt exist', async () =
 
   // verify neither we or them cannot move into no album
   variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables}))
-    .rejects.toThrow(/ClientError: Album .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables})).rejects.toThrow(
+    /ClientError: Album .* does not exist/,
+  )
 
   // verify the post is unchanged
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -126,7 +126,6 @@ test('Cant create post in or move post into album that doesnt exist', async () =
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.album).toBeNull()
 })
-
 
 test('Cant create post in or move post into an album thats not ours', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -141,8 +140,9 @@ test('Cant create post in or move post into an album thats not ours', async () =
   // verify we cannot create a post in their album
   const postId = uuidv4()
   let variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Album .* does not belong to caller /)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Album .* does not belong to caller /,
+  )
 
   // make sure that post did not end making it into the DB
   resp = await theirClient.query({query: queries.post, variables: {postId}})
@@ -160,10 +160,12 @@ test('Cant create post in or move post into an album thats not ours', async () =
 
   // verify neither we or them cannot move the post into their album
   variables = {postId, albumId}
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables}))
-    .rejects.toThrow(/ClientError: Album .* belong to /)
-  await expect(theirClient.mutate({mutation: mutations.editPostAlbum, variables}))
-    .rejects.toThrow(/ClientError: Cannot edit another user's post/)
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables})).rejects.toThrow(
+    /ClientError: Album .* belong to /,
+  )
+  await expect(theirClient.mutate({mutation: mutations.editPostAlbum, variables})).rejects.toThrow(
+    /ClientError: Cannot edit another user's post/,
+  )
 
   // verify the post is unchanged
   resp = await theirClient.query({query: queries.post, variables: {postId}})
@@ -171,7 +173,6 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.album).toBeNull()
 })
-
 
 test('Adding a post with PENDING status does not affect Album.posts until COMPLETED', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -221,7 +222,6 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp.data.album.posts.items).toHaveLength(1)
   expect(resp.data.album.posts.items[0].postId).toBe(postId)
 })
-
 
 test('Add, remove, change albums for an existing post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -317,7 +317,6 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(after >= resp.data.album.postsLastUpdatedAt).toBe(true)
 })
 
-
 // TODO: define behavior here. It's probably ok to let vido posts into albums, as they now have 'poster' images
 test.skip('Cant add video post to album (yet)', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -330,8 +329,9 @@ test.skip('Cant add video post to album (yet)', async () => {
 
   // verify can't create video post in that album
   const postId = uuidv4()
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, postType: 'VIDEO', albumId}}))
-    .rejects.toThrow('ClientError lsadfkjasldkfj')
+  await expect(
+    ourClient.mutate({mutation: mutations.addPost, variables: {postId, postType: 'VIDEO', albumId}}),
+  ).rejects.toThrow('ClientError lsadfkjasldkfj')
 
   // create the video post
   resp = ourClient.mutate({mutation: mutations.addPost, variables: {postId, postType: 'VIDEO'}})
@@ -339,10 +339,10 @@ test.skip('Cant add video post to album (yet)', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // verify can't move the video post into that album
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}}))
-    .rejects.toThrow('ClientError lsadfkjasldkfj')
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})).rejects.toThrow(
+    'ClientError lsadfkjasldkfj',
+  )
 })
-
 
 test('Adding an existing post to album not in COMPLETED status has no affect on Album.post & friends', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -390,7 +390,6 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
   expect(resp.data.album.posts.items).toHaveLength(0)
 })
 
-
 test('Archiving a post removes it from Album.posts & friends, restoring it does not maintain rank', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -408,7 +407,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.album.albumId).toBe(albumId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // add another image post in the album
   const postId2 = uuidv4()
@@ -463,7 +462,6 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp.data.album.postsLastUpdatedAt > postsLastUpdatedAt).toBe(true)
 })
 
-
 test('Deleting a post removes it from Album.posts & friends', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -506,7 +504,6 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
   expect(resp.data.album.posts.items).toHaveLength(0)
   expect(postsLastUpdatedAt < resp.data.album.postsLastUpdatedAt).toBe(true)
 })
-
 
 test('Edit album post order failures', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -553,18 +550,21 @@ test('Edit album post order failures', async () => {
 
   // verify they cannot change our album's post order
   variables = {postId: postId1, precedingPostId: postId2}
-  await expect(theirClient.mutate({mutation: mutations.editPostAlbumOrder, variables}))
-    .rejects.toThrow(/ClientError: Cannot edit another /)
+  await expect(theirClient.mutate({mutation: mutations.editPostAlbumOrder, variables})).rejects.toThrow(
+    /ClientError: Cannot edit another /,
+  )
 
   // verify they cannot use their post to change our order
   variables = {postId: postId3, precedingPostId: postId2}
-  await expect(theirClient.mutate({mutation: mutations.editPostAlbumOrder, variables}))
-    .rejects.toThrow(/ClientError: .* does not belong to caller/)
+  await expect(theirClient.mutate({mutation: mutations.editPostAlbumOrder, variables})).rejects.toThrow(
+    /ClientError: .* does not belong to caller/,
+  )
 
   // verify we cannot use their post to change our order
   variables = {postId: postId1, precedingPostId: postId3}
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables}))
-    .rejects.toThrow(/ClientError: .* does not belong to caller/)
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})).rejects.toThrow(
+    /ClientError: .* does not belong to caller/,
+  )
 
   // check album post order has not changed
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -582,7 +582,6 @@ test('Edit album post order failures', async () => {
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId1)
   expect(resp.data.editPostAlbumOrder.album.albumId).toBe(albumId)
 })
-
 
 test('Edit album post order', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -627,7 +626,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId3)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // check album post order
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -653,7 +652,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId2)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // check album post order
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -679,7 +678,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId1)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // check album post order
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -705,7 +704,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId3)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // check album again directly, make sure nothing changed
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -725,7 +724,6 @@ test('Edit album post order', async () => {
   expect(prevAlbum.art.url480p.split('?')[0]).toBe(album.art.url480p.split('?')[0])
   expect(prevAlbum.art.url64p.split('?')[0]).toBe(album.art.url64p.split('?')[0])
 })
-
 
 test('Cannot edit post album if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -757,11 +755,13 @@ test('Cannot edit post album if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't edit the album in that post
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: ''}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: ''}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 
   // verify we can't edit the order of psots in that album
   let variables = {postId: postId, precedingPostId: postId2}
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })

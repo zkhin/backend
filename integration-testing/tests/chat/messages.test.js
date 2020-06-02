@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -17,7 +17,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Add messages to a direct chat', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -109,7 +108,6 @@ test('Add messages to a direct chat', async () => {
   expect(resp.data.chat.messages.items[3].viewedStatus).toBe('VIEWED')
 })
 
-
 test('Report message views', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -199,7 +197,6 @@ test('Report message views', async () => {
   expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
 })
 
-
 test('Disabled user cannot add, edit, delete or report views of chat messages', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -219,21 +216,24 @@ test('Disabled user cannot add, edit, delete or report views of chat messages', 
 
   // verify we cannot add a message to that chat
   variables = {chatId, messageId: uuidv4(), text: 'lore'}
-  await expect(ourClient.mutate({mutation: mutations.addChatMessage, variables}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.addChatMessage, variables})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 
   // verify we cannot edit our chat message
-  await expect(ourClient.mutate({mutation: mutations.editChatMessage, variables: {messageId, text: 'lore new'}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.editChatMessage, variables: {messageId, text: 'lore new'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 
   // verify we cannot edit our chat message
-  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 
-  await expect(ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId]}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId]}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
-
 
 test('Cant add a message to a chat we are not in', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -249,8 +249,9 @@ test('Cant add a message to a chat we are not in', async () => {
 
   // verify the rando can't add a message to our chat
   variables = {chatId, messageId: uuidv4(), text: 'lore'}
-  await expect(randoClient.mutate({mutation: mutations.addChatMessage, variables}))
-    .rejects.toThrow(/ClientError: .* is not a member/)
+  await expect(randoClient.mutate({mutation: mutations.addChatMessage, variables})).rejects.toThrow(
+    /ClientError: .* is not a member/,
+  )
 
   // check the chat and verify the rando's message didn't get saved
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
@@ -260,7 +261,6 @@ test('Cant add a message to a chat we are not in', async () => {
   expect(resp.data.chat.messages.items).toHaveLength(1)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageId)
 })
-
 
 test('Tag users in a chat message', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
@@ -315,7 +315,6 @@ test('Tag users in a chat message', async () => {
   expect(resp.data.chat.messages.items[2].textTaggedUsers).toHaveLength(0)
 })
 
-
 test('Edit chat message', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -330,10 +329,12 @@ test('Edit chat message', async () => {
 
   // verify neither rando nor us can edit the chat message
   variables = {messageId, text: 'lore new'}
-  await expect(randoClient.mutate({mutation: mutations.editChatMessage, variables}))
-    .rejects.toThrow(/ClientError: User .* cannot edit message /)
-  await expect(ourClient.mutate({mutation: mutations.editChatMessage, variables}))
-    .rejects.toThrow(/ClientError: User .* cannot edit message /)
+  await expect(randoClient.mutate({mutation: mutations.editChatMessage, variables})).rejects.toThrow(
+    /ClientError: User .* cannot edit message /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.editChatMessage, variables})).rejects.toThrow(
+    /ClientError: User .* cannot edit message /,
+  )
 
   // we report a view of the message
   variables = {messageIds: [messageId]}
@@ -385,7 +386,6 @@ test('Edit chat message', async () => {
   expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
 })
 
-
 test('Delete chat message', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -400,10 +400,12 @@ test('Delete chat message', async () => {
 
   // verify neither rando nor us can delete the chat message
   variables = {messageId: uuidv4()}
-  await expect(randoClient.mutate({mutation: mutations.deleteChatMessage, variables}))
-    .rejects.toThrow(/ClientError: User .* cannot delete message /)
-  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables}))
-    .rejects.toThrow(/ClientError: User .* cannot delete message /)
+  await expect(randoClient.mutate({mutation: mutations.deleteChatMessage, variables})).rejects.toThrow(
+    /ClientError: User .* cannot delete message /,
+  )
+  await expect(ourClient.mutate({mutation: mutations.deleteChatMessage, variables})).rejects.toThrow(
+    /ClientError: User .* cannot delete message /,
+  )
 
   // check the message hasn't changed
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
@@ -416,7 +418,7 @@ test('Delete chat message', async () => {
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   // check that the message has now dissapeared from the db
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
@@ -425,7 +427,6 @@ test('Delete chat message', async () => {
   expect(resp.data.chat.messageCount).toBe(0)
   expect(resp.data.chat.messages.items).toHaveLength(0)
 })
-
 
 test('User.chats sort order should react to message adds, edits and deletes', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

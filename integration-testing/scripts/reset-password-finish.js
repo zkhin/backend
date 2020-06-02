@@ -39,18 +39,20 @@ prmt.get(prmtSchema, async (err, result) => {
 })
 
 const chooseNewPassword = async (usernameLike, confirmationCode, password) => {
-  if (! password) {
-    password = pwdGenerator.generate({length:8})
+  if (!password) {
+    password = pwdGenerator.generate({length: 8})
     console.log(`Auto generated password: ${password}`)
   }
-  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: testingCognitoClientId }})
+  const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: testingCognitoClientId}})
 
   // empty response upon success
-  await userPoolClient.confirmForgotPassword({
-    ConfirmationCode: confirmationCode,
-    Username: usernameLike,
-    Password: password,
-  }).promise()
+  await userPoolClient
+    .confirmForgotPassword({
+      ConfirmationCode: confirmationCode,
+      Username: usernameLike,
+      Password: password,
+    })
+    .promise()
 
   console.log('You may now use your new password to sign in')
 }

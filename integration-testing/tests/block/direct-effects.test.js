@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -13,7 +13,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('User.blockedUsers, User.blockedStatus respond correctly to blocking and unblocking', async () => {
   // us and them
@@ -64,14 +63,13 @@ test('User.blockedUsers, User.blockedStatus respond correctly to blocking and un
   expect(resp.data.self.blockedUsers.items).toHaveLength(0)
 })
 
-
 test('Unblocking a user we have not blocked is an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has not blocked /)
+  await expect(
+    ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* has not blocked /)
 })
-
 
 test('Double blocking a user is an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -83,20 +81,21 @@ test('Double blocking a user is an error', async () => {
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // try to block them again
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has already blocked /)
+  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: .* has already blocked /,
+  )
 })
-
 
 test('Trying to block or unblock yourself is an error', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   let variables = {userId: ourUserId}
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables}))
-    .rejects.toThrow(/ClientError: Cannot block yourself/)
-  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables}))
-    .rejects.toThrow(/ClientError: Cannot unblock yourself/)
+  await expect(ourClient.mutate({mutation: mutations.blockUser, variables})).rejects.toThrow(
+    /ClientError: Cannot block yourself/,
+  )
+  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables})).rejects.toThrow(
+    /ClientError: Cannot unblock yourself/,
+  )
 })
-
 
 test('User.blockedUsers ordering, privacy', async () => {
   // us and two others
@@ -126,7 +125,6 @@ test('User.blockedUsers ordering, privacy', async () => {
   expect(resp.data.user.blockedUsers).toBeNull()
 })
 
-
 test('We can block & unblock a user that has blocked us', async () => {
   // us and them
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -148,7 +146,6 @@ test('We can block & unblock a user that has blocked us', async () => {
   expect(resp.data.unblockUser.userId).toBe(theirUserId)
 })
 
-
 test('We cannot block a user if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
@@ -160,10 +157,10 @@ test('We cannot block a user if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't block them
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('We cannot unblock a user if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -182,6 +179,7 @@ test('We cannot unblock a user if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't unblock them
-  await expect(ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })

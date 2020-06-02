@@ -10,10 +10,7 @@ dotenv.config()
 const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
 if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
 
-const cognitoIndentityPoolClient = new AWS.CognitoIdentity({params: {
-  IdentityPoolId: identityPoolId,
-}})
-
+const cognitoIndentityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
 
 prmt.message = ''
 prmt.start()
@@ -44,11 +41,15 @@ prmt.get(prmtSchema, async (err, result) => {
     return 1
   }
   const gqlCreds = await generateGQLCredentials(result.accessToken)
-  const output = JSON.stringify({
-    authProvider: 'FACEBOOK',
-    tokens: {AccessToken: result.accessToken},
-    credentials: gqlCreds,
-  }, null, 2)
+  const output = JSON.stringify(
+    {
+      authProvider: 'FACEBOOK',
+      tokens: {AccessToken: result.accessToken},
+      credentials: gqlCreds,
+    },
+    null,
+    2,
+  )
   if (result.destination) fs.writeFileSync(result.destination, output + '\n')
   else console.log(output)
 })

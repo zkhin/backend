@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('One user adds multiple comments, ordering', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -75,19 +74,23 @@ test('One user adds multiple comments, ordering', async () => {
   expect(resp.data.post.comments.items[1].commentedBy.userId).toBe(ourUserId)
 })
 
-
 test('Cant report no comment views, or more than 100', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   let variables = {commentIds: []}
-  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables}))
-    .rejects.toThrow(/ClientError: A minimum of 1 comment id /)
+  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables})).rejects.toThrow(
+    /ClientError: A minimum of 1 comment id /,
+  )
 
-  variables = {commentIds: Array(101).fill().map(() => uuidv4())}
-  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables}))
-    .rejects.toThrow(/ClientError: A max of 100 comment ids /)
+  variables = {
+    commentIds: Array(101)
+      .fill()
+      .map(() => uuidv4()),
+  }
+  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables})).rejects.toThrow(
+    /ClientError: A max of 100 comment ids /,
+  )
 })
-
 
 test('Cant report comment views if our user is diabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -111,10 +114,10 @@ test('Cant report comment views if our user is diabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify can't report a view of a comment
-  await expect(ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
-
 
 test('Comment report views, viewed status tracked correctly', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -205,7 +208,6 @@ test('Comment report views, viewed status tracked correctly', async () => {
   expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
   expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
 })
-
 
 test('Comments of private user on public post are visible to all', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

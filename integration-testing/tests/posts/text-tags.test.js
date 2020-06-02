@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -19,7 +19,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('No text tags', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -48,7 +47,6 @@ test('No text tags', async () => {
   expect(resp.data.addPost.text).toBe(text)
   expect(resp.data.addPost.textTaggedUsers).toHaveLength(0)
 })
-
 
 test('Lots of text tags, current username does not match tagged one', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
@@ -84,7 +82,6 @@ test('Lots of text tags, current username does not match tagged one', async () =
   expect(textTaggedUsers[2].user.username).toBe(expectedTextTaggedUsers[2].user.username)
 })
 
-
 test('Changing username should not affect who is in tags', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
 
@@ -116,7 +113,6 @@ test('Changing username should not affect who is in tags', async () => {
   expect(resp.data.post.textTaggedUsers[0].user.username).toBe(ourNewUsername)
 })
 
-
 test('Tags of usernames with special characters', async () => {
   // Allowed characters for usernames: alphanumeric, underscore and dot
   // Only testing one (dificult) case one here, unit tests will get all the corner cases
@@ -137,7 +133,6 @@ test('Tags of usernames with special characters', async () => {
   expect(resp.data.addPost.textTaggedUsers[0].user.userId).toBe(ourUserId)
   expect(resp.data.addPost.textTaggedUsers[0].user.username).toBe(ourUsername)
 })
-
 
 test('Tagged user blocks caller', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

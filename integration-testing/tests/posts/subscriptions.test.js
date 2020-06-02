@@ -7,7 +7,7 @@ global.WebSocket = require('ws')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, subscriptions } = require('../../schema')
+const {mutations, subscriptions} = require('../../schema')
 
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const imageBytes = misc.generateRandomJpeg(8, 8)
@@ -22,7 +22,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Post message triggers cannot be called from external graphql client', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -43,10 +42,10 @@ test('Post message triggers cannot be called from external graphql client', asyn
     postStatus: 'COMPLETED',
     isVerified: false,
   }
-  await expect(ourClient.mutate({mutation: mutations.triggerPostNotification, variables: {input}}))
-    .rejects.toThrow(/ClientError: Access denied/)
+  await expect(ourClient.mutate({mutation: mutations.triggerPostNotification, variables: {input}})).rejects.toThrow(
+    /ClientError: Access denied/,
+  )
 })
-
 
 test('Cannot subscribe to other users notifications', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -56,9 +55,14 @@ test('Cannot subscribe to other users notifications', async () => {
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
   // the subscription next() method is never triggered
   const notifications = []
-  await ourClient
-    .subscribe({query: subscriptions.onPostNotification, variables: {userId: theirUserId}})
-    .subscribe({next: resp => { notifications.push(resp) }, error: resp => { console.log(resp) }})
+  await ourClient.subscribe({query: subscriptions.onPostNotification, variables: {userId: theirUserId}}).subscribe({
+    next: (resp) => {
+      notifications.push(resp)
+    },
+    error: (resp) => {
+      console.log(resp)
+    },
+  })
 
   // they create an image post, complete it
   const postId = uuidv4()
@@ -77,7 +81,6 @@ test('Cannot subscribe to other users notifications', async () => {
   //  - unsubcribing results in the AWS SDK throwing errors
 })
 
-
 test('Format for COMPLETED message notifications', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -85,8 +88,15 @@ test('Format for COMPLETED message notifications', async () => {
   const ourNotifications = []
   const ourSub = await ourClient
     .subscribe({query: subscriptions.onPostNotification, variables: {userId: ourUserId}})
-    .subscribe({next: resp => { ourNotifications.push(resp) }, error: resp => { console.log(resp) }})
-  const ourSubInitTimeout = misc.sleep(15000)  // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+    .subscribe({
+      next: (resp) => {
+        ourNotifications.push(resp)
+      },
+      error: (resp) => {
+        console.log(resp)
+      },
+    })
+  const ourSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
 
   // we create a pending post that will fail verification
   const postId1 = uuidv4()
@@ -129,7 +139,7 @@ test('Format for COMPLETED message notifications', async () => {
       postId: postId1,
       postStatus: 'COMPLETED',
       isVerified: false,
-    }
+    },
   })
   expect(ourNotifications[1].data.onPostNotification).toEqual({
     __typename: 'PostNotification',
@@ -140,7 +150,7 @@ test('Format for COMPLETED message notifications', async () => {
       postId: postId2,
       postStatus: 'COMPLETED',
       isVerified: true,
-    }
+    },
   })
 
   // shut down the subscription

@@ -3,7 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -14,7 +14,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Post owner comment activity does not change Post.hasNewCommentActivity', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -61,7 +60,6 @@ test('Post owner comment activity does not change Post.hasNewCommentActivity', a
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.postHasNewCommentActivity).toBe(false)
 })
-
 
 test('Post.hasNewCommentActivity - set, reset, privacy', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -148,7 +146,6 @@ test('Post.hasNewCommentActivity - set, reset, privacy', async () => {
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
   expect(resp.data.post.postedBy.postHasNewCommentActivity).toBe(false)
 })
-
 
 test('User.postHasNewCommentActivity - set, reset, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

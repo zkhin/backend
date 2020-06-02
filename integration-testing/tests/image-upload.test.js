@@ -8,7 +8,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const jpgHeaders = {'Content-Type': 'image/jpeg'}
 const pngHeaders = {'Content-Type': 'image/png'}
@@ -36,7 +36,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Uploading image sets width, height and colors', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -72,7 +71,6 @@ test('Uploading image sets width, height and colors', async () => {
   expect(resp.data.post.image.colors[0].b).toBeTruthy()
 })
 
-
 test('Uploading png image results in error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -95,7 +93,6 @@ test('Uploading png image results in error', async () => {
   expect(resp.data.post.postStatus).toBe('ERROR')
 })
 
-
 test('Upload heic image', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -110,7 +107,7 @@ test('Upload heic image', async () => {
 
   // upload a heic, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: heicHeaders, body: heicImageData})
-  await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 20*1000})
+  await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 20 * 1000})
 
   // check that post completed and generated all thumbnails ok
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -147,7 +144,6 @@ test('Upload heic image', async () => {
   expect(size.height).toBe(2160)
 })
 
-
 test('Thumbnails built on successful upload', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -161,7 +157,7 @@ test('Thumbnails built on successful upload', async () => {
 
   // upload a big jpeg, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: bigImageData})
-  await misc.sleep(5000)  // big jpeg, so takes at least a few seconds to process
+  await misc.sleep(5000) // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   resp = await ourClient.query({query: queries.post, variables: {postId}})

@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -19,7 +19,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Exact match search on username', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -37,7 +36,6 @@ test('Exact match search on username', async () => {
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
-
 
 test('Prefix match on username', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -64,7 +62,6 @@ test('Prefix match on username', async () => {
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
 
-
 test('Exact match search on fullName', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -81,7 +78,6 @@ test('Exact match search on fullName', async () => {
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
-
 
 test('Search works on fullName, case insensitive', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -106,7 +102,6 @@ test('Search works on fullName, case insensitive', async () => {
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
-
 
 test('Search works on fullName, searching one name at a time', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -134,7 +129,6 @@ test('Search works on fullName, searching one name at a time', async () => {
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
 
-
 test('Search works on fullName, omitting middle name', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -156,7 +150,6 @@ test('Search works on fullName, omitting middle name', async () => {
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
-
 
 test('Search works on fullName with prefix of name', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -187,7 +180,6 @@ test('Search works on fullName with prefix of name', async () => {
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 })
 
-
 test('Cant do blank searches', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -211,7 +203,6 @@ test('Cant do blank searches', async () => {
   expect(resp.errors.length).toBeTruthy()
   expect(resp.data).toBeNull()
 })
-
 
 test('Doesnt crash on special characters', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -240,7 +231,6 @@ test('Doesnt crash on special characters', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.searchUsers.items).toHaveLength(0)
 })
-
 
 test('Special characters do not work as wildcards', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -275,7 +265,6 @@ test('Special characters do not work as wildcards', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.searchUsers.items).toHaveLength(0)
 })
-
 
 test('User search returns urls for profile pics', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

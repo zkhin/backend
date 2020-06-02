@@ -4,7 +4,7 @@ const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -16,7 +16,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Create a direct chat', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -59,7 +58,7 @@ test('Create a direct chat', async () => {
   const chatCreatedAt = chat.createdAt
   expect(chat.lastMessageActivityAt).toBe(chatCreatedAt)
   expect(chat.userCount).toBe(2)
-  expect(chat.users.items.map(u => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
   expect(chat.messageCount).toBe(1)
   expect(chat.messages.items).toHaveLength(1)
   expect(chat.messages.items[0].messageId).toBe(messageId)
@@ -128,7 +127,6 @@ test('Create a direct chat', async () => {
   expect(resp.data.chat).toBeNull()
 })
 
-
 test('Cannot create a direct chat if one already exists', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -142,15 +140,16 @@ test('Cannot create a direct chat if one already exists', async () => {
 
   // verify we cannot open up another direct chat with them
   variables = {userId: theirUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
-    .rejects.toThrow(/ClientError: Chat already exists /)
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
+    /ClientError: Chat already exists /,
+  )
 
   // verify they cannot open up another direct chat with us
   variables = {userId: ourUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables}))
-    .rejects.toThrow(/ClientError: Chat already exists /)
+  await expect(theirClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
+    /ClientError: Chat already exists /,
+  )
 })
-
 
 test('Cannot create a direct chat if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -164,20 +163,20 @@ test('Cannot create a direct chat if we are disabled', async () => {
 
   // verify we cannot open up another direct chat with them
   let variables = {userId: theirUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Cannot open direct chat with self', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   const chatId = uuidv4()
   let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
-  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables}))
-    .rejects.toThrow(/ClientError: .* cannot open direct chat with themselves/)
+  await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
+    /ClientError: .* cannot open direct chat with themselves/,
+  )
 })
-
 
 test('Create multiple direct chats', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

@@ -5,7 +5,7 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -23,7 +23,6 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test("resetUser really releases the user's username", async () => {
   const [ourClient, ourUserId, ourPassword] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId, theirPassword] = await loginCache.getCleanLogin()
@@ -40,12 +39,15 @@ test("resetUser really releases the user's username", async () => {
 
   // verify someone else cannot claim our username or variants of
   let mutation = mutations.setUsername
-  await expect(theirClient.mutate({mutation, variables: {username: ourUsername}}))
-    .rejects.toThrow(/ClientError: .* already taken /)
-  await expect(theirClient.mutate({mutation, variables: {username: ourUsername.toLowerCase()}}))
-    .rejects.toThrow(/ClientError: .* already taken /)
-  await expect(theirClient.mutate({mutation, variables: {username: ourUsername.toUpperCase()}}))
-    .rejects.toThrow(/ClientError: .* already taken /)
+  await expect(theirClient.mutate({mutation, variables: {username: ourUsername}})).rejects.toThrow(
+    /ClientError: .* already taken /,
+  )
+  await expect(theirClient.mutate({mutation, variables: {username: ourUsername.toLowerCase()}})).rejects.toThrow(
+    /ClientError: .* already taken /,
+  )
+  await expect(theirClient.mutate({mutation, variables: {username: ourUsername.toUpperCase()}})).rejects.toThrow(
+    /ClientError: .* already taken /,
+  )
 
   // reset our account
   resp = await ourClient.mutate({mutation: mutations.resetUser})
@@ -54,13 +56,14 @@ test("resetUser really releases the user's username", async () => {
 
   // verify we cannot login with our username anymore
   AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}
-  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise())
-    .rejects.toThrow(/Incorrect username or password/)
+  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()).rejects.toThrow(
+    /Incorrect username or password/,
+  )
 
   // verify that someone else can now claim our released username and then login with it
   await theirClient.mutate({
     mutation: mutations.setUsername,
-    variables: {username: ourUsername}
+    variables: {username: ourUsername},
   })
   AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: theirPassword}
   resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
@@ -72,10 +75,10 @@ test("resetUser really releases the user's username", async () => {
   expect(resp.data.resetUser.userId).toBe(theirUserId)
 
   // verify they cannot login with their username anymore
-  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise())
-    .rejects.toThrow(/Incorrect username or password/)
+  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()).rejects.toThrow(
+    /Incorrect username or password/,
+  )
 })
-
 
 test("resetUser deletes all the user's data (best effort test)", async () => {
   // Note that without privileged access to the system's state,
@@ -180,7 +183,6 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp.data.self.feed.items).toHaveLength(0)
 })
 
-
 test('resetUser deletes any likes we have placed', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -218,7 +220,6 @@ test('resetUser deletes any likes we have placed', async () => {
   expect(resp.data.post.onymousLikeCount).toBe(0)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
 })
-
 
 test('resetUser deletes all blocks of us and by us', async () => {
   // us and two other users
@@ -262,7 +263,6 @@ test('resetUser deletes all blocks of us and by us', async () => {
   expect(resp.data.self.blockedUsers.items).toHaveLength(0)
 })
 
-
 test('resetUser deletes users flags of posts', async () => {
   const [ourClient, , , , ourUsername] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -293,7 +293,6 @@ test('resetUser deletes users flags of posts', async () => {
   expect(resp.data.post.flagStatus).toBe('NOT_FLAGGED')
 })
 
-
 test('resetUser with optional username intializes new user correctly', async () => {
   const [client, userId, password, email] = await loginCache.getCleanLogin()
   const newUsername = cognito.generateUsername()
@@ -317,7 +316,6 @@ test('resetUser with optional username intializes new user correctly', async () 
   resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
   expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
 })
-
 
 test('resetUser deletes any comments we have added to posts', async () => {
   const [ourClient, , , , ourUsername] = await loginCache.getCleanLogin()
@@ -353,7 +351,6 @@ test('resetUser deletes any comments we have added to posts', async () => {
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
 
-
 test('resetUser deletes any albums we have added', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -377,7 +374,6 @@ test('resetUser deletes any albums we have added', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.album).toBeNull()
 })
-
 
 test('resetUser deletes all of our direct chats', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -421,7 +417,6 @@ test('resetUser deletes all of our direct chats', async () => {
   expect(resp.data.chat).toBeNull()
 })
 
-
 test('resetUser causes us to leave group chats', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -438,8 +433,7 @@ test('resetUser causes us to leave group chats', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(2)
-  expect(resp.data.chat.users.items.map(u => u.userId).sort())
-    .toEqual([ourUserId, theirUserId].sort())
+  expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messages.items).toHaveLength(3)
   expect(resp.data.chat.messages.items[0].authorUserId).toBeNull()
@@ -457,7 +451,7 @@ test('resetUser causes us to leave group chats', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(1)
-  expect(resp.data.chat.users.items.map(u => u.userId)).toEqual([theirUserId])
+  expect(resp.data.chat.users.items.map((u) => u.userId)).toEqual([theirUserId])
   expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messages.items).toHaveLength(4)
   expect(resp.data.chat.messages.items[0].authorUserId).toBeNull()
@@ -467,7 +461,6 @@ test('resetUser causes us to leave group chats', async () => {
   expect(resp.data.chat.messages.items[2].author).toBeNull()
   expect(resp.data.chat.messages.items[3].authorUserId).toBeNull()
 })
-
 
 test('resetUser changes userStatus', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -484,7 +477,6 @@ test('resetUser changes userStatus', async () => {
   expect(resp.data.resetUser.userId).toBe(ourUserId)
   expect(resp.data.resetUser.userStatus).toBe('DELETING')
 })
-
 
 test('Can reset a disabled user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Cant flag our own comment', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -37,8 +36,9 @@ test('Cant flag our own comment', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // verify we cant flag that comment
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: .* their own comment /)
+  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: .* their own comment /,
+  )
 
   // check the comment flagStatus shows we did not flag it
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -47,8 +47,6 @@ test('Cant flag our own comment', async () => {
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
   expect(resp.data.post.comments.items[0].flagStatus).toBe('NOT_FLAGGED')
 })
-
-
 
 test('Anybody can flag a comment of private user on post of public user', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -87,10 +85,10 @@ test('Anybody can flag a comment of private user on post of public user', async 
   expect(resp.data.post.comments.items[0].flagStatus).toBe('FLAGGED')
 
   // verify we can't double-flag
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: .* has already been flagged /)
+  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: .* has already been flagged /,
+  )
 })
-
 
 test('Cant flag a comment if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -115,10 +113,10 @@ test('Cant flag a comment if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't flag their comment
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Follower can flag comment on post of private user, non-follower cannot', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -143,8 +141,9 @@ test('Follower can flag comment on post of private user, non-follower cannot', a
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // verify they can't flag their comment
-  await expect(theirClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: User does not have access /)
+  await expect(theirClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: User does not have access /,
+  )
 
   // they request to follow us
   resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
@@ -177,16 +176,15 @@ test('Follower can flag comment on post of private user, non-follower cannot', a
   expect(resp.data.post.comments.items[0].flagStatus).toBe('FLAGGED')
 })
 
-
 test('Cannot flag comment that does not exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // try to flag a non-existent post
   const commentId = uuidv4()
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: Comment .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: Comment .* does not exist/,
+  )
 })
-
 
 test('Cannot flag comment of user that has blocked us', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -211,8 +209,9 @@ test('Cannot flag comment of user that has blocked us', async () => {
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // verify we cannot flag their comment
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: .* has been blocked by owner /)
+  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: .* has been blocked by owner /,
+  )
 
   // they unblock us
   resp = await theirClient.mutate({mutation: mutations.unblockUser, variables: {userId: ourUserId}})
@@ -225,7 +224,6 @@ test('Cannot flag comment of user that has blocked us', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.flagComment.flagStatus).toBe('FLAGGED')
 })
-
 
 test('Cannot flag comment of user we have blocked', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -250,8 +248,9 @@ test('Cannot flag comment of user we have blocked', async () => {
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // verify we cannot flag their comment
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}}))
-    .rejects.toThrow(/ClientError: .* has blocked owner /)
+  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: .* has blocked owner /,
+  )
 
   // we unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})

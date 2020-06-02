@@ -4,11 +4,9 @@ const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
-const { mutations } = require('../../../schema')
-
+const {mutations} = require('../../../schema')
 
 describe('cognito-only user', () => {
-
   let client, accessToken
 
   beforeEach(async () => {
@@ -24,28 +22,35 @@ describe('cognito-only user', () => {
 
   test('Mutation.createCognitoOnlyUser fails if identity pool id and user pool "username" dont match', async () => {
     // create the user in the user pool, with a random username and email
-    const cognitoUsername = 'us-east-1:' + uuidv4()  // looks like a cognito identity pool id to pass validation
+    const cognitoUsername = 'us-east-1:' + uuidv4() // looks like a cognito identity pool id to pass validation
     const password = cognito.generatePassword()
     const email = cognito.generateEmail()
 
-    await cognito.userPoolClient.signUp({
-      Username: cognitoUsername,
-      Password: password,
-      UserAttributes: [{
-        Name: 'family_name',
-        Value: cognito.familyName,
-      }, {
-        Name: 'email',
-        Value: email,
-      }],
-      ClientMetadata: {autoConfirmUser: 'true'},
-    }).promise()
+    await cognito.userPoolClient
+      .signUp({
+        Username: cognitoUsername,
+        Password: password,
+        UserAttributes: [
+          {
+            Name: 'family_name',
+            Value: cognito.familyName,
+          },
+          {
+            Name: 'email',
+            Value: email,
+          },
+        ],
+        ClientMetadata: {autoConfirmUser: 'true'},
+      })
+      .promise()
 
     // sign the user in
-    let resp = await cognito.userPoolClient.initiateAuth({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      AuthParameters: {USERNAME: cognitoUsername, PASSWORD: password},
-    }).promise()
+    let resp = await cognito.userPoolClient
+      .initiateAuth({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        AuthParameters: {USERNAME: cognitoUsername, PASSWORD: password},
+      })
+      .promise()
     accessToken = resp['AuthenticationResult']['AccessToken']
     const idToken = resp['AuthenticationResult']['IdToken']
 
@@ -62,15 +67,15 @@ describe('cognito-only user', () => {
 
     // try to pick random username, register it - should fail
     let variables = {username: cognito.generateUsername()}
-    await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
-      .rejects.toThrow(/ClientError: No entry found in cognito user pool /)
+    await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables})).rejects.toThrow(
+      /ClientError: No entry found in cognito user pool /,
+    )
   })
 
   describe('success cases', () => {
-
     let userId, email
 
-    beforeEach(async () =>  {
+    beforeEach(async () => {
       // get un-authenticated userId
       const idResp = await cognito.identityPoolClient.getId().promise()
       userId = idResp['IdentityId']
@@ -78,24 +83,31 @@ describe('cognito-only user', () => {
       email = cognito.generateEmail()
 
       // create the user in the user pool, with an email
-      await cognito.userPoolClient.signUp({
-        Username: userId,
-        Password: password,
-        UserAttributes: [{
-          Name: 'family_name',
-          Value: cognito.familyName,
-        }, {
-          Name: 'email',
-          Value: email,
-        }],
-        ClientMetadata: {autoConfirmUser: 'true'},
-      }).promise()
+      await cognito.userPoolClient
+        .signUp({
+          Username: userId,
+          Password: password,
+          UserAttributes: [
+            {
+              Name: 'family_name',
+              Value: cognito.familyName,
+            },
+            {
+              Name: 'email',
+              Value: email,
+            },
+          ],
+          ClientMetadata: {autoConfirmUser: 'true'},
+        })
+        .promise()
 
       // sign the user in
-      let resp = await cognito.userPoolClient.initiateAuth({
-        AuthFlow: 'USER_PASSWORD_AUTH',
-        AuthParameters: {USERNAME: userId, PASSWORD: password},
-      }).promise()
+      let resp = await cognito.userPoolClient
+        .initiateAuth({
+          AuthFlow: 'USER_PASSWORD_AUTH',
+          AuthParameters: {USERNAME: userId, PASSWORD: password},
+        })
+        .promise()
       accessToken = resp['AuthenticationResult']['AccessToken']
       const idToken = resp['AuthenticationResult']['IdToken']
 
@@ -158,11 +170,13 @@ describe('cognito-only user', () => {
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
 
       // try to create the user again, should fail with ClientError
-      await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
-        .rejects.toThrow(/ClientError: .* already exists/)
+      await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables})).rejects.toThrow(
+        /ClientError: .* already exists/,
+      )
       variables = {username: cognito.generateUsername()}
-      await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables}))
-        .rejects.toThrow(/ClientError: .* already exists/)
+      await expect(client.mutate({mutation: mutations.createCognitoOnlyUser, variables})).rejects.toThrow(
+        /ClientError: .* already exists/,
+      )
     })
   })
 })

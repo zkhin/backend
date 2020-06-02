@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Follow & unfollow a public user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -59,7 +58,6 @@ test('Follow & unfollow a public user', async () => {
   expect(resp.data.user.followerStatus).toBe('NOT_FOLLOWING')
 })
 
-
 test('Cant follow someone if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
@@ -71,10 +69,10 @@ test('Cant follow someone if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't follow them
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Cant unfollow someone if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -92,10 +90,10 @@ test('Cant unfollow someone if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't unfollow them
-  await expect(ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
-
 
 test('Try to double follow a user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -107,8 +105,9 @@ test('Try to double follow a user', async () => {
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // we cannot follow them again
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* already /)
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: .* already /,
+  )
 
   // verify we're still in following them
   resp = await theirClient.query({query: queries.ourFollowerUsers})
@@ -132,8 +131,9 @@ test('Try to double follow a user', async () => {
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // we cannot follow them again
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* already /)
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: .* already /,
+  )
 
   // verify we're still in REQUESTED state
   resp = await theirClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'REQUESTED'}})
@@ -142,16 +142,15 @@ test('Try to double follow a user', async () => {
   expect(resp.data.self.followerUsers.items[0].userId).toBe(ourUserId)
 })
 
-
 test('Try to unfollow a user we are not following', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
 
   // try to unfollow them
-  await expect(ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* is not following /)
+  await expect(
+    ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* is not following /)
 })
-
 
 test('When we stop following a public user, any likes of ours on their posts are unchanged', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

@@ -5,7 +5,7 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -20,7 +20,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Edit post', async () => {
   // we create an image post
@@ -55,16 +54,17 @@ test('Edit post', async () => {
   expect(resp.data.post.text).toBeNull()
 })
 
-
 test('Edit post failures for for various scenarios', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // verify we can't edit a post that doesn't exist
-  await expect(ourClient.mutate({
-    mutation: mutations.editPost,
-    variables: {postId, text: 'keep calm'},
-  })).rejects.toThrow('does not exist')
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.editPost,
+      variables: {postId, text: 'keep calm'},
+    }),
+  ).rejects.toThrow('does not exist')
 
   // we add a post
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
@@ -72,17 +72,21 @@ test('Edit post failures for for various scenarios', async () => {
   expect(resp.data.addPost.postStatus).toBe('PENDING')
 
   // verify we can't give it a content-less edit
-  await expect(ourClient.mutate({
-    mutation: mutations.editPost,
-    variables: {postId}
-  })).rejects.toThrow('Empty edit requested')
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.editPost,
+      variables: {postId},
+    }),
+  ).rejects.toThrow('Empty edit requested')
 
   // verify another user can't edit it
   const [theirClient] = await loginCache.getCleanLogin()
-  await expect(theirClient.mutate({
-    mutation: mutations.editPost,
-    variables: {postId, text: 'go'},
-  })).rejects.toThrow("another User's post")
+  await expect(
+    theirClient.mutate({
+      mutation: mutations.editPost,
+      variables: {postId, text: 'go'},
+    }),
+  ).rejects.toThrow("another User's post")
 
   // verify we can edit it!
   const text = 'stop'
@@ -97,10 +101,10 @@ test('Edit post failures for for various scenarios', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't edit
-  await expect(ourClient.mutate({mutation: mutations.editPost, variables: {postId, text: 'new2'}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.editPost, variables: {postId, text: 'new2'}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Edit post edits the copies of posts in followers feeds', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -137,7 +141,6 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   expect(resp.data.self.feed.items[0].postId).toBe(postId)
   expect(resp.data.self.feed.items[0].text).toBe(newText)
 })
-
 
 test('Disable comments causes existing comments to disappear, then reappear when comments re-enabled', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -191,7 +194,6 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
 })
 
-
 test('Edit post set likesDisabled', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
@@ -200,7 +202,7 @@ test('Edit post set likesDisabled', async () => {
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postStatus).toBe('PENDING')
-  expect(resp.data.addPost.likesDisabled).toBe(true)  // global default
+  expect(resp.data.addPost.likesDisabled).toBe(true) // global default
 
   // edit the likes disabled status
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, likesDisabled: false}})
@@ -217,7 +219,6 @@ test('Edit post set likesDisabled', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPost.likesDisabled).toBe(true)
 })
-
 
 test('Edit post set sharingDisabled', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -245,7 +246,6 @@ test('Edit post set sharingDisabled', async () => {
   expect(resp.data.editPost.sharingDisabled).toBe(false)
 })
 
-
 test('Edit post set verificationHidden', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
@@ -271,7 +271,6 @@ test('Edit post set verificationHidden', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPost.verificationHidden).toBe(false)
 })
-
 
 test('Edit post text ensure textTagged users is rewritten', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

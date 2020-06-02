@@ -3,8 +3,7 @@
 const rp = require('request-promise-native')
 
 const cognito = require('../../../utils/cognito.js')
-const { mutations } = require('../../../schema')
-
+const {mutations} = require('../../../schema')
 
 /* Run me as a one-off, as you'll have to get a valid google id token
  * for our app. Can be generated from https://developers.facebook.com/tools/explorer/
@@ -13,7 +12,6 @@ const { mutations } = require('../../../schema')
  * is authorized to send to.
  */
 describe.skip('facebook user', () => {
-
   const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN
   if (facebookAccessToken === undefined) throw new Error('Env var FACEBOOK_ACCESS_TOKEN must be defined')
 

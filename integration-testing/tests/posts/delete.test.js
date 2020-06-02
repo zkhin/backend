@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Delete a post that was our next story to expire', async () => {
   // us, them, they follow us
@@ -98,7 +97,6 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(0)
 })
 
-
 test('Deleting image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -120,7 +118,7 @@ test('Deleting image post', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deletePost.postStatus).toBe('DELETING')
 
-  // verify we can no longer see the post 
+  // verify we can no longer see the post
   resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId, postStatus: 'PENDING'}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.posts.items).toHaveLength(0)
@@ -128,7 +126,6 @@ test('Deleting image post', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.posts.items).toHaveLength(0)
 })
-
 
 test('Invalid attempts to delete posts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -144,17 +141,18 @@ test('Invalid attempts to delete posts', async () => {
 
   // verify another user can't delete our post
   const [theirClient] = await loginCache.getCleanLogin()
-  await expect(theirClient.mutate({
-    mutation: mutations.deletePost,
-    variables: {postId},
-  })).rejects.toThrow("another User's post")
+  await expect(
+    theirClient.mutate({
+      mutation: mutations.deletePost,
+      variables: {postId},
+    }),
+  ).rejects.toThrow("another User's post")
 
   // verify we can actually delete that post
   resp = await ourClient.mutate({mutation: mutations.deletePost, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deletePost.postStatus).toBe('DELETING')
 })
-
 
 test('Cant delete a post if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -173,10 +171,10 @@ test('Cant delete a post if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't delete that post
-  await expect(ourClient.mutate({mutation: mutations.deletePost, variables: {postId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.deletePost, variables: {postId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('When a post is deleted, any likes of it disappear', async () => {
   // us and them, they add a post
@@ -201,12 +199,12 @@ test('When a post is deleted, any likes of it disappear', async () => {
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
   expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
 
-  resp = await ourClient.query({query: queries.self })
+  resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(1)
   expect(resp.data.self.onymouslyLikedPosts.items[0].postId).toBe(postId)
 
-  resp = await theirClient.query({query: queries.self })
+  resp = await theirClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.anonymouslyLikedPosts.items).toHaveLength(1)
   expect(resp.data.self.anonymouslyLikedPosts.items[0].postId).toBe(postId)
@@ -220,11 +218,11 @@ test('When a post is deleted, any likes of it disappear', async () => {
   await ourClient.resetStore()
 
   // verify the post has disappeared from the like lists
-  resp = await ourClient.query({query: queries.self })
+  resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(0)
 
-  resp = await theirClient.query({query: queries.self })
+  resp = await theirClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.anonymouslyLikedPosts.items).toHaveLength(0)
 })

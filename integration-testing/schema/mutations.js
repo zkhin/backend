@@ -3,8 +3,8 @@ const gql = require('graphql-tag')
 const fragments = require('./fragments.js')
 
 module.exports.createCognitoOnlyUser = gql`
-  mutation CreateCognitoOnlyUser ($username: String!, $fullName: String) {
-    createCognitoOnlyUser (username: $username, fullName: $fullName) {
+  mutation CreateCognitoOnlyUser($username: String!, $fullName: String) {
+    createCognitoOnlyUser(username: $username, fullName: $fullName) {
       userId
       username
       fullName
@@ -16,8 +16,8 @@ module.exports.createCognitoOnlyUser = gql`
 `
 
 module.exports.createGoogleUser = gql`
-  mutation CreateGoogleUser ($username: String!, $fullName: String, $googleIdToken: String!) {
-    createGoogleUser (username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {
+  mutation CreateGoogleUser($username: String!, $fullName: String, $googleIdToken: String!) {
+    createGoogleUser(username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {
       userId
       username
       fullName
@@ -27,8 +27,8 @@ module.exports.createGoogleUser = gql`
 `
 
 module.exports.createFacebookUser = gql`
-  mutation CreateFacebookUser ($username: String!, $fullName: String, $facebookAccessToken: String!) {
-    createFacebookUser (username: $username, fullName: $fullName, facebookAccessToken: $facebookAccessToken) {
+  mutation CreateFacebookUser($username: String!, $fullName: String, $facebookAccessToken: String!) {
+    createFacebookUser(username: $username, fullName: $fullName, facebookAccessToken: $facebookAccessToken) {
       userId
       username
       fullName
@@ -38,8 +38,8 @@ module.exports.createFacebookUser = gql`
 `
 
 module.exports.setUsername = gql`
-  mutation SetUsername ($username: String!) {
-    setUserDetails (username: $username) {
+  mutation SetUsername($username: String!) {
+    setUserDetails(username: $username) {
       userId
       username
     }
@@ -47,8 +47,8 @@ module.exports.setUsername = gql`
 `
 
 module.exports.setUserPrivacyStatus = gql`
-  mutation SetUserPrivacyStatus ($privacyStatus: PrivacyStatus!) {
-    setUserDetails (privacyStatus: $privacyStatus) {
+  mutation SetUserPrivacyStatus($privacyStatus: PrivacyStatus!) {
+    setUserDetails(privacyStatus: $privacyStatus) {
       userId
       privacyStatus
       followedCount
@@ -58,8 +58,8 @@ module.exports.setUserPrivacyStatus = gql`
 `
 
 module.exports.setUserAcceptedEULAVersion = gql`
-  mutation SetUserEULAVersion ($version: String!) {
-    setUserAcceptedEULAVersion (version: $version) {
+  mutation SetUserEULAVersion($version: String!) {
+    setUserAcceptedEULAVersion(version: $version) {
       userId
       acceptedEULAVersion
     }
@@ -67,16 +67,16 @@ module.exports.setUserAcceptedEULAVersion = gql`
 `
 
 module.exports.setUserAPNSToken = gql`
-  mutation SetUserAPNSToken ($token: String!) {
-    setUserAPNSToken (token: $token) {
+  mutation SetUserAPNSToken($token: String!) {
+    setUserAPNSToken(token: $token) {
       userId
     }
   }
 `
 
 module.exports.setUserFollowCountsHidden = gql`
-  mutation SetUserFollowCountsHidden ($value: Boolean!) {
-    setUserDetails (followCountsHidden: $value) {
+  mutation SetUserFollowCountsHidden($value: Boolean!) {
+    setUserDetails(followCountsHidden: $value) {
       userId
       followCountsHidden
     }
@@ -84,8 +84,8 @@ module.exports.setUserFollowCountsHidden = gql`
 `
 
 module.exports.setUserViewCountsHidden = gql`
-  mutation SetUserViewCountsHidden ($value: Boolean!) {
-    setUserDetails (viewCountsHidden: $value) {
+  mutation SetUserViewCountsHidden($value: Boolean!) {
+    setUserDetails(viewCountsHidden: $value) {
       userId
       viewCountsHidden
     }
@@ -93,8 +93,8 @@ module.exports.setUserViewCountsHidden = gql`
 `
 
 module.exports.setUserDetails = gql`
-  mutation SetUserDetails ($bio: String, $fullName: String, $photoPostId: ID) {
-    setUserDetails (bio: $bio, fullName: $fullName, photoPostId: $photoPostId) {
+  mutation SetUserDetails($bio: String, $fullName: String, $photoPostId: ID) {
+    setUserDetails(bio: $bio, fullName: $fullName, photoPostId: $photoPostId) {
       userId
       bio
       fullName
@@ -107,8 +107,8 @@ module.exports.setUserDetails = gql`
 `
 
 module.exports.setUserLanguageCode = gql`
-  mutation SetUserLanguageCode ($languageCode: String) {
-    setUserDetails (languageCode: $languageCode) {
+  mutation SetUserLanguageCode($languageCode: String) {
+    setUserDetails(languageCode: $languageCode) {
       userId
       languageCode
     }
@@ -116,8 +116,8 @@ module.exports.setUserLanguageCode = gql`
 `
 
 module.exports.setUserThemeCode = gql`
-  mutation SetUserThemeCode ($themeCode: String) {
-    setUserDetails (themeCode: $themeCode) {
+  mutation SetUserThemeCode($themeCode: String) {
+    setUserDetails(themeCode: $themeCode) {
       userId
       themeCode
     }
@@ -125,17 +125,17 @@ module.exports.setUserThemeCode = gql`
 `
 
 module.exports.setUserMentalHealthSettings = gql`
-  mutation SetUserCommentsDisabled (
-    $commentsDisabled: Boolean,
-    $likesDisabled: Boolean,
-    $sharingDisabled: Boolean,
-    $verificationHidden: Boolean,
+  mutation SetUserCommentsDisabled(
+    $commentsDisabled: Boolean
+    $likesDisabled: Boolean
+    $sharingDisabled: Boolean
+    $verificationHidden: Boolean
   ) {
-    setUserDetails (
-      commentsDisabled: $commentsDisabled,
-      likesDisabled: $likesDisabled,
-      sharingDisabled: $sharingDisabled,
-      verificationHidden: $verificationHidden,
+    setUserDetails(
+      commentsDisabled: $commentsDisabled
+      likesDisabled: $likesDisabled
+      sharingDisabled: $sharingDisabled
+      verificationHidden: $verificationHidden
     ) {
       userId
       commentsDisabled
@@ -147,8 +147,8 @@ module.exports.setUserMentalHealthSettings = gql`
 `
 
 module.exports.updateUserContactInfo = gql`
-  mutation SetUserContactInfo ($accessToken: String!) {
-    updateUserContactInfo (authProvider: COGNITO, accessToken: $accessToken) {
+  mutation SetUserContactInfo($accessToken: String!) {
+    updateUserContactInfo(authProvider: COGNITO, accessToken: $accessToken) {
       userId
       email
       phoneNumber
@@ -167,8 +167,8 @@ module.exports.disableUser = gql`
 `
 
 module.exports.resetUser = gql`
-  mutation ResetUser ($newUsername: String) {
-    resetUser (newUsername: $newUsername) {
+  mutation ResetUser($newUsername: String) {
+    resetUser(newUsername: $newUsername) {
       userId
       username
       fullName
@@ -178,8 +178,8 @@ module.exports.resetUser = gql`
 `
 
 module.exports.followUser = gql`
-  mutation FollowUser ($userId: ID!) {
-    followUser (userId: $userId) {
+  mutation FollowUser($userId: ID!) {
+    followUser(userId: $userId) {
       userId
       followedStatus
       followerCount
@@ -188,8 +188,8 @@ module.exports.followUser = gql`
 `
 
 module.exports.unfollowUser = gql`
-  mutation UnfollowUser ($userId: ID!) {
-    unfollowUser (userId: $userId) {
+  mutation UnfollowUser($userId: ID!) {
+    unfollowUser(userId: $userId) {
       userId
       followedStatus
       followerCount
@@ -198,8 +198,8 @@ module.exports.unfollowUser = gql`
 `
 
 module.exports.acceptFollowerUser = gql`
-  mutation AcceptFollowerUser ($userId: ID!) {
-    acceptFollowerUser (userId: $userId) {
+  mutation AcceptFollowerUser($userId: ID!) {
+    acceptFollowerUser(userId: $userId) {
       userId
       followerStatus
       followedCount
@@ -208,8 +208,8 @@ module.exports.acceptFollowerUser = gql`
 `
 
 module.exports.denyFollowerUser = gql`
-  mutation DenyFollowerUser ($userId: ID!) {
-    denyFollowerUser (userId: $userId) {
+  mutation DenyFollowerUser($userId: ID!) {
+    denyFollowerUser(userId: $userId) {
       userId
       followerStatus
       followedCount
@@ -218,8 +218,8 @@ module.exports.denyFollowerUser = gql`
 `
 
 module.exports.blockUser = gql`
-  mutation BlockUser ($userId: ID!) {
-    blockUser (userId: $userId) {
+  mutation BlockUser($userId: ID!) {
+    blockUser(userId: $userId) {
       userId
       blockedStatus
     }
@@ -227,8 +227,8 @@ module.exports.blockUser = gql`
 `
 
 module.exports.unblockUser = gql`
-  mutation UnblockUser ($userId: ID!) {
-    unblockUser (userId: $userId) {
+  mutation UnblockUser($userId: ID!) {
+    unblockUser(userId: $userId) {
       userId
       blockedStatus
     }
@@ -236,43 +236,43 @@ module.exports.unblockUser = gql`
 `
 
 module.exports.addPost = gql`
-  mutation AddPost (
-    $postId: ID!,
-    $postType: PostType,
-    $albumId: ID,
-    $text: String,
-    $imageData: String,
+  mutation AddPost(
+    $postId: ID!
+    $postType: PostType
+    $albumId: ID
+    $text: String
+    $imageData: String
     $takenInReal: Boolean
-    $imageFormat: ImageFormat,
-    $originalFormat: String,
-    $originalMetadata: String,
+    $imageFormat: ImageFormat
+    $originalFormat: String
+    $originalMetadata: String
     $lifetime: String
-    $commentsDisabled: Boolean,
-    $likesDisabled: Boolean,
-    $sharingDisabled: Boolean,
-    $verificationHidden: Boolean,
-    $setAsUserPhoto: Boolean,
-    $crop: CropInput,
+    $commentsDisabled: Boolean
+    $likesDisabled: Boolean
+    $sharingDisabled: Boolean
+    $verificationHidden: Boolean
+    $setAsUserPhoto: Boolean
+    $crop: CropInput
   ) {
-    addPost (
-      postId: $postId,
-      postType: $postType,
-      albumId: $albumId,
-      text: $text,
+    addPost(
+      postId: $postId
+      postType: $postType
+      albumId: $albumId
+      text: $text
       imageInput: {
-        takenInReal: $takenInReal,
-        imageFormat: $imageFormat,
-        originalFormat: $originalFormat,
-        originalMetadata: $originalMetadata,
-        imageData: $imageData,
-        crop: $crop,
-      },
-      lifetime: $lifetime,
-      commentsDisabled: $commentsDisabled,
-      likesDisabled: $likesDisabled,
-      sharingDisabled: $sharingDisabled,
-      verificationHidden: $verificationHidden,
-      setAsUserPhoto: $setAsUserPhoto,
+        takenInReal: $takenInReal
+        imageFormat: $imageFormat
+        originalFormat: $originalFormat
+        originalMetadata: $originalMetadata
+        imageData: $imageData
+        crop: $crop
+      }
+      lifetime: $lifetime
+      commentsDisabled: $commentsDisabled
+      likesDisabled: $likesDisabled
+      sharingDisabled: $sharingDisabled
+      verificationHidden: $verificationHidden
+      setAsUserPhoto: $setAsUserPhoto
     ) {
       postId
       postedAt
@@ -327,21 +327,21 @@ module.exports.addPost = gql`
 `
 
 module.exports.editPost = gql`
-  mutation EditPost (
-    $postId: ID!,
-    $text: String,
-    $commentsDisabled: Boolean,
-    $likesDisabled: Boolean,
-    $sharingDisabled: Boolean,
-    $verificationHidden: Boolean,
+  mutation EditPost(
+    $postId: ID!
+    $text: String
+    $commentsDisabled: Boolean
+    $likesDisabled: Boolean
+    $sharingDisabled: Boolean
+    $verificationHidden: Boolean
   ) {
     editPost(
-      postId: $postId,
-      text: $text,
-      commentsDisabled: $commentsDisabled,
-      likesDisabled: $likesDisabled,
-      sharingDisabled: $sharingDisabled,
-      verificationHidden: $verificationHidden,
+      postId: $postId
+      text: $text
+      commentsDisabled: $commentsDisabled
+      likesDisabled: $likesDisabled
+      sharingDisabled: $sharingDisabled
+      verificationHidden: $verificationHidden
     ) {
       postId
       postStatus
@@ -368,7 +368,7 @@ module.exports.editPost = gql`
 `
 
 module.exports.editPostAlbum = gql`
-  mutation EditPostAlbum ($postId: ID!, $albumId: ID) {
+  mutation EditPostAlbum($postId: ID!, $albumId: ID) {
     editPostAlbum(postId: $postId, albumId: $albumId) {
       postId
       album {
@@ -379,7 +379,7 @@ module.exports.editPostAlbum = gql`
 `
 
 module.exports.editPostAlbumOrder = gql`
-  mutation EditPostAlbumOrder ($postId: ID!, $precedingPostId: ID) {
+  mutation EditPostAlbumOrder($postId: ID!, $precedingPostId: ID) {
     editPostAlbumOrder(postId: $postId, precedingPostId: $precedingPostId) {
       postId
       album {
@@ -390,7 +390,7 @@ module.exports.editPostAlbumOrder = gql`
 `
 
 module.exports.editPostExpiresAt = gql`
-  mutation EditPostExpiresAt ($postId: ID!, $expiresAt: AWSDateTime) {
+  mutation EditPostExpiresAt($postId: ID!, $expiresAt: AWSDateTime) {
     editPostExpiresAt(postId: $postId, expiresAt: $expiresAt) {
       postId
       expiresAt
@@ -399,7 +399,7 @@ module.exports.editPostExpiresAt = gql`
 `
 
 module.exports.flagPost = gql`
-  mutation FlagPost ($postId: ID!) {
+  mutation FlagPost($postId: ID!) {
     flagPost(postId: $postId) {
       postId
       postStatus
@@ -409,7 +409,7 @@ module.exports.flagPost = gql`
 `
 
 module.exports.deletePost = gql`
-  mutation DeletePost ($postId: ID!) {
+  mutation DeletePost($postId: ID!) {
     deletePost(postId: $postId) {
       postId
       postStatus
@@ -418,7 +418,7 @@ module.exports.deletePost = gql`
 `
 
 module.exports.archivePost = gql`
-  mutation ArchivePost ($postId: ID!) {
+  mutation ArchivePost($postId: ID!) {
     archivePost(postId: $postId) {
       postId
       postStatus
@@ -438,7 +438,7 @@ module.exports.archivePost = gql`
 `
 
 module.exports.restoreArchivedPost = gql`
-  mutation RestoreArchivePost ($postId: ID!) {
+  mutation RestoreArchivePost($postId: ID!) {
     restoreArchivedPost(postId: $postId) {
       postId
       postStatus
@@ -456,8 +456,8 @@ module.exports.restoreArchivedPost = gql`
 `
 
 module.exports.onymouslyLikePost = gql`
-  mutation OnymouslyLikePost ($postId: ID!) {
-    onymouslyLikePost (postId: $postId) {
+  mutation OnymouslyLikePost($postId: ID!) {
+    onymouslyLikePost(postId: $postId) {
       postId
       likeStatus
       onymousLikeCount
@@ -472,8 +472,8 @@ module.exports.onymouslyLikePost = gql`
 `
 
 module.exports.anonymouslyLikePost = gql`
-  mutation AnonymouslyLikePost ($postId: ID!) {
-    anonymouslyLikePost (postId: $postId) {
+  mutation AnonymouslyLikePost($postId: ID!) {
+    anonymouslyLikePost(postId: $postId) {
       postId
       likeStatus
       onymousLikeCount
@@ -488,8 +488,8 @@ module.exports.anonymouslyLikePost = gql`
 `
 
 module.exports.dislikePost = gql`
-  mutation DislikePost ($postId: ID!) {
-    dislikePost (postId: $postId) {
+  mutation DislikePost($postId: ID!) {
+    dislikePost(postId: $postId) {
       postId
       likeStatus
       onymousLikeCount
@@ -504,14 +504,14 @@ module.exports.dislikePost = gql`
 `
 
 module.exports.reportPostViews = gql`
-  mutation ReportPostViews ($postIds: [ID!]!) {
-    reportPostViews (postIds: $postIds)
+  mutation ReportPostViews($postIds: [ID!]!) {
+    reportPostViews(postIds: $postIds)
   }
 `
 
 module.exports.deleteCard = gql`
-  mutation DeleteCard ($cardId: ID!) {
-    deleteCard (cardId: $cardId) {
+  mutation DeleteCard($cardId: ID!) {
+    deleteCard(cardId: $cardId) {
       ...CardFragment
     }
   }
@@ -519,8 +519,8 @@ module.exports.deleteCard = gql`
 `
 
 module.exports.addComment = gql`
-  mutation AddComment ($commentId: ID!, $postId: ID!, $text: String!) {
-    addComment (commentId: $commentId, postId: $postId, text: $text) {
+  mutation AddComment($commentId: ID!, $postId: ID!, $text: String!) {
+    addComment(commentId: $commentId, postId: $postId, text: $text) {
       ...CommentFragment
     }
   }
@@ -528,8 +528,8 @@ module.exports.addComment = gql`
 `
 
 module.exports.deleteComment = gql`
-  mutation DeleteComment ($commentId: ID!) {
-    deleteComment (commentId: $commentId) {
+  mutation DeleteComment($commentId: ID!) {
+    deleteComment(commentId: $commentId) {
       ...CommentFragment
     }
   }
@@ -537,13 +537,13 @@ module.exports.deleteComment = gql`
 `
 
 module.exports.reportCommentViews = gql`
-  mutation ReportCommentViews ($commentIds: [ID!]!) {
-    reportCommentViews (commentIds: $commentIds)
+  mutation ReportCommentViews($commentIds: [ID!]!) {
+    reportCommentViews(commentIds: $commentIds)
   }
 `
 
 module.exports.flagComment = gql`
-  mutation FlagComment ($commentId: ID!) {
+  mutation FlagComment($commentId: ID!) {
     flagComment(commentId: $commentId) {
       commentId
       flagStatus
@@ -552,8 +552,8 @@ module.exports.flagComment = gql`
 `
 
 module.exports.addAlbum = gql`
-  mutation AddAlbum ($albumId: ID!, $name: String!, $description: String) {
-    addAlbum (albumId: $albumId, name: $name, description: $description) {
+  mutation AddAlbum($albumId: ID!, $name: String!, $description: String) {
+    addAlbum(albumId: $albumId, name: $name, description: $description) {
       ...AlbumFragment
     }
   }
@@ -561,8 +561,8 @@ module.exports.addAlbum = gql`
 `
 
 module.exports.editAlbum = gql`
-  mutation EditAlbum ($albumId: ID!, $name: String, $description: String) {
-    editAlbum (albumId: $albumId, name: $name, description: $description) {
+  mutation EditAlbum($albumId: ID!, $name: String, $description: String) {
+    editAlbum(albumId: $albumId, name: $name, description: $description) {
       ...AlbumFragment
     }
   }
@@ -570,8 +570,8 @@ module.exports.editAlbum = gql`
 `
 
 module.exports.deleteAlbum = gql`
-  mutation DeleteAlbum ($albumId: ID!) {
-    deleteAlbum (albumId: $albumId) {
+  mutation DeleteAlbum($albumId: ID!) {
+    deleteAlbum(albumId: $albumId) {
       ...AlbumFragment
     }
   }
@@ -579,8 +579,8 @@ module.exports.deleteAlbum = gql`
 `
 
 module.exports.createDirectChat = gql`
-  mutation CreateDirectChat ($chatId: ID!, $userId: ID!, $messageId: ID! $messageText: String!) {
-    createDirectChat (chatId: $chatId, userId: $userId, messageId: $messageId, messageText: $messageText) {
+  mutation CreateDirectChat($chatId: ID!, $userId: ID!, $messageId: ID!, $messageText: String!) {
+    createDirectChat(chatId: $chatId, userId: $userId, messageId: $messageId, messageText: $messageText) {
       ...ChatFragment
       messageCount
       messages {
@@ -596,9 +596,13 @@ module.exports.createDirectChat = gql`
 `
 
 module.exports.createGroupChat = gql`
-  mutation CreateGroupChat ($chatId: ID!, $name: String, $userIds: [ID!]!, $messageId: ID! $messageText: String!) {
-    createGroupChat (
-      chatId: $chatId, name: $name, userIds: $userIds, messageId: $messageId, messageText: $messageText,
+  mutation CreateGroupChat($chatId: ID!, $name: String, $userIds: [ID!]!, $messageId: ID!, $messageText: String!) {
+    createGroupChat(
+      chatId: $chatId
+      name: $name
+      userIds: $userIds
+      messageId: $messageId
+      messageText: $messageText
     ) {
       ...ChatFragment
       messageCount
@@ -615,8 +619,8 @@ module.exports.createGroupChat = gql`
 `
 
 module.exports.editGroupChat = gql`
-  mutation EditGroupChat ($chatId: ID!, $name: String!) {
-    editGroupChat (chatId: $chatId, name: $name) {
+  mutation EditGroupChat($chatId: ID!, $name: String!) {
+    editGroupChat(chatId: $chatId, name: $name) {
       ...ChatFragment
       messageCount
       messages {
@@ -632,8 +636,8 @@ module.exports.editGroupChat = gql`
 `
 
 module.exports.addToGroupChat = gql`
-  mutation AddToGroupChat ($chatId: ID!, $userIds: [ID!]!) {
-    addToGroupChat (chatId: $chatId, userIds: $userIds) {
+  mutation AddToGroupChat($chatId: ID!, $userIds: [ID!]!) {
+    addToGroupChat(chatId: $chatId, userIds: $userIds) {
       ...ChatFragment
       messageCount
       messages {
@@ -649,8 +653,8 @@ module.exports.addToGroupChat = gql`
 `
 
 module.exports.leaveGroupChat = gql`
-  mutation LeaveGroupChat ($chatId: ID!) {
-    leaveGroupChat (chatId: $chatId) {
+  mutation LeaveGroupChat($chatId: ID!) {
+    leaveGroupChat(chatId: $chatId) {
       ...ChatFragment
       messageCount
       messages {
@@ -666,8 +670,8 @@ module.exports.leaveGroupChat = gql`
 `
 
 module.exports.addChatMessage = gql`
-  mutation AddChatMessage ($chatId: ID!, $messageId: ID!, $text: String!) {
-    addChatMessage (chatId: $chatId, messageId: $messageId, text: $text) {
+  mutation AddChatMessage($chatId: ID!, $messageId: ID!, $text: String!) {
+    addChatMessage(chatId: $chatId, messageId: $messageId, text: $text) {
       ...ChatMessageFragment
       viewedStatus
     }
@@ -676,8 +680,8 @@ module.exports.addChatMessage = gql`
 `
 
 module.exports.editChatMessage = gql`
-  mutation EditChatMessage ($messageId: ID!, $text: String!) {
-    editChatMessage (messageId: $messageId, text: $text) {
+  mutation EditChatMessage($messageId: ID!, $text: String!) {
+    editChatMessage(messageId: $messageId, text: $text) {
       ...ChatMessageFragment
       viewedStatus
     }
@@ -686,8 +690,8 @@ module.exports.editChatMessage = gql`
 `
 
 module.exports.deleteChatMessage = gql`
-  mutation DeleteChatMessage ($messageId: ID!) {
-    deleteChatMessage (messageId: $messageId) {
+  mutation DeleteChatMessage($messageId: ID!) {
+    deleteChatMessage(messageId: $messageId) {
       ...ChatMessageFragment
       viewedStatus
     }
@@ -696,22 +700,22 @@ module.exports.deleteChatMessage = gql`
 `
 
 module.exports.reportChatMessageViews = gql`
-  mutation ReportChatMessageViews ($messageIds: [ID!]!) {
-    reportChatMessageViews (messageIds: $messageIds)
+  mutation ReportChatMessageViews($messageIds: [ID!]!) {
+    reportChatMessageViews(messageIds: $messageIds)
   }
 `
 
 module.exports.triggerChatMessageNotification = gql`
-  mutation TriggerChatMessageNotification ($input: ChatMessageNotificationInput!) {
-    triggerChatMessageNotification (input: $input) {
+  mutation TriggerChatMessageNotification($input: ChatMessageNotificationInput!) {
+    triggerChatMessageNotification(input: $input) {
       userId
     }
   }
 `
 
 module.exports.triggerPostNotification = gql`
-  mutation TriggerPostNotification ($input: PostNotificationInput!) {
-    triggerPostNotification (input: $input) {
+  mutation TriggerPostNotification($input: PostNotificationInput!) {
+    triggerPostNotification(input: $input) {
       userId
     }
   }

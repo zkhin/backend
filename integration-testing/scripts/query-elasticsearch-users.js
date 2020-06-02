@@ -11,15 +11,14 @@ AWS.config = new AWS.Config()
 const endpoint = process.env.ELASTICSEARCH_ENDPOINT
 if (endpoint === undefined) throw new Error('Env var ELASTICSEARCH_ENDPOINT must be defined')
 
-
 if (process.argv.length != 3) {
   console.log(`Usage: ${__filename} <query string>`)
   process.exit(1)
 }
 
-const main = async ( queryStr ) => {
+const main = async (queryStr) => {
   const esClient = elasticsearch.Client({
-    hosts: [ 'https://' + endpoint ],
+    hosts: ['https://' + endpoint],
     connectionClass: httpAwsEs,
   })
 

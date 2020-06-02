@@ -6,7 +6,7 @@ const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -21,9 +21,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 describe('Read and write properties our our own profile', () => {
-
   // username is tested in the set-username.test.js
 
   test('followed/follwer status', async () => {
@@ -58,7 +56,7 @@ describe('Read and write properties our our own profile', () => {
   })
 
   test('fullName and bio', async () => {
-    const bio = 'truckin\''
+    const bio = "truckin'"
     const fullName = 'Hunter S.'
     const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -91,7 +89,6 @@ describe('Read and write properties our our own profile', () => {
   })
 })
 
-
 test('Disabled user cannot setUserDetails', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -102,16 +99,17 @@ test('Disabled user cannot setUserDetails', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify can't edit our details
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
 
 test('setUserDetails without any arguments returns an error', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails}))
-    .rejects.toThrow(/ClientError: Called without any arguments/)
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails})).rejects.toThrow(
+    /ClientError: Called without any arguments/,
+  )
 })
-
 
 test('Try to get user that does not exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -122,15 +120,15 @@ test('Try to get user that does not exist', async () => {
   expect(resp.data.user).toBeNull()
 })
 
-
 test('Various photoPostId failures', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
 
   // verify can't set profile photo using post that doesn't exist
   let postId = 'post-id-dne'
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: 'post-id-dne'}}))
-    .rejects.toThrow(/ClientError: .*not found/)
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: 'post-id-dne'}}),
+  ).rejects.toThrow(/ClientError: .*not found/)
 
   // create a text-only post
   postId = uuidv4()
@@ -142,8 +140,9 @@ test('Various photoPostId failures', async () => {
   expect(resp.data.addPost.postType).toBe('TEXT_ONLY')
 
   // verify can't set profile photo using text-only post
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}}))
-    .rejects.toThrow(/ClientError: .*does not have type/)
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}}),
+  ).rejects.toThrow(/ClientError: .*does not have type/)
 
   // create an image post, leave it in pending
   postId = uuidv4()
@@ -155,8 +154,9 @@ test('Various photoPostId failures', async () => {
 
   // verify can't set profile photo using pending image post
   variables = {photoPostId: postId}
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables}))
-    .rejects.toThrow(/ClientError: .*does not have status/)
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables})).rejects.toThrow(
+    /ClientError: .*does not have status/,
+  )
 
   // the other user creates an image post
   postId = uuidv4()
@@ -168,8 +168,9 @@ test('Various photoPostId failures', async () => {
 
   // verify can't set our profile photo using their post
   variables = {photoPostId: postId}
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables}))
-    .rejects.toThrow(/ClientError: .*does not belong to/)
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables})).rejects.toThrow(
+    /ClientError: .*does not belong to/,
+  )
 
   // we create an image post that doesn't pass verification
   postId = uuidv4()
@@ -182,10 +183,10 @@ test('Various photoPostId failures', async () => {
 
   // verify can't set our profile photo using non-verified post
   variables = {photoPostId: postId}
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables}))
-    .rejects.toThrow(/ClientError: .*is not verified/)
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables})).rejects.toThrow(
+    /ClientError: .*is not verified/,
+  )
 })
-
 
 test('Set and delete our profile photo, using postId', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -240,7 +241,6 @@ test('Set and delete our profile photo, using postId', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.photo).toBeNull()
 })
-
 
 test('Read properties of another private user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -358,7 +358,6 @@ test('Read properties of another private user', async () => {
   expect(resp.data.user.phoneNumber).toBeNull()
 })
 
-
 test('Read properties of another public user', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -414,7 +413,6 @@ test('Read properties of another public user', async () => {
   expect(user.phoneNumber).toBeNull()
 })
 
-
 test('User language code - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -434,7 +432,6 @@ test('User language code - get, set, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.languageCode).toBeNull()
 })
-
 
 test('User theme code - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -461,7 +458,6 @@ test('User theme code - get, set, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.themeCode).toBe('green.orange')
 })
-
 
 test('User accepted EULA version - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -499,10 +495,10 @@ test('User accepted EULA version - get, set, privacy', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can no longer edit the EULA
-  await expect(ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '42'}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '42'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
-
 
 test('User commentsDisabled - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -530,7 +526,6 @@ test('User commentsDisabled - get, set, privacy', async () => {
   expect(resp.data.user.commentsDisabled).toBeNull()
 })
 
-
 test('User likesDisabled - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -555,7 +550,6 @@ test('User likesDisabled - get, set, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.likesDisabled).toBeNull()
 })
-
 
 test('User sharingDisabled - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -583,7 +577,6 @@ test('User sharingDisabled - get, set, privacy', async () => {
   expect(resp.data.user.sharingDisabled).toBeNull()
 })
 
-
 test('User verificationHidden - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -595,7 +588,7 @@ test('User verificationHidden - get, set, privacy', async () => {
   // we change it
   resp = await ourClient.mutate({
     mutation: mutations.setUserMentalHealthSettings,
-    variables: {verificationHidden: true}
+    variables: {verificationHidden: true},
   })
   expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.verificationHidden).toBe(true)
@@ -611,7 +604,6 @@ test('User verificationHidden - get, set, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.verificationHidden).toBeNull()
 })
-
 
 test('User setUserAPNSToken', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

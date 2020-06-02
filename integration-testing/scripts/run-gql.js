@@ -4,10 +4,10 @@
 
 const AWS = require('aws-sdk')
 const AWSAppSyncClient = require('aws-appsync').default
-const { createAppSyncLink } = require('aws-appsync')
-const { setContext } = require('apollo-link-context')
-const { ApolloLink } = require('apollo-link')
-const { createHttpLink } = require('apollo-link-http')
+const {createAppSyncLink} = require('aws-appsync')
+const {setContext} = require('apollo-link-context')
+const {ApolloLink} = require('apollo-link')
+const {createHttpLink} = require('apollo-link-http')
 const dotenv = require('dotenv')
 const fs = require('fs')
 const gql = require('graphql-tag')
@@ -15,7 +15,7 @@ const util = require('util')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 dotenv.config()
 AWS.config = new AWS.Config()
@@ -62,20 +62,20 @@ const appsyncOptions = {
           ...previousContext.headers,
           ['x-real-version']: '1.2.3(456)',
           ['x-real-device']: 'iPhone7,2', // https://www.npmjs.com/package/react-native-device-info#getdeviceid
-          ['x-real-system']: 'iOS 11.0',  // https://www.npmjs.com/package/react-native-device-info#getsystemname
-        }
+          ['x-real-system']: 'iOS 11.0', // https://www.npmjs.com/package/react-native-device-info#getsystemname
+        },
       })),
       createHttpLink({
-        uri: appsyncConfig.url
-      })
-    ])
-  })
+        uri: appsyncConfig.url,
+      }),
+    ]),
+  }),
 }
 const appsyncClient = new AWSAppSyncClient(appsyncConfig, appsyncOptions)
 
 const startChangeUserEmail = gql`
-  mutation StartChangeUserEmail ($email: AWSEmail!) {
-    startChangeUserEmail (email: $email) {
+  mutation StartChangeUserEmail($email: AWSEmail!) {
+    startChangeUserEmail(email: $email) {
       userId
       username
       email
@@ -85,8 +85,8 @@ const startChangeUserEmail = gql`
 `
 
 const finishChangeUserEmail = gql`
-  mutation FinishChangeUserEmail ($cognitoAccessToken: String!, $verificationCode: String!) {
-    finishChangeUserEmail (cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
+  mutation FinishChangeUserEmail($cognitoAccessToken: String!, $verificationCode: String!) {
+    finishChangeUserEmail(cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
       userId
       username
       email
@@ -96,8 +96,8 @@ const finishChangeUserEmail = gql`
 `
 
 const startChangeUserPhoneNumber = gql`
-  mutation StartChangeUserPhoneNumber ($phoneNumber: AWSPhone!) {
-    startChangeUserPhoneNumber (phoneNumber: $phoneNumber) {
+  mutation StartChangeUserPhoneNumber($phoneNumber: AWSPhone!) {
+    startChangeUserPhoneNumber(phoneNumber: $phoneNumber) {
       userId
       username
       email
@@ -107,8 +107,8 @@ const startChangeUserPhoneNumber = gql`
 `
 
 const finishChangeUserPhoneNumber = gql`
-  mutation FinishChangeUserPhoneNumber ($cognitoAccessToken: String!, $verificationCode: String!) {
-    finishChangeUserPhoneNumber (cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
+  mutation FinishChangeUserPhoneNumber($cognitoAccessToken: String!, $verificationCode: String!) {
+    finishChangeUserPhoneNumber(cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
       userId
       username
       email
@@ -119,7 +119,7 @@ const finishChangeUserPhoneNumber = gql`
 
 const setUserDetails = gql`
   mutation SetUserDetails {
-    setUserDetails (fullName: "Miss. Purple", bio: "millions of peaches") {
+    setUserDetails(fullName: "Miss. Purple", bio: "millions of peaches") {
       userId
       username
       fullName
@@ -132,19 +132,19 @@ const setUserDetails = gql`
 
 const lambdaClientError = gql`
   mutation LambdaClientError {
-    lambdaClientError (arg1: "test-arg1", arg2: "test-arg2")
+    lambdaClientError(arg1: "test-arg1", arg2: "test-arg2")
   }
 `
 
 const lambdaServerError = gql`
   mutation LambdaServerError {
-    lambdaServerError (arg1: "test-arg1", arg2: "test-arg2")
+    lambdaServerError(arg1: "test-arg1", arg2: "test-arg2")
   }
 `
 
 const dynamoServerError = gql`
   mutation DynamoServerError {
-    dynamoServerError (arg1: "test-arg1", arg2: "test-arg2")
+    dynamoServerError(arg1: "test-arg1", arg2: "test-arg2")
   }
 `
 

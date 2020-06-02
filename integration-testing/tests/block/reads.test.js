@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -21,7 +21,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Blocked user only see absolutely minimal profile of blocker via direct access', async () => {
   // us and them
@@ -43,11 +42,14 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   // we set some details on our profile
-  resp = await ourClient.mutate({mutation: mutations.setUserDetails, variables: {
-    photoPostId: postId,
-    bio: 'testing',
-    fullName: 'test test',
-  }})
+  resp = await ourClient.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      photoPostId: postId,
+      bio: 'testing',
+      fullName: 'test test',
+    },
+  })
   expect(resp.errors).toBeUndefined()
   variables = {version: 'v2020-01-01.1'}
   resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables})
@@ -155,7 +157,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull).toEqual(ourUserLimited)
 })
 
-
 test('Blocked cannot see blocker in search results, blocker can see blocked in search results', async () => {
   // use and them
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -201,7 +202,6 @@ test('Blocked cannot see blocker in search results, blocker can see blocked in s
   expect(resp.data.searchUsers.items).toHaveLength(0)
 })
 
-
 test('Blocked cannot see blockers follower or followed users lists', async () => {
   // use and them
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -226,7 +226,6 @@ test('Blocked cannot see blockers follower or followed users lists', async () =>
   resp = await ourClient.query({query: queries.followerUsers, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
 })
-
 
 test('Blocked cannot see blockers posts or stories', async () => {
   // use and them
@@ -255,7 +254,6 @@ test('Blocked cannot see blockers posts or stories', async () => {
   expect(resp.data.user.posts.items).toHaveLength(0)
 })
 
-
 test('Blocked cannot see blockers lists of likes', async () => {
   // use and them
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -278,7 +276,6 @@ test('Blocked cannot see blockers lists of likes', async () => {
   expect(resp.data.user.onymouslyLikedPosts.items).toHaveLength(0)
   expect(resp.data.user.anonymouslyLikedPosts).toBeNull()
 })
-
 
 test('Blocked cannot see directly see blockers posts', async () => {
   // use and them

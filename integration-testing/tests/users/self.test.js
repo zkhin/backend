@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -12,7 +12,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Query.self for user that exists, matches Query.user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -28,7 +27,6 @@ test('Query.self for user that exists, matches Query.user', async () => {
   expect(resp.data.user).toEqual(selfItem)
 })
 
-
 test('Query.self for user that does not exist', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -42,7 +40,6 @@ test('Query.self for user that does not exist', async () => {
   expect(resp.errors.length).toBeTruthy()
   expect(resp.errors[0].message).toEqual('User does not exist')
 })
-
 
 test('Query.user matches Query.self', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

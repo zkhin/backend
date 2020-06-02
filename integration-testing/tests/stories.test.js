@@ -7,7 +7,7 @@ require('isomorphic-fetch')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -22,7 +22,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Posts that are not within a day of expiring do not show up as a stories', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -58,7 +57,6 @@ test('Posts that are not within a day of expiring do not show up as a stories', 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(0)
 })
-
 
 test('Add a post that shows up as story', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -96,7 +94,6 @@ test('Add a post that shows up as story', async () => {
   expect(resp.data.user.followedUsersWithStories).toBeNull()
 })
 
-
 test('Add posts with images show up in stories', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const imageBytes = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.jpg'))
@@ -130,7 +127,6 @@ test('Add posts with images show up in stories', async () => {
   expect(resp.data.user.stories.items[1].image.url).toBeTruthy()
 })
 
-
 test('Stories are ordered by first-to-expire-first', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -159,7 +155,6 @@ test('Stories are ordered by first-to-expire-first', async () => {
   expect(resp.data.user.stories.items[1].postId).toBe(postId1)
   expect(resp.data.user.stories.items[2].postId).toBe(postId3)
 })
-
 
 test('Followed users with stories are ordered by first-to-expire-first', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -218,7 +213,6 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
   expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(other1UserId)
   expect(resp.data.self.followedUsersWithStories.items[1].userId).toBe(other2UserId)
 })
-
 
 test('Stories of private user are visible to themselves and followers only', async () => {
   // us, a private user with a story
@@ -283,7 +277,6 @@ test('Stories of private user are visible to themselves and followers only', asy
   expect(resp.data.user.stories).toBeNull()
 })
 
-
 // waiting on a way to externally trigger the 'archive expired posts' cron job
 test.skip('Post that expires is removed from stories', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -321,7 +314,6 @@ test.skip('Post that expires is removed from stories', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(0)
 })
-
 
 test('Post that is archived is removed from stories', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

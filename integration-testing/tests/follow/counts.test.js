@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -13,8 +13,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
-test('Follow counts public user', async() => {
+test('Follow counts public user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
@@ -55,8 +54,7 @@ test('Follow counts public user', async() => {
   expect(resp.data.user.followedCount).toBe(0)
 })
 
-
-test('Follow counts private user', async() => {
+test('Follow counts private user', async () => {
   // create two new users, both private
   const [u1Client, u1UserId] = await loginCache.getCleanLogin()
   let resp = await u1Client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})

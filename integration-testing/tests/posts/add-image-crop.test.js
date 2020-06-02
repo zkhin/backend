@@ -10,7 +10,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const jpegHeight = 32
 const jpegWidth = 64
@@ -30,7 +30,6 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Invalid jpeg crops, direct gql data upload', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const imageData = jpegData
@@ -38,8 +37,9 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   // can't crop negative
   let postId = uuidv4()
   let crop = {upperLeft: {x: 1, y: -1}, lowerRight: {x: jpegWidth - 1, y: jpegHeight - 1}}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}))
-    .rejects.toThrow(/ClientError: .* cannot be negative/)
+  await expect(
+    ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}),
+  ).rejects.toThrow(/ClientError: .* cannot be negative/)
   let resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
@@ -47,8 +47,9 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   // can't down to zero area
   postId = uuidv4()
   crop = {upperLeft: {x: 100, y: 1}, lowerRight: {x: 100, y: jpegHeight - 1}}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}))
-    .rejects.toThrow(/ClientError: .* must be strictly greater than /)
+  await expect(
+    ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData, crop}}),
+  ).rejects.toThrow(/ClientError: .* must be strictly greater than /)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
@@ -64,9 +65,7 @@ test('Invalid jpeg crops, direct gql data upload', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('ERROR')
-
 })
-
 
 test('Invalid jpeg crops, upload via cloudfront', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -74,8 +73,9 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
   // can't crop negative
   let postId = uuidv4()
   let crop = {upperLeft: {x: 1, y: -1}, lowerRight: {x: jpegWidth - 1, y: jpegHeight - 1}}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}}))
-    .rejects.toThrow(/ClientError: .* cannot be negative/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}})).rejects.toThrow(
+    /ClientError: .* cannot be negative/,
+  )
   let resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
@@ -92,7 +92,7 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
 
   // upload the image data to cloudfront
   await rp.put({url: uploadUrl, headers: jpegHeaders, body: jpegBytes})
-  await misc.sleep(5*1000) // enough time to error our
+  await misc.sleep(5 * 1000) // enough time to error our
 
   // check the post is now in an error state
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -103,10 +103,10 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
   // can't down to zero area
   postId = uuidv4()
   crop = {upperLeft: {x: 100, y: 1}, lowerRight: {x: 100, y: jpegHeight - 1}}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}}))
-    .rejects.toThrow(/ClientError: .* must be strictly greater than /)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}})).rejects.toThrow(
+    /ClientError: .* must be strictly greater than /,
+  )
 })
-
 
 test('Valid jpeg crop, direct upload via gql', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -134,13 +134,15 @@ test('Valid jpeg crop, direct upload via gql', async () => {
   expect(size.height).toBe(3)
 })
 
-
 test('Valid jpeg crop, upload via cloudfront', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // add the post
   const postId = uuidv4()
-  const crop = {upperLeft: {x: jpegWidth/4, y: jpegHeight/4}, lowerRight: {x: jpegWidth*3/4, y: jpegHeight*3/4}}
+  const crop = {
+    upperLeft: {x: jpegWidth / 4, y: jpegHeight / 4},
+    lowerRight: {x: (jpegWidth * 3) / 4, y: (jpegHeight * 3) / 4},
+  }
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, crop}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
@@ -164,15 +166,14 @@ test('Valid jpeg crop, upload via cloudfront', async () => {
 
   // check size of the native image
   let size = await requestImageSize(urlNative)
-  expect(size.width).toBe(jpegWidth/2)
-  expect(size.height).toBe(jpegHeight/2)
+  expect(size.width).toBe(jpegWidth / 2)
+  expect(size.height).toBe(jpegHeight / 2)
 
   // check size of the 4K thumbnail
   size = await requestImageSize(url4k)
-  expect(size.width).toBe(jpegWidth/2)
-  expect(size.height).toBe(jpegHeight/2)
+  expect(size.width).toBe(jpegWidth / 2)
+  expect(size.height).toBe(jpegHeight / 2)
 })
-
 
 test('Valid jpeg crop, metadata preserved', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -180,7 +181,9 @@ test('Valid jpeg crop, metadata preserved', async () => {
   // pull exif data (only exif) from the original image
   const orgExif = await sharp(grantBytes)
     .metadata()
-    .then(({ exif }) => { return exifReader(exif) })
+    .then(({exif}) => {
+      return exifReader(exif)
+    })
   expect(orgExif).toBeTruthy()
 
   // add the post with a crop
@@ -197,7 +200,9 @@ test('Valid jpeg crop, metadata preserved', async () => {
   const croppedBytes = await rp.get({uri: urlNative, encoding: null})
   const newExif = await sharp(croppedBytes)
     .metadata()
-    .then(({ exif }) => { return exifReader(exif) })
+    .then(({exif}) => {
+      return exifReader(exif)
+    })
 
   // make sure exif data hasn't changed
   expect(newExif).toEqual(orgExif)

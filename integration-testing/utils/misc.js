@@ -5,7 +5,7 @@ const gql = require('graphql-tag')
 
 const shortRandomString = () => Math.random().toString(36).substring(7)
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const generateRandomJpeg = (width, height) => {
   const buf = Buffer.alloc(width * height * 4)
@@ -16,13 +16,17 @@ const generateRandomJpeg = (width, height) => {
   const imgData = {
     data: buf,
     width: width,
-    height: height
+    height: height,
   }
   const quality = 50
   return jpeg.encode(imgData, quality).data
 }
 
-const sleepUntilPostCompleted = async (gqlClient, postId, {maxWaitMs = 10*1000, pollingIntervalMs = 1000} = {}) => {
+const sleepUntilPostCompleted = async (
+  gqlClient,
+  postId,
+  {maxWaitMs = 10 * 1000, pollingIntervalMs = 1000} = {},
+) => {
   const queryPost = gql(`query Post ($postId: ID!) {
     post (postId: $postId) {
       postId

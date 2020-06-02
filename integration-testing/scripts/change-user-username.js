@@ -56,12 +56,12 @@ const prmtSchema = {
       pattern: /^[cfg]?$/,
     },
     username: {
-      description: 'User\'s email, phone or human-readable username?',
+      description: "User's email, phone or human-readable username?",
       required: true,
       ask: () => prmt.history('authSource').value === 'c',
     },
     password: {
-      description: 'User\'s password?',
+      description: "User's password?",
       required: true,
       hidden: true,
       ask: () => prmt.history('authSource').value === 'c',
@@ -105,22 +105,25 @@ prmt.get(prmtSchema, async (err, result) => {
   process.stdout.write('Exchanging auth token for graphql-authorized JWT token...')
   const creds = await generateGQLCredentials(result.authSource, token)
   const awsCredentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
-  const appsyncClient = new AWSAppSyncClient({
-    url: appsyncApiUrl,
-    region: AWS.config.region,
-    auth: {
-      type: 'AWS_IAM',
-      credentials: awsCredentials,
+  const appsyncClient = new AWSAppSyncClient(
+    {
+      url: appsyncApiUrl,
+      region: AWS.config.region,
+      auth: {
+        type: 'AWS_IAM',
+        credentials: awsCredentials,
+      },
+      disableOffline: true,
     },
-    disableOffline: true,
-  }, {
-    defaultOptions: {
-      query: {
-        fetchPolicy: 'network-only',
-        errorPolicy: 'all',
+    {
+      defaultOptions: {
+        query: {
+          fetchPolicy: 'network-only',
+          errorPolicy: 'all',
+        },
       },
     },
-  })
+  )
   process.stdout.write(' done.\n')
 
   process.stdout.write('Retrieving current username...')
@@ -140,8 +143,8 @@ prmt.get(prmtSchema, async (err, result) => {
 })
 
 const setUsername = gql`
-  mutation SetUserDetails ($username: String!) {
-    setUserDetails (username: $username) {
+  mutation SetUserDetails($username: String!) {
+    setUserDetails(username: $username) {
       userId
       username
     }
@@ -159,10 +162,12 @@ const querySelf = gql`
 
 const generateCognitoTokens = async (username, password) => {
   // sign them in
-  const resp = await cognitoUserPoolClient.initiateAuth({
-    AuthFlow: 'USER_PASSWORD_AUTH',
-    AuthParameters: {USERNAME: username, PASSWORD: password},
-  }).promise()
+  const resp = await cognitoUserPoolClient
+    .initiateAuth({
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      AuthParameters: {USERNAME: username, PASSWORD: password},
+    })
+    .promise()
   return resp.AuthenticationResult
 }
 

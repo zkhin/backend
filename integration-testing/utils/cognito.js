@@ -14,7 +14,7 @@ const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
-const { mutations } = require('../schema')
+const {mutations} = require('../schema')
 
 dotenv.config()
 AWS.config = new AWS.Config()
@@ -52,7 +52,7 @@ const generatePassword = () => {
 const generateUsername = () => familyName + uuidv4().substring(24)
 
 const generateEmail = (substr) => {
-  substr = substr  || uuidv4().substring(24)
+  substr = substr || uuidv4().substring(24)
   return 'success+' + substr + '@simulator.amazonses.com'
 }
 
@@ -65,7 +65,7 @@ const generateRRUuid = (callerData) => {
   const repoRoot = path.dirname(path.dirname(__dirname))
   const callerFilePath = path.relative(repoRoot, callerData.filePath)
   const callerOrigin = callerFilePath + '#L' + callerData.lineNumber
-  const callerHash = md5(callerOrigin)  // 32-char hex string
+  const callerHash = md5(callerOrigin) // 32-char hex string
 
   // covert to an 16-element byte array https://stackoverflow.com/a/34356351
   const callerBytes = []
@@ -78,27 +78,29 @@ const generateRRUuid = (callerData) => {
 
 const getAppSyncClient = async (creds) => {
   const credsObj = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
-  const client = new AWSAppSyncClient({
-    url: appsyncApiUrl,
-    region: AWS.config.region,
-    auth: {
-      type: 'AWS_IAM',
-      credentials: credsObj,
+  const client = new AWSAppSyncClient(
+    {
+      url: appsyncApiUrl,
+      region: AWS.config.region,
+      auth: {
+        type: 'AWS_IAM',
+        credentials: credsObj,
+      },
+      disableOffline: true,
     },
-    disableOffline: true,
-  }, {
-    defaultOptions: {
-      query: {
-        // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
-        fetchPolicy: 'network-only',
-        errorPolicy: 'all',
+    {
+      defaultOptions: {
+        query: {
+          // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
+          fetchPolicy: 'network-only',
+          errorPolicy: 'all',
+        },
       },
     },
-  })
+  )
   await client.hydrated()
   return client
 }
-
 
 /**
  * Generate and return a client to use with the appsync endpoint, and some optional login details.
@@ -108,7 +110,7 @@ const getAppSyncClient = async (creds) => {
 const getAppSyncLogin = async (newUserPhone) => {
   const myUuid = generateRRUuid(callerId.getData())
   const email = generateEmail(myUuid.substring(24).toLowerCase())
-  const password = myUuid + '-1.Aa'  // fulfill password requirements
+  const password = myUuid + '-1.Aa' // fulfill password requirements
 
   // try to sign the user in, and if that doesn't work, create the user
   let idToken, userId, userNeedsReset
@@ -121,7 +123,7 @@ const getAppSyncLogin = async (newUserPhone) => {
     userNeedsReset = true
     userId = jwtDecode(idToken)['cognito:username']
   } catch (err) {
-    if (err.code !== 'NotAuthorizedException') throw(err)
+    if (err.code !== 'NotAuthorizedException') throw err
     // user does not exist, we must create them. No need to reset it later on, as new user starts fresh
     userNeedsReset = false
 
@@ -131,7 +133,7 @@ const getAppSyncLogin = async (newUserPhone) => {
 
     // create user in the user pool, using the 'identity id' from the identity pool as the user pool 'username'
     const UserAttributes = [
-      {Name: 'family_name', Value: familyName },
+      {Name: 'family_name', Value: familyName},
       {Name: 'email', Value: email},
     ]
     if (newUserPhone) UserAttributes.push({Name: 'phone_number', Value: newUserPhone})
@@ -154,21 +156,18 @@ const getAppSyncLogin = async (newUserPhone) => {
   if (userNeedsReset) {
     // one call resets the user and then does the equivalent of calling Mutation.createCognitoOnlyUser()
     await appSyncClient.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
-  }
-  else {
+  } else {
     await appSyncClient.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
   }
 
   return [appSyncClient, userId, password, email, username]
 }
 
-
 /**
  * A class to help each test file re-use the same logins, thus
  * speeding up the tests and reducing orphaned objects.
  */
 class AppSyncLoginCache {
-
   constructor() {
     this.cleanLogins = []
     this.dirtyLogins = []
@@ -210,7 +209,6 @@ class AppSyncLoginCache {
     }
   }
 }
-
 
 module.exports = {
   // most common

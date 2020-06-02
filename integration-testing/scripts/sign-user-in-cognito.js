@@ -25,18 +25,17 @@ const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 const cognitoIdentityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
 const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
 
-
 prmt.message = ''
 prmt.start()
 
 const prmtSchema = {
   properties: {
     username: {
-      description: 'User\'s email, phone or human-readable username?',
+      description: "User's email, phone or human-readable username?",
       required: true,
     },
     password: {
-      description: 'User\'s password?',
+      description: "User's password?",
       required: true,
       hidden: true,
     },
@@ -59,11 +58,15 @@ prmt.get(prmtSchema, async (err, result) => {
   const creds = await generateCredentials(tokens)
   if (result.pinpointEndpointId) trackWithPinpoint(result.pinpointEndpointId, tokens, creds)
   if (tokens) {
-    const output = JSON.stringify({
-      authProvider: 'COGNITO',
-      tokens: tokens,
-      credentials: creds,
-    }, null, 2)
+    const output = JSON.stringify(
+      {
+        authProvider: 'COGNITO',
+        tokens: tokens,
+        credentials: creds,
+      },
+      null,
+      2,
+    )
     if (result.destination) fs.writeFileSync(result.destination, output + '\n')
     else console.log(output)
   }
@@ -72,12 +75,14 @@ prmt.get(prmtSchema, async (err, result) => {
 const generateTokens = async (username, password) => {
   // sign them in
   try {
-    return await cognitoUserPoolClient.initiateAuth({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      AuthParameters: {USERNAME: username, PASSWORD: password},
-    }).promise().then(resp => resp.AuthenticationResult)
-  }
-  catch ( err ) {
+    return await cognitoUserPoolClient
+      .initiateAuth({
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        AuthParameters: {USERNAME: username, PASSWORD: password},
+      })
+      .promise()
+      .then((resp) => resp.AuthenticationResult)
+  } catch (err) {
     console.log(err)
     return null
   }
@@ -91,8 +96,7 @@ const generateCredentials = async (tokens) => {
     const userId = jwtDecode(idToken)['cognito:username']
     const Logins = {[`cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`]: idToken}
     resp = await cognitoIdentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  }
-  else {
+  } else {
     // generate unauthenticated credentials
     // get a throwaway userId to use to generate credentials to record this event to pinpoint
     // note the frontend should make every effort to not generate a throwawy identity like this
@@ -111,17 +115,26 @@ const trackWithPinpoint = async (endpointId, tokens, creds) => {
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
   const eventType = tokens ? '_userauth.sign_in' : '_userauth.auth_fail'
-  let resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
-    Endpoint: {},
-    Events: {[eventType]:{
-      EventType: eventType,
-      Timestamp: moment().toISOString(),
-    }},
-  }}}}).promise()
+  let resp = await pinpoint
+    .putEvents({
+      EventsRequest: {
+        BatchItem: {
+          [endpointId]: {
+            Endpoint: {},
+            Events: {
+              [eventType]: {
+                EventType: eventType,
+                Timestamp: moment().toISOString(),
+              },
+            },
+          },
+        },
+      },
+    })
+    .promise()
   if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
     console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
-  }
-  else {
+  } else {
     console.log(`Error recording pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
     console.log(util.inspect(resp, {showHidden: false, depth: null}))
   }

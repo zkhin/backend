@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations } = require('../../schema')
+const {mutations} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -12,7 +12,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Cant accept or deny a follow request if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -37,12 +36,13 @@ test('Cant accept or deny a follow request if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify they can't deny or accept the following
-  await expect(theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
-  await expect(theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
-
 
 test('Try to double-accept a follow request', async () => {
   // us and a private user
@@ -64,10 +64,10 @@ test('Try to double-accept a follow request', async () => {
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // they try to accept the follow request again
-  await expect(theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}))
-    .rejects.toThrow(/ClientError: .* already has status /)
+  await expect(
+    theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}),
+  ).rejects.toThrow(/ClientError: .* already has status /)
 })
-
 
 test('Try to double-deny a follow request', async () => {
   // us and a private user
@@ -89,20 +89,21 @@ test('Try to double-deny a follow request', async () => {
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
 
   // they try to accept the follow request again
-  await expect(theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}))
-    .rejects.toThrow(/ClientError: .* already has status /)
+  await expect(
+    theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}),
+  ).rejects.toThrow(/ClientError: .* already has status /)
 })
-
 
 test('Cant accept/deny non-existent follow requests', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, theirUserId] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has not requested /)
-  await expect(ourClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has not requested /)
+  await expect(
+    ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* has not requested /)
+  await expect(
+    ourClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* has not requested /)
 })
-
 
 test('Cant request to follow a user that has blocked us', async () => {
   // us and them
@@ -114,8 +115,9 @@ test('Cant request to follow a user that has blocked us', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify we cannot request to follow them
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has been blocked by /)
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: .* has been blocked by /,
+  )
 
   // they unblock us
   resp = await theirClient.mutate({mutation: mutations.unblockUser, variables: {userId: ourUserId}})
@@ -127,7 +129,6 @@ test('Cant request to follow a user that has blocked us', async () => {
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 })
 
-
 test('Cant request to follow a user that we have blocked', async () => {
   // us and them
   const [ourClient] = await loginCache.getCleanLogin()
@@ -138,8 +139,9 @@ test('Cant request to follow a user that we have blocked', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify we cannot request to follow them
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has blocked /)
+  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
+    /ClientError: .* has blocked /,
+  )
 
   // we unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})

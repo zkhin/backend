@@ -3,8 +3,8 @@ const gql = require('graphql-tag')
 const fragments = require('./fragments.js')
 
 module.exports.onChatMessageNotification = gql`
-  subscription OnChatMessageNotification ($userId: ID!) {
-    onChatMessageNotification (userId: $userId) {
+  subscription OnChatMessageNotification($userId: ID!) {
+    onChatMessageNotification(userId: $userId) {
       userId
       type
       message {
@@ -16,8 +16,8 @@ module.exports.onChatMessageNotification = gql`
 `
 
 module.exports.onPostNotification = gql`
-  subscription OnPostNotification ($userId: ID!) {
-    onPostNotification (userId: $userId) {
+  subscription OnPostNotification($userId: ID!) {
+    onPostNotification(userId: $userId) {
       userId
       type
       post {

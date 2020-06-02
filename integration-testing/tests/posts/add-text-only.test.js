@@ -3,7 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations } = require('../../schema')
+const {mutations} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -14,26 +14,27 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Add text-only post failures', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // verify can't use setAsUserPhoto with TEXT_ONLY posts
   let variables = {postId: uuidv4(), postType: 'TEXT_ONLY', text: 't', setAsUserPhoto: true}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Cannot .* with setAsUserPhoto$/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Cannot .* with setAsUserPhoto$/,
+  )
 
   // verify can't use image_input with TEXT_ONLY posts
   variables = {postId: uuidv4(), postType: 'TEXT_ONLY', text: 't', takenInReal: true}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Cannot .* with ImageInput$/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Cannot .* with ImageInput$/,
+  )
 
   // verify can't add TEXT_ONLY post with text
   variables = {postId: uuidv4(), postType: 'TEXT_ONLY'}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Cannot .* without text$/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Cannot .* without text$/,
+  )
 })
-
 
 test('Add text-only post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

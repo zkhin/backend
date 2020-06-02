@@ -2,7 +2,6 @@
 
 const gql = require('graphql-tag')
 
-
 module.exports.card = gql`
   fragment CardFragment on Card {
     cardId

@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -19,7 +19,6 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Blocking a user causes their onymous likes on our posts to dissapear', async () => {
   // us and them
   const [ourClient] = await loginCache.getCleanLogin()
@@ -31,7 +30,7 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // they like the post
   resp = await theirClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
@@ -55,7 +54,6 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   expect(resp.data.post.onymousLikeCount).toBe(0)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
 })
-
 
 test('Blocking a user causes their anonymous likes on our posts to dissapear', async () => {
   // us and them
@@ -90,7 +88,6 @@ test('Blocking a user causes their anonymous likes on our posts to dissapear', a
   expect(resp.data.self.anonymouslyLikedPosts.items).toHaveLength(0)
 })
 
-
 test('Blocking a user that has requested to follow us causes their follow request to dissapear', async () => {
   // us and them
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -120,7 +117,6 @@ test('Blocking a user that has requested to follow us causes their follow reques
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsers.items).toHaveLength(0)
 })
-
 
 test('Blocking a user that we have denied following to causes their follow request to dissapear', async () => {
   // us and them
@@ -155,7 +151,6 @@ test('Blocking a user that we have denied following to causes their follow reque
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsers.items).toHaveLength(0)
 })
-
 
 test('Blocking a follower causes unfollowing, our posts in their feed and first story to disapear', async () => {
   // us and them
@@ -205,7 +200,6 @@ test('Blocking a follower causes unfollowing, our posts in their feed and first 
   expect(resp.data.self.followerUsers.items).toHaveLength(0)
 })
 
-
 test('Blocking a user that we have requested to follow us causes our follow request to dissapear', async () => {
   // us and them
   const [ourClient] = await loginCache.getCleanLogin()
@@ -235,7 +229,6 @@ test('Blocking a user that we have requested to follow us causes our follow requ
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsers.items).toHaveLength(0)
 })
-
 
 test('Blocking a user that has denied our following to causes our follow request to dissapear', async () => {
   // us and them
@@ -271,7 +264,6 @@ test('Blocking a user that has denied our following to causes our follow request
   expect(resp.data.self.followedUsers.items).toHaveLength(0)
 })
 
-
 test('Blocking a user we follow causes unfollowing, their posts in feed and first story to disapear', async () => {
   // us and them
   const [ourClient] = await loginCache.getCleanLogin()
@@ -287,7 +279,7 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // verify that post shows up in our feed
   resp = await ourClient.query({query: queries.selfFeed})

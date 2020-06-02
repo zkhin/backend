@@ -3,7 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
-const { mutations } = require('../../schema')
+const {mutations} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -14,22 +14,21 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Add video post failures', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // verify can't use setAsUserPhoto with video posts
   let variables = {postId: uuidv4(), postType: 'VIDEO', setAsUserPhoto: true}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Cannot .* with setAsUserPhoto$/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Cannot .* with setAsUserPhoto$/,
+  )
 
   // verify can't use image_input with video posts
   variables = {postId: uuidv4(), postType: 'VIDEO', takenInReal: true}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Cannot .* with ImageInput$/)
-
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Cannot .* with ImageInput$/,
+  )
 })
-
 
 test('Add pending video post minimal', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -51,7 +50,6 @@ test('Add pending video post minimal', async () => {
   expect(resp.data.addPost.sharingDisabled).toBe(false)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 })
-
 
 test('Add pending video post maximal', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

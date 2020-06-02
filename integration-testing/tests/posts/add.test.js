@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -19,7 +19,6 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Add post no expiration', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -32,7 +31,7 @@ test('Add post no expiration', async () => {
   expect(post.postStatus).toBe('COMPLETED')
   expect(post.expiresAt).toBeNull()
   expect(post.originalPost.postId).toBe(postId)
-  await misc.sleep(2000)  // let dynamo converge
+  await misc.sleep(2000) // let dynamo converge
 
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
@@ -60,7 +59,6 @@ test('Add post no expiration', async () => {
   expect(resp.data.self.feed.items[0].postType).toBe('IMAGE')
 })
 
-
 test('Add post with expiration', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -83,7 +81,6 @@ test('Add post with expiration', async () => {
   expect(expires_at.isSame(expected_expires_at)).toBe(true)
 })
 
-
 test('Add post with text of empty string same as null text', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
@@ -96,32 +93,33 @@ test('Add post with text of empty string same as null text', async () => {
   expect(resp.data.addPost.text).toBeNull()
 })
 
-
 test('Cannot add post with invalid lifetime', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const variables = {postId: uuidv4()}
 
   // malformed duration string
   variables.lifetime = 'invalid'
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Unable to parse lifetime /)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Unable to parse lifetime /,
+  )
 
   // negative value for lifetime
   variables.lifetime = '-P1D'
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: Unable to parse lifetime /)  // server-side lib doesn't support negative durations
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: Unable to parse lifetime /,
+  ) // server-side lib doesn't support negative durations
 
   // zero value for lifetime
   variables.lifetime = 'P0D'
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables}))
-    .rejects.toThrow(/ClientError: .* with non-positive lifetime$/)
+  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+    /ClientError: .* with non-positive lifetime$/,
+  )
 
   // success!
   variables.lifetime = 'P1D'
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
 })
-
 
 test('Mental health settings default values', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -176,7 +174,6 @@ test('Mental health settings default values', async () => {
   expect(resp.data.addPost.sharingDisabled).toBe(false)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 })
-
 
 test('Mental health settings specify values', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -234,7 +231,6 @@ test('Mental health settings specify values', async () => {
   expect(resp.data.post.verificationHidden).toBe(true)
 })
 
-
 test('Disabled user cannot add a post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -245,6 +241,7 @@ test('Disabled user cannot add a post', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't add a post
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(
+    ourClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })

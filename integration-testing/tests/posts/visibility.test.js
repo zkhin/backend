@@ -7,7 +7,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -23,7 +23,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Visiblity of post() and user.posts() for a public user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -77,7 +76,6 @@ test('Visiblity of post() and user.posts() for a public user', async () => {
   expect(resp.data.post).toMatchObject({postId})
 })
 
-
 test('Visiblity of post() and user.posts() for a private user', async () => {
   // our user, set to private
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -115,7 +113,6 @@ test('Visiblity of post() and user.posts() for a private user', async () => {
   resp = await randoClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post).toBeNull()
 })
-
 
 test('Visiblity of post() and user.posts() for the follow stages user', async () => {
   // our user, set to private
@@ -165,7 +162,6 @@ test('Visiblity of post() and user.posts() for the follow stages user', async ()
   expect(resp.data.user.posts.items).toEqual([expect.objectContaining({postId})])
 })
 
-
 test('Post that does not exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -174,7 +170,6 @@ test('Post that does not exist', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
 })
-
 
 test('Post that is not complete', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -198,7 +193,6 @@ test('Post that is not complete', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
 })
-
 
 test('Post.viewedBy only visible to post owner', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

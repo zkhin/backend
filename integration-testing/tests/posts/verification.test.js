@@ -7,7 +7,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const smallGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const smallGrantDataB64 = new Buffer.from(smallGrantData).toString('base64')
@@ -23,7 +23,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Add image post passes verification', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -53,7 +52,6 @@ test('Add image post passes verification', async () => {
   expect(post.isVerified).toBe(true)
 })
 
-
 test('Add image post fails verification', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -76,7 +74,6 @@ test('Add image post fails verification', async () => {
   expect(post.isVerified).toBe(false)
 })
 
-
 test('Add image post verification hidden hides verification state', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -89,7 +86,7 @@ test('Add image post verification hidden hides verification state', async () => 
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
   expect(post.verificationHidden).toBe(true)
-  expect(post.isVerified).toBe(true)  // even though in reality it failed verification
+  expect(post.isVerified).toBe(true) // even though in reality it failed verification
 
   // check those values stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -97,7 +94,7 @@ test('Add image post verification hidden hides verification state', async () => 
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
-  expect(post.isVerified).toBe(true)  // even though in reality it failed verification
+  expect(post.isVerified).toBe(true) // even though in reality it failed verification
 
   // change the verification hidden setting of the post
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, verificationHidden: false}})
@@ -123,7 +120,6 @@ test('Add image post verification hidden hides verification state', async () => 
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.isVerified).toBe(true)
 })
-
 
 test('Post verification hidden setting is private to post owner', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

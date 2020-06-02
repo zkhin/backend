@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -22,7 +22,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Cant use jpeg data for an HEIC image', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -66,7 +65,6 @@ test('Cant use jpeg data for an HEIC image', async () => {
   expect(resp.data.post.image).toBeNull()
 })
 
-
 test('Add image post with image data directly included', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
@@ -106,7 +104,6 @@ test('Add image post with image data directly included', async () => {
   expect(imageCheck.url480p.split('?')[0]).toBe(image.url480p.split('?')[0])
   expect(imageCheck.url64p.split('?')[0]).toBe(image.url64p.split('?')[0])
 })
-
 
 test('Add image post (with postType specified), check non-duplicates are not marked as such', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -159,7 +156,6 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   expect(resp.data.post.originalPost.postId).toBe(postId2)
 })
 
-
 test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -174,7 +170,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.addPost.postId).toBe(ourPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // they add another image post with the same image, original should point back to first post
   variables = {postId: theirPostId, imageData}
@@ -183,7 +179,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.addPost.postId).toBe(theirPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // check each others post objects directly
   resp = await theirClient.query({query: queries.post, variables: {postId: ourPostId}})
@@ -241,7 +237,6 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.post.originalPost.postId).toBe(ourPostId)
 })
 
-
 test('Add post setAsUserPhoto failures', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -273,7 +268,6 @@ test('Add post setAsUserPhoto failures', async () => {
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.photo).toBeNull()
 })
-
 
 test('Add post setAsUserPhoto success', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

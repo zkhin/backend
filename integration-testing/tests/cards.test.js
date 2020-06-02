@@ -3,7 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -14,7 +14,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Cards are private to user themselves', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -41,7 +40,6 @@ test('Cards are private to user themselves', async () => {
   expect(resp.data.user.cardCount).toBeNull()
   expect(resp.data.user.cards).toBeNull()
 })
-
 
 test('Generate comment card', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -111,7 +109,6 @@ test('Generate comment card', async () => {
   expect(resp.data.self.cards.items).toHaveLength(0)
 })
 
-
 test('Unread chat message card with correct format', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -175,7 +172,6 @@ test('Unread chat message card with correct format', async () => {
   expect(resp.data.self.cards.items).toHaveLength(0)
 })
 
-
 test('List cards', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
@@ -223,14 +219,14 @@ test('List cards', async () => {
   expect(resp.data.self.cards.items[1].action).toContain('chat')
 })
 
-
 test('Delete card, generate new card after deleting', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
 
   // verify can't delete card that doesn't exist
-  await expect(ourClient.mutate({mutation: mutations.deleteCard, variables: {cardId: uuidv4()}}))
-    .rejects.toThrow(/ClientError: No card .* found/)
+  await expect(ourClient.mutate({mutation: mutations.deleteCard, variables: {cardId: uuidv4()}})).rejects.toThrow(
+    /ClientError: No card .* found/,
+  )
 
   // they start a direct chat with us
   const chatId = uuidv4()
@@ -250,8 +246,9 @@ test('Delete card, generate new card after deleting', async () => {
   const card = resp.data.self.cards.items[0]
 
   // verify they can't delete our card
-  await expect(theirClient.mutate({mutation: mutations.deleteCard, variables: {cardId: card.cardId}}))
-    .rejects.toThrow(/ClientError: Caller.* does not own Card /)
+  await expect(
+    theirClient.mutate({mutation: mutations.deleteCard, variables: {cardId: card.cardId}}),
+  ).rejects.toThrow(/ClientError: Caller.* does not own Card /)
 
   // verify we can delete our card
   resp = await ourClient.mutate({mutation: mutations.deleteCard, variables: {cardId: card.cardId}})

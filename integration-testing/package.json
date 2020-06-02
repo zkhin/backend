@@ -7,9 +7,29 @@
     "lint": "eslint '**/*.js' --ignore-pattern node_modules/",
     "test": "jest"
   },
+  "eslintConfig": {
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "extends": [
+      "plugin:prettier/recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "sourceType": "module"
+    }
+  },
   "jest": {
     "maxWorkers": 7,
     "testTimeout": 60000
+  },
+  "prettier": {
+    "bracketSpacing": false,
+    "printWidth": 117,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "all"
   },
   "dependencies": {},
   "devDependencies": {
@@ -20,8 +40,10 @@
     "elasticsearch": "^16.6.0",
     "es6-promise": "^4.2.8",
     "eslint": "^6.8.0",
-    "flip-promise": "^1.0.4",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-prettier": "^3.1.3",
     "exif-reader": "^1.0.3",
+    "flip-promise": "^1.0.4",
     "generate-password": "^1.5.0",
     "graphql-tag": "^2.10.3",
     "http-aws-es": "^6.0.0",
@@ -31,6 +53,7 @@
     "jwt-decode": "^2.2.0",
     "md5": "^2.2.1",
     "moment": "^2.24.0",
+    "prettier": "^2.0.5",
     "prompt": "^1.0.0",
     "request": "^2.88.0",
     "request-image-size": "^2.1.0",

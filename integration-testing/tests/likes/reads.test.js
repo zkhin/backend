@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -21,7 +21,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Cant request over 100 of any of the like lists', async () => {
   // we add a post
@@ -48,7 +47,6 @@ test('Cant request over 100 of any of the like lists', async () => {
   expect(resp.errors.length).toBeTruthy()
 })
 
-
 test('Order of users that have onymously liked a post', async () => {
   // us and two other private users
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -60,7 +58,7 @@ test('Order of users that have onymously liked a post', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(1000)  // let dynamo converge
+  await misc.sleep(1000) // let dynamo converge
 
   // all three of us onymously like it
   resp = await other2Client.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
@@ -124,7 +122,6 @@ test('Order of users that have onymously liked a post', async () => {
   expect(post.onymouslyLikedBy.items[0].userId).toBe(other1UserId)
 })
 
-
 test('Order of onymously liked posts', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
@@ -163,7 +160,6 @@ test('Order of onymously liked posts', async () => {
   expect(resp.data.self.onymouslyLikedPosts.items[0].postId).toBe(postId2)
   expect(resp.data.self.onymouslyLikedPosts.items[1].postId).toBe(postId1)
 })
-
 
 test('Order of anonymously liked posts', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -204,7 +200,6 @@ test('Order of anonymously liked posts', async () => {
   expect(resp.data.self.anonymouslyLikedPosts.items[1].postId).toBe(postId1)
 })
 
-
 test('Media objects show up correctly in lists of liked posts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -237,7 +232,6 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   expect(resp.data.user.onymouslyLikedPosts.items[0].postId).toBe(postId)
   expect(resp.data.user.onymouslyLikedPosts.items[0].image.url).toBeTruthy()
 })
-
 
 test('Like lists and counts are private to the owner of the post', async () => {
   // https://github.com/real-social-media/backend/issues/16

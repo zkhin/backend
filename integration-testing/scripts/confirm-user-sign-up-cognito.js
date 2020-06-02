@@ -17,14 +17,13 @@ if (api_root === undefined) throw new Error('Env var REAL_AUTH_API_ROOT must be 
 
 const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 
-
 prmt.message = ''
 prmt.start()
 
 const prmtSchema = {
   properties: {
     userId: {
-      description: 'User id (aka cognito user pool \'username\') of user to confirm?',
+      description: "User id (aka cognito user pool 'username') of user to confirm?",
     },
     confirmationCode: {
       description: 'Confirmation code from email/sms?',
@@ -65,17 +64,26 @@ const trackWithPinpoint = async (endpointId, userId, creds) => {
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
   const eventType = '_userauth.sign_up'
-  let resp = await pinpoint.putEvents({EventsRequest: {BatchItem: {[endpointId]: {
-    Endpoint: {},
-    Events: {[eventType]:{
-      EventType: eventType,
-      Timestamp: moment().toISOString(),
-    }},
-  }}}}).promise()
+  let resp = await pinpoint
+    .putEvents({
+      EventsRequest: {
+        BatchItem: {
+          [endpointId]: {
+            Endpoint: {},
+            Events: {
+              [eventType]: {
+                EventType: eventType,
+                Timestamp: moment().toISOString(),
+              },
+            },
+          },
+        },
+      },
+    })
+    .promise()
   if (resp.EventsResponse.Results[endpointId].EventsItemResponse[eventType].StatusCode == 202) {
     console.log(`Pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
-  }
-  else {
+  } else {
     console.log(`Error recording pinpoint event '${eventType}' recorded on for endpoint '${endpointId}'`)
     console.log(util.inspect(resp, {showHidden: false, depth: null}))
   }

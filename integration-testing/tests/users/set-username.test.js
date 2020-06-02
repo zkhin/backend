@@ -2,7 +2,7 @@
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations } = require('../../schema')
+const {mutations} = require('../../schema')
 
 const AuthFlow = cognito.AuthFlow
 
@@ -16,7 +16,6 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('setting invalid username fails', async () => {
   const [client] = await loginCache.getCleanLogin()
   const usernameTooShort = 'aa'
@@ -24,14 +23,16 @@ test('setting invalid username fails', async () => {
   const usernameBadChar = 'a!a'
 
   const mutation = mutations.setUsername
-  await expect(client.mutate({mutation, variables: {username: usernameTooShort}}))
-    .rejects.toThrow(/ClientError: Username .* does not validate/)
-  await expect(client.mutate({mutation, variables: {username: usernameTooLong}}))
-    .rejects.toThrow(/ClientError: Username .* does not validate/)
-  await expect(client.mutate({mutation, variables: {username: usernameBadChar}}))
-    .rejects.toThrow(/ClientError: Username .* does not validate/)
+  await expect(client.mutate({mutation, variables: {username: usernameTooShort}})).rejects.toThrow(
+    /ClientError: Username .* does not validate/,
+  )
+  await expect(client.mutate({mutation, variables: {username: usernameTooLong}})).rejects.toThrow(
+    /ClientError: Username .* does not validate/,
+  )
+  await expect(client.mutate({mutation, variables: {username: usernameBadChar}})).rejects.toThrow(
+    /ClientError: Username .* does not validate/,
+  )
 })
-
 
 test('changing username succeeds, then can use it to login in lowercase', async () => {
   const [client, , password] = await loginCache.getCleanLogin()
@@ -47,7 +48,6 @@ test('changing username succeeds, then can use it to login in lowercase', async 
   expect(resp).toHaveProperty('AuthenticationResult.IdToken')
 })
 
-
 test('collision on changing username fails, login username is not changed', async () => {
   const [ourClient, , ourPassword] = await loginCache.getCleanLogin()
   const [theirClient, , theirPassword] = await loginCache.getCleanLogin()
@@ -59,8 +59,9 @@ test('collision on changing username fails, login username is not changed', asyn
   await theirClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}})
 
   // try and fail setting user1's username to user2's
-  await expect(ourClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}}))
-    .rejects.toThrow(/ClientError: Username .* already taken /)
+  await expect(
+    ourClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}}),
+  ).rejects.toThrow(/ClientError: Username .* already taken /)
 
   // verify user1 can still login with their original username
   let AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}

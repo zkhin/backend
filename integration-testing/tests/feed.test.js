@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('When followed user adds/deletes a post, our feed reacts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -70,7 +69,6 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   expect(items[0].text).toBe(postText2)
 })
 
-
 test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -118,7 +116,6 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   items = resp.data.self.feed.items
   expect(items).toHaveLength(0)
 })
-
 
 test('When a private user accepts or denies our follow request, our feed reacts', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -180,7 +177,6 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   expect(resp.data.self.feed.items).toHaveLength(0)
 })
 
-
 test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow request, our feed reacts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -235,7 +231,6 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(items[1].image).toBeTruthy()
 })
 
-
 // waiting on a way to externally trigger the 'archive expired posts' cron job
 test.skip('Post that expires is removed from feed', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -264,9 +259,7 @@ test.skip('Post that expires is removed from feed', async () => {
   // that post should now have disappeared from our feed
   //resp = await ourClient.query({query: queries.selfFeed})
   //expect(resp.data.self.feed.items).toHaveLength(0)
-
 })
-
 
 test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctly', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -301,7 +294,6 @@ test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctl
   expect(resp.data.self.feed.items[0].postedBy.blockerStatus).toBe('SELF')
   expect(resp.data.self.feed.items[0].postedBy.followedStatus).toBe('SELF')
 })
-
 
 test('Feed privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

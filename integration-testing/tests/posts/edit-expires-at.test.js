@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -21,17 +21,16 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('Cant edit Post.expiresAt for post that do not exist', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const variables = {
     postId: uuidv4(),
     expiresAt: moment().add(moment.duration('P1D')).toISOString(),
   }
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
-    .rejects.toThrow(/ClientError: Post .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
+    /ClientError: Post .* does not exist/,
+  )
 })
-
 
 test('Cant edit Post.expiresAt for post that isnt ours', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -46,10 +45,10 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
 
   // we try to edit its expiresAt
   variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
-    .rejects.toThrow(/ClientError: Cannot edit another /)
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
+    /ClientError: Cannot edit another /,
+  )
 })
-
 
 test('Cant set Post.expiresAt to datetime in the past', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -63,10 +62,10 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
 
   // we try to edit its expiresAt to a date in the past
   variables = {postId, expiresAt: moment().subtract(moment.duration('PT1M')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
-    .rejects.toThrow(/ClientError: Cannot .* in the past/)
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
+    /ClientError: Cannot .* in the past/,
+  )
 })
-
 
 test('Cant edit Post.expiresAt if we are disabled', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -86,10 +85,10 @@ test('Cant edit Post.expiresAt if we are disabled', async () => {
 
   // verify we can't edit the expires at
   variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables}))
-    .rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
 })
-
 
 test('Cant set Post.expiresAt with datetime without timezone info', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -105,7 +104,6 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
   variables = {postId, expiresAt: '2019-01-01T01:01:01'}
   await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow('GraphQL error')
 })
-
 
 test('Add and remove expiresAt from a Post', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -150,7 +148,6 @@ test('Add and remove expiresAt from a Post', async () => {
   expect(resp.data.editPostExpiresAt.expiresAt).toBeNull()
 })
 
-
 test('Edit Post.expiresAt with UTC', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const postId = uuidv4()
@@ -183,7 +180,6 @@ test('Edit Post.expiresAt with UTC', async () => {
   expect(post.expiresAt).toBeTruthy()
   expect(moment(post.expiresAt).isSame(at)).toBe(true)
 })
-
 
 test('Edit Post.expiresAt with non-UTC', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -219,7 +215,6 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   expect(post.expiresAt).toBeTruthy()
   expect(moment(post.expiresAt).isSame(at)).toBe(true)
 })
-
 
 test('Adding and clearing Post.expiresAt removes and adds it to users stories', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -262,7 +257,6 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp.data.user.stories.items).toHaveLength(0)
 })
 
-
 test('Clearing Post.expiresAt removes from first followed stories', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -298,7 +292,6 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(0)
 })
-
 
 test('Changing Post.expiresAt is reflected in first followed stories', async () => {
   const [ourClient] = await loginCache.getCleanLogin()

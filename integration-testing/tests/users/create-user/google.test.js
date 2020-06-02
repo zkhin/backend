@@ -3,8 +3,7 @@
 const rp = require('request-promise-native')
 
 const cognito = require('../../../utils/cognito.js')
-const { mutations } = require('../../../schema')
-
+const {mutations} = require('../../../schema')
 
 /* Run me as a one-off, as you'll have to get a valid google id token
  * for our app. Can be generated from https://developers.google.com/oauthplayground/
@@ -13,7 +12,6 @@ const { mutations } = require('../../../schema')
  * is authorized to send to.
  */
 describe.skip('google user', () => {
-
   const googleIdToken = process.env.GOOGLE_ID_TOKEN
   if (googleIdToken === undefined) throw new Error('Env var GOOGLE_ID_TOKEN must be defined')
 
@@ -36,7 +34,7 @@ describe.skip('google user', () => {
       qs: {id_token: googleIdToken},
       json: true,
     })
-    expect(tokenInfo['email_verified']).toBe('true')  // it's a string... ?
+    expect(tokenInfo['email_verified']).toBe('true') // it's a string... ?
     const email = tokenInfo['email']
 
     // get and id and credentials from the identity pool

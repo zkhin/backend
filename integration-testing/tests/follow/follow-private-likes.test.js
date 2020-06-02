@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const misc = require('../../utils/misc.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -18,7 +18,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('When we stop following a private user, any likes of ours on their posts disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -88,7 +87,7 @@ test('When we stop following a private user, any likes of ours on their posts di
 
   resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.post).toBeNull()  // access denied
+  expect(resp.data.post).toBeNull() // access denied
 
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
@@ -98,7 +97,6 @@ test('When we stop following a private user, any likes of ours on their posts di
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.anonymouslyLikedPosts.items).toHaveLength(0)
 })
-
 
 test('When a private user decides to deny our following, any likes of ours on their posts disappear', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()

@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -13,8 +13,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
-test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async() => {
+test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 

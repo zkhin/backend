@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito.js')
 const misc = require('../utils/misc.js')
-const { mutations, queries } = require('../schema')
+const {mutations, queries} = require('../schema')
 
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -17,7 +17,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 // Use of selfFeed is arbitrary, could use any paginated list query
 test('Paginated list limits', async () => {
@@ -45,7 +44,6 @@ test('Paginated list limits', async () => {
   expect(resp.data.self.feed.items).toHaveLength(0)
 })
 
-
 // Use of comments is arbitrary, could use any paginated list query
 test('Paginated list default', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
@@ -58,7 +56,7 @@ test('Paginated list default', async () => {
 
   // add 21 comments to the post
   let commentId
-  for (let i=0; i < 21; i++) {
+  for (let i = 0; i < 21; i++) {
     commentId = uuidv4()
     resp = await ourClient.mutate({mutation: mutations.addComment, variables: {postId, commentId, text: 't'}})
     expect(resp.errors).toBeUndefined()

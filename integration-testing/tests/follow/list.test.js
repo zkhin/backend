@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -15,7 +15,6 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-
 test('getFollowe[d|r]Users cant request NOT_FOLLOWING', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   let variables = {userId: ourUserId, followStatus: 'NOT_FOLLOWING'}
@@ -26,7 +25,6 @@ test('getFollowe[d|r]Users cant request NOT_FOLLOWING', async () => {
   expect(resp.errors.length).toBeTruthy()
   expect(resp.data.user.followerUsers).toBeNull()
 })
-
 
 test('getFollowe[d|r]Users queries respond correctly for each followStatus', async () => {
   // two new private users
@@ -197,7 +195,6 @@ test('getFollowe[d|r]Users queries respond correctly for each followStatus', asy
   expect(resp.data.self.followerUsers.items[0].userId).toBe(ourUserId)
 })
 
-
 test('Get Followe[d|r] Users order', async () => {
   // us and three others
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -244,7 +241,6 @@ test('Get Followe[d|r] Users order', async () => {
   expect(resp.data.self.followerUsers.items[2].userId).toBe(other1UserId)
 })
 
-
 test('getFollowe[d|r]Users queries only allow followStatus FOLLOWING when querying about other users', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [, userId] = await loginCache.getCleanLogin()
@@ -280,7 +276,6 @@ test('getFollowe[d|r]Users queries only allow followStatus FOLLOWING when queryi
   expect(resp.errors.length).toBeTruthy()
   expect(resp.data.user.followerUsers).toBeNull()
 })
-
 
 test('getFollowe[d|r]Users queries correctly hide responses when querying about other private users', async () => {
   // another private user, don't follow them yet

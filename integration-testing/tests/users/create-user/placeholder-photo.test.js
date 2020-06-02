@@ -6,7 +6,7 @@ const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
-const { mutations, queries } = require('../../../schema')
+const {mutations, queries} = require('../../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -19,7 +19,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 // expects the placeholder photos directory in the REAL-Themes bucket *not* to be set up
 test('Mutation.createCognitoOnlyUser with no placeholder photos in bucket fails softly', async () => {
@@ -34,7 +33,6 @@ test('Mutation.createCognitoOnlyUser with no placeholder photos in bucket fails 
   expect(resp['data']['self']['userId']).toBe(userId)
   expect(resp['data']['self']['photo']).toBeNull()
 })
-
 
 /* This test expects the placeholder photos directory in the REAL-Themes bucket
  * to be set up with exactly one placeholder photo */

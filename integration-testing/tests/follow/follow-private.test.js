@@ -1,7 +1,7 @@
 /* eslint-env jest */
 
 const cognito = require('../../utils/cognito.js')
-const { mutations, queries } = require('../../schema')
+const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -13,7 +13,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
 
 test('Follow a private user - approved', async () => {
   // us and a private user
@@ -51,7 +50,6 @@ test('Follow a private user - approved', async () => {
   expect(resp.data.user.followerStatus).toBe('FOLLOWING')
 })
 
-
 test('Follow a private user - denied', async () => {
   // us and a private user
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -79,7 +77,6 @@ test('Follow a private user - denied', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerStatus).toBe('DENIED')
 })
-
 
 test('Deny & then approve a preivously approved follow request', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
@@ -117,8 +114,7 @@ test('Deny & then approve a preivously approved follow request', async () => {
   expect(resp.data.user.followerStatus).toBe('FOLLOWING')
 })
 
-
-test('Cancelling follow requests', async() => {
+test('Cancelling follow requests', async () => {
   // us and a private user
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
@@ -158,8 +154,9 @@ test('Cancelling follow requests', async() => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
   // we cannot unfollow them
-  await expect(ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}))
-    .rejects.toThrow(/ClientError: .* has status `DENIED`$/)
+  await expect(
+    ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* has status `DENIED`$/)
   // they accept the follow request
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
   expect(resp.errors).toBeUndefined()
@@ -169,7 +166,6 @@ test('Cancelling follow requests', async() => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 })
-
 
 test('Private user changing to public has follow requests taken care of', async () => {
   // new user for us, make us private
