@@ -16,9 +16,9 @@
   integrity sha512-AoeIEJn8vt+d/6+PXDRPaksYhnlbMIiejioBZvvMQsOjW/JYK6k/0dKnvvP3EhK5GfMBWDPtrxRtegWdAcdq9Q==
 
 "@babel/runtime@^7.9.2":
-  version "7.9.6"
-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.9.6.tgz#a9102eb5cadedf3f31d08a9ecf294af7827ea29f"
-  integrity sha512-64AF1xY3OAkFHqOb9s4jpgk1Mm5vDZ4L3acHvAml+53nO1XbXLuDodsVpO4OIUsmemlUHMxNdYMNJmsvOwLrvQ==
+  version "7.10.2"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.10.2.tgz#d103f21f2602497d38348a32e008637d506db839"
+  integrity sha512-6sF3uQw2ivImfVIl62RZ7MXhO2tap69WeWK57vAaimT6AZbE4FbqjdEJIN1UqoD6wI6B+1n9UiagafH1sxjOtg==
   dependencies:
     regenerator-runtime "^0.13.4"
 
@@ -502,7 +502,22 @@ aws-info@^1.0.0:
   resolved "https://registry.yarnpkg.com/aws-info/-/aws-info-1.0.0.tgz#2727d2417068169a1fe77658106e54e15e30763b"
   integrity sha512-xhZfilnREzSwcaU/jXrfnTSY+1soseElFlkVuN0yWJnRtafH3gACXkd3vXddFgt3GvQxQ0d2g+gBtuZHoA7sZA==
 
-aws-sdk@^2.404.0, aws-sdk@^2.610.0:
+aws-sdk@^2.404.0:
+  version "2.687.0"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.687.0.tgz#664019f43a697b9697a5b90789a5ecbbb9e2b90f"
+  integrity sha512-gUIL4YXWdg3dv1QJMs0PCLpaHRe4DtPIYgRh3PPLJHnbIETLQdiA98co6qthAXIIWKx2hET4d1BhnAlAp77zQw==
+  dependencies:
+    buffer "4.9.2"
+    events "1.1.1"
+    ieee754 "1.1.13"
+    jmespath "0.15.0"
+    querystring "0.2.0"
+    sax "1.2.1"
+    url "0.10.3"
+    uuid "3.3.2"
+    xml2js "0.4.19"
+
+aws-sdk@^2.610.0:
   version "2.683.0"
   resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.683.0.tgz#c374374a443790a9520b1b00a3f0d42085c42891"
   integrity sha512-mi1175pJMbQhCWhBEQ5ccQ3SDE+SJzbapuAQtcb7tdLLV7dPKf4zQXhpqK1uG0dysm8NhsNtgxwA2diYOKWlTg==
@@ -647,6 +662,15 @@ buffer@4.9.1:
   version "4.9.1"
   resolved "https://registry.yarnpkg.com/buffer/-/buffer-4.9.1.tgz#6d1bb601b07a4efced97094132093027c95bc298"
   integrity sha1-bRu2AbB6TvztlwlBMgkwJ8lbwpg=
+  dependencies:
+    base64-js "^1.0.2"
+    ieee754 "^1.1.4"
+    isarray "^1.0.0"
+
+buffer@4.9.2:
+  version "4.9.2"
+  resolved "https://registry.yarnpkg.com/buffer/-/buffer-4.9.2.tgz#230ead344002988644841ab0244af8c44bbe3ef8"
+  integrity sha512-xq+q3SRMOxGivLhBNaUdC64hDTQwejJ+H0T/NB1XMtTVEwNTrfFF3gAxiyW0Bu/xWEGhjVKgUcMhCrUy2+uCWg==
   dependencies:
     base64-js "^1.0.2"
     ieee754 "^1.1.4"
@@ -2110,17 +2134,17 @@ graphlib@^2.1.1, graphlib@^2.1.7:
   dependencies:
     lodash "^4.17.15"
 
-graphql-playground-html@1.6.15:
-  version "1.6.15"
-  resolved "https://registry.yarnpkg.com/graphql-playground-html/-/graphql-playground-html-1.6.15.tgz#f86e8d9c027a046e113746913c3e96429f991e2c"
-  integrity sha512-yRTKAOybHD6Lcb2/u4jkSkBzcz+Ppje8NmQuA0jn8Ou9T44qjm4vVwqkOW5ciugR/t4s5NilaWgvdbPMocfS6g==
+graphql-playground-html@1.6.19:
+  version "1.6.19"
+  resolved "https://registry.yarnpkg.com/graphql-playground-html/-/graphql-playground-html-1.6.19.tgz#3883ecf5e8c18b3c0f08145b5417b9c01a1f0bef"
+  integrity sha512-cLAqoOlxHbGj/LBpr4l2BE9qXf3g8ShjQqU2daVueITI/3wIkcDQTaQaQp+HWv0uaX0dCsgMCFW/TooLj8yJOg==
 
 graphql-playground-middleware-koa@^1.6.4:
-  version "1.6.13"
-  resolved "https://registry.yarnpkg.com/graphql-playground-middleware-koa/-/graphql-playground-middleware-koa-1.6.13.tgz#5aff6c0c50b98905047539ee5b7fef5c414ed090"
-  integrity sha512-AVuwR/GIL7PKquZFssWYeuGBHOicyxNJiwqATKkv7CKO5jwgZDKQXezYcMV8vLFLeZ1kjaJOLi97Z18tK+xk/g==
+  version "1.6.14"
+  resolved "https://registry.yarnpkg.com/graphql-playground-middleware-koa/-/graphql-playground-middleware-koa-1.6.14.tgz#f60d45ff7013c831821999bbe1e8736ef66bc7a4"
+  integrity sha512-8jwWuVoGo+53IGGO8W0csZvHjlFxoBk29mmxVbp3wvSPV76mMnTbMMRtGSuekEQhHiWQHjbDLNsNM0Yo0Dl6NQ==
   dependencies:
-    graphql-playground-html "1.6.15"
+    graphql-playground-html "1.6.19"
 
 graphql-tools@5.0.0:
   version "5.0.0"
@@ -3816,9 +3840,10 @@ semver@^7.3.2:
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.3.2.tgz#604962b052b81ed0786aae84389ffba70ffd3938"
   integrity sha512-OrOb32TeeambH6UrhtShmF7CRDqhL6/5XpPNp2DuRH6+9QLw/orhp72j87v8Qa1ScDkvrrBNpZcDejAirJmfXQ==
 
-"serverless-appsync-plugin@git+https://github.com/mfogel/serverless-appsync-plugin.git#0e37152":
-  version "1.2.0"
-  resolved "git+https://github.com/mfogel/serverless-appsync-plugin.git#0e37152bceac5b0817e7209bd56076cbe2841c6f"
+serverless-appsync-plugin@^1.3.1:
+  version "1.3.1"
+  resolved "https://registry.yarnpkg.com/serverless-appsync-plugin/-/serverless-appsync-plugin-1.3.1.tgz#70a2e2f97fba422f3098e91f99ffb83d932da6b5"
+  integrity sha512-BtfY5y6HvviEOpX/Wo3I01bI/xg+3hire3wNZ2dbiVCWWYJF7Q+Ztq5cmce3m6vvlsf2qE9lhTmzZY3171k2aw==
   dependencies:
     aws-sdk "^2.404.0"
     chalk "^2.4.2"
