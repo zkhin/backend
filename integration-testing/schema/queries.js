@@ -200,7 +200,12 @@ module.exports.searchUsers = gql`
 `
 
 module.exports.post = gql`
-  query Post($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
+  query Post(
+    $postId: ID!
+    $onymouslyLikedByLimit: Int
+    $commentsReverse: Boolean
+    $commentsViewedStatus: ViewedStatus
+  ) {
     post(postId: $postId) {
       postId
       postType
@@ -239,7 +244,7 @@ module.exports.post = gql`
       commentsDisabled
       commentCount
       comments(reverse: $commentsReverse) {
-        items {
+        items(viewedStatus: $commentsViewedStatus) {
           ...CommentFragment
         }
       }

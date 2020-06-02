@@ -637,7 +637,7 @@ type Post {
 }
 
 type PaginatedPosts {
-  # If `viewedStatus` is non-null, posts will be filtered down to just those with that `viewedStatus`
+  # set `viewedStatus` to filter down `items` server-side
   items(viewedStatus: ViewedStatus): [Post!]!
   nextToken: String
 }
@@ -681,7 +681,8 @@ type Comment {
 }
 
 type PaginatedComments {
-  items: [Comment!]!
+  # set `viewedStatus` to filter down `items` server-side
+  items(viewedStatus: ViewedStatus): [Comment!]!
   nextToken: String
 }
 
