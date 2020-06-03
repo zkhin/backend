@@ -95,7 +95,7 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   // we follow them, and those two posts show up in our feed
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'FOLLOWING')
+  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.errors).toBeUndefined()
   items = resp.data.self.feed.items
@@ -110,7 +110,7 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   // we unfollow them, and those two posts disappear from our feed
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.unfollowUser.followedStatus == 'NOT_FOLLOWING')
+  expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.errors).toBeUndefined()
   items = resp.data.self.feed.items
@@ -148,7 +148,7 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   // we request to follow them, our feed does not react
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'REQUESTED')
+  expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.feed.items).toHaveLength(0)
@@ -156,7 +156,7 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   // they accept our follow request, and those two posts show up in our feed
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.acceptFollowerUser.followerStatus == 'FOLLOWING')
+  expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.errors).toBeUndefined()
   const items = resp.data.self.feed.items
@@ -171,7 +171,7 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   // they change their mind and deny the request, and those two posts disapear from our feed
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.denyFollowerUser.followerStatus == 'DENIED')
+  expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.feed.items).toHaveLength(0)
@@ -208,7 +208,7 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   // we request to follow them, our feed does not react
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'REQUESTED')
+  expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.feed.items).toHaveLength(0)
@@ -239,7 +239,7 @@ test.skip('Post that expires is removed from feed', async () => {
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'FOLLOWING')
+  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add a post that expires in a millisecond
   const postId = uuidv4()

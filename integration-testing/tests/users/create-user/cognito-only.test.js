@@ -149,7 +149,7 @@ describe('cognito-only user', () => {
       expect(resp['data']['createCognitoOnlyUser']['fullName']).toBeNull()
     })
 
-    test('Mutation.createCognitoOnlyUser handles empty string fullName', async () => {
+    test('Mutation.createCognitoOnlyUser handles fullName', async () => {
       // pick a valid full name, verify we can sign up with it
       const username = cognito.generateUsername()
       const fullName = 'Hunter S'

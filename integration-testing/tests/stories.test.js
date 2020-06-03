@@ -30,7 +30,7 @@ test('Posts that are not within a day of expiring do not show up as a stories', 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'FOLLOWING')
+  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add two posts that are not close to expiring
   const [postId1, postId2] = [uuidv4(), uuidv4()]
@@ -65,7 +65,7 @@ test('Add a post that shows up as story', async () => {
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'FOLLOWING')
+  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add a post that expires in a day
   const postId = uuidv4()
@@ -285,7 +285,7 @@ test.skip('Post that expires is removed from stories', async () => {
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'FOLLOWING')
+  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add a post that expires in a millisecond
   const postId = uuidv4()
@@ -322,7 +322,7 @@ test('Post that is archived is removed from stories', async () => {
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.followUser.followedStatus == 'FOLLOWING')
+  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add a post that expires in an hour
   const postId = uuidv4()

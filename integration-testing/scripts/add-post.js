@@ -184,12 +184,11 @@ prmt.get(prmtSchema, async (err, result) => {
     process.stdout.write(' done.\n')
 
     process.stdout.write('Waiting for upload to be processed...')
-    while (true) {
-      resp = await appsyncClient.query({query: getPost, variables: {postId}})
-      if (!['PENDING', 'PROCESSING'].includes(resp.data.post.postStatus)) break
+    do {
       await new Promise((resolve) => setTimeout(resolve, 1000)) // sleep one second
       process.stdout.write('.')
-    }
+      resp = await appsyncClient.query({query: getPost, variables: {postId}})
+    } while (['PENDING', 'PROCESSING'].includes(resp.data.post.postStatus))
     process.stdout.write(' done.\n')
   }
 

@@ -250,7 +250,7 @@ test('Can filter comments by viewedStatus', async () => {
 
   // we add a post
   const postId = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postedBy.userId).toBe(ourUserId)
@@ -258,7 +258,6 @@ test('Can filter comments by viewedStatus', async () => {
   // they comment on our post, twice
   const [commentId1, commentId2] = [uuidv4(), uuidv4()]
   const vars = {postId, text: 'lore'}
-  let variables = {commentId: commentId1, postId, text: 'lore'}
   resp = await theirClient.mutate({mutation: mutations.addComment, variables: {...vars, commentId: commentId1}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId1)
@@ -270,7 +269,6 @@ test('Can filter comments by viewedStatus', async () => {
 
   // we comment on our post
   const commentId3 = uuidv4()
-  variables = {commentId: commentId2, postId, text: 'lore'}
   resp = await ourClient.mutate({mutation: mutations.addComment, variables: {...vars, commentId: commentId3}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId3)
