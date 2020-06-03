@@ -1,0 +1,5 @@
+[flake8]
+# we just use flake8 as a wrapper around pyflakes
+# pyflakes provides linting for us. For style checking we use black.
+select=F
+extend-exclude=node_modules

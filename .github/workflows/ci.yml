@@ -61,20 +61,26 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: Install black
-      run: pip install black
+    - name: Install black, flake8 (for pyflakes)
+      run: pip install black flake8
 
-    - name: Lint real-auth with black
+    - name: Lint real-auth
       working-directory: real-auth
-      run: black --check --diff .
+      run: |
+        black --check --diff .
+        flake8 .
 
-    - name: Lint real-cloudfront with black
+    - name: Lint real-cloudfront
       working-directory: real-cloudfront
-      run: black --check --diff .
+      run: |
+        black --check --diff .
+        flake8 .
 
-    - name: Lint real-main with black
+    - name: Lint real-main
       working-directory: real-main
-      run: black --check --diff .
+      run: |
+        black --check --diff .
+        flake8 .
 
   javascript-lint:
     runs-on: ubuntu-latest

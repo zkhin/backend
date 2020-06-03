@@ -17,6 +17,8 @@ Installed on your system you will need `nodejs12`, `yarn`, `python3.8`, `poetry`
 
 In each of the stack root directories, run `yarn install` to install serverless and required plugins.
 
+To lint python files you will need `black` and `flake8` installed globally.
+
 ## Deployment
 
 To deploy each serverless stack, run `yarn deploy` in that stack's root directory.
@@ -24,7 +26,6 @@ To deploy each serverless stack, run `yarn deploy` in that stack's root director
 ### AWS Credentials
 
 By default, serverless will use aws credentials stored in the profile with name `real-{stage}` (ie: `real-dev`, `real-staging`, or `real-production`). This behavior can be overridden by using the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option.
-
 
 Serverless expects the AWS credentials to have `AdministratorAccess` policy attached.
 
