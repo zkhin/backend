@@ -107,7 +107,7 @@ def test_create_cognito_user_with_email_and_phone(user_manager, cognito_client):
     phone = '+123'
 
     # frontend does this part out-of-band: creates the user in cognito with verified email and phone
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id,
         UserAttributes=[
@@ -148,7 +148,7 @@ def test_create_cognito_user_with_non_verified_email_and_phone(user_manager, cog
     phone = '+123'
 
     # frontend does this part out-of-band: creates the user in cognito with unverified email and phone
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id,
         UserAttributes=[
@@ -183,13 +183,13 @@ def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user
     username_2 = cognito_only_user1.username.lower()
 
     # frontend does this part out-of-band: creates the user in cognito, no preferred_username
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
 
     # moto doesn't seem to honor the 'make preferred usernames unique' setting (using it as an alias)
     # so mock it's response like to simulate that it does
-    exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
+    exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user_manager.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
@@ -204,7 +204,7 @@ def test_create_cognito_only_user_username_released_if_user_not_found_in_user_po
     user_id_1 = 'my-user-id-1'
     user_id_2 = 'my-user-id-2'
     username = 'myUsername'
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id_2,
         MessageAction='SUPPRESS',
@@ -295,15 +295,15 @@ def test_create_facebook_user_success(user_manager, real_user):
 
 def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
     # configure cognito to respond as if username is already taken
-    exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
+    exception = user_manager.cognito_client.user_pool_client.exceptions.UsernameExistsException({}, None)
+    user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
 
     # configure cognito to respond as if email is already taken
-    exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
+    exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
+    user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
@@ -349,15 +349,15 @@ def test_create_google_user_success(user_manager, real_user):
 def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
 
     # configure cognito to respond as if username is already taken
-    exception = user_manager.cognito_client.boto_client.exceptions.UsernameExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
+    exception = user_manager.cognito_client.user_pool_client.exceptions.UsernameExistsException({}, None)
+    user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
     # configure cognito to respond as if email is already taken
-    exception = user_manager.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
-    user_manager.cognito_client.boto_client.admin_create_user = mock.Mock(side_effect=exception)
+    exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
+    user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')

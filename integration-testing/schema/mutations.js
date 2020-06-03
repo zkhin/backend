@@ -166,6 +166,16 @@ module.exports.disableUser = gql`
   }
 `
 
+module.exports.deleteUser = gql`
+  mutation DisableUser {
+    deleteUser {
+      userId
+      username
+      userStatus
+    }
+  }
+`
+
 module.exports.resetUser = gql`
   mutation ResetUser($newUsername: String) {
     resetUser(newUsername: $newUsername) {

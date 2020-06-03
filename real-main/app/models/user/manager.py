@@ -34,8 +34,13 @@ class UserManager:
     def __init__(self, clients, managers=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY):
         managers = managers or {}
         managers['user'] = self
+        self.album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
+        self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
+        self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
+        self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
@@ -66,8 +71,13 @@ class UserManager:
 
     def init_user(self, user_item):
         kwargs = {
+            'album_manager': getattr(self, 'album_manager', None),
             'block_manager': getattr(self, 'block_manager', None),
+            'card_manager': getattr(self, 'card_manager', None),
+            'chat_manager': getattr(self, 'chat_manager', None),
+            'comment_manager': getattr(self, 'comment_manager', None),
             'follow_manager': getattr(self, 'follow_manager', None),
+            'like_manager': getattr(self, 'like_manager', None),
             'post_manager': getattr(self, 'post_manager', None),
             'trending_manager': getattr(self, 'trending_manager', None),
         }
@@ -91,7 +101,7 @@ class UserManager:
 
         try:
             attrs = self.cognito_client.get_user_attributes(user_id)
-        except self.cognito_client.boto_client.exceptions.UserNotFoundException:
+        except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
             raise self.exceptions.UserValidationException(
                 f'No entry found in cognito user pool with cognito username `{user_id}`'
             )
@@ -105,7 +115,7 @@ class UserManager:
         # this is part of allowing case-insensitive logins
         try:
             self.cognito_client.set_user_attributes(user_id, {'preferred_username': username.lower()})
-        except self.cognito_client.boto_client.exceptions.AliasExistsException:
+        except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
             raise self.exceptions.UserValidationException(
                 f'Username `{username}` already taken (case-insensitive comparison)'
             )
@@ -145,8 +155,8 @@ class UserManager:
                 user_id, cognito_id_token=cognito_id_token, facebook_access_token=facebook_access_token
             )
         except (
-            self.cognito_client.boto_client.exceptions.AliasExistsException,
-            self.cognito_client.boto_client.exceptions.UsernameExistsException,
+            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+            self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
         ):
             raise self.exceptions.UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
@@ -181,8 +191,8 @@ class UserManager:
                 user_id, cognito_id_token=cognito_id_token, google_id_token=google_id_token
             )
         except (
-            self.cognito_client.boto_client.exceptions.AliasExistsException,
-            self.cognito_client.boto_client.exceptions.UsernameExistsException,
+            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+            self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
         ):
             raise self.exceptions.UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'

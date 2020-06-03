@@ -506,3 +506,66 @@ test('Can reset a disabled user', async () => {
   expect(resp.errors).toHaveLength(1)
   expect(resp.errors[0].message).toBe('User does not exist')
 })
+
+test('Delete a user', async () => {
+  const [ourClient, ourUserId] = await cognito.getAppSyncLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // check we can query ok
+  let resp = await ourClient.query({query: queries.self})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.self.userId).toBe(ourUserId)
+  expect(resp.data.self.userStatus).toBe('ACTIVE')
+
+  // delete ourselves
+  resp = await ourClient.mutate({mutation: mutations.deleteUser})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.deleteUser.userId).toBe(ourUserId)
+  expect(resp.data.deleteUser.userStatus).toBe('DELETING')
+
+  // check we no longer exist (but our GQL creds can't be revoked)
+  await ourClient.clearStore()
+  resp = await ourClient.query({query: queries.self})
+  expect(resp.errors).toHaveLength(1)
+  expect(resp.errors[0]['message']).toBe('User does not exist')
+  expect(resp.data).toBeNull()
+
+  // check another user sees us gone
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.user).toBeNull()
+})
+
+test('Delete a user disabled user', async () => {
+  const [ourClient, ourUserId] = await cognito.getAppSyncLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // check we can query ok
+  let resp = await ourClient.query({query: queries.self})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.self.userId).toBe(ourUserId)
+  expect(resp.data.self.userStatus).toBe('ACTIVE')
+
+  // disable ourselves
+  resp = await ourClient.mutate({mutation: mutations.disableUser})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.disableUser.userId).toBe(ourUserId)
+  expect(resp.data.disableUser.userStatus).toBe('DISABLED')
+
+  // check another user sees that status
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.user.userId).toBe(ourUserId)
+  expect(resp.data.user.userStatus).toBe('DISABLED')
+
+  // delete ourselves
+  resp = await ourClient.mutate({mutation: mutations.deleteUser})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.deleteUser.userId).toBe(ourUserId)
+  expect(resp.data.deleteUser.userStatus).toBe('DELETING')
+
+  // check another user sees us gone
+  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.user).toBeNull()
+})

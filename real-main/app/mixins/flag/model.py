@@ -1,7 +1,5 @@
 import logging
 
-from app.models.user.enums import UserStatus
-
 from . import enums, exceptions
 
 logger = logging.getLogger()
@@ -54,7 +52,7 @@ class FlagModelMixin:
             self.user.refresh_item(strongly_consistent=True)
             if self.is_user_forced_disabling_criteria_met():
                 logger.warning(f'Force disabling user `{self.user.id}`')
-                self.user.set_user_status(UserStatus.DISABLED)
+                self.user.disable()
                 # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
                 logger.warning(f'USER_FORCE_DISABLED: user `{self.user.id}` with username `{self.user.username}`')
 

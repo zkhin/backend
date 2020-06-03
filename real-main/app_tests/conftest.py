@@ -78,15 +78,16 @@ def cognito_client():
     with moto.mock_cognitoidp():
         # https://github.com/spulec/moto/blob/80b64f9b3ff5/tests/test_cognitoidp/test_cognitoidp.py#L1133
         cognito_client = clients.CognitoClient('dummy', 'dummy')
-        cognito_client.user_pool_id = cognito_client.boto_client.create_user_pool(
+        cognito_client.user_pool_id = cognito_client.user_pool_client.create_user_pool(
             PoolName=str(uuid.uuid4()),
             AliasAttributes=['phone_number', 'email', 'preferred_username'],  # seems moto doesn't enforce uniqueness
         )['UserPool']['Id']
-        cognito_client.client_id = cognito_client.boto_client.create_user_pool_client(
+        cognito_client.client_id = cognito_client.user_pool_client.create_user_pool_client(
             UserPoolId=cognito_client.user_pool_id,
             ClientName=str(uuid.uuid4()),
             ReadAttributes=['email', 'phone_number'],
         )['UserPoolClient']['ClientId']
+        cognito_client.identity_pool_client = mock.Mock(cognito_client.identity_pool_client)
         yield cognito_client
 
 

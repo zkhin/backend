@@ -33,8 +33,13 @@ class User:
         self,
         user_item,
         clients,
+        album_manager=None,
         block_manager=None,
+        card_manager=None,
+        chat_manager=None,
+        comment_manager=None,
         follow_manager=None,
+        like_manager=None,
         trending_manager=None,
         post_manager=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
@@ -46,10 +51,20 @@ class User:
                 setattr(self, f'{client_name}_client', clients[client_name])
         if 'dynamo' in clients:
             self.dynamo = UserDynamo(clients['dynamo'])
+        if album_manager:
+            self.album_manager = album_manager
         if block_manager:
             self.block_manager = block_manager
+        if card_manager:
+            self.card_manager = card_manager
+        if chat_manager:
+            self.chat_manager = chat_manager
+        if comment_manager:
+            self.comment_manager = comment_manager
         if follow_manager:
             self.follow_manager = follow_manager
+        if like_manager:
+            self.like_manager = like_manager
         if post_manager:
             self.post_manager = post_manager
         if trending_manager:
@@ -112,15 +127,81 @@ class User:
         return self
 
     def serialize(self, caller_user_id):
+        assert self.item
         resp = self.item.copy()
         resp['blockerStatus'] = self.block_manager.get_block_status(self.id, caller_user_id)
         resp['followedStatus'] = self.follow_manager.get_follow_status(caller_user_id, self.id)
         return resp
 
-    def set_user_status(self, status):
-        if status == self.item.get('userStatus', UserStatus.ACTIVE):
-            return self
-        self.item = self.dynamo.set_user_status(self.id, status)
+    def enable(self):
+        if self.status == UserStatus.ACTIVE:
+            pass
+        elif self.status == UserStatus.DISABLED:
+            self.item = self.dynamo.set_user_status(self.id, UserStatus.ACTIVE)
+        elif self.status == UserStatus.DELETING:
+            raise exceptions.UserException(f'Cannot enable user `{self.id}` in status `{self.status}`')
+        else:
+            raise Exception(f'Unrecognized user status `{self.status}`')
+        return self
+
+    def disable(self):
+        if self.status == UserStatus.ACTIVE:
+            self.item = self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
+        elif self.status == UserStatus.DISABLED:
+            pass
+        elif self.status == UserStatus.DELETING:
+            raise exceptions.UserException(f'Cannot disable user `{self.id}` in status `{self.status}`')
+        else:
+            raise Exception(f'Unrecognized user status `{self.status}`')
+        return self
+
+    def delete(self, skip_cognito=False):
+        if self.status != UserStatus.DELETING:
+            self.item = self.dynamo.set_user_status(self.id, UserStatus.DELETING)
+
+        # for REQUESTED and DENIED, just delete them
+        # for FOLLOWING, unfollow so that the other user's counts remain correct
+        self.follow_manager.reset_followed_items(self.id)
+        self.follow_manager.reset_follower_items(self.id)
+
+        # unflag everything we've flagged
+        self.post_manager.unflag_all_by_user(self.id)
+        self.comment_manager.unflag_all_by_user(self.id)
+
+        # delete all our likes & comments & albums & posts
+        self.like_manager.dislike_all_by_user(self.id)
+        self.comment_manager.delete_all_by_user(self.id)
+        self.album_manager.delete_all_by_user(self.id)
+        self.post_manager.delete_all_by_user(self.id)
+
+        # delete any cards we have
+        self.card_manager.truncate_cards(self.id)
+
+        # remove all blocks of and by us
+        self.block_manager.unblock_all_blocks(self.id)
+
+        # leave all chats we are part of (auto-deletes direct & solo chats)
+        self.chat_manager.leave_all_chats(self.id)
+
+        # remove our trending item, if it's there
+        self.trending_manager.dynamo.delete_trending(self.id)
+
+        # delete current and old profile photos
+        self.clear_photo_s3_objects()
+
+        # delete our own profile. Leave our stale item around so we can serialize
+        self.dynamo.delete_user(self.id)
+
+        if skip_cognito:
+            # release our preferred_username from cognito
+            try:
+                self.cognito_client.clear_user_attribute(self.id, 'preferred_username')
+            except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
+                logger.warning(f'No cognito user pool entry found when deleting user `{self.id}`')
+        else:
+            self.cognito_client.delete_user_pool_entry(self.id)
+            self.cognito_client.delete_identity_pool_entry(self.id)
+
         return self
 
     def set_accepted_eula_version(self, version):
@@ -159,7 +240,7 @@ class User:
         self.validate.username(username)
         try:
             self.cognito_client.set_user_attributes(self.id, {'preferred_username': username.lower()})
-        except self.cognito_client.boto_client.exceptions.AliasExistsException:
+        except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
             raise exceptions.UserValidationException(f'Username `{username}` already taken (case-insensitive cmp)')
 
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
@@ -227,29 +308,6 @@ class User:
         photo_dir_prefix = '/'.join([self.id, 'profile-photo', ''])
         self.s3_uploads_client.delete_objects_with_prefix(photo_dir_prefix)
 
-    def delete(self):
-        """
-        Delete the user item and resources it directly owns (ie profile photo) from stateful services.
-        Return the dynamo item as it was before the delete.
-        """
-        # remove our trending item, if it's there
-        self.trending_manager.dynamo.delete_trending(self.id)
-
-        # delete current and old profile photos
-        self.clear_photo_s3_objects()
-
-        # release our preferred_username from cognito
-        try:
-            self.cognito_client.clear_user_attribute(self.id, 'preferred_username')
-        except self.cognito_client.boto_client.exceptions.UserNotFoundException:
-            logger.warning(f'No cognito user pool entry found when deleting user `{self.id}`')
-
-        # delete our own profile
-        item = self.dynamo.delete_user(self.id)
-        self.item = None
-        self.id = None
-        return item
-
     def start_change_contact_attribute(self, attribute_name, attribute_value):
         assert attribute_name in CONTACT_ATTRIBUTE_NAMES
         names = CONTACT_ATTRIBUTE_NAMES[attribute_name]
@@ -290,7 +348,7 @@ class User:
         # try to do the validation
         try:
             self.cognito_client.verify_user_attribute(access_token, names['cognito'], verification_code)
-        except self.cognito_client.boto_client.exceptions.CodeMismatchException:
+        except self.cognito_client.user_pool_client.exceptions.CodeMismatchException:
             raise exceptions.UserVerificationException('Verification code is invalid')
 
         # success, update cognito, dynamo, then delete the temporary attribute in cognito

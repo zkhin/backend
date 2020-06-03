@@ -50,6 +50,10 @@ provider:
       Resource: arn:aws:cognito-idp:*:*:*
     - Effect: Allow
       Action:
+        - cognito-identity:DeleteIdentities
+      Resource: arn:aws:cognito-identity:*:*:*
+    - Effect: Allow
+      Action:
         - dynamodb:*
       Resource:
         - !GetAtt DynamoDbTable.Arn

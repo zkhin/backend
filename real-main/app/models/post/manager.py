@@ -253,3 +253,7 @@ class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             logger.warning(f'Deleting expired post with pk ({post_pk["partitionKey"]}, {post_pk["sortKey"]})')
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
+
+    def delete_all_by_user(self, user_id):
+        for post_item in self.dynamo.generate_posts_by_user(user_id):
+            self.init_post(post_item).delete()

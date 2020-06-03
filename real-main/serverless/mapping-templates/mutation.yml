@@ -53,6 +53,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: deleteUser
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: setUserDetails
   dataSource: LambdaDataSource
   request: Lambda.request.vtl

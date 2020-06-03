@@ -5,7 +5,6 @@ import pytest
 
 from app.models.follow.enums import FollowStatus
 from app.models.user.enums import UserStatus
-from app.utils import image_size
 
 
 @pytest.fixture
@@ -33,7 +32,7 @@ def user3(user_manager, cognito_client):
 def user_verified_phone(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     phone = '+12125551212'
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id,
         MessageAction='SUPPRESS',
@@ -94,7 +93,7 @@ def test_cant_update_username_to_one_already_taken(user, user2):
     assert user2.item['username'] == username.lower()
 
     # mock out the cognito backend so it behaves like the real thing
-    exception = user.cognito_client.boto_client.exceptions.AliasExistsException({}, None)
+    exception = user.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
 
     # verify we can't update to that username
@@ -172,26 +171,37 @@ def test_delete_all_details(user):
     assert 'viewCountsHidden' not in user.item
 
 
-def test_get_set_user_status(user):
+def test_disable_enable_user_status(user):
     assert user.status == UserStatus.ACTIVE
     assert 'userStatus' not in user.item
 
     # no op
-    user.set_user_status(UserStatus.ACTIVE)
+    user.enable()
     assert user.status == UserStatus.ACTIVE
 
-    # change it
-    user.set_user_status(UserStatus.DELETING)
-    assert user.status == UserStatus.DELETING
-    assert user.item['userStatus'] == UserStatus.DELETING
+    # disable user
+    user.disable()
+    assert user.status == UserStatus.DISABLED
+    assert user.refresh_item().status == UserStatus.DISABLED
 
-    # change it again
-    user.set_user_status(UserStatus.DISABLED)
+    # no op
+    user.disable()
     assert user.status == UserStatus.DISABLED
 
-    # change it back
-    user.set_user_status(UserStatus.ACTIVE)
+    # enable user
+    user.enable()
     assert user.status == UserStatus.ACTIVE
+    assert user.refresh_item().status == UserStatus.ACTIVE
+
+    # directly in dynamo set user status to DELETING
+    user.dynamo.set_user_status(user.id, UserStatus.DELETING)
+    user.refresh_item()
+    assert user.status == UserStatus.DELETING
+
+    with pytest.raises(user.exceptions.UserException, match='Cannot enable user .* in status'):
+        user.enable()
+    with pytest.raises(user.exceptions.UserException, match='Cannot disable user .* in status'):
+        user.disable()
 
 
 def test_set_privacy_status_no_change(user):
@@ -381,8 +391,8 @@ def test_finish_change_email_wrong_verification_code(user):
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
     # moto has not yet implemented verify_user_attribute
-    exception = user.cognito_client.boto_client.exceptions.CodeMismatchException({}, None)
-    user.cognito_client.boto_client.verify_user_attribute = mock.Mock(side_effect=exception)
+    exception = user.cognito_client.user_pool_client.exceptions.CodeMismatchException({}, None)
+    user.cognito_client.user_pool_client.verify_user_attribute = mock.Mock(side_effect=exception)
 
     access_token = {}
     verification_code = {}
@@ -390,110 +400,6 @@ def test_finish_change_email_wrong_verification_code(user):
         user.finish_change_contact_attribute('email', access_token, verification_code)
     assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
     assert user.item['email'] == org_email
-
-
-def test_delete_user_basic_flow(user):
-    # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.clear_user_attribute = mock.Mock()
-
-    # delete the user
-    org_user_id = user.id
-    org_user_item = user.item
-    deleted_user_item = user.delete()
-    assert deleted_user_item == org_user_item
-
-    # verify cognito was called to release username over there
-    assert user.cognito_client.clear_user_attribute.mock_calls == [
-        mock.call(org_user_id, 'preferred_username'),
-    ]
-
-    # verify it got removed from the db
-    resp = user.dynamo.get_user(org_user_id)
-    assert resp is None
-
-
-def test_delete_user_deletes_trending(user):
-    trending_manager = user.trending_manager
-    user_id = user.id
-
-    # add a trending for the user
-    item_type = trending_manager.enums.TrendingItemType.USER
-    trending_manager.increment_score(item_type, user.id)
-
-    # verify we can see it
-    resp = trending_manager.dynamo.get_trending(user_id)
-    assert resp is not None
-
-    # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.boto_client.admin_delete_user_attributes = mock.Mock()
-
-    # delete the user
-    user.delete()
-
-    # verify the trending has disappeared
-    resp = trending_manager.dynamo.get_trending(user_id)
-    assert resp is None
-
-
-def test_delete_user_releases_username(user, user2):
-    # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.boto_client.admin_delete_user_attributes = mock.Mock()
-
-    # release our username by deleting our user
-    username = user.item['username']
-    user.delete()
-
-    # verify the username is now available by adding it to another
-    user2.update_username(username)
-    assert user2.item['username'] == username
-
-
-def test_delete_no_entry_in_user_pool(user, caplog):
-    # configure the user pool to behave as if there is no entry for this user
-    # note that moto cognito has not yet implemented admin_delete_user_attributes
-    exception = user.cognito_client.boto_client.exceptions.UserNotFoundException({}, None)
-    user.cognito_client.clear_user_attribute = mock.Mock(side_effect=exception)
-
-    # verify a delete works as usual
-    user_id = user.id
-    user.delete()
-    assert user.item is None
-    assert user.id is None
-    assert user.dynamo.get_user(user_id) is None
-
-    # verify the issue was logged
-    assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'WARNING'
-    assert 'No cognito user pool entry found' in caplog.records[0].msg
-
-
-def test_delete_user_with_profile_pic(user):
-    post_id = 'mid'
-    photo_data = b'this is an image'
-    content_type = 'image/jpeg'
-
-    # add a profile pic of all sizes for that user
-    paths = [user.get_photo_path(size, photo_post_id=post_id) for size in image_size.JPEGS]
-    for path in paths:
-        user.s3_uploads_client.put_object(path, photo_data, content_type)
-    user.dynamo.set_user_photo_post_id(user.id, post_id)
-    user.refresh_item()
-
-    # verify s3 was populated, dynamo set
-    for size in image_size.JPEGS:
-        path = user.get_photo_path(size)
-        assert user.s3_uploads_client.exists(path)
-    assert 'photoPostId' in user.item
-
-    # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.boto_client.admin_delete_user_attributes = mock.Mock()
-
-    # delete the user
-    user.delete()
-
-    # verify the profile pic got removed from s3
-    for path in paths:
-        assert not user.s3_uploads_client.exists(path)
 
 
 def test_serailize_self(user):
@@ -530,6 +436,26 @@ def test_serailize_followed(user, user2, follow_manager):
     assert resp.pop('blockerStatus') == 'NOT_BLOCKING'
     assert resp.pop('followedStatus') == 'FOLLOWING'
     assert resp == user.item
+
+
+def test_serialize_deleting(user, user2):
+    user.delete()
+
+    resp = user.serialize(user.id)
+    assert resp['userId'] == user.id
+    assert resp['userStatus'] == 'DELETING'
+    assert resp['blockerStatus'] == 'SELF'
+    assert resp['followedStatus'] == 'SELF'
+
+    resp = user.serialize(user2.id)
+    assert resp['userId'] == user.id
+    assert resp['userStatus'] == 'DELETING'
+    assert resp['blockerStatus'] == 'NOT_BLOCKING'
+    assert resp['followedStatus'] == 'NOT_FOLLOWING'
+
+    user.refresh_item()
+    with pytest.raises(AssertionError):
+        user.serialize(user.id)
 
 
 def test_is_forced_disabling_criteria_met_by_posts(user):

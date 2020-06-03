@@ -241,58 +241,21 @@ def set_user_apns_token(caller_user, arguments, source, context):
 
 @routes.register('Mutation.resetUser')
 def reset_user(caller_user_id, arguments, source, context):
-    new_username = arguments.get('newUsername')
-    new_username = None if new_username == '' else new_username  # treat empty string like null
+    new_username = arguments.get('newUsername') or None  # treat empty string like null
 
-    # mark our user as in the process of deleting
-    caller_user = user_manager.get_user(caller_user_id)
-    if caller_user:
-        caller_user.set_user_status(UserStatus.DELETING)
+    # resetUser may be called when user exists in cognito but not in dynamo
+    user = user_manager.get_user(caller_user_id)
+    if user:
+        user.delete(skip_cognito=True)
 
-    # for REQUESTED and DENIED, just delete them
-    # for FOLLOWING, unfollow so that the other user's counts remain correct
-    follow_manager.reset_followed_items(caller_user_id)
-    follow_manager.reset_follower_items(caller_user_id)
+    if new_username:
+        # equivalent to calling Mutation.createCognitoOnlyUser()
+        try:
+            user = user_manager.create_cognito_only_user(caller_user_id, new_username)
+        except user_manager.exceptions.UserException as err:
+            raise ClientException(str(err))
 
-    # unflag everything we've flagged
-    post_manager.unflag_all_by_user(caller_user_id)
-    comment_manager.unflag_all_by_user(caller_user_id)
-
-    # delete all our likes & comments & albums
-    like_manager.dislike_all_by_user(caller_user_id)
-    comment_manager.delete_all_by_user(caller_user_id)
-    album_manager.delete_all_by_user(caller_user_id)
-
-    # delete all our posts, and all likes on those posts
-    for post_item in post_manager.dynamo.generate_posts_by_user(caller_user_id):
-        post_manager.init_post(post_item).delete()
-
-    # delete any cards we have
-    card_manager.truncate_cards(caller_user_id)
-
-    # remove all blocks of and by us
-    block_manager.unblock_all_blocks(caller_user_id)
-
-    # leave all chats we are part of (auto-deletes direct & solo chats)
-    chat_manager.leave_all_chats(caller_user_id)
-
-    # finally, delete our own profile
-    user_item = None
-    if caller_user:
-        user_item = caller_user.delete()
-
-    if not new_username:
-        if user_item:
-            user_item['blockerStatus'] = block_manager.enums.BlockStatus.SELF
-            user_item['followedStatus'] = follow_manager.enums.FollowStatus.SELF
-        return user_item
-
-    # equivalent to calling Mutation.createCognitoOnlyUser()
-    try:
-        user = user_manager.create_cognito_only_user(caller_user_id, new_username)
-    except user_manager.exceptions.UserException as err:
-        raise ClientException(str(err))
-    return user.serialize(caller_user_id)
+    return user.serialize(caller_user_id) if user else None
 
 
 @routes.register('Mutation.disableUser')
@@ -302,7 +265,17 @@ def disable_user(caller_user_id, arguments, source, context):
     if not user:
         raise ClientException(f'User `{caller_user_id}` does not exist')
 
-    user.set_user_status(UserStatus.DISABLED)
+    user.disable()
+    return user.serialize(caller_user_id)
+
+
+@routes.register('Mutation.deleteUser')
+def delete_user(caller_user_id, arguments, source, context):
+    user = user_manager.get_user(caller_user_id)
+    if not user:
+        raise ClientException(f'User `{caller_user_id}` does not exist')
+
+    user.delete()
     return user.serialize(caller_user_id)
 
 

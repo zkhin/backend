@@ -4,8 +4,6 @@ import uuid
 
 import pytest
 
-import app.models.user.enums as user_enums
-
 
 @pytest.fixture
 def user(user_manager, cognito_client):
@@ -158,14 +156,14 @@ def test_flag_force_archive_by_admin(model, user2, caplog):
 def test_flag_force_disable_user(model, user2, user3, caplog):
     model.is_crowdsourced_forced_removal_criteria_met = mock.Mock(return_value=True)
     model.remove_from_flagging = mock.Mock()
-    model.user.set_user_status = mock.Mock()
+    model.user.disable = mock.Mock()
 
     # test without force disabling triggered
     model.is_user_forced_disabling_criteria_met = mock.Mock(return_value=False)
     with caplog.at_level(logging.WARNING):
         model.flag(user2)
     assert model.remove_from_flagging.mock_calls == [mock.call()]
-    assert model.user.set_user_status.mock_calls == []
+    assert model.user.disable.mock_calls == []
 
     # check the logs
     assert len(caplog.records) == 1
@@ -179,7 +177,7 @@ def test_flag_force_disable_user(model, user2, user3, caplog):
     with caplog.at_level(logging.WARNING):
         model.flag(user3)
     assert model.remove_from_flagging.mock_calls == [mock.call()]
-    assert model.user.set_user_status.mock_calls == [mock.call(user_enums.UserStatus.DISABLED)]
+    assert model.user.disable.mock_calls == [mock.call()]
 
     # check the logs
     assert len(caplog.records) == 3

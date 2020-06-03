@@ -23,7 +23,7 @@ def test_create_verified_user_pool_entry(cognito_client):
     email = f'{username}-test@real.app'
 
     # check they aren't there
-    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.get_user_attributes(user_id)
 
     # create them, check they are there
@@ -35,14 +35,14 @@ def test_create_verified_user_pool_entry(cognito_client):
     assert attrs['preferred_username'] == username
 
     # verify we can't create them again
-    with pytest.raises(cognito_client.boto_client.exceptions.UsernameExistsException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UsernameExistsException):
         cognito_client.create_verified_user_pool_entry(user_id, username, email)
 
 
 def test_set_and_get_user_attributes(cognito_client):
     # create an entry in the user pool, check attributes
     user_id = 'uid'
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
     assert cognito_client.get_user_attributes(user_id) == {}
@@ -62,37 +62,37 @@ def test_set_and_get_user_attributes(cognito_client):
     assert attrs['gender'] == 'female'
 
     # try to set & get user attributes for a user that doesn't exist
-    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.set_user_attributes('uiddne', {'gender': 'female'})
-    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.get_user_attributes('uiddne')
 
 
 def test_get_user_by_status(cognito_client):
     # create an entry in the user pool, check status
     user_id = 'uid'
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
     assert cognito_client.get_user_status(user_id) == 'FORCE_CHANGE_PASSWORD'
 
-    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.get_user_status('uiddne')
 
 
 def test_delete_user_pool_entry(cognito_client):
     # cant delete a user that doesn't exist
-    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.delete_user_pool_entry('uiddne')
 
     # create a dummy profile, verify exists
     user_id = 'uid'
-    cognito_client.boto_client.admin_create_user(
+    cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id, Username=user_id,
     )
     assert cognito_client.get_user_status(user_id)
 
     # delete the dummy profile, verify it's gone
     cognito_client.delete_user_pool_entry(user_id)
-    with pytest.raises(cognito_client.boto_client.exceptions.UserNotFoundException):
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.get_user_status(user_id)
