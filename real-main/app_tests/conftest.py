@@ -146,8 +146,8 @@ def block_manager(dynamo_client):
 
 
 @pytest.fixture
-def card_manager(dynamo_client):
-    yield models.CardManager({'dynamo': dynamo_client})
+def card_manager(dynamo_client, appsync_client):
+    yield models.CardManager({'appsync': appsync_client, 'dynamo': dynamo_client})
 
 
 @pytest.fixture
@@ -163,8 +163,10 @@ def chat_message_manager(dynamo_client, appsync_client, cloudfront_client):
 
 
 @pytest.fixture
-def comment_manager(dynamo_client, user_manager):
-    yield models.CommentManager({'dynamo': dynamo_client}, managers={'user': user_manager})
+def comment_manager(dynamo_client, user_manager, appsync_client):
+    yield models.CommentManager(
+        {'appsync': appsync_client, 'dynamo': dynamo_client}, managers={'user': user_manager}
+    )
 
 
 @pytest.fixture

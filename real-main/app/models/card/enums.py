@@ -1,3 +1,10 @@
+class CardNotificationType:
+    ADDED = 'ADDED'
+    DELETED = 'DELETED'
+
+    _ALL = (ADDED, DELETED)
+
+
 class _WellKnownCard:
     def __init__(self, name, title, action):
         self.name = name

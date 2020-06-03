@@ -114,16 +114,17 @@ def test_add_system_message(chat_message_manager, chat, appsync_client, user2, u
     assert chat.item['messageCount'] == 1
     assert chat.item['lastMessageActivityAt'] == now.to_iso8601_string()
 
-    # check the message notification was triggered
-    assert len(appsync_client.send.call_args_list) == 2
-    assert len(appsync_client.send.call_args_list[0].args) == 2
-    variables = appsync_client.send.call_args_list[0].args[1]
+    # triggers both the chat message notifications and also the cards notifications
+    # check the chat message notifications were triggered correctly, skip the cards
+    assert len(appsync_client.send.call_args_list) == 4
+    assert len(appsync_client.send.call_args_list[1].args) == 2
+    variables = appsync_client.send.call_args_list[2].args[1]
     assert variables['input']['userId'] == user2.id
     assert variables['input']['messageId'] == message.id
     assert variables['input']['authorUserId'] is None
     assert variables['input']['type'] == 'ADDED'
-    assert len(appsync_client.send.call_args_list[1].args) == 2
-    variables = appsync_client.send.call_args_list[1].args[1]
+    assert len(appsync_client.send.call_args_list[3].args) == 2
+    variables = appsync_client.send.call_args_list[3].args[1]
     assert variables['input']['userId'] == user3.id
     assert variables['input']['messageId'] == message.id
     assert variables['input']['authorUserId'] is None

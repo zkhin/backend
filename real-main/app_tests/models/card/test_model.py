@@ -1,5 +1,8 @@
-import pytest
 import uuid
+
+import pytest
+
+from app.models.card.enums import CardNotificationType
 
 
 @pytest.fixture
@@ -31,14 +34,22 @@ def test_serialize(user, card):
     assert resp['subTitle'] == card.item['subTitle']
 
 
-def test_delete(card, user):
+def test_delete(card, user, appsync_client):
+    appsync_client.reset_mock()
+
     # verify starting state
     assert card.dynamo.get_card(card.id)
-    user.refresh_item().item.get('cardCount', 0) == 1
+    assert user.refresh_item().item.get('cardCount', 0) == 1
 
     # delete the card
     card.delete()
 
     # verify final state
     assert card.dynamo.get_card(card.id) is None
-    user.refresh_item().item.get('cardCount', 0) == 0
+    assert user.refresh_item().item.get('cardCount', 0) == 0
+
+    # check the notifiation was triggered
+    assert len(appsync_client.mock_calls) == 1
+    assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
+    assert appsync_client.send.call_args.args[1]['input']['type'] == CardNotificationType.DELETED
+    assert appsync_client.send.call_args.args[1]['input']['cardId'] == card.id

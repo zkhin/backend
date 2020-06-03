@@ -238,6 +238,7 @@ type Mutation {
   reportChatMessageViews(messageIds: [ID!]!): Boolean
 
   # Used internally to fire subscription events. Calling externally is an error.
+  triggerCardNotification(input: CardNotificationInput!): CardNotification!
   triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
   triggerPostNotification(input: PostNotificationInput!): PostNotification!
 
@@ -248,6 +249,10 @@ type Mutation {
 }
 
 type Subscription {
+  # Fires for changes (see CardNotificationType) to callers's cards
+  #   - userId must be caller's own userId
+  onCardNotification(userId: ID!): CardNotification @aws_subscribe(mutations: ["triggerCardNotification"])
+
   # Fires for changes (adds, edits, deletes) to chat messages in chats we are in or have just been added to
   #   - userId must be caller's own userId
   #   - does not fire for the caller's own messages
@@ -393,6 +398,26 @@ type Card {
 type PaginatedCards {
   items: [Card!]!
   nextToken: String
+}
+
+type CardNotification {
+  userId: ID!  # user this notification is intended for
+  type: CardNotificationType!
+  card: Card!
+}
+
+enum CardNotificationType {
+  ADDED
+  DELETED
+}
+
+input CardNotificationInput {
+  userId: ID!  # user this notification is intended for
+  type: CardNotificationType!
+  cardId: ID!
+  title: String!
+  subTitle: String
+  action: String!  # an AWSURL, but AWS occasionally errors out trying to serialize our 'https://real.app' urls
 }
 
 type Chat {

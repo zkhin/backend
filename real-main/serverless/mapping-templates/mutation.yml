@@ -310,6 +310,11 @@
   response: PassThru.response.vtl
 
 - type: Mutation
+  field: triggerCardNotification
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: Mutation
   field: triggerChatMessageNotification
   dataSource: NoneDataSource
   response: PassThru.response.vtl

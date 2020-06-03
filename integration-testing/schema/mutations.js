@@ -715,6 +715,14 @@ module.exports.reportChatMessageViews = gql`
   }
 `
 
+module.exports.triggerCardNotification = gql`
+  mutation TriggerCardNotification($input: CardNotificationInput!) {
+    triggerCardNotification(input: $input) {
+      userId
+    }
+  }
+`
+
 module.exports.triggerChatMessageNotification = gql`
   mutation TriggerChatMessageNotification($input: ChatMessageNotificationInput!) {
     triggerChatMessageNotification(input: $input) {

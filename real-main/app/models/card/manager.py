@@ -7,6 +7,7 @@ from app import models
 
 from . import enums, exceptions
 from .model import Card
+from .appsync import CardAppSync
 from .dynamo import CardDynamo
 
 logger = logging.getLogger()
@@ -22,6 +23,8 @@ class CardManager:
         managers['card'] = self
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
+        if 'appsync' in clients:
+            self.appsync = CardAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = CardDynamo(clients['dynamo'])
 
@@ -31,6 +34,7 @@ class CardManager:
 
     def init_card(self, item):
         kwargs = {
+            'card_appsync': self.appsync,
             'card_dynamo': self.dynamo,
             'user_manager': self.user_manager,
         }
@@ -48,7 +52,9 @@ class CardManager:
             self.exceptions.CardException('Unable to register card added on user item'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-        return self.get_card(card_id, strongly_consistent=True)
+        card = self.get_card(card_id, strongly_consistent=True)
+        self.appsync.trigger_notification(enums.CardNotificationType.ADDED, card)
+        return card
 
     def add_well_known_card_if_dne(self, user_id, well_known_card, now=None):
         card_id = well_known_card.get_card_id(user_id)

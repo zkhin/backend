@@ -12,7 +12,8 @@ class Card:
     enums = enums
     exceptions = exceptions
 
-    def __init__(self, item, card_dynamo=None, user_manager=None):
+    def __init__(self, item, card_appsync=None, card_dynamo=None, user_manager=None):
+        self.appsync = card_appsync
         self.dynamo = card_dynamo
         self.user_manager = user_manager
 
@@ -47,4 +48,5 @@ class Card:
             self.exceptions.CardException('Unable to register card deleted on user item'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        self.appsync.trigger_notification(enums.CardNotificationType.DELETED, self)
         return self

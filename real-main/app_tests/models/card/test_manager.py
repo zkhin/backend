@@ -13,8 +13,9 @@ def user(user_manager, cognito_client):
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
-def test_add_card_minimal(card_manager, user):
+def test_add_card_minimal(card_manager, user, appsync_client):
     # check starting state
+    appsync_client.reset_mock()
     assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # add card
@@ -31,6 +32,12 @@ def test_add_card_minimal(card_manager, user):
     assert card.item['title'] == title
     assert card.item['action'] == action
     assert 'subTitle' not in card.item
+
+    # check the notifiation was triggered
+    assert len(appsync_client.mock_calls) == 1
+    assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
+    assert appsync_client.send.call_args.args[1]['input']['type'] == enums.CardNotificationType.ADDED
+    assert appsync_client.send.call_args.args[1]['input']['cardId'] == card.id
 
     # verify can add another card with same title and action
     assert card_manager.add_card(user.id, title, action)

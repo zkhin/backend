@@ -2,6 +2,19 @@ const gql = require('graphql-tag')
 
 const fragments = require('./fragments.js')
 
+module.exports.onCardNotification = gql`
+  subscription OnCardNotification($userId: ID!) {
+    onCardNotification(userId: $userId) {
+      userId
+      type
+      card {
+        ...CardFragment
+      }
+    }
+  }
+  ${fragments.card}
+`
+
 module.exports.onChatMessageNotification = gql`
   subscription OnChatMessageNotification($userId: ID!) {
     onChatMessageNotification(userId: $userId) {
