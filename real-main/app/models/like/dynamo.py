@@ -16,7 +16,7 @@ class LikeDynamo:
         return liked_by_user_id, post_id
 
     def get_like(self, liked_by_user_id, post_id):
-        return self.client.get_item({'partitionKey': f'like/{liked_by_user_id}/{post_id}', 'sortKey': '-',})
+        return self.client.get_item({'partitionKey': f'like/{liked_by_user_id}/{post_id}', 'sortKey': '-'})
 
     def transact_add_like(self, liked_by_user_id, post_item, like_status, now=None):
         now = now or pendulum.now('utc')
@@ -49,9 +49,9 @@ class LikeDynamo:
     def transact_delete_like(self, liked_by_user_id, post_id, like_status):
         return {
             'Delete': {
-                'Key': {'partitionKey': {'S': f'like/{liked_by_user_id}/{post_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'like/{liked_by_user_id}/{post_id}'}, 'sortKey': {'S': '-'}},
                 'ConditionExpression': 'likeStatus = :like_status',
-                'ExpressionAttributeValues': {':like_status': {'S': like_status},},
+                'ExpressionAttributeValues': {':like_status': {'S': like_status}},
             },
         }
 

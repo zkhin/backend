@@ -14,7 +14,7 @@ table_schema = {
                 {'AttributeName': 'gsiA1PartitionKey', 'KeyType': 'HASH'},
                 {'AttributeName': 'gsiA1SortKey', 'KeyType': 'RANGE'},
             ],
-            'Projection': {'ProjectionType': 'ALL',},
+            'Projection': {'ProjectionType': 'ALL'},
         },
         {
             'IndexName': 'GSI-A2',
@@ -22,7 +22,7 @@ table_schema = {
                 {'AttributeName': 'gsiA2PartitionKey', 'KeyType': 'HASH'},
                 {'AttributeName': 'gsiA2SortKey', 'KeyType': 'RANGE'},
             ],
-            'Projection': {'ProjectionType': 'ALL',},
+            'Projection': {'ProjectionType': 'ALL'},
         },
         {
             'IndexName': 'GSI-A3',
@@ -30,7 +30,7 @@ table_schema = {
                 {'AttributeName': 'gsiA3PartitionKey', 'KeyType': 'HASH'},
                 {'AttributeName': 'gsiA3SortKey', 'KeyType': 'RANGE'},
             ],
-            'Projection': {'ProjectionType': 'ALL',},
+            'Projection': {'ProjectionType': 'ALL'},
         },
         {
             'IndexName': 'GSI-K1',

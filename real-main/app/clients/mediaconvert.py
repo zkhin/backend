@@ -58,13 +58,13 @@ class MediaConvertClient:
                 "OutputGroups": [
                     {
                         "Name": "Apple HLS",
-                        "OutputGroupSettings": {"HlsGroupSettings": {"Destination": video_output_url_prefix,}},
+                        "OutputGroupSettings": {"HlsGroupSettings": {"Destination": video_output_url_prefix}},
                     },
                     {
                         "Name": "File Group",
                         "OutputGroupSettings": {
                             "Type": "FILE_GROUP_SETTINGS",
-                            "FileGroupSettings": {"Destination": image_output_url_prefix,},
+                            "FileGroupSettings": {"Destination": image_output_url_prefix},
                         },
                         "Outputs": [
                             {

@@ -154,7 +154,7 @@ def test_migrate_user_with_email(dynamo_client, dynamo_table, pinpoint_client, c
                 'EndpointRequest': {
                     'Address': user['email'],
                     'ChannelType': 'EMAIL',
-                    'User': {'UserId': user['userId'],},
+                    'User': {'UserId': user['userId']},
                 },
             }
         )
@@ -195,7 +195,7 @@ def test_migrate_user_with_phone(dynamo_client, dynamo_table, pinpoint_client, c
                 'EndpointRequest': {
                     'Address': user['phoneNumber'],
                     'ChannelType': 'SMS',
-                    'User': {'UserId': user['userId'],},
+                    'User': {'UserId': user['userId']},
                 },
             }
         )
@@ -242,7 +242,7 @@ def test_migrate_user_with_phone_and_email(
                 'EndpointRequest': {
                     'Address': user['email'],
                     'ChannelType': 'EMAIL',
-                    'User': {'UserId': user['userId'],},
+                    'User': {'UserId': user['userId']},
                 },
             }
         ),
@@ -253,7 +253,7 @@ def test_migrate_user_with_phone_and_email(
                 'EndpointRequest': {
                     'Address': user['phoneNumber'],
                     'ChannelType': 'SMS',
-                    'User': {'UserId': user['userId'],},
+                    'User': {'UserId': user['userId']},
                 },
             }
         ),

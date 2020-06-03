@@ -198,7 +198,7 @@ class UserDynamo:
             'Update': {
                 'Key': self.typed_pk(user_id),
                 'UpdateExpression': 'ADD #count_name :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'},},
+                'ExpressionAttributeValues': {':one': {'N': '1'}},
                 'ExpressionAttributeNames': {'#count_name': count_name},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
@@ -213,7 +213,7 @@ class UserDynamo:
                 # only updates, no creates and make sure it doesn't go negative
                 'ConditionExpression': 'attribute_exists(#count_name) and #count_name > :zero',
                 'ExpressionAttributeNames': {'#count_name': count_name},
-                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
             },
         }
         return transact
@@ -264,7 +264,7 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
         }
         return {'Update': kwargs}
 
@@ -302,9 +302,9 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD postDeletedCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
         }
-        count_to_decrement = {PostStatus.COMPLETED: 'postCount', PostStatus.ARCHIVED: 'postArchivedCount',}.get(
+        count_to_decrement = {PostStatus.COMPLETED: 'postCount', PostStatus.ARCHIVED: 'postArchivedCount'}.get(
             prev_status
         )
         if count_to_decrement:
@@ -320,7 +320,7 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD commentCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
         }
         return {'Update': kwargs}
 
@@ -345,7 +345,7 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD cardCount :positive_one',
             'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'},},
+            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
         }
         return {'Update': kwargs}
 
@@ -354,6 +354,6 @@ class UserDynamo:
             'Key': self.typed_pk(user_id),
             'UpdateExpression': 'ADD cardCount :negative_one',
             'ConditionExpression': 'attribute_exists(partitionKey) AND cardCount > :zero',
-            'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+            'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
         }
         return {'Update': kwargs}

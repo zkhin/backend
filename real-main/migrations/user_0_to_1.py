@@ -37,7 +37,7 @@ def copy_object(old_path, new_path):
     print(f'Copying S3 object from {old_path} to {new_path} ...', end='')
     new_obj = s3_bucket.Object(new_path)
     new_obj.copy(
-        {'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path,}
+        {'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path}
     )
     print(' done.')
 
@@ -60,7 +60,7 @@ def generate_all_users(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version,},
+        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -82,10 +82,10 @@ def update_user(user):
     old_path = user.get('photoPath')
     if not old_path:
         kwargs = {
-            'Key': {'partitionKey': user['partitionKey'], 'sortKey': user['sortKey'],},
+            'Key': {'partitionKey': user['partitionKey'], 'sortKey': user['sortKey']},
             'UpdateExpression': 'SET schemaVersion = :one',
             'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :zero',
-            'ExpressionAttributeValues': {':zero': 0, ':one': 1,},
+            'ExpressionAttributeValues': {':zero': 0, ':one': 1},
         }
         update_dynamo(kwargs)
         return
@@ -116,7 +116,7 @@ def update_user(user):
 
     # update the DB
     kwargs = {
-        'Key': {'partitionKey': user['partitionKey'], 'sortKey': user['sortKey'],},
+        'Key': {'partitionKey': user['partitionKey'], 'sortKey': user['sortKey']},
         'UpdateExpression': 'SET photoMediaId = :pmi, schemaVersion = :one REMOVE photoPath',
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :zero',
         'ExpressionAttributeValues': {':zero': 0, ':one': 1, ':pmi': photo_media_id},

@@ -50,7 +50,7 @@ def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1
     kwargs = {
         'ApplicationId': pinpoint_client.app_id,
         'EndpointId': endpoint_id2,
-        'EndpointRequest': {'Address': address1, 'ChannelType': channel_type, 'User': {'UserId': user_id,}},
+        'EndpointRequest': {'Address': address1, 'ChannelType': channel_type, 'User': {'UserId': user_id}},
     }
     pinpoint_client.client.update_endpoint(**kwargs)
     user_endpoints = pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type)

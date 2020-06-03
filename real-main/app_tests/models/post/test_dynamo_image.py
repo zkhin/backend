@@ -61,7 +61,7 @@ def test_transact_add_doesnt_add_non_positive_crops(post_image_dynamo):
     crop2 = {'upperLeft': {'x': 2, 'y': 1}, 'lowerRight': {'x': 0, 'y': -1}}
 
     post_image_dynamo.client.transact_write_items(
-        [post_image_dynamo.transact_add('pid1', crop=crop1), post_image_dynamo.transact_add('pid2', crop=crop2),]
+        [post_image_dynamo.transact_add('pid1', crop=crop1), post_image_dynamo.transact_add('pid2', crop=crop2)]
     )
 
     # check format first one

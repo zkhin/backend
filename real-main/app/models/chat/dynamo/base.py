@@ -84,7 +84,7 @@ class ChatDynamo:
 
     def transact_delete(self, chat_id, expected_user_count=None):
         query_kwargs = {
-            'Delete': {'Key': self.typed_pk(chat_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}
+            'Delete': {'Key': self.typed_pk(chat_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
         }
         if expected_user_count is not None:
             query_kwargs['Delete']['ConditionExpression'] += ' AND userCount = :uc'
@@ -96,7 +96,7 @@ class ChatDynamo:
             'Update': {
                 'Key': self.typed_pk(chat_id),
                 'UpdateExpression': 'ADD userCount :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'},},
+                'ExpressionAttributeValues': {':one': {'N': '1'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',
             }
         }
@@ -106,7 +106,7 @@ class ChatDynamo:
             'Update': {
                 'Key': self.typed_pk(chat_id),
                 'UpdateExpression': 'ADD userCount :negOne',
-                'ExpressionAttributeValues': {':negOne': {'N': '-1'}, ':zero': {'N': '0'},},
+                'ExpressionAttributeValues': {':negOne': {'N': '-1'}, ':zero': {'N': '0'}},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND userCount > :zero',
             }
         }

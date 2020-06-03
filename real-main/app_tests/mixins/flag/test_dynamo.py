@@ -75,7 +75,7 @@ def test_delete_all_for_item(flag_dynamo):
 
     # add a flag to item 2 as a distraction, should not be touched
     flag_dynamo.client.transact_write_items(
-        [flag_dynamo.transact_add(item_id_2, 'uid'),]
+        [flag_dynamo.transact_add(item_id_2, 'uid')]
     )
     dummy = next(flag_dynamo.generate_by_item(item_id_2))
 
@@ -86,7 +86,7 @@ def test_delete_all_for_item(flag_dynamo):
 
     # add two flags to the item
     flag_dynamo.client.transact_write_items(
-        [flag_dynamo.transact_add(item_id_1, 'uid'), flag_dynamo.transact_add(item_id_1, 'uid2'),]
+        [flag_dynamo.transact_add(item_id_1, 'uid'), flag_dynamo.transact_add(item_id_1, 'uid2')]
     )
     assert len(list(flag_dynamo.generate_by_item(item_id_1))) == 2
 

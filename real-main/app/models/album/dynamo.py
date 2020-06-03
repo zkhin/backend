@@ -94,7 +94,7 @@ class AlbumDynamo:
         return self.client.update_item(update_query_kwargs)
 
     def transact_delete_album(self, album_id):
-        return {'Delete': {'Key': self.typed_pk(album_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}}
+        return {'Delete': {'Key': self.typed_pk(album_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}}
 
     def transact_add_post(self, album_id, old_rank_count=None, now=None):
         "Transaction to change album properties to reflect adding a post to the album"
@@ -103,7 +103,7 @@ class AlbumDynamo:
             'Update': {
                 'Key': self.typed_pk(album_id),
                 'UpdateExpression': 'ADD postCount :one, rankCount :one SET postsLastUpdatedAt = :now',
-                'ExpressionAttributeValues': {':one': {'N': '1'}, ':now': {'S': now.to_iso8601_string()},},
+                'ExpressionAttributeValues': {':one': {'N': '1'}, ':now': {'S': now.to_iso8601_string()}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',
             }
         }

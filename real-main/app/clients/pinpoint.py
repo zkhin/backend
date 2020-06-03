@@ -40,7 +40,7 @@ class PinpointClient:
             kwargs = {
                 'ApplicationId': self.app_id,
                 'EndpointId': endpoint_id,
-                'EndpointRequest': {'Address': address, 'ChannelType': channel_type, 'User': {'UserId': user_id,}},
+                'EndpointRequest': {'Address': address, 'ChannelType': channel_type, 'User': {'UserId': user_id}},
             }
             self.client.update_endpoint(**kwargs)
         return endpoint_id
@@ -73,7 +73,7 @@ class PinpointClient:
             kwargs = {
                 'ApplicationId': self.app_id,
                 'EndpointId': endpoint_id,
-                'EndpointRequest': {'EndpointStatus': 'ACTIVE',},
+                'EndpointRequest': {'EndpointStatus': 'ACTIVE'},
             }
             self.client.update_endpoint(**kwargs)
 
@@ -84,7 +84,7 @@ class PinpointClient:
             kwargs = {
                 'ApplicationId': self.app_id,
                 'EndpointId': endpoint_id,
-                'EndpointRequest': {'EndpointStatus': 'INACTIVE',},
+                'EndpointRequest': {'EndpointStatus': 'INACTIVE'},
             }
             self.client.update_endpoint(**kwargs)
 

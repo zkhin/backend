@@ -23,7 +23,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix)',
-            'ExpressionAttributeValues': {':pk_prefix': 'media/',},
+            'ExpressionAttributeValues': {':pk_prefix': 'media/'},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -40,7 +40,7 @@ class Migration:
 
         transact_media = {
             'Delete': {
-                'Key': {'partitionKey': {'S': f'media/{media_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'media/{media_id}'}, 'sortKey': {'S': '-'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',
                 'TableName': self.dynamo_table.name,
             },
@@ -69,7 +69,7 @@ class Migration:
         if 'colors' in item:
             transact_post['Put']['Item']['colors'] = {
                 'L': [
-                    {'M': {'r': {'N': str(color['r'])}, 'g': {'N': str(color['g'])}, 'b': {'N': str(color['b'])},}}
+                    {'M': {'r': {'N': str(color['r'])}, 'g': {'N': str(color['g'])}, 'b': {'N': str(color['b'])}}}
                     for color in item['colors']
                 ]
             }

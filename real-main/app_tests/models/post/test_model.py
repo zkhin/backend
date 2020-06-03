@@ -128,7 +128,7 @@ def test_get_video_writeonly_url(cloudfront_client, s3_uploads_client):
     }
     expected_url = {}
     cloudfront_client.configure_mock(
-        **{'generate_presigned_url.return_value': expected_url,}
+        **{'generate_presigned_url.return_value': expected_url}
     )
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
@@ -148,7 +148,7 @@ def test_get_image_readonly_url(cloudfront_client, s3_uploads_client):
     }
     expected_url = {}
     cloudfront_client.configure_mock(
-        **{'generate_presigned_url.return_value': expected_url,}
+        **{'generate_presigned_url.return_value': expected_url}
     )
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
@@ -177,7 +177,7 @@ def test_get_hls_access_cookies(cloudfront_client, s3_uploads_client):
         'CloudFront-Key-Pair-Id': 'cf-kpid',
     }
     cloudfront_client.configure_mock(
-        **{'generate_presigned_cookies.return_value': presigned_cookies, 'domain': domain,}
+        **{'generate_presigned_cookies.return_value': presigned_cookies, 'domain': domain}
     )
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
@@ -821,7 +821,7 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
 
     # set the imageFormat to heic
     query_kwargs = {
-        'Key': {'partitionKey': f'post/{post.id}', 'sortKey': 'image',},
+        'Key': {'partitionKey': f'post/{post.id}', 'sortKey': 'image'},
         'UpdateExpression': 'SET imageFormat = :im',
         'ExpressionAttributeValues': {':im': 'HEIC'},
     }

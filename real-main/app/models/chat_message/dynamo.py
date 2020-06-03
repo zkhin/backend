@@ -40,7 +40,7 @@ class ChatMessageDynamo:
                     'text': {'S': text},
                     'textTags': {
                         'L': [
-                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']},}}
+                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
                             for text_tag in text_tags
                         ]
                     },
@@ -57,13 +57,13 @@ class ChatMessageDynamo:
             'Update': {
                 'Key': self.typed_pk(message_id),
                 'UpdateExpression': 'SET lastEditedAt = :at, #textName = :text, textTags = :textTags',
-                'ExpressionAttributeNames': {'#textName': 'text',},
+                'ExpressionAttributeNames': {'#textName': 'text'},
                 'ExpressionAttributeValues': {
                     ':at': {'S': now.to_iso8601_string()},
                     ':text': {'S': text},
                     ':textTags': {
                         'L': [
-                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']},}}
+                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
                             for text_tag in text_tags
                         ]
                     },
@@ -74,7 +74,7 @@ class ChatMessageDynamo:
 
     def transact_delete_chat_message(self, message_id):
         return {
-            'Delete': {'Key': self.typed_pk(message_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}
+            'Delete': {'Key': self.typed_pk(message_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
         }
 
     def generate_chat_messages_by_chat(self, chat_id, pks_only=False):

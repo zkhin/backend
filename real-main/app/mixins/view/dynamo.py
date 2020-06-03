@@ -65,7 +65,7 @@ class ViewDynamo:
         query_kwargs = {
             'Key': pk,
             'UpdateExpression': 'ADD viewCount :vc SET lastViewedAt = :lva',
-            'ExpressionAttributeValues': {':vc': view_count, ':lva': viewed_at.to_iso8601_string(),},
+            'ExpressionAttributeValues': {':vc': view_count, ':lva': viewed_at.to_iso8601_string()},
         }
         try:
             return self.client.update_item(query_kwargs)

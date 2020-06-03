@@ -41,9 +41,9 @@ def test_delete_users_posts_from_feed(feed_manager):
     posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter(
         [
-            {'postId': 'pid1', 'postedByUserId': posted_by_uid1, 'postedAt': posted_at,},
-            {'postId': 'pid2', 'postedByUserId': posted_by_uid2, 'postedAt': posted_at,},
-            {'postId': 'pid3', 'postedByUserId': posted_by_uid1, 'postedAt': posted_at,},
+            {'postId': 'pid1', 'postedByUserId': posted_by_uid1, 'postedAt': posted_at},
+            {'postId': 'pid2', 'postedByUserId': posted_by_uid2, 'postedAt': posted_at},
+            {'postId': 'pid3', 'postedByUserId': posted_by_uid1, 'postedAt': posted_at},
         ]
     )
     feed_manager.dynamo.add_posts_to_feed(feed_user_id, posts_generator)

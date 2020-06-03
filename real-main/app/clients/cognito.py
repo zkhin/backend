@@ -31,9 +31,9 @@ class CognitoClient:
             Username=user_id,
             MessageAction='SUPPRESS',
             UserAttributes=[
-                {'Name': 'email', 'Value': email,},
-                {'Name': 'email_verified', 'Value': 'true',},
-                {'Name': 'preferred_username', 'Value': username.lower(),},
+                {'Name': 'email', 'Value': email},
+                {'Name': 'email_verified', 'Value': 'true'},
+                {'Name': 'preferred_username', 'Value': username.lower()},
             ],
         )
 
@@ -66,7 +66,7 @@ class CognitoClient:
         self.user_pool_client.admin_update_user_attributes(
             UserPoolId=self.user_pool_id,
             Username=user_id,
-            UserAttributes=[{'Name': name, 'Value': value,} for name, value in attrs.items()],
+            UserAttributes=[{'Name': name, 'Value': value} for name, value in attrs.items()],
         )
 
     def clear_user_attribute(self, user_id, name):
@@ -85,7 +85,7 @@ class CognitoClient:
         )
 
     def get_user_status(self, user_id):
-        boto_resp = self.user_pool_client.admin_get_user(UserPoolId=self.user_pool_id, Username=user_id,)
+        boto_resp = self.user_pool_client.admin_get_user(UserPoolId=self.user_pool_id, Username=user_id)
         return boto_resp['UserStatus']
 
     def list_unconfirmed_user_pool_entries(self):

@@ -23,7 +23,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND attribute_exists(checksum)',
-            'ExpressionAttributeValues': {':pk_prefix': 'media/',},
+            'ExpressionAttributeValues': {':pk_prefix': 'media/'},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -43,16 +43,16 @@ class Migration:
 
         transact_media = {
             'Update': {
-                'Key': {'partitionKey': {'S': f'media/{media_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'media/{media_id}'}, 'sortKey': {'S': '-'}},
                 'UpdateExpression': 'REMOVE checksum, gsiK1PartitionKey, gsiK1SortKey',
-                'ExpressionAttributeValues': {':ck': {'S': checksum},},
+                'ExpressionAttributeValues': {':ck': {'S': checksum}},
                 'ConditionExpression': 'checksum = :ck',
                 'TableName': self.dynamo_table.name,
             },
         }
         transact_post = {
             'Update': {
-                'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'}},
                 'UpdateExpression': 'SET checksum = :ck, gsiK2PartitionKey = :gsipk, gsiK2SortKey = :pa',
                 'ExpressionAttributeValues': {
                     ':ck': {'S': checksum},

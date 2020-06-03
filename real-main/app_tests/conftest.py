@@ -136,7 +136,7 @@ def s3_placeholder_photos_client(s3_clients):
 @pytest.fixture
 def album_manager(dynamo_client, s3_uploads_client, cloudfront_client):
     yield models.AlbumManager(
-        {'dynamo': dynamo_client, 's3_uploads': s3_uploads_client, 'cloudfront': cloudfront_client,}
+        {'dynamo': dynamo_client, 's3_uploads': s3_uploads_client, 'cloudfront': cloudfront_client}
     )
 
 
@@ -158,7 +158,7 @@ def chat_manager(dynamo_client, appsync_client):
 @pytest.fixture
 def chat_message_manager(dynamo_client, appsync_client, cloudfront_client):
     yield models.ChatMessageManager(
-        {'appsync': appsync_client, 'cloudfront': cloudfront_client, 'dynamo': dynamo_client,}
+        {'appsync': appsync_client, 'cloudfront': cloudfront_client, 'dynamo': dynamo_client}
     )
 
 

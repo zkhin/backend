@@ -55,7 +55,7 @@ class ChatMemberDynamo:
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),
             'UpdateExpression': 'SET gsiK2SortKey = :gsik2sk',
-            'ExpressionAttributeValues': {':gsik2sk': 'chat/' + now.to_iso8601_string(),},
+            'ExpressionAttributeValues': {':gsik2sk': 'chat/' + now.to_iso8601_string()},
         }
         return self.client.update_item(query_kwargs)
 
@@ -67,7 +67,7 @@ class ChatMemberDynamo:
             ),
             'IndexName': 'GSI-K1',
         }
-        return map(lambda item: item['sortKey'][len('member/') :], self.client.generate_all_query(query_kwargs),)
+        return map(lambda item: item['sortKey'][len('member/') :], self.client.generate_all_query(query_kwargs))
 
     def generate_chat_ids_by_user(self, user_id):
         query_kwargs = {
@@ -77,4 +77,4 @@ class ChatMemberDynamo:
             ),
             'IndexName': 'GSI-K2',
         }
-        return map(lambda item: item['partitionKey'][len('chat/') :], self.client.generate_all_query(query_kwargs),)
+        return map(lambda item: item['partitionKey'][len('chat/') :], self.client.generate_all_query(query_kwargs))

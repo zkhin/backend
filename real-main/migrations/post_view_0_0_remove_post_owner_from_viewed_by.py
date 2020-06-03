@@ -24,7 +24,7 @@ class Migration:
         assert isinstance(version, int)
         scan_kwargs = {
             'FilterExpression': ('begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv'),
-            'ExpressionAttributeValues': {':pk_prefix': 'postView/', ':sv': version,},
+            'ExpressionAttributeValues': {':pk_prefix': 'postView/', ':sv': version},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -41,7 +41,7 @@ class Migration:
             # Delete the PostView
             {
                 'Delete': {
-                    'Key': {'partitionKey': {'S': f'postView/{post_id}/{user_id}'}, 'sortKey': {'S': '-'},},
+                    'Key': {'partitionKey': {'S': f'postView/{post_id}/{user_id}'}, 'sortKey': {'S': '-'}},
                     'ConditionExpression': 'attribute_exists(partitionKey)',
                     'TableName': self.table_name,
                 }
@@ -49,20 +49,20 @@ class Migration:
             # Decrement the Post.piewedByCount
             {
                 'Update': {
-                    'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'},},
+                    'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'}},
                     'UpdateExpression': 'ADD viewedByCount :negative_one',
                     'ConditionExpression': 'attribute_exists(viewedByCount) and viewedByCount > :zero',
-                    'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                    'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
                     'TableName': self.table_name,
                 }
             },
             # Decrement the User.postViewedByCount
             {
                 'Update': {
-                    'Key': {'partitionKey': {'S': f'user/{user_id}'}, 'sortKey': {'S': 'profile'},},
+                    'Key': {'partitionKey': {'S': f'user/{user_id}'}, 'sortKey': {'S': 'profile'}},
                     'UpdateExpression': 'ADD postViewedByCount :negative_one',
                     'ConditionExpression': 'attribute_exists(postViewedByCount) and postViewedByCount > :zero',
-                    'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                    'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
                     'TableName': self.table_name,
                 }
             },

@@ -18,8 +18,8 @@ CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOU
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
-    'email': {'short': 'email', 'cognito': 'email', 'dynamo': 'email',},
-    'phone': {'short': 'phone', 'cognito': 'phone_number', 'dynamo': 'phoneNumber',},
+    'email': {'short': 'email', 'cognito': 'email', 'dynamo': 'email'},
+    'phone': {'short': 'phone', 'cognito': 'phone_number', 'dynamo': 'phoneNumber'},
 }
 
 

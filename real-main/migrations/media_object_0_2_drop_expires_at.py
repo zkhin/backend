@@ -12,7 +12,7 @@ def generate_all_media_objects_with_expires_at():
     "Return a generator of all items in the table that pass the filter"
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and attribute_exists(expiresAt)',
-        'ExpressionAttributeValues': {':pk_prefix': 'media/',},
+        'ExpressionAttributeValues': {':pk_prefix': 'media/'},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -31,7 +31,7 @@ def update_item(kwargs):
 
 def update_media(item):
     kwargs = {
-        'Key': {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey'],},
+        'Key': {'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']},
         'UpdateExpression': 'REMOVE expiresAt, gsiK1PartitionKey, gsiK1SortKey',
         'ConditionExpression': 'attribute_exists(partitionKey) and attribute_exists(expiresAt)',
     }

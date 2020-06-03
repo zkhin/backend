@@ -54,7 +54,7 @@ class Migration:
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :fsv',
-            'ExpressionAttributeValues': {':pk_prefix': 'user/', ':fsv': self.from_version,},
+            'ExpressionAttributeValues': {':pk_prefix': 'user/', ':fsv': self.from_version},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -87,10 +87,10 @@ class Migration:
     def dynamo_update_user_schema_version(self, user_id):
         logger.warning(f'User `{user_id}`: dynamo: updating schema version')
         kwargs = {
-            'Key': {'partitionKey': f'user/{user_id}', 'sortKey': 'profile',},
+            'Key': {'partitionKey': f'user/{user_id}', 'sortKey': 'profile'},
             'UpdateExpression': 'SET schemaVersion = :tsv',
             'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :fsv',
-            'ExpressionAttributeValues': {':fsv': self.from_version, ':tsv': self.to_version,},
+            'ExpressionAttributeValues': {':fsv': self.from_version, ':tsv': self.to_version},
         }
         logger.info(f'Applying update_item with kwargs: {kwargs}')
         self.dynamo_table.update_item(**kwargs)

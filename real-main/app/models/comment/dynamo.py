@@ -47,7 +47,7 @@ class CommentDynamo:
                     'text': {'S': text},
                     'textTags': {
                         'L': [
-                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']},}}
+                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
                             for text_tag in text_tags
                         ]
                     },
@@ -58,7 +58,7 @@ class CommentDynamo:
 
     def transact_delete_comment(self, comment_id):
         return {
-            'Delete': {'Key': self.typed_pk(comment_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}
+            'Delete': {'Key': self.typed_pk(comment_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
         }
 
     def transact_increment_flag_count(self, comment_id):
@@ -66,7 +66,7 @@ class CommentDynamo:
             'Update': {
                 'Key': self.typed_pk(comment_id),
                 'UpdateExpression': 'ADD flagCount :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'},},
+                'ExpressionAttributeValues': {':one': {'N': '1'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             }
         }
@@ -76,7 +76,7 @@ class CommentDynamo:
             'Update': {
                 'Key': self.typed_pk(comment_id),
                 'UpdateExpression': 'ADD flagCount :neg_one',
-                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'}},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
             }
         }

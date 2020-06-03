@@ -144,7 +144,7 @@ class PostDynamo:
         if text_tags is not None:
             post_item['textTags'] = {
                 'L': [
-                    {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']},}}
+                    {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
                     for text_tag in text_tags
                 ]
             }
@@ -171,7 +171,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD flagCount :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'},},
+                'ExpressionAttributeValues': {':one': {'N': '1'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             }
         }
@@ -181,7 +181,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD flagCount :neg_one',
-                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'}},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
             }
         }
@@ -250,7 +250,7 @@ class PostDynamo:
         verification_hidden=None,
     ):
         assert any(
-            k is not None for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden,)
+            k is not None for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden)
         ), 'Action-less post edit requested'
 
         exp_actions = collections.defaultdict(list)
@@ -344,7 +344,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'SET hasNewCommentActivity = :nv',
-                'ExpressionAttributeValues': {':nv': {'BOOL': new_value}, ':ov': {'BOOL': not new_value},},
+                'ExpressionAttributeValues': {':nv': {'BOOL': new_value}, ':ov': {'BOOL': not new_value}},
                 'ConditionExpression': cond_exp,
             },
         }
@@ -394,8 +394,8 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD #count_name :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'},},
-                'ExpressionAttributeNames': {'#count_name': like_count_attribute,},
+                'ExpressionAttributeValues': {':one': {'N': '1'}},
+                'ExpressionAttributeNames': {'#count_name': like_count_attribute},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
@@ -412,8 +412,8 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD #count_name :negative_one',
-                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
-                'ExpressionAttributeNames': {'#count_name': like_count_attribute,},
+                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
+                'ExpressionAttributeNames': {'#count_name': like_count_attribute},
                 # only updates and no going below zero
                 'ConditionExpression': 'attribute_exists(partitionKey) and #count_name > :zero',
             },
@@ -424,7 +424,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'},},
+                'ExpressionAttributeValues': {':one': {'N': '1'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
@@ -434,7 +434,7 @@ class PostDynamo:
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :negative_one',
-                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'},},
+                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
                 # only updates and no going below zero
                 'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
             },
@@ -496,4 +496,4 @@ class PostDynamo:
             'IndexName': 'GSI-K3',
             'ProjectionExpression': 'partitionKey',
         }
-        return map(lambda item: item['partitionKey'].split('/')[1], self.client.generate_all_query(query_kwargs),)
+        return map(lambda item: item['partitionKey'].split('/')[1], self.client.generate_all_query(query_kwargs))

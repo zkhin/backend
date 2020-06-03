@@ -61,7 +61,7 @@ def test_cannot_crop_no_crop(post_manager, user):
 
 
 @pytest.mark.parametrize(
-    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height + 1}},]
+    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height + 1}}]
 )
 def test_cannot_overcrop_jpeg_post_height(user, jpeg_image_post, crop):
     jpeg_image_post.image_item['crop'] = crop
@@ -70,7 +70,7 @@ def test_cannot_overcrop_jpeg_post_height(user, jpeg_image_post, crop):
 
 
 @pytest.mark.parametrize(
-    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width + 1, 'y': grant_height}},]
+    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width + 1, 'y': grant_height}}]
 )
 def test_cannot_overcrop_jpeg_post_width(user, jpeg_image_post, crop):
     jpeg_image_post.image_item['crop'] = crop
@@ -99,7 +99,7 @@ def test_successful_jpeg_crop_to_minimal_image(user, jpeg_image_post, crop, s3_u
 
 
 @pytest.mark.parametrize(
-    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height}},]
+    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height}}]
 )
 def test_successful_jpeg_crop_off_nothing(user, jpeg_image_post, crop, s3_uploads_client):
     # crop the image

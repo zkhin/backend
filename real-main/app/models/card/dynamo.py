@@ -46,7 +46,7 @@ class CardDynamo:
         return query_kwargs
 
     def transact_delete_card(self, card_id):
-        return {'Delete': {'Key': self.typed_pk(card_id), 'ConditionExpression': 'attribute_exists(partitionKey)',}}
+        return {'Delete': {'Key': self.typed_pk(card_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}}
 
     def generate_cards_by_user(self, user_id, pks_only=False):
         query_kwargs = {

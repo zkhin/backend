@@ -37,9 +37,9 @@ def user_verified_phone(user_manager, cognito_client):
         Username=user_id,
         MessageAction='SUPPRESS',
         UserAttributes=[
-            {'Name': 'phone_number', 'Value': phone,},
-            {'Name': 'phone_number_verified', 'Value': 'true',},
-            {'Name': 'preferred_username', 'Value': username.lower(),},
+            {'Name': 'phone_number', 'Value': phone},
+            {'Name': 'phone_number_verified', 'Value': 'true'},
+            {'Name': 'preferred_username', 'Value': username.lower()},
         ],
     )
     yield user_manager.create_cognito_only_user(user_id, username)

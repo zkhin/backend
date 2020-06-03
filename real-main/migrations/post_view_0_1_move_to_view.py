@@ -31,7 +31,7 @@ class Migration:
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix)',
-            'ExpressionAttributeValues': {':pk_prefix': 'postView/',},
+            'ExpressionAttributeValues': {':pk_prefix': 'postView/'},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -95,7 +95,7 @@ class Migration:
 
         transact_delete = {
             'Delete': {
-                'Key': {'partitionKey': {'S': f'postView/{post_id}/{user_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'postView/{post_id}/{user_id}'}, 'sortKey': {'S': '-'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',
                 'TableName': self.table_name,
             }

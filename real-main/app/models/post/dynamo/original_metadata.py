@@ -8,10 +8,10 @@ class PostOriginalMetadataDynamo:
         self.client = dynamo_client
 
     def get(self, post_id):
-        return self.client.get_item({'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata',})
+        return self.client.get_item({'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata'})
 
     def delete(self, post_id):
-        return self.client.delete_item({'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata',})
+        return self.client.delete_item({'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata'})
 
     def transact_add(self, post_id, original_metadata):
         return {

@@ -29,7 +29,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND attribute_exists(photoMediaId)',
-            'ExpressionAttributeValues': {':pk_prefix': 'user/',},
+            'ExpressionAttributeValues': {':pk_prefix': 'user/'},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -45,9 +45,9 @@ class Migration:
         logger.warning(f'Migrating `{user_id}`')
 
         kwargs = {
-            'Key': {'partitionKey': user_item['partitionKey'], 'sortKey': user_item['sortKey'],},
+            'Key': {'partitionKey': user_item['partitionKey'], 'sortKey': user_item['sortKey']},
             'UpdateExpression': 'REMOVE photoMediaId SET photoPostId = :mid',
-            'ExpressionAttributeValues': {':mid': media_id,},
+            'ExpressionAttributeValues': {':mid': media_id},
             'ConditionExpression': 'attribute_exists(partitionKey) AND photoMediaId = :mid',
         }
 

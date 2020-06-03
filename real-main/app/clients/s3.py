@@ -31,7 +31,7 @@ class S3Client:
         return checksum
 
     def list_common_prefixes(self, path_prefix):
-        resp = self.boto_client.list_objects_v2(Bucket=self.bucket_name, Delimiter='/', Prefix=path_prefix,)
+        resp = self.boto_client.list_objects_v2(Bucket=self.bucket_name, Delimiter='/', Prefix=path_prefix)
         return [cp['Prefix'] for cp in resp.get('CommonPrefixes', [])]
 
     def delete_object(self, path):
@@ -49,7 +49,7 @@ class S3Client:
     def copy_object(self, old_path, new_path):
         new_obj = self.bucket.Object(new_path)
         new_obj.copy(
-            {'Bucket': self.bucket.name, 'Key': old_path,}
+            {'Bucket': self.bucket.name, 'Key': old_path}
         )
 
     def put_object(self, path, body, content_type):

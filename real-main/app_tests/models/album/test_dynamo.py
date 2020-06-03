@@ -55,7 +55,7 @@ def test_transact_add_album_maximal(album_dynamo):
     # add the album to the DB
     created_at = pendulum.now('utc')
     album_dynamo.client.transact_write_items(
-        [album_dynamo.transact_add_album(album_id, user_id, name, description=description, created_at=created_at),]
+        [album_dynamo.transact_add_album(album_id, user_id, name, description=description, created_at=created_at)]
     )
 
     # retrieve the album and verify the format is as we expect

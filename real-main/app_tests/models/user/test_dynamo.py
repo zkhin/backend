@@ -715,7 +715,7 @@ def test_transact_post_deleted(user_dynamo):
 
     # delete the archived post
     user_dynamo.client.transact_write_items(
-        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),]
+        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED)]
     )
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('postCount', 0) == 1
@@ -724,7 +724,7 @@ def test_transact_post_deleted(user_dynamo):
 
     # delete the completed post
     user_dynamo.client.transact_write_items(
-        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),]
+        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED)]
     )
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('postCount', 0) == 0
@@ -733,7 +733,7 @@ def test_transact_post_deleted(user_dynamo):
 
     # delete a pending post
     user_dynamo.client.transact_write_items(
-        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.PENDING),]
+        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.PENDING)]
     )
     user_item = user_dynamo.get_user(user_id)
     assert user_item.get('postCount', 0) == 0
@@ -743,13 +743,13 @@ def test_transact_post_deleted(user_dynamo):
     # verify can't go negative for completed posts
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(
-            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED),]
+            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED)]
         )
 
     # verify can't go negative for archived posts
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items(
-            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED),]
+            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED)]
         )
 
 

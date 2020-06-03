@@ -208,7 +208,7 @@ def test_create_cognito_only_user_username_released_if_user_not_found_in_user_po
         UserPoolId=cognito_client.user_pool_id,
         Username=user_id_2,
         MessageAction='SUPPRESS',
-        UserAttributes=[{'Name': 'email', 'Value': 'test@real.app',}, {'Name': 'email_verified', 'Value': 'true',}],
+        UserAttributes=[{'Name': 'email', 'Value': 'test@real.app'}, {'Name': 'email_verified', 'Value': 'true'}],
     )
 
     # create the first user that doesn't exist in the user pool, should fail

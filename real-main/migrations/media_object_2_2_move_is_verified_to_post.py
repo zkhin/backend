@@ -23,7 +23,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND attribute_exists(isVerified)',
-            'ExpressionAttributeValues': {':pk_prefix': 'media/',},
+            'ExpressionAttributeValues': {':pk_prefix': 'media/'},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -42,18 +42,18 @@ class Migration:
 
         transact_media = {
             'Update': {
-                'Key': {'partitionKey': {'S': f'media/{media_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'media/{media_id}'}, 'sortKey': {'S': '-'}},
                 'UpdateExpression': 'REMOVE isVerified',
-                'ExpressionAttributeValues': {':iv': {'BOOL': is_verified},},
+                'ExpressionAttributeValues': {':iv': {'BOOL': is_verified}},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND isVerified = :iv',
                 'TableName': self.dynamo_table.name,
             },
         }
         transact_post = {
             'Update': {
-                'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'post/{post_id}'}, 'sortKey': {'S': '-'}},
                 'UpdateExpression': 'SET isVerified = :iv',
-                'ExpressionAttributeValues': {':iv': {'BOOL': is_verified},},
+                'ExpressionAttributeValues': {':iv': {'BOOL': is_verified}},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND attribute_not_exists(isVerified)',
                 'TableName': self.dynamo_table.name,
             },

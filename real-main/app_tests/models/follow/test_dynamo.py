@@ -148,7 +148,7 @@ def test_generate_followers(follow_dynamo, user1, user2, user3):
 
     # one user follows us, check our generated followers
     follow_dynamo.client.transact_write_items(
-        [follow_dynamo.transact_add_following(other1_user.id, our_user.id, 'anything'),]
+        [follow_dynamo.transact_add_following(other1_user.id, our_user.id, 'anything')]
     )
     resp = list(follow_dynamo.generate_follower_items(our_user.id))
     assert len(resp) == 1
@@ -157,7 +157,7 @@ def test_generate_followers(follow_dynamo, user1, user2, user3):
 
     # the other user follows us, check our generated followers
     follow_dynamo.client.transact_write_items(
-        [follow_dynamo.transact_add_following(other2_user.id, our_user.id, 'anything'),]
+        [follow_dynamo.transact_add_following(other2_user.id, our_user.id, 'anything')]
     )
     resp = list(follow_dynamo.generate_follower_items(our_user.id))
     assert len(resp) == 2
@@ -178,7 +178,7 @@ def test_generate_followeds(follow_dynamo, user1, user2, user3):
 
     # we follow another user, check our generated followeds
     follow_dynamo.client.transact_write_items(
-        [follow_dynamo.transact_add_following(our_user.id, other1_user.id, 'anything'),]
+        [follow_dynamo.transact_add_following(our_user.id, other1_user.id, 'anything')]
     )
     resp = list(follow_dynamo.generate_followed_items(our_user.id))
     assert len(resp) == 1
@@ -187,7 +187,7 @@ def test_generate_followeds(follow_dynamo, user1, user2, user3):
 
     # we follow the other user, check our generated followeds
     follow_dynamo.client.transact_write_items(
-        [follow_dynamo.transact_add_following(our_user.id, other2_user.id, 'anything'),]
+        [follow_dynamo.transact_add_following(our_user.id, other2_user.id, 'anything')]
     )
     resp = list(follow_dynamo.generate_followed_items(our_user.id))
     assert len(resp) == 2

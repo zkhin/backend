@@ -23,7 +23,7 @@ class Migration:
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix)',
-            'ExpressionAttributeValues': {':pk_prefix': 'flag/',},
+            'ExpressionAttributeValues': {':pk_prefix': 'flag/'},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -55,7 +55,7 @@ class Migration:
         }
         transact_delete = {
             'Delete': {
-                'Key': {'partitionKey': {'S': f'flag/{user_id}/{post_id}'}, 'sortKey': {'S': '-'},},
+                'Key': {'partitionKey': {'S': f'flag/{user_id}/{post_id}'}, 'sortKey': {'S': '-'}},
                 'ConditionExpression': 'attribute_exists(partitionKey)',
                 'TableName': self.dynamo_table.name,
             }

@@ -59,6 +59,6 @@ def dispatch(event, context):
     except ClientException as err:
         msg = 'ClientError: ' + str(err)
         logger.warning(msg)
-        return {'error': {'message': msg, 'data': err.data, 'info': err.info,}}
+        return {'error': {'message': msg, 'data': err.data, 'info': err.info}}
 
     return {'success': resp}

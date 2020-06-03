@@ -27,7 +27,7 @@ class Migration:
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
             'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :fsv',
-            'ExpressionAttributeValues': {':pk_prefix': 'user/', ':fsv': self.from_version,},
+            'ExpressionAttributeValues': {':pk_prefix': 'user/', ':fsv': self.from_version},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -48,10 +48,10 @@ class Migration:
     def dynamo_update_user(self, user_id, org_count, actual_count):
         logger.warning(f'User `{user_id}`: updating user record with {actual_count} archived posts')
         kwargs = {
-            'Key': {'partitionKey': f'user/{user_id}', 'sortKey': 'profile',},
+            'Key': {'partitionKey': f'user/{user_id}', 'sortKey': 'profile'},
             'UpdateExpression': 'SET schemaVersion = :tsv',
             'ConditionExpression': 'schemaVersion = :fsv',
-            'ExpressionAttributeValues': {':tsv': self.to_version, ':fsv': self.from_version,},
+            'ExpressionAttributeValues': {':tsv': self.to_version, ':fsv': self.from_version},
         }
 
         if actual_count == 0:

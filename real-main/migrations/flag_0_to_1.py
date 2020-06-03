@@ -19,7 +19,7 @@ def generate_all_flags(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {':pk_prefix': 'flag/', ':sv': version,},
+        'ExpressionAttributeValues': {':pk_prefix': 'flag/', ':sv': version},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -40,7 +40,7 @@ def update_flag(flag):
     _, user_id, post_id = flag['partitionKey'].split('/')
     flagged_at = flag['likedAt']
     kwargs = {
-        'Key': {'partitionKey': flag['partitionKey'], 'sortKey': flag['sortKey'],},
+        'Key': {'partitionKey': flag['partitionKey'], 'sortKey': flag['sortKey']},
         'UpdateExpression': ' '.join(
             [
                 'SET '

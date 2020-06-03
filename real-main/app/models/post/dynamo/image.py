@@ -49,7 +49,7 @@ class PostImageDynamo:
         query_kwargs = {
             'Key': self.pk(post_id),
             'UpdateExpression': 'SET height = :height, width = :width',
-            'ExpressionAttributeValues': {':height': height, ':width': width,},
+            'ExpressionAttributeValues': {':height': height, ':width': width},
         }
         return self.client.update_item(query_kwargs)
 
@@ -57,7 +57,7 @@ class PostImageDynamo:
         assert color_tuples, 'No support for deleting colors, yet'
 
         # transform to map before saving
-        color_maps = [{'r': ct[0], 'g': ct[1], 'b': ct[2],} for ct in color_tuples]
+        color_maps = [{'r': ct[0], 'g': ct[1], 'b': ct[2]} for ct in color_tuples]
 
         query_kwargs = {
             'Key': self.pk(post_id),

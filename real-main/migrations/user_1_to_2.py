@@ -19,7 +19,7 @@ def generate_all_users(version):
     assert isinstance(version, int)
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) and schemaVersion = :sv',
-        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version,},
+        'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sv': version},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -51,7 +51,7 @@ def update_user(user):
         exp_values[':ga1sk'] = '-'
 
     kwargs = {
-        'Key': {'partitionKey': user['partitionKey'], 'sortKey': user['sortKey'],},
+        'Key': {'partitionKey': user['partitionKey'], 'sortKey': user['sortKey']},
         'UpdateExpression': 'SET ' + ', '.join(set_exps),
         'ConditionExpression': 'attribute_exists(partitionKey) and schemaVersion = :one',
         'ExpressionAttributeValues': exp_values,

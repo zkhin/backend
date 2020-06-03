@@ -51,11 +51,11 @@ class FollowedFirstStoryManager:
 
         # figgure out what the followed first story was prev, and is now, the operation we're refreshing for
         ffs_prev = next(
-            iter(sorted(filter(lambda s: s is not None, [db_story, story_prev]), key=lambda s: s['expiresAt'],)),
+            iter(sorted(filter(lambda s: s is not None, [db_story, story_prev]), key=lambda s: s['expiresAt'])),
             None,
         )
         ffs_now = next(
-            iter(sorted(filter(lambda s: s is not None, [db_story, story_now]), key=lambda s: s['expiresAt'],)), None
+            iter(sorted(filter(lambda s: s is not None, [db_story, story_now]), key=lambda s: s['expiresAt'])), None
         )
 
         if ffs_prev and not ffs_now:

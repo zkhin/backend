@@ -29,7 +29,7 @@ def generate_all_media_objects_uploaded_or_archived(version):
             ' and (mediaStatus = :u or mediaStatus = :a)'
             ' and attribute_not_exists(colors)'
         ),
-        'ExpressionAttributeValues': {':pk_prefix': 'media/', ':sv': version, ':u': 'UPLOADED', ':a': 'ARCHIVED',},
+        'ExpressionAttributeValues': {':pk_prefix': 'media/', ':sv': version, ':u': 'UPLOADED', ':a': 'ARCHIVED'},
     }
     while True:
         paginated = boto_table.scan(**scan_kwargs)
@@ -69,9 +69,9 @@ def get_colors(data):
 
 def save_colors(media_item, colors):
     media_id = media_item['mediaId']
-    color_maps = [{'r': ct[0], 'g': ct[1], 'b': ct[2],} for ct in colors]
+    color_maps = [{'r': ct[0], 'g': ct[1], 'b': ct[2]} for ct in colors]
     kwargs = {
-        'Key': {'partitionKey': f'media/{media_id}', 'sortKey': '-',},
+        'Key': {'partitionKey': f'media/{media_id}', 'sortKey': '-'},
         'UpdateExpression': 'SET colors = :colors',
         'ExpressionAttributeValues': {':colors': color_maps},
         'ConditionExpression': 'attribute_exists(partitionKey) and attribute_not_exists(colors)',

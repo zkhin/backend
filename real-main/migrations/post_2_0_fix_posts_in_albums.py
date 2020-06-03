@@ -38,7 +38,7 @@ class Migration:
                 ' and attribute_exists(albumId)'
                 ' and attribute_not_exists(gsiK3PartitionKey)'
             ),
-            'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sv': self.from_version,},
+            'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sv': self.from_version},
         }
         while True:
             paginated = self.boto_table.scan(**scan_kwargs)
@@ -54,7 +54,7 @@ class Migration:
         # we can rebalance the posts in the album later
         album_rank = decimal.Decimal(random.randrange(1, 1000 * 1000)) / 1000 / 1000 / 10
         kwargs = {
-            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': '-',},
+            'Key': {'partitionKey': f'post/{post_id}', 'sortKey': '-'},
             'UpdateExpression': (
                 'SET gsiK3PartitionKey = :pk, gsiK3SortKey = :sk REMOVE gsiK2PartitionKey, gsiK2SortKey'
             ),
