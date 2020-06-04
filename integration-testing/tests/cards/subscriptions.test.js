@@ -135,9 +135,9 @@ test('Lifecycle, format for comment activity notification', async () => {
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('ADDED')
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
-  expect(resp.data.onCardNotification.card.title).toBe('You have new comment activity')
+  expect(resp.data.onCardNotification.card.title).toBe('You have new comments')
   expect(resp.data.onCardNotification.card.subTitle).toBeNull()
-  expect(resp.data.onCardNotification.card.action).toBe('https://real.app/comment/')
+  expect(resp.data.onCardNotification.card.action).toBe('https://real.app/chat/')
   const orgCard = resp.data.onCardNotification.card
 
   // set up a promise that will resolve to the next message received from the subscription
@@ -211,7 +211,7 @@ test('Lifecycle, format for chat activity notification', async () => {
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('ADDED')
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
-  expect(resp.data.onCardNotification.card.title).toBe('You have new chat activity')
+  expect(resp.data.onCardNotification.card.title).toBe('You have new messages')
   expect(resp.data.onCardNotification.card.subTitle).toBeNull()
   expect(resp.data.onCardNotification.card.action).toBe('https://real.app/chat/')
   const orgCard = resp.data.onCardNotification.card

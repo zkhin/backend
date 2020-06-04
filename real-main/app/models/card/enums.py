@@ -15,7 +15,6 @@ class _WellKnownCard:
         return f'{user_id}:{self.name}'
 
 
-COMMENT_ACTIVITY_CARD = _WellKnownCard(
-    'COMMENT_ACTIVITY', 'You have new comment activity', 'https://real.app/comment/',
-)
-CHAT_ACTIVITY_CARD = _WellKnownCard('CHAT_ACTIVITY', 'You have new chat activity', 'https://real.app/chat/')
+# these both say 'new', but more accurate would be 'new, edited or deleted'
+COMMENT_ACTIVITY_CARD = _WellKnownCard('COMMENT_ACTIVITY', 'You have new comments', 'https://real.app/chat/',)
+CHAT_ACTIVITY_CARD = _WellKnownCard('CHAT_ACTIVITY', 'You have new messages', 'https://real.app/chat/')

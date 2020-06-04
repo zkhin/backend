@@ -81,9 +81,9 @@ test('Generate comment card', async () => {
   // verify that card has expected format
   let card = resp.data.self.cards.items[0]
   expect(card.cardId).toBeTruthy()
-  expect(card.title).toBe('You have new comment activity')
+  expect(card.title).toBe('You have new comments')
   expect(card.subTitle).toBeNull()
-  expect(card.action).toBe('https://real.app/comment/')
+  expect(card.action).toBe('https://real.app/chat/')
 
   // they comment again on the post
   variables = {commentId: uuidv4(), postId, text: 'nice post'}
@@ -144,7 +144,7 @@ test('Unread chat message card with correct format', async () => {
   // verify that card has expected format
   let card = resp.data.self.cards.items[0]
   expect(card.cardId).toBeTruthy()
-  expect(card.title).toBe('You have new chat activity')
+  expect(card.title).toBe('You have new messages')
   expect(card.subTitle).toBeNull()
   expect(card.action).toBe('https://real.app/chat/')
 
@@ -215,7 +215,7 @@ test('List cards', async () => {
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(2)
   expect(resp.data.self.cards.items).toHaveLength(2)
-  expect(resp.data.self.cards.items[0].action).toContain('comment')
+  expect(resp.data.self.cards.items[0].action).toContain('chat')
   expect(resp.data.self.cards.items[1].action).toContain('chat')
 })
 
