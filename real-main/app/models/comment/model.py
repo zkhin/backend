@@ -80,7 +80,7 @@ class Comment(FlagModelMixin, ViewModelMixin):
 
         # if this comment is being deleted by anyone other than post owner, count it as new comment activity
         if deleter_user_id and deleter_user_id != self.post.user_id:
-            self.post.set_new_comment_activity(True)
+            self.post.register_new_comment_activity()
         # delete view records on the comment
         self.delete_views()
         return self

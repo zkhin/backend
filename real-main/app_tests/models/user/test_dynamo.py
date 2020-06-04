@@ -549,33 +549,6 @@ def test_increment_decrement_chat_count(user_dynamo):
     assert user_item['chatCount'] == 0
 
 
-def test_increment_decrement_post_has_new_comment_activity_count(user_dynamo):
-    user_id = 'my-user-id'
-    username = 'my-username'
-
-    # create the user, verify user starts with no chat count
-    user_item = user_dynamo.add_user(user_id, username)
-    assert user_item['userId'] == user_id
-    assert 'postHasNewCommentActivityCount' not in user_item
-
-    # verify can't go below zero
-    transacts = [user_dynamo.transact_decrement_post_has_new_comment_activity_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items(transacts)
-
-    # increment
-    transacts = [user_dynamo.transact_increment_post_has_new_comment_activity_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['postHasNewCommentActivityCount'] == 1
-
-    # decrement
-    transacts = [user_dynamo.transact_decrement_post_has_new_comment_activity_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['postHasNewCommentActivityCount'] == 0
-
-
 def test_increment_post_viewed_by_count_doesnt_exist(user_dynamo):
     user_id = 'doesnt-exist'
     with pytest.raises(UserDoesNotExist):

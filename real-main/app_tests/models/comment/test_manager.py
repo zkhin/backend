@@ -56,16 +56,19 @@ def test_add_comment(comment_manager, user, post):
 def test_add_comment_registers_new_comment_activity(comment_manager, user, user2, post):
     comment_id = 'cid'
 
+    # check starting state
+    post.refresh_item()
+    assert post.item.get('commentCount', 0) == 0
+    assert post.last_new_comment_activity_at is None
+
     # add the comment, verify
     comment = comment_manager.add_comment(comment_id, post.id, user2.id, 'lore ipsum')
     assert comment.id == comment_id
 
     # check the post counter incremented, and there *is* new comment acitivy
     post.refresh_item()
-    assert post.item['commentCount'] == 1
-    assert post.item.get('hasNewCommentActivity', False) is True
-    user.refresh_item()
-    assert user.item.get('postHasNewCommentActivityCount', 0) == 1
+    assert post.item.get('commentCount', 0) == 1
+    assert post.last_new_comment_activity_at
 
 
 def test_add_comment_cant_reuse_ids(comment_manager, user, post):

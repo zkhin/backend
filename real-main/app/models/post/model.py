@@ -155,6 +155,10 @@ class Post(FlagModelMixin, ViewModelMixin):
             self._user = self.user_manager.get_user(self.user_id)
         return self._user
 
+    @property
+    def last_new_comment_activity_at(self):
+        return pendulum.parse(self.item['gsiA3SortKey']) if 'gsiA3SortKey' in self.item else None
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -582,41 +586,20 @@ class Post(FlagModelMixin, ViewModelMixin):
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
 
-    def set_new_comment_activity(self, new_value):
-        old_value = self.item.get('hasNewCommentActivity', False)
-        if old_value == new_value:
+    def register_new_comment_activity(self, now=None):
+        now = now or pendulum.now('utc')
+        self.card_manager.add_well_known_card_if_dne(self.user_id, COMMENT_ACTIVITY_CARD)
+        self.item = self.dynamo.set_last_new_comment_activity_at(self.item, now)
+        return self
+
+    def clear_new_comment_activity(self):
+        if 'gsiA3SortKey' not in self.item:
             return self
 
-        if new_value:
-            self.card_manager.add_well_known_card_if_dne(self.user_id, COMMENT_ACTIVITY_CARD)
-        else:
-            # once we've seen the new comment activity for *any* post, we remove the notification card,
-            # even if there are other posts with activity we have not seen
-            self.card_manager.remove_well_known_card_if_exists(self.user_id, COMMENT_ACTIVITY_CARD)
-
-        # order matters to moto (in test suite), but not on dynamo
-        transacts = [self.dynamo.transact_set_has_new_comment_activity(self.id, new_value)]
-        transact_exceptions = [exceptions.DoesNotHaveExpectedCommentActivity(self.id, old_value)]
-
-        user_dyanmo = self.user_manager.dynamo
-        if new_value:
-            transacts.append(user_dyanmo.transact_increment_post_has_new_comment_activity_count(self.user_id))
-        else:
-            transacts.append(user_dyanmo.transact_decrement_post_has_new_comment_activity_count(self.user_id))
-        transact_exceptions.append(
-            exceptions.PostException(
-                f'Unable to increment/decrement posts have new comment activity count for user `{self.user_id}`',
-            )
-        )
-
-        try:
-            self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-        except exceptions.DoesNotHaveExpectedCommentActivity:
-            # race condition, another thread already set the comment activity so we don't need to
-            pass
-
-        # avoid another refresh_item b/c of possible race conditions
-        self.item['hasNewCommentActivity'] = new_value
+        # once we've seen the new comment activity for *any* post, we remove the notification card,
+        # even if there are other posts with activity we have not seen
+        self.card_manager.remove_well_known_card_if_exists(self.user_id, COMMENT_ACTIVITY_CARD)
+        self.item = self.dynamo.set_last_new_comment_activity_at(self.item, None)
         return self
 
     def set_expires_at(self, expires_at):

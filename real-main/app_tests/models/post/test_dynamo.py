@@ -59,8 +59,6 @@ def test_transact_add_pending_post_sans_options(post_dynamo):
         'sortKey': '-',
         'gsiA2PartitionKey': 'post/pbuid',
         'gsiA2SortKey': f'{PostStatus.PENDING}/{posted_at_str}',
-        'gsiA3PartitionKey': 'post/pbuid',
-        'gsiA3SortKey': f'{PostStatus.PENDING}/ptype/{posted_at_str}',
         'postedByUserId': 'pbuid',
         'postId': 'pid',
         'postType': 'ptype',
@@ -108,8 +106,6 @@ def test_transact_add_pending_post_with_options(post_dynamo):
         'sortKey': '-',
         'gsiA2PartitionKey': 'post/pbuid',
         'gsiA2SortKey': PostStatus.PENDING + '/' + posted_at_str,
-        'gsiA3PartitionKey': 'post/pbuid',
-        'gsiA3SortKey': PostStatus.PENDING + '/' + post_type + '/' + posted_at_str,
         'postedByUserId': 'pbuid',
         'postId': 'pid',
         'postType': 'ptype',
@@ -195,7 +191,7 @@ def test_generate_posts_by_user(post_dynamo):
 def test_transact_set_post_status(post_dynamo):
     post_id = 'my-post-id'
     user_id = 'my-user-id'
-    keys_that_change = ('postStatus', 'gsiA2SortKey', 'gsiA3SortKey')
+    keys_that_change = ('postStatus', 'gsiA2SortKey')
 
     # add a post, verify starts pending
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')]
@@ -210,7 +206,6 @@ def test_transact_set_post_status(post_dynamo):
     new_post_item = post_dynamo.get_post(post_id)
     assert new_post_item.pop('postStatus') == new_status
     assert new_post_item.pop('gsiA2SortKey').startswith(new_status + '/')
-    assert new_post_item.pop('gsiA3SortKey').startswith(new_status + '/')
     assert {**new_post_item, **{k: org_post_item[k] for k in keys_that_change}} == org_post_item
 
     # set post status *with* specifying an original post id
@@ -221,7 +216,6 @@ def test_transact_set_post_status(post_dynamo):
     new_post_item = post_dynamo.get_post(post_id)
     assert new_post_item.pop('postStatus') == new_status
     assert new_post_item.pop('gsiA2SortKey').startswith(new_status + '/')
-    assert new_post_item.pop('gsiA3SortKey').startswith(new_status + '/')
     assert new_post_item.pop('originalPostId') == original_post_id
     assert {**new_post_item, **{k: org_post_item[k] for k in keys_that_change}} == org_post_item
 
@@ -253,7 +247,6 @@ def test_transact_set_post_status_with_expires_at_and_album_id(post_dynamo):
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item['postStatus'] == new_status
-    assert post_item['gsiA3SortKey'].startswith(new_status + '/')
     assert post_item['gsiA2SortKey'].startswith(new_status + '/')
     assert post_item['gsiA1SortKey'].startswith(new_status + '/')
 
@@ -521,7 +514,6 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     new_post_item = post_dynamo.set_expires_at(new_post_item, expires_at)
     new_post_item['postedAt'] = org_post_item['postedAt']
     new_post_item['gsiA2SortKey'] = org_post_item['gsiA2SortKey']
-    new_post_item['gsiA3SortKey'] = org_post_item['gsiA3SortKey']
     assert new_post_item == org_post_item
 
 
@@ -551,7 +543,6 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
     new_post_item = post_dynamo.remove_expires_at(post_id)
     new_post_item['postedAt'] = org_post_item['postedAt']
     new_post_item['gsiA2SortKey'] = org_post_item['gsiA2SortKey']
-    new_post_item['gsiA3SortKey'] = org_post_item['gsiA3SortKey']
     assert new_post_item == org_post_item
 
 
@@ -845,53 +836,40 @@ def test_transact_increment_decrement_comment_count(post_dynamo):
     assert post_item.get('commentCount', 0) == 1
 
 
-def test_transact_set_has_new_comment_activity(post_dynamo):
+def test_set_last_new_comment_activity_at(post_dynamo):
+    user_id = 'uid'
     post_id = 'pid'
 
     # add a post, verify starts with no new comment activity
-    transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    transact = post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
     post_dynamo.client.transact_write_items([transact])
     post_item = post_dynamo.get_post(post_id)
-    assert 'hasNewCommentActivity' not in post_item
+    assert 'gsiA3PartitionKey' not in post_item
+    assert 'gsiA3SortKey' not in post_item
 
-    # verify can't set missing to False
-    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
-    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
-        post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert 'hasNewCommentActivity' not in post_item
+    # add some comment activity
+    at = pendulum.now('utc')
+    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, at)
+    assert post_item['gsiA3PartitionKey'].split('/') == ['post', 'uid']
+    assert pendulum.parse(post_item['gsiA3SortKey']) == at
 
-    # verify can set missing to True
-    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['hasNewCommentActivity'] is True
+    # update the comment activity
+    at = pendulum.now('utc')
+    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, at)
+    assert post_item['gsiA3PartitionKey'].split('/') == ['post', 'uid']
+    assert pendulum.parse(post_item['gsiA3SortKey']) == at
 
-    # verify can't set True to True
-    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
-    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
-        post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['hasNewCommentActivity'] is True
+    # clear the comment activity
+    at = pendulum.now('utc')
+    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, None)
+    assert 'gsiA3PartitionKey' not in post_item
+    assert 'gsiA3SortKey' not in post_item
 
-    # verify can set True to False
-    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['hasNewCommentActivity'] is False
-
-    # verify can't set False to False
-    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, False)
-    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
-        post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['hasNewCommentActivity'] is False
-
-    # verify can set False to True
-    transact = post_dynamo.transact_set_has_new_comment_activity(post_id, True)
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item['hasNewCommentActivity'] is True
+    # no-op: clear the comment activity again
+    at = pendulum.now('utc')
+    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, None)
+    assert 'gsiA3PartitionKey' not in post_item
+    assert 'gsiA3SortKey' not in post_item
 
 
 def test_transact_set_album_id_pending_post(post_dynamo):
