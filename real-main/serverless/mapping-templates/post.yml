@@ -127,3 +127,8 @@
   field: hasNewCommentActivity
   dataSource: NoneDataSource
   response: PassThru.response.vtl
+
+- type: Post
+  field: lastNewCommentActivityAt
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl

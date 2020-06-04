@@ -328,6 +328,7 @@ module.exports.addPost = gql`
       sharingDisabled
       verificationHidden
       hasNewCommentActivity
+      lastNewCommentActivityAt
       flagStatus
     }
   }

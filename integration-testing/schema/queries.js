@@ -216,7 +216,6 @@ module.exports.post = gql`
         postCount
         blockerStatus
         followedStatus
-        postHasNewCommentActivity
       }
       expiresAt
       album {
@@ -252,6 +251,7 @@ module.exports.post = gql`
       sharingDisabled
       verificationHidden
       hasNewCommentActivity
+      lastNewCommentActivityAt
       onymousLikeCount
       anonymousLikeCount
       onymouslyLikedBy(limit: $onymouslyLikedByLimit) {
