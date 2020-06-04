@@ -1,13 +1,12 @@
-import os.path as path
 import uuid
+from os import path
 
-import PIL.Image as Image
+import PIL.Image
 import pytest
 
 from app.models.post.enums import PostType
 from app.models.post.exceptions import PostException
 from app.utils import image_size
-
 
 grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
 grant_height = 320
@@ -116,7 +115,7 @@ def test_successful_jpeg_crop_off_nothing(user, jpeg_image_post, crop, s3_upload
 def test_jpeg_metadata_preserved_through_crop(user, jpeg_image_post, s3_uploads_client):
     # get the original exif tags
     path = jpeg_image_post.get_image_path(image_size.NATIVE)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path))
     exif_data = image.info['exif']
     assert exif_data
 

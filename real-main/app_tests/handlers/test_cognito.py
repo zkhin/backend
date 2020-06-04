@@ -1,6 +1,6 @@
 import pytest
 
-from app.handlers.cognito import validate_username_format, validate_user_attribute_lowercase, CognitoClientException
+from app.handlers.cognito import CognitoClientException, validate_user_attribute_lowercase, validate_username_format
 
 
 def test_uuid_missing():

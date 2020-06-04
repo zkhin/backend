@@ -1,8 +1,8 @@
 import collections
 import logging
+import uuid
 
 import pendulum
-import uuid
 
 from app import models
 from app.mixins.base import ManagerBase

@@ -1,7 +1,7 @@
 import cachecontrol
-import google.auth.transport.requests as google_requests
-import google.oauth2.id_token as google_id_token
 import requests
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 
 class GoogleClient:

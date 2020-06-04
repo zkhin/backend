@@ -1,7 +1,7 @@
 import base64
 import decimal
-import os.path as path
 import uuid
+from os import path
 
 import pytest
 

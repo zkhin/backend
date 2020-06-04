@@ -7,7 +7,6 @@ from . import enums, exceptions
 from .dynamo import FollowDynamo
 from .model import Follow
 
-
 logger = logging.getLogger()
 
 

@@ -5,9 +5,7 @@ from app.clients import PostVerificationClient
 
 @pytest.fixture
 def post_verification_client():
-    yield PostVerificationClient(
-        lambda: {'root': 'https://url-root/', 'key': 'the-api-key'}
-    )
+    yield PostVerificationClient(lambda: {'root': 'https://url-root/', 'key': 'the-api-key'})
 
 
 def test_verify_image_success_minimal(post_verification_client, requests_mock):

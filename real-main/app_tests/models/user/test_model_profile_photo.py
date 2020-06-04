@@ -1,12 +1,11 @@
-import unittest.mock as mock
 import uuid
+from unittest import mock
 
 import pytest
 
 from app.models.post.enums import PostType
-from app.utils import image_size
-
 from app.models.user.exceptions import UserException
+from app.utils import image_size
 
 
 @pytest.fixture

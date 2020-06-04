@@ -2,13 +2,13 @@ import collections
 import functools
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Attr, Key
 
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostStatus
 
-from .. import exceptions, enums
+from .. import enums, exceptions
 
 logger = logging.getLogger()
 
@@ -38,13 +38,13 @@ class PostDynamo:
     def get_next_completed_post_to_expire(self, user_id, exclude_post_id=None):
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('gsiA1PartitionKey').eq(f'post/{user_id}')
-                & conditions.Key('gsiA1SortKey').begins_with(f'{PostStatus.COMPLETED}/')
+                Key('gsiA1PartitionKey').eq(f'post/{user_id}')
+                & Key('gsiA1SortKey').begins_with(f'{PostStatus.COMPLETED}/')
             ),
             'IndexName': 'GSI-A1',
         }
         if exclude_post_id:
-            query_kwargs['FilterExpression'] = conditions.Attr('postId').ne(exclude_post_id)
+            query_kwargs['FilterExpression'] = Attr('postId').ne(exclude_post_id)
         return next(self.client.generate_all_query(query_kwargs), None)
 
     def batch_get_posted_by_user_ids(self, post_ids):
@@ -56,19 +56,19 @@ class PostDynamo:
 
     def generate_posts_by_user(self, user_id, completed=None):
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiA2PartitionKey').eq(f'post/{user_id}'),
+            'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'post/{user_id}'),
             'IndexName': 'GSI-A2',
         }
         if completed is not None:
-            filter_exp = conditions.Attr('postStatus')
+            filter_exp = Attr('postStatus')
             filter_exp = filter_exp.eq if completed else filter_exp.ne
             query_kwargs['FilterExpression'] = filter_exp(PostStatus.COMPLETED)
         return self.client.generate_all_query(query_kwargs)
 
     def generate_expired_post_pks_by_day(self, date, cut_off_time=None):
-        key_conditions = [conditions.Key('gsiK1PartitionKey').eq(f'post/{date}')]
+        key_conditions = [Key('gsiK1PartitionKey').eq(f'post/{date}')]
         if cut_off_time:
-            key_conditions.append(conditions.Key('gsiK1SortKey').lt(str(cut_off_time)))
+            key_conditions.append(Key('gsiK1SortKey').lt(str(cut_off_time)))
         query_kwargs = {
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-K1',
@@ -80,8 +80,7 @@ class PostDynamo:
         "Do a table **scan** to generate pks of expired posts. Does *not* include cut_off_date."
         query_kwargs = {
             'FilterExpression': (
-                conditions.Attr('partitionKey').begins_with('post/')
-                & conditions.Attr('expiresAt').lt(str(cut_off_date))
+                Attr('partitionKey').begins_with('post/') & Attr('expiresAt').lt(str(cut_off_date))
             ),
             'ProjectionExpression': 'partitionKey, sortKey',
         }
@@ -323,7 +322,7 @@ class PostDynamo:
 
     def get_first_with_checksum(self, checksum):
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiK2PartitionKey').eq(f'postChecksum/{checksum}'),
+            'KeyConditionExpression': Key('gsiK2PartitionKey').eq(f'postChecksum/{checksum}'),
             'IndexName': 'GSI-K2',
         }
         keys = self.client.query_head(query_kwargs)
@@ -483,13 +482,13 @@ class PostDynamo:
     def generate_post_ids_in_album(self, album_id, completed=None, after_rank=None):
         assert completed is None or after_rank is None, 'Cant specify both completed and after_rank kwargs'
 
-        key_exps = [conditions.Key('gsiK3PartitionKey').eq(f'post/{album_id}')]
+        key_exps = [Key('gsiK3PartitionKey').eq(f'post/{album_id}')]
         if completed is True:
-            key_exps.append(conditions.Key('gsiK3SortKey').gt(-1))
+            key_exps.append(Key('gsiK3SortKey').gt(-1))
         if completed is False:
-            key_exps.append(conditions.Key('gsiK3SortKey').eq(-1))
+            key_exps.append(Key('gsiK3SortKey').eq(-1))
         if after_rank is not None:
-            key_exps.append(conditions.Key('gsiK3SortKey').gt(after_rank))
+            key_exps.append(Key('gsiK3SortKey').gt(after_rank))
 
         query_kwargs = {
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_exps),

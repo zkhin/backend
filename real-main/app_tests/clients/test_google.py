@@ -1,9 +1,8 @@
-import unittest.mock as mock
+from unittest import mock
 
 import pytest
 
 from app.clients import GoogleClient
-
 
 # this an actual real response, if it's not obvious
 google_id_info = {

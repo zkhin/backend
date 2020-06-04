@@ -62,24 +62,28 @@ jobs:
         python-version: 3.8
 
     - name: Install black, flake8 (for pyflakes)
-      run: pip install black flake8
+      # waiting on isort 5.0 https://github.com/timothycrosley/isort/issues/1117
+      run: pip install black flake8 git+https://github.com/timothycrosley/isort.git@158b22e2
 
     - name: Lint real-auth
       working-directory: real-auth
       run: |
         black --check --diff .
+        isort --check --diff .
         flake8 .
 
     - name: Lint real-cloudfront
       working-directory: real-cloudfront
       run: |
         black --check --diff .
+        isort --check --diff .
         flake8 .
 
     - name: Lint real-main
       working-directory: real-main
       run: |
         black --check --diff .
+        isort --check --diff .
         flake8 .
 
   javascript-lint:

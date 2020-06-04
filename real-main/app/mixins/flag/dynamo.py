@@ -1,7 +1,7 @@
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -46,8 +46,7 @@ class FlagDynamo:
     def generate_by_item(self, item_id, pks_only=False):
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('partitionKey').eq(f'{self.item_type}/{item_id}')
-                & conditions.Key('sortKey').begins_with('flag/')
+                Key('partitionKey').eq(f'{self.item_type}/{item_id}') & Key('sortKey').begins_with('flag/')
             ),
         }
         if pks_only:
@@ -58,8 +57,7 @@ class FlagDynamo:
         query_kwargs = {
             'ProjectionExpression': 'partitionKey',
             'KeyConditionExpression': (
-                conditions.Key('gsiK1PartitionKey').eq(f'flag/{user_id}')
-                & conditions.Key('gsiK1SortKey').eq(self.item_type)
+                Key('gsiK1PartitionKey').eq(f'flag/{user_id}') & Key('gsiK1SortKey').eq(self.item_type)
             ),
             'IndexName': 'GSI-K1',
         }

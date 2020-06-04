@@ -1,14 +1,14 @@
 import logging
+import uuid
 
 import pendulum
-import uuid
 
 from app import models
 
 from . import enums, exceptions
-from .model import Card
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
+from .model import Card
 
 logger = logging.getLogger()
 

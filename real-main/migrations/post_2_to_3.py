@@ -4,8 +4,8 @@ import os
 
 import boto3
 import PIL
-import PIL.Image as Image
-import PIL.ImageOps as ImageOps
+import PIL.Image
+import PIL.ImageOps
 
 logger = logging.getLogger()
 
@@ -71,11 +71,11 @@ class Migration:
         native_data = self.s3_get_object_data(native_path)
         if native_data:
             try:
-                im = Image.open(io.BytesIO(native_data))
+                im = PIL.Image.open(io.BytesIO(native_data))
             except PIL.UnidentifiedImageError:
                 logger.warning(f'Post `{post_id}`: s3: native image appears corrupted')
             else:
-                im = ImageOps.exif_transpose(im)
+                im = PIL.ImageOps.exif_transpose(im)
                 for size in THUMBNAILS:
                     im.thumbnail(size.max_dimensions)
                     data = io.BytesIO()

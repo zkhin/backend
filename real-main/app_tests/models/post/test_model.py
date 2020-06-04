@@ -1,18 +1,17 @@
 import base64
 import decimal
 import logging
-import os.path as path
-import unittest.mock as mock
 import uuid
+from os import path
+from unittest import mock
 
 import pendulum
 import pytest
 
 from app.models import FollowedFirstStoryManager
-from app.models.post.enums import PostType, PostStatus
+from app.models.post.enums import PostStatus, PostType
 from app.models.post.model import Post
 from app.utils import image_size
-
 
 grant_height = 320
 grant_width = 240
@@ -127,9 +126,7 @@ def test_get_video_writeonly_url(cloudfront_client, s3_uploads_client):
         'postStatus': PostStatus.PENDING,
     }
     expected_url = {}
-    cloudfront_client.configure_mock(
-        **{'generate_presigned_url.return_value': expected_url}
-    )
+    cloudfront_client.configure_mock(**{'generate_presigned_url.return_value': expected_url})
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     url = post.get_video_writeonly_url()
@@ -147,9 +144,7 @@ def test_get_image_readonly_url(cloudfront_client, s3_uploads_client):
         'postStatus': PostStatus.PENDING,
     }
     expected_url = {}
-    cloudfront_client.configure_mock(
-        **{'generate_presigned_url.return_value': expected_url}
-    )
+    cloudfront_client.configure_mock(**{'generate_presigned_url.return_value': expected_url})
 
     post = Post(item, cloudfront_client=cloudfront_client, s3_uploads_client=s3_uploads_client)
     url = post.get_image_readonly_url(image_size.NATIVE)

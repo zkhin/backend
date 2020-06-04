@@ -1,6 +1,6 @@
 import logging
 
-import boto3.dynamodb.conditions as conditions
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -64,16 +64,14 @@ class FeedDynamo:
 
     def generate_feed(self, feed_user_id):
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'feed/{feed_user_id}'),
+            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'feed/{feed_user_id}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.generate_all_query(query_kwargs)
 
     def generate_feed_pks_by_posted_by_user(self, feed_user_id, posted_by_user_id):
         query_kwargs = {
-            'KeyConditionExpression': (
-                conditions.Key('gsiK2PartitionKey').eq(f'feed/{feed_user_id}/{posted_by_user_id}')
-            ),
+            'KeyConditionExpression': (Key('gsiK2PartitionKey').eq(f'feed/{feed_user_id}/{posted_by_user_id}')),
             'IndexName': 'GSI-K2',
             'ProjectionExpression': 'partitionKey, sortKey',
         }

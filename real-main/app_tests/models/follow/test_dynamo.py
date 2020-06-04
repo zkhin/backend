@@ -3,8 +3,8 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.follow.enums import FollowStatus
 from app.models.follow.dynamo import FollowDynamo
+from app.models.follow.enums import FollowStatus
 
 
 @pytest.fixture

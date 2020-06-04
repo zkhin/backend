@@ -1,7 +1,7 @@
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 from ..enums import ChatType
 
@@ -30,7 +30,7 @@ class ChatDynamo:
     def get_direct_chat(self, user_id_1, user_id_2):
         user_ids = sorted([user_id_1, user_id_2])
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'chat/{user_ids[0]}/{user_ids[1]}'),
+            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'chat/{user_ids[0]}/{user_ids[1]}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.query_head(query_kwargs)

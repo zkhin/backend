@@ -1,8 +1,8 @@
 import functools
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 from . import exceptions
 
@@ -85,9 +85,9 @@ class TrendingDynamo:
 
     def generate_trendings(self, item_type, max_last_indexed_at=None):
         "Generator of trendings. max_last_index_at is exclusive"
-        key_conditions = [conditions.Key('gsiA1PartitionKey').eq(f'trending/{item_type}')]
+        key_conditions = [Key('gsiA1PartitionKey').eq(f'trending/{item_type}')]
         if max_last_indexed_at is not None:
-            key_conditions.append(conditions.Key('gsiA1SortKey').lt(max_last_indexed_at.to_iso8601_string()))
+            key_conditions.append(Key('gsiA1SortKey').lt(max_last_indexed_at.to_iso8601_string()))
         query_kwargs = {
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-A1',

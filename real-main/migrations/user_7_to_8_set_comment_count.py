@@ -2,7 +2,7 @@ import logging
 import os
 
 import boto3
-import boto3.dynamodb.conditions as conditions
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -74,7 +74,7 @@ class Migration:
     def dynamo_count_comments(self, user_id):
         logger.warning(f'User `{user_id}`: counting comments')
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiA2PartitionKey').eq(f'comment/{user_id}'),
+            'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'comment/{user_id}'),
             'IndexName': 'GSI-A2',
         }
         resp = self.dynamo_table.query(**query_kwargs)

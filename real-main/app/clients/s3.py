@@ -48,9 +48,7 @@ class S3Client:
 
     def copy_object(self, old_path, new_path):
         new_obj = self.bucket.Object(new_path)
-        new_obj.copy(
-            {'Bucket': self.bucket.name, 'Key': old_path}
-        )
+        new_obj.copy({'Bucket': self.bucket.name, 'Key': old_path})
 
     def put_object(self, path, body, content_type):
         self.bucket.put_object(Key=path, Body=body, ContentType=content_type)

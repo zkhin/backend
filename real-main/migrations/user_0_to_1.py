@@ -6,13 +6,11 @@ S3:
     - Move user's native profile photo
     - Generate and store 480p, 1080p versions of user's profile photo
 """
-
 import io
 import os
 
 import boto3
-import PIL.Image as Image
-
+import PIL.Image
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 if not S3_UPLOADS_BUCKET:
@@ -36,9 +34,7 @@ def copy_object(old_path, new_path):
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Object.copy
     print(f'Copying S3 object from {old_path} to {new_path} ...', end='')
     new_obj = s3_bucket.Object(new_path)
-    new_obj.copy(
-        {'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path}
-    )
+    new_obj.copy({'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path})
     print(' done.')
 
 
@@ -97,7 +93,7 @@ def update_user(user):
     copy_object(old_path, new_native_path)
 
     # generate the 480p thumbnail, upload it
-    image = Image.open(get_object_data_stream(old_path))
+    image = PIL.Image.open(get_object_data_stream(old_path))
     image.thumbnail([854, 480])
     in_mem_file = io.BytesIO()
     image.save(in_mem_file, format='JPEG')
@@ -106,7 +102,7 @@ def update_user(user):
     put_object(new_480p_path, in_mem_file.read())
 
     # generate the 1080p thumbnail, upload it
-    image = Image.open(get_object_data_stream(old_path))
+    image = PIL.Image.open(get_object_data_stream(old_path))
     image.thumbnail([1920, 1080])
     in_mem_file = io.BytesIO()
     image.save(in_mem_file, format='JPEG')

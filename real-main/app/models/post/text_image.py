@@ -1,12 +1,12 @@
 import io
 import logging
-import os.path as path
+import os.path
 
-import PIL.Image as Image
-import PIL.ImageDraw as ImageDraw
-import PIL.ImageFont as ImageFont
+import PIL.Image
+import PIL.ImageDraw
+import PIL.ImageFont
 
-font_path = path.join(path.dirname(__file__), '..', '..', '..', 'fonts', 'OpenSans-Regular.ttf')
+font_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'fonts', 'OpenSans-Regular.ttf')
 logger = logging.getLogger()
 
 
@@ -16,15 +16,15 @@ def generate_text_image(text, dimensions, font_size=None):
 
     image_width, image_height = dimensions
     image_aspect_ratio = image_width / image_height
-    img = Image.new('RGB', dimensions)
+    img = PIL.Image.new('RGB', dimensions)
 
     font_size = font_size or image_height // 10
 
     with open(font_path, 'rb') as fh:
-        font = ImageFont.truetype(fh, size=font_size)
+        font = PIL.ImageFont.truetype(fh, size=font_size)
 
     # we want our text to match, more or less, the aspect ratio of the overall image
-    draw = ImageDraw.Draw(img)
+    draw = PIL.ImageDraw.Draw(img)
 
     # determine how big horizontal and vertical spaces are
     size_1 = draw.textsize('Z Z', font=font)

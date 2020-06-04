@@ -1,8 +1,9 @@
-import pytest
 import uuid
 
-from app.models.post.enums import PostType
+import pytest
+
 from app.mixins.view.enums import ViewedStatus
+from app.models.post.enums import PostType
 
 
 @pytest.fixture

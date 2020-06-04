@@ -1,7 +1,7 @@
 import io
 
-import PIL.Image as Image
-import PIL.ImageOps as ImageOps
+import PIL.Image
+import PIL.ImageOps
 import pyheif
 
 from app.utils import image_size
@@ -47,11 +47,11 @@ class CachedImage:
                 heif_file = pyheif.read_heif(fh)
             except pyheif.error.HeifError as err:
                 raise PostException(f'Unable to read HEIC file for post `{self.post_id}`: {err}')
-            return Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
+            return PIL.Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
 
         else:
             try:
-                return ImageOps.exif_transpose(Image.open(fh))
+                return PIL.ImageOps.exif_transpose(PIL.Image.open(fh))
             except PostException:
                 raise
             except Exception as err:

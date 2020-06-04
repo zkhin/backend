@@ -2,7 +2,7 @@ import logging
 import os
 
 import boto3
-import gql.transport.requests as gql_requests
+import gql.transport.requests
 import requests_aws4auth
 
 APPSYNC_GRAPHQL_URL = os.environ.get('APPSYNC_GRAPHQL_URL')
@@ -31,7 +31,7 @@ class AppSyncClient:
             self.service_name,
             session_token=creds.token,
         )
-        transport = gql_requests.RequestsHTTPTransport(
+        transport = gql.transport.requests.RequestsHTTPTransport(
             url=self.appsync_graphql_url, use_json=True, headers=self.headers, auth=auth,
         )
         resp = transport.execute(query, variables)

@@ -1,7 +1,7 @@
 import io
-import os.path as path
-import unittest.mock as mock
 import uuid
+from os import path
+from unittest import mock
 
 import pytest
 

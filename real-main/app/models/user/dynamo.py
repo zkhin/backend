@@ -1,8 +1,8 @@
 import collections
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 from app.models.post.enums import PostStatus
 
@@ -33,7 +33,7 @@ class UserDynamo:
 
     def get_user_by_username(self, username):
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'username/{username}'),
+            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'username/{username}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.query_head(query_kwargs)

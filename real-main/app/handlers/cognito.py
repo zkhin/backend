@@ -2,7 +2,7 @@ import logging
 import os
 import re
 
-from app.logging import handler_logging, LogLevelContext
+from app.logging import LogLevelContext, handler_logging
 
 logger = logging.getLogger()
 

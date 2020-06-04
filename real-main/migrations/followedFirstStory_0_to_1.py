@@ -1,6 +1,6 @@
 import os
-import boto3
 
+import boto3
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 if not DYNAMO_TABLE:

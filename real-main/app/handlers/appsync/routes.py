@@ -1,7 +1,5 @@
 "Routing table to dispatch graphql calls to the correct handler"
-
 import importlib
-
 
 # graphql field -> python handler
 cache = {}

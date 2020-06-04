@@ -4,10 +4,9 @@ Tests for generating album art.
 These tests mainly intended to just ensure the art-generating logic
 doesn't crash, not that the output has the correct visual form.
 """
-
 import contextlib
-import os.path as path
 import random
+from os import path
 
 import pytest
 

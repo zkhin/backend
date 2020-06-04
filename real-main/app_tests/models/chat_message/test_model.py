@@ -1,13 +1,13 @@
 import json
-import unittest.mock as mock
 import uuid
+from unittest import mock
 
 import pendulum
 import pytest
 
+from app.mixins.view.enums import ViewedStatus
 from app.models.block.enums import BlockStatus
 from app.models.post.enums import PostType
-from app.mixins.view.enums import ViewedStatus
 
 
 @pytest.fixture

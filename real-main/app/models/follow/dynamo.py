@@ -1,8 +1,8 @@
 import functools
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -81,9 +81,9 @@ class FollowDynamo:
 
     def generate_followed_items(self, user_id, follow_status=None, limit=None, next_token=None):
         "Generate items that represent a followed of the given user (that the given user is the follower)"
-        key_conditions = [conditions.Key('gsiA1PartitionKey').eq(f'follower/{user_id}')]
+        key_conditions = [Key('gsiA1PartitionKey').eq(f'follower/{user_id}')]
         if follow_status is not None:
-            key_conditions.append(conditions.Key('gsiA1SortKey').begins_with(follow_status + '/'))
+            key_conditions.append(Key('gsiA1SortKey').begins_with(follow_status + '/'))
         query_kwargs = {
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-A1',
@@ -92,9 +92,9 @@ class FollowDynamo:
 
     def generate_follower_items(self, user_id, follow_status=None, limit=None, next_token=None):
         "Generate items that represent a follower of the given user (that the given user is the followed)"
-        key_conditions = [conditions.Key('gsiA2PartitionKey').eq(f'followed/{user_id}')]
+        key_conditions = [Key('gsiA2PartitionKey').eq(f'followed/{user_id}')]
         if follow_status is not None:
-            key_conditions.append(conditions.Key('gsiA2SortKey').begins_with(follow_status + '/'))
+            key_conditions.append(Key('gsiA2SortKey').begins_with(follow_status + '/'))
         query_kwargs = {
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-A2',

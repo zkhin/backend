@@ -4,11 +4,11 @@ import os
 import urllib
 
 import botocore
-import cryptography.hazmat.backends as backends
-import cryptography.hazmat.primitives.asymmetric.padding as padding
-import cryptography.hazmat.primitives.hashes as hashes
-import cryptography.hazmat.primitives.serialization as serialization
 import pendulum
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+from cryptography.hazmat.primitives.hashes import SHA1
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 CLOUDFRONT_UPLOADS_DOMAIN = os.environ.get('CLOUDFRONT_UPLOADS_DOMAIN')
 
@@ -37,7 +37,7 @@ class CloudFrontClient:
             pk_string = f"-----BEGIN RSA PRIVATE KEY-----\n{private_key}\n-----END RSA PRIVATE KEY-----"
             pk_raw = bytearray(pk_string, 'utf-8')
             backend = backends.default_backend()
-            self._private_key = serialization.load_pem_private_key(pk_raw, password=None, backend=backend)
+            self._private_key = load_pem_private_key(pk_raw, password=None, backend=backend)
         return self._private_key
 
     def get_cloudfront_signer(self):
@@ -46,7 +46,7 @@ class CloudFrontClient:
             pk = self.get_private_key()
 
             def sign(msg):
-                return pk.sign(msg, padding.PKCS1v15(), hashes.SHA1())
+                return pk.sign(msg, PKCS1v15(), SHA1())
 
             self._cfsigner = botocore.signers.CloudFrontSigner(key_id, sign)
         return self._cfsigner
@@ -66,7 +66,7 @@ class CloudFrontClient:
         expires_at = expires_at or pendulum.now('utc') + self.lifetime
         url = self.generate_unsigned_url(path)
         policy = self.generate_cookie_policy(url, expires_at)
-        signature = self.get_private_key().sign(policy, padding.PKCS1v15(), hashes.SHA1())
+        signature = self.get_private_key().sign(policy, PKCS1v15(), SHA1())
         return {
             'ExpiresAt': expires_at.to_iso8601_string(),
             'CloudFront-Policy': self._encode(policy),

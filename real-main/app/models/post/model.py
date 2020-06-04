@@ -4,7 +4,7 @@ import logging
 
 import colorthief
 import pendulum
-import PIL.Image as Image
+import PIL.Image
 
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
@@ -13,7 +13,7 @@ from app.utils import image_size
 
 from . import enums, exceptions
 from .cached_image import CachedImage
-from .enums import PostStatus, PostType, PostNotificationType
+from .enums import PostNotificationType, PostStatus, PostType
 from .text_image import generate_text_image
 
 logger = logging.getLogger()
@@ -232,7 +232,7 @@ class Post(FlagModelMixin, ViewModelMixin):
         for cache in (self.k4_jpeg_cache, self.p1080_jpeg_cache, self.p480_jpeg_cache, self.p64_jpeg_cache):
             fh = io.BytesIO()
             try:
-                image.thumbnail(cache.image_size.max_dimensions, resample=Image.LANCZOS)
+                image.thumbnail(cache.image_size.max_dimensions, resample=PIL.Image.LANCZOS)
                 image.save(fh, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             except Exception as err:
                 raise exceptions.PostException(f'Unable to thumbnail image data as jpeg for post `{self.id}`: {err}')

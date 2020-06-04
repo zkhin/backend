@@ -1,8 +1,8 @@
 import io
-import os.path as path
 import uuid
+from os import path
 
-import PIL.Image as Image
+import PIL.Image
 import pytest
 
 from app.models.post.enums import PostStatus, PostType
@@ -54,7 +54,7 @@ def test_build_image_thumbnails_wide_image(s3_uploads_client, processing_image_p
     # check the 4k thumbnail is there, and that it is the right size
     path_4k = post.get_image_path(image_size.K4)
     assert s3_uploads_client.exists(path_4k)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_4k))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_4k))
     width, height = image.size
     assert width == 3840
     assert height < 2160
@@ -62,7 +62,7 @@ def test_build_image_thumbnails_wide_image(s3_uploads_client, processing_image_p
     # check the 1080 thumbnail is there, and that it is the right size
     path_1080 = post.get_image_path(image_size.P1080)
     assert s3_uploads_client.exists(path_1080)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_1080))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_1080))
     width, height = image.size
     assert width == 1920
     assert height < 1080
@@ -70,7 +70,7 @@ def test_build_image_thumbnails_wide_image(s3_uploads_client, processing_image_p
     # check the 480 thumbnail is there, and that it is the right size
     path_480 = post.get_image_path(image_size.P480)
     assert s3_uploads_client.exists(path_480)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_480))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_480))
     width, height = image.size
     assert width == 854
     assert height < 480
@@ -78,7 +78,7 @@ def test_build_image_thumbnails_wide_image(s3_uploads_client, processing_image_p
     # check the 64 thumbnail is there, and that it is the right size
     path_64 = post.get_image_path(image_size.P64)
     assert s3_uploads_client.exists(path_64)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_64))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_64))
     width, height = image.size
     assert width == 114
     assert height < 64
@@ -88,7 +88,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
     post = processing_image_post
 
     # rotate our wide image to make it tall
-    image = Image.open(blank_path).rotate(90, expand=True)
+    image = PIL.Image.open(blank_path).rotate(90, expand=True)
     in_mem_file = io.BytesIO()
     image.save(in_mem_file, format='JPEG')
     in_mem_file.seek(0)
@@ -102,7 +102,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
     # check the 4k thumbnail is there, and that it is the right size
     path_4k = post.get_image_path(image_size.K4)
     assert s3_uploads_client.exists(path_4k)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_4k))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_4k))
     width, height = image.size
     assert width < 3840
     assert height == 2160
@@ -110,7 +110,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
     # check the 1080 thumbnail is there, and that it is the right size
     path_1080 = post.get_image_path(image_size.P1080)
     assert s3_uploads_client.exists(path_1080)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_1080))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_1080))
     width, height = image.size
     assert width < 1920
     assert height == 1080
@@ -118,7 +118,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
     # check the 480 thumbnail is there, and that it is the right size
     path_480 = post.get_image_path(image_size.P480)
     assert s3_uploads_client.exists(path_480)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_480))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_480))
     width, height = image.size
     assert width < 854
     assert height == 480
@@ -126,7 +126,7 @@ def test_build_image_thumbnails_tall_image(s3_uploads_client, processing_image_p
     # check the 64 thumbnail is there, and that it is the right size
     path_64 = post.get_image_path(image_size.P64)
     assert s3_uploads_client.exists(path_64)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_64))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_64))
     width, height = image.size
     assert width < 114
     assert height == 64
@@ -149,7 +149,7 @@ def test_build_image_thumbnails_respect_exif_orientation(s3_uploads_client, proc
     # check 4k
     path_4k = post.get_image_path(image_size.K4)
     assert s3_uploads_client.exists(path_4k)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_4k))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_4k))
     width, height = image.size
     assert width == grant_rotated_width
     assert height == grant_rotated_height
@@ -157,7 +157,7 @@ def test_build_image_thumbnails_respect_exif_orientation(s3_uploads_client, proc
     # check 1080p
     path_1080 = post.get_image_path(image_size.P1080)
     assert s3_uploads_client.exists(path_1080)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_1080))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_1080))
     width, height = image.size
     assert width == grant_rotated_width
     assert height == grant_rotated_height
@@ -165,7 +165,7 @@ def test_build_image_thumbnails_respect_exif_orientation(s3_uploads_client, proc
     # check 480p
     path_480 = post.get_image_path(image_size.P480)
     assert s3_uploads_client.exists(path_480)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_480))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_480))
     width, height = image.size
     assert width == grant_rotated_width
     assert height == grant_rotated_height
@@ -173,7 +173,7 @@ def test_build_image_thumbnails_respect_exif_orientation(s3_uploads_client, proc
     # check 64p
     path_64 = post.get_image_path(image_size.P64)
     assert s3_uploads_client.exists(path_64)
-    image = Image.open(s3_uploads_client.get_object_data_stream(path_64))
+    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path_64))
     width, height = image.size
     assert width < grant_rotated_width
     assert height < grant_rotated_height

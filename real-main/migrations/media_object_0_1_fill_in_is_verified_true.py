@@ -1,4 +1,5 @@
 import os
+
 import boto3
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')

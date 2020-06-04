@@ -1,8 +1,9 @@
+import types
+from unittest import mock
+
 import boto3
 import moto
 import pytest
-import types
-import unittest.mock as mock
 
 from .table_schema import table_schema
 

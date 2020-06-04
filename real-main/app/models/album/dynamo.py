@@ -1,8 +1,8 @@
 import collections
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -152,7 +152,7 @@ class AlbumDynamo:
 
     def generate_by_user(self, user_id):
         query_kwargs = {
-            'KeyConditionExpression': conditions.Key('gsiA1PartitionKey').eq(f'album/{user_id}'),
+            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'album/{user_id}'),
             'IndexName': 'GSI-A1',
         }
         return self.client.generate_all_query(query_kwargs)

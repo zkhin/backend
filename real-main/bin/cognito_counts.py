@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-
 import argparse
 import collections
 import datetime
-import pprint
 import os
+import pprint
 
 import boto3
 import dotenv

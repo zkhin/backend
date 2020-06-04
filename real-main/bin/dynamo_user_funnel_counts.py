@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-
 import argparse
 import collections
-import pprint
 import os
+import pprint
 
 import boto3
-import boto3.dynamodb.conditions as conditions
 import dotenv
 import pendulum
+from boto3.dynamodb.conditions import Attr, Key
 
 dotenv.load_dotenv()
 
@@ -37,8 +36,8 @@ def generate_users(table, signed_up_date):
     kwargs = {
         'ProjectionExpression': 'userId',
         'FilterExpression': (
-            conditions.Key('partitionKey').begins_with('user/')
-            & conditions.Attr('signedUpAt').between(signed_up_date, signed_up_date + 'T24')
+            Key('partitionKey').begins_with('user/')
+            & Attr('signedUpAt').between(signed_up_date, signed_up_date + 'T24')
         ),
     }
     last_key = False
@@ -55,7 +54,7 @@ def generate_posts(table, user_id):
     "A generator that generates all posts by that user"
     kwargs = {
         'ProjectionExpression': 'postId, postStatus, isVerified',
-        'KeyConditionExpression': conditions.Key('gsiA2PartitionKey').eq(f'post/{user_id}'),
+        'KeyConditionExpression': Key('gsiA2PartitionKey').eq(f'post/{user_id}'),
         'IndexName': 'GSI-A2',
     }
     last_key = False

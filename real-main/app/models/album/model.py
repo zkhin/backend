@@ -4,7 +4,7 @@ import itertools
 import logging
 import os
 
-import PIL.Image as Image
+import PIL.Image
 
 from app.utils import image_size
 
@@ -158,9 +158,9 @@ class Album:
 
         # generate and save thumbnails
         native_image_buf.seek(0)
-        image = Image.open(native_image_buf)
+        image = PIL.Image.open(native_image_buf)
         for size in image_size.THUMBNAILS:  # ordered by decreasing size
-            image.thumbnail(size.max_dimensions, resample=Image.LANCZOS)
+            image.thumbnail(size.max_dimensions, resample=PIL.Image.LANCZOS)
             in_mem_file = io.BytesIO()
             image.save(in_mem_file, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             in_mem_file.seek(0)

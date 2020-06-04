@@ -2,7 +2,7 @@ import json
 import logging
 
 from .exceptions import ClientException
-from .logging import logger, LogLevelContext
+from .logging import LogLevelContext, logger
 
 
 def handler(required_query_params=[]):

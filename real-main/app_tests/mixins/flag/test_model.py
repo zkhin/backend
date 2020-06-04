@@ -1,6 +1,6 @@
 import logging
-import unittest.mock as mock
 import uuid
+from unittest import mock
 
 import pytest
 
@@ -143,7 +143,7 @@ def test_flag_force_remove_by_crowdsourced_criteria(model, user2, user3, caplog)
 @pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
 def test_flag_force_archive_by_admin(model, user2, caplog):
     model.remove_from_flagging = mock.Mock()
-    model.flag_admin_usernames = (user2.username)
+    model.flag_admin_usernames = user2.username
     with caplog.at_level(logging.WARNING):
         model.flag(user2)
     assert len(caplog.records) == 1

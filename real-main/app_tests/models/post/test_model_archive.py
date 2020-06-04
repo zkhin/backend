@@ -1,5 +1,5 @@
-import unittest.mock as mock
 import uuid
+from unittest import mock
 
 import pendulum
 import pytest

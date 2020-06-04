@@ -3,10 +3,9 @@ Dynamo:
     - Remove email, phoneNumber, contactInfoSource, gsiA1PartitionKey and gsiA1SortKey
       for all users
 """
-
 import os
-import boto3
 
+import boto3
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 if not DYNAMO_TABLE:

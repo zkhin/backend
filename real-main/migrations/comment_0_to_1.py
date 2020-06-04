@@ -2,7 +2,7 @@ import logging
 import os
 
 import boto3
-import boto3.dynamodb.conditions as conditions
+from boto3.dynamodb.conditions import Key
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 
@@ -42,9 +42,7 @@ class Migration:
 
         # count the existing views for that comment
         kwargs = {
-            'KeyConditionExpression': (
-                conditions.Key('partitionKey').eq(pk) & conditions.Key('sortKey').begins_with('view/')
-            ),
+            'KeyConditionExpression': Key('partitionKey').eq(pk) & Key('sortKey').begins_with('view/'),
             'Select': 'COUNT',
         }
         resp = self.dynamo_table.query(**kwargs)

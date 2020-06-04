@@ -3,12 +3,12 @@ import os
 
 import stringcase
 
-from app.utils import image_size
 from app.models.post.enums import PostStatus, PostType
+from app.utils import image_size
 
 from . import enums, exceptions
-from .enums import UserPrivacyStatus, UserStatus
 from .dynamo import UserDynamo
+from .enums import UserPrivacyStatus, UserStatus
 from .validate import UserValidate
 
 logger = logging.getLogger()

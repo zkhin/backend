@@ -1,13 +1,14 @@
 import base64
-import os.path as path
 import uuid
-import unittest.mock as mock
+from os import path
+from unittest import mock
 
 import moto
 import pytest
 
 from app import clients, models
-from app_tests.dynamodb.table_schema import table_schema
+
+from .dynamodb.table_schema import table_schema
 
 heic_path = path.join(path.dirname(__file__), 'fixtures', 'IMG_0265.HEIC')
 grant_path = path.join(path.dirname(__file__), 'fixtures', 'grant.jpg')

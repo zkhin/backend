@@ -4,7 +4,6 @@ Tests for generating images from text.
 These tests aren't intended to ensure the output looks correct,
 they're more just intended to ensure the alogirthm doesn't crash.
 """
-
 import pytest
 
 from app.models.post.text_image import generate_text_image, rectangle_wrap

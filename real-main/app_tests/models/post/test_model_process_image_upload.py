@@ -1,11 +1,11 @@
-import unittest.mock as mock
 import uuid
+from unittest import mock
 
 import pendulum
 import pytest
 
-from app.models.post.exceptions import PostException
 from app.models.post.enums import PostStatus, PostType
+from app.models.post.exceptions import PostException
 from app.utils import image_size
 
 

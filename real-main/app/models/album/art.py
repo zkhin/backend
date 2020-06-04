@@ -1,7 +1,7 @@
 import io
 import math
 
-import PIL.Image as Image
+import PIL.Image
 
 
 def generate_basic_grid(image_data_buffers):
@@ -17,7 +17,7 @@ def generate_basic_grid(image_data_buffers):
     images = []
     max_width, max_height = 0, 0
     for buf in image_data_buffers:
-        image = Image.open(buf)
+        image = PIL.Image.open(buf)
         max_width = max(max_width, image.size[0])
         max_height = max(max_height, image.size[1])
         images.append(image)
@@ -25,7 +25,7 @@ def generate_basic_grid(image_data_buffers):
     # paste those thumbs together as a grid
     # Min size will be 4k since max_width and max_height come from 1080p thumbs
     stride = int(math.sqrt(len(image_data_buffers)))
-    target_image = Image.new('RGB', (max_width * stride, max_height * stride))
+    target_image = PIL.Image.new('RGB', (max_width * stride, max_height * stride))
     for row in range(0, stride):
         for column in range(0, stride):
             image = images[row * stride + column]
@@ -56,7 +56,7 @@ def generate_zoomed_grid(image_data_buffers):
     # collect and resize (zoom in or out as needed so each image fills its cell)
     images = []
     for buf in image_data_buffers:
-        image = Image.open(buf)
+        image = PIL.Image.open(buf)
         image_width, image_height = image.size
 
         # comparing aspect ratios without rounding errors
@@ -75,13 +75,13 @@ def generate_zoomed_grid(image_data_buffers):
             box = None
 
         if image_width != cell_width or image_height != cell_height:
-            image = image.resize((cell_width, cell_height), box=box, resample=Image.LANCZOS)
+            image = image.resize((cell_width, cell_height), box=box, resample=PIL.Image.LANCZOS)
 
         images.append(image)
 
     # paste those thumbs together as a grid
     # Min size will be 4k since max_width and max_height come from 1080p thumbs
-    target_image = Image.new('RGB', (output_width, output_height))
+    target_image = PIL.Image.new('RGB', (output_width, output_height))
     for row in range(0, stride):
         for column in range(0, stride):
             image = images[row * stride + column]

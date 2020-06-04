@@ -1,6 +1,6 @@
 import logging
 
-import boto3.dynamodb.conditions as conditions
+from boto3.dynamodb.conditions import Key
 
 from . import exceptions
 
@@ -26,8 +26,7 @@ class ViewDynamo:
         pk = self.pk(item_id, None)
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('partitionKey').eq(pk['partitionKey'])
-                & conditions.Key('sortKey').begins_with('view/')
+                Key('partitionKey').eq(pk['partitionKey']) & Key('sortKey').begins_with('view/')
             )
         }
         gen = self.client.generate_all_query(query_kwargs)

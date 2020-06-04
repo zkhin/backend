@@ -2,8 +2,8 @@ import string
 
 import pytest
 
-from app.models.user.validate import UserValidate
 from app.models.user.exceptions import UserValidationException
+from app.models.user.validate import UserValidate
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 import logging
-import unittest.mock as mock
 import uuid
+from unittest import mock
 
 import pytest
 

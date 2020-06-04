@@ -3,7 +3,7 @@ import uuid
 import pytest
 
 from app.models.like.enums import LikeStatus
-from app.models.like.exceptions import LikeException, AlreadyLiked
+from app.models.like.exceptions import AlreadyLiked, LikeException
 from app.models.post.enums import PostType
 
 

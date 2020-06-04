@@ -508,9 +508,7 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     assert org_post_item['expiresAt'] == expires_at.to_iso8601_string()
 
     # delete it from the DB
-    post_dynamo.client.delete_item(
-        {'partitionKey': f'post/{post_id}', 'sortKey': '-'}
-    )
+    post_dynamo.client.delete_item({'partitionKey': f'post/{post_id}', 'sortKey': '-'})
 
     # now add it to the DB, without a lifetime
     transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text)]
@@ -539,9 +537,7 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
     assert 'expiresAt' not in org_post_item
 
     # delete it from the DB
-    post_dynamo.client.delete_item(
-        {'partitionKey': f'post/{post_id}', 'sortKey': '-'}
-    )
+    post_dynamo.client.delete_item({'partitionKey': f'post/{post_id}', 'sortKey': '-'})
 
     # now add it to the DB, with a lifetime
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)

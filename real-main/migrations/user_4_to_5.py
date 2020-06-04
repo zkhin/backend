@@ -2,8 +2,8 @@
 Dynamo:
     - add gsiA1PartitionKey, gsiA1SortKey for all users
 """
-
 import os
+
 import boto3
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
@@ -47,9 +47,7 @@ def copy_object(old_path, new_path):
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Object.copy
     print(f'Copying S3 object from {old_path} to {new_path} ...', end='')
     new_obj = s3_bucket.Object(new_path)
-    new_obj.copy(
-        {'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path}
-    )
+    new_obj.copy({'Bucket': S3_UPLOADS_BUCKET, 'Key': old_path})
     print(' done.')
 
 

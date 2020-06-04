@@ -2,10 +2,9 @@
 Dynamo:
     - Add gsiA1PartitionKey, gsiA1SortKey for all users with emails
 """
-
 import os
-import boto3
 
+import boto3
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 if not DYNAMO_TABLE:

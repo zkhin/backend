@@ -1,7 +1,7 @@
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -51,8 +51,7 @@ class CardDynamo:
     def generate_cards_by_user(self, user_id, pks_only=False):
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('gsiA1PartitionKey').eq(f'user/{user_id}')
-                & conditions.Key('gsiA1SortKey').begins_with('card/')
+                Key('gsiA1PartitionKey').eq(f'user/{user_id}') & Key('gsiA1SortKey').begins_with('card/')
             ),
             'IndexName': 'GSI-A1',
         }

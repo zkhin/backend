@@ -1,7 +1,7 @@
 import logging
 
-import boto3.dynamodb.conditions as conditions
 import pendulum
+from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
 
@@ -62,8 +62,7 @@ class ChatMemberDynamo:
     def generate_user_ids_by_chat(self, chat_id):
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('gsiK1PartitionKey').eq(f'chat/{chat_id}')
-                & conditions.Key('gsiK1SortKey').begins_with('member/')
+                Key('gsiK1PartitionKey').eq(f'chat/{chat_id}') & Key('gsiK1SortKey').begins_with('member/')
             ),
             'IndexName': 'GSI-K1',
         }
@@ -72,8 +71,7 @@ class ChatMemberDynamo:
     def generate_chat_ids_by_user(self, user_id):
         query_kwargs = {
             'KeyConditionExpression': (
-                conditions.Key('gsiK2PartitionKey').eq(f'member/{user_id}')
-                & conditions.Key('gsiK2SortKey').begins_with('chat/')
+                Key('gsiK2PartitionKey').eq(f'member/{user_id}') & Key('gsiK2SortKey').begins_with('chat/')
             ),
             'IndexName': 'GSI-K2',
         }
