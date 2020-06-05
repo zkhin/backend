@@ -25,6 +25,11 @@ module.exports.self = gql`
           postId
         }
       }
+      postsByNewCommentActivity {
+        items {
+          postId
+        }
+      }
       anonymouslyLikedPosts(limit: $anonymouslyLikedPostsLimit) {
         items {
           postId
@@ -113,6 +118,11 @@ module.exports.user = gql`
         }
       }
       posts {
+        items {
+          postId
+        }
+      }
+      postsByNewCommentActivity {
         items {
           postId
         }
