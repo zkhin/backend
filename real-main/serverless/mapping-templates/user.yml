@@ -105,11 +105,6 @@
   response: PassThru.response.vtl
 
 - type: User
-  field: postHasNewCommentActivity
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
-
-- type: User
   field: feed
   dataSource: DynamodbDataSource
 
@@ -119,6 +114,10 @@
 
 - type: User
   field: posts
+  dataSource: DynamodbDataSource
+
+- type: User
+  field: postsByNewCommentActivity
   dataSource: DynamodbDataSource
 
 - type: User

@@ -161,7 +161,6 @@ module.exports.simpleUserFields = gql`
     sharingDisabled
     verificationHidden
     postViewedByCount
-    postHasNewCommentActivity
     viewCountsHidden
     signedUpAt
     userStatus

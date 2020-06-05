@@ -319,15 +319,14 @@ type User {
   posts(postStatus: PostStatus, postType: PostType, limit: Int, nextToken: String): PaginatedPosts
   postCount: Int  # only posts with COMPLETED status
 
+  # User's posts that have new comment activity, ordered with most recent first
+  postsByNewCommentActivity(limit: Int, nextToken: String): PaginatedPosts
+
   # User's notification cards
   #   - private to the user themselves
   #   - ordered by most recently created first
   cards(limit: Int, nextToken: String): PaginatedCards
   cardCount: Int
-
-  # Do any of the user's posts have Post.hasNewCommentActivity set?
-  #   - private to user themselves only
-  postHasNewCommentActivity: Boolean
 
   # Posts the user has anonymously liked
   #   - private to user themselves only
@@ -662,6 +661,7 @@ type Post {
   # Have new comments appeared on the post since the last time a view of a comment was reported?
   #   - private to post owner only
   hasNewCommentActivity: Boolean
+  lastNewCommentActivityAt: AWSDateTime
 }
 
 type PaginatedPosts {

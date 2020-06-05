@@ -24,37 +24,33 @@
   #end
 #end
 
-## if the post type has been specified, we need to use GSI-A3. Else, we use GSI-A2
-#if ($util.isNull($ctx.args.postType))
-  #set ($indexName = 'GSI-A2')
-  #set ($pkName = 'gsiA2PartitionKey')
-  #set ($skName = 'gsiA2SortKey')
-  #set ($skPrefix = "$postStatus/")
-#else
-  #set ($indexName = 'GSI-A3')
-  #set ($pkName = 'gsiA3PartitionKey')
-  #set ($skName = 'gsiA3SortKey')
-  #set ($skPrefix = "$postStatus/$ctx.args.postType/")
+## filter on postType if requested
+#if (! $util.isNull($ctx.args.postType))
+  #set ($filter = {
+    "expression": "postType = :pt",
+    "expressionValues": {
+      ":pt": { "S": "$ctx.args.postType" }
+    }
+  })
 #end
 
 {
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "#pk = :pk and begins_with(#sk, :skPrefix)",
-    "expressionNames": {
-      "#pk": "$pkName",
-      "#sk": "$skName"
-    },
+    "expression": "gsiA2PartitionKey = :pk and begins_with(gsiA2SortKey, :skPrefix)",
     "expressionValues": {
       ":pk": { "S": "post/$user.userId" },
-      ":skPrefix": { "S": "$skPrefix" }
+      ":skPrefix": { "S": "$postStatus/" }
     }
   },
-  "index": "$indexName",
+  "index": "GSI-A2",
   "scanIndexForward": false,
   "limit": $limit
   #if ($ctx.args.nextToken)
   , "nextToken": "$ctx.args.nextToken"
+  #end
+  #if ($filter)
+  ,  "filter": $util.toJson($filter)
   #end
 }

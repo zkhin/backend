@@ -133,11 +133,8 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, co
     post.refresh_item()
 
     # clear comment activity
-    post.set_new_comment_activity(False)
-    post.refresh_item()
-    assert post.item.get('hasNewCommentActivity', False) is False
-    user.refresh_item()
-    assert user.item.get('postHasNewCommentActivityCount', 0) == 0
+    post.clear_new_comment_activity()
+    assert post.last_new_comment_activity_at is None
 
     # verify user3 (a rando) cannot delete either of the comments
     with pytest.raises(comment_manager.exceptions.CommentException, match='not authorized to delete'):
@@ -152,17 +149,13 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, co
     comment1.delete(deleter_user_id=user.id)
     assert comment1.refresh_item().item is None
     post.refresh_item()
-    assert post.item.get('hasNewCommentActivity', False) is False
-    user.refresh_item()
-    assert user.item.get('postHasNewCommentActivityCount', 0) == 0
+    assert post.last_new_comment_activity_at is None
 
     # verify comment owner can delete their own comment, does register as new activity
     comment2.delete(deleter_user_id=user2.id)
     assert comment2.refresh_item().item is None
     post.refresh_item()
-    assert post.item.get('hasNewCommentActivity', False) is True
-    user.refresh_item()
-    assert user.item.get('postHasNewCommentActivityCount', 0) == 1
+    assert post.last_new_comment_activity_at
 
 
 def test_record_view_count(comment, user, user2, user3):

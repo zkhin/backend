@@ -92,7 +92,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
         # if this comment is from anyone other than post owner, count it as new comment activity
         if user_id != post.user_id:
-            post.set_new_comment_activity(True)
+            post.register_new_comment_activity(now=now)
 
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)
@@ -115,7 +115,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         for post_id in post_ids:
             post = self.post_manager.get_post(comment.post_id)
             if user_id == post.user_id:
-                post.set_new_comment_activity(False)
+                post.clear_new_comment_activity()
 
     def delete_all_by_user(self, user_id):
         for comment_item in self.dynamo.generate_by_user(user_id):

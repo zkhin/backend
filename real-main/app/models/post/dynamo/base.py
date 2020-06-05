@@ -111,8 +111,6 @@ class PostDynamo:
             'sortKey': {'S': '-'},
             'gsiA2PartitionKey': {'S': f'post/{posted_by_user_id}'},
             'gsiA2SortKey': {'S': f'{post_status}/{posted_at_str}'},
-            'gsiA3PartitionKey': {'S': f'post/{posted_by_user_id}'},
-            'gsiA3SortKey': {'S': f'{post_status}/{post_type}/{posted_at_str}'},
             'postId': {'S': post_id},
             'postedAt': {'S': posted_at_str},
             'postedByUserId': {'S': posted_by_user_id},
@@ -193,11 +191,10 @@ class PostDynamo:
         ), 'album_rank must be specified only when completing a post in an album'
         album_rank = album_rank if album_rank is not None else -1
 
-        exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsia2sk', 'gsiA3SortKey = :gsia3sk']
+        exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsia2sk']
         exp_values = {
             ':postStatus': {'S': status},
             ':gsia2sk': {'S': f'{status}/{post_item["postedAt"]}'},
-            ':gsia3sk': {'S': f'{status}/{post_item["postType"]}/{post_item["postedAt"]}'},
         }
 
         if original_post_id:
@@ -329,24 +326,22 @@ class PostDynamo:
         post_id = keys['partitionKey'].split('/')[1] if keys else None
         return post_id
 
-    def transact_set_has_new_comment_activity(self, post_id, new_value):
-        """
-        Set the boolean Post.hasNewCommentActivity.
-        If the post already had the value that we're seting to, an exception will be thrown.
-        """
-        cond_exp = 'attribute_exists(partitionKey)'
-        if new_value:
-            cond_exp += ' AND (attribute_not_exists(hasNewCommentActivity) OR hasNewCommentActivity = :ov)'
-        else:
-            cond_exp += ' AND hasNewCommentActivity = :ov'
-        return {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'UpdateExpression': 'SET hasNewCommentActivity = :nv',
-                'ExpressionAttributeValues': {':nv': {'BOOL': new_value}, ':ov': {'BOOL': not new_value}},
-                'ConditionExpression': cond_exp,
-            },
+    def set_last_new_comment_activity_at(self, post_item, at):
+        "Use `new_value = None` to delete"
+        post_id = post_item['postId']
+        user_id = post_item['postedByUserId']
+        kwargs = {
+            'Key': self.pk(post_id),
         }
+        if at:
+            kwargs['UpdateExpression'] = 'SET gsiA3PartitionKey = :pk, gsiA3SortKey = :sk'
+            kwargs['ExpressionAttributeValues'] = {
+                ':pk': f'post/{user_id}',
+                ':sk': at.to_iso8601_string(),
+            }
+        else:
+            kwargs['UpdateExpression'] = 'REMOVE gsiA3PartitionKey, gsiA3SortKey'
+        return self.client.update_item(kwargs)
 
     def set_expires_at(self, post_item, expires_at):
         expires_at_str = expires_at.to_iso8601_string()
