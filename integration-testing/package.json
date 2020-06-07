@@ -1,13 +1,16 @@
 {
   "name": "integration-testing",
-  "description": "",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^12"
+  },
   "scripts": {
-    "lint": "eslint '**/*.js' --ignore-pattern node_modules/",
+    "lint": "eslint '**/*.js'",
     "test": "jest"
   },
   "eslintConfig": {
+    "root": true,
     "env": {
       "es6": true,
       "node": true
