@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 import pendulum
 
@@ -26,29 +27,37 @@ class TrendingModelMixin:
         self._trending_item = self.trending_dynamo.get(self.id, strongly_consistent=strongly_consistent)
         return self
 
-    def trending_register_view(self, now=None, retry_count=0):
+    def trending_increment_score(self, now=None, retry_count=0):
+        if retry_count > 0:
+            logger.warning(f'trending_increment_score() for item `{self.item_type}:{self.id}` retry {retry_count}')
         if retry_count > 2:
             raise Exception(
-                'trending_register_view() failed for item `{self.item_type}:{self.id}` after {retry_count} tries'
+                f'trending_increment_score() failed for item `{self.item_type}:{self.id}` after {retry_count} tries'
             )
         now = now or pendulum.now('utc')
         last_deflated_at = pendulum.parse(self.trending_item['lastDeflatedAt']) if self.trending_item else now
-        days_since_last_deflation = (now - last_deflated_at.start_of('day')).days
-        inflated_score = self.score_inflation_per_day ** days_since_last_deflation
+        days_since_last_deflation = (now - last_deflated_at.start_of('day')).total_days()
+        inflated_score = Decimal(self.score_inflation_per_day ** days_since_last_deflation)
 
-        try:
-            self._trending_item = (
-                self.trending_dynamo.add_score(self.id, inflated_score, last_deflated_at)
-                if self.trending_item
-                else self.trending_dynamo.add(self.id, inflated_score, now=now)
-            )
-        except exceptions.TrendingDNEOrAttributeMismatch:
-            # we lost a race condition, try again.
-            self.refresh_trending_item(strongly_consistent=True)
-            return self.trending_register_view(self, now=now, retry_count=retry_count + 1)
+        if self.trending_item:
+            try:
+                self._trending_item = self.trending_dynamo.add_score(self.id, inflated_score, last_deflated_at)
+            except exceptions.TrendingDNEOrAttributeMismatch:
+                pass
+            else:
+                return self
+        else:
+            try:
+                self._trending_item = self.trending_dynamo.add(self.id, inflated_score, now=now)
+            except exceptions.TrendingAlreadyExists:
+                pass
+            else:
+                return self
 
-        return self
+        # we lost a race condition, try again.
+        self.refresh_trending_item(strongly_consistent=True)
+        return self.trending_increment_score(now=now, retry_count=retry_count + 1)
 
     def trending_delete(self):
-        self.trending_item = self.trending_dynamo.delete(self.id)
+        self._trending_item = self.trending_dynamo.delete(self.id)
         return self
