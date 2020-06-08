@@ -7,6 +7,7 @@ import pendulum
 import PIL.Image
 
 from app.mixins.flag.model import FlagModelMixin
+from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
 from app.models.card.enums import COMMENT_ACTIVITY_CARD
 from app.utils import image_size
@@ -19,7 +20,7 @@ from .text_image import generate_text_image
 logger = logging.getLogger()
 
 
-class Post(FlagModelMixin, ViewModelMixin):
+class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     enums = enums
     exceptions = exceptions
@@ -516,6 +517,7 @@ class Post(FlagModelMixin, ViewModelMixin):
 
         # delete the trending index, if it exists
         self.trending_manager.dynamo.delete_trending(self.id)
+        self.trending_delete()
 
         # update album art, if needed
         if album:

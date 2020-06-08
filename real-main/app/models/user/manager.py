@@ -4,6 +4,8 @@ import random
 import re
 
 from app import models
+from app.mixins.base import ManagerBase
+from app.mixins.trending.manager import TrendingManagerMixin
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -15,7 +17,7 @@ logger = logging.getLogger()
 S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTORY')
 
 
-class UserManager:
+class UserManager(TrendingManagerMixin, ManagerBase):
 
     enums = enums
     exceptions = exceptions
@@ -30,8 +32,10 @@ class UserManager:
         's3_placeholder_photos',
     ]
     username_tag_regex = re.compile('@' + UserValidate.username_regex.pattern)
+    item_type = 'user'
 
     def __init__(self, clients, managers=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY):
+        super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['user'] = self
         self.album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
@@ -71,6 +75,7 @@ class UserManager:
 
     def init_user(self, user_item):
         kwargs = {
+            'trending_dynamo': getattr(self, 'trending_dynamo', None),
             'album_manager': getattr(self, 'album_manager', None),
             'block_manager': getattr(self, 'block_manager', None),
             'card_manager': getattr(self, 'card_manager', None),
