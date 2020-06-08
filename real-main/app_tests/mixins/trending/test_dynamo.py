@@ -5,11 +5,7 @@ import pendulum
 import pytest
 
 from app.mixins.trending.dynamo import TrendingDynamo
-from app.mixins.trending.exceptions import (
-    TrendingAlreadyExists,
-    TrendingDNEOrLastDeflatedAtMismatch,
-    TrendingDNEOrScoreMismatch,
-)
+from app.mixins.trending.exceptions import TrendingAlreadyExists, TrendingDNEOrAttributeMismatch
 
 
 @pytest.fixture
@@ -70,12 +66,12 @@ def test_add_score_failures(trending_dynamo):
         trending_dynamo.add_score(item_id, Decimal(-99), pendulum.now('utc'))
 
     # verify can't add to trending that doesn't exist
-    with pytest.raises(TrendingDNEOrLastDeflatedAtMismatch, match=f'itype:{item_id}'):
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
         trending_dynamo.add_score(item_id, Decimal(99), pendulum.now('utc'))
 
     # verify can't add to trending with treding last deflated at mismatch
     trending_dynamo.add(item_id, Decimal(42), now=pendulum.now('utc'))
-    with pytest.raises(TrendingDNEOrLastDeflatedAtMismatch, match=f'itype:{item_id}'):
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
         trending_dynamo.add_score(item_id, Decimal(99), pendulum.now('utc'))
 
 
@@ -104,29 +100,35 @@ def test_add_score_success(trending_dynamo):
 
 def test_deflate_score_failures(trending_dynamo):
     item_id = str(uuid.uuid4())
+    now = pendulum.now('utc')
+    yesterday = now.subtract(days=1).date()
 
     # verify need to use decimals
     with pytest.raises(AssertionError, match='decimal'):
-        trending_dynamo.deflate_score(item_id, Decimal(5), 4, pendulum.now('utc'))
+        trending_dynamo.deflate_score(item_id, Decimal(5), 4, yesterday, now)
     with pytest.raises(AssertionError, match='decimal'):
-        trending_dynamo.deflate_score(item_id, 5, Decimal(4), pendulum.now('utc'))
+        trending_dynamo.deflate_score(item_id, 5, Decimal(4), yesterday, now)
 
     # verify can't deflate to less than zero
     with pytest.raises(AssertionError, match='greater than 0'):
-        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(-1), pendulum.now('utc'))
+        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(-1), yesterday, now)
 
     # verify can't deflate to more than our score
     with pytest.raises(AssertionError, match='less than existing'):
-        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(6), pendulum.now('utc'))
+        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(6), yesterday, now)
 
     # verify can't deflate trending that DNE
-    with pytest.raises(TrendingDNEOrScoreMismatch, match=f'itype:{item_id}'):
-        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(4), pendulum.now('utc'))
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
+        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(4), yesterday, now)
 
     # verify can't deflate with expected score mismatch
     trending_dynamo.add(item_id, Decimal(6))
-    with pytest.raises(TrendingDNEOrScoreMismatch, match=f'itype:{item_id}'):
-        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(4), pendulum.now('utc'))
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
+        trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(4), yesterday, now)
+
+    # verify can't deflate with expected deflation date mismatch
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
+        trending_dynamo.deflate_score(item_id, Decimal(6), Decimal(4), yesterday, now)
 
 
 def test_deflate_score_success(trending_dynamo):
@@ -140,7 +142,7 @@ def test_deflate_score_success(trending_dynamo):
 
     # verify we can deflate score to an integer
     now = pendulum.now('utc')
-    trending_dynamo.deflate_score(item_id, Decimal(6 / 7), Decimal(1 / 6), now)
+    trending_dynamo.deflate_score(item_id, Decimal(6 / 7), Decimal(1 / 6), now.date(), now)
     new_item = trending_dynamo.get(item_id)
     assert pendulum.parse(new_item['lastDeflatedAt']) == now
     assert new_item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 6))
@@ -157,12 +159,12 @@ def test_delete_failures(trending_dynamo):
         trending_dynamo.delete(item_id, 5.4)
 
     # verify can't delete item that DNE if we specify score
-    with pytest.raises(TrendingDNEOrScoreMismatch, match=f'itype:{item_id}'):
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
         trending_dynamo.delete(item_id, Decimal(5.4))
 
     # verify can't delete item with score mismatch
     trending_dynamo.add(item_id, Decimal(42))
-    with pytest.raises(TrendingDNEOrScoreMismatch, match=f'itype:{item_id}'):
+    with pytest.raises(TrendingDNEOrAttributeMismatch, match=f'itype:{item_id}'):
         trending_dynamo.delete(item_id, Decimal(5.4))
 
 

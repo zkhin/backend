@@ -59,9 +59,9 @@ class TrendingDynamo:
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDNEOrLastDeflatedAtMismatch(self.item_type, item_id)
+            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
 
-    def deflate_score(self, item_id, expected_score, new_score, now):
+    def deflate_score(self, item_id, expected_score, new_score, expected_last_deflation_date, now):
         assert isinstance(expected_score, decimal.Decimal), 'Boto uses decimals for numbers'
         assert isinstance(new_score, decimal.Decimal), 'Boto uses decimals for numbers'
         assert new_score > 0, 'Score must be greater than 0'
@@ -69,17 +69,18 @@ class TrendingDynamo:
         query_kwargs = {
             'Key': self.pk(item_id),
             'UpdateExpression': 'SET gsiK3SortKey = :ns, lastDeflatedAt = :lda',
-            'ConditionExpression': 'gsiK3SortKey = :es',
+            'ConditionExpression': 'gsiK3SortKey = :es AND begins_with(lastDeflatedAt, :eldd)',
             'ExpressionAttributeValues': {
                 ':es': expected_score.normalize(),
                 ':ns': new_score.normalize(),
                 ':lda': now.to_iso8601_string(),
+                ':eldd': str(expected_last_deflation_date),
             },
         }
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDNEOrScoreMismatch(self.item_type, item_id)
+            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
 
     def delete(self, item_id, expected_score=None):
         if expected_score is not None:
@@ -93,7 +94,7 @@ class TrendingDynamo:
         try:
             return self.client.delete_item(self.pk(item_id), **kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDNEOrScoreMismatch(self.item_type, item_id)
+            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
 
     def generate_keys(self):
         "Generates only primary key and GSI-K3. Ordered with lowest score first."
