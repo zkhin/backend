@@ -299,3 +299,16 @@ def test_delete_archived_post(completed_post_with_media):
     assert post.user.item.get('postCount', 0) == 0
     assert post.user.item.get('postArchivedCount', 0) == 0
     assert post.user.item.get('postDeletedCount', 0) == 1
+
+
+def test_delete_post_deletes_trending(completed_post_with_media):
+    post = completed_post_with_media
+
+    # check post starts with a trending_item
+    assert post.trending_item
+    assert post.refresh_trending_item().trending_item
+
+    # delete the post, verify the trending item has disappeared
+    post.delete()
+    assert post.trending_item is None
+    assert post.refresh_trending_item().trending_item is None

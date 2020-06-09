@@ -17,7 +17,10 @@ def user(user_manager, cognito_client):
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post.trending_delete()  # remove the auto-trending assigned to all posts
+    post.refresh_trending_item()
+    yield post
 
 
 @pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
@@ -105,7 +108,7 @@ def test_delete(model):
 
     # delete the trending item
     model.trending_delete()
-    assert model.trending_item  # the ALL_OLD return values
+    assert model.trending_item is None
     assert model.refresh_trending_item().trending_item is None
 
     # delete the trending item when it doesn't exist

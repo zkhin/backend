@@ -23,6 +23,10 @@ class TrendingModelMixin:
         this = self if hasattr(self, '_trending_item') else self.refresh_trending_item()
         return this._trending_item
 
+    @property
+    def trending_score(self):
+        return self.trending_item['gsiK3SortKey'] if self.trending_item else None
+
     def refresh_trending_item(self, strongly_consistent=False):
         self._trending_item = self.trending_dynamo.get(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -59,5 +63,7 @@ class TrendingModelMixin:
         return self.trending_increment_score(now=now, retry_count=retry_count + 1)
 
     def trending_delete(self):
-        self._trending_item = self.trending_dynamo.delete(self.id)
+        self.trending_dynamo.delete(self.id)
+        if hasattr(self, '_trending_item'):
+            delattr(self, '_trending_item')
         return self
