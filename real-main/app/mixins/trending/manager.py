@@ -33,7 +33,7 @@ class TrendingManagerMixin:
             count += 1
         return count
 
-    def trending_deflate_item(self, trending_item, retry_count=0):
+    def trending_deflate_item(self, trending_item, now=None, retry_count=0):
         """
         Deflate a single trending item. Can accept a full trending_item or just the keys from PK & GSI-K3.
 
@@ -45,16 +45,19 @@ class TrendingManagerMixin:
         item_id = trending_item['partitionKey'].split('/')[1]
         if retry_count > 2:
             raise Exception(
-                'trending_deflate_item() failed for item `{self.item_type}:{item_id}` after {retry_count} tries'
+                f'trending_deflate_item() failed for item `{self.item_type}:{item_id}` after {retry_count} tries'
             )
 
-        now = pendulum.now('utc')
+        now = now or pendulum.now('utc')
         last_deflation_at = (
             pendulum.parse(trending_item['lastDeflatedAt'])
             if 'lastDeflatedAt' in trending_item
             else now.subtract(days=1)  # common case, dynamo write will fail if we're wrong
         )
         days_since_last_deflation = (now - last_deflation_at.start_of('day')).days
+        if days_since_last_deflation < 1:
+            logging.warning(f'Trending for item `{self.item_type}:{item_id}` has already been deflated today')
+            return
 
         current_score = trending_item['gsiK3SortKey']
         new_score = current_score / (self.score_inflation_per_day ** days_since_last_deflation)
@@ -62,8 +65,11 @@ class TrendingManagerMixin:
         try:
             self.trending_dynamo.deflate_score(item_id, current_score, new_score, last_deflation_at.date(), now)
         except exceptions.TrendingDNEOrAttributeMismatch:
+            logging.warning(
+                f'Trending deflate (common case assumption?) failure, trying again for `{self.item_type}:{item_id}`'
+            )
             trending_item = self.trending_dynamo.get(item_id, strongly_consistent=True)
-            self.trending_deflate_item(trending_item, retry_count=retry_count + 1)
+            self.trending_deflate_item(trending_item, now=now, retry_count=retry_count + 1)
 
     def trending_delete_tail(self, total_count):
         to_delete = total_count - self.min_count_to_keep
@@ -74,7 +80,7 @@ class TrendingManagerMixin:
         for trending_keys in self.trending_dynamo.generate_keys():
             item_id = trending_keys['partitionKey'].split('/')[1]
             current_score = trending_keys['gsiK3SortKey']
-            if to_delete <= 0 or current_score >= self.min_score_to_keep:
+            if current_score >= self.min_score_to_keep:
                 break
             try:
                 self.trending_dynamo.delete(item_id, expected_score=current_score)
@@ -83,3 +89,5 @@ class TrendingManagerMixin:
                 logging.warning(f'Lost race condition, not deleting trending for item `{self.item_type}:{item_id}`')
             else:
                 to_delete -= 1
+            if to_delete <= 0:
+                break
