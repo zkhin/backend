@@ -430,9 +430,37 @@ module.exports.trendingUsers = gql`
   }
 `
 
+module.exports.trendingUsersNew = gql`
+  query TrendingUsersNew($limit: Int) {
+    trendingUsersNew(limit: $limit) {
+      items {
+        userId
+        blockerStatus
+      }
+    }
+  }
+`
+
 module.exports.trendingPosts = gql`
   query TrendingPosts($limit: Int, $viewedStatus: ViewedStatus) {
     trendingPosts(limit: $limit) {
+      items(viewedStatus: $viewedStatus) {
+        postId
+        postedBy {
+          userId
+          privacyStatus
+          blockerStatus
+          followedStatus
+        }
+        viewedStatus
+      }
+    }
+  }
+`
+
+module.exports.trendingPostsNew = gql`
+  query TrendingPostsNew($limit: Int, $viewedStatus: ViewedStatus) {
+    trendingPostsNew(limit: $limit) {
       items(viewedStatus: $viewedStatus) {
         postId
         postedBy {

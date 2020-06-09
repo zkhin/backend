@@ -45,7 +45,7 @@ type Query {
 
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
-  trendingPostsNew(limit: Int, nextToken: String): PaginatedUsers!
+  trendingPostsNew(limit: Int, nextToken: String): PaginatedPosts!
 
   # A specific album
   #   - albums of a private user are private to only themselves and their followers
