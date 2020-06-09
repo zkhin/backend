@@ -23,6 +23,7 @@ clients = {
 }
 
 managers = {}
+user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
@@ -37,6 +38,18 @@ def reindex_trending_users(event, context):
 def reindex_trending_posts(event, context):
     now = pendulum.now('utc')
     trending_manager.reindex(trending_manager.enums.TrendingItemType.POST, cutoff=now)
+
+
+@handler_logging
+def deflate_trending_users(event, context):
+    total_count = user_manager.trending_deflate()
+    user_manager.trending_delete_tail(total_count)
+
+
+@handler_logging
+def deflate_trending_posts(event, context):
+    total_count = post_manager.trending_deflate()
+    post_manager.trending_delete_tail(total_count)
 
 
 @handler_logging
