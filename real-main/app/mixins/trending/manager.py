@@ -24,15 +24,16 @@ class TrendingManagerMixin:
     def trending_deflate(self, now=None):
         """
         Iterate over all trending items and deflate them.
-        Returns the total number of trending items.
+        Returns a pair of integers: (total_items, deflated_items)
         """
         now = now or pendulum.now('utc')
         # iterates from lowest score upward, deflate and count each one
-        count = 0
+        total_count, deflated_count = 0, 0
         for trending_keys in self.trending_dynamo.generate_keys():
-            self.trending_deflate_item(trending_keys, now=now)
-            count += 1
-        return count
+            deflated = self.trending_deflate_item(trending_keys, now=now)
+            deflated_count += int(deflated)
+            total_count += 1
+        return total_count, deflated_count
 
     def trending_deflate_item(self, trending_item, now=None, retry_count=0):
         """
@@ -58,7 +59,7 @@ class TrendingManagerMixin:
         days_since_last_deflation = (now - last_deflation_at.start_of('day')).days
         if days_since_last_deflation < 1:
             logging.warning(f'Trending for item `{self.item_type}:{item_id}` has already been deflated today')
-            return
+            return False
 
         current_score = trending_item['gsiK3SortKey']
         new_score = current_score / (self.score_inflation_per_day ** days_since_last_deflation)
@@ -70,7 +71,8 @@ class TrendingManagerMixin:
                 f'Trending deflate (common case assumption?) failure, trying again for `{self.item_type}:{item_id}`'
             )
             trending_item = self.trending_dynamo.get(item_id, strongly_consistent=True)
-            self.trending_deflate_item(trending_item, now=now, retry_count=retry_count + 1)
+            return self.trending_deflate_item(trending_item, now=now, retry_count=retry_count + 1)
+        return True
 
     def trending_delete_tail(self, total_count):
         max_to_delete = total_count - self.min_count_to_keep

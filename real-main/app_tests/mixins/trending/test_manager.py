@@ -9,38 +9,38 @@ import pytest
 
 @pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
 def test_trending_deflate(manager):
-    manager.trending_deflate_item = Mock()
 
     # test with none
-    count = manager.trending_deflate()
-    assert count == 0
+    manager.trending_deflate_item = Mock()
+    resp = manager.trending_deflate()
+    assert resp == (0, 0)
     assert manager.trending_deflate_item.mock_calls == []
 
     # test with one
-    manager.trending_deflate_item.reset_mock()
+    manager.trending_deflate_item = Mock(return_value=True)
     item1 = manager.trending_dynamo.add(str(uuid4()), Decimal(2))
     keys1 = item1  # FIXME https://github.com/spulec/moto/issues/3055
     now = pendulum.now('utc')
-    count = manager.trending_deflate(now=now)
-    assert count == 1
+    resp = manager.trending_deflate(now=now)
+    assert resp == (1, 1)
     assert manager.trending_deflate_item.mock_calls == [call(keys1, now=now)]
 
     # test with two, order
-    manager.trending_deflate_item.reset_mock()
+    manager.trending_deflate_item = Mock(return_value=False)
     item2 = manager.trending_dynamo.add(str(uuid4()), Decimal(3))
     keys2 = item2  # FIXME https://github.com/spulec/moto/issues/3055
     now = pendulum.now('utc')
-    count = manager.trending_deflate(now=now)
-    assert count == 2
+    resp = manager.trending_deflate(now=now)
+    assert resp == (2, 0)
     assert manager.trending_deflate_item.mock_calls == [call(keys1, now=now), call(keys2, now=now)]
 
     # test with three, order
-    manager.trending_deflate_item.reset_mock()
+    manager.trending_deflate_item = Mock(return_value=True)
     item3 = manager.trending_dynamo.add(str(uuid4()), Decimal(2.5))
     keys3 = item3  # FIXME https://github.com/spulec/moto/issues/3055
     now = pendulum.now('utc')
-    count = manager.trending_deflate(now=now)
-    assert count == 3
+    resp = manager.trending_deflate(now=now)
+    assert resp == (3, 3)
     assert manager.trending_deflate_item.mock_calls == [
         call(keys1, now=now),
         call(keys3, now=now),
@@ -67,7 +67,8 @@ def test_trending_deflate_item_already_deflated_today(manager, caplog):
     manager.trending_dynamo.deflate_score = Mock()
 
     with caplog.at_level(logging.WARNING):
-        manager.trending_deflate_item(item)
+        deflated = manager.trending_deflate_item(item)
+    assert deflated is False
     assert len(caplog.records) == 1
     assert manager.item_type in caplog.records[0].msg
     assert item_id in caplog.records[0].msg
@@ -87,7 +88,8 @@ def test_trending_deflate_item_no_recursion_without_last_deflated_at_assumption(
     # do the deflation, next day
     now = pendulum.parse('2020-06-08T18:00:00Z')
     with caplog.at_level(logging.WARNING):
-        manager.trending_deflate_item(item, now=now)
+        deflated = manager.trending_deflate_item(item, now=now)
+    assert deflated is True
     assert caplog.records == []
     item = manager.trending_dynamo.get(item_id)
     assert pendulum.parse(item['lastDeflatedAt']) == now
@@ -107,7 +109,8 @@ def test_trending_deflate_item_no_recursion_with_last_deflated_at_assumption(man
     # do the deflation, next day, so the common case assumption (that the job is run once per day) should hold
     now = pendulum.parse('2020-06-08T18:00:00Z')
     with caplog.at_level(logging.WARNING):
-        manager.trending_deflate_item(keys, now=now)
+        deflated = manager.trending_deflate_item(keys, now=now)
+    assert deflated is True
     assert caplog.records == []
     item = manager.trending_dynamo.get(item_id)
     assert pendulum.parse(item['lastDeflatedAt']) == now
@@ -127,7 +130,8 @@ def test_trending_deflate_item_with_recursion_with_last_deflated_at_assumption(m
     # do a deflation run two days later, so the common case asumption fails
     now = pendulum.parse('2020-06-09T18:00:00Z')
     with caplog.at_level(logging.WARNING):
-        manager.trending_deflate_item(keys, now=now)
+        deflated = manager.trending_deflate_item(keys, now=now)
+    assert deflated is True
     assert len(caplog.records) == 1
     assert 'trying again' in caplog.records[0].msg
     assert manager.item_type in caplog.records[0].msg
@@ -154,7 +158,8 @@ def test_trending_deflate_item_with_recursion_without_last_deflated_at_assumptio
     # do a deflation run
     now = pendulum.parse('2020-06-08T18:00:00Z')
     with caplog.at_level(logging.WARNING):
-        manager.trending_deflate_item(item, now=now)
+        deflated = manager.trending_deflate_item(item, now=now)
+    assert deflated is True
     assert len(caplog.records) == 1
     assert 'trying again' in caplog.records[0].msg
     assert manager.item_type in caplog.records[0].msg
