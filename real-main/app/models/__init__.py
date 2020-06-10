@@ -10,7 +10,6 @@ __all__ = [
     'FollowedFirstStoryManager',
     'LikeManager',
     'PostManager',
-    'TrendingManager',
     'UserManager',
 ]
 
@@ -25,5 +24,4 @@ from .follow.manager import FollowManager
 from .followed_first_story.manager import FollowedFirstStoryManager
 from .like.manager import LikeManager
 from .post.manager import PostManager
-from .trending.manager import TrendingManager
 from .user.manager import UserManager

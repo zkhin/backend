@@ -398,28 +398,6 @@ functions:
       - functionErrors
       - functionThrottles
 
-  reindexTrendingUsers:
-    name: ${self:provider.stackName}-reindexTrendingUsers
-    handler: app.handlers.cron.reindex_trending_users
-    layers:
-      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
-    events:
-      - schedule: rate(1 minute)
-    alarms:
-      - functionErrors
-      - functionThrottles
-
-  reindexTrendingPosts:
-    name: ${self:provider.stackName}-reindexTrendingPosts
-    handler: app.handlers.cron.reindex_trending_posts
-    layers:
-      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
-    events:
-      - schedule: rate(1 minute)
-    alarms:
-      - functionErrors
-      - functionThrottles
-
   deflateTrendingUsers:
     name: ${self:provider.stackName}-deflateTrendingUsers
     handler: app.handlers.cron.deflate_trending_users

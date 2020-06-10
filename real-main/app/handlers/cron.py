@@ -25,19 +25,6 @@ clients = {
 managers = {}
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
-trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
-
-
-@handler_logging
-def reindex_trending_users(event, context):
-    now = pendulum.now('utc')
-    trending_manager.reindex(trending_manager.enums.TrendingItemType.USER, cutoff=now)
-
-
-@handler_logging
-def reindex_trending_posts(event, context):
-    now = pendulum.now('utc')
-    trending_manager.reindex(trending_manager.enums.TrendingItemType.POST, cutoff=now)
 
 
 @handler_logging

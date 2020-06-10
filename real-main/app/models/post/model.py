@@ -46,7 +46,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         followed_first_story_manager=None,
         like_manager=None,
         post_manager=None,
-        trending_manager=None,
         user_manager=None,
         **kwargs,
     ):
@@ -88,8 +87,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.like_manager = like_manager
         if post_manager:
             self.post_manager = post_manager
-        if trending_manager:
-            self.trending_manager = trending_manager
         if user_manager:
             self.user_manager = user_manager
 
@@ -446,7 +443,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.followed_first_story_manager.refresh_after_story_change(story_prev=self.item)
 
         # delete the trending index, if it exists
-        self.trending_manager.dynamo.delete_trending(self.id)
         self.trending_delete()
 
         # update feeds
@@ -529,7 +525,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         self.delete_views()
 
         # delete the trending index, if it exists
-        self.trending_manager.dynamo.delete_trending(self.id)
         self.trending_delete()
 
         # update album art, if needed
@@ -732,9 +727,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.status != enums.PostStatus.COMPLETED:
             logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{self.id}`')
             return False
-
-        # give every post the chance to get into trending, so count post owner's own views for trending
-        self.trending_manager.increment_scores_for_post(self, now=viewed_at)
 
         # don't count post owner's views
         if self.user_id == user_id:

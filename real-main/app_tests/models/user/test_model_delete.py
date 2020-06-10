@@ -21,7 +21,6 @@ def user(user_manager, cognito_client):
     user.card_manager = mock.Mock(user.card_manager)
     user.block_manager = mock.Mock(user.block_manager)
     user.chat_manager = mock.Mock(user.chat_manager)
-    user.trending_manager = mock.Mock(user.trending_manager)
     yield user
 
 
@@ -118,7 +117,6 @@ def test_delete_user_managers_all_called(user):
     assert user.card_manager.mock_calls == []
     assert user.block_manager.mock_calls == []
     assert user.chat_manager.mock_calls == []
-    assert user.trending_manager.mock_calls == []
 
     # delete user, check final state
     user.delete()
@@ -148,7 +146,4 @@ def test_delete_user_managers_all_called(user):
     ]
     assert user.chat_manager.mock_calls == [
         mock.call.leave_all_chats(user.id),
-    ]
-    assert user.trending_manager.mock_calls == [
-        mock.call.dynamo.delete_trending(user.id),
     ]

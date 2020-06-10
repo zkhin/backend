@@ -38,7 +38,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             clients, managers=managers
         )
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
-        self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
@@ -78,7 +77,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             'followed_first_story_manager': self.followed_first_story_manager,
             'like_manager': self.like_manager,
             'post_manager': self,
-            'trending_manager': self.trending_manager,
             'user_manager': self.user_manager,
         }
         return Post(post_item, **kwargs) if post_item else None

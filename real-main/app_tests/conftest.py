@@ -204,11 +204,6 @@ def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_cl
 
 
 @pytest.fixture
-def trending_manager(dynamo_client):
-    yield models.TrendingManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
 def user_manager(
     cloudfront_client,
     dynamo_client,

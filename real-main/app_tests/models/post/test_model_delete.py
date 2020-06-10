@@ -4,7 +4,7 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import CommentManager, FeedManager, FollowedFirstStoryManager, LikeManager, TrendingManager
+from app.models import CommentManager, FeedManager, FollowedFirstStoryManager, LikeManager
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
@@ -60,7 +60,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     post.feed_manager = mock.Mock(FeedManager({}))
     post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
-    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -89,9 +88,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
     ]
-    assert post.trending_manager.mock_calls == [
-        mock.call.dynamo.delete_trending(post.id),
-    ]
 
 
 def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
@@ -111,7 +107,6 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post.like_manager = mock.Mock(LikeManager({}))
     post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
     post.feed_manager = mock.Mock(FeedManager({}))
-    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -138,9 +133,6 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     ]
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
-    assert post.trending_manager.mock_calls == [
-        mock.call.dynamo.delete_trending(post.id),
-    ]
 
 
 def test_delete_completed_media_post(post_manager, completed_post_with_media, user_manager):
@@ -157,7 +149,6 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     post.like_manager = mock.Mock(LikeManager({}))
     post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
     post.feed_manager = mock.Mock(FeedManager({}))
-    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -190,9 +181,6 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
-    assert post.trending_manager.mock_calls == [
-        mock.call.dynamo.delete_trending(post.id),
-    ]
 
 
 def test_delete_completed_post_in_album(album_manager, post_manager, post_with_album, user_manager):
@@ -217,7 +205,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     post.like_manager = mock.Mock(LikeManager({}))
     post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
     post.feed_manager = mock.Mock(FeedManager({}))
-    post.trending_manager = mock.Mock(TrendingManager({'dynamo': {}}))
 
     # delete the post
     post.delete()
@@ -247,9 +234,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert post.followed_first_story_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
-    ]
-    assert post.trending_manager.mock_calls == [
-        mock.call.dynamo.delete_trending(post.id),
     ]
 
 

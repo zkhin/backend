@@ -46,7 +46,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
-        self.trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
         self.clients = clients
         for client_name in self.client_names:
@@ -84,7 +83,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'follow_manager': getattr(self, 'follow_manager', None),
             'like_manager': getattr(self, 'like_manager', None),
             'post_manager': getattr(self, 'post_manager', None),
-            'trending_manager': getattr(self, 'trending_manager', None),
         }
         return User(user_item, self.clients, **kwargs) if user_item else None
 

@@ -1,6 +1,5 @@
 import logging
 import uuid
-from unittest import mock
 
 import pendulum
 import pytest
@@ -40,19 +39,6 @@ def test_record_view_count_logs_warning_for_non_completed_posts(post, user2, cap
     assert len(caplog.records) == 1
     assert user2.id in caplog.records[0].msg
     assert post.id in caplog.records[0].msg
-
-
-def test_record_view_count_adds_to_trending(post, user2):
-    post.trending_manager = mock.Mock(post.trending_manager)
-
-    # verify recording a view by a rando adds to trending
-    post.record_view_count(user2.id, 2)
-    assert post.trending_manager.mock_calls == [mock.call.increment_scores_for_post(post, now=None)]
-    post.trending_manager.reset_mock()
-
-    # verify recording a view by the post owner also adds to trending
-    post.record_view_count(post.user_id, 2)
-    assert post.trending_manager.mock_calls == [mock.call.increment_scores_for_post(post, now=None)]
 
 
 def test_record_view_count_increments_counters(post, user2, user3):

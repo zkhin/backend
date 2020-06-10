@@ -36,7 +36,6 @@ type Query {
 
   # Globally trending users
   trendingUsers(limit: Int, nextToken: String): PaginatedUsers!
-  trendingUsersNew(limit: Int, nextToken: String): PaginatedUsers!
 
   # A specific post
   #   - posts that do not have COMPLETED postStatus are private to only the post owner
@@ -45,7 +44,6 @@ type Query {
 
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
-  trendingPostsNew(limit: Int, nextToken: String): PaginatedPosts!
 
   # A specific album
   #   - albums of a private user are private to only themselves and their followers

@@ -42,7 +42,6 @@ class User(TrendingModelMixin):
         comment_manager=None,
         follow_manager=None,
         like_manager=None,
-        trending_manager=None,
         post_manager=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
         frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
@@ -71,8 +70,6 @@ class User(TrendingModelMixin):
             self.like_manager = like_manager
         if post_manager:
             self.post_manager = post_manager
-        if trending_manager:
-            self.trending_manager = trending_manager
         self.validate = UserValidate()
         self.item = user_item
         self.id = user_item['userId']
@@ -188,7 +185,6 @@ class User(TrendingModelMixin):
         self.chat_manager.leave_all_chats(self.id)
 
         # remove our trending item, if it's there
-        self.trending_manager.dynamo.delete_trending(self.id)
         self.trending_delete()
 
         # delete current and old profile photos
