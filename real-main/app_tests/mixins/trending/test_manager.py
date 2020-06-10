@@ -20,25 +20,32 @@ def test_trending_deflate(manager):
     manager.trending_deflate_item.reset_mock()
     item1 = manager.trending_dynamo.add(str(uuid4()), Decimal(2))
     keys1 = item1  # FIXME https://github.com/spulec/moto/issues/3055
-    count = manager.trending_deflate()
+    now = pendulum.now('utc')
+    count = manager.trending_deflate(now=now)
     assert count == 1
-    assert manager.trending_deflate_item.mock_calls == [call(keys1)]
+    assert manager.trending_deflate_item.mock_calls == [call(keys1, now=now)]
 
     # test with two, order
     manager.trending_deflate_item.reset_mock()
     item2 = manager.trending_dynamo.add(str(uuid4()), Decimal(3))
     keys2 = item2  # FIXME https://github.com/spulec/moto/issues/3055
-    count = manager.trending_deflate()
+    now = pendulum.now('utc')
+    count = manager.trending_deflate(now=now)
     assert count == 2
-    assert manager.trending_deflate_item.mock_calls == [call(keys1), call(keys2)]
+    assert manager.trending_deflate_item.mock_calls == [call(keys1, now=now), call(keys2, now=now)]
 
     # test with three, order
     manager.trending_deflate_item.reset_mock()
     item3 = manager.trending_dynamo.add(str(uuid4()), Decimal(2.5))
     keys3 = item3  # FIXME https://github.com/spulec/moto/issues/3055
-    count = manager.trending_deflate()
+    now = pendulum.now('utc')
+    count = manager.trending_deflate(now=now)
     assert count == 3
-    assert manager.trending_deflate_item.mock_calls == [call(keys1), call(keys3), call(keys2)]
+    assert manager.trending_deflate_item.mock_calls == [
+        call(keys1, now=now),
+        call(keys3, now=now),
+        call(keys2, now=now),
+    ]
 
 
 @pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])

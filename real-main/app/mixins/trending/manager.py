@@ -26,10 +26,11 @@ class TrendingManagerMixin:
         Iterate over all trending items and deflate them.
         Returns the total number of trending items.
         """
+        now = now or pendulum.now('utc')
         # iterates from lowest score upward, deflate and count each one
         count = 0
         for trending_keys in self.trending_dynamo.generate_keys():
-            self.trending_deflate_item(trending_keys)
+            self.trending_deflate_item(trending_keys, now=now)
             count += 1
         return count
 
