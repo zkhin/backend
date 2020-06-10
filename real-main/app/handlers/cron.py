@@ -45,9 +45,9 @@ def deflate_trending_users(event, context):
     total_cnt, deflated_cnt = user_manager.trending_deflate()
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'Trending users deflated: {deflated_cnt} out of {total_cnt}')
-    deleted_cnt = user_manager.trending_delete_tail(deflated_cnt)
+    deleted_cnt = user_manager.trending_delete_tail(total_cnt)
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'Trending users deleted: {deleted_cnt} out of {total_cnt}')
+        logger.info(f'Trending users removed: {deleted_cnt} out of {total_cnt}')
 
 
 @handler_logging
@@ -55,9 +55,9 @@ def deflate_trending_posts(event, context):
     total_cnt, deflated_cnt = post_manager.trending_deflate()
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'Trending posts deflated: {deflated_cnt} out of {total_cnt}')
-    deleted_cnt = post_manager.trending_delete_tail(deflated_cnt)
+    deleted_cnt = post_manager.trending_delete_tail(total_cnt)
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'Trending posts deleted: {deleted_cnt} out of {total_cnt}')
+        logger.info(f'Trending posts removed: {deleted_cnt} out of {total_cnt}')
 
 
 @handler_logging

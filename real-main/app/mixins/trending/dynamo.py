@@ -71,7 +71,7 @@ class TrendingDynamo:
             'UpdateExpression': 'SET gsiK3SortKey = :ns, lastDeflatedAt = :lda',
             'ConditionExpression': 'gsiK3SortKey = :es AND begins_with(lastDeflatedAt, :eldd)',
             'ExpressionAttributeValues': {
-                ':es': expected_score.normalize(),
+                ':es': expected_score,  # no normalization because must match exactly
                 ':ns': new_score.normalize(),
                 ':lda': now.to_iso8601_string(),
                 ':eldd': str(expected_last_deflation_date),
