@@ -155,3 +155,14 @@ def test_forced_archive(post, caplog):
     assert post.user.item.get('postCount', 0) == 0
     assert post.user.item.get('postArchivedCount', 0) == 1
     assert post.user.item.get('postForcedArchivingCount', 0) == 1
+
+
+def test_archive_deletes_trending(post):
+    # check post starts with a trending_item
+    assert post.trending_item
+    assert post.refresh_trending_item().trending_item
+
+    # archive the post, verify the trending item has disappeared
+    post.archive()
+    assert post.trending_item is None
+    assert post.refresh_trending_item().trending_item is None

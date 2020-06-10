@@ -1,0 +1,5 @@
+{
+  "maxWorkers": 1,
+  "testRegex": "/tests/.*\\.sequential\\.test\\.js$",
+  "testTimeout": 60000
+}

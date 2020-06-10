@@ -4,7 +4,7 @@ import os
 import pendulum
 
 from app import clients, models
-from app.logging import handler_logging
+from app.logging import LogLevelContext, handler_logging
 
 from . import xray
 
@@ -23,6 +23,7 @@ clients = {
 }
 
 managers = {}
+user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 trending_manager = managers.get('trending') or models.TrendingManager(clients, managers=managers)
 
@@ -37,6 +38,26 @@ def reindex_trending_users(event, context):
 def reindex_trending_posts(event, context):
     now = pendulum.now('utc')
     trending_manager.reindex(trending_manager.enums.TrendingItemType.POST, cutoff=now)
+
+
+@handler_logging
+def deflate_trending_users(event, context):
+    total_cnt, deflated_cnt = user_manager.trending_deflate()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending users deflated: {deflated_cnt} out of {total_cnt}')
+    deleted_cnt = user_manager.trending_delete_tail(total_cnt)
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending users removed: {deleted_cnt} out of {total_cnt}')
+
+
+@handler_logging
+def deflate_trending_posts(event, context):
+    total_cnt, deflated_cnt = post_manager.trending_deflate()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending posts deflated: {deflated_cnt} out of {total_cnt}')
+    deleted_cnt = post_manager.trending_delete_tail(total_cnt)
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending posts removed: {deleted_cnt} out of {total_cnt}')
 
 
 @handler_logging

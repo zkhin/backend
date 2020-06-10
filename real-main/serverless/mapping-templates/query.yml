@@ -25,6 +25,10 @@
   dataSource: DynamodbDataSource
 
 - type: Query
+  field: trendingUsersNew
+  dataSource: DynamodbDataSource
+
+- type: Query
   field: post
   request: Query.post/before.request.vtl
   response: Query.post/after.response.vtl
@@ -42,6 +46,10 @@
 
 - type: Query
   field: trendingPosts
+  dataSource: DynamodbDataSource
+
+- type: Query
+  field: trendingPostsNew
   dataSource: DynamodbDataSource
 
 - type: Query

@@ -11,6 +11,7 @@ As [recommended by AWS](https://docs.aws.amazon.com/amazondynamodb/latest/develo
 | Table Partition Key `partitionKey` | Table Sort Key `sortKey` | Schema Version `schemaVersion` | Attributes | GSI-A1 Partition Key `gsiA1PartitionKey` | GSI-A1 Sort Key `gsiA1SortKey` | GSI-A2 Partition Key `gsiA2PartitionKey` | GSI-A2 Sort Key `gsiA2SortKey` | GSI-A3 Partition Key `gsiA3PartitionKey` | GSI-A3 Sort Key `gsiA3SortKey` | GSI-K1 Partition Key `gsiK1PartitionKey` | GSI-K1 Sort Key `gsiK1SortKey` | GSI-K2 Partition Key `gsiK2PartitionKey` | GSI-K2 Sort Key `gsiK2SortKey` | GSI-K3 Partition Key `gsiK3PartitionKey` | GSI-K3 Sort Key `gsiK3SortKey:Number` |
 | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
 | `user/{userId}` | `profile` | `9` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `bio`, `photoPostId`, `userStatus`, `privacyStatus`, `commentCount:Number`, `followedCount:Number`, `followerCount:Number`, `postCount:Number`, `postArchivedCount:Number`, `postDeletedCount:Number`, `postForcedArchivingCount:Number`, `albumCount:Number`, `chatCount:Number`, `lastManuallyReindexedAt`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `lastDisabedAt`, `acceptedEULAVersion`, `postViewedByCount:Number`, `usernameLastValue`, `usernameLastChangedAt`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean` | `username/{username}` | `-` |
+| `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | | | | | `user/trending` | `{score}` |
 | `following/{followerUserId}/{followedUserId}` | `-`| `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `followedFirstStory/{followerUserId}/{postedByUserId}` | `-`| `1` | `postId`, `postedAt`, `postedByUserId`, `expiresAt` | `followedFirstStory/{followerUserId}` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
@@ -18,13 +19,14 @@ As [recommended by AWS](https://docs.aws.amazon.com/amazondynamodb/latest/develo
 | `post/{postId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `post` |
 | `post/{postId}` | `image` | `0` | `takenInReal:Boolean`, `originalFormat`, `imageFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` |
 | `post/{postId}` | `originalMetadata` | `0` | `originalMetadata` |
+| `post/{postId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | | | | | `post/trending` | `{score}` |
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
 | `comment/{commentId}` | `-` | `1` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]`, `flagCount:Number`, `viewedByCount:Number` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `comment` |
 | `comment/{commentId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount:Number` | | | | | | | `comment/{commentId}` | `view/{firstViewedAt}` |
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
-| `trending/{itemId}` | `-` | `0` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
+| `trending/{itemId}` | `-` | `1` | `pendingViewCount:Number` | `trending/{itemType}` | `{lastIndexedAt}` | | | | | | | | | `trending/{itemType}` | `{score:Number}` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount:Number`, `rankCount:Number`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
 | `card/{cardId}` | `-` | `0` | `title`, `subTitle`, `action` | `user/{userId}` | `card/{createdAt}` |
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdByUserId`, `createdAt`, `lastMessageActivityAt`, `messageCount:Number`, `userCount:Number` | `chat/{userId1}/{userId2}` | `-` |

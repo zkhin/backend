@@ -3,6 +3,7 @@ import os
 
 import stringcase
 
+from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
@@ -23,11 +24,12 @@ CONTACT_ATTRIBUTE_NAMES = {
 }
 
 
-class User:
+class User(TrendingModelMixin):
 
     enums = enums
     exceptions = exceptions
     client_names = ['cloudfront', 'cognito', 'dynamo', 'pinpoint', 's3_uploads']
+    item_type = 'user'
 
     def __init__(
         self,
@@ -44,7 +46,9 @@ class User:
         post_manager=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
         frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
+        **kwargs,
     ):
+        super().__init__(**kwargs)
         self.clients = clients
         for client_name in self.client_names:
             if client_name in clients:
@@ -185,6 +189,7 @@ class User:
 
         # remove our trending item, if it's there
         self.trending_manager.dynamo.delete_trending(self.id)
+        self.trending_delete()
 
         # delete current and old profile photos
         self.clear_photo_s3_objects()

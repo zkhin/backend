@@ -7,6 +7,7 @@ import pendulum
 import PIL.Image
 
 from app.mixins.flag.model import FlagModelMixin
+from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
 from app.models.card.enums import COMMENT_ACTIVITY_CARD
 from app.utils import image_size
@@ -19,7 +20,7 @@ from .text_image import generate_text_image
 logger = logging.getLogger()
 
 
-class Post(FlagModelMixin, ViewModelMixin):
+class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     enums = enums
     exceptions = exceptions
@@ -158,6 +159,14 @@ class Post(FlagModelMixin, ViewModelMixin):
     @property
     def last_new_comment_activity_at(self):
         return pendulum.parse(self.item['gsiA3SortKey']) if 'gsiA3SortKey' in self.item else None
+
+    @property
+    def is_verified(self):
+        return self.item.get('isVerified')
+
+    @property
+    def original_post_id(self):
+        return self.item.get('originalPostId', self.id)
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
@@ -402,6 +411,10 @@ class Post(FlagModelMixin, ViewModelMixin):
         if album:
             album.update_art_if_needed()
 
+        # all verified original posts get a one free bump into trending, however, their user doesn't
+        if self.type != PostType.IMAGE or (self.is_verified and original_post_id is None):
+            self.trending_increment_score(now=now)
+
         # alert frontend
         self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)
 
@@ -434,6 +447,7 @@ class Post(FlagModelMixin, ViewModelMixin):
 
         # delete the trending index, if it exists
         self.trending_manager.dynamo.delete_trending(self.id)
+        self.trending_delete()
 
         # update feeds
         self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
@@ -516,6 +530,7 @@ class Post(FlagModelMixin, ViewModelMixin):
 
         # delete the trending index, if it exists
         self.trending_manager.dynamo.delete_trending(self.id)
+        self.trending_delete()
 
         # update album art, if needed
         if album:
@@ -725,17 +740,20 @@ class Post(FlagModelMixin, ViewModelMixin):
         if self.user_id == user_id:
             return False
 
-        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
+        # trending - keep non-verified and non-original image posts out
+        if self.type != PostType.IMAGE or (self.is_verified and self.original_post_id == self.id):
+            self.trending_increment_score(now=viewed_at)
+            self.user.trending_increment_score(now=viewed_at)
 
+        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
         # record the viewedBy on the post and user
         if is_new_view:
             self.dynamo.increment_viewed_by_count(self.id)
             self.user_manager.dynamo.increment_post_viewed_by_count(self.user_id)
 
         # If this is a non-original post, count this like a view of the original post as well
-        original_post_id = self.item.get('originalPostId', self.id)
-        if original_post_id != self.id:
-            original_post = self.post_manager.get_post(original_post_id)
+        if self.original_post_id != self.id:
+            original_post = self.post_manager.get_post(self.original_post_id)
             if original_post:
                 original_post.record_view_count(user_id, view_count, viewed_at=viewed_at)
 

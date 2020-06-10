@@ -351,12 +351,12 @@ test('Order of trending users', async () => {
   resp = await anotherClient.mutate({mutation: mutations.reportPostViews, variables: {postIds}})
   expect(resp.errors).toBeUndefined()
 
-  // verify trending users has correct order
+  // verify both show up in trending users, though we can't gaurantee order
+  // both will have a score of 1 and they will have a pendingViewCount of 1
   resp = await ourClient.query({query: queries.trendingUsers})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(2)
-  expect(resp.data.trendingUsers.items[0].userId).toBe(theirUserId)
-  expect(resp.data.trendingUsers.items[1].userId).toBe(ourUserId)
+  expect(resp.data.trendingUsers.items.map((i) => i.userId).sort()).toEqual([ourUserId, theirUserId].sort())
 })
 
 test('We do not see trending users that have blocked us, but see all others', async () => {

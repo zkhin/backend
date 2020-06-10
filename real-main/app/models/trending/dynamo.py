@@ -30,7 +30,7 @@ class TrendingDynamo:
                 'gsiA1SortKey': now.to_iso8601_string(),
                 'gsiK3PartitionKey': f'trending/{item_type}',
                 'gsiK3SortKey': view_count,
-                'schemaVersion': 0,
+                'schemaVersion': 1,
                 'pendingViewCount': 0,
             },
         }

@@ -7,6 +7,7 @@ import pendulum
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
+from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
 
 from . import enums, exceptions
@@ -17,7 +18,7 @@ from .model import Post
 logger = logging.getLogger()
 
 
-class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
+class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, ManagerBase):
 
     enums = enums
     exceptions = exceptions
@@ -62,6 +63,7 @@ class PostManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             'post_image_dynamo': getattr(self, 'image_dynamo', None),
             'post_original_metadata_dynamo': getattr(self, 'original_metadata_dynamo', None),
             'flag_dynamo': getattr(self, 'flag_dynamo', None),
+            'trending_dynamo': getattr(self, 'trending_dynamo', None),
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),

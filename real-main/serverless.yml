@@ -420,6 +420,28 @@ functions:
       - functionErrors
       - functionThrottles
 
+  deflateTrendingUsers:
+    name: ${self:provider.stackName}-deflateTrendingUsers
+    handler: app.handlers.cron.deflate_trending_users
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 day)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  deflateTrendingPosts:
+    name: ${self:provider.stackName}-deflateTrendingPosts
+    handler: app.handlers.cron.deflate_trending_posts
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: rate(1 day)
+    alarms:
+      - functionErrors
+      - functionThrottles
+
   deleteRecentlyExpiredPosts:
     name: ${self:provider.stackName}-deleteRecentlyExpiredPosts
     handler: app.handlers.cron.delete_recently_expired_posts
