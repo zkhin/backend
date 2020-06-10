@@ -140,9 +140,9 @@ def test_deflate_score_success(trending_dynamo):
     assert pendulum.parse(item['lastDeflatedAt']) == now
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(6 / 7))
 
-    # verify we can deflate score to an integer
+    # verify we can deflate score
     now = pendulum.now('utc')
-    trending_dynamo.deflate_score(item_id, Decimal(6 / 7), Decimal(1 / 6), now.date(), now)
+    trending_dynamo.deflate_score(item_id, item['gsiK3SortKey'], Decimal(1 / 6), now.date(), now)
     new_item = trending_dynamo.get(item_id)
     assert pendulum.parse(new_item['lastDeflatedAt']) == now
     assert new_item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 6))
