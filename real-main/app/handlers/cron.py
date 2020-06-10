@@ -4,7 +4,7 @@ import os
 import pendulum
 
 from app import clients, models
-from app.logging import handler_logging
+from app.logging import LogLevelContext, handler_logging
 
 from . import xray
 
@@ -42,14 +42,22 @@ def reindex_trending_posts(event, context):
 
 @handler_logging
 def deflate_trending_users(event, context):
-    total_count = user_manager.trending_deflate()
-    user_manager.trending_delete_tail(total_count)
+    deflated_cnt = user_manager.trending_deflate()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('Trending users deflated: `{deflated_cnt}`')
+    deleted_cnt = user_manager.trending_delete_tail(deflated_cnt)
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending users deleted: `{deleted_cnt}`')
 
 
 @handler_logging
 def deflate_trending_posts(event, context):
-    total_count = post_manager.trending_deflate()
-    post_manager.trending_delete_tail(total_count)
+    deflated_cnt = post_manager.trending_deflate()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending posts deflated: `{deflated_cnt}`')
+    deleted_cnt = post_manager.trending_delete_tail(deflated_cnt)
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Trending posts deleted: `{deleted_cnt}`')
 
 
 @handler_logging

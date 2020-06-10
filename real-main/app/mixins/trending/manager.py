@@ -73,11 +73,11 @@ class TrendingManagerMixin:
             self.trending_deflate_item(trending_item, now=now, retry_count=retry_count + 1)
 
     def trending_delete_tail(self, total_count):
-        to_delete = total_count - self.min_count_to_keep
-        if to_delete <= 0:
-            return
+        max_to_delete = total_count - self.min_count_to_keep
+        if max_to_delete <= 0:
+            return 0
 
-        # trim off posts with score belong the minimum, keeping at least our min count
+        deleted = 0
         for trending_keys in self.trending_dynamo.generate_keys():
             item_id = trending_keys['partitionKey'].split('/')[1]
             current_score = trending_keys['gsiK3SortKey']
@@ -89,6 +89,8 @@ class TrendingManagerMixin:
                 # race condition, the item must have recieved a boost in score
                 logging.warning(f'Lost race condition, not deleting trending for item `{self.item_type}:{item_id}`')
             else:
-                to_delete -= 1
-            if to_delete <= 0:
+                deleted += 1
+            if deleted >= max_to_delete:
                 break
+
+        return deleted

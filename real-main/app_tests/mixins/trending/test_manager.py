@@ -173,14 +173,16 @@ def test_trending_delete_tail(manager):
     manager.trending_dynamo.delete = Mock(wraps=manager.trending_dynamo.delete)
 
     # test none to delete
-    manager.trending_delete_tail(10000)
+    cnt = manager.trending_delete_tail(10000)
+    assert cnt == 0
     assert manager.trending_dynamo.delete.mock_calls == []
 
     # test one to delete
     manager.trending_dynamo.delete.reset_mock()
     item1_id, item1_score = str(uuid4()), Decimal(0.25)
     manager.trending_dynamo.add(item1_id, item1_score)
-    manager.trending_delete_tail(10001)
+    cnt = manager.trending_delete_tail(10001)
+    assert cnt == 1
     assert manager.trending_dynamo.delete.mock_calls == [call(item1_id, expected_score=item1_score)]
     assert manager.trending_dynamo.get(item1_id) is None
 
@@ -192,7 +194,8 @@ def test_trending_delete_tail(manager):
     manager.trending_dynamo.add(item1_id, item1_score)
     manager.trending_dynamo.add(item2_id, item2_score)
     manager.trending_dynamo.add(item3_id, item3_score)
-    manager.trending_delete_tail(10002)
+    cnt = manager.trending_delete_tail(10002)
+    assert cnt == 2
     assert manager.trending_dynamo.delete.mock_calls == [
         call(item2_id, expected_score=item2_score),
         call(item1_id, expected_score=pytest.approx(item1_score)),
@@ -210,7 +213,8 @@ def test_trending_delete_tail(manager):
     manager.trending_dynamo.add(item1_id, item1_score)
     manager.trending_dynamo.add(item2_id, item2_score)
     manager.trending_dynamo.add(item3_id, item3_score)
-    manager.trending_delete_tail(10003)
+    cnt = manager.trending_delete_tail(10003)
+    assert cnt == 1
     assert manager.trending_dynamo.delete.mock_calls == [
         call(item2_id, expected_score=item2_score),
     ]
@@ -241,7 +245,8 @@ def test_trending_delete_tail_race_condition(manager, caplog):
 
     # do the tail delete
     with caplog.at_level(logging.WARNING):
-        manager.trending_delete_tail(10002)
+        cnt = manager.trending_delete_tail(10002)
+    assert cnt == 1
     assert len(caplog.records) == 1
     assert 'not deleting trending' in caplog.records[0].msg
     assert item2_id in caplog.records[0].msg
