@@ -7,7 +7,10 @@
   },
   "scripts": {
     "lint": "eslint '**/*.js'",
-    "test": "jest"
+    "test": "yarn run test-concurrent",
+    "test-all": "yarn run test-concurrent; r1=$?; yarn run test-sequential; r2=$?; [[ $r1 -eq 0 && $r2 -eq 0 ]] && true || false",
+    "test-concurrent": "jest -c ./jest.concurrent.config.json",
+    "test-sequential": "jest -c ./jest.sequential.config.json"
   },
   "eslintConfig": {
     "root": true,
@@ -30,10 +33,6 @@
     "rules": {
       "jest/no-disabled-tests": "off"
     }
-  },
-  "jest": {
-    "maxWorkers": 7,
-    "testTimeout": 60000
   },
   "prettier": {
     "bracketSpacing": false,
@@ -60,7 +59,7 @@
     "graphql-tag": "^2.10.3",
     "http-aws-es": "^6.0.0",
     "isomorphic-fetch": "^2.2.1",
-    "jest": "^25.1.0",
+    "jest": "^26.0.1",
     "jpeg-js": "^0.3.6",
     "jwt-decode": "^2.2.0",
     "md5": "^2.2.1",
