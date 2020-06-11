@@ -1,16 +1,32 @@
-import uuid
+from uuid import uuid4
 
 import pendulum
 import pytest
 
-from app.models.card import enums
+from app.models.card import enums, specs
+from app.models.post.enums import PostType
 
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def chat_card_spec(user):
+    yield specs.ChatCardSpec(user.id)
+
+
+@pytest.fixture
+def comment_card_spec(user, post_manager):
+    post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+    yield specs.CommentCardSpec(user.id, post.id)
+
+
+comment_card_spec1 = comment_card_spec
+comment_card_spec2 = comment_card_spec
 
 
 def test_add_card_minimal(card_manager, user, appsync_client):
@@ -70,38 +86,55 @@ def test_add_card_maximal(card_manager, user):
     assert card_manager.get_card(card.id)
 
 
-@pytest.mark.parametrize('wk_card', [enums.COMMENT_ACTIVITY_CARD, enums.CHAT_ACTIVITY_CARD])
-def test_add_and_remove_well_known_card(user, wk_card, card_manager):
-    card_id = f'{user.id}:{wk_card.name}'
-
+@pytest.mark.parametrize('spec', pytest.lazy_fixture(['chat_card_spec', 'comment_card_spec']))
+def test_add_and_remove_card_by_spec(user, spec, card_manager):
     # verify starting state
-    assert card_manager.get_card(card_id) is None
+    assert card_manager.get_card(spec.card_id) is None
 
     # add the card, verify state
     before = pendulum.now('utc')
-    card_manager.add_well_known_card_if_dne(user.id, wk_card)
+    card_manager.add_card_by_spec_if_dne(spec)
     after = pendulum.now('utc')
-    card = card_manager.get_card(card_id)
-    assert card.id == card_id
-    assert card.item['title'] == wk_card.title
-    assert card.item['action'] == wk_card.action
+    card = card_manager.get_card(spec.card_id)
+    assert card.id == spec.card_id
+    assert card.item['title'] == spec.title
+    assert card.item['action'] == spec.action
     assert before < card.created_at < after
 
     # add the card again, verify no-op
-    card_manager.add_well_known_card_if_dne(user.id, wk_card)
-    new_card = card_manager.get_card(card_id)
-    assert new_card.id == card_id
-    assert new_card.item['title'] == wk_card.title
-    assert new_card.item['action'] == wk_card.action
+    card_manager.add_card_by_spec_if_dne(spec)
+    new_card = card_manager.get_card(spec.card_id)
+    assert new_card.id == spec.card_id
+    assert new_card.item['title'] == spec.title
+    assert new_card.item['action'] == spec.action
     assert new_card.created_at == card.created_at
 
     # remove the card, verify it's gone
-    card_manager.remove_well_known_card_if_exists(user.id, wk_card)
-    assert card_manager.get_card(card_id) is None
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
 
     # remove the card again, verify no-op
-    card_manager.remove_well_known_card_if_exists(user.id, wk_card)
-    assert card_manager.get_card(card_id) is None
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
+
+
+def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comment_card_spec2):
+    spec1 = comment_card_spec1
+    spec2 = comment_card_spec2
+
+    # verify starting state
+    assert card_manager.get_card(spec1.card_id) is None
+    assert card_manager.get_card(spec2.card_id) is None
+
+    # add the card, verify state
+    card_manager.add_card_by_spec_if_dne(spec1)
+    assert card_manager.get_card(spec1.card_id)
+    assert card_manager.get_card(spec2.card_id) is None
+
+    # add the other card, verify state and no conflict
+    card_manager.add_card_by_spec_if_dne(spec2)
+    assert card_manager.get_card(spec1.card_id)
+    assert card_manager.get_card(spec2.card_id)
 
 
 def test_truncate_cards(card_manager, user):

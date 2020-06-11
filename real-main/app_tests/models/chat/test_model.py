@@ -4,6 +4,7 @@ from unittest import mock
 import pendulum
 import pytest
 
+from app.models.card.specs import ChatCardSpec
 from app.models.chat.exceptions import ChatException
 
 
@@ -140,8 +141,8 @@ def test_cant_add_to_non_group_chat(direct_chat):
 
 
 def test_update_members_last_message_activity_at(direct_chat, user1, user2, card_manager):
-    user1_card_id = f'{user1.id}:{card_manager.enums.CHAT_ACTIVITY_CARD.name}'
-    user2_card_id = f'{user2.id}:{card_manager.enums.CHAT_ACTIVITY_CARD.name}'
+    user1_card_id = ChatCardSpec(user1.id).card_id
+    user2_card_id = ChatCardSpec(user2.id).card_id
 
     # verify members start with same activity timestamp
     user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
