@@ -4,7 +4,7 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.card.enums import CHAT_ACTIVITY_CARD
+from app.models.card.specs import ChatCardSpec
 
 
 @pytest.fixture
@@ -259,20 +259,23 @@ def test_record_views(chat_message_manager, chat, user2, user3, caplog):
 
 
 def test_record_views_removes_card(chat_message_manager, chat, user2, user3, card_manager):
+    spec2 = ChatCardSpec(user2.id)
+    spec3 = ChatCardSpec(user3.id)
+
     # add the well-known card for both users, check starting state
-    card_manager.add_well_known_card_if_dne(user2.id, CHAT_ACTIVITY_CARD)
-    card_manager.add_well_known_card_if_dne(user3.id, CHAT_ACTIVITY_CARD)
-    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user2.id))
-    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user3.id))
+    card_manager.add_card_by_spec_if_dne(spec2)
+    card_manager.add_card_by_spec_if_dne(spec3)
+    assert card_manager.get_card(spec2.card_id)
+    assert card_manager.get_card(spec3.card_id)
 
     # user2 adds a message, both users views it, should remove user3's card but not user2's
     message1 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user2.id)
     chat_message_manager.record_views([message1.id], user2.id)
     chat_message_manager.record_views([message1.id], user3.id)
-    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user2.id))
-    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user3.id)) is None
+    assert card_manager.get_card(spec2.card_id)
+    assert card_manager.get_card(spec3.card_id) is None
 
     # user3 adds a message, user2 views it, should remove user2's card
     message1 = chat_message_manager.add_chat_message(str(uuid.uuid4()), 't', chat.id, user3.id)
     chat_message_manager.record_views([message1.id], user2.id)
-    assert card_manager.get_card(CHAT_ACTIVITY_CARD.get_card_id(user2.id)) is None
+    assert card_manager.get_card(spec2.card_id) is None

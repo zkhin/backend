@@ -4,7 +4,7 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.card.enums import COMMENT_ACTIVITY_CARD
+from app.models.card.specs import CommentCardSpec
 from app.models.post.enums import PostType
 
 
@@ -221,6 +221,7 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
 
 
 def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):
+    card_id = CommentCardSpec(user.id, post.id).card_id
     comment1 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
     comment2 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
 
@@ -240,22 +241,22 @@ def test_record_views(comment_manager, user, user2, user3, post, caplog, card_ma
 
     # another user can record views of our comments, which does not clear the 'coment activity' indicators
     post.refresh_item().item.get('hasNewCommentActivity', False) is True
-    assert card_manager.get_card(COMMENT_ACTIVITY_CARD.get_card_id(user.id))
+    assert card_manager.get_card(card_id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user3.id) is None
     assert comment_manager.view_dynamo.get_view(comment2.id, user3.id) is None
     comment_manager.record_views([comment1.id, comment2.id, comment1.id], user3.id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user3.id)['viewCount'] == 2
     assert comment_manager.view_dynamo.get_view(comment2.id, user3.id)['viewCount'] == 1
     post.refresh_item().item.get('hasNewCommentActivity', False) is True
-    assert card_manager.get_card(COMMENT_ACTIVITY_CARD.get_card_id(user.id))
+    assert card_manager.get_card(card_id)
 
     # post owner records views of comment, clears 'comment activity' indicators
     post.refresh_item().item.get('hasNewCommentActivity', False) is True
-    assert card_manager.get_card(COMMENT_ACTIVITY_CARD.get_card_id(user.id))
+    assert card_manager.get_card(card_id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user.id) is None
     assert comment_manager.view_dynamo.get_view(comment2.id, user.id) is None
     comment_manager.record_views([comment1.id, comment2.id, comment1.id], user.id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user.id)['viewCount'] == 2
     assert comment_manager.view_dynamo.get_view(comment2.id, user.id)['viewCount'] == 1
     post.refresh_item().item.get('hasNewCommentActivity', False) is False
-    assert card_manager.get_card(COMMENT_ACTIVITY_CARD.get_card_id(user.id)) is None
+    assert card_manager.get_card(card_id) is None
