@@ -56,17 +56,16 @@ class CardManager:
         self.appsync.trigger_notification(enums.CardNotificationType.ADDED, card)
         return card
 
-    def add_well_known_card_if_dne(self, user_id, well_known_card, now=None):
-        card_id = well_known_card.get_card_id(user_id)
-        if self.get_card(card_id):
+    def add_card_by_spec_if_dne(self, spec, now=None):
+        if self.get_card(spec.card_id):
             return
         try:
-            self.add_card(user_id, well_known_card.title, well_known_card.action, card_id, now=now)
+            self.add_card(spec.user_id, spec.title, spec.action, spec.card_id, now=now)
         except self.exceptions.CardAlreadyExists:
             pass
 
-    def remove_well_known_card_if_exists(self, user_id, well_known_card, now=None):
-        card = self.get_card(well_known_card.get_card_id(user_id))
+    def remove_card_by_spec_if_exists(self, spec, now=None):
+        card = self.get_card(spec.card_id)
         if not card:
             return
         try:

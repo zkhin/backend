@@ -3,7 +3,7 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.card import enums
+from app.models.card import enums, specs
 
 
 @pytest.fixture
@@ -70,38 +70,38 @@ def test_add_card_maximal(card_manager, user):
     assert card_manager.get_card(card.id)
 
 
-@pytest.mark.parametrize('wk_card', [enums.COMMENT_ACTIVITY_CARD, enums.CHAT_ACTIVITY_CARD])
-def test_add_and_remove_well_known_card(user, wk_card, card_manager):
-    card_id = f'{user.id}:{wk_card.name}'
+@pytest.mark.parametrize('spec_class', [specs.CommentCardSpec, specs.ChatCardSpec])
+def test_add_and_remove_well_known_card(user, spec_class, card_manager):
+    spec = spec_class(user.id)
 
     # verify starting state
-    assert card_manager.get_card(card_id) is None
+    assert card_manager.get_card(spec.card_id) is None
 
     # add the card, verify state
     before = pendulum.now('utc')
-    card_manager.add_well_known_card_if_dne(user.id, wk_card)
+    card_manager.add_card_by_spec_if_dne(spec)
     after = pendulum.now('utc')
-    card = card_manager.get_card(card_id)
-    assert card.id == card_id
-    assert card.item['title'] == wk_card.title
-    assert card.item['action'] == wk_card.action
+    card = card_manager.get_card(spec.card_id)
+    assert card.id == spec.card_id
+    assert card.item['title'] == spec.title
+    assert card.item['action'] == spec.action
     assert before < card.created_at < after
 
     # add the card again, verify no-op
-    card_manager.add_well_known_card_if_dne(user.id, wk_card)
-    new_card = card_manager.get_card(card_id)
-    assert new_card.id == card_id
-    assert new_card.item['title'] == wk_card.title
-    assert new_card.item['action'] == wk_card.action
+    card_manager.add_card_by_spec_if_dne(spec)
+    new_card = card_manager.get_card(spec.card_id)
+    assert new_card.id == spec.card_id
+    assert new_card.item['title'] == spec.title
+    assert new_card.item['action'] == spec.action
     assert new_card.created_at == card.created_at
 
     # remove the card, verify it's gone
-    card_manager.remove_well_known_card_if_exists(user.id, wk_card)
-    assert card_manager.get_card(card_id) is None
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
 
     # remove the card again, verify no-op
-    card_manager.remove_well_known_card_if_exists(user.id, wk_card)
-    assert card_manager.get_card(card_id) is None
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
 
 
 def test_truncate_cards(card_manager, user):
