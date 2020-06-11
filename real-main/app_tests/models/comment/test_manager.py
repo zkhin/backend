@@ -221,7 +221,7 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
 
 
 def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):
-    card_id = CommentCardSpec(user.id).card_id
+    card_id = CommentCardSpec(user.id, post.id).card_id
     comment1 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
     comment2 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
 

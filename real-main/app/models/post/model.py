@@ -598,7 +598,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     def register_new_comment_activity(self, now=None):
         now = now or pendulum.now('utc')
-        self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(self.user_id))
+        self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(self.user_id, self.id))
         self.item = self.dynamo.set_last_new_comment_activity_at(self.item, now)
         return self
 
@@ -608,7 +608,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # once we've seen the new comment activity for *any* post, we remove the notification card,
         # even if there are other posts with activity we have not seen
-        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id))
+        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
         self.item = self.dynamo.set_last_new_comment_activity_at(self.item, None)
         return self
 
