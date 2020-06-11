@@ -28,8 +28,8 @@ comment2 = comment
 @pytest.mark.parametrize(
     'manager, model1, model2',
     [
-        (pytest.lazy_fixture('post_manager'), pytest.lazy_fixture('post'), pytest.lazy_fixture('post2')),
-        (pytest.lazy_fixture('comment_manager'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('comment2')),
+        pytest.lazy_fixture(['post_manager', 'post', 'post2']),
+        pytest.lazy_fixture(['comment_manager', 'comment', 'comment2']),
     ],
 )
 def test_unflag_all_by_user(manager, model1, model2, user2):

@@ -23,14 +23,14 @@ def post(post_manager, user):
     yield post
 
 
-@pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_retry_count_exceeded(model):
     with pytest.raises(Exception, match=f'failed for item `{model.item_type}:{model.id}` after 3 tries'):
         model.trending_increment_score(retry_count=3)
     model.trending_increment_score(retry_count=2)  # no exception throw
 
 
-@pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_add_new(model):
     now = pendulum.parse('2020-06-08T12:00:00Z')  # halfway through the day
     model.trending_increment_score(now)
@@ -39,7 +39,7 @@ def test_increment_score_add_new(model):
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5))
 
 
-@pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_add_new_race_condition(model, caplog):
     # sneak behind the model's back and add a trending
     assert model.trending_item is None
@@ -57,7 +57,7 @@ def test_increment_score_add_new_race_condition(model, caplog):
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 + 2 ** 0.25))
 
 
-@pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_update_existing_basic(model):
     # create the trending item
     created_at = pendulum.parse('2020-06-08T12:00:00Z')  # 1/2 way through the day
@@ -75,7 +75,7 @@ def test_increment_score_update_existing_basic(model):
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75 + 2 ** (25 / 24)))
 
 
-@pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_update_existing_race_condition_deflation(model, caplog):
     # create the trending item
     created_at = pendulum.parse('2020-06-08T12:00:00Z')  # 1/2 way through the day
@@ -97,7 +97,7 @@ def test_increment_score_update_existing_race_condition_deflation(model, caplog)
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(new_score + Decimal(2 ** (1 / 12)))
 
 
-@pytest.mark.parametrize('model', (pytest.lazy_fixture('user'), pytest.lazy_fixture('post')))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_delete(model):
     assert model.trending_item is None
 

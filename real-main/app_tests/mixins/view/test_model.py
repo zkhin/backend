@@ -35,7 +35,7 @@ def chat_message(chat_manager, chat_message_manager, user, user2):
 
 
 @pytest.mark.parametrize(
-    'model', (pytest.lazy_fixture('post'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('chat_message'))
+    'model', pytest.lazy_fixture(['post', 'comment', 'chat_message']),
 )
 def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     # check owner has always viewed it
@@ -48,7 +48,7 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
 
 
 @pytest.mark.parametrize(
-    'model', (pytest.lazy_fixture('post'), pytest.lazy_fixture('comment'), pytest.lazy_fixture('chat_message'))
+    'model', pytest.lazy_fixture(['post', 'comment', 'chat_message']),
 )
 def test_record_get_and_delete_views(model, user2, user3):
     # check users have not viewed it

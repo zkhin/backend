@@ -30,7 +30,7 @@ user6 = user
 user7 = user
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_flag_success(model, user2):
     # check starting state
     assert model.item.get('flagCount', 0) == 0
@@ -49,7 +49,7 @@ def test_flag_success(model, user2):
     assert model.refresh_item().item.get('flagCount', 0) == 1
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_cant_flag_our_own_model(model, user):
     with pytest.raises(model.flag_exceptions.FlagException, match='flag their own'):
         model.flag(user)
@@ -58,7 +58,7 @@ def test_cant_flag_our_own_model(model, user):
     assert list(model.flag_dynamo.generate_by_item(model.id)) == []
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_cant_flag_model_of_user_thats_blocking_us(model, user, user2, block_manager):
     block_manager.block(user, user2)
     with pytest.raises(model.flag_exceptions.FlagException, match='has been blocked by owner'):
@@ -68,7 +68,7 @@ def test_cant_flag_model_of_user_thats_blocking_us(model, user, user2, block_man
     assert list(model.flag_dynamo.generate_by_item(model.id)) == []
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_cant_flag_model_of_user_we_are_blocking(model, user, user2, block_manager):
     block_manager.block(user2, user)
     with pytest.raises(model.flag_exceptions.FlagException, match='has blocked owner'):
@@ -78,7 +78,7 @@ def test_cant_flag_model_of_user_we_are_blocking(model, user, user2, block_manag
     assert list(model.flag_dynamo.generate_by_item(model.id)) == []
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_unflag(model, user2):
     # flag the model, verify worked
     model.flag(user2)
@@ -97,7 +97,7 @@ def test_unflag(model, user2):
         model.unflag(user2.id)
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_is_crowdsourced_forced_removal_criteria_met(model, user2, user3, user4, user5, user6, user7):
     # should archive if over 5 users have viewed the model and more than 10% have flagged it
     # one flag, verify shouldn't force-archive
@@ -119,7 +119,7 @@ def test_is_crowdsourced_forced_removal_criteria_met(model, user2, user3, user4,
     assert model.is_crowdsourced_forced_removal_criteria_met() is True
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_flag_force_remove_by_crowdsourced_criteria(model, user2, user3, caplog):
     model.remove_from_flagging = mock.Mock()
 
@@ -140,7 +140,7 @@ def test_flag_force_remove_by_crowdsourced_criteria(model, user2, user3, caplog)
     assert model.remove_from_flagging.mock_calls == [mock.call()]
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_flag_force_archive_by_admin(model, user2, caplog):
     model.remove_from_flagging = mock.Mock()
     model.flag_admin_usernames = user2.username
@@ -152,7 +152,7 @@ def test_flag_force_archive_by_admin(model, user2, caplog):
     assert model.remove_from_flagging.mock_calls == [mock.call()]
 
 
-@pytest.mark.parametrize('model', [pytest.lazy_fixture('post'), pytest.lazy_fixture('comment')])
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_flag_force_disable_user(model, user2, user3, caplog):
     model.is_crowdsourced_forced_removal_criteria_met = mock.Mock(return_value=True)
     model.remove_from_flagging = mock.Mock()

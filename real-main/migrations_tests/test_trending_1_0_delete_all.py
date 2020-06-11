@@ -75,7 +75,7 @@ def test_nothing_to_migrate(dynamo_client, dynamo_table, caplog, new_trending):
     assert dynamo_table.get_item(Key=pk)['Item'] == new_trending
 
 
-@pytest.mark.parametrize('trending', [pytest.lazy_fixture('user_trending'), pytest.lazy_fixture('post_trending')])
+@pytest.mark.parametrize('trending', pytest.lazy_fixture(['user_trending', 'post_trending']))
 def test_migrate_one(dynamo_client, dynamo_table, caplog, trending):
     # verify starting state
     item_pk = trending['partitionKey']

@@ -7,7 +7,7 @@ import pendulum
 import pytest
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate(manager):
 
     # test with none
@@ -48,7 +48,7 @@ def test_trending_deflate(manager):
     ]
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_retry_count(manager):
     # add a trending item
     item_id, item_score = str(uuid4()), Decimal(0.4)
@@ -59,7 +59,7 @@ def test_trending_deflate_item_retry_count(manager):
     manager.trending_deflate_item(item, retry_count=2)  # no exception thrown
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_already_deflated_today(manager, caplog):
     # add a trending item
     item_id, item_score = str(uuid4()), Decimal(0.4)
@@ -76,7 +76,7 @@ def test_trending_deflate_item_already_deflated_today(manager, caplog):
     assert manager.trending_dynamo.deflate_score.mock_calls == []
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_no_recursion_without_last_deflated_at_assumption(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
@@ -96,7 +96,7 @@ def test_trending_deflate_item_no_recursion_without_last_deflated_at_assumption(
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.20))
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_no_recursion_with_last_deflated_at_assumption(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
@@ -117,7 +117,7 @@ def test_trending_deflate_item_no_recursion_with_last_deflated_at_assumption(man
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.20))
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_with_recursion_with_last_deflated_at_assumption(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
@@ -143,7 +143,7 @@ def test_trending_deflate_item_with_recursion_with_last_deflated_at_assumption(m
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.10))  # two days worth of deflating
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_with_recursion_without_last_deflated_at_assumption(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
@@ -171,7 +171,7 @@ def test_trending_deflate_item_with_recursion_without_last_deflated_at_assumptio
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.7))
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_delete_tail(manager):
     assert manager.min_count_to_keep == 10 * 1000
     assert manager.min_score_to_keep == 0.5
@@ -228,7 +228,7 @@ def test_trending_delete_tail(manager):
     assert manager.trending_dynamo.get(item3_id)
 
 
-@pytest.mark.parametrize('manager', [pytest.lazy_fixture('user_manager'), pytest.lazy_fixture('post_manager')])
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_delete_tail_race_condition(manager, caplog):
     assert manager.min_count_to_keep == 10 * 1000
     assert manager.min_score_to_keep == 0.5

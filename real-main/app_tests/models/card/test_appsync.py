@@ -29,7 +29,7 @@ def maximal_card(card_manager, user):
     yield card_manager.add_card(user.id, card_id, 'max_title', 'https://real.app/max/', sub_title='my max card')
 
 
-@pytest.mark.parametrize('card', (pytest.lazy_fixture('minimal_card'), pytest.lazy_fixture('maximal_card')))
+@pytest.mark.parametrize('card', pytest.lazy_fixture(['minimal_card', 'maximal_card']))
 def test_trigger_notification(card_appsync, user, card, appsync_client):
     appsync_client.reset_mock()
 

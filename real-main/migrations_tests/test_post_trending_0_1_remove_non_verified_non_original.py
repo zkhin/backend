@@ -125,7 +125,7 @@ def test_migrate_none_to_migrate(dynamo_client, dynamo_table, caplog, text_only,
         assert dynamo_table.get_item(Key=key)['Item'] == trending
 
 
-@pytest.mark.parametrize('trending', [pytest.lazy_fixture('not_verified'), pytest.lazy_fixture('not_original')])
+@pytest.mark.parametrize('trending', pytest.lazy_fixture(['not_verified', 'not_original']))
 def test_migrate_one(dynamo_client, dynamo_table, caplog, trending):
     # verify starting state
     key = {'partitionKey': trending['partitionKey'], 'sortKey': trending['sortKey']}
