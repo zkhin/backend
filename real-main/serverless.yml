@@ -125,6 +125,7 @@ custom:
 
     mappingTemplates:
       - ${file(./serverless/mapping-templates/album.yml)}
+      - ${file(./serverless/mapping-templates/card.yml)}
       - ${file(./serverless/mapping-templates/chat.yml)}
       - ${file(./serverless/mapping-templates/chat-message.yml)}
       - ${file(./serverless/mapping-templates/comment.yml)}

@@ -53,6 +53,7 @@ test('Unread chat message card with correct format', async () => {
   expect(card.title).toBe('You have new messages')
   expect(card.subTitle).toBeNull()
   expect(card.action).toBe('https://real.app/chat/')
+  expect(card.thumbnail).toBeFalsy()
 
   // they add another message to the chat
   variables = {chatId, messageId: uuidv4(), text: 'lore ipsum'}

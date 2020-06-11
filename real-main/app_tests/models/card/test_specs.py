@@ -3,6 +3,7 @@ from uuid import uuid4
 import pytest
 
 from app.models.card import specs
+from app.models.card.exceptions import MalformedCardId
 from app.models.post.enums import PostType
 
 
@@ -44,3 +45,28 @@ def test_chat_card_spec(user):
     assert spec.user_id == user.id
     assert user.id in spec.card_id
     assert spec.action == 'https://real.app/chat/'
+
+
+def test_from_card_id():
+    # unrecognized card id formats
+    assert specs.CardSpec.from_card_id(None) is None
+    assert specs.CardSpec.from_card_id('unrecognized') is None
+
+    # mal-formed card id formats
+    with pytest.raises(MalformedCardId):
+        specs.CardSpec.from_card_id('malformed-no-post-id:COMMENT_ACTIVITY')
+    with pytest.raises(MalformedCardId):
+        specs.CardSpec.from_card_id('CHAT_ACTIVITY')
+
+    # well-formed comment activity card id
+    user_id, post_id = f'us-east-1:{uuid4()}', str(uuid4())
+    spec = specs.CardSpec.from_card_id(f'{user_id}:COMMENT_ACTIVITY:{post_id}')
+    assert isinstance(spec, specs.CommentCardSpec)
+    assert spec.user_id == user_id
+    assert spec.post_id == post_id
+
+    # well-formed chat activity card id
+    user_id = f'us-east-1:{uuid4()}'
+    spec = specs.CardSpec.from_card_id(f'{user_id}:CHAT_ACTIVITY')
+    assert isinstance(spec, specs.ChatCardSpec)
+    assert spec.user_id == user_id

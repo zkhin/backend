@@ -21,6 +21,7 @@ class CardManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['card'] = self
+        self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         if 'appsync' in clients:
@@ -36,6 +37,7 @@ class CardManager:
         kwargs = {
             'card_appsync': self.appsync,
             'card_dynamo': self.dynamo,
+            'post_manager': self.post_manager,
             'user_manager': self.user_manager,
         }
         return Card(item, **kwargs)
@@ -60,7 +62,7 @@ class CardManager:
         if self.get_card(spec.card_id):
             return
         try:
-            self.add_card(spec.user_id, spec.title, spec.action, spec.card_id, now=now)
+            return self.add_card(spec.user_id, spec.title, spec.action, spec.card_id, now=now)
         except self.exceptions.CardAlreadyExists:
             pass
 

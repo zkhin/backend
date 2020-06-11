@@ -4,6 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const {mutations, queries} = require('../../schema')
+const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -103,6 +104,7 @@ test('Delete card, generate new card after deleting', async () => {
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
+  await misc.sleep(2000) // let dynamo converge
 
   // verify we see the card, and its count
   resp = await ourClient.query({query: queries.self})

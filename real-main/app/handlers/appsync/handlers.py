@@ -875,6 +875,20 @@ def delete_card(caller_user, arguments, source, context):
     return card.serialize(caller_user.id)
 
 
+@routes.register('Card.thumbnail')
+def card_thumbnail(caller_user_id, arguments, source, context):
+    card = card_manager.get_card(source['cardId'])
+    if card and card.has_thumbnail:
+        return {
+            'url': card.get_image_url(image_size.NATIVE),
+            'url64p': card.get_image_url(image_size.P64),
+            'url480p': card.get_image_url(image_size.P480),
+            'url1080p': card.get_image_url(image_size.P1080),
+            'url4k': card.get_image_url(image_size.K4),
+        }
+    return None
+
+
 @routes.register('Mutation.addAlbum')
 @validate_caller
 def add_album(caller_user, arguments, source, context):

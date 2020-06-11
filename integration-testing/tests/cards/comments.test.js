@@ -65,6 +65,17 @@ test('Generate comment card', async () => {
   expect(card.subTitle).toBeNull()
   expect(card.action).toMatch(RegExp('^https://real.app/chat/post/'))
   expect(card.action).toContain(postId)
+  expect(card.thumbnail).toBeTruthy()
+  expect(card.thumbnail.url64p).toMatch(RegExp('^https://.*.jpg'))
+  expect(card.thumbnail.url480p).toMatch(RegExp('^https://.*.jpg'))
+  expect(card.thumbnail.url1080p).toMatch(RegExp('^https://.*.jpg'))
+  expect(card.thumbnail.url4k).toMatch(RegExp('^https://.*.jpg'))
+  expect(card.thumbnail.url).toMatch(RegExp('^https://.*.jpg'))
+  expect(card.thumbnail.url64p).toContain(postId)
+  expect(card.thumbnail.url480p).toContain(postId)
+  expect(card.thumbnail.url1080p).toContain(postId)
+  expect(card.thumbnail.url4k).toContain(postId)
+  expect(card.thumbnail.url).toContain(postId)
 
   // they comment again on the post
   resp = await theirClient.mutate({
