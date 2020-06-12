@@ -405,7 +405,7 @@ functions:
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
-      - schedule: rate(1 day)
+      - schedule: 'cron(7 0 * * ? *)'
     alarms:
       - functionErrors
       - functionThrottles
@@ -416,7 +416,7 @@ functions:
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
-      - schedule: rate(1 day)
+      - schedule: 'cron(7 0 * * ? *)'
     alarms:
       - functionErrors
       - functionThrottles
