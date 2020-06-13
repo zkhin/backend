@@ -24,6 +24,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     client_names = [
         'cloudfront',
         'cognito',
+        'elasticsearch',
         'dynamo',
         'facebook',
         'google',
@@ -85,6 +86,51 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'post_manager': getattr(self, 'post_manager', None),
         }
         return User(user_item, self.clients, **kwargs) if user_item else None
+
+    def postprocess_record(self, pk, sk, old_item, new_item):
+        user_id = pk[len('user/') :]
+        self.postprocess_elasticsearch(old_item, new_item)
+        self.postprocess_pinpoint(user_id, old_item, new_item)
+
+    def postprocess_elasticsearch(self, old_item, new_item):
+        # if we're manually rebuilding the index, treat everything as new
+        new_reindexed_at = new_item.get('lastManuallyReindexedAt', {}).get('S')
+        old_reindexed_at = old_item.get('lastManuallyReindexedAt', {}).get('S')
+        if new_reindexed_at and new_reindexed_at != old_reindexed_at:
+            old_item = {}
+
+        if new_item and old_item:
+            self.elasticsearch_client.update_user(old_item, new_item)
+        if new_item and not old_item:
+            self.elasticsearch_client.add_user(new_item)
+        if not new_item and old_item:
+            self.elasticsearch_client.delete_user(old_item)
+
+    def postprocess_pinpoint(self, user_id, old_item, new_item):
+        # check if this was a user deletion
+        if old_item and not new_item:
+            self.pinpoint_client.delete_user_endpoints(user_id)
+            return
+
+        # check for a change of email, phone
+        for dynamo_name, pinpoint_name in (('email', 'EMAIL'), ('phoneNumber', 'SMS')):
+            value = new_item.get(dynamo_name, {}).get('S')
+            if old_item.get(dynamo_name, {}).get('S') == value:
+                continue
+            if value:
+                self.pinpoint_client.update_user_endpoint(user_id, pinpoint_name, value)
+            else:
+                self.pinpoint_client.delete_user_endpoint(user_id, pinpoint_name)
+
+        # check if this was a change in user status
+        status = new_item.get('userStatus', {}).get('S', enums.UserStatus.ACTIVE)
+        if old_item and old_item.get('userStatus', {}).get('S', enums.UserStatus.ACTIVE) != status:
+            if status == enums.UserStatus.ACTIVE:
+                self.pinpoint_client.enable_user_endpoints(user_id)
+            if status == enums.UserStatus.DISABLED:
+                self.pinpoint_client.disable_user_endpoints(user_id)
+            if status == enums.UserStatus.DELETING:
+                self.pinpoint_client.delete_user_endpoints(user_id)
 
     def get_available_placeholder_photo_codes(self):
         # don't want to foce the test suite to always pass in this parameter

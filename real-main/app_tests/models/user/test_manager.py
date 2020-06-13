@@ -5,6 +5,8 @@ from unittest import mock
 
 import pytest
 
+from app.models.user.enums import UserStatus
+
 
 @pytest.fixture
 def cognito_only_user1(user_manager, cognito_client):
@@ -467,3 +469,18 @@ def test_username_tag_regex(user_manager):
 
     # uglies
     assert re.findall(reg, 'hi @._._ @4_. @A_A\n@B.4\r@333!?') == ['@._._', '@4_.', '@A_A', '@B.4', '@333']
+
+
+def test_postprocess_record(user_manager):
+    # use simulated update to disable a user
+    user_id = str(uuid.uuid4())
+    pk = f'user/{user_id}'
+    sk = 'profile'
+    old_item = {'userId': {'S': user_id}}
+    new_item = {'userId': {'S': user_id}, 'userStatus': {'S': UserStatus.DISABLED}}
+
+    user_manager.elasticsearch_client.reset_mock()
+    user_manager.pinpoint_client.reset_mock()
+    user_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert user_manager.pinpoint_client.mock_calls == [mock.call.disable_user_endpoints(user_id)]
+    assert user_manager.elasticsearch_client.mock_calls == [mock.call.update_user(old_item, new_item)]

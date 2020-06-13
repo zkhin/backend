@@ -99,6 +99,11 @@ def dynamo_client():
 
 
 @pytest.fixture
+def elasticsearch_client():
+    yield mock.Mock(clients.ESSearchClient(domain='my-es-domain.com'))
+
+
+@pytest.fixture
 def facebook_client():
     yield mock.Mock(clients.FacebookClient())
 
@@ -213,6 +218,7 @@ def user_manager(
     facebook_client,
     google_client,
     pinpoint_client,
+    elasticsearch_client,
 ):
     yield models.UserManager(
         {
@@ -224,5 +230,6 @@ def user_manager(
             'facebook': facebook_client,
             'google': google_client,
             'pinpoint': pinpoint_client,
+            'elasticsearch': elasticsearch_client,
         }
     )
