@@ -42,6 +42,13 @@ user2 = user
 
 
 @pytest.fixture
+def real_user(user_manager, cognito_client):
+    user_id = str(uuid.uuid4())
+    cognito_client.create_verified_user_pool_entry(user_id, 'real', 'real-test@real.app')
+    yield user_manager.create_cognito_only_user(user_id, 'real')
+
+
+@pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
 
@@ -59,6 +66,11 @@ def pending_image_post(post_manager, user2):
 @pytest.fixture
 def pending_image_post_heic(post_manager, user2):
     yield post_manager.add_post(user2, 'pid2', PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
+
+
+@pytest.fixture
+def image_post(user, post_manager, grant_data_b64):
+    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64})
 
 
 @pytest.fixture
@@ -914,3 +926,61 @@ def test_set_colors_colortheif_fails(s3_uploads_client, pending_image_post, capl
     assert caplog.records[0].levelname == 'WARNING'
     assert 'ColorTheif' in caplog.records[0].msg
     assert f'`{post.id}`' in caplog.records[0].msg
+
+
+def test_trending_increment_score_success_case(image_post):
+    org_score = image_post.trending_item['gsiK3SortKey']
+    recorded = image_post.trending_increment_score()
+    assert recorded is True
+    assert image_post.trending_item['gsiK3SortKey'] > org_score
+
+
+def test_trending_increment_score_skips_non_verified_image_posts(image_post):
+    org_score = image_post.trending_item['gsiK3SortKey']
+    image_post.item['isVerified'] = False
+    recorded = image_post.trending_increment_score()
+    assert recorded is False
+    assert image_post.trending_item['gsiK3SortKey'] == org_score
+
+
+def test_trending_increment_score_skips_non_original_posts(image_post):
+    org_score = image_post.trending_item['gsiK3SortKey']
+    image_post.item['originalPostId'] = str(uuid.uuid4())
+    recorded = image_post.trending_increment_score()
+    assert recorded is False
+    assert image_post.trending_item['gsiK3SortKey'] == org_score
+
+
+def test_trending_increment_score_skip_real_users_posts(real_user, post_manager, grant_data_b64):
+    image_post = post_manager.add_post(
+        real_user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64}
+    )
+    assert image_post.trending_item is None
+    recorded = image_post.trending_increment_score()
+    assert recorded is False
+    assert image_post.trending_item is None
+
+
+def test_trending_increment_score_skip_posts_over_24_hours_old(post):
+    # verify we can increment its trending as normal
+    org_score = post.trending_item['gsiK3SortKey']
+    post.item['originalPostId'] = str(uuid.uuid4())
+    recorded = post.trending_increment_score()
+    assert recorded is True
+    assert post.trending_item['gsiK3SortKey'] != org_score
+
+    # hack it's age to 23:59, verify we can increment its trending
+    post.item['postedAt'] = pendulum.now('utc').subtract(hours=23, minutes=59).to_iso8601_string()
+    org_score = post.trending_item['gsiK3SortKey']
+    post.item['originalPostId'] = str(uuid.uuid4())
+    recorded = post.trending_increment_score()
+    assert recorded is True
+    assert post.trending_item['gsiK3SortKey'] != org_score
+
+    # hack it's age to 24hrs + a few microseconds, verify we cannot increment its trending anymore
+    post.item['postedAt'] = pendulum.now('utc').subtract(hours=24).to_iso8601_string()
+    org_score = post.trending_item['gsiK3SortKey']
+    post.item['originalPostId'] = str(uuid.uuid4())
+    recorded = post.trending_increment_score()
+    assert recorded is False
+    assert post.trending_item['gsiK3SortKey'] == org_score

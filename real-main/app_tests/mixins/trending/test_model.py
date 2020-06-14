@@ -33,7 +33,7 @@ def test_increment_score_retry_count_exceeded(model):
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_add_new(model):
     now = pendulum.parse('2020-06-08T12:00:00Z')  # halfway through the day
-    model.trending_increment_score(now)
+    model.trending_increment_score(now=now)
     assert pendulum.parse(model.trending_item['createdAt']) == now
     assert pendulum.parse(model.trending_item['lastDeflatedAt']) == now
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5))
@@ -49,7 +49,7 @@ def test_increment_score_add_new_race_condition(model, caplog):
     # do the score icrement, verify
     now = pendulum.parse('2020-06-08T06:00:00Z')  # 1/4 through the day
     with caplog.at_level(logging.WARNING):
-        model.trending_increment_score(now)
+        model.trending_increment_score(now=now)
     assert len(caplog.records) == 1
     assert 'retry 1' in caplog.records[0].msg
     assert pendulum.parse(model.trending_item['createdAt']) == created_at
@@ -61,17 +61,17 @@ def test_increment_score_add_new_race_condition(model, caplog):
 def test_increment_score_update_existing_basic(model):
     # create the trending item
     created_at = pendulum.parse('2020-06-08T12:00:00Z')  # 1/2 way through the day
-    model.trending_increment_score(created_at)
+    model.trending_increment_score(now=created_at)
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5))
 
     # udpate the score
     now = pendulum.parse('2020-06-08T18:00:00Z')  # 3/4 way through the day
-    model.trending_increment_score(now)
+    model.trending_increment_score(now=now)
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75))
 
     # udpate the score, more than one day after last deflation
     now = pendulum.parse('2020-06-09T01:00:00Z')  # 25 hrs after
-    model.trending_increment_score(now)
+    model.trending_increment_score(now=now)
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75 + 2 ** (25 / 24)))
 
 
@@ -79,7 +79,7 @@ def test_increment_score_update_existing_basic(model):
 def test_increment_score_update_existing_race_condition_deflation(model, caplog):
     # create the trending item
     created_at = pendulum.parse('2020-06-08T12:00:00Z')  # 1/2 way through the day
-    model.trending_increment_score(created_at)
+    model.trending_increment_score(now=created_at)
     score = model.trending_item['gsiK3SortKey']
     assert score == pytest.approx(Decimal(2 ** 0.5))
 
@@ -91,7 +91,7 @@ def test_increment_score_update_existing_race_condition_deflation(model, caplog)
     # update the score
     now = pendulum.parse('2020-06-09T02:00:00Z')
     with caplog.at_level(logging.WARNING):
-        model.trending_increment_score(now)
+        model.trending_increment_score(now=now)
     assert len(caplog.records) == 1
     assert 'retry 1' in caplog.records[0].msg
     assert model.trending_item['gsiK3SortKey'] == pytest.approx(new_score + Decimal(2 ** (1 / 12)))

@@ -408,9 +408,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if album:
             album.update_art_if_needed()
 
-        # all verified original posts get a one free bump into trending, however, their user doesn't
-        if self.type != PostType.IMAGE or (self.is_verified and original_post_id is None):
-            self.trending_increment_score(now=now)
+        # give new posts a free bump into trending, but not their user
+        self.trending_increment_score(now=now)
 
         # alert frontend
         self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)
@@ -732,9 +731,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.user_id == user_id:
             return False
 
-        # trending - keep non-verified and non-original image posts out
-        if self.type != PostType.IMAGE or (self.is_verified and self.original_post_id == self.id):
-            self.trending_increment_score(now=viewed_at)
+        recorded = self.trending_increment_score(now=viewed_at)
+        if recorded:
             self.user.trending_increment_score(now=viewed_at)
 
         is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
@@ -750,3 +748,24 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 original_post.record_view_count(user_id, view_count, viewed_at=viewed_at)
 
         return True
+
+    def trending_increment_score(self, now=None, **kwargs):
+        now = now or pendulum.now('utc')
+
+        # keep non-verified posts out of trending
+        if self.type == PostType.IMAGE and not self.is_verified:
+            return False
+
+        # keep non-original posts out of trending
+        if self.type == PostType.IMAGE and self.original_post_id != self.id:
+            return False
+
+        # keep the 'real' user's posts out of trending
+        if self.user_id == self.user_manager.real_user_id:
+            return False
+
+        # posts over 24 hours old don't earn more trending points
+        if now - self.posted_at > pendulum.duration(hours=24):
+            return False
+
+        return super().trending_increment_score(now=now, **kwargs)

@@ -141,7 +141,7 @@ def test_verified_image_posts_originality_determines_trending(post_manager, user
     assert user.trending_score == 1
 
     # other user adds a non-orginal copy of the first post
-    now = pendulum.parse('2020-06-10T00:00:00Z')  # exact begining of day so post gets exactly one free trending
+    now = pendulum.parse('2020-06-09T12:00:00Z')
     post2 = post_manager.add_post(
         user2, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, now=now
     )
@@ -157,12 +157,12 @@ def test_verified_image_posts_originality_determines_trending(post_manager, user
     assert user.refresh_trending_item().trending_score == 1
 
     # record a view on that copy by a third user
-    viewed_at = pendulum.parse('2020-06-11T00:00:00Z')  # two days forward for post, one for user
+    viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # 12 hours forward for original post
     post2.record_view_count(user3.id, 8, viewed_at=viewed_at)
     assert post2.trending_score is None
     assert post2.refresh_trending_item().trending_score is None
     assert user2.refresh_trending_item().trending_score is None
 
     # verify those trending points went to the original post & user
-    assert post.refresh_trending_item().trending_score == 1 + 2 + 4
-    assert user.refresh_trending_item().trending_score == 1 + 2
+    assert post.refresh_trending_item().trending_score == 1 + 2 + 2
+    assert user.refresh_trending_item().trending_score == 1 + 1

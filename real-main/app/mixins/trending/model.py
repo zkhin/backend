@@ -32,6 +32,7 @@ class TrendingModelMixin:
         return self
 
     def trending_increment_score(self, now=None, retry_count=0):
+        "Return a boolean indicating if the score was incremented or not"
         if retry_count > 0:
             logger.warning(f'trending_increment_score() for item `{self.item_type}:{self.id}` retry {retry_count}')
         if retry_count > 2:
@@ -49,14 +50,14 @@ class TrendingModelMixin:
             except exceptions.TrendingDNEOrAttributeMismatch:
                 pass
             else:
-                return self
+                return True
         else:
             try:
                 self._trending_item = self.trending_dynamo.add(self.id, inflated_score, now=now)
             except exceptions.TrendingAlreadyExists:
                 pass
             else:
-                return self
+                return True
 
         # we lost a race condition, try again.
         self.refresh_trending_item(strongly_consistent=True)
