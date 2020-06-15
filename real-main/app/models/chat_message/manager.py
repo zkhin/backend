@@ -7,7 +7,6 @@ import pendulum
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.view.manager import ViewManagerMixin
-from app.models.card.specs import ChatCardSpec
 
 from . import exceptions
 from .appsync import ChatMessageAppSync
@@ -124,4 +123,4 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
             if message.record_view_count(user_id, view_count, viewed_at=viewed_at):
                 views_recorded = True
         if views_recorded:
-            self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
+            self.card_manager.remove_well_known_card_if_exists(user_id, self.card_manager.enums.CHAT_ACTIVITY_CARD)

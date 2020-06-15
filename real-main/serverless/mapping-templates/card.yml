@@ -1,5 +1,0 @@
-- type: Card
-  field: thumbnail
-  dataSource: LambdaDataSource
-  request: Lambda.request.vtl
-  response: Lambda.response.vtl

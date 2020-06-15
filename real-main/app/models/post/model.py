@@ -9,7 +9,7 @@ import PIL.Image
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
-from app.models.card.specs import CommentCardSpec
+from app.models.card.enums import COMMENT_ACTIVITY_CARD
 from app.utils import image_size
 
 from . import enums, exceptions
@@ -597,7 +597,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     def register_new_comment_activity(self, now=None):
         now = now or pendulum.now('utc')
-        self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(self.user_id, self.id))
+        self.card_manager.add_well_known_card_if_dne(self.user_id, COMMENT_ACTIVITY_CARD)
         self.item = self.dynamo.set_last_new_comment_activity_at(self.item, now)
         return self
 
@@ -607,7 +607,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # once we've seen the new comment activity for *any* post, we remove the notification card,
         # even if there are other posts with activity we have not seen
-        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
+        self.card_manager.remove_well_known_card_if_exists(self.user_id, COMMENT_ACTIVITY_CARD)
         self.item = self.dynamo.set_last_new_comment_activity_at(self.item, None)
         return self
 

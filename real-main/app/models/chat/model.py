@@ -2,7 +2,7 @@ import logging
 
 import pendulum
 
-from app.models.card.specs import ChatCardSpec
+from app.models.card.enums import CHAT_ACTIVITY_CARD
 
 from . import enums, exceptions
 
@@ -113,7 +113,7 @@ class Chat:
         for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
             self.member_dynamo.update_last_message_activity_at(self.id, user_id, now)
             if user_id != activity_by_user_id:
-                self.card_manager.add_card_by_spec_if_dne(ChatCardSpec(user_id), now=now)
+                self.card_manager.add_well_known_card_if_dne(user_id, CHAT_ACTIVITY_CARD, now=now)
 
     def leave(self, user):
         if self.type != enums.ChatType.GROUP:

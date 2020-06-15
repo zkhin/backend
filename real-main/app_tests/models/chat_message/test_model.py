@@ -7,7 +7,6 @@ import pytest
 
 from app.mixins.view.enums import ViewedStatus
 from app.models.block.enums import BlockStatus
-from app.models.card.specs import ChatCardSpec
 from app.models.post.enums import PostType
 
 
@@ -61,7 +60,7 @@ def test_chat_message_serialize(message, user1, user2, chat):
 
 
 def test_chat_message_edit(message, chat, user1, user2, card_manager):
-    card_id = ChatCardSpec(user2.id).card_id
+    card_id = f'{user2.id}:{card_manager.enums.CHAT_ACTIVITY_CARD.name}'
 
     # check starting state
     chat.refresh_item()
@@ -109,7 +108,7 @@ def test_chat_message_edit(message, chat, user1, user2, card_manager):
 
 
 def test_chat_message_delete(message, chat, user1, user2, card_manager):
-    card_id = ChatCardSpec(user2.id).card_id
+    card_id = f'{user2.id}:{card_manager.enums.CHAT_ACTIVITY_CARD.name}'
 
     # double check starting state
     chat.refresh_item()

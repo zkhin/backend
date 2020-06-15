@@ -1,17 +1,13 @@
-from unittest.mock import Mock, call
-from uuid import uuid4
+import uuid
 
 import pytest
 
 from app.models.card.enums import CardNotificationType
-from app.models.card.specs import CommentCardSpec
-from app.models.post.enums import PostType
-from app.utils import image_size
 
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id, username = str(uuid4()), str(uuid4())[:8]
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
@@ -19,16 +15,6 @@ def user(user_manager, cognito_client):
 @pytest.fixture
 def card(user, card_manager):
     yield card_manager.add_card(user.id, 'card title', 'https://action')
-
-
-@pytest.fixture
-def post(user, post_manager):
-    yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
-
-
-@pytest.fixture
-def comment_card(user, card_manager, post):
-    yield card_manager.add_card_by_spec_if_dne(CommentCardSpec(user.id, post.id))
 
 
 def test_serialize(user, card):
@@ -67,18 +53,3 @@ def test_delete(card, user, appsync_client):
     assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
     assert appsync_client.send.call_args.args[1]['input']['type'] == CardNotificationType.DELETED
     assert appsync_client.send.call_args.args[1]['input']['cardId'] == card.id
-
-
-def test_get_image_url(card, post, comment_card):
-    assert card.post is None
-    assert card.has_thumbnail is False
-    assert card.get_image_url(image_size.NATIVE) is None
-
-    assert comment_card.post
-    assert comment_card.post.id == post.id
-    assert comment_card.has_thumbnail is True
-
-    mocked_url = 'https://' + str(uuid4())
-    comment_card._post = Mock(**{'get_image_readonly_url.return_value': mocked_url})
-    assert comment_card.get_image_url('whatevs') == mocked_url
-    assert comment_card.post.mock_calls == [call.get_image_readonly_url('whatevs')]
