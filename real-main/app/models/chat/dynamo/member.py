@@ -69,23 +69,31 @@ class ChatMemberDynamo:
                 return
             raise
 
-    def increment_viewed_message_count(self, chat_id, user_id):
+    def increment_unviewed_message_count(self, chat_id, user_id):
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),
-            'UpdateExpression': 'ADD viewedMessageCount :one',
+            'UpdateExpression': 'ADD unviewedMessageCount :one',
             'ExpressionAttributeValues': {':one': 1},
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }
         return self.client.update_item(query_kwargs)
 
-    def decrement_viewed_message_count(self, chat_id, user_id):
+    def decrement_unviewed_message_count(self, chat_id, user_id, fail_soft=False):
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),
-            'UpdateExpression': 'ADD viewedMessageCount :neg_one',
+            'UpdateExpression': 'ADD unviewedMessageCount :neg_one',
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND viewedMessageCount > :zero',
+            'ConditionExpression': 'attribute_exists(partitionKey) AND unviewedMessageCount > :zero',
         }
-        return self.client.update_item(query_kwargs)
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if fail_soft:
+                logger.warning(
+                    f'Failed to decrement unviewed message count for chat `{chat_id}` and member `{user_id}`'
+                )
+                return
+            raise
 
     def generate_user_ids_by_chat(self, chat_id):
         query_kwargs = {

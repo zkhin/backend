@@ -427,7 +427,7 @@ test('Delete chat message', async () => {
   expect(resp.data.chat.messages.items).toHaveLength(0)
 })
 
-test('User.chats sort order should react to message adds, edits and not deletes', async () => {
+test('User.chats sort order should react to message adds, but not to edits and deletes', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [other1Client] = await loginCache.getCleanLogin()
   const [other2Client] = await loginCache.getCleanLogin()
@@ -459,25 +459,25 @@ test('User.chats sort order should react to message adds, edits and not deletes'
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editChatMessage.messageId).toBe(messageId11)
 
-  // verify the order we see chats in has now changed
+  // verify the order we see chats in has not changed - edits aren't counted as new activity
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
-  expect(resp.data.self.chats.items[1].chatId).toBe(chatId2)
+  expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
+  expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
 
-  // other2 deletes their original message
-  variables = {messageId: messageId21}
-  resp = await other2Client.mutate({mutation: mutations.deleteChatMessage, variables})
+  // other1 deletes their original message
+  variables = {messageId: messageId11}
+  resp = await other1Client.mutate({mutation: mutations.deleteChatMessage, variables})
   expect(resp.errors).toBeUndefined()
-  expect(resp.data.deleteChatMessage.messageId).toBe(messageId21)
+  expect(resp.data.deleteChatMessage.messageId).toBe(messageId11)
 
   // verify the order we see chats in has not changed - deletes aren't counted as new activity
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
-  expect(resp.data.self.chats.items[1].chatId).toBe(chatId2)
+  expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
+  expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
 
   // we add another message to chat1
   const messageId13 = uuidv4()
@@ -485,6 +485,20 @@ test('User.chats sort order should react to message adds, edits and not deletes'
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId13)
+
+  // verify the order we see chats in has changed
+  resp = await ourClient.query({query: queries.self})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.self.chats.items).toHaveLength(2)
+  expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
+  expect(resp.data.self.chats.items[1].chatId).toBe(chatId2)
+
+  // we add another message to chat1
+  const messageId14 = uuidv4()
+  variables = {chatId: chatId1, messageId: messageId14, text: 'new text'}
+  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addChatMessage.messageId).toBe(messageId14)
 
   // verify the order we see chats in has _not_ changed
   resp = await ourClient.query({query: queries.self})

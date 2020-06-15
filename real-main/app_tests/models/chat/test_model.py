@@ -4,7 +4,6 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models.card.specs import ChatCardSpec
 from app.models.chat.exceptions import ChatException
 
 
@@ -138,55 +137,6 @@ def test_add(group_chat, user1, user2, user3, user4, user5, user6, user_manager,
 def test_cant_add_to_non_group_chat(direct_chat):
     with pytest.raises(ChatException, match='non-GROUP chat'):
         direct_chat.add('uid', ['new-uid'])
-
-
-def test_update_last_message_activity_at(direct_chat, user1, user2, card_manager):
-    user1_card_id = ChatCardSpec(user1.id).card_id
-    user2_card_id = ChatCardSpec(user2.id).card_id
-
-    # verify members start with same activity timestamp
-    user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
-    user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-    user1_last_activity_at = pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :])
-    user2_last_activity_at = pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/') :])
-    assert user1_last_activity_at == user2_last_activity_at
-    last_activity_at = user1_last_activity_at
-
-    # no messages on the chat, so no cards
-    assert card_manager.get_card(user1_card_id) is None
-    assert card_manager.get_card(user2_card_id) is None
-
-    # update last activity for all by user1, verify
-    now = pendulum.now('utc')
-    direct_chat.update_last_message_activity_at(user1.id, now)
-    assert pendulum.parse(direct_chat.item['lastMessageActivityAt']) == now
-    assert pendulum.parse(direct_chat.refresh_item().item['lastMessageActivityAt']) == now
-    user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
-    user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :]) == now
-    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/') :]) == now
-    assert now > last_activity_at
-    last_activity_at = now
-
-    # check card state
-    assert card_manager.get_card(user1_card_id) is None
-    assert card_manager.get_card(user2_card_id)
-
-    # update last activity for all by user2, verify
-    now = pendulum.now('utc')
-    direct_chat.update_last_message_activity_at(user2.id, now)
-    assert pendulum.parse(direct_chat.item['lastMessageActivityAt']) == now
-    assert pendulum.parse(direct_chat.refresh_item().item['lastMessageActivityAt']) == now
-    user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
-    user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-    assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :]) == now
-    assert pendulum.parse(user2_member_item['gsiK2SortKey'][len('chat/') :]) == now
-    assert now > last_activity_at
-    last_activity_at = now
-
-    # check card state
-    assert card_manager.get_card(user1_card_id)
-    assert card_manager.get_card(user2_card_id)
 
 
 def test_leave(group_chat, user1, user2):

@@ -40,6 +40,9 @@ class ViewDynamo:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
 
+    def delete_view(self, item_id, user_id):
+        return self.client.delete_item(self.pk(item_id, user_id))
+
     def delete_views(self, view_pk_generator):
         with self.client.table.batch_writer() as batch:
             for pk in view_pk_generator:
