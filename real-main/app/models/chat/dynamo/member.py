@@ -52,18 +52,40 @@ class ChatMemberDynamo:
         }
 
     def update_last_message_activity_at(self, chat_id, user_id, now, fail_soft=False):
+        now_str = now.to_iso8601_string()
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),
             'UpdateExpression': 'SET gsiK2SortKey = :gsik2sk',
-            'ExpressionAttributeValues': {':gsik2sk': 'chat/' + now.to_iso8601_string()},
+            'ExpressionAttributeValues': {':gsik2sk': 'chat/' + now_str},
             'ConditionExpression': 'attribute_exists(partitionKey) AND NOT :gsik2sk < gsiK2SortKey',
         }
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
             if fail_soft:
+                logger.warning(
+                    f'Failed to update last message activity for chat `{chat_id}` and member `{user_id}` to `{now_str}`'
+                )
                 return
             raise
+
+    def increment_viewed_message_count(self, chat_id, user_id):
+        query_kwargs = {
+            'Key': self.pk(chat_id, user_id),
+            'UpdateExpression': 'ADD viewedMessageCount :one',
+            'ExpressionAttributeValues': {':one': 1},
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }
+        return self.client.update_item(query_kwargs)
+
+    def decrement_viewed_message_count(self, chat_id, user_id):
+        query_kwargs = {
+            'Key': self.pk(chat_id, user_id),
+            'UpdateExpression': 'ADD viewedMessageCount :neg_one',
+            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND viewedMessageCount > :zero',
+        }
+        return self.client.update_item(query_kwargs)
 
     def generate_user_ids_by_chat(self, chat_id):
         query_kwargs = {

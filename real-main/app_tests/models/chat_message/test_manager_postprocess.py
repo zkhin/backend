@@ -1,7 +1,9 @@
 from uuid import uuid4
 
+import pendulum
 import pytest
 
+from app.mixins.view.enums import ViewedStatus
 from app.models.card.specs import ChatCardSpec
 
 
@@ -197,3 +199,31 @@ def test_postprocess_system_message_added(chat_message_manager, card_manager, ch
     assert member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'].split('/') == ['chat', message.item['createdAt']]
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id)
+
+
+def test_postprocess_message_view_add_update_delete(chat_message_manager, chat, message1, user2):
+    # verify starting state
+    assert message1.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
+    assert 'viewedMessageCount' not in chat.member_dynamo.get(chat.id, user2.id)
+    view_item = message1.view_dynamo.add_view(message1.id, user2.id, 1, pendulum.now('utc'))
+    pk, sk = view_item['partitionKey'], view_item['sortKey']
+
+    # post-process the message view add
+    old_item = None
+    new_item = message1.view_dynamo.client.get_typed_item(message1.view_dynamo.typed_pk(message1.id, user2.id))
+    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat.member_dynamo.get(chat.id, user2.id)['viewedMessageCount'] == 1
+
+    # post-process message view edit (nothing should change)
+    old_item = new_item
+    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat.member_dynamo.get(chat.id, user2.id)['viewedMessageCount'] == 1
+
+    # post-process messge view delete
+    new_item = None
+    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat.member_dynamo.get(chat.id, user2.id)['viewedMessageCount'] == 0
+
+    # verify trying decrement below zero is rejected
+    with pytest.raises(chat.dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_message_manager.postprocess_record(pk, sk, old_item, new_item)

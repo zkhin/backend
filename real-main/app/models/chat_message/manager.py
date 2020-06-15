@@ -53,8 +53,10 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
         return ChatMessage(item, **kwargs)
 
     def postprocess_record(self, pk, sk, old_item, new_item):
+        message_id = pk.split('/')[1]
+
         # message added
-        if not old_item and new_item:  # message added
+        if sk == '-' and not old_item and new_item:
             chat_id = new_item['chatId']['S']
             user_id = new_item.get('userId', {}).get('S')  # system messages have no userId
             created_at = pendulum.parse(new_item['createdAt']['S'])
@@ -64,7 +66,7 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
                 chat.update_last_message_activity_at(user_id, created_at)
 
         # message edited
-        if old_item and new_item:
+        if sk == '-' and old_item and new_item:
             chat_id = new_item['chatId']['S']
             user_id = new_item['userId']['S']
             edited_at = pendulum.parse(new_item['lastEditedAt']['S'])
@@ -73,11 +75,23 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
                 chat.update_last_message_activity_at(user_id, edited_at)
 
         # message deleted
-        if old_item and not new_item:
+        if sk == '-' and old_item and not new_item:
             chat_id = old_item['chatId']['S']
             chat = self.chat_manager.get_chat(chat_id)
             if chat:
                 chat.dynamo.decrement_message_count(chat_id)
+
+        # message view added
+        if sk.startswith('view/') and not old_item and new_item:
+            user_id = sk.split('/')[1]
+            message = self.get_chat_message(message_id)
+            message.chat.member_dynamo.increment_viewed_message_count(message.chat_id, user_id)
+
+        # message view deleted
+        if sk.startswith('view/') and old_item and not new_item:
+            user_id = sk.split('/')[1]
+            message = self.get_chat_message(message_id)
+            message.chat.member_dynamo.decrement_viewed_message_count(message.chat_id, user_id)
 
     def add_chat_message(self, message_id, text, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')

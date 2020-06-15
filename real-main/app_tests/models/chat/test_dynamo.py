@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 import pendulum
@@ -231,7 +232,7 @@ def test_increment_decrement_message_count(chat_dynamo):
     assert chat_dynamo.get(chat_id)['messageCount'] == 0
 
 
-def test_update_last_message_activity_at(chat_dynamo):
+def test_update_last_message_activity_at(chat_dynamo, caplog):
     # add the chat to the DB, verify it is in DB
     chat_id = str(uuid4())
     transact = chat_dynamo.transact_add(chat_id, 'chat-type', str(uuid4()))
@@ -250,7 +251,14 @@ def test_update_last_message_activity_at(chat_dynamo):
 
     # verify we can fail soft
     before = now.subtract(seconds=10)
-    assert chat_dynamo.update_last_message_activity_at(chat_id, before, fail_soft=True) is None
+    with caplog.at_level(logging.WARNING):
+        resp = chat_dynamo.update_last_message_activity_at(chat_id, before, fail_soft=True)
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(
+        x in caplog.records[0].msg for x in ['Failed', 'last message activity', chat_id, before.to_iso8601_string()]
+    )
+    assert resp is None
     assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now
 
     # verify we can fail hard

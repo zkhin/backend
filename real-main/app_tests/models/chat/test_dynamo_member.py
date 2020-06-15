@@ -1,3 +1,6 @@
+import logging
+from uuid import uuid4
+
 import pendulum
 import pytest
 
@@ -47,7 +50,7 @@ def test_transact_delete(cm_dynamo):
     assert cm_dynamo.get(chat_id, user_id) is None
 
 
-def test_update_last_message_activity_at(cm_dynamo):
+def test_update_last_message_activity_at(cm_dynamo, caplog):
     chat_id = 'cid'
 
     # add a member to the chat
@@ -73,7 +76,14 @@ def test_update_last_message_activity_at(cm_dynamo):
 
     # verify we can fail soft on an update
     before = new_now.subtract(seconds=10)
-    resp = cm_dynamo.update_last_message_activity_at(chat_id, user_id, before, fail_soft=True)
+    with caplog.at_level(logging.WARNING):
+        resp = cm_dynamo.update_last_message_activity_at(chat_id, user_id, before, fail_soft=True)
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(
+        x in caplog.records[0].msg
+        for x in ['Failed', 'last message activity', chat_id, user_id, before.to_iso8601_string()]
+    )
     assert resp is None
     assert cm_dynamo.get(chat_id, user_id) == item
 
@@ -127,3 +137,37 @@ def test_generate_chat_ids_by_chat(cm_dynamo):
 
     # verify we generate both chat_ids, in order
     assert list(cm_dynamo.generate_chat_ids_by_user(user_id)) == [chat_id_1, chat_id_2]
+
+
+def test_increment_decrement_viewed_message_count(cm_dynamo):
+    # add the chat to the DB, verify it is in DB
+    chat_id, user_id = str(uuid4()), str(uuid4())
+    transact = cm_dynamo.transact_add(chat_id, user_id)
+    cm_dynamo.client.transact_write_items([transact])
+    assert 'viewedMessageCount' not in cm_dynamo.get(chat_id, user_id)
+
+    # verify can't decrement below zero
+    with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
+        cm_dynamo.decrement_viewed_message_count(chat_id, user_id)
+    assert 'viewedMessageCount' not in cm_dynamo.get(chat_id, user_id)
+
+    # increment
+    assert cm_dynamo.increment_viewed_message_count(chat_id, user_id)['viewedMessageCount'] == 1
+    assert cm_dynamo.get(chat_id, user_id)['viewedMessageCount'] == 1
+
+    # increment
+    assert cm_dynamo.increment_viewed_message_count(chat_id, user_id)['viewedMessageCount'] == 2
+    assert cm_dynamo.get(chat_id, user_id)['viewedMessageCount'] == 2
+
+    # decrement
+    assert cm_dynamo.decrement_viewed_message_count(chat_id, user_id)['viewedMessageCount'] == 1
+    assert cm_dynamo.get(chat_id, user_id)['viewedMessageCount'] == 1
+
+    # decrement
+    assert cm_dynamo.decrement_viewed_message_count(chat_id, user_id)['viewedMessageCount'] == 0
+    assert cm_dynamo.get(chat_id, user_id)['viewedMessageCount'] == 0
+
+    # verify can't decrement below zero
+    with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
+        cm_dynamo.decrement_viewed_message_count(chat_id, user_id)
+    assert cm_dynamo.get(chat_id, user_id)['viewedMessageCount'] == 0

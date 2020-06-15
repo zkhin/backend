@@ -39,7 +39,7 @@ def postprocess_records(event, context):
             except Exception as err:
                 logger.exception(str(err))
 
-        if pk.startswith('chatMessage/') and sk == '-':
+        if pk.startswith('chatMessage/'):
             try:
                 chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
             except Exception as err:

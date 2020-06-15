@@ -18,6 +18,12 @@ class ViewDynamo:
             'sortKey': f'view/{user_id}',
         }
 
+    def typed_pk(self, item_id, user_id):
+        return {
+            'partitionKey': {'S': f'{self.item_type}/{item_id}'},
+            'sortKey': {'S': f'view/{user_id}'},
+        }
+
     def get_view(self, item_id, user_id, strongly_consistent=False):
         return self.client.get_item(self.pk(item_id, user_id), ConsistentRead=strongly_consistent)
 
