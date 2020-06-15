@@ -57,19 +57,30 @@ def test_update_last_message_activity_at(cm_dynamo):
     cm_dynamo.client.transact_write_items([transact])
 
     # verify starting state
-    org_item = cm_dynamo.get(chat_id, user_id)
-    assert org_item['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
+    item = cm_dynamo.get(chat_id, user_id)
+    assert item['gsiK2SortKey'] == 'chat/' + now.to_iso8601_string()
 
     # update the last message activity at for that memeber
     new_now = pendulum.now('utc')
-    item = cm_dynamo.update_last_message_activity_at(chat_id, user_id, new_now)
-    assert item['gsiK2SortKey'] == 'chat/' + new_now.to_iso8601_string()
+    new_item = cm_dynamo.update_last_message_activity_at(chat_id, user_id, new_now)
+    assert new_item['gsiK2SortKey'] == 'chat/' + new_now.to_iso8601_string()
 
     # verify final state
-    item = cm_dynamo.get(chat_id, user_id)
-    assert item['gsiK2SortKey'] == 'chat/' + new_now.to_iso8601_string()
-    item['gsiK2SortKey'] = org_item['gsiK2SortKey']
-    assert item == org_item
+    new_item = cm_dynamo.get(chat_id, user_id)
+    assert new_item['gsiK2SortKey'] == 'chat/' + new_now.to_iso8601_string()
+    item['gsiK2SortKey'] = new_item['gsiK2SortKey']
+    assert item == new_item
+
+    # verify we can fail soft on an update
+    before = new_now.subtract(seconds=10)
+    resp = cm_dynamo.update_last_message_activity_at(chat_id, user_id, before, fail_soft=True)
+    assert resp is None
+    assert cm_dynamo.get(chat_id, user_id) == item
+
+    # verify we can fail hard on an update
+    with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
+        cm_dynamo.update_last_message_activity_at(chat_id, user_id, before)
+    assert cm_dynamo.get(chat_id, user_id) == item
 
 
 def test_generate_user_ids_by_chat(cm_dynamo):

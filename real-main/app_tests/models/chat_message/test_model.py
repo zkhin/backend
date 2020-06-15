@@ -7,7 +7,6 @@ import pytest
 
 from app.mixins.view.enums import ViewedStatus
 from app.models.block.enums import BlockStatus
-from app.models.card.specs import ChatCardSpec
 from app.models.post.enums import PostType
 
 
@@ -60,25 +59,11 @@ def test_chat_message_serialize(message, user1, user2, chat):
     message.serialize(user2.id)['viewedStatus'] == ViewedStatus.VIEWED
 
 
-def test_chat_message_edit(message, chat, user1, user2, card_manager):
-    card_id = ChatCardSpec(user2.id).card_id
-
+def test_chat_message_edit(message, user1, user2, card_manager):
     # check starting state
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageActivityAt'] == message.item['createdAt']
     assert message.item['text'] == 'lore ipsum'
     assert message.item['textTags'] == []
     assert 'lastEditedAt' not in message.item
-
-    # clear starting state card state
-    card_manager.get_card(card_id).delete()
-    assert card_manager.get_card(card_id) is None
-
-    # check starting chat membership sort order state
-    gsi_k2_sort_key = 'chat/' + message.item['createdAt']
-    assert chat.member_dynamo.get(chat.id, user1.id)['gsiK2SortKey'] == gsi_k2_sort_key
-    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == gsi_k2_sort_key
 
     # edit the message
     username = user1.item['username']
@@ -90,64 +75,17 @@ def test_chat_message_edit(message, chat, user1, user2, card_manager):
     assert pendulum.parse(message.item['lastEditedAt']) == now
 
     # check state in dynamo
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageActivityAt'] == message.item['lastEditedAt']
     message.refresh_item()
     assert message.item['text'] == new_text
     assert message.item['textTags'] == [{'tag': f'@{username}', 'userId': user1.id}]
     assert pendulum.parse(message.item['lastEditedAt']) == now
 
-    # check the card got created
-    assert card_manager.get_card(card_id) is not None
 
-    # check final chat membership sort order state
-    membership_1 = chat.member_dynamo.get(chat.id, user1.id)
-    membership_2 = chat.member_dynamo.get(chat.id, user2.id)
-    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/') :]) == now
-    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/') :]) == now
-
-
-def test_chat_message_delete(message, chat, user1, user2, card_manager):
-    card_id = ChatCardSpec(user2.id).card_id
-
-    # double check starting state
-    chat.refresh_item()
-    message.refresh_item()
-    assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageActivityAt'] == message.item['createdAt']
-    assert message.item
-
-    # clear starting state card state
-    card_manager.get_card(card_id).delete()
-    assert card_manager.get_card(card_id) is None
-
-    # check starting chat membership sort order state
-    gsi_k2_sort_key = 'chat/' + message.item['createdAt']
-    assert chat.member_dynamo.get(chat.id, user1.id)['gsiK2SortKey'] == gsi_k2_sort_key
-    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == gsi_k2_sort_key
-
-    # delete the message
-    now = pendulum.now('utc')
-    message.delete(now=now)
-    # we need to be able to serialize the gql response, so keep the in-mem item around
-    assert message.item
-
-    # check state in dynamo
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 0
-    assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
-    message.refresh_item()
-    assert message.item is None
-
-    # check the card got created
-    assert card_manager.get_card(card_id) is not None
-
-    # check final chat membership sort order state
-    membership_1 = chat.member_dynamo.get(chat.id, user1.id)
-    membership_2 = chat.member_dynamo.get(chat.id, user2.id)
-    assert pendulum.parse(membership_1['gsiK2SortKey'][len('chat/') :]) == now
-    assert pendulum.parse(membership_2['gsiK2SortKey'][len('chat/') :]) == now
+def test_chat_message_delete(message, user1, user2, card_manager):
+    assert message.refresh_item().item
+    message.delete()
+    assert message.item  # keep in-memory copy of item around so we can serialize the gql response
+    assert message.refresh_item().item is None
 
 
 def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, block_manager):

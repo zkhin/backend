@@ -82,6 +82,38 @@ class ChatDynamo:
             query_kwargs['UpdateExpression'] = 'REMOVE #name'
         return self.client.update_item(query_kwargs)
 
+    def update_last_message_activity_at(self, chat_id, now, fail_soft=False):
+        query_kwargs = {
+            'Key': self.pk(chat_id),
+            'UpdateExpression': 'SET lastMessageActivityAt = :at',
+            'ExpressionAttributeValues': {':at': now.to_iso8601_string()},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND NOT :at < lastMessageActivityAt',
+        }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if fail_soft:
+                return
+            raise
+
+    def increment_message_count(self, chat_id):
+        query_kwargs = {
+            'Key': self.pk(chat_id),
+            'UpdateExpression': 'ADD messageCount :one',
+            'ExpressionAttributeValues': {':one': 1},
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }
+        return self.client.update_item(query_kwargs)
+
+    def decrement_message_count(self, chat_id):
+        query_kwargs = {
+            'Key': self.pk(chat_id),
+            'UpdateExpression': 'ADD messageCount :neg_one',
+            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
+        }
+        return self.client.update_item(query_kwargs)
+
     def transact_delete(self, chat_id, expected_user_count=None):
         query_kwargs = {
             'Delete': {'Key': self.typed_pk(chat_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
@@ -108,39 +140,5 @@ class ChatDynamo:
                 'UpdateExpression': 'ADD userCount :negOne',
                 'ExpressionAttributeValues': {':negOne': {'N': '-1'}, ':zero': {'N': '0'}},
                 'ConditionExpression': 'attribute_exists(partitionKey) AND userCount > :zero',
-            }
-        }
-
-    def transact_register_chat_message_added(self, chat_id, now):
-        return {
-            'Update': {
-                'Key': self.typed_pk(chat_id),
-                'UpdateExpression': 'ADD messageCount :one SET lastMessageActivityAt = :at',
-                'ExpressionAttributeValues': {':one': {'N': '1'}, ':at': {'S': now.to_iso8601_string()}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
-        }
-
-    def transact_register_chat_message_edited(self, chat_id, now):
-        return {
-            'Update': {
-                'Key': self.typed_pk(chat_id),
-                'UpdateExpression': 'SET lastMessageActivityAt = :at',
-                'ExpressionAttributeValues': {':at': {'S': now.to_iso8601_string()}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
-        }
-
-    def transact_register_chat_message_deleted(self, chat_id, now):
-        return {
-            'Update': {
-                'Key': self.typed_pk(chat_id),
-                'UpdateExpression': 'ADD messageCount :negOne SET lastMessageActivityAt = :at',
-                'ExpressionAttributeValues': {
-                    ':negOne': {'N': '-1'},
-                    ':zero': {'N': '0'},
-                    ':at': {'S': now.to_iso8601_string()},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
             }
         }

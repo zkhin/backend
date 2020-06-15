@@ -273,7 +273,6 @@ test('Tag users in a chat message', async () => {
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
-  expect(resp.data.createDirectChat.messageCount).toBe(1)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
   expect(resp.data.createDirectChat.messages.items[0].text).toBe(text)
@@ -428,7 +427,7 @@ test('Delete chat message', async () => {
   expect(resp.data.chat.messages.items).toHaveLength(0)
 })
 
-test('User.chats sort order should react to message adds, edits and deletes', async () => {
+test('User.chats sort order should react to message adds, edits and not deletes', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [other1Client] = await loginCache.getCleanLogin()
   const [other2Client] = await loginCache.getCleanLogin()
@@ -473,21 +472,7 @@ test('User.chats sort order should react to message adds, edits and deletes', as
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId21)
 
-  // verify the order we see chats in has now changed
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.self.chats.items).toHaveLength(2)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
-  expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
-
-  // we add a message to chat1
-  const messageId12 = uuidv4()
-  variables = {chatId: chatId1, messageId: messageId12, text: 'new text'}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.addChatMessage.messageId).toBe(messageId12)
-
-  // verify the order we see chats in has now changed
+  // verify the order we see chats in has not changed - deletes aren't counted as new activity
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)

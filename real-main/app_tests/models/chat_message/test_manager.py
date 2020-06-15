@@ -23,20 +23,11 @@ def chat(chat_manager, user2, user3):
     yield chat_manager.add_direct_chat('cid', user2.id, user3.id)
 
 
-def test_add_chat_message(chat_message_manager, user, chat, user2, user3):
+def test_add_chat_message(chat_message_manager, chat, user, user2, user3):
     username = user.item['username']
     text = f'whats up with @{username}?'
     message_id = 'mid'
     user_id = 'uid'
-
-    # check message count starts off at zero
-    assert 'messageCount' not in chat.item
-    assert 'lastMessageActivityAt' not in chat.item
-
-    # check the chat memberships start off with correct lastMessageActivityAt
-    gsi_k2_sort_key = 'chat/' + chat.item['createdAt']
-    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == gsi_k2_sort_key
-    assert chat.member_dynamo.get(chat.id, user3.id)['gsiK2SortKey'] == gsi_k2_sort_key
 
     # add the message, check it looks ok
     now = pendulum.now('utc')
@@ -47,15 +38,6 @@ def test_add_chat_message(chat_message_manager, user, chat, user2, user3):
     assert message.item['createdAt'] == now_str
     assert message.item['text'] == text
     assert message.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
-
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageActivityAt'] == now_str
-
-    # check the chat memberships lastMessageActivityAt was updated
-    assert chat.member_dynamo.get(chat.id, user2.id)['gsiK2SortKey'] == 'chat/' + now_str
-    assert chat.member_dynamo.get(chat.id, user3.id)['gsiK2SortKey'] == 'chat/' + now_str
 
 
 def test_truncate_chat_messages(chat_message_manager, user, chat):
@@ -73,16 +55,11 @@ def test_truncate_chat_messages(chat_message_manager, user, chat):
     assert message_1.view_dynamo.get_view(message_1.id, 'uid')
     assert message_2.view_dynamo.get_view(message_2.id, 'uid')
 
-    # check the chat total is correct
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 2
-
     # truncate the messages
     chat_message_manager.truncate_chat_messages(chat.id)
 
-    # check the chat itself was not deleted, including the message total
+    # check the chat itself was not deleted
     chat.refresh_item()
-    assert chat.item['messageCount'] == 2
 
     # check the two messages have been deleted
     assert chat_message_manager.get_chat_message(message_id_1) is None
@@ -96,10 +73,6 @@ def test_truncate_chat_messages(chat_message_manager, user, chat):
 def test_add_system_message(chat_message_manager, chat, appsync_client, user2, user3):
     text = 'sample sample'
 
-    # check message count starts off at zero
-    assert 'messageCount' not in chat.item
-    assert 'lastMessageActivityAt' not in chat.item
-
     # add the message, check it looks ok
     now = pendulum.now('utc')
     message = chat_message_manager.add_system_message(chat.id, text, now=now)
@@ -109,22 +82,16 @@ def test_add_system_message(chat_message_manager, chat, appsync_client, user2, u
     assert message.item['text'] == text
     assert message.item['textTags'] == []
 
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 1
-    assert chat.item['lastMessageActivityAt'] == now.to_iso8601_string()
-
-    # triggers both the chat message notifications and also the cards notifications
-    # check the chat message notifications were triggered correctly, skip the cards
-    assert len(appsync_client.send.call_args_list) == 4
-    assert len(appsync_client.send.call_args_list[1].args) == 2
-    variables = appsync_client.send.call_args_list[2].args[1]
+    # check the chat message notifications were triggered correctly
+    assert len(appsync_client.send.call_args_list) == 2
+    assert len(appsync_client.send.call_args_list[0].args) == 2
+    variables = appsync_client.send.call_args_list[0].args[1]
     assert variables['input']['userId'] == user2.id
     assert variables['input']['messageId'] == message.id
     assert variables['input']['authorUserId'] is None
     assert variables['input']['type'] == 'ADDED'
-    assert len(appsync_client.send.call_args_list[3].args) == 2
-    variables = appsync_client.send.call_args_list[3].args[1]
+    assert len(appsync_client.send.call_args_list[1].args) == 2
+    variables = appsync_client.send.call_args_list[1].args[1]
     assert variables['input']['userId'] == user3.id
     assert variables['input']['messageId'] == message.id
     assert variables['input']['authorUserId'] is None
@@ -134,35 +101,21 @@ def test_add_system_message(chat_message_manager, chat, appsync_client, user2, u
 def test_add_system_message_group_created(chat_message_manager, chat, user):
     assert user.username
 
-    # check message count starts off at zero
-    assert 'messageCount' not in chat.item
-
     # add the message, check it looks ok
     message = chat_message_manager.add_system_message_group_created(chat.id, user)
     assert message.item['text'] == f'@{user.username} created the group'
     assert message.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
-
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 1
 
     # add another message, check it looks ok
     message = chat_message_manager.add_system_message_group_created(chat.id, user, name='group name')
     assert message.item['text'] == f'@{user.username} created the group "group name"'
     assert message.item['textTags'] == [{'tag': f'@{user.username}', 'userId': user.id}]
 
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 2
-
 
 def test_add_system_message_added_to_group(chat_message_manager, chat, user, user2, user3):
     assert user.username
     assert user2.username
     assert user3.username
-
-    # check message count starts off at zero
-    assert 'messageCount' not in chat.item
 
     # can't add no users
     with pytest.raises(AssertionError):
@@ -186,32 +139,18 @@ def test_add_system_message_added_to_group(chat_message_manager, chat, user, use
     )
     assert len(message.item['textTags']) == 3
 
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 3
-
 
 def test_add_system_message_left_group(chat_message_manager, chat, user):
     assert user.username
-
-    # check message count starts off at zero
-    assert 'messageCount' not in chat.item
 
     # user leaves
     message = chat_message_manager.add_system_message_left_group(chat.id, user)
     assert message.item['text'] == f'@{user.username} left the group'
     assert len(message.item['textTags']) == 1
 
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 1
-
 
 def test_add_system_message_group_name_edited(chat_message_manager, chat, user):
     assert user.username
-
-    # check message count starts off at zero
-    assert 'messageCount' not in chat.item
 
     # user changes the name
     message = chat_message_manager.add_system_message_group_name_edited(chat.id, user, '4eva')
@@ -222,10 +161,6 @@ def test_add_system_message_group_name_edited(chat_message_manager, chat, user):
     message = chat_message_manager.add_system_message_group_name_edited(chat.id, user, None)
     assert message.item['text'] == f'@{user.username} deleted the name of the group'
     assert len(message.item['textTags']) == 1
-
-    # check the chat was altered correctly
-    chat.refresh_item()
-    assert chat.item['messageCount'] == 2
 
 
 def test_record_views(chat_message_manager, chat, user2, user3, caplog):

@@ -51,13 +51,19 @@ class ChatMemberDynamo:
             }
         }
 
-    def update_last_message_activity_at(self, chat_id, user_id, now):
+    def update_last_message_activity_at(self, chat_id, user_id, now, fail_soft=False):
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),
             'UpdateExpression': 'SET gsiK2SortKey = :gsik2sk',
             'ExpressionAttributeValues': {':gsik2sk': 'chat/' + now.to_iso8601_string()},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND NOT :gsik2sk < gsiK2SortKey',
         }
-        return self.client.update_item(query_kwargs)
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if fail_soft:
+                return
+            raise
 
     def generate_user_ids_by_chat(self, chat_id):
         query_kwargs = {

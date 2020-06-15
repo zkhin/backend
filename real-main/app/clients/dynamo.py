@@ -53,6 +53,10 @@ class DynamoClient:
         "Get an item by its primary key"
         return self.table.get_item(Key=pk, **kwargs).get('Item')
 
+    def get_typed_item(self, typed_pk, **kwargs):
+        "Get an typed version of the item by its typed primary key"
+        return self.boto3_client.get_item(Key=typed_pk, TableName=self.table_name, **kwargs).get('Item')
+
     def batch_get_items(self, typed_keys, projection_expression=None):
         """
         Get a bunch of items in one batch request.

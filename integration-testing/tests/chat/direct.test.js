@@ -56,10 +56,8 @@ test('Create a direct chat', async () => {
   expect(before <= chat.createdAt).toBe(true)
   expect(after >= chat.createdAt).toBe(true)
   const chatCreatedAt = chat.createdAt
-  expect(chat.lastMessageActivityAt).toBe(chatCreatedAt)
   expect(chat.userCount).toBe(2)
   expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  expect(chat.messageCount).toBe(1)
   expect(chat.messages.items).toHaveLength(1)
   expect(chat.messages.items[0].messageId).toBe(messageId)
   expect(chat.messages.items[0].text).toBe(messageText)
@@ -74,6 +72,8 @@ test('Create a direct chat', async () => {
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.directChat.chatId).toBe(chatId)
+  expect(resp.data.user.directChat.lastMessageActivityAt).toBe(chatCreatedAt)
+  expect(resp.data.user.directChat.messageCount).toBe(1)
   expect(resp.data.user.chatCount).toBeNull()
   expect(resp.data.user.chats).toBeNull()
 

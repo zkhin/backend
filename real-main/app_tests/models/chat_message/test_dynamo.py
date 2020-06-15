@@ -9,8 +9,8 @@ def chat_message_dynamo(dynamo_client):
     yield ChatMessageDynamo(dynamo_client)
 
 
-@pytest.mark.parametrize("user_id", ['uid', None])
-def test_transact_add_chat_message(chat_message_dynamo, user_id):
+@pytest.mark.parametrize('user_id', ['uid', None])
+def test_add_chat_message(chat_message_dynamo, user_id):
     message_id = 'mid'
     chat_id = 'cid'
     text = 'message_text'
@@ -19,13 +19,7 @@ def test_transact_add_chat_message(chat_message_dynamo, user_id):
         {'tag': '@2', 'userId': 'uidt2'},
     ]
 
-    # add the chat to the DB
     now = pendulum.now('utc')
-    transact = chat_message_dynamo.transact_add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
-    chat_message_dynamo.client.transact_write_items([transact])
-
-    # retrieve the message and verify all good
-    item = chat_message_dynamo.get_chat_message(message_id)
     expected_item = {
         'partitionKey': 'chatMessage/mid',
         'sortKey': '-',
@@ -40,25 +34,28 @@ def test_transact_add_chat_message(chat_message_dynamo, user_id):
     }
     if user_id:
         expected_item['userId'] = user_id
+
+    # add the chat to the DB, verify correct form
+    item = chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
     assert item == expected_item
+    assert item == chat_message_dynamo.get_chat_message(message_id)
 
-    # verify we can't add another chat with same id
-    with pytest.raises(chat_message_dynamo.client.exceptions.TransactionCanceledException):
-        chat_message_dynamo.client.transact_write_items([transact])
+    # verify we can't add the same message twice
+    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
 
 
-def test_transact_edit_chat_message(chat_message_dynamo):
+def test_edit_chat_message(chat_message_dynamo):
     message_id = 'mid'
     new_text = 'new message_text'
     new_text_tags = [
         {'tag': '@4', 'userId': 'uidt6'},
     ]
     edited_at = pendulum.now('utc')
-    edit_transact = chat_message_dynamo.transact_edit_chat_message(message_id, new_text, new_text_tags, edited_at)
 
     # verify we can't edit message that doesn't exist
-    with pytest.raises(chat_message_dynamo.client.exceptions.TransactionCanceledException):
-        chat_message_dynamo.client.transact_write_items([edit_transact])
+    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_message_dynamo.edit_chat_message(message_id, new_text, new_text_tags, edited_at)
 
     # add the message
     chat_id = 'cid'
@@ -71,19 +68,15 @@ def test_transact_edit_chat_message(chat_message_dynamo):
     added_at = pendulum.now('utc')
 
     # add the message to the DB
-    add_transact = chat_message_dynamo.transact_add_chat_message(
-        message_id, chat_id, user_id, org_text, org_text_tags, added_at,
-    )
-    chat_message_dynamo.client.transact_write_items([add_transact])
-    item = chat_message_dynamo.get_chat_message(message_id)
+    item = chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, org_text, org_text_tags, added_at)
     assert item['messageId'] == 'mid'
     assert item['text'] == org_text
     assert item['textTags'] == org_text_tags
     assert 'lastEditedAt' not in item
 
     # edit the message
-    chat_message_dynamo.client.transact_write_items([edit_transact])
-    new_item = chat_message_dynamo.get_chat_message(message_id)
+    new_item = chat_message_dynamo.edit_chat_message(message_id, new_text, new_text_tags, edited_at)
+    assert new_item == chat_message_dynamo.get_chat_message(message_id)
     assert new_item['messageId'] == 'mid'
     assert new_item['text'] == new_text
     assert new_item['textTags'] == new_text_tags
@@ -94,23 +87,22 @@ def test_transact_edit_chat_message(chat_message_dynamo):
     assert new_item == item
 
 
-def test_transact_delete_chat_message(chat_message_dynamo):
+def test_delete_chat_message(chat_message_dynamo):
     message_id = 'mid'
-    delete_transact = chat_message_dynamo.transact_delete_chat_message(message_id)
-
-    # verify we can't delete message that doesn't exist
-    with pytest.raises(chat_message_dynamo.client.exceptions.TransactionCanceledException):
-        chat_message_dynamo.client.transact_write_items([delete_transact])
 
     # add the message to the DB
     now = pendulum.now('utc')
-    add_transact = chat_message_dynamo.transact_add_chat_message(message_id, 'cid', 'uid', 'lore ipsum', [], now)
-    chat_message_dynamo.client.transact_write_items([add_transact])
-    item = chat_message_dynamo.get_chat_message(message_id)
+    item = chat_message_dynamo.add_chat_message(message_id, 'cid', 'uid', 'lore ipsum', [], now)
     assert item['messageId'] == 'mid'
 
     # delete the message
-    chat_message_dynamo.client.transact_write_items([delete_transact])
+    new_item = chat_message_dynamo.delete_chat_message(message_id)
+    assert new_item == item
+    assert chat_message_dynamo.get_chat_message(message_id) is None
+
+    # verify idempotent
+    new_item = chat_message_dynamo.delete_chat_message(message_id)
+    assert new_item is None
     assert chat_message_dynamo.get_chat_message(message_id) is None
 
 
@@ -124,8 +116,7 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
     # add a chat message
     message_id_1 = 'mid1'
     now = pendulum.now('utc')
-    transact = chat_message_dynamo.transact_add_chat_message(message_id_1, chat_id, 'uid', 'lore', [], now)
-    chat_message_dynamo.client.transact_write_items([transact])
+    chat_message_dynamo.add_chat_message(message_id_1, chat_id, 'uid', 'lore', [], now)
 
     # verify with one chat message
     items = list(chat_message_dynamo.generate_chat_messages_by_chat(chat_id))
@@ -139,8 +130,7 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
     # add another chat message
     message_id_2 = 'mid2'
     now = pendulum.now('utc')
-    transact = chat_message_dynamo.transact_add_chat_message(message_id_2, chat_id, 'uid', 'ipsum', [], now)
-    chat_message_dynamo.client.transact_write_items([transact])
+    chat_message_dynamo.add_chat_message(message_id_2, chat_id, 'uid', 'ipsum', [], now)
 
     # verify with two chat messages
     items = list(chat_message_dynamo.generate_chat_messages_by_chat(chat_id))

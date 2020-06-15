@@ -35,10 +35,8 @@ test('Create and edit a group chat', async () => {
   expect(chat.name).toBe('x')
   expect(before <= chat.createdAt).toBe(true)
   expect(after >= chat.createdAt).toBe(true)
-  expect(chat.createdAt < chat.lastMessageActivityAt).toBe(true)
   expect(chat.userCount).toBe(3)
   expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other1UserId, other2UserId].sort())
-  expect(chat.messageCount).toBe(3)
   expect(chat.messages.items).toHaveLength(3)
   expect(chat.messages.items[0].text).toContain(ourUsername)
   expect(chat.messages.items[0].text).toContain('created the group')
@@ -70,6 +68,8 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.self.chatCount).toBe(1)
   expect(resp.data.self.chats.items).toHaveLength(1)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
+  expect(resp.data.self.chats.items[0].messageCount).toBe(3)
+  expect(resp.data.self.chats.items[0].createdAt < resp.data.self.chats.items[0].lastMessageActivityAt).toBe(true)
 
   // check other1 has the chat
   resp = await other1Client.query({query: queries.self})
@@ -278,7 +278,6 @@ test('Create a group chat with just us and without a name, add people to it and 
   expect(chat.chatId).toBe(chatId)
   expect(chat.userCount).toBe(3)
   expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
-  expect(chat.messageCount).toBe(3)
   expect(chat.messages.items).toHaveLength(3)
   expect(chat.messages.items[1].messageId).toBe(messageId1)
   expect(chat.messages.items[2].text).toContain(ourUsername)
@@ -301,6 +300,7 @@ test('Create a group chat with just us and without a name, add people to it and 
   expect(resp.data.self.chatCount).toBe(1)
   expect(resp.data.self.chats.items).toHaveLength(1)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
+  expect(resp.data.self.chats.items[0].messageCount).toBe(3)
 
   // check other can directly access the chat, and they see the system message from adding a user
   resp = await otherClient.query({query: queries.chat, variables: {chatId}})
@@ -364,7 +364,6 @@ test('Cant add a users that does not exist to a group', async () => {
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(1)
   expect(resp.data.createGroupChat.users.items[0].userId).toBe(ourUserId)
-  expect(resp.data.createGroupChat.messageCount).toBe(2)
   expect(resp.data.createGroupChat.messages.items).toHaveLength(2)
   expect(resp.data.createGroupChat.messages.items[1].messageId).toBe(messageId)
 
@@ -376,7 +375,6 @@ test('Cant add a users that does not exist to a group', async () => {
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
   expect(resp.data.addToGroupChat.userCount).toBe(2)
   expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  expect(resp.data.addToGroupChat.messageCount).toBe(3)
   expect(resp.data.addToGroupChat.messages.items).toHaveLength(3)
   expect(resp.data.addToGroupChat.messages.items[1].messageId).toBe(messageId)
   expect(resp.data.addToGroupChat.messages.items[2].text).toContain('added')

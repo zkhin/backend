@@ -52,22 +52,41 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
         }
         return ChatMessage(item, **kwargs)
 
+    def postprocess_record(self, pk, sk, old_item, new_item):
+        # message added
+        if not old_item and new_item:  # message added
+            chat_id = new_item['chatId']['S']
+            user_id = new_item.get('userId', {}).get('S')  # system messages have no userId
+            created_at = pendulum.parse(new_item['createdAt']['S'])
+            chat = self.chat_manager.get_chat(chat_id)
+            if chat:
+                chat.dynamo.increment_message_count(chat_id)
+                chat.update_last_message_activity_at(user_id, created_at)
+
+        # message edited
+        if old_item and new_item:
+            chat_id = new_item['chatId']['S']
+            user_id = new_item['userId']['S']
+            edited_at = pendulum.parse(new_item['lastEditedAt']['S'])
+            chat = self.chat_manager.get_chat(chat_id)
+            if chat:
+                chat.update_last_message_activity_at(user_id, edited_at)
+
+        # message deleted
+        if old_item and not new_item:
+            chat_id = old_item['chatId']['S']
+            chat = self.chat_manager.get_chat(chat_id)
+            if chat:
+                chat.dynamo.decrement_message_count(chat_id)
+
     def add_chat_message(self, message_id, text, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')
         text_tags = self.user_manager.get_text_tags(text)
-
-        transacts = [
-            self.dynamo.transact_add_chat_message(message_id, chat_id, user_id, text, text_tags, now),
-            self.chat_manager.dynamo.transact_register_chat_message_added(chat_id, now),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-
-        message = self.get_chat_message(message_id, strongly_consistent=True)
-        message.chat.update_members_last_message_activity_at(user_id, now)
-        return message
+        item = self.dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
+        return self.init_chat_message(item)
 
     def truncate_chat_messages(self, chat_id):
-        # delete all chat messages for the chat without bothering to adjust Chat.messageCount
+        # delete all chat messages for the chat
         with self.dynamo.client.table.batch_writer() as batch:
             for chat_message_pk in self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True):
                 chat_message_id = chat_message_pk['partitionKey'].split('/')[1]

@@ -107,11 +107,14 @@ class Chat:
             self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user, users, now=now)
             self.item['messageCount'] = self.item.get('messageCount', 0) + 1
 
-    def update_members_last_message_activity_at(self, activity_by_user_id, now):
+    def update_last_message_activity_at(self, activity_by_user_id, now):
         # Note that dynamo has no support for batch updates.
         # This update will need to be made async at some scale (chats with 1000+ members?)
+        resp = self.dynamo.update_last_message_activity_at(self.id, now, fail_soft=True)
+        if resp:
+            self.item = resp
         for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
-            self.member_dynamo.update_last_message_activity_at(self.id, user_id, now)
+            self.member_dynamo.update_last_message_activity_at(self.id, user_id, now, fail_soft=True)
             if user_id != activity_by_user_id:
                 self.card_manager.add_card_by_spec_if_dne(ChatCardSpec(user_id), now=now)
 

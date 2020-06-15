@@ -75,26 +75,11 @@ class ChatMessage(ViewModelMixin):
     def edit(self, text, now=None):
         now = now or pendulum.now('utc')
         text_tags = self.user_manager.get_text_tags(text)
-
-        transacts = [
-            self.dynamo.transact_edit_chat_message(self.id, text, text_tags, now=now),
-            self.chat_manager.dynamo.transact_register_chat_message_edited(self.chat_id, now),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-
-        self.chat.update_members_last_message_activity_at(self.user_id, now)
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.edit_chat_message(self.id, text, text_tags, now=now)
         return self
 
-    def delete(self, now=None):
-        now = now or pendulum.now('utc')
-        transacts = [
-            self.dynamo.transact_delete_chat_message(self.id),
-            self.chat_manager.dynamo.transact_register_chat_message_deleted(self.chat_id, now),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-
-        self.chat.update_members_last_message_activity_at(self.user_id, now)
+    def delete(self):
+        self.item = self.dynamo.delete_chat_message(self.id)
         return self
 
     def trigger_notifications(self, notification_type, user_ids=None):

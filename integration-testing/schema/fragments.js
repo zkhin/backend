@@ -9,6 +9,7 @@ module.exports.chat = gql`
     name
     createdAt
     lastMessageActivityAt
+    messageCount
     userCount
     users {
       items {

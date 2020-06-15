@@ -24,58 +24,39 @@ class ChatMessageDynamo:
     def get_chat_message(self, message_id, strongly_consistent=False):
         return self.client.get_item(self.pk(message_id), ConsistentRead=strongly_consistent)
 
-    def transact_add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now):
+    def add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now):
         created_at_str = now.to_iso8601_string()
         query_kwargs = {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '0'},
-                    'partitionKey': {'S': f'chatMessage/{message_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'chatMessage/{chat_id}'},
-                    'gsiA1SortKey': {'S': created_at_str},
-                    'messageId': {'S': message_id},
-                    'chatId': {'S': chat_id},
-                    'createdAt': {'S': created_at_str},
-                    'text': {'S': text},
-                    'textTags': {
-                        'L': [
-                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
-                            for text_tag in text_tags
-                        ]
-                    },
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            }
+            'Item': {
+                'schemaVersion': 0,
+                'partitionKey': f'chatMessage/{message_id}',
+                'sortKey': '-',
+                'gsiA1PartitionKey': f'chatMessage/{chat_id}',
+                'gsiA1SortKey': created_at_str,
+                'messageId': message_id,
+                'chatId': chat_id,
+                'createdAt': created_at_str,
+                'text': text,
+                'textTags': text_tags,
+            },
+            'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }
         if author_user_id:
-            query_kwargs['Put']['Item']['userId'] = {'S': author_user_id}
-        return query_kwargs
+            query_kwargs['Item']['userId'] = author_user_id
+        return self.client.add_item(query_kwargs)
 
-    def transact_edit_chat_message(self, message_id, text, text_tags, now):
-        return {
-            'Update': {
-                'Key': self.typed_pk(message_id),
-                'UpdateExpression': 'SET lastEditedAt = :at, #textName = :text, textTags = :textTags',
-                'ExpressionAttributeNames': {'#textName': 'text'},
-                'ExpressionAttributeValues': {
-                    ':at': {'S': now.to_iso8601_string()},
-                    ':text': {'S': text},
-                    ':textTags': {
-                        'L': [
-                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
-                            for text_tag in text_tags
-                        ]
-                    },
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
+    def edit_chat_message(self, message_id, text, text_tags, now):
+        query_kwargs = {
+            'Key': self.pk(message_id),
+            'UpdateExpression': 'SET lastEditedAt = :at, #textName = :text, textTags = :textTags',
+            'ExpressionAttributeNames': {'#textName': 'text'},
+            'ExpressionAttributeValues': {':at': now.to_iso8601_string(), ':text': text, ':textTags': text_tags},
+            'ConditionExpression': 'attribute_exists(partitionKey)',
         }
+        return self.client.update_item(query_kwargs)
 
-    def transact_delete_chat_message(self, message_id):
-        return {
-            'Delete': {'Key': self.typed_pk(message_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
-        }
+    def delete_chat_message(self, message_id):
+        return self.client.delete_item(self.pk(message_id))
 
     def generate_chat_messages_by_chat(self, chat_id, pks_only=False):
         query_kwargs = {

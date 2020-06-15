@@ -140,7 +140,7 @@ def test_cant_add_to_non_group_chat(direct_chat):
         direct_chat.add('uid', ['new-uid'])
 
 
-def test_update_members_last_message_activity_at(direct_chat, user1, user2, card_manager):
+def test_update_last_message_activity_at(direct_chat, user1, user2, card_manager):
     user1_card_id = ChatCardSpec(user1.id).card_id
     user2_card_id = ChatCardSpec(user2.id).card_id
 
@@ -156,11 +156,11 @@ def test_update_members_last_message_activity_at(direct_chat, user1, user2, card
     assert card_manager.get_card(user1_card_id) is None
     assert card_manager.get_card(user2_card_id) is None
 
-    # update last activity for all by user1
+    # update last activity for all by user1, verify
     now = pendulum.now('utc')
-    direct_chat.update_members_last_message_activity_at(user1.id, now)
-
-    # verify members start with same activity timestamp
+    direct_chat.update_last_message_activity_at(user1.id, now)
+    assert pendulum.parse(direct_chat.item['lastMessageActivityAt']) == now
+    assert pendulum.parse(direct_chat.refresh_item().item['lastMessageActivityAt']) == now
     user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
     user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
     assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :]) == now
@@ -172,12 +172,11 @@ def test_update_members_last_message_activity_at(direct_chat, user1, user2, card
     assert card_manager.get_card(user1_card_id) is None
     assert card_manager.get_card(user2_card_id)
 
-    # update last activity for all by user2
+    # update last activity for all by user2, verify
     now = pendulum.now('utc')
-    direct_chat.update_members_last_message_activity_at(user2.id, now)
-    assert now > user1_last_activity_at
-
-    # verify members start with same activity timestamp
+    direct_chat.update_last_message_activity_at(user2.id, now)
+    assert pendulum.parse(direct_chat.item['lastMessageActivityAt']) == now
+    assert pendulum.parse(direct_chat.refresh_item().item['lastMessageActivityAt']) == now
     user1_member_item = direct_chat.member_dynamo.get(direct_chat.id, user1.id)
     user2_member_item = direct_chat.member_dynamo.get(direct_chat.id, user2.id)
     assert pendulum.parse(user1_member_item['gsiK2SortKey'][len('chat/') :]) == now
@@ -240,7 +239,6 @@ def test_cant_leave_non_group_chat(direct_chat):
 def test_delete_group_chat(group_chat, user1, chat_message_manager):
     # user1 adds message to the chat
     group_chat.refresh_item()
-    assert group_chat.item['messageCount'] == 1
     message_id = 'mid'
     chat_message_manager.add_chat_message(message_id, 'lore ipsum', group_chat.id, user1.id)
 
