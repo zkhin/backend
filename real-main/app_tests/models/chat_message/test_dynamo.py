@@ -23,7 +23,7 @@ def test_add_chat_message(chat_message_dynamo, user_id):
     expected_item = {
         'partitionKey': 'chatMessage/mid',
         'sortKey': '-',
-        'schemaVersion': 0,
+        'schemaVersion': 1,
         'gsiA1PartitionKey': 'chatMessage/cid',
         'gsiA1SortKey': now.to_iso8601_string(),
         'messageId': 'mid',
