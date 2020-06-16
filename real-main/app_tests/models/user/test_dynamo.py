@@ -1,3 +1,6 @@
+import logging
+from uuid import uuid4
+
 import pendulum
 import pytest
 
@@ -803,3 +806,47 @@ def test_transact_card_added_and_transact_card_deleted(user_dynamo):
     # verify can't go negative
     with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
         user_dynamo.client.transact_write_items([transact_deleted])
+
+
+def test_increment_decrement_chats_with_unviewed_messages_count(user_dynamo, caplog):
+    # add the chat to the DB, verify it is in DB
+    user_id, username = str(uuid4()), str(uuid4())[:8]
+    user_dynamo.add_user(user_id, username)
+    assert 'chatsWithUnviewedMessagesCount' not in user_dynamo.get_user(user_id)
+
+    # verify can't decrement below zero
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)
+    assert 'chatsWithUnviewedMessagesCount' not in user_dynamo.get_user(user_id)
+
+    # increment
+    assert user_dynamo.increment_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 1
+    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 1
+
+    # increment
+    assert user_dynamo.increment_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 2
+    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 2
+
+    # decrement
+    assert user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 1
+    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 1
+
+    # decrement
+    assert user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 0
+    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 0
+
+    # verify fail soft on trying to decrement below zero
+    with caplog.at_level(logging.WARNING):
+        resp = user_dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
+    assert resp is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(
+        x in caplog.records[0].msg for x in ['Failed', 'decrement chats with unviewed messages count', user_id]
+    )
+    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 0
+
+    # verify fail hard on trying to decrement below zero
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)
+    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 0

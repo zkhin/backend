@@ -122,6 +122,17 @@ class ChatManager:
                 user = user or self.user_manager.get_user(user_id)
                 chat.leave(user)
 
+    def postprocess_record(self, pk, sk, old_item, new_item):
+        # if this is a member record, check if we went to or from zero unviewed messages
+        if sk.startswith('member/'):
+            user_id = sk.split('/')[1]
+            old_count = int(old_item.get('unviewedMessageCount', {}).get('N', '0')) if old_item else 0
+            new_count = int(new_item.get('unviewedMessageCount', {}).get('N', '0')) if new_item else 0
+            if old_count == 0 and new_count != 0:
+                self.user_manager.dynamo.increment_chats_with_unviewed_messages_count(user_id)
+            if old_count != 0 and new_count == 0:
+                self.user_manager.dynamo.decrement_chats_with_unviewed_messages_count(user_id)
+
     def postprocess_chat_message_added(self, chat_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.
         self.dynamo.update_last_message_activity_at(chat_id, created_at, fail_soft=True)

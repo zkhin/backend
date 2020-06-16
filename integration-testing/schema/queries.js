@@ -82,6 +82,7 @@ module.exports.self = gql`
         }
       }
       chatCount
+      chatsWithUnviewedMessagesCount
       chats {
         items {
           ...ChatFragment
@@ -177,6 +178,7 @@ module.exports.user = gql`
         }
       }
       chatCount
+      chatsWithUnviewedMessagesCount
       chats {
         items {
           ...ChatFragment

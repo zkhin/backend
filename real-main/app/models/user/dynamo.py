@@ -351,3 +351,27 @@ class UserDynamo:
             'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
         }
         return {'Update': kwargs}
+
+    def increment_chats_with_unviewed_messages_count(self, user_id):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'ADD chatsWithUnviewedMessagesCount :one',
+            'ExpressionAttributeValues': {':one': 1},
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }
+        return self.client.update_item(query_kwargs)
+
+    def decrement_chats_with_unviewed_messages_count(self, user_id, fail_soft=False):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'ADD chatsWithUnviewedMessagesCount :neg_one',
+            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND chatsWithUnviewedMessagesCount > :zero',
+        }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if fail_soft:
+                logger.warning(f'Failed to decrement chats with unviewed messages count for user `{user_id}`')
+                return
+            raise
