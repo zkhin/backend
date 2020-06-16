@@ -140,7 +140,7 @@ class ChatManager:
 
         # for each memeber of the chat
         #   - update the last message activity timestamp (controls chat ordering)
-        #   - for everyone except the author, increment their 'unviewedMessagesCount'
+        #   - for everyone except the author, increment their 'unviewedMessageCount'
         #     and add a 'You have new chat messages' card if it doesn't already exist
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             self.member_dynamo.update_last_message_activity_at(chat_id, user_id, created_at, fail_soft=True)

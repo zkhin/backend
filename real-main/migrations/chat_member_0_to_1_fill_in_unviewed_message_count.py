@@ -93,7 +93,7 @@ class Migration:
         if new_cnt > 0:
             query_kwargs['UpdateExpression'] += ', unviewedMessageCount = :numc'
             query_kwargs['ExpressionAttributeValues'][':numc'] = new_cnt
-        logger.warning(f'Member chat `{chat_id}`, user `{user_id}`: setting unviewedMessagesCount to `{new_cnt}`')
+        logger.warning(f'Member chat `{chat_id}`, user `{user_id}`: setting unviewedMessageCount to `{new_cnt}`')
         return self.dynamo_table.update_item(**query_kwargs)
 
 
