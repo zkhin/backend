@@ -18,6 +18,12 @@ class ViewDynamo:
             'sortKey': f'view/{user_id}',
         }
 
+    def typed_pk(self, item_id, user_id):
+        return {
+            'partitionKey': {'S': f'{self.item_type}/{item_id}'},
+            'sortKey': {'S': f'view/{user_id}'},
+        }
+
     def get_view(self, item_id, user_id, strongly_consistent=False):
         return self.client.get_item(self.pk(item_id, user_id), ConsistentRead=strongly_consistent)
 
@@ -33,6 +39,9 @@ class ViewDynamo:
         if pks_only:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
+
+    def delete_view(self, item_id, user_id):
+        return self.client.delete_item(self.pk(item_id, user_id))
 
     def delete_views(self, view_pk_generator):
         with self.client.table.batch_writer() as batch:

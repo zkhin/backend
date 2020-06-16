@@ -83,16 +83,18 @@ class ChatDynamo:
         return self.client.update_item(query_kwargs)
 
     def update_last_message_activity_at(self, chat_id, now, fail_soft=False):
+        now_str = now.to_iso8601_string()
         query_kwargs = {
             'Key': self.pk(chat_id),
             'UpdateExpression': 'SET lastMessageActivityAt = :at',
-            'ExpressionAttributeValues': {':at': now.to_iso8601_string()},
+            'ExpressionAttributeValues': {':at': now_str},
             'ConditionExpression': 'attribute_exists(partitionKey) AND NOT :at < lastMessageActivityAt',
         }
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
             if fail_soft:
+                logger.warning(f'Failed to update last message activity for chat `{chat_id}` to `{now_str}`')
                 return
             raise
 
@@ -105,14 +107,20 @@ class ChatDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def decrement_message_count(self, chat_id):
+    def decrement_message_count(self, chat_id, fail_soft=False):
         query_kwargs = {
             'Key': self.pk(chat_id),
             'UpdateExpression': 'ADD messageCount :neg_one',
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
             'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
         }
-        return self.client.update_item(query_kwargs)
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if fail_soft:
+                logger.warning(f'Failed to decrement message count for chat `{chat_id}`')
+                return
+            raise
 
     def transact_delete(self, chat_id, expected_user_count=None):
         query_kwargs = {

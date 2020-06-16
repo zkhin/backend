@@ -373,6 +373,7 @@ type User {
   #   - ordered by Chat.lastMessageActivityAt, most recent first
   chats(limit: Int, nextToken: String): PaginatedChats
   chatCount: Int
+  chatsWithUnviewedMessagesCount: Int
 
   # Direct-message chat between caller and user. Null when looking at:
   #   - self

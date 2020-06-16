@@ -82,10 +82,18 @@ def test_chat_message_edit(message, user1, user2, card_manager):
 
 
 def test_chat_message_delete(message, user1, user2, card_manager):
+    # add some views of the message
+    assert message.record_view_count(user2.id, 2)
+
+    # check starting state
     assert message.refresh_item().item
+    assert message.get_viewed_status(user2.id) == ViewedStatus.VIEWED
+
+    # do the delete, check final state
     message.delete()
     assert message.item  # keep in-memory copy of item around so we can serialize the gql response
     assert message.refresh_item().item is None
+    assert message.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
 
 
 def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, block_manager):

@@ -73,6 +73,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.cards.items).toHaveLength(0)
   expect(ourUserFull.chatCount).toBe(0)
   expect(ourUserFull.chats.items).toHaveLength(0)
+  expect(ourUserFull.chatsWithUnviewedMessagesCount).toBe(0)
   expect(ourUserFull.commentsDisabled).toBe(false)
   expect(ourUserFull.directChat).toBeNull()
   expect(ourUserFull.email).toBeTruthy()
@@ -125,6 +126,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.cards = null
   ourUserFull.chatCount = null
   ourUserFull.chats = null
+  ourUserFull.chatsWithUnviewedMessagesCount = null
   ourUserFull.commentsDisabled = null
   ourUserFull.email = null
   ourUserFull.feed = null

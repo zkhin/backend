@@ -28,7 +28,7 @@ class ChatMessageDynamo:
         created_at_str = now.to_iso8601_string()
         query_kwargs = {
             'Item': {
-                'schemaVersion': 0,
+                'schemaVersion': 1,
                 'partitionKey': f'chatMessage/{message_id}',
                 'sortKey': '-',
                 'gsiA1PartitionKey': f'chatMessage/{chat_id}',

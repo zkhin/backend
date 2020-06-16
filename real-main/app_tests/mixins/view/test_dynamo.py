@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pendulum
 import pytest
 
@@ -103,6 +105,26 @@ def test_generate_views(view_dynamo):
     assert len(pks) == 2
     assert pks[0] == {'partitionKey': 'itype/iid', 'sortKey': 'view/uid0'}
     assert pks[1] == {'partitionKey': 'itype/iid', 'sortKey': 'view/uid1'}
+
+
+def test_delete_view(view_dynamo):
+    # add two views, verify
+    item_id1, user_id1 = [str(uuid4()), str(uuid4())]
+    item_id2, user_id2 = [str(uuid4()), str(uuid4())]
+    view_dynamo.add_view(item_id1, user_id1, 1, pendulum.now('utc'))
+    view_dynamo.add_view(item_id2, user_id2, 2, pendulum.now('utc'))
+    assert view_dynamo.get_view(item_id1, user_id1)
+    assert view_dynamo.get_view(item_id2, user_id2)
+
+    # delete one of the views, verify final state
+    resp = view_dynamo.delete_view(item_id1, user_id1)
+    assert resp
+    assert view_dynamo.get_view(item_id1, user_id1) is None
+    assert view_dynamo.get_view(item_id2, user_id2)
+
+    # delete a view that doesn't exist, should fail softly
+    resp = view_dynamo.delete_view(item_id1, user_id1)
+    assert resp is None
 
 
 def test_delete_views(view_dynamo):

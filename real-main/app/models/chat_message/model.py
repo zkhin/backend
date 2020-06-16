@@ -80,6 +80,7 @@ class ChatMessage(ViewModelMixin):
 
     def delete(self):
         self.item = self.dynamo.delete_chat_message(self.id)
+        self.delete_views()
         return self
 
     def trigger_notifications(self, notification_type, user_ids=None):
