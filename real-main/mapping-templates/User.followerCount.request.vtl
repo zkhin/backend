@@ -4,6 +4,13 @@
   #return
 #end
 
+## if the target user is private, and caller is not a follower, then return null
+#if ($ctx.source.privacyStatus == 'PRIVATE')
+  #if ($ctx.source.followedStatus != 'SELF' and $ctx.source.followedStatus != 'FOLLOWING')
+    #return
+  #end
+#end
+
 ## if followCountsHidden is set, and the caller is not looking at their
 ## own profile, hide the count
 #if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)

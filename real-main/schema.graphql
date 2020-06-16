@@ -339,7 +339,8 @@ type User {
   onymouslyLikedPosts(limit: Int, nextToken: String): PaginatedPosts
 
   # Users the user follows
-  #   - null for users with followCountsHidden set, or if user has blocked caller
+  #   - null for users with followCountsHidden set, if user has blocked caller, or if user is
+  #     private and caller is not a follower
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followedUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
@@ -351,7 +352,8 @@ type User {
   followedUsersWithStories(limit: Int, nextToken: String): PaginatedUsers
 
   # Users that follow the user
-  #   - null for users with followCountsHidden set, or if user has blocked caller
+  #   - null for users with followCountsHidden set, if user has blocked caller, or if user is
+  #     private and caller is not a follower
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followerUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
