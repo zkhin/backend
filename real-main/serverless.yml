@@ -412,6 +412,7 @@ functions:
   deflateTrendingUsers:
     name: ${self:provider.stackName}-deflateTrendingUsers
     handler: app.handlers.cron.deflate_trending_users
+    timeout: 900
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
@@ -423,6 +424,7 @@ functions:
   deflateTrendingPosts:
     name: ${self:provider.stackName}-deflateTrendingPosts
     handler: app.handlers.cron.deflate_trending_posts
+    timeout: 900
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
