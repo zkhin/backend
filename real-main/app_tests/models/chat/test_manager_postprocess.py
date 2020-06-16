@@ -99,7 +99,7 @@ def test_postprocess_record_member_edited(chat_manager, chat, user1):
     chat_manager.user_manager = Mock(chat_manager.user_manager)
     chat_manager.postprocess_record(pk, sk, old_item, new_item)
     assert chat_manager.user_manager.mock_calls == [
-        call.dynamo.decrement_chats_with_unviewed_messages_count(user1.id),
+        call.dynamo.decrement_chats_with_unviewed_messages_count(user1.id, fail_soft=True),
     ]
 
     # simulate editing member from zero unviewed message count to some, verify
@@ -140,7 +140,7 @@ def test_postprocess_record_member_deleted(chat_manager, chat, user1):
     chat_manager.user_manager = Mock(chat_manager.user_manager)
     chat_manager.postprocess_record(pk, sk, old_item, new_item)
     assert chat_manager.user_manager.mock_calls == [
-        call.dynamo.decrement_chats_with_unviewed_messages_count(user1.id),
+        call.dynamo.decrement_chats_with_unviewed_messages_count(user1.id, fail_soft=True),
     ]
 
     # simulate deleting member with a zero unviewed message count

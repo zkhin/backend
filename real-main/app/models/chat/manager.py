@@ -131,7 +131,7 @@ class ChatManager:
             if old_count == 0 and new_count != 0:
                 self.user_manager.dynamo.increment_chats_with_unviewed_messages_count(user_id)
             if old_count != 0 and new_count == 0:
-                self.user_manager.dynamo.decrement_chats_with_unviewed_messages_count(user_id)
+                self.user_manager.dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
 
     def postprocess_chat_message_added(self, chat_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.
