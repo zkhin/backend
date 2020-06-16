@@ -520,6 +520,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   })
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId1)
+  await misc.sleep(1000) // let dynamo stream handler catch up
 
   // we should see an unread chat with unread messages
   resp = await ourClient.query({query: queries.self})
@@ -544,6 +545,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   })
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
+  await misc.sleep(1000) // let dynamo stream handler catch up
 
   // check our counts
   resp = await ourClient.query({query: queries.self})
@@ -564,13 +566,14 @@ test('User.chatsWithUnviewedMessages', async () => {
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  await misc.sleep(1000) // let dynamo stream handler catch up
 
   // we report to have viewed their message in the first chat
   resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId1]}})
   expect(resp.errors).toBeUndefined()
+  await misc.sleep(1000) // let dynamo stream handler catch up
 
   // check counts again
-  await misc.sleep(1000) // let dynamo stream handler catch up
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
@@ -583,6 +586,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   })
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
+  await misc.sleep(1000) // let dynamo stream handler catch up
 
   // check counts again
   resp = await ourClient.query({query: queries.self})
@@ -593,6 +597,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId3}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId3)
+  await misc.sleep(1000) // let dynamo stream handler catch up
 
   // check counts again
   resp = await ourClient.query({query: queries.self})
