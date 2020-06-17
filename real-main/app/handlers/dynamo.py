@@ -46,7 +46,7 @@ def postprocess_records(event, context):
         if pk.startswith('chatMessage/'):
             postprocess_record = chat_message_manager.postprocess_record
 
-        if pk.startswith('following/'):
+        if pk.startswith('following/') or (pk.startswith('user/') and sk.startswith('follower/')):
             postprocess_record = follow_manager.postprocess_record
 
         if postprocess_record:

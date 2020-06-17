@@ -37,6 +37,33 @@ def test_add_following(follow_dynamo, user1, user2):
     followed_at_str = follow_item['followedAt']
     assert follow_item == {
         'schemaVersion': 1,
+        'partitionKey': f'user/{user2.id}',
+        'sortKey': f'follower/{user1.id}',
+        'gsiA1PartitionKey': f'follower/{user1.id}',
+        'gsiA1SortKey': f'{follow_status}/{followed_at_str}',
+        'gsiA2PartitionKey': f'followed/{user2.id}',
+        'gsiA2SortKey': f'{follow_status}/{followed_at_str}',
+        'followStatus': follow_status,
+        'followedAt': followed_at_str,
+        'followerUserId': user1.id,
+        'followedUserId': user2.id,
+    }
+
+
+def test_add_following_old_pk(follow_dynamo, user1, user2):
+    # verify doesn't already exist
+    follow_item = follow_dynamo.get_following(user1.id, user2.id)
+    assert follow_item is None
+
+    # add it
+    follow_status = 'just-a-string-at-this-level'
+    follow_item = follow_dynamo.add_following(user1.id, user2.id, follow_status, use_old_pk=True)
+
+    # test it stuck in the db
+    assert follow_dynamo.get_following(user1.id, user2.id) == follow_item
+    followed_at_str = follow_item['followedAt']
+    assert follow_item == {
+        'schemaVersion': 1,
         'partitionKey': f'following/{user1.id}/{user2.id}',
         'sortKey': '-',
         'gsiA1PartitionKey': f'follower/{user1.id}',

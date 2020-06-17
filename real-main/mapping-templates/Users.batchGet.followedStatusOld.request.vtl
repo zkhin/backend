@@ -12,8 +12,8 @@
       #if (! $ctx.stash.userIdToIndex.containsKey($user.userId))
         $util.qr($ctx.stash.userIdToIndex.put($user.userId, $keys.size()))
         $util.qr($keys.add({
-          'partitionKey': {'S': "user/$user.userId"},
-          'sortKey': {'S': "follower/$callerUserId"}
+          'partitionKey': {'S': "following/$callerUserId/$user.userId"},
+          'sortKey': {'S': '-'}
         }))
       #end
     #end

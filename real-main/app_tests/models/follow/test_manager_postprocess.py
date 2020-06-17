@@ -17,13 +17,21 @@ user2 = user1
 
 
 @pytest.fixture
-def follow_deets(follow_manager, user1, user2):
+def follow_deets_new_pk(follow_manager, user1, user2):
     item = follow_manager.dynamo.add_following(user1.id, user2.id, FollowStatus.REQUESTED)
-    typed_pk = follow_manager.dynamo.typed_pk(user1.id, user2.id)
+    typed_pk = follow_manager.dynamo.new_typed_pk(user1.id, user2.id)
+    yield (item, typed_pk, typed_pk['partitionKey']['S'], typed_pk['sortKey']['S'])
+
+
+@pytest.fixture
+def follow_deets_old_pk(follow_manager, user1, user2):
+    item = follow_manager.dynamo.add_following(user1.id, user2.id, FollowStatus.REQUESTED, use_old_pk=True)
+    typed_pk = follow_manager.dynamo.old_typed_pk(user1.id, user2.id)
     yield (item, typed_pk, typed_pk['partitionKey']['S'], typed_pk['sortKey']['S'])
 
 
 @pytest.mark.parametrize('follow_status', [FollowStatus.FOLLOWING])
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_add_increments(follow_manager, user1, user2, follow_deets, follow_status):
     # set up and verify starting state
     item, typed_pk, pk, sk = follow_deets
@@ -41,6 +49,7 @@ def test_postprocess_add_increments(follow_manager, user1, user2, follow_deets, 
 
 
 @pytest.mark.parametrize('follow_status', [s for s in FollowStatus._ALL if s != FollowStatus.FOLLOWING])
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_add_no_change(follow_manager, user1, user2, follow_deets, follow_status):
     # set up and verify starting state
     item, typed_pk, pk, sk = follow_deets
@@ -61,6 +70,7 @@ def test_postprocess_add_no_change(follow_manager, user1, user2, follow_deets, f
     'old_follow_status, new_follow_status',
     [[FollowStatus.REQUESTED, FollowStatus.FOLLOWING], [FollowStatus.DENIED, FollowStatus.FOLLOWING]],
 )
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_update_increments(
     follow_manager, user1, user2, follow_deets, old_follow_status, new_follow_status
 ):
@@ -82,6 +92,7 @@ def test_postprocess_update_increments(
 
 
 @pytest.mark.parametrize('old_follow_status, new_follow_status', [[FollowStatus.REQUESTED, FollowStatus.DENIED]])
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_update_no_change(
     follow_manager, user1, user2, follow_deets, old_follow_status, new_follow_status
 ):
@@ -103,6 +114,7 @@ def test_postprocess_update_no_change(
 
 
 @pytest.mark.parametrize('old_follow_status, new_follow_status', [[FollowStatus.FOLLOWING, FollowStatus.DENIED]])
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_update_decrements(
     follow_manager, user1, user2, follow_deets, old_follow_status, new_follow_status, caplog
 ):
@@ -140,6 +152,7 @@ def test_postprocess_update_decrements(
 
 
 @pytest.mark.parametrize('follow_status', [FollowStatus.FOLLOWING])
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_delete_decrements(follow_manager, user1, user2, follow_deets, follow_status, caplog):
     # postprocess an add to increment counts
     item, typed_pk, pk, sk = follow_deets
@@ -173,6 +186,7 @@ def test_postprocess_delete_decrements(follow_manager, user1, user2, follow_deet
 
 
 @pytest.mark.parametrize('follow_status', [s for s in FollowStatus._ALL if s != FollowStatus.FOLLOWING])
+@pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
 def test_postprocess_delete_no_change(follow_manager, user1, user2, follow_deets, follow_status):
     # set up and verify starting state
     item, typed_pk, pk, sk = follow_deets

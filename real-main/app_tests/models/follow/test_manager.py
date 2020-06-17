@@ -82,9 +82,10 @@ def test_request_to_follow_public_user(follow_manager, users):
 
     # check the followedFirstStory
     follow = follow_manager.get_follow(our_user.id, their_user.id)
+    follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': follow.item['partitionKey'].replace('following/', 'followedFirstStory/'),
-        'sortKey': follow.item['sortKey'],
+        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'sortKey': '-',
     }
     ffs = follow_manager.dynamo.client.get_item(pk)
     assert ffs is None
@@ -104,9 +105,10 @@ def test_request_to_follow_public_user_with_story(follow_manager, users, their_p
 
     # check the followedFirstStory
     follow = follow_manager.get_follow(our_user.id, their_user.id)
+    follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': follow.item['partitionKey'].replace('following/', 'followedFirstStory/'),
-        'sortKey': follow.item['sortKey'],
+        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'sortKey': '-',
     }
     ffs = follow_manager.dynamo.client.get_item(pk)
     assert ffs['postId'] == their_post.id
@@ -137,9 +139,10 @@ def test_request_to_follow_private_user(follow_manager, users):
 
     # check the followedFirstStory
     follow = follow_manager.get_follow(our_user.id, their_user.id)
+    follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': follow.item['partitionKey'].replace('following/', 'followedFirstStory/'),
-        'sortKey': follow.item['sortKey'],
+        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'sortKey': '-',
     }
     ffs = follow_manager.dynamo.client.get_item(pk)
     assert ffs is None

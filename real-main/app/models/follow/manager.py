@@ -48,7 +48,14 @@ class FollowManager:
 
     def postprocess_record(self, pk, sk, old_item, new_item):
         # check if follow status changed to/from something other than FOLLOWING and FOLLOWING
-        _, follower_user_id, followed_user_id = pk.split('/')
+        try:
+            # old pk format
+            _, follower_user_id, followed_user_id = pk.split('/')
+        except ValueError:
+            # new pk format
+            followed_user_id = pk[len('user/') :]
+            follower_user_id = sk[len('follower/') :]
+
         old_status = old_item['followStatus']['S'] if old_item else enums.FollowStatus.NOT_FOLLOWING
         new_status = new_item['followStatus']['S'] if new_item else enums.FollowStatus.NOT_FOLLOWING
         if old_status != enums.FollowStatus.FOLLOWING and new_status == enums.FollowStatus.FOLLOWING:

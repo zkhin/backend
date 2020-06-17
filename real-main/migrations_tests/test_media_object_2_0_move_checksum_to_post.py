@@ -182,7 +182,7 @@ def test_media_without_post_id_errors(dynamo_client, dynamo_table, caplog, media
 def test_media_post_with_checksum_errors(dynamo_client, dynamo_table, caplog, media_post_with_checksum):
     migration = Migration(dynamo_client, dynamo_table)
     with caplog.at_level(logging.WARNING):
-        with pytest.raises(dynamo_client.exceptions.ConditionalCheckFailedException):
+        with pytest.raises(dynamo_client.exceptions.TransactionCanceledException):
             migration.run()
     assert media_post_with_checksum['mediaId'] in str(caplog.records[0])
 
@@ -190,7 +190,7 @@ def test_media_post_with_checksum_errors(dynamo_client, dynamo_table, caplog, me
 def test_media_post_has_diff_posted_at_errors(dynamo_client, dynamo_table, caplog, media_post_has_diff_posted_at):
     migration = Migration(dynamo_client, dynamo_table)
     with caplog.at_level(logging.WARNING):
-        with pytest.raises(dynamo_client.exceptions.ConditionalCheckFailedException):
+        with pytest.raises(dynamo_client.exceptions.TransactionCanceledException):
             migration.run()
     assert media_post_has_diff_posted_at['mediaId'] in str(caplog.records[0])
 

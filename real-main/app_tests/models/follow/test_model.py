@@ -81,9 +81,10 @@ def test_accept_follow_request_with_story(users_private, their_post, requested_f
     assert our_feed_by_them[0]['postId'] == their_post.id
 
     # check the followedFirstStory
+    follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': follow.item['partitionKey'].replace('following/', 'followedFirstStory/'),
-        'sortKey': follow.item['sortKey'],
+        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
+        'sortKey': '-',
     }
     ffs = follow.dynamo.client.get_item(pk)
     assert ffs['postId'] == their_post.id

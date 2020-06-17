@@ -1,16 +1,31 @@
 #if ($ctx.source.userId == $ctx.identity.cognitoIdentityId)
-    #return ('SELF')
+  #return ('SELF')
 #end
 
 #if (! $util.isNull($ctx.source.followerStatus))
   #return ($ctx.source.followerStatus)
 #end
 
+#set ($followerUserId = $ctx.source.userId)
+#set ($followedUserId = $ctx.identity.cognitoIdentityId)
+
+#set ($keys = [
+  {
+    'partitionKey': {'S': "user/$followedUserId"},
+    'sortKey': {'S': "follower/$followerUserId"}
+  }, {
+    'partitionKey': {'S': "following/$followerUserId/$followedUserId"},
+    'sortKey': {'S': '-'}
+  }
+])
+
+
 {
   "version": "2018-05-29",
-  "operation": "GetItem",
-  "key": {
-    "partitionKey": {"S": "following/$ctx.source.userId/$ctx.identity.cognitoIdentityId"},
-    "sortKey": {"S": "-"}
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($keys)
+    }
   }
 }
