@@ -46,6 +46,18 @@ class FollowManager:
             user_manager=self.user_manager,
         )
 
+    def postprocess_record(self, pk, sk, old_item, new_item):
+        # check if follow status changed to/from something other than FOLLOWING and FOLLOWING
+        _, follower_user_id, followed_user_id = pk.split('/')
+        old_status = old_item['followStatus']['S'] if old_item else enums.FollowStatus.NOT_FOLLOWING
+        new_status = new_item['followStatus']['S'] if new_item else enums.FollowStatus.NOT_FOLLOWING
+        if old_status != enums.FollowStatus.FOLLOWING and new_status == enums.FollowStatus.FOLLOWING:
+            self.user_manager.dynamo.increment_followed_count(follower_user_id)
+            self.user_manager.dynamo.increment_follower_count(followed_user_id)
+        if old_status == enums.FollowStatus.FOLLOWING and new_status != enums.FollowStatus.FOLLOWING:
+            self.user_manager.dynamo.decrement_followed_count(follower_user_id, fail_soft=True)
+            self.user_manager.dynamo.decrement_follower_count(followed_user_id, fail_soft=True)
+
     def get_follow_status(self, follower_user_id, followed_user_id):
         if follower_user_id == followed_user_id:
             return enums.FollowStatus.SELF
@@ -84,35 +96,26 @@ class FollowManager:
             if followed_user.item['privacyStatus'] == UserPrivacyStatus.PRIVATE
             else enums.FollowStatus.FOLLOWING
         )
+        follow_item = self.dynamo.add_following(follower_user.id, followed_user.id, follow_status)
 
-        transacts = [self.dynamo.transact_add_following(follower_user.id, followed_user.id, follow_status)]
         if follow_status == enums.FollowStatus.FOLLOWING:
-            transacts.extend(
-                [
-                    self.user_manager.dynamo.transact_increment_followed_count(follower_user.id),
-                    self.user_manager.dynamo.transact_increment_follower_count(followed_user.id),
-                ]
-            )
-        self.dynamo.client.transact_write_items(transacts)
-        follow = self.get_follow(follower_user.id, followed_user.id, strongly_consistent=True)
-
-        if follow.status == enums.FollowStatus.FOLLOWING:
-            # async with sns?
+            # async with dynamo stream handler?
             self.feed_manager.add_users_posts_to_feed(follower_user.id, followed_user.id)
             post = self.post_manager.dynamo.get_next_completed_post_to_expire(followed_user.id)
             if post:
                 self.ffs_manager.dynamo.set_all([follower_user.id], post)
 
-        return follow
+        return self.init_follow(follow_item)
 
     def accept_all_requested_follow_requests(self, followed_user_id):
         for item in self.dynamo.generate_follower_items(followed_user_id, enums.FollowStatus.REQUESTED):
+            # can't batch this: dynamo doesn't support batch updates
             self.init_follow(item).accept()
 
     def delete_all_denied_follow_requests(self, followed_user_id):
         for item in self.dynamo.generate_follower_items(followed_user_id, enums.FollowStatus.DENIED):
-            transacts = [self.dynamo.transact_delete_following(item)]
-            self.dynamo.client.transact_write_items(transacts)
+            # TODO: do as batch write
+            self.dynamo.delete_following(item)
 
     def reset_follower_items(self, followed_user_id):
         for item in self.dynamo.generate_follower_items(followed_user_id):
@@ -120,8 +123,8 @@ class FollowManager:
             if item['followStatus'] == enums.FollowStatus.FOLLOWING:
                 self.init_follow(item).unfollow()
             else:
-                transacts = [self.dynamo.transact_delete_following(item)]
-                self.dynamo.client.transact_write_items(transacts)
+                # TODO: do as batch write
+                self.dynamo.delete_following(item)
 
     def reset_followed_items(self, follower_user_id):
         for item in self.dynamo.generate_followed_items(follower_user_id):
@@ -129,5 +132,5 @@ class FollowManager:
             if item['followStatus'] == enums.FollowStatus.FOLLOWING:
                 self.init_follow(item).unfollow()
             else:
-                transacts = [self.dynamo.transact_delete_following(item)]
-                self.dynamo.client.transact_write_items(transacts)
+                # TODO: do as batch write
+                self.dynamo.delete_following(item)

@@ -230,18 +230,6 @@ class UserDynamo:
     def transact_decrement_chat_count(self, user_id):
         return self._transact_decrement_count(user_id, 'chatCount')
 
-    def transact_increment_followed_count(self, user_id):
-        return self._transact_increment_count(user_id, 'followedCount')
-
-    def transact_decrement_followed_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'followedCount')
-
-    def transact_increment_follower_count(self, user_id):
-        return self._transact_increment_count(user_id, 'followerCount')
-
-    def transact_decrement_follower_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'followerCount')
-
     def increment_post_viewed_by_count(self, user_id):
         query_kwargs = {
             'Key': self.pk(user_id),
@@ -352,26 +340,46 @@ class UserDynamo:
         }
         return {'Update': kwargs}
 
-    def increment_chats_with_unviewed_messages_count(self, user_id):
+    def _increment_count(self, attribute_name, user_id):
         query_kwargs = {
             'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD chatsWithUnviewedMessagesCount :one',
+            'UpdateExpression': 'ADD #attrName :one',
+            'ExpressionAttributeNames': {'#attrName': attribute_name},
             'ExpressionAttributeValues': {':one': 1},
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }
         return self.client.update_item(query_kwargs)
 
-    def decrement_chats_with_unviewed_messages_count(self, user_id, fail_soft=False):
+    def _decrement_count(self, attribute_name, user_id, fail_soft=False):
         query_kwargs = {
             'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD chatsWithUnviewedMessagesCount :neg_one',
+            'UpdateExpression': 'ADD #attrName :neg_one',
+            'ExpressionAttributeNames': {'#attrName': attribute_name},
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND chatsWithUnviewedMessagesCount > :zero',
+            'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
         }
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
             if fail_soft:
-                logger.warning(f'Failed to decrement chats with unviewed messages count for user `{user_id}`')
+                logger.warning(f'Failed to decrement {attribute_name} for user `{user_id}`')
                 return
             raise
+
+    def increment_chats_with_unviewed_messages_count(self, user_id):
+        return self._increment_count('chatsWithUnviewedMessagesCount', user_id)
+
+    def decrement_chats_with_unviewed_messages_count(self, user_id, fail_soft=False):
+        return self._decrement_count('chatsWithUnviewedMessagesCount', user_id, fail_soft=fail_soft)
+
+    def increment_followed_count(self, user_id):
+        return self._increment_count('followedCount', user_id)
+
+    def decrement_followed_count(self, user_id, fail_soft=False):
+        return self._decrement_count('followedCount', user_id, fail_soft=fail_soft)
+
+    def increment_follower_count(self, user_id):
+        return self._increment_count('followerCount', user_id)
+
+    def decrement_follower_count(self, user_id, fail_soft=False):
+        return self._decrement_count('followerCount', user_id, fail_soft=fail_soft)

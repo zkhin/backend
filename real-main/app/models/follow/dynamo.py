@@ -17,67 +17,49 @@ class FollowDynamo:
             'sortKey': '-',
         }
 
+    def typed_pk(self, follower_user_id, followed_user_id):
+        return {
+            'partitionKey': {'S': f'following/{follower_user_id}/{followed_user_id}'},
+            'sortKey': {'S': '-'},
+        }
+
     def get_following(self, follower_user_id, followed_user_id, strongly_consistent=False):
         pk = self.pk(follower_user_id, followed_user_id)
         return self.client.get_item(pk, ConsistentRead=strongly_consistent)
 
-    def transact_add_following(self, follower_user_id, followed_user_id, follow_status):
+    def add_following(self, follower_user_id, followed_user_id, follow_status):
         followed_at_str = pendulum.now('utc').to_iso8601_string()
-        transact = {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '1'},
-                    'partitionKey': {'S': f'following/{follower_user_id}/{followed_user_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'follower/{follower_user_id}'},
-                    'gsiA1SortKey': {'S': f'{follow_status}/{followed_at_str}'},
-                    'gsiA2PartitionKey': {'S': f'followed/{followed_user_id}'},
-                    'gsiA2SortKey': {'S': f'{follow_status}/{followed_at_str}'},
-                    'followedAt': {'S': followed_at_str},
-                    'followStatus': {'S': follow_status},
-                    'followerUserId': {'S': follower_user_id},
-                    'followedUserId': {'S': followed_user_id},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # only creates
+        query_kwargs = {
+            'Item': {
+                **self.pk(follower_user_id, followed_user_id),
+                'schemaVersion': 1,
+                'gsiA1PartitionKey': f'follower/{follower_user_id}',
+                'gsiA1SortKey': f'{follow_status}/{followed_at_str}',
+                'gsiA2PartitionKey': f'followed/{followed_user_id}',
+                'gsiA2SortKey': f'{follow_status}/{followed_at_str}',
+                'followedAt': followed_at_str,
+                'followStatus': follow_status,
+                'followerUserId': follower_user_id,
+                'followedUserId': followed_user_id,
             },
         }
-        return transact
+        return self.client.add_item(query_kwargs)
 
-    def transact_update_following_status(self, follow_item, follow_status):
-        set_exps = [
-            'followStatus = :status',
-            'gsiA1SortKey = :sk',
-            'gsiA2SortKey = :sk',
-        ]
-        exp_values = {
-            ':status': {'S': follow_status},
-            ':sk': {'S': f'{follow_status}/{follow_item["followedAt"]}'},
-        }
-
-        transact = {
-            'Update': {
-                'Key': {
-                    'partitionKey': {'S': follow_item['partitionKey']},
-                    'sortKey': {'S': follow_item['sortKey']},
-                },
-                'UpdateExpression': 'SET ' + ', '.join(set_exps),
-                'ExpressionAttributeValues': exp_values,
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates
+    def update_following_status(self, follow_item, follow_status):
+        key = {k: follow_item[k] for k in ('partitionKey', 'sortKey')}
+        query_kwargs = {
+            'Key': key,
+            'UpdateExpression': 'SET followStatus = :status, gsiA1SortKey = :sk, gsiA2SortKey = :sk',
+            'ExpressionAttributeValues': {
+                ':status': follow_status,
+                ':sk': f'{follow_status}/{follow_item["followedAt"]}',
             },
         }
-        return transact
+        return self.client.update_item(query_kwargs)
 
-    def transact_delete_following(self, follow_item):
-        transact = {
-            'Delete': {
-                'Key': {
-                    'partitionKey': {'S': follow_item['partitionKey']},
-                    'sortKey': {'S': follow_item['sortKey']},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # fail loudly if doesn't exist
-            },
-        }
-        return transact
+    def delete_following(self, follow_item):
+        key = {k: follow_item[k] for k in ('partitionKey', 'sortKey')}
+        return self.client.delete_item(key)
 
     def generate_followed_items(self, user_id, follow_status=None, limit=None, next_token=None):
         "Generate items that represent a followed of the given user (that the given user is the follower)"

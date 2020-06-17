@@ -19,6 +19,7 @@ managers = {}
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
+follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
 
 
 @handler_logging
@@ -44,6 +45,9 @@ def postprocess_records(event, context):
 
         if pk.startswith('chatMessage/'):
             postprocess_record = chat_message_manager.postprocess_record
+
+        if pk.startswith('following/'):
+            postprocess_record = follow_manager.postprocess_record
 
         if postprocess_record:
             try:

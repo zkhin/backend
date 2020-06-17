@@ -50,19 +50,10 @@ class Follow:
         "Returns the status of the follow request"
         if not force and self.status == FollowStatus.DENIED:
             raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
-
-        transacts = [self.dynamo.transact_delete_following(self.item)]
-        if self.status == FollowStatus.FOLLOWING:
-            transacts.extend(
-                [
-                    self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
-                    self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
-                ]
-            )
-        self.dynamo.client.transact_write_items(transacts)
+        self.dynamo.delete_following(self.item)
 
         if self.status == FollowStatus.FOLLOWING:
-            # async with sns?
+            # async with dynamo stream handler?
             self.feed_manager.delete_users_posts_from_feed(self.follower_user_id, self.followed_user_id)
             self.ffs_manager.dynamo.delete_all([self.follower_user_id], self.followed_user_id)
 
@@ -78,15 +69,9 @@ class Follow:
         "Returns the status of the follow request"
         if self.status == FollowStatus.FOLLOWING:
             raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING)
+        self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING),
 
-        transacts = [
-            self.dynamo.transact_update_following_status(self.item, FollowStatus.FOLLOWING),
-            self.user_manager.dynamo.transact_increment_followed_count(self.follower_user_id),
-            self.user_manager.dynamo.transact_increment_follower_count(self.followed_user_id),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-
-        # async with sns?
+        # async with dynamo stream handler?
         self.feed_manager.add_users_posts_to_feed(self.follower_user_id, self.followed_user_id)
 
         post = self.post_manager.dynamo.get_next_completed_post_to_expire(self.followed_user_id)
@@ -100,16 +85,7 @@ class Follow:
         "Returns the status of the follow request"
         if self.status == FollowStatus.DENIED:
             raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
-
-        transacts = [self.dynamo.transact_update_following_status(self.item, FollowStatus.DENIED)]
-        if self.status == FollowStatus.FOLLOWING:
-            transacts.extend(
-                [
-                    self.user_manager.dynamo.transact_decrement_followed_count(self.follower_user_id),
-                    self.user_manager.dynamo.transact_decrement_follower_count(self.followed_user_id),
-                ]
-            )
-        self.dynamo.client.transact_write_items(transacts)
+        self.dynamo.update_following_status(self.item, FollowStatus.DENIED)
 
         if self.status == FollowStatus.FOLLOWING:
             # async with sns?

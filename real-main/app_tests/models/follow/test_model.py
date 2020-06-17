@@ -61,16 +61,7 @@ def test_accept(users_private, requested_follow):
     assert follow.accept().status == FollowStatus.FOLLOWING
     assert follow.refresh_item().status == FollowStatus.FOLLOWING
 
-    # check follow counters
-    our_user.refresh_item()
-    assert our_user.item.get('followerCount', 0) == 0
-    assert our_user.item.get('followedCount', 0) == 1
-
-    their_user.refresh_item()
-    assert their_user.item.get('followerCount', 0) == 1
-    assert their_user.item.get('followedCount', 0) == 0
-
-    # verify we can't
+    # verify we can't double accept
     with pytest.raises(follow.exceptions.AlreadyHasStatus):
         follow.accept()
 

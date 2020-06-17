@@ -61,6 +61,7 @@ test('List cards', async () => {
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
   // verify list & count that one card
+  await misc.sleep(500) // let dynamo stream handler catch up
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -107,6 +108,7 @@ test('Delete card, generate new card after deleting', async () => {
   await misc.sleep(2000) // let dynamo converge
 
   // verify we see the card, and its count
+  await misc.sleep(500) // let dynamo stream handler catch up
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -139,6 +141,7 @@ test('Delete card, generate new card after deleting', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify we see the card and it's exactly like the old card (even same cardId)
+  await misc.sleep(500) // let dynamo stream handler catch up
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)

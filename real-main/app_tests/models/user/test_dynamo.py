@@ -444,60 +444,6 @@ def test_set_user_privacy_status(user_dynamo):
     assert user_item['privacyStatus'] == UserPrivacyStatus.PUBLIC
 
 
-def test_increment_decrement_follower_count(user_dynamo):
-    user_id = 'my-user-id'
-    username = 'my-username'
-
-    # create the user, verify user starts with no follower count
-    user_item = user_dynamo.add_user(user_id, username)
-    assert user_item['userId'] == user_id
-    assert 'followerCount' not in user_item
-
-    # verify can't go below zero
-    transacts = [user_dynamo.transact_decrement_follower_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items(transacts)
-
-    # increment
-    transacts = [user_dynamo.transact_increment_follower_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['followerCount'] == 1
-
-    # decrement
-    transacts = [user_dynamo.transact_decrement_follower_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['followerCount'] == 0
-
-
-def test_increment_decrement_followed_count(user_dynamo):
-    user_id = 'my-user-id'
-    username = 'my-username'
-
-    # create the user, verify user starts with no followed count
-    user_item = user_dynamo.add_user(user_id, username)
-    assert user_item['userId'] == user_id
-    assert 'followedCount' not in user_item
-
-    # verify can't go below zero
-    transacts = [user_dynamo.transact_decrement_followed_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items(transacts)
-
-    # increment
-    transacts = [user_dynamo.transact_increment_followed_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['followedCount'] == 1
-
-    # decrement
-    transacts = [user_dynamo.transact_decrement_followed_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['followedCount'] == 0
-
-
 def test_increment_decrement_album_count(user_dynamo):
     user_id = 'my-user-id'
     username = 'my-username'
@@ -808,45 +754,60 @@ def test_transact_card_added_and_transact_card_deleted(user_dynamo):
         user_dynamo.client.transact_write_items([transact_deleted])
 
 
-def test_increment_decrement_chats_with_unviewed_messages_count(user_dynamo, caplog):
-    # add the chat to the DB, verify it is in DB
+@pytest.mark.parametrize(
+    'incrementor_name, decrementor_name, attribute_name',
+    [
+        [
+            'increment_chats_with_unviewed_messages_count',
+            'decrement_chats_with_unviewed_messages_count',
+            'chatsWithUnviewedMessagesCount',
+        ],
+        ['increment_followed_count', 'decrement_followed_count', 'followedCount'],
+        ['increment_follower_count', 'decrement_follower_count', 'followerCount'],
+    ],
+)
+def test_increment_decrement_chats_with_unviewed_messages_count(
+    user_dynamo, caplog, incrementor_name, decrementor_name, attribute_name
+):
+    incrementor = getattr(user_dynamo, incrementor_name)
+    decrementor = getattr(user_dynamo, decrementor_name)
+
+    # add the user to the DB, verify it is in DB
     user_id, username = str(uuid4()), str(uuid4())[:8]
     user_dynamo.add_user(user_id, username)
-    assert 'chatsWithUnviewedMessagesCount' not in user_dynamo.get_user(user_id)
+    assert attribute_name not in user_dynamo.get_user(user_id)
 
     # verify can't decrement below zero
     with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
-        user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)
-    assert 'chatsWithUnviewedMessagesCount' not in user_dynamo.get_user(user_id)
+        decrementor(user_id)
+    assert attribute_name not in user_dynamo.get_user(user_id)
 
     # increment
-    assert user_dynamo.increment_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 1
-    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 1
+    assert incrementor(user_id)[attribute_name] == 1
+    assert user_dynamo.get_user(user_id)[attribute_name] == 1
 
     # increment
-    assert user_dynamo.increment_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 2
-    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 2
+    assert incrementor(user_id)[attribute_name] == 2
+    assert user_dynamo.get_user(user_id)[attribute_name] == 2
 
     # decrement
-    assert user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 1
-    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 1
+    assert decrementor(user_id)[attribute_name] == 1
+    assert user_dynamo.get_user(user_id)[attribute_name] == 1
 
     # decrement
-    assert user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)['chatsWithUnviewedMessagesCount'] == 0
-    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 0
+    assert decrementor(user_id)[attribute_name] == 0
+    assert user_dynamo.get_user(user_id)[attribute_name] == 0
 
     # verify fail soft on trying to decrement below zero
     with caplog.at_level(logging.WARNING):
-        resp = user_dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
+        resp = decrementor(user_id, fail_soft=True)
     assert resp is None
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
-    assert all(
-        x in caplog.records[0].msg for x in ['Failed', 'decrement chats with unviewed messages count', user_id]
-    )
-    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 0
+    assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, user_id])
+    assert user_dynamo.get_user(user_id)[attribute_name] == 0
 
     # verify fail hard on trying to decrement below zero
     with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)
-    assert user_dynamo.get_user(user_id)['chatsWithUnviewedMessagesCount'] == 0
+    assert user_dynamo.get_user(user_id)[attribute_name] == 0

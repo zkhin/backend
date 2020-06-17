@@ -5,6 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
 const {mutations, queries} = require('../../schema')
+const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -62,6 +63,7 @@ test('Create and edit a group chat', async () => {
   const messageIdSystem1 = chat.messages.items[1].messageId
 
   // check we have the chat
+  await misc.sleep(500) // let dynamo stream handler catch up
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)

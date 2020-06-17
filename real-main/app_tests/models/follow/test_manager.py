@@ -76,15 +76,6 @@ def test_request_to_follow_public_user(follow_manager, users):
     assert follow_manager.request_to_follow(our_user, their_user).status == FollowStatus.FOLLOWING
     assert follow_manager.get_follow(our_user.id, their_user.id).status == FollowStatus.FOLLOWING
 
-    # check follow counters
-    our_user.refresh_item()
-    assert our_user.item.get('followerCount', 0) == 0
-    assert our_user.item.get('followedCount', 0) == 1
-
-    their_user.refresh_item()
-    assert their_user.item.get('followerCount', 0) == 1
-    assert their_user.item.get('followedCount', 0) == 0
-
     # check our feed
     our_feed_by_them = list(follow_manager.feed_manager.dynamo.generate_feed(our_user.id))
     assert len(our_feed_by_them) == 0
@@ -235,17 +226,9 @@ def test_reset_follower_items(follow_manager, users_private):
     # request to follow, and accept the following
     assert follow_manager.request_to_follow(our_user, their_user).accept().status == FollowStatus.FOLLOWING
 
-    # check counts
-    assert our_user.refresh_item().item.get('followedCount', 0) == 1
-    assert their_user.refresh_item().item.get('followerCount', 0) == 1
-
-    # do reset, should clear and reset counts
+    # do reset, verify
     follow_manager.reset_follower_items(their_user.id)
     assert follow_manager.get_follow(our_user.id, their_user.id) is None
-
-    # check counts
-    assert our_user.refresh_item().item.get('followedCount', 0) == 0
-    assert their_user.refresh_item().item.get('followerCount', 0) == 0
 
 
 def test_reset_followed_items(follow_manager, users_private):
@@ -261,17 +244,9 @@ def test_reset_followed_items(follow_manager, users_private):
     # request to follow, and accept the following
     assert follow_manager.request_to_follow(our_user, their_user).accept().status == FollowStatus.FOLLOWING
 
-    # check counts
-    assert our_user.refresh_item().item.get('followedCount', 0) == 1
-    assert their_user.refresh_item().item.get('followerCount', 0) == 1
-
-    # do reset, should clear and reset counts
+    # do reset, verify
     follow_manager.reset_followed_items(our_user.id)
     assert follow_manager.get_follow(our_user.id, their_user.id) is None
-
-    # check counts
-    assert our_user.refresh_item().item.get('followedCount', 0) == 0
-    assert their_user.refresh_item().item.get('followerCount', 0) == 0
 
 
 def test_generate_follower_user_ids(follow_manager, users, other_users):
