@@ -47,7 +47,6 @@ class FollowManager:
         )
 
     def postprocess_record(self, pk, sk, old_item, new_item):
-        # check if follow status changed to/from something other than FOLLOWING and FOLLOWING
         try:
             # old pk format
             _, follower_user_id, followed_user_id = pk.split('/')
@@ -58,12 +57,20 @@ class FollowManager:
 
         old_status = old_item['followStatus']['S'] if old_item else enums.FollowStatus.NOT_FOLLOWING
         new_status = new_item['followStatus']['S'] if new_item else enums.FollowStatus.NOT_FOLLOWING
+
+        # incr/decr followedCount and followerCount if follow status changed to/from FOLLOWING and something else
         if old_status != enums.FollowStatus.FOLLOWING and new_status == enums.FollowStatus.FOLLOWING:
             self.user_manager.dynamo.increment_followed_count(follower_user_id)
             self.user_manager.dynamo.increment_follower_count(followed_user_id)
         if old_status == enums.FollowStatus.FOLLOWING and new_status != enums.FollowStatus.FOLLOWING:
             self.user_manager.dynamo.decrement_followed_count(follower_user_id, fail_soft=True)
             self.user_manager.dynamo.decrement_follower_count(followed_user_id, fail_soft=True)
+
+        # incr/decr requestedFollowerCount if follow status changed to/from REQUESTED and something else
+        if old_status != enums.FollowStatus.REQUESTED and new_status == enums.FollowStatus.REQUESTED:
+            self.user_manager.dynamo.increment_requested_follower_count(followed_user_id)
+        if old_status == enums.FollowStatus.REQUESTED and new_status != enums.FollowStatus.REQUESTED:
+            self.user_manager.dynamo.decrement_requested_follower_count(followed_user_id, fail_soft=True)
 
     def get_follow_status(self, follower_user_id, followed_user_id):
         if follower_user_id == followed_user_id:

@@ -47,7 +47,7 @@ class UserDynamo:
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
-                'schemaVersion': 9,
+                'schemaVersion': 10,
                 'partitionKey': f'user/{user_id}',
                 'sortKey': 'profile',
                 'gsiA1PartitionKey': f'username/{username}',
@@ -383,3 +383,9 @@ class UserDynamo:
 
     def decrement_follower_count(self, user_id, fail_soft=False):
         return self._decrement_count('followerCount', user_id, fail_soft=fail_soft)
+
+    def increment_requested_follower_count(self, user_id):
+        return self._increment_count('requestedFollowerCount', user_id)
+
+    def decrement_requested_follower_count(self, user_id, fail_soft=False):
+        return self._decrement_count('requestedFollowerCount', user_id, fail_soft=fail_soft)
