@@ -20,6 +20,11 @@ def chat_card_spec(user):
 
 
 @pytest.fixture
+def requested_followers_card_spec(user):
+    yield specs.RequestedFollowersCardSpec(user.id)
+
+
+@pytest.fixture
 def comment_card_spec(user, post_manager):
     post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
     yield specs.CommentCardSpec(user.id, post.id)
@@ -86,7 +91,9 @@ def test_add_card_maximal(card_manager, user):
     assert card_manager.get_card(card.id)
 
 
-@pytest.mark.parametrize('spec', pytest.lazy_fixture(['chat_card_spec', 'comment_card_spec']))
+@pytest.mark.parametrize(
+    'spec', pytest.lazy_fixture(['chat_card_spec', 'comment_card_spec', 'requested_followers_card_spec'])
+)
 def test_add_and_remove_card_by_spec(user, spec, card_manager):
     # verify starting state
     assert card_manager.get_card(spec.card_id) is None

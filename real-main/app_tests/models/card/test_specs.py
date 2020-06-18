@@ -47,6 +47,14 @@ def test_chat_card_spec(user):
     assert spec.action == 'https://real.app/chat/'
 
 
+def test_requested_followers_card_spec(user):
+    spec = specs.RequestedFollowersCardSpec(user.id)
+    assert spec.title == 'You have pending follow requests'
+    assert spec.user_id == user.id
+    assert user.id in spec.card_id
+    assert spec.action == 'https://real.app/chat/'
+
+
 def test_from_card_id():
     # unrecognized card id formats
     assert specs.CardSpec.from_card_id(None) is None
@@ -69,4 +77,10 @@ def test_from_card_id():
     user_id = f'us-east-1:{uuid4()}'
     spec = specs.CardSpec.from_card_id(f'{user_id}:CHAT_ACTIVITY')
     assert isinstance(spec, specs.ChatCardSpec)
+    assert spec.user_id == user_id
+
+    # well-formed requested followers card id
+    user_id = f'us-east-1:{uuid4()}'
+    spec = specs.CardSpec.from_card_id(f'{user_id}:REQUESTED_FOLLOWERS')
+    assert isinstance(spec, specs.RequestedFollowersCardSpec)
     assert spec.user_id == user_id

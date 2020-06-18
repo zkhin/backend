@@ -7,6 +7,7 @@ class CardSpec:
 
     comment_card_id_re = r'^([\w:-]+):COMMENT_ACTIVITY:([\w-]+)$'
     chat_card_id_re = r'^([\w:-]+):CHAT_ACTIVITY$'
+    requested_followers_card_id_re = r'^([\w:-]+):REQUESTED_FOLLOWERS$'
 
     @classmethod
     def from_card_id(cls, card_id):
@@ -23,6 +24,13 @@ class CardSpec:
                 raise MalformedCardId(card_id)
             user_id = m.group(1)
             return ChatCardSpec(user_id)
+
+        if card_id and 'REQUESTED_FOLLOWERS' in card_id:
+            m = re.search(cls.requested_followers_card_id_re, card_id)
+            if not m:
+                raise MalformedCardId(card_id)
+            user_id = m.group(1)
+            return RequestedFollowersCardSpec(user_id)
 
         return None
 
@@ -50,3 +58,14 @@ class ChatCardSpec(CardSpec):
     def __init__(self, user_id):
         self.user_id = user_id
         self.card_id = f'{user_id}:CHAT_ACTIVITY'
+
+
+class RequestedFollowersCardSpec(CardSpec):
+
+    title = 'You have pending follow requests'
+    action = 'https://real.app/chat/'
+    post_id = None
+
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.card_id = f'{user_id}:REQUESTED_FOLLOWERS'

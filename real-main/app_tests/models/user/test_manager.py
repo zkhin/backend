@@ -5,8 +5,6 @@ from unittest import mock
 
 import pytest
 
-from app.models.user.enums import UserStatus
-
 
 @pytest.fixture
 def cognito_only_user1(user_manager, cognito_client):
@@ -477,10 +475,12 @@ def test_postprocess_record(user_manager):
     pk = f'user/{user_id}'
     sk = 'profile'
     old_item = {'userId': {'S': user_id}}
-    new_item = {'userId': {'S': user_id}, 'userStatus': {'S': UserStatus.DISABLED}}
+    new_item = {'userId': {'S': user_id}}
 
-    user_manager.elasticsearch_client.reset_mock()
-    user_manager.pinpoint_client.reset_mock()
+    user_manager.postprocess_elasticsearch = mock.Mock(user_manager.postprocess_elasticsearch)
+    user_manager.postprocess_pinpoint = mock.Mock(user_manager.postprocess_pinpoint)
+    user_manager.postprocess_requested_followers_card = mock.Mock(user_manager.postprocess_requested_followers_card)
     user_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user_manager.pinpoint_client.mock_calls == [mock.call.disable_user_endpoints(user_id)]
-    assert user_manager.elasticsearch_client.mock_calls == [mock.call.update_user(old_item, new_item)]
+    assert user_manager.postprocess_elasticsearch.mock_calls == [mock.call(old_item, new_item)]
+    assert user_manager.postprocess_pinpoint.mock_calls == [mock.call(user_id, old_item, new_item)]
+    assert user_manager.postprocess_requested_followers_card.mock_calls == [mock.call(user_id, old_item, new_item)]

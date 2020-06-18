@@ -6,6 +6,7 @@ import re
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
+from app.models.card.specs import RequestedFollowersCardSpec
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
@@ -91,6 +92,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         user_id = pk[len('user/') :]
         self.postprocess_elasticsearch(old_item, new_item)
         self.postprocess_pinpoint(user_id, old_item, new_item)
+        self.postprocess_requested_followers_card(user_id, old_item, new_item)
 
     def postprocess_elasticsearch(self, old_item, new_item):
         # if we're manually rebuilding the index, treat everything as new
@@ -131,6 +133,17 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 self.pinpoint_client.disable_user_endpoints(user_id)
             if status == enums.UserStatus.DELETING:
                 self.pinpoint_client.delete_user_endpoints(user_id)
+
+    def postprocess_requested_followers_card(self, user_id, old_item, new_item):
+        old_requested_followers_count = int((old_item or {}).get('requestedFollowerCount', {}).get('N', '0'))
+        new_requested_followers_count = int((new_item or {}).get('requestedFollowerCount', {}).get('N', '0'))
+        card_spec = RequestedFollowersCardSpec(user_id)
+
+        if old_requested_followers_count == 0 and new_requested_followers_count > 0:
+            self.card_manager.add_card_by_spec_if_dne(card_spec)
+
+        if old_requested_followers_count > 0 and new_requested_followers_count == 0:
+            self.card_manager.remove_card_by_spec_if_exists(card_spec)
 
     def get_available_placeholder_photo_codes(self):
         # don't want to foce the test suite to always pass in this parameter

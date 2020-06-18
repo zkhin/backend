@@ -210,6 +210,7 @@ def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_cl
 
 @pytest.fixture
 def user_manager(
+    appsync_client,
     cloudfront_client,
     dynamo_client,
     s3_uploads_client,
@@ -222,6 +223,7 @@ def user_manager(
 ):
     yield models.UserManager(
         {
+            'appsync': appsync_client,
             'cloudfront': cloudfront_client,
             'dynamo': dynamo_client,
             's3_uploads': s3_uploads_client,
