@@ -43,6 +43,15 @@ _Once per AWS Account_
 
 - Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
 
+#### Pinpoint
+
+_Once per deployment_
+
+Pinpoint must be manually configured to send Apple Push notifications. After first deployment, from the [Pinpoint console](https://console.aws.amazon.com/pinpoint/home?region=us-east-1)
+  - navigate REAL Pinpoint Project -> Settings -> Push notifications -> Edit -> Apple Push Notification Service
+  - Enable APNS and choose 'Certificate credentials' as authentication type
+  - The p12 certificate and its password are available from the frontend iOS team
+
 #### SecretsManager
 
 _Once per deployment_
