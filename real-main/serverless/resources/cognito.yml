@@ -126,7 +126,7 @@ Resources:
         - phone_number
       EmailConfiguration:
         EmailSendingAccount: DEVELOPER
-        SourceArn: arn:aws:ses:us-east-1:#{AWS::AccountId}:identity/${self:custom.sesFromAddr.${self:provider.stage}, self:custom.sesFromAddr.default}
+        SourceArn: ${self:custom.sesSender.arn}
       Policies:
         PasswordPolicy:
           MinimumLength: 8

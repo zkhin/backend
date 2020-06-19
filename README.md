@@ -61,10 +61,10 @@ To allow [SES](https://console.aws.amazon.com/ses/home) to send transactional em
 - Configure the MAIL FROM domain of `mail.real.app`
 - If this is a production account, you will also want to configure DKIM for `real.app` in the SES interface.
 
-SES also requires you confirm the email you wish to send email from (even if you've already confirmed the domain).
+You must also confirm, using the SES interface,  the email address you wish to send email from (even if you've already confirmed the domain). By default `no-reply@real.app` will be used. You can either:
 
-- If this is a production account, you will need to get access to the `no-reply@real.app` address to confirm it.
-- If this is a development account, you can set the environment variable `SES_DEV_FROM_ADDR` in a `.env` file in the `real-main` directory to set the from address to one that you control and can confirm.
+- confirm that email address. You would want to do this for a brand-new production deployment, and possibly for a new staging or pre-production deployment.
+- alternatively, you can set the environment variable `SES_SENDER_ADDRESS` in a `.env` file in the `real-main` directory to an email address you control, and then confirm that email address in SES.
 
 #### SNS
 

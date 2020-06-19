@@ -105,9 +105,10 @@ provider:
       Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, '*' ] ]
 
 custom:
-  sesFromAddr:
-    default: 'no-reply@real.app'
-    dev: ${env:SES_DEV_FROM_ADDR, self:custom.sesFromAddr.default}
+  sesSender:
+    defaultAddress: 'no-reply@real.app'
+    address: ${env:SES_SENDER_ADDRESS, self:custom.sesSender.defaultAddress}
+    arn: arn:aws:ses:us-east-1:#{AWS::AccountId}:identity/${self:custom.sesSender.address}
 
   splitStacks:
     perType: false
