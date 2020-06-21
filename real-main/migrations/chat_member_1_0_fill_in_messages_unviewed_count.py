@@ -9,22 +9,26 @@ DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 
 
 class Migration:
-    "Move Chat.messageCount to Chat.messagesCount"
+    "Move ChatMember.unviewedMessageCount to ChatMember.messagesUnviewedCount"
 
     def __init__(self, dynamo_client, dynamo_table):
         self.dynamo_client = dynamo_client
         self.dynamo_table = dynamo_table
 
     def run(self):
-        for item in self.generate_chat_items():
-            self.migrate_chat(item)
+        for item in self.generate_chat_member_items():
+            self.migrate_chat_member(item)
 
-    def generate_chat_items(self):
+    def generate_chat_member_items(self):
         scan_kwargs = {
             'FilterExpression': ' AND '.join(
-                ['begins_with(partitionKey, :pk_prefix)', 'sortKey = :sk', 'attribute_exists(messageCount)']
+                [
+                    'begins_with(partitionKey, :pk_prefix)',
+                    'begins_with(sortKey, :sk_prefix)',
+                    'attribute_exists(unviewedMessageCount)',
+                ]
             ),
-            'ExpressionAttributeValues': {':pk_prefix': 'chat/', ':sk': '-'},
+            'ExpressionAttributeValues': {':pk_prefix': 'chat/', ':sk_prefix': 'member/'},
         }
         while True:
             paginated = self.dynamo_table.scan(**scan_kwargs)
@@ -34,15 +38,17 @@ class Migration:
                 break
             scan_kwargs['ExclusiveStartKey'] = paginated['LastEvaluatedKey']
 
-    def migrate_chat(self, chat):
-        old_msg_cnt = chat['messageCount']
+    def migrate_chat_member(self, item):
+        old_cnt = item['unviewedMessageCount']
         query_kwargs = {
-            'Key': {k: chat[k] for k in ('partitionKey', 'sortKey')},
-            'UpdateExpression': 'ADD messagesCount :omc REMOVE messageCount',
-            'ConditionExpression': 'messageCount = :omc',
-            'ExpressionAttributeValues': {':omc': old_msg_cnt},
+            'Key': {k: item[k] for k in ('partitionKey', 'sortKey')},
+            'UpdateExpression': 'ADD messagesUnviewedCount :oc REMOVE unviewedMessageCount',
+            'ConditionExpression': 'unviewedMessageCount = :oc',
+            'ExpressionAttributeValues': {':oc': old_cnt},
         }
-        logger.warning(f'Migrating chat `{chat["partitionKey"]}` with old messageCount of `{old_msg_cnt}`')
+        logger.warning(
+            f'Migrating chat member `{item["partitionKey"]}` / `{item["sortKey"]}` with unviewedMessageCount of `{old_cnt}`'
+        )
         return self.dynamo_table.update_item(**query_kwargs)
 
 

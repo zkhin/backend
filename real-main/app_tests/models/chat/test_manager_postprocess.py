@@ -40,7 +40,7 @@ def test_postprocess_record_member_added(chat_manager, chat, user1):
 
     # simulate adding member with no unviewed message count
     new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert 'unviewedMessageCount' not in new_item
+    assert 'messagesUnviewedCount' not in new_item
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -48,9 +48,9 @@ def test_postprocess_record_member_added(chat_manager, chat, user1):
     assert chat_manager.user_manager.mock_calls == []
 
     # simulate adding member with some unviewed message count
-    chat.member_dynamo.increment_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
     new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert new_item['unviewedMessageCount']['N'] == '1'
+    assert new_item['messagesUnviewedCount']['N'] == '1'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -60,9 +60,9 @@ def test_postprocess_record_member_added(chat_manager, chat, user1):
     ]
 
     # simulate adding member with zero unviewed message count
-    chat.member_dynamo.decrement_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.decrement_messages_unviewed_count(chat.id, user1.id)
     new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert new_item['unviewedMessageCount']['N'] == '0'
+    assert new_item['messagesUnviewedCount']['N'] == '0'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -76,10 +76,10 @@ def test_postprocess_record_member_edited(chat_manager, chat, user1):
 
     # simulate editing member from no unviewed message count to some, verify
     old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    chat.member_dynamo.increment_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
     new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert 'unviewedMessageCount' not in old_item
-    assert new_item['unviewedMessageCount']['N'] == '1'
+    assert 'messagesUnviewedCount' not in old_item
+    assert new_item['messagesUnviewedCount']['N'] == '1'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -90,10 +90,10 @@ def test_postprocess_record_member_edited(chat_manager, chat, user1):
 
     # simulate editing member from some unviewed message count to none, verify
     old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    chat.member_dynamo.decrement_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.decrement_messages_unviewed_count(chat.id, user1.id)
     new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert old_item['unviewedMessageCount']['N'] == '1'
-    assert new_item['unviewedMessageCount']['N'] == '0'
+    assert old_item['messagesUnviewedCount']['N'] == '1'
+    assert new_item['messagesUnviewedCount']['N'] == '0'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -104,10 +104,10 @@ def test_postprocess_record_member_edited(chat_manager, chat, user1):
 
     # simulate editing member from zero unviewed message count to some, verify
     old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    chat.member_dynamo.increment_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
     new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert old_item['unviewedMessageCount']['N'] == '0'
-    assert new_item['unviewedMessageCount']['N'] == '1'
+    assert old_item['messagesUnviewedCount']['N'] == '0'
+    assert new_item['messagesUnviewedCount']['N'] == '1'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -124,7 +124,7 @@ def test_postprocess_record_member_deleted(chat_manager, chat, user1):
 
     # simulate deleting member with no unviewed message count
     old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert 'unviewedMessageCount' not in old_item
+    assert 'messagesUnviewedCount' not in old_item
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -132,9 +132,9 @@ def test_postprocess_record_member_deleted(chat_manager, chat, user1):
     assert chat_manager.user_manager.mock_calls == []
 
     # simulate deleting member with some unviewed message count
-    chat.member_dynamo.increment_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
     old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert old_item['unviewedMessageCount']['N'] == '1'
+    assert old_item['messagesUnviewedCount']['N'] == '1'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -144,9 +144,9 @@ def test_postprocess_record_member_deleted(chat_manager, chat, user1):
     ]
 
     # simulate deleting member with a zero unviewed message count
-    chat.member_dynamo.decrement_unviewed_message_count(chat.id, user1.id)
+    chat.member_dynamo.decrement_messages_unviewed_count(chat.id, user1.id)
     old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
-    assert old_item['unviewedMessageCount']['N'] == '0'
+    assert old_item['messagesUnviewedCount']['N'] == '0'
 
     # postprocess that, verify calls
     chat_manager.user_manager = Mock(chat_manager.user_manager)
@@ -166,8 +166,8 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
     assert user1_member_item['gsiK2SortKey'].split('/') == ['chat', chat.item['createdAt']]
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', chat.item['createdAt']]
-    assert 'unviewedMessageCount' not in user1_member_item
-    assert 'unviewedMessageCount' not in user2_member_item
+    assert 'messagesUnviewedCount' not in user1_member_item
+    assert 'messagesUnviewedCount' not in user2_member_item
     assert card_manager.get_card(spec1.card_id) is None
     assert card_manager.get_card(spec2.card_id) is None
 
@@ -181,8 +181,8 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
     assert user1_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
-    assert 'unviewedMessageCount' not in user1_member_item
-    assert user2_member_item['unviewedMessageCount'] == 1
+    assert 'messagesUnviewedCount' not in user1_member_item
+    assert user2_member_item['messagesUnviewedCount'] == 1
     assert card_manager.get_card(spec1.card_id) is None
     assert card_manager.get_card(spec2.card_id)
 
@@ -196,8 +196,8 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
     assert user1_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
-    assert user1_member_item['unviewedMessageCount'] == 1
-    assert user2_member_item['unviewedMessageCount'] == 1
+    assert user1_member_item['messagesUnviewedCount'] == 1
+    assert user2_member_item['messagesUnviewedCount'] == 1
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id)
 
@@ -220,8 +220,8 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
     assert user1_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
-    assert user1_member_item['unviewedMessageCount'] == 2
-    assert user2_member_item['unviewedMessageCount'] == 1
+    assert user1_member_item['messagesUnviewedCount'] == 2
+    assert user2_member_item['messagesUnviewedCount'] == 1
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id)
 
@@ -238,8 +238,8 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
     assert user1_member_item['gsiK2SortKey'].split('/') == ['chat', chat.item['createdAt']]
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', chat.item['createdAt']]
-    assert 'unviewedMessageCount' not in user1_member_item
-    assert 'unviewedMessageCount' not in user2_member_item
+    assert 'messagesUnviewedCount' not in user1_member_item
+    assert 'messagesUnviewedCount' not in user2_member_item
     assert card_manager.get_card(spec1.card_id) is None
     assert card_manager.get_card(spec2.card_id) is None
 
@@ -253,8 +253,8 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
     assert user1_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
-    assert user1_member_item['unviewedMessageCount'] == 1
-    assert user2_member_item['unviewedMessageCount'] == 1
+    assert user1_member_item['messagesUnviewedCount'] == 1
+    assert user2_member_item['messagesUnviewedCount'] == 1
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id)
 
@@ -275,24 +275,24 @@ def test_postprocess_chat_message_deleted(
     chat.refresh_item()
     assert chat.item['messagesCount'] == 2
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
-    assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 1
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
 
     # postprocess deleting the message user2 viewed, verify state
     chat_manager.postprocess_chat_message_deleted(chat.id, message2.id, user1.id)
     chat.refresh_item()
     assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
-    assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 1
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
 
     # postprocess deleting the message user2 did not view, verify state
     chat_manager.postprocess_chat_message_deleted(chat.id, message1.id, user1.id)
     chat.refresh_item()
     assert chat.item['messagesCount'] == 0
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
-    assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 0
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
 
 
 def test_postprocess_chat_message_view_added(chat_manager, card_manager, chat, user1, user2, caplog):
@@ -302,12 +302,12 @@ def test_postprocess_chat_message_view_added(chat_manager, card_manager, chat, u
     chat.refresh_item()
     assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
-    assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 1
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
 
     # postprocess adding a view, verify state
     chat_manager.postprocess_chat_message_view_added(chat.id, user2.id)
     chat.refresh_item()
     assert chat.item['messagesCount'] == 1
-    assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 0
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
