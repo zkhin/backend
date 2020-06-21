@@ -71,6 +71,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.self.chats.items).toHaveLength(1)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
   expect(resp.data.self.chats.items[0].messageCount).toBe(3)
+  expect(resp.data.self.chats.items[0].messagesCount).toBe(3)
   expect(resp.data.self.chats.items[0].createdAt < resp.data.self.chats.items[0].lastMessageActivityAt).toBe(true)
 
   // check other1 has the chat
@@ -100,6 +101,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(5)
+  expect(resp.data.chat.messagesCount).toBe(5)
   expect(resp.data.chat.messages.items).toHaveLength(5)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
   expect(resp.data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
@@ -120,6 +122,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.name).toBe('new name')
   expect(resp.data.chat.messageCount).toBe(6)
+  expect(resp.data.chat.messagesCount).toBe(6)
   expect(resp.data.chat.messages.items).toHaveLength(6)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
   expect(resp.data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
@@ -147,6 +150,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.name).toBeNull()
   expect(resp.data.chat.messageCount).toBe(7)
+  expect(resp.data.chat.messagesCount).toBe(7)
   expect(resp.data.chat.messages.items).toHaveLength(7)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
   expect(resp.data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
@@ -303,6 +307,7 @@ test('Create a group chat with just us and without a name, add people to it and 
   expect(resp.data.self.chats.items).toHaveLength(1)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
   expect(resp.data.self.chats.items[0].messageCount).toBe(3)
+  expect(resp.data.self.chats.items[0].messagesCount).toBe(3)
 
   // check other can directly access the chat, and they see the system message from adding a user
   resp = await otherClient.query({query: queries.chat, variables: {chatId}})
@@ -331,6 +336,7 @@ test('Create a group chat with just us and without a name, add people to it and 
   expect(chat.users.items).toHaveLength(2)
   expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
   expect(chat.messageCount).toBe(5)
+  expect(chat.messagesCount).toBe(5)
   expect(chat.messages.items).toHaveLength(5)
   expect(chat.messages.items[1].messageId).toBe(messageId1)
   expect(chat.messages.items[3].messageId).toBe(messageId2)

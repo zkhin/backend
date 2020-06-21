@@ -56,7 +56,7 @@ class Chat:
             return
         self.item = self.dynamo.update_name(self.id, name)
         self.chat_message_manager.add_system_message_group_name_edited(self.id, edited_by_user, name)
-        self.item['messageCount'] = self.item.get('messageCount', 0) + 1
+        self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
         return self
 
     def add(self, added_by_user, user_ids, now=None):
@@ -103,7 +103,7 @@ class Chat:
 
         if users:
             self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user, users, now=now)
-            self.item['messageCount'] = self.item.get('messageCount', 0) + 1
+            self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
 
     def leave(self, user):
         if self.type != enums.ChatType.GROUP:
@@ -128,7 +128,7 @@ class Chat:
             self.delete_group_chat()
         else:
             self.chat_message_manager.add_system_message_left_group(self.id, user)
-            self.item['messageCount'] = self.item.get('messageCount', 0) + 1
+            self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
 
         return self
 

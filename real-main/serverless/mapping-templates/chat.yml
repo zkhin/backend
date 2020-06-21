@@ -16,3 +16,8 @@
   field: messageCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl
+
+- type: Chat
+  field: messagesCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl

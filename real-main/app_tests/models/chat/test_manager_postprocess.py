@@ -160,7 +160,7 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
 
     # verify starting state
     chat.refresh_item()
-    assert 'messageCount' not in chat.item
+    assert 'messagesCount' not in chat.item
     assert 'lastMessageActivityAt' not in chat.item
     user1_member_item = chat.member_dynamo.get(chat.id, user1.id)
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
@@ -175,7 +175,7 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
     now = pendulum.now('utc')
     chat_manager.postprocess_chat_message_added(chat.id, user1.id, now)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 1
+    assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
     user1_member_item = chat.member_dynamo.get(chat.id, user1.id)
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
@@ -190,7 +190,7 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
     now = pendulum.now('utc')
     chat_manager.postprocess_chat_message_added(chat.id, user2.id, now)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 2
+    assert chat.item['messagesCount'] == 2
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
     user1_member_item = chat.member_dynamo.get(chat.id, user1.id)
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
@@ -214,7 +214,7 @@ def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1,
 
     # verify final state
     chat.refresh_item()
-    assert chat.item['messageCount'] == 3
+    assert chat.item['messagesCount'] == 3
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
     user1_member_item = chat.member_dynamo.get(chat.id, user1.id)
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
@@ -232,7 +232,7 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
 
     # verify starting state
     chat.refresh_item()
-    assert 'messageCount' not in chat.item
+    assert 'messagesCount' not in chat.item
     assert 'lastMessageActivityAt' not in chat.item
     user1_member_item = chat.member_dynamo.get(chat.id, user1.id)
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
@@ -247,7 +247,7 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
     now = pendulum.now('utc')
     chat_manager.postprocess_chat_message_added(chat.id, None, now)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 1
+    assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
     user1_member_item = chat.member_dynamo.get(chat.id, user1.id)
     user2_member_item = chat.member_dynamo.get(chat.id, user2.id)
@@ -273,7 +273,7 @@ def test_postprocess_chat_message_deleted(
 
     # verify starting state
     chat.refresh_item()
-    assert chat.item['messageCount'] == 2
+    assert chat.item['messagesCount'] == 2
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
     assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
     assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 1
@@ -281,7 +281,7 @@ def test_postprocess_chat_message_deleted(
     # postprocess deleting the message user2 viewed, verify state
     chat_manager.postprocess_chat_message_deleted(chat.id, message2.id, user1.id)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 1
+    assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
     assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
     assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 1
@@ -289,7 +289,7 @@ def test_postprocess_chat_message_deleted(
     # postprocess deleting the message user2 did not view, verify state
     chat_manager.postprocess_chat_message_deleted(chat.id, message1.id, user1.id)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 0
+    assert chat.item['messagesCount'] == 0
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
     assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
     assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 0
@@ -300,7 +300,7 @@ def test_postprocess_chat_message_view_added(chat_manager, card_manager, chat, u
     now = pendulum.now('utc')
     chat_manager.postprocess_chat_message_added(chat.id, user1.id, now)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 1
+    assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now
     assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
     assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 1
@@ -308,6 +308,6 @@ def test_postprocess_chat_message_view_added(chat_manager, card_manager, chat, u
     # postprocess adding a view, verify state
     chat_manager.postprocess_chat_message_view_added(chat.id, user2.id)
     chat.refresh_item()
-    assert chat.item['messageCount'] == 1
+    assert chat.item['messagesCount'] == 1
     assert 'unviewedMessageCount' not in chat.member_dynamo.get(chat.id, user1.id)
     assert chat.member_dynamo.get(chat.id, user2.id)['unviewedMessageCount'] == 0

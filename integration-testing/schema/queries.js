@@ -462,7 +462,6 @@ module.exports.chat = gql`
   query Chat($chatId: ID!, $reverse: Boolean) {
     chat(chatId: $chatId) {
       ...ChatFragment
-      messageCount
       messages(reverse: $reverse) {
         items {
           ...ChatMessageFragment

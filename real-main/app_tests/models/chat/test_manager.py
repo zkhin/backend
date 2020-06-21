@@ -70,7 +70,7 @@ def test_add_direct_chat(chat_manager, user1, user2):
     assert chat.type == ChatType.DIRECT
     assert chat.item['createdAt'] == now.to_iso8601_string()
     assert chat.item['createdByUserId'] == user1.id
-    assert chat.item.get('messageCount', 0) == 0
+    assert chat.item.get('messagesCount', 0) == 0
     assert chat.item.get('name') is None
 
     # verify user's chat counts have incremented
@@ -96,7 +96,7 @@ def test_add_minimal_group_chat(chat_manager, user1):
     after = pendulum.now('utc')
     assert chat.id == chat_id
     assert chat.type == ChatType.GROUP
-    assert chat.item.get('messageCount', 0) == 0
+    assert chat.item.get('messagesCount', 0) == 0
     assert chat.item.get('name') is None
     assert chat.item['createdByUserId'] == user1.id
     created_at = pendulum.parse(chat.item['createdAt'])
@@ -129,7 +129,7 @@ def test_add_maximal_group_chat(chat_manager, user1):
     chat = chat_manager.add_group_chat(chat_id, user1, name=name, now=now)
     assert chat.id == chat_id
     assert chat.type == ChatType.GROUP
-    assert chat.item.get('messageCount', 0) == 0
+    assert chat.item.get('messagesCount', 0) == 0
     assert chat.item['name'] == name
     assert chat.item['createdByUserId'] == user1.id
     assert pendulum.parse(chat.item['createdAt']) == now

@@ -10,6 +10,7 @@ module.exports.chat = gql`
     createdAt
     lastMessageActivityAt
     messageCount
+    messagesCount
     userCount
     users {
       items {

@@ -74,6 +74,7 @@ test('Create a direct chat', async () => {
   expect(resp.data.user.directChat.chatId).toBe(chatId)
   expect(resp.data.user.directChat.lastMessageActivityAt).toBe(chatCreatedAt)
   expect(resp.data.user.directChat.messageCount).toBe(1)
+  expect(resp.data.user.directChat.messagesCount).toBe(1)
   expect(resp.data.user.chatCount).toBeNull()
   expect(resp.data.user.chats).toBeNull()
 

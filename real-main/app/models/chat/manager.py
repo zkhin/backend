@@ -136,7 +136,7 @@ class ChatManager:
     def postprocess_chat_message_added(self, chat_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.
         self.dynamo.update_last_message_activity_at(chat_id, created_at, fail_soft=True)
-        self.dynamo.increment_message_count(chat_id)
+        self.dynamo.increment_messages_count(chat_id)
 
         # for each memeber of the chat
         #   - update the last message activity timestamp (controls chat ordering)
@@ -150,7 +150,7 @@ class ChatManager:
 
     def postprocess_chat_message_deleted(self, chat_id, message_id, author_user_id):
         # Note that dynamo has no support for batch updates.
-        self.dynamo.decrement_message_count(chat_id, fail_soft=True)
+        self.dynamo.decrement_messages_count(chat_id, fail_soft=True)
 
         # for each memeber of the chat other than the author
         #   - if they've viewed the message, delete the view record

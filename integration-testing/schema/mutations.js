@@ -593,7 +593,6 @@ module.exports.createDirectChat = gql`
   mutation CreateDirectChat($chatId: ID!, $userId: ID!, $messageId: ID!, $messageText: String!) {
     createDirectChat(chatId: $chatId, userId: $userId, messageId: $messageId, messageText: $messageText) {
       ...ChatFragment
-      messageCount
       messages {
         items {
           ...ChatMessageFragment
@@ -616,7 +615,6 @@ module.exports.createGroupChat = gql`
       messageText: $messageText
     ) {
       ...ChatFragment
-      messageCount
       messages {
         items {
           ...ChatMessageFragment
@@ -633,7 +631,6 @@ module.exports.editGroupChat = gql`
   mutation EditGroupChat($chatId: ID!, $name: String!) {
     editGroupChat(chatId: $chatId, name: $name) {
       ...ChatFragment
-      messageCount
       messages {
         items {
           ...ChatMessageFragment
@@ -650,7 +647,6 @@ module.exports.addToGroupChat = gql`
   mutation AddToGroupChat($chatId: ID!, $userIds: [ID!]!) {
     addToGroupChat(chatId: $chatId, userIds: $userIds) {
       ...ChatFragment
-      messageCount
       messages {
         items {
           ...ChatMessageFragment
@@ -667,7 +663,6 @@ module.exports.leaveGroupChat = gql`
   mutation LeaveGroupChat($chatId: ID!) {
     leaveGroupChat(chatId: $chatId) {
       ...ChatFragment
-      messageCount
       messages {
         items {
           ...ChatMessageFragment

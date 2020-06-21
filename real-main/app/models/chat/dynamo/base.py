@@ -98,21 +98,21 @@ class ChatDynamo:
                 return
             raise
 
-    def increment_message_count(self, chat_id):
+    def increment_messages_count(self, chat_id):
         query_kwargs = {
             'Key': self.pk(chat_id),
-            'UpdateExpression': 'ADD messageCount :one',
+            'UpdateExpression': 'ADD messagesCount :one',
             'ExpressionAttributeValues': {':one': 1},
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }
         return self.client.update_item(query_kwargs)
 
-    def decrement_message_count(self, chat_id, fail_soft=False):
+    def decrement_messages_count(self, chat_id, fail_soft=False):
         query_kwargs = {
             'Key': self.pk(chat_id),
-            'UpdateExpression': 'ADD messageCount :neg_one',
+            'UpdateExpression': 'ADD messagesCount :neg_one',
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND messageCount > :zero',
+            'ConditionExpression': 'attribute_exists(partitionKey) AND messagesCount > :zero',
         }
         try:
             return self.client.update_item(query_kwargs)
