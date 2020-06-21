@@ -1,0 +1,14 @@
+#if (! $util.isNull($ctx.source.messagesUnviewedCount))
+  #return ($ctx.source.messagesUnviewedCount)
+#end
+
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+
+{
+    "version": "2018-05-29",
+    "operation": "GetItem",
+    "key": {
+        "partitionKey": { "S": "chat/$ctx.source.chatId" },
+        "sortKey": { "S": "member/$callerUserId" }
+    }
+}

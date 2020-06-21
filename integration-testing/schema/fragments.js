@@ -11,6 +11,7 @@ module.exports.chat = gql`
     lastMessageActivityAt
     messageCount
     messagesCount
+    messagesUnviewedCount
     userCount
     users {
       items {
