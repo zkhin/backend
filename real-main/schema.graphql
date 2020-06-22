@@ -438,7 +438,6 @@ type Chat {
   messages(limit: Int, nextToken: String, reverse: Boolean): PaginatedChatMessages!
   messageCount: Int!  # DEPRECATED: use messagesCount
   messagesCount(viewedStatus: ViewedStatus): Int!
-  messagesUnviewedCount: Int!
 }
 
 type PaginatedChats {

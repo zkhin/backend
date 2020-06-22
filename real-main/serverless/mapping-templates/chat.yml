@@ -20,7 +20,3 @@
 - type: Chat
   field: messagesCount
   dataSource: DynamodbDataSource
-
-- type: Chat
-  field: messagesUnviewedCount
-  dataSource: DynamodbDataSource
