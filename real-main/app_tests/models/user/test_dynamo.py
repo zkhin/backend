@@ -764,7 +764,7 @@ def test_transact_card_added_and_transact_card_deleted(user_dynamo):
         ],
         ['increment_followed_count', 'decrement_followed_count', 'followedCount'],
         ['increment_follower_count', 'decrement_follower_count', 'followerCount'],
-        ['increment_requested_follower_count', 'decrement_requested_follower_count', 'requestedFollowerCount'],
+        ['increment_followers_requested_count', 'decrement_followers_requested_count', 'followersRequestedCount'],
     ],
 )
 def test_increment_decrement_chats_with_unviewed_messages_count(

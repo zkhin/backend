@@ -135,8 +135,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 self.pinpoint_client.delete_user_endpoints(user_id)
 
     def postprocess_requested_followers_card(self, user_id, old_item, new_item):
-        old_requested_followers_count = int((old_item or {}).get('requestedFollowerCount', {}).get('N', '0'))
-        new_requested_followers_count = int((new_item or {}).get('requestedFollowerCount', {}).get('N', '0'))
+        old_requested_followers_count = int((old_item or {}).get('followersRequestedCount', {}).get('N', '0'))
+        new_requested_followers_count = int((new_item or {}).get('followersRequestedCount', {}).get('N', '0'))
         card_spec = RequestedFollowersCardSpec(user_id)
 
         if old_requested_followers_count == 0 and new_requested_followers_count > 0:

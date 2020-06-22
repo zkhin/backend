@@ -384,8 +384,8 @@ class UserDynamo:
     def decrement_follower_count(self, user_id, fail_soft=False):
         return self._decrement_count('followerCount', user_id, fail_soft=fail_soft)
 
-    def increment_requested_follower_count(self, user_id):
-        return self._increment_count('requestedFollowerCount', user_id)
+    def increment_followers_requested_count(self, user_id):
+        return self._increment_count('followersRequestedCount', user_id)
 
-    def decrement_requested_follower_count(self, user_id, fail_soft=False):
-        return self._decrement_count('requestedFollowerCount', user_id, fail_soft=fail_soft)
+    def decrement_followers_requested_count(self, user_id, fail_soft=False):
+        return self._decrement_count('followersRequestedCount', user_id, fail_soft=fail_soft)

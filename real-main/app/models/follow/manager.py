@@ -66,11 +66,11 @@ class FollowManager:
             self.user_manager.dynamo.decrement_followed_count(follower_user_id, fail_soft=True)
             self.user_manager.dynamo.decrement_follower_count(followed_user_id, fail_soft=True)
 
-        # incr/decr requestedFollowerCount if follow status changed to/from REQUESTED and something else
+        # incr/decr followersRequestedCount if follow status changed to/from REQUESTED and something else
         if old_status != enums.FollowStatus.REQUESTED and new_status == enums.FollowStatus.REQUESTED:
-            self.user_manager.dynamo.increment_requested_follower_count(followed_user_id)
+            self.user_manager.dynamo.increment_followers_requested_count(followed_user_id)
         if old_status == enums.FollowStatus.REQUESTED and new_status != enums.FollowStatus.REQUESTED:
-            self.user_manager.dynamo.decrement_requested_follower_count(followed_user_id, fail_soft=True)
+            self.user_manager.dynamo.decrement_followers_requested_count(followed_user_id, fail_soft=True)
 
     def get_follow_status(self, follower_user_id, followed_user_id):
         if follower_user_id == followed_user_id:

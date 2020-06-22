@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from migrations.user_9_to_10_fill_requested_follower_count import Migration
+from migrations.user_9_to_10_fill_followers_requested_count import Migration
 
 
 @pytest.fixture
@@ -114,7 +114,7 @@ def test_migrate_two_requested(dynamo_client, dynamo_table, caplog, user_two_req
 
     # verify final state
     new_item = dynamo_table.get_item(Key=key)['Item']
-    assert new_item.pop('requestedFollowerCount') == 2
+    assert new_item.pop('followersRequestedCount') == 2
     assert new_item.pop('schemaVersion') == 10
     assert item.pop('schemaVersion') == 9
     assert new_item == item
@@ -126,11 +126,11 @@ def test_migrate_two_requested_one_already_counted(dynamo_client, dynamo_table, 
 
     dynamo_table.update_item(
         Key=key,
-        UpdateExpression='SET requestedFollowerCount = :rfc',
+        UpdateExpression='SET followersRequestedCount = :rfc',
         ConditionExpression='attribute_exists(partitionKey)',
         ExpressionAttributeValues={':rfc': 1},
     )
-    item['requestedFollowerCount'] = 1
+    item['followersRequestedCount'] = 1
 
     # verify starting state
     assert dynamo_table.get_item(Key=key)['Item'] == item
@@ -145,9 +145,9 @@ def test_migrate_two_requested_one_already_counted(dynamo_client, dynamo_table, 
 
     # verify final state
     new_item = dynamo_table.get_item(Key=key)['Item']
-    assert new_item.pop('requestedFollowerCount') == 2
+    assert new_item.pop('followersRequestedCount') == 2
     assert new_item.pop('schemaVersion') == 10
-    assert item.pop('requestedFollowerCount') == 1
+    assert item.pop('followersRequestedCount') == 1
     assert item.pop('schemaVersion') == 9
     assert new_item == item
 
@@ -171,8 +171,8 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, user_none_request
     # verify final state
     for key, item in zip(keys, items):
         new_item = dynamo_table.get_item(Key=key)['Item']
-        new_item.pop('requestedFollowerCount', None)  # varies by item
-        item.pop('requestedFollowerCount', None)  # varies by item
+        new_item.pop('followersRequestedCount', None)  # varies by item
+        item.pop('followersRequestedCount', None)  # varies by item
         assert new_item.pop('schemaVersion') == 10
         assert item.pop('schemaVersion') == 9
         assert new_item == item
@@ -184,7 +184,7 @@ def test_migrate_two_requested_race_condition(dynamo_client, dynamo_table, caplo
 
     dynamo_table.update_item(
         Key=key,
-        UpdateExpression='SET requestedFollowerCount = :rfc',
+        UpdateExpression='SET followersRequestedCount = :rfc',
         ConditionExpression='attribute_exists(partitionKey)',
         ExpressionAttributeValues={':rfc': 1},
     )
@@ -197,7 +197,7 @@ def test_migrate_two_requested_race_condition(dynamo_client, dynamo_table, caplo
     # migrate, check logging
     migration = Migration(dynamo_client, dynamo_table)
     with pytest.raises(dynamo_client.exceptions.ConditionalCheckFailedException):
-        migration.set_requested_follower_count(item, 2)
+        migration.set_followers_requested_count(item, 2)
     assert len(caplog.records) == 1
     assert item['userId'] in caplog.records[0].msg
     assert '`2`' in caplog.records[0].msg
@@ -212,7 +212,7 @@ def test_migrate_two_requested_race_condition_2(dynamo_client, dynamo_table, cap
 
     dynamo_table.update_item(
         Key=key,
-        UpdateExpression='SET requestedFollowerCount = :rfc',
+        UpdateExpression='SET followersRequestedCount = :rfc',
         ConditionExpression='attribute_exists(partitionKey)',
         ExpressionAttributeValues={':rfc': 1},
     )
@@ -220,7 +220,7 @@ def test_migrate_two_requested_race_condition_2(dynamo_client, dynamo_table, cap
 
     dynamo_table.update_item(
         Key=key,
-        UpdateExpression='REMOVE requestedFollowerCount',
+        UpdateExpression='REMOVE followersRequestedCount',
         ConditionExpression='attribute_exists(partitionKey)',
     )
     updated_item = dynamo_table.get_item(Key=key)['Item']
@@ -232,7 +232,7 @@ def test_migrate_two_requested_race_condition_2(dynamo_client, dynamo_table, cap
     # migrate, check logging
     migration = Migration(dynamo_client, dynamo_table)
     with pytest.raises(dynamo_client.exceptions.ConditionalCheckFailedException):
-        migration.set_requested_follower_count(item, 2)
+        migration.set_followers_requested_count(item, 2)
     assert len(caplog.records) == 1
     assert item['userId'] in caplog.records[0].msg
     assert '`2`' in caplog.records[0].msg

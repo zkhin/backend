@@ -9,7 +9,7 @@ DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
 
 
 class Migration:
-    "Fill User.requestedFollowerCount"
+    "Fill User.followersRequestedCount"
 
     from_version = 9
     to_version = 10
@@ -20,8 +20,8 @@ class Migration:
 
     def run(self):
         for user in self.generate_all_users_to_migrate():
-            count = self.get_requested_follower_count(user)
-            self.set_requested_follower_count(user, count)
+            count = self.get_followers_requested_count(user)
+            self.set_followers_requested_count(user, count)
 
     def generate_all_users_to_migrate(self):
         scan_kwargs = {
@@ -36,7 +36,7 @@ class Migration:
                 break
             scan_kwargs['ExclusiveStartKey'] = paginated['LastEvaluatedKey']
 
-    def get_requested_follower_count(self, user):
+    def get_followers_requested_count(self, user):
         user_id = user['userId']
         query_kwargs = {
             'KeyConditionExpression': 'gsiA2PartitionKey = :pk AND begins_with(gsiA2SortKey, :sk_prefix)',
@@ -52,7 +52,7 @@ class Migration:
             query_kwargs['ExclusiveStartKey'] = paginated['LastEvaluatedKey']
         return count
 
-    def set_requested_follower_count(self, user, count):
+    def set_followers_requested_count(self, user, count):
         user_id = user['userId']
         kwargs = {
             'Key': {k: user[k] for k in ('partitionKey', 'sortKey')},
@@ -62,19 +62,19 @@ class Migration:
         }
 
         if count > 0:
-            kwargs['UpdateExpression'] += ', requestedFollowerCount = :rfc'
+            kwargs['UpdateExpression'] += ', followersRequestedCount = :rfc'
             kwargs['ExpressionAttributeValues'][':rfc'] = count
         if count == 0:
-            kwargs['UpdateExpression'] += ' REMOVE requestedFollowerCount'
+            kwargs['UpdateExpression'] += ' REMOVE followersRequestedCount'
 
-        org_count = user.get('requestedFollowerCount')
+        org_count = user.get('followersRequestedCount')
         if org_count is None:
-            kwargs['ConditionExpression'] += ' AND attribute_not_exists(requestedFollowerCount)'
+            kwargs['ConditionExpression'] += ' AND attribute_not_exists(followersRequestedCount)'
         else:
-            kwargs['ConditionExpression'] += ' AND requestedFollowerCount = :org_rfc'
+            kwargs['ConditionExpression'] += ' AND followersRequestedCount = :org_rfc'
             kwargs['ExpressionAttributeValues'][':org_rfc'] = org_count
 
-        logger.warning(f'Migrating user `{user_id}`: setting requestedFollowerCount to `{count}`')
+        logger.warning(f'Migrating user `{user_id}`: setting followersRequestedCount to `{count}`')
         self.dynamo_table.update_item(**kwargs)
 
 

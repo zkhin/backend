@@ -169,7 +169,7 @@ def test_postprocess_decrements_follower_followed_counts(
     'old_follow_status, new_follow_status', [[None, FollowStatus.REQUESTED]],
 )
 @pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
-def test_postprocess_increments_requested_follower_count(
+def test_postprocess_increments_followers_requested_count(
     follow_manager, user1, user2, follow_deets, old_follow_status, new_follow_status
 ):
     item, typed_pk, pk, sk = follow_deets
@@ -189,11 +189,11 @@ def test_postprocess_increments_requested_follower_count(
         new_item = None
 
     # check starting state, postprocess, check final state, repeat
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 0
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
     follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 1
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 1
     follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 2
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 2
 
 
 # all the expected state changes that don't change the requested follower count
@@ -208,7 +208,7 @@ def test_postprocess_increments_requested_follower_count(
     ],
 )
 @pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
-def test_postprocess_no_change_requested_follower_count(
+def test_postprocess_no_change_followers_requested_count(
     follow_manager, user1, user2, follow_deets, old_follow_status, new_follow_status
 ):
     item, typed_pk, pk, sk = follow_deets
@@ -228,11 +228,11 @@ def test_postprocess_no_change_requested_follower_count(
         new_item = None
 
     # check starting state, postprocess, check final state, repeat
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 0
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
     follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 0
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
     follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 0
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
 
 
 # all the expected state changes that decrement the requested follower count
@@ -245,7 +245,7 @@ def test_postprocess_no_change_requested_follower_count(
     ],
 )
 @pytest.mark.parametrize('follow_deets', pytest.lazy_fixture(['follow_deets_new_pk', 'follow_deets_old_pk']))
-def test_postprocess_decrements_requested_follower_count(
+def test_postprocess_decrements_followers_requested_count(
     follow_manager, user1, user2, follow_deets, old_follow_status, new_follow_status, caplog
 ):
     item, typed_pk, pk, sk = follow_deets
@@ -255,7 +255,7 @@ def test_postprocess_decrements_requested_follower_count(
     follow_manager.dynamo.update_following_status(item, FollowStatus.REQUESTED)
     new_item = follow_manager.dynamo.client.get_typed_item(typed_pk)
     follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 1
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 1
 
     if old_follow_status:
         follow_manager.dynamo.update_following_status(item, old_follow_status)
@@ -272,14 +272,14 @@ def test_postprocess_decrements_requested_follower_count(
         new_item = None
 
     # check starting state, postprocess, check final state
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 1
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 1
     follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 0
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
 
     # postprocess failed decrement, verify fails softly
     with caplog.at_level(logging.WARNING):
         follow_manager.postprocess_record(pk, sk, old_item, new_item)
-    records = [rec for rec in caplog.records if 'requestedFollowerCount' in rec.msg]
+    records = [rec for rec in caplog.records if 'followersRequestedCount' in rec.msg]
     assert len(records) == 1
     assert all(x in records[0].msg for x in ('Failed to decrement', user2.id))
-    assert user2.refresh_item().item.get('requestedFollowerCount', 0) == 0
+    assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
