@@ -80,6 +80,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.feed.items).toHaveLength(1)
   expect(ourUserFull.followCountsHidden).toBe(false)
   expect(ourUserFull.followerCount).toBe(0)
+  expect(ourUserFull.followersCount).toBe(0)
+  expect(ourUserFull.followersRequestedCount).toBe(0)
   expect(ourUserFull.followedCount).toBe(0)
   expect(ourUserFull.followerStatus).toBe('SELF')
   expect(ourUserFull.followedStatus).toBe('SELF')
@@ -133,6 +135,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.followCountsHidden = null
   ourUserFull.followedCount = null
   ourUserFull.followerCount = null
+  ourUserFull.followersCount = null
+  ourUserFull.followersRequestedCount = null
   ourUserFull.followedStatus = 'NOT_FOLLOWING'
   ourUserFull.followerStatus = 'NOT_FOLLOWING'
   ourUserFull.followedUsers = null

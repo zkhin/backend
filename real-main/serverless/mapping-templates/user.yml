@@ -24,6 +24,11 @@
   response: PassThru.response.vtl
 
 - type: User
+  field: followersCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
   field: followedUsers
   dataSource: DynamodbDataSource
 

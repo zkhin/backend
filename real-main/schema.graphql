@@ -357,7 +357,8 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followerUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
-  followerCount: Int # only counts users with followStatus = FOLLOWING
+  followerCount: Int # DEPRECATED: use followersCount
+  followersCount(followStatus: FollowStatus = FOLLOWING): Int  # only supports FOLLOWING, REQUESTED (so far)
 
   # Users the user has blocked
   #   - private to user themselves only
