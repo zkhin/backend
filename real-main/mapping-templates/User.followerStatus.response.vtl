@@ -2,16 +2,10 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-## order doesn't really matter, as in general only one of these will exist
-#set ($result = $ctx.result.data.${table}[0])
-#if ($util.isNull($result))
-  #set ($result = $ctx.result.data.${table}[1])
-#end
-
-#if ($util.isNull($result))
+#if ($util.isNull($ctx.result))
   #set ($status = 'NOT_FOLLOWING')
 #else
-  #set ($status = $result.followStatus)
+  #set ($status = $ctx.result.followStatus)
 #end
 
 $util.toJson($status)

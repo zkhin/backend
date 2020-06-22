@@ -9,23 +9,11 @@
 #set ($followerUserId = $ctx.source.userId)
 #set ($followedUserId = $ctx.identity.cognitoIdentityId)
 
-#set ($keys = [
-  {
-    'partitionKey': {'S': "user/$followedUserId"},
-    'sortKey': {'S': "follower/$followerUserId"}
-  }, {
-    'partitionKey': {'S': "following/$followerUserId/$followedUserId"},
-    'sortKey': {'S': '-'}
-  }
-])
-
-
 {
   "version": "2018-05-29",
-  "operation": "BatchGetItem",
-  "tables": {
-    "${table}": {
-      "keys": $util.toJson($keys)
-    }
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": {"S": "user/$followedUserId"},
+    "sortKey": {"S": "follower/$followerUserId"}
   }
 }

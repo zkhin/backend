@@ -22,7 +22,6 @@
     - Users.batchGet
     - Users.batchGet.blockerStatus
     - Users.filterBy.blockerStatus
-    - Users.batchGet.followedStatusOld
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus
     - Users.endPipeline
@@ -79,7 +78,6 @@
     - Users.batchGet
     - Users.batchGet.blockerStatus
     - Users.filterBy.blockerStatus
-    - Users.batchGet.followedStatusOld
     - Users.batchGet.followedStatus
 
 - type: Post

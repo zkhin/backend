@@ -147,7 +147,6 @@ custom:
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatusOld
           - Users.batchGet.followedStatus
           - PaginatedChatMessages.items.endUserPipeline
 
@@ -171,7 +170,6 @@ custom:
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatusOld
           - Users.batchGet.followedStatus
           - Users.endPipeline
 
@@ -188,7 +186,6 @@ custom:
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatusOld
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
 
@@ -201,7 +198,6 @@ custom:
           - Users.batchGet
           - Users.batchGet.blockerStatus
           - Users.filterBy.blockerStatus
-          - Users.batchGet.followedStatusOld
           - Users.batchGet.followedStatus
 
     functionConfigurations:
@@ -215,9 +211,6 @@ custom:
       - dataSource: NoneDataSource
         name: Users.filterBy.blockerStatus
         response: PassThru.response.vtl
-
-      - dataSource: DynamodbDataSource
-        name: Users.batchGet.followedStatusOld
 
       - dataSource: DynamodbDataSource
         name: Users.batchGet.followedStatus
