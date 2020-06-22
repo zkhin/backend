@@ -8,6 +8,11 @@
   response: PassThru.response.vtl
 
 - type: Chat
+  field: usersCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: Chat
   field: messages
   dataSource: DynamodbDataSource
   response: PassThru.response.vtl

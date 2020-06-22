@@ -470,6 +470,7 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(2)
+  expect(resp.data.createGroupChat.usersCount).toBe(2)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
 
   // they block us

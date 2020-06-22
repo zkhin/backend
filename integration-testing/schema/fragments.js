@@ -14,6 +14,7 @@ module.exports.chat = gql`
     messagesViewedCount: messagesCount(viewedStatus: VIEWED)
     messagesUnviewedCount: messagesCount(viewedStatus: NOT_VIEWED)
     userCount
+    usersCount
     users {
       items {
         userId

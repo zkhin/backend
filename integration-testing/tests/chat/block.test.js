@@ -128,6 +128,7 @@ test('Blocking a user we are in a group chat with', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(2)
+  expect(resp.data.chat.usersCount).toBe(2)
   expect(resp.data.chat.users.items).toHaveLength(1)
   expect(resp.data.chat.users.items[0].userId).toBe(ourUserId)
   expect(resp.data.chat.messageCount).toBe(4)
@@ -143,6 +144,7 @@ test('Blocking a user we are in a group chat with', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(2)
+  expect(resp.data.chat.usersCount).toBe(2)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
   expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messagesCount).toBe(4)
@@ -171,6 +173,7 @@ test('Creating a group chat with users with have a blocking relationship skips t
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId1)
   expect(resp.data.createGroupChat.userCount).toBe(2)
+  expect(resp.data.createGroupChat.usersCount).toBe(2)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
 
   // check they cannot see that chat
@@ -185,6 +188,7 @@ test('Creating a group chat with users with have a blocking relationship skips t
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
   expect(resp.data.createGroupChat.userCount).toBe(1)
+  expect(resp.data.createGroupChat.usersCount).toBe(1)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId)).toEqual([theirUserId])
 
   // check we cannot see the chat
@@ -217,6 +221,7 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(1)
+  expect(resp.data.createGroupChat.usersCount).toBe(1)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 
   // check if we try to add other1 to the chat, it skips them
@@ -225,6 +230,7 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
   expect(resp.data.addToGroupChat.userCount).toBe(1)
+  expect(resp.data.addToGroupChat.usersCount).toBe(1)
   expect(resp.data.addToGroupChat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 
   // check we cannot other2 to it
@@ -233,6 +239,7 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
   expect(resp.data.addToGroupChat.userCount).toBe(1)
+  expect(resp.data.addToGroupChat.usersCount).toBe(1)
   expect(resp.data.addToGroupChat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 
   // check the chat still shows just us in it
@@ -240,6 +247,7 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(1)
+  expect(resp.data.chat.usersCount).toBe(1)
   expect(resp.data.chat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 })
 
@@ -261,6 +269,7 @@ test('Test create a group chat with two users that have a blocking relationship 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(3)
+  expect(resp.data.createGroupChat.usersCount).toBe(3)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, other1UserId, other2UserId].sort(),
   )
@@ -270,6 +279,7 @@ test('Test create a group chat with two users that have a blocking relationship 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(3)
+  expect(resp.data.chat.usersCount).toBe(3)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, other1UserId, other2UserId].sort(),
   )
@@ -279,6 +289,7 @@ test('Test create a group chat with two users that have a blocking relationship 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(3)
+  expect(resp.data.chat.usersCount).toBe(3)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other2UserId].sort())
 
   // check we see everyone in it
@@ -286,6 +297,7 @@ test('Test create a group chat with two users that have a blocking relationship 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(3)
+  expect(resp.data.chat.usersCount).toBe(3)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, other1UserId, other2UserId].sort(),
   )
