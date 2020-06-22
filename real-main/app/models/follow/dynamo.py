@@ -11,42 +11,27 @@ class FollowDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def new_pk(self, follower_user_id, followed_user_id):
+    def pk(self, follower_user_id, followed_user_id):
         return {
             'partitionKey': f'user/{followed_user_id}',
             'sortKey': f'follower/{follower_user_id}',
         }
 
-    def new_typed_pk(self, follower_user_id, followed_user_id):
+    def typed_pk(self, follower_user_id, followed_user_id):
         return {
             'partitionKey': {'S': f'user/{followed_user_id}'},
             'sortKey': {'S': f'follower/{follower_user_id}'},
         }
 
-    def old_pk(self, follower_user_id, followed_user_id):
-        return {
-            'partitionKey': f'following/{follower_user_id}/{followed_user_id}',
-            'sortKey': '-',
-        }
-
-    def old_typed_pk(self, follower_user_id, followed_user_id):
-        return {
-            'partitionKey': {'S': f'following/{follower_user_id}/{followed_user_id}'},
-            'sortKey': {'S': '-'},
-        }
-
     def get_following(self, follower_user_id, followed_user_id, strongly_consistent=False):
-        new_pk = self.new_pk(follower_user_id, followed_user_id)
-        old_pk = self.old_pk(follower_user_id, followed_user_id)
-        new_item = self.client.get_item(new_pk, ConsistentRead=strongly_consistent)
-        return new_item if new_item else self.client.get_item(old_pk, ConsistentRead=strongly_consistent)
+        pk = self.pk(follower_user_id, followed_user_id)
+        return self.client.get_item(pk, ConsistentRead=strongly_consistent)
 
-    def add_following(self, follower_user_id, followed_user_id, follow_status, use_old_pk=False):
+    def add_following(self, follower_user_id, followed_user_id, follow_status):
         followed_at_str = pendulum.now('utc').to_iso8601_string()
-        pk_getter = self.old_pk if use_old_pk else self.new_pk
         query_kwargs = {
             'Item': {
-                **pk_getter(follower_user_id, followed_user_id),
+                **self.pk(follower_user_id, followed_user_id),
                 'schemaVersion': 1,
                 'gsiA1PartitionKey': f'follower/{follower_user_id}',
                 'gsiA1SortKey': f'{follow_status}/{followed_at_str}',
