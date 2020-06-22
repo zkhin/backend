@@ -19,8 +19,7 @@
 
 - type: Chat
   field: messagesCount
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
+  dataSource: DynamodbDataSource
 
 - type: Chat
   field: messagesUnviewedCount
