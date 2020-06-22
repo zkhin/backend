@@ -22,6 +22,7 @@ test('Follow counts public user', async () => {
   let resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBe(0)
+  expect(resp.data.user.followedsCount).toBe(0)
   expect(resp.data.user.followerCount).toBe(0)
   expect(resp.data.user.followersCount).toBe(0)
   expect(resp.data.user.followersRequestedCount).toBeNull()
@@ -37,6 +38,7 @@ test('Follow counts public user', async () => {
   expect(resp.data.user.followersCount).toBe(1)
   expect(resp.data.user.followersRequestedCount).toBeNull()
   expect(resp.data.user.followedCount).toBe(0)
+  expect(resp.data.user.followedsCount).toBe(0)
 
   // verify thier requested followers count didn't change
   resp = await theirClient.query({query: queries.user, variables: {userId: theirUserId}})
@@ -45,6 +47,7 @@ test('Follow counts public user', async () => {
   expect(resp.data.user.followersCount).toBe(1)
   expect(resp.data.user.followersRequestedCount).toBe(0)
   expect(resp.data.user.followedCount).toBe(0)
+  expect(resp.data.user.followedsCount).toBe(0)
 
   // they follow us, their followed count increments
   resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
@@ -56,6 +59,7 @@ test('Follow counts public user', async () => {
   expect(resp.data.user.followerCount).toBe(1)
   expect(resp.data.user.followersCount).toBe(1)
   expect(resp.data.user.followedCount).toBe(1)
+  expect(resp.data.user.followedsCount).toBe(1)
 
   // unfollow, counts drop back down
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
@@ -65,6 +69,7 @@ test('Follow counts public user', async () => {
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBe(1)
+  expect(resp.data.user.followedsCount).toBe(1)
   expect(resp.data.user.followerCount).toBe(0)
   expect(resp.data.user.followersCount).toBe(0)
 
@@ -77,6 +82,7 @@ test('Follow counts public user', async () => {
   expect(resp.data.user.followerCount).toBe(0)
   expect(resp.data.user.followersCount).toBe(0)
   expect(resp.data.user.followedCount).toBe(0)
+  expect(resp.data.user.followedsCount).toBe(0)
 })
 
 test('Follow counts private user', async () => {
@@ -108,11 +114,13 @@ test('Follow counts private user', async () => {
   resp = await u1Client.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedCount).toBe(0)
+  expect(resp.data.self.followedsCount).toBe(0)
 
   // verify u1 cannot see u2's counts, lists
   resp = await u1Client.query({query: queries.user, variables: {userId: u2UserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBeNull()
+  expect(resp.data.user.followedsCount).toBeNull()
   expect(resp.data.user.followedUsers).toBeNull()
   expect(resp.data.user.followerCount).toBeNull()
   expect(resp.data.user.followersCount).toBeNull()
@@ -132,11 +140,13 @@ test('Follow counts private user', async () => {
   resp = await u1Client.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedCount).toBe(1)
+  expect(resp.data.self.followedsCount).toBe(1)
 
   // verify now u1 can see u2's counts, lists
   resp = await u1Client.query({query: queries.user, variables: {userId: u2UserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBe(0)
+  expect(resp.data.user.followedsCount).toBe(0)
   expect(resp.data.user.followedUsers.items).toHaveLength(0)
   expect(resp.data.user.followerCount).toBe(1)
   expect(resp.data.user.followersCount).toBe(1)
@@ -156,11 +166,13 @@ test('Follow counts private user', async () => {
   resp = await u1Client.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedCount).toBe(0)
+  expect(resp.data.self.followedsCount).toBe(0)
 
   // verify u1 cannot see u2's counts, lists
   resp = await u1Client.query({query: queries.user, variables: {userId: u2UserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBeNull()
+  expect(resp.data.user.followedsCount).toBeNull()
   expect(resp.data.user.followedUsers).toBeNull()
   expect(resp.data.user.followerCount).toBeNull()
   expect(resp.data.user.followersCount).toBeNull()
@@ -180,11 +192,13 @@ test('Follow counts private user', async () => {
   resp = await u1Client.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedCount).toBe(1)
+  expect(resp.data.self.followedsCount).toBe(1)
 
   // verify now u1 can see u2's counts, lists
   resp = await u1Client.query({query: queries.user, variables: {userId: u2UserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBe(0)
+  expect(resp.data.user.followedsCount).toBe(0)
   expect(resp.data.user.followedUsers.items).toHaveLength(0)
   expect(resp.data.user.followerCount).toBe(1)
   expect(resp.data.user.followersCount).toBe(1)
@@ -202,11 +216,13 @@ test('Follow counts private user', async () => {
   expect(resp.data.self.followersCount).toBe(0)
   expect(resp.data.self.followersRequestedCount).toBe(0)
   expect(resp.data.self.followedCount).toBe(0)
+  expect(resp.data.self.followedsCount).toBe(0)
 
   // verify u1 cannot see u2's counts, lists
   resp = await u1Client.query({query: queries.user, variables: {userId: u2UserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedCount).toBeNull()
+  expect(resp.data.user.followedsCount).toBeNull()
   expect(resp.data.user.followedUsers).toBeNull()
   expect(resp.data.user.followerCount).toBeNull()
   expect(resp.data.user.followersCount).toBeNull()
@@ -227,4 +243,5 @@ test('Follow counts private user', async () => {
   expect(resp.data.self.followersCount).toBe(0)
   expect(resp.data.self.followersRequestedCount).toBe(0)
   expect(resp.data.self.followedCount).toBe(0)
+  expect(resp.data.self.followedsCount).toBe(0)
 })

@@ -19,6 +19,11 @@
   response: PassThru.response.vtl
 
 - type: User
+  field: followedsCount
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
   field: followerCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl

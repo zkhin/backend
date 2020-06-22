@@ -159,6 +159,7 @@ module.exports.simpleUserFields = gql`
     followerStatus
     followCountsHidden
     followedCount
+    followedsCount
     followerCount
     followersCount
     followersRequestedCount: followersCount(followStatus: REQUESTED)
