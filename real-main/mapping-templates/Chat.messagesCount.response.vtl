@@ -3,7 +3,7 @@
 #end
 
 #set ($viewedStatus = $ctx.args.viewedStatus)
-#set ($totalMsgCnt = $util.defaultIfNull($ctx.source.messagesCount, $util.defaultIfNull($ctx.source.messageCount, 0)))
+#set ($totalMsgCnt = $util.defaultIfNull($ctx.source.messagesCount, 0))
 #set ($unviewedMsgCnt = $util.defaultIfNull($ctx.result.messagesUnviewedCount, 0))
 
 #if ($viewedStatus == 'VIEWED')

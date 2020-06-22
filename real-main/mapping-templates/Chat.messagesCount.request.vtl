@@ -1,6 +1,6 @@
 #set ($viewedStatus = $ctx.args.viewedStatus)
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
-#set ($totalMsgCnt = $util.defaultIfNull($ctx.source.messagesCount, $util.defaultIfNull($ctx.source.messageCount, 0)))
+#set ($totalMsgCnt = $util.defaultIfNull($ctx.source.messagesCount, 0))
 
 #if ($util.isNull($viewedStatus))
   #return ($totalMsgCnt)
