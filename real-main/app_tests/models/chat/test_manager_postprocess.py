@@ -154,6 +154,153 @@ def test_postprocess_record_member_deleted(chat_manager, chat, user1):
     assert chat_manager.user_manager.mock_calls == []
 
 
+def test_postprocess_record_view_added_edited_deleted(chat_manager, card_manager, chat, user1):
+    card_spec = ChatCardSpec(user1.id)
+
+    typed_pk = chat.view_dynamo.typed_pk(chat.id, user1.id)
+    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
+    old_item = None
+
+    # simulate a new view
+    chat.record_view_count(user1.id, 2)
+    new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert new_item['viewCount']['N'] == '2'
+    old_item = None
+
+    # set up the card
+    card_manager.add_card_by_spec_if_dne(card_spec)
+    assert card_manager.get_card(card_spec.card_id)
+
+    # set up the messagesUnviewedCount so it can be cleared
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+
+    # postprocess the add, verify state changed
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert card_manager.get_card(card_spec.card_id) is None
+
+    # simulate recording another view on a chat that's already been viewed
+    old_item = new_item
+    chat.record_view_count(user1.id, 3)
+    new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert new_item['viewCount']['N'] == '5'
+
+    # set up the card again
+    card_manager.add_card_by_spec_if_dne(card_spec)
+    assert card_manager.get_card(card_spec.card_id)
+
+    # set up the messagesUnviewedCount so it can be cleared
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+
+    # postprocess the edit, verify state changed
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert card_manager.get_card(card_spec.card_id) is None
+
+    # simulate deleting the view record altogether
+    old_item = new_item
+    new_item = None
+
+    # set up the card again
+    card_manager.add_card_by_spec_if_dne(card_spec)
+    assert card_manager.get_card(card_spec.card_id)
+
+    # set up the messagesUnviewedCount so it can be cleared
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+
+    # postprocess the delete, verify state did not change
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+    assert card_manager.get_card(card_spec.card_id)
+
+
+def test_postprocess_record_view_edited(chat_manager, chat, user1):
+    typed_pk = chat.member_dynamo.typed_pk(chat.id, user1.id)
+    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
+
+    # simulate editing member from no unviewed message count to some, verify
+    old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
+    new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert 'messagesUnviewedCount' not in old_item
+    assert new_item['messagesUnviewedCount']['N'] == '1'
+
+    # postprocess that, verify calls
+    chat_manager.user_manager = Mock(chat_manager.user_manager)
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat_manager.user_manager.mock_calls == [
+        call.dynamo.increment_chats_with_unviewed_messages_count(user1.id),
+    ]
+
+    # simulate editing member from some unviewed message count to none, verify
+    old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    chat.member_dynamo.decrement_messages_unviewed_count(chat.id, user1.id)
+    new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert old_item['messagesUnviewedCount']['N'] == '1'
+    assert new_item['messagesUnviewedCount']['N'] == '0'
+
+    # postprocess that, verify calls
+    chat_manager.user_manager = Mock(chat_manager.user_manager)
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat_manager.user_manager.mock_calls == [
+        call.dynamo.decrement_chats_with_unviewed_messages_count(user1.id, fail_soft=True),
+    ]
+
+    # simulate editing member from zero unviewed message count to some, verify
+    old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
+    new_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert old_item['messagesUnviewedCount']['N'] == '0'
+    assert new_item['messagesUnviewedCount']['N'] == '1'
+
+    # postprocess that, verify calls
+    chat_manager.user_manager = Mock(chat_manager.user_manager)
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat_manager.user_manager.mock_calls == [
+        call.dynamo.increment_chats_with_unviewed_messages_count(user1.id),
+    ]
+
+
+def test_postprocess_record_view_deleted(chat_manager, chat, user1):
+    typed_pk = chat.member_dynamo.typed_pk(chat.id, user1.id)
+    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
+    new_item = None
+
+    # simulate deleting member with no unviewed message count
+    old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert 'messagesUnviewedCount' not in old_item
+
+    # postprocess that, verify calls
+    chat_manager.user_manager = Mock(chat_manager.user_manager)
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat_manager.user_manager.mock_calls == []
+
+    # simulate deleting member with some unviewed message count
+    chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
+    old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert old_item['messagesUnviewedCount']['N'] == '1'
+
+    # postprocess that, verify calls
+    chat_manager.user_manager = Mock(chat_manager.user_manager)
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat_manager.user_manager.mock_calls == [
+        call.dynamo.decrement_chats_with_unviewed_messages_count(user1.id, fail_soft=True),
+    ]
+
+    # simulate deleting member with a zero unviewed message count
+    chat.member_dynamo.decrement_messages_unviewed_count(chat.id, user1.id)
+    old_item = chat.member_dynamo.client.get_typed_item(typed_pk)
+    assert old_item['messagesUnviewedCount']['N'] == '0'
+
+    # postprocess that, verify calls
+    chat_manager.user_manager = Mock(chat_manager.user_manager)
+    chat_manager.postprocess_record(pk, sk, old_item, new_item)
+    assert chat_manager.user_manager.mock_calls == []
+
+
 def test_postprocess_chat_message_added(chat_manager, card_manager, chat, user1, user2, caplog):
     spec1 = ChatCardSpec(user1.id)
     spec2 = ChatCardSpec(user2.id)

@@ -5,17 +5,30 @@
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
 #set ($messageId = $ctx.source.messageId)
 #set ($authorId = $ctx.source.userId)
+#set ($chatId = $ctx.source.chatId)
 
 ## Author has always viewed the message
 #if ($callerUserId == $authorId)
   #return ('VIEWED')
 #end
 
+#set ($keys = [
+  {
+    'partitionKey': { 'S': "chatMessage/$messageId" },
+    'sortKey': { 'S': "view/$callerUserId" }
+  }, {
+    'partitionKey': {'S': "chat/$chatId"},
+    'sortKey': { 'S': "view/$callerUserId" }
+  }
+])
+
+
 {
-    "version": "2018-05-29",
-    "operation": "GetItem",
-    "key": {
-        "partitionKey": { "S": "chatMessage/$messageId" },
-        "sortKey": { "S": "view/$callerUserId" }
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($keys)
     }
+  }
 }

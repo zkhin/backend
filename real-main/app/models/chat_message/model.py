@@ -69,7 +69,6 @@ class ChatMessage(ViewModelMixin):
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         resp['author'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
-        resp['viewedStatus'] = self.get_viewed_status(caller_user_id)
         return resp
 
     def edit(self, text, now=None):

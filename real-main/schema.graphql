@@ -229,13 +229,14 @@ type Mutation {
   editGroupChat(chatId: ID!, name: String!): Chat
   addToGroupChat(chatId: ID!, userIds: [ID!]!): Chat
   leaveGroupChat(chatId: ID!): Chat
+  reportChatViews(chatIds: [ID!]!): Boolean
 
   # Chat messages
   #   - may only be edited or deleted by message author
   addChatMessage(chatId: ID!, messageId: ID!, text: String!): ChatMessage
   editChatMessage(messageId: ID!, text: String!): ChatMessage
   deleteChatMessage(messageId: ID!): ChatMessage
-  reportChatMessageViews(messageIds: [ID!]!): Boolean
+  reportChatMessageViews(messageIds: [ID!]!): Boolean  # DEPRECATED: use reportChatViews
 
   # Used internally to fire subscription events. Calling externally is an error.
   triggerCardNotification(input: CardNotificationInput!): CardNotification!

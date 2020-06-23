@@ -215,6 +215,123 @@ test('Report message views', async () => {
   expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
 })
 
+test('Report chat views', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+  const [chatId, messageId1, messageId2, messageId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
+
+  // they open up a chat with us
+  let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'}
+  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.createDirectChat.chatId).toBe(chatId)
+  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
+  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
+  expect(resp.data.createDirectChat.messages.items[0].viewedStatus).toBe('VIEWED')
+
+  // they add a message to the chat
+  variables = {chatId, messageId: messageId2, text: 'lore'}
+  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
+  expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
+
+  // check each message's viewedStatus is as expected for us
+  await misc.sleep(500) // let dynamo stream handler catch up
+  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.chat.chatId).toBe(chatId)
+  expect(resp.data.chat.messageCount).toBe(2)
+  expect(resp.data.chat.messagesCount).toBe(2)
+  expect(resp.data.chat.messagesViewedCount).toBe(0)
+  expect(resp.data.chat.messagesUnviewedCount).toBe(2)
+  expect(resp.data.chat.messages.items).toHaveLength(2)
+  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
+  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
+  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('NOT_VIEWED')
+  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('NOT_VIEWED')
+
+  // we report to have viewed the chat
+  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
+  expect(resp.errors).toBeUndefined()
+
+  // check all messages now appear viewed for us
+  await misc.sleep(500) // let dynamo stream handler catch up
+  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.chat.chatId).toBe(chatId)
+  expect(resp.data.chat.messageCount).toBe(2)
+  expect(resp.data.chat.messagesCount).toBe(2)
+  expect(resp.data.chat.messagesViewedCount).toBe(2)
+  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
+  expect(resp.data.chat.messages.items).toHaveLength(2)
+  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
+  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
+  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+
+  // they add another message to the chat
+  variables = {chatId, messageId: messageId3, text: 'lore'}
+  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.addChatMessage.messageId).toBe(messageId3)
+  expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
+
+  // check the new messages now appears unviewed for us
+  await misc.sleep(500) // let dynamo stream handler catch up
+  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.chat.chatId).toBe(chatId)
+  expect(resp.data.chat.messageCount).toBe(3)
+  expect(resp.data.chat.messagesCount).toBe(3)
+  expect(resp.data.chat.messagesViewedCount).toBe(2)
+  expect(resp.data.chat.messagesUnviewedCount).toBe(1)
+  expect(resp.data.chat.messages.items).toHaveLength(3)
+  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
+  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
+  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
+  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('NOT_VIEWED')
+
+  // we report to have viewed the chat again
+  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
+  expect(resp.errors).toBeUndefined()
+
+  // check all messages now appear viewed for us
+  await misc.sleep(500) // let dynamo stream handler catch up
+  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.chat.chatId).toBe(chatId)
+  expect(resp.data.chat.messageCount).toBe(3)
+  expect(resp.data.chat.messagesCount).toBe(3)
+  expect(resp.data.chat.messagesViewedCount).toBe(3)
+  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
+  expect(resp.data.chat.messages.items).toHaveLength(3)
+  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
+  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
+  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
+  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+
+  // check all messages appear viewed for them, because they're athor of them all
+  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
+  expect(resp.errors).toBeUndefined()
+  expect(resp.data.chat.chatId).toBe(chatId)
+  expect(resp.data.chat.messageCount).toBe(3)
+  expect(resp.data.chat.messagesCount).toBe(3)
+  expect(resp.data.chat.messagesViewedCount).toBe(3)
+  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
+  expect(resp.data.chat.messages.items).toHaveLength(3)
+  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
+  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
+  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
+  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+})
+
 test('Disabled user cannot add, edit, delete or report views of chat messages', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 

@@ -2,15 +2,18 @@ import logging
 
 import pendulum
 
+from app.mixins.view.model import ViewModelMixin
+
 from . import enums, exceptions
 
 logger = logging.getLogger()
 
 
-class Chat:
+class Chat(ViewModelMixin):
 
     enums = enums
     exceptions = exceptions
+    item_type = 'chat'
 
     def __init__(
         self,
@@ -21,7 +24,9 @@ class Chat:
         card_manager=None,
         chat_message_manager=None,
         user_manager=None,
+        **kwargs,
     ):
+        super().__init__(**kwargs)
         if dynamo:
             self.dynamo = dynamo
         if member_dynamo:
@@ -38,6 +43,7 @@ class Chat:
         self.item = item
         # immutables
         self.id = item['chatId']
+        self.user_id = None  # this model has no 'owner' (required by ViewModelMixin)
         self.type = self.item['chatType']
         self.created_by_user_id = item['createdByUserId']
 

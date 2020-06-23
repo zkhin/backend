@@ -2,8 +2,19 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#if ($util.isNull($ctx.result))
-  #return ('NOT_VIEWED')
+#set ($messageView = $ctx.result.data.${table}[0])
+#set ($chatView = $ctx.result.data.${table}[1])
+
+#if (!$util.isNull($messageView))
+  #return ('VIEWED')
 #end
-#
-#return ('VIEWED')
+
+#if (!$util.isNull($chatView))
+  #set ($chatLastViewedAt = $chatView.lastViewedAt)
+  #set ($messageCreatedAt = $ctx.source.createdAt)
+  #if ($chatLastViewedAt.compareTo($messageCreatedAt) >= 0)
+    #return ('VIEWED')
+  #end
+#end
+
+#return ('NOT_VIEWED')

@@ -95,6 +95,14 @@ class ChatMemberDynamo:
                 return
             raise
 
+    def clear_messages_unviewed_count(self, chat_id, user_id):
+        query_kwargs = {
+            'Key': self.pk(chat_id, user_id),
+            'UpdateExpression': 'REMOVE messagesUnviewedCount',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }
+        return self.client.update_item(query_kwargs)
+
     def generate_user_ids_by_chat(self, chat_id):
         query_kwargs = {
             'KeyConditionExpression': (

@@ -1053,6 +1053,19 @@ def leave_group_chat(caller_user, arguments, source, context):
     return chat.item
 
 
+@routes.register('Mutation.reportChatViews')
+@validate_caller
+def report_chat_views(caller_user, arguments, source, context):
+    chat_ids = arguments['chatIds']
+    if len(chat_ids) == 0:
+        raise ClientException('A minimum of 1 chat id must be reported')
+    if len(chat_ids) > 100:
+        raise ClientException('A max of 100 chat ids may be reported at a time')
+
+    chat_manager.record_views(chat_ids, caller_user.id)
+    return True
+
+
 @routes.register('Mutation.addChatMessage')
 @validate_caller
 def add_chat_message(caller_user, arguments, source, context):

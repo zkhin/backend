@@ -174,3 +174,27 @@ def test_increment_decrement_messages_unviewed_count(cm_dynamo, caplog):
     with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
         cm_dynamo.decrement_messages_unviewed_count(chat_id, user_id)
     assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 0
+
+
+def test_increment_clear_messages_unviewed_count(cm_dynamo, caplog):
+    # add the chat to the DB, verify it is in DB
+    chat_id, user_id = str(uuid4()), str(uuid4())
+    transact = cm_dynamo.transact_add(chat_id, user_id)
+    cm_dynamo.client.transact_write_items([transact])
+    assert 'messagesUnviewedCount' not in cm_dynamo.get(chat_id, user_id)
+
+    # increment
+    assert cm_dynamo.increment_messages_unviewed_count(chat_id, user_id)['messagesUnviewedCount'] == 1
+    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 1
+
+    # increment
+    assert cm_dynamo.increment_messages_unviewed_count(chat_id, user_id)['messagesUnviewedCount'] == 2
+    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 2
+
+    # clear
+    assert 'messagesUnviewedCount' not in cm_dynamo.clear_messages_unviewed_count(chat_id, user_id)
+    assert 'messagesUnviewedCount' not in cm_dynamo.get(chat_id, user_id)
+
+    # check clear is idempotent
+    assert 'messagesUnviewedCount' not in cm_dynamo.clear_messages_unviewed_count(chat_id, user_id)
+    assert 'messagesUnviewedCount' not in cm_dynamo.get(chat_id, user_id)

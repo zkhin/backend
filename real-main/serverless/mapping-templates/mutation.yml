@@ -269,6 +269,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: reportChatViews
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: addChatMessage
   dataSource: LambdaDataSource
   request: Lambda.request.vtl

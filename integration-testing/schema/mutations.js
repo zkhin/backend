@@ -675,6 +675,12 @@ module.exports.leaveGroupChat = gql`
   ${fragments.chatMessage}
 `
 
+module.exports.reportChatViews = gql`
+  mutation ReportChatViews($chatIds: [ID!]!) {
+    reportChatViews(chatIds: $chatIds)
+  }
+`
+
 module.exports.addChatMessage = gql`
   mutation AddChatMessage($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage(chatId: $chatId, messageId: $messageId, text: $text) {

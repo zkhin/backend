@@ -1,8 +1,11 @@
+import collections
 import logging
 
 import pendulum
 
 from app import models
+from app.mixins.base import ManagerBase
+from app.mixins.view.manager import ViewManagerMixin
 from app.models.card.specs import ChatCardSpec
 
 from . import enums, exceptions
@@ -12,12 +15,14 @@ from .model import Chat
 logger = logging.getLogger()
 
 
-class ChatManager:
+class ChatManager(ViewManagerMixin, ManagerBase):
 
     enums = enums
     exceptions = exceptions
+    item_type = 'chat'
 
     def __init__(self, clients, managers=None):
+        super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['chat'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
@@ -44,6 +49,7 @@ class ChatManager:
         kwargs = {
             'dynamo': getattr(self, 'dynamo', None),
             'member_dynamo': getattr(self, 'member_dynamo', None),
+            'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
             'card_manager': self.card_manager,
             'chat_message_manager': self.chat_message_manager,
@@ -122,7 +128,19 @@ class ChatManager:
                 user = user or self.user_manager.get_user(user_id)
                 chat.leave(user)
 
+    def record_views(self, chat_ids, user_id, viewed_at=None):
+        for chat_id, view_count in dict(collections.Counter(chat_ids)).items():
+            chat = self.get_chat(chat_id)
+            if not chat:
+                logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE chat `{chat_id}`')
+            elif not chat.is_member(user_id):
+                logger.warning(f'Cannot record view(s) by non-member user `{user_id}` on chat `{chat_id}`')
+            else:
+                chat.record_view_count(user_id, view_count, viewed_at=viewed_at)
+
     def postprocess_record(self, pk, sk, old_item, new_item):
+        chat_id = pk.split('/')[1]
+
         # if this is a member record, check if we went to or from zero unviewed messages
         if sk.startswith('member/'):
             user_id = sk.split('/')[1]
@@ -132,6 +150,14 @@ class ChatManager:
                 self.user_manager.dynamo.increment_chats_with_unviewed_messages_count(user_id)
             if old_count != 0 and new_count == 0:
                 self.user_manager.dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
+
+        # if this is a view record, clear unviewed messages and the chat card
+        if sk.startswith('view/'):
+            user_id = sk.split('/')[1]
+            # only adds or edits of view items
+            if new_item:
+                self.member_dynamo.clear_messages_unviewed_count(chat_id, user_id)
+                self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
 
     def postprocess_chat_message_added(self, chat_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.

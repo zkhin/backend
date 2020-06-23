@@ -1,9 +1,11 @@
+import logging
 import uuid
 from unittest import mock
 
 import pendulum
 import pytest
 
+from app.mixins.view.enums import ViewedStatus
 from app.models.chat.enums import ChatType
 from app.models.chat.exceptions import ChatException
 
@@ -205,3 +207,38 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     assert chat_manager.member_dynamo.get(chat_id_3, user1.id) is None
     assert chat_manager.member_dynamo.get(chat_id_4, user1.id) is None
     assert chat_manager.member_dynamo.get(chat_id_4, user2.id)
+
+
+def test_record_views(chat_manager, user1, user2, user3, caplog):
+    chat_id = str(uuid.uuid4())
+
+    # verify can't record views on chat that DNE
+    with caplog.at_level(logging.WARNING):
+        chat_manager.record_views([chat_id], user1.id)
+    assert len(caplog.records) == 1
+    assert 'Cannot record view' in caplog.records[0].msg
+    assert 'on DNE chat' in caplog.records[0].msg
+    assert chat_id in caplog.records[0].msg
+    assert user1.id in caplog.records[0].msg
+
+    chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
+    assert chat.get_viewed_status(user1.id) == ViewedStatus.NOT_VIEWED
+    assert chat.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
+    assert chat.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED
+
+    # verify non-member can't record views on chat
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        chat_manager.record_views([chat_id], user3.id)
+    assert len(caplog.records) == 1
+    assert 'Cannot record view' in caplog.records[0].msg
+    assert 'by non-member user' in caplog.records[0].msg
+    assert chat_id in caplog.records[0].msg
+    assert user3.id in caplog.records[0].msg
+    assert chat.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED
+
+    # verify member can record views on chat
+    caplog.clear()
+    chat_manager.record_views([chat_id], user1.id)
+    assert caplog.records == []
+    assert chat.get_viewed_status(user1.id) == ViewedStatus.VIEWED
