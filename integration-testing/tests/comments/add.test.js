@@ -30,6 +30,7 @@ test('Add a comments', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentCount).toBe(0)
+  expect(resp.data.addPost.commentsCount).toBe(0)
   expect(resp.data.addPost.comments.items).toHaveLength(0)
 
   // we comment on the post
@@ -45,6 +46,7 @@ test('Add a comments', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(1)
+  expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(ourCommentId)
   expect(resp.data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
@@ -63,6 +65,7 @@ test('Add a comments', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(2)
+  expect(resp.data.post.commentsCount).toBe(2)
   expect(resp.data.post.comments.items).toHaveLength(2)
   expect(resp.data.post.comments.items[0].commentId).toBe(ourCommentId)
   expect(resp.data.post.comments.items[1].commentId).toBe(theirCommentId)

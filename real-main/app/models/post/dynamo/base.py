@@ -413,8 +413,8 @@ class PostDynamo:
             },
         }
 
-    def transact_increment_comment_count(self, post_id):
-        return {
+    def transact_increment_comment_count(self, post_id, include_comments_unviewed_count=False):
+        transact = {
             'Update': {
                 'Key': self.typed_pk(post_id),
                 'UpdateExpression': 'ADD commentCount :one',
@@ -422,6 +422,9 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
             },
         }
+        if include_comments_unviewed_count:
+            transact['Update']['UpdateExpression'] += ', commentsUnviewedCount :one'
+        return transact
 
     def transact_decrement_comment_count(self, post_id):
         return {
@@ -433,6 +436,14 @@ class PostDynamo:
                 'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
             },
         }
+
+    def clear_comments_unviewed_count(self, post_id):
+        query_kwargs = {
+            'Key': self.pk(post_id),
+            'UpdateExpression': 'REMOVE commentsUnviewedCount',
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }
+        return self.client.update_item(query_kwargs)
 
     def transact_set_album_id(self, post_item, album_id, album_rank=None):
         post_id = post_item['postId']

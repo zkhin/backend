@@ -53,6 +53,19 @@ def test_add_comment(comment_manager, user, post):
     assert user.item.get('postHasNewCommentActivityCount', 0) == 0
 
 
+def test_add_comment_increments_unviewed_comments_count(comment_manager, user, post, user2):
+    # check our starting state
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 0
+
+    # post owner adds a comment, should not increment count
+    assert comment_manager.add_comment(str(uuid.uuid4()), post.id, user.id, 'lore ipsum')
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 0
+
+    # somebody else adds a comment, should increment count
+    assert comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 'lore ipsum')
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 1
+
+
 def test_add_comment_registers_new_comment_activity(comment_manager, user, user2, post):
     comment_id = 'cid'
 

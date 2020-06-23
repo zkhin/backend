@@ -249,6 +249,9 @@ module.exports.post = gql`
       viewedStatus
       commentsDisabled
       commentCount
+      commentsCount
+      commentsViewedCount: commentsCount(viewedStatus: VIEWED)
+      commentsUnviewedCount: commentsCount(viewedStatus: NOT_VIEWED)
       comments(reverse: $commentsReverse) {
         items {
           ...CommentFragment
@@ -258,7 +261,6 @@ module.exports.post = gql`
       sharingDisabled
       verificationHidden
       hasNewCommentActivity
-      lastNewCommentActivityAt
       onymousLikeCount
       anonymousLikeCount
       onymouslyLikedBy(limit: $onymouslyLikedByLimit) {

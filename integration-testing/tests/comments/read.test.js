@@ -29,6 +29,7 @@ test('One user adds multiple comments, ordering', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentCount).toBe(0)
+  expect(resp.data.addPost.commentsCount).toBe(0)
   expect(resp.data.addPost.comments.items).toHaveLength(0)
 
   // we add a comment on the post
@@ -51,6 +52,7 @@ test('One user adds multiple comments, ordering', async () => {
   const post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.commentCount).toBe(2)
+  expect(post.commentsCount).toBe(2)
   expect(post.comments.items).toHaveLength(2)
   expect(post.comments.items[0].commentId).toBe(commentId1)
   expect(post.comments.items[0].commentedBy.userId).toBe(ourUserId)
@@ -67,6 +69,7 @@ test('One user adds multiple comments, ordering', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(2)
+  expect(resp.data.post.commentsCount).toBe(2)
   expect(resp.data.post.comments.items).toHaveLength(2)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId2)
   expect(resp.data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
@@ -130,6 +133,7 @@ test('Comment report views, viewed status tracked correctly', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentCount).toBe(0)
+  expect(resp.data.addPost.commentsCount).toBe(0)
   expect(resp.data.addPost.comments.items).toHaveLength(0)
 
   // we add a comment on the post
@@ -219,6 +223,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.addPost.postId).toBe(postId)
     expect(resp.data.addPost.commentCount).toBe(0)
+    expect(resp.data.addPost.commentsCount).toBe(0)
     expect(resp.data.addPost.comments.items).toHaveLength(0)
   })
 
@@ -359,6 +364,7 @@ test('Comments of private user on public post are visible to all', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(1)
+  expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
   expect(resp.data.post.comments.items[0].commentedBy.userId).toBe(theirUserId)

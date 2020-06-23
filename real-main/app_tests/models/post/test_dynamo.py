@@ -1098,3 +1098,35 @@ def test_transact_set_album_rank(post_dynamo):
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id)
     assert post_item['gsiK3SortKey'] == 0.5
+
+
+def test_transact_increment_clear_comments_unviewed_count(post_dynamo):
+    post_id = 'pid'
+
+    # add a post, check starting state
+    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
+    post_dynamo.client.transact_write_items(transacts)
+    assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
+
+    # increment
+    transacts = [post_dynamo.transact_increment_comment_count(post_id, True)]
+    post_dynamo.client.transact_write_items(transacts)
+    assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 1
+
+    # increment
+    transacts = [post_dynamo.transact_increment_comment_count(post_id, True)]
+    post_dynamo.client.transact_write_items(transacts)
+    assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 2
+
+    # no change
+    transacts = [post_dynamo.transact_increment_comment_count(post_id)]
+    post_dynamo.client.transact_write_items(transacts)
+    assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 2
+
+    # clear
+    assert 'commentsUnviewedCount' not in post_dynamo.clear_comments_unviewed_count(post_id)
+    assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
+
+    # check clearing is idemopotent
+    assert 'commentsUnviewedCount' not in post_dynamo.clear_comments_unviewed_count(post_id)
+    assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)

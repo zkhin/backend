@@ -210,7 +210,7 @@ type Mutation {
   flagComment(commentId: ID!): Comment
 
   # Report comment views
-  reportCommentViews(commentIds: [ID!]!): Boolean
+  reportCommentViews(commentIds: [ID!]!): Boolean  # DEPRECATED use reportPostViews()
 
   addAlbum(albumId: ID!, name: String!, description: String): Album
   # Edit an Album
@@ -664,13 +664,13 @@ type Post {
   #   - null if comments are disabled
   #   - ordered by commentedAt, oldest comment first
   comments(limit: Int, nextToken: String, reverse: Boolean): PaginatedComments
-  commentCount: Int
+  commentCount: Int  # DEPRECATED: use commentsCount
+  commentsCount(viewedStatus: ViewedStatus): Int  # Only post owner may set viewedStatus
   commentsDisabled: Boolean
 
   # Have new comments appeared on the post since the last time a view of a comment was reported?
   #   - private to post owner only
-  hasNewCommentActivity: Boolean
-  lastNewCommentActivityAt: AWSDateTime
+  hasNewCommentActivity: Boolean  # DEPRECATED: use commentsCount
 }
 
 type PaginatedPosts {

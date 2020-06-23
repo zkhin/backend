@@ -338,6 +338,7 @@ test('resetUser deletes any comments we have added to posts', async () => {
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentCount).toBe(1)
+  expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
 
@@ -348,6 +349,7 @@ test('resetUser deletes any comments we have added to posts', async () => {
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentCount).toBe(0)
+  expect(resp.data.post.commentsCount).toBe(0)
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
 

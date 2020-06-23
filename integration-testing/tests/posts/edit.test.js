@@ -165,6 +165,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentsDisabled).toBe(false)
   expect(resp.data.post.commentCount).toBe(1)
+  expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
 
@@ -178,6 +179,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentsDisabled).toBe(true)
   expect(resp.data.post.commentCount).toBeNull()
+  expect(resp.data.post.commentsCount).toBeNull()
   expect(resp.data.post.comments).toBeNull()
 
   // re-enable comments on the post
@@ -190,6 +192,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentsDisabled).toBe(false)
   expect(resp.data.post.commentCount).toBe(1)
+  expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
 })

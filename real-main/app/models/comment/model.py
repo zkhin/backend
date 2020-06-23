@@ -75,6 +75,8 @@ class Comment(FlagModelMixin, ViewModelMixin):
             self.post_manager.dynamo.transact_decrement_comment_count(self.post_id),
             self.dynamo.transact_delete_comment(self.id),
         ]
+        # TODO: decrement commentsUnviewedCount as appropriate based on timestamps of the comment
+        #       being deleted and the lastViewedAt time for post owner on the post
         self.dynamo.client.transact_write_items(transacts)
 
         # if this comment is being deleted by anyone other than post owner, count it as new comment activity

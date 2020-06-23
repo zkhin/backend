@@ -80,7 +80,9 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         text_tags = self.user_manager.get_text_tags(text)
         transacts = [
             self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
-            self.post_manager.dynamo.transact_increment_comment_count(post_id),
+            self.post_manager.dynamo.transact_increment_comment_count(
+                post_id, include_comments_unviewed_count=(user_id != post.user_id),
+            ),
             self.user_manager.dynamo.transact_comment_added(user_id),
         ]
         transact_exceptions = [

@@ -183,6 +183,8 @@ class ChatManager(ViewManagerMixin, ManagerBase):
         #   - if they haven't viewed the message, decrement their 'unviewedMessageCount'
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             if user_id != author_user_id:
+                # TODO: decrement messagesUnviewedCount as appropriate based on timestamps of the message
+                #       being deleted and the lastViewedAt time for this user on the chat
                 resp = self.chat_message_manager.view_dynamo.delete_view(message_id, user_id)
                 if not resp:
                     self.member_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)

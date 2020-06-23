@@ -67,6 +67,26 @@ def test_record_view_count_increments_counters(post, user2, user3):
     assert post.user.refresh_item().item.get('postViewedByCount', 0) == 2
 
 
+def test_record_view_count_clears_comments_unviewed_count(post, user2):
+    # add some counts directly to dynamo, check state
+    transacts = [post.dynamo.transact_increment_comment_count(post.id, True)]
+    post.dynamo.client.transact_write_items(transacts)
+    post.dynamo.client.transact_write_items(transacts)
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 2
+
+    # verify recording view by user that's not post owner doesn't affect this counter
+    post.record_view_count(user2.id, 2)
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 2
+
+    # verify recording view by post owner zeros out this counter
+    post.record_view_count(post.user_id, 1)
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 0
+
+    # verify idempotent
+    post.record_view_count(post.user_id, 1)
+    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 0
+
+
 def test_record_view_count_records_to_original_post_as_well(post, post2, user2):
     # verify post owner's view doesn't make it up to the original
     post.item['originalPostId'] = post2.id

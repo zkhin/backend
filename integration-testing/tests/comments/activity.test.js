@@ -25,7 +25,6 @@ test('Post owner comment activity does not change newCommentActivity', async () 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.hasNewCommentActivity).toBe(false)
-  expect(resp.data.addPost.lastNewCommentActivityAt).toBeNull()
 
   // we comment on the post
   const commentId = uuidv4()
@@ -39,7 +38,6 @@ test('Post owner comment activity does not change newCommentActivity', async () 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeNull()
 
   // delete the comment
   resp = await ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId}})
@@ -51,7 +49,6 @@ test('Post owner comment activity does not change newCommentActivity', async () 
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeNull()
 })
 
 test('Post newCommentActivity - set, reset, privacy', async () => {
@@ -65,14 +62,12 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.hasNewCommentActivity).toBe(false)
-  expect(resp.data.addPost.lastNewCommentActivityAt).toBeNull()
 
   // check they cannot see Post newCommentActivity
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBeNull()
-  expect(resp.data.post.lastNewCommentActivityAt).toBeNull()
 
   // they comment on the post twice
   const commentId1 = uuidv4()
@@ -92,7 +87,6 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(true)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeTruthy()
 
   // we report to have viewed one comment, the first one
   resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId1]}})
@@ -103,7 +97,6 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeNull()
 
   // they delete the comment, the one we haven't viewed
   resp = await theirClient.mutate({mutation: mutations.deleteComment, variables: {commentId: commentId2}})
@@ -115,7 +108,6 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(true)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeTruthy()
 
   // we report to have viewed comment that was no deleted, again
   resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId1]}})
@@ -126,7 +118,6 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeNull()
 
   // we delete a comment, the one we viewed
   resp = await ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: commentId1}})
@@ -138,5 +129,4 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
-  expect(resp.data.post.lastNewCommentActivityAt).toBeNull()
 })

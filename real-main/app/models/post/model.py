@@ -732,6 +732,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
 
         if self.user_id == user_id:
+            self.dynamo.clear_comments_unviewed_count(self.id)
             self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(user_id, self.id))
             return False  # post owner's views don't count for trending, etc.
 
