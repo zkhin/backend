@@ -2,8 +2,19 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#if ($util.isNull($ctx.result))
-  #return ('NOT_VIEWED')
-#else
+#set ($commentView = $ctx.result.data.${table}[0])
+#set ($postView = $ctx.result.data.${table}[1])
+
+#if (!$util.isNull($commentView))
   #return ('VIEWED')
 #end
+
+#if (!$util.isNull($postView))
+  #set ($postLastViewedAt = $postView.lastViewedAt)
+  #set ($commentCreatedAt = $ctx.source.commentedAt)
+  #if ($postLastViewedAt.compareTo($commentCreatedAt) >= 0)
+    #return ('VIEWED')
+  #end
+#end
+
+#return ('NOT_VIEWED')

@@ -59,7 +59,6 @@ class Comment(FlagModelMixin, ViewModelMixin):
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         resp['commentedBy'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
-        resp['viewedStatus'] = self.get_viewed_status(caller_user_id)
         return resp
 
     def delete(self, deleter_user_id=None, forced=False):

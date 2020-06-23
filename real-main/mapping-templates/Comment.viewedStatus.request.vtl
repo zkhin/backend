@@ -5,17 +5,30 @@
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
 #set ($commentId = $ctx.source.commentId)
 #set ($authorId = $ctx.source.userId)
+#set ($postId = $ctx.source.postId)
 
 ## Author has always viewed the message
 #if ($callerUserId == $authorId)
   #return ('VIEWED')
 #end
 
+#set ($keys = [
+  {
+    'partitionKey': { 'S': "comment/$commentId" },
+    'sortKey': { 'S': "view/$callerUserId" }
+  }, {
+    'partitionKey': {'S': "post/$postId"},
+    'sortKey': { 'S': "view/$callerUserId" }
+  }
+])
+
+
 {
-    "version": "2018-05-29",
-    "operation": "GetItem",
-    "key": {
-        "partitionKey": { "S": "comment/$commentId" },
-        "sortKey": { "S": "view/$callerUserId" }
+  "version": "2018-05-29",
+  "operation": "BatchGetItem",
+  "tables": {
+    "${table}": {
+      "keys": $util.toJson($keys)
     }
+  }
 }

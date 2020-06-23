@@ -2,10 +2,11 @@
   $util.error('Limit cannot be less than 1 or greater than 100', 'ClientError')
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
 ## hidden from everyone except owner of the post
 ## note that the posts's postedBy is guaranteed to be filled in by the parent
-#if ($ctx.identity.cognitoIdentityId != $ctx.source.postedBy.userId)
+#if ($callerUserId != $ctx.source.postedBy.userId)
   #return
 #end
 
@@ -22,6 +23,12 @@
     "expressionValues": {
       ":pk": { "S": "post/$ctx.source.postId" },
       ":skPrefix": { "S": "view/" }
+    }
+  },
+  "filter": {
+    "expression": "sortKey <> :sk",
+    "expressionValues": {
+      ":sk": { "S": "view/$callerUserId" }
     }
   },
   "index": "GSI-K1",

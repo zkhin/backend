@@ -18,6 +18,16 @@ class ViewModelMixin:
             self.view_dynamo = view_dynamo
 
     def get_viewed_status(self, user_id):
+        """
+        ViewedStatus based only on view records for this model.
+
+        Note that for some of our models the ViewedStatus rendered on
+        the GQL api is dependent on view records for the parent model.
+        IE, Comment.viewedStatus depends on the parent Post's view records, and
+        ChatMessage.viewedStatus depends on the parent Chat's view records.
+        That parent dependency is not reflected in the viewed status returned
+        by this method.
+        """
         if self.user_id == user_id:  # owner of the item
             return enums.ViewedStatus.VIEWED
         elif self.view_dynamo.get_view(self.id, user_id):

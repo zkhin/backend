@@ -209,6 +209,126 @@ test('Comment report views, viewed status tracked correctly', async () => {
   expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
 })
 
+test('Comment viewed status reacts to views Post correctly', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}}).then((resp) => {
+    expect(resp.errors).toBeUndefined()
+    expect(resp.data.addPost.postId).toBe(postId)
+    expect(resp.data.addPost.commentCount).toBe(0)
+    expect(resp.data.addPost.comments.items).toHaveLength(0)
+  })
+
+  // they add a comment on the post
+  const commentId1 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId1, postId, text: 'lore'}})
+    .then((resp) => {
+      expect(resp.errors).toBeUndefined()
+      expect(resp.data.addComment.commentId).toBe(commentId1)
+      expect(resp.data.addComment.viewedStatus).toBe('VIEWED')
+    })
+
+  // they add another comment on the post
+  const commentId2 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId2, postId, text: 'lore'}})
+    .then((resp) => {
+      expect(resp.errors).toBeUndefined()
+      expect(resp.data.addComment.commentId).toBe(commentId2)
+      expect(resp.data.addComment.viewedStatus).toBe('VIEWED')
+    })
+
+  // check we see the comments correctly
+  await misc.sleep(500)
+  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
+    expect(resp.errors).toBeUndefined()
+    expect(resp.data.post.postId).toBe(postId)
+    expect(resp.data.post.comments.items).toHaveLength(2)
+    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(resp.data.post.comments.items[0].viewedStatus).toBe('NOT_VIEWED')
+    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(resp.data.post.comments.items[1].viewedStatus).toBe('NOT_VIEWED')
+  })
+
+  // we report to have viewed the post
+  await ourClient
+    .mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+    .then((resp) => expect(resp.errors).toBeUndefined())
+
+  // check we see the comments correctly
+  await misc.sleep(500)
+  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
+    expect(resp.errors).toBeUndefined()
+    expect(resp.data.post.postId).toBe(postId)
+    expect(resp.data.post.comments.items).toHaveLength(2)
+    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(resp.data.post.comments.items[0].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
+  })
+
+  // we add a comment to the post
+  const commentId3 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId3, postId, text: 'lore'}})
+    .then((resp) => {
+      expect(resp.errors).toBeUndefined()
+      expect(resp.data.addComment.commentId).toBe(commentId3)
+      expect(resp.data.addComment.viewedStatus).toBe('VIEWED')
+    })
+
+  // they add another comment on the post
+  const commentId4 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId4, postId, text: 'lore'}})
+    .then((resp) => {
+      expect(resp.errors).toBeUndefined()
+      expect(resp.data.addComment.commentId).toBe(commentId4)
+      expect(resp.data.addComment.viewedStatus).toBe('VIEWED')
+    })
+
+  // check we see the comments correctly
+  await misc.sleep(500)
+  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
+    expect(resp.errors).toBeUndefined()
+    expect(resp.data.post.postId).toBe(postId)
+    expect(resp.data.post.comments.items).toHaveLength(4)
+    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(resp.data.post.comments.items[0].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[2].commentId).toBe(commentId3)
+    expect(resp.data.post.comments.items[2].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[3].commentId).toBe(commentId4)
+    expect(resp.data.post.comments.items[3].viewedStatus).toBe('NOT_VIEWED')
+  })
+
+  // we report to have viewed the post again
+  await ourClient
+    .mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+    .then((resp) => expect(resp.errors).toBeUndefined())
+
+  // check we see the comments correctly
+  await misc.sleep(500)
+  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
+    expect(resp.errors).toBeUndefined()
+    expect(resp.data.post.postId).toBe(postId)
+    expect(resp.data.post.comments.items).toHaveLength(4)
+    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(resp.data.post.comments.items[0].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[2].commentId).toBe(commentId3)
+    expect(resp.data.post.comments.items[2].viewedStatus).toBe('VIEWED')
+    expect(resp.data.post.comments.items[3].commentId).toBe(commentId4)
+    expect(resp.data.post.comments.items[3].viewedStatus).toBe('VIEWED')
+  })
+})
+
 test('Comments of private user on public post are visible to all', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
