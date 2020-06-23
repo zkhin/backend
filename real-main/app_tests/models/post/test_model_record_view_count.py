@@ -71,7 +71,7 @@ def test_record_view_count_records_to_original_post_as_well(post, post2, user2):
     # verify post owner's view doesn't make it up to the original
     post.item['originalPostId'] = post2.id
     post.record_view_count(post.user_id, 1)
-    assert post.view_dynamo.get_view(post.id, post.user_id) is None
+    assert post.view_dynamo.get_view(post.id, post.user_id)
     assert post2.view_dynamo.get_view(post2.id, post.user_id) is None
 
     # verify a rando's view is recorded locally and goes up to the orginal

@@ -731,9 +731,9 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # their view will be filtered out when looking at Post.viewedBy
         is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
 
-        # don't count post owner's views
         if self.user_id == user_id:
-            return False
+            self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(user_id, self.id))
+            return False  # post owner's views don't count for trending, etc.
 
         recorded = self.trending_increment_score(now=viewed_at)
         if recorded:

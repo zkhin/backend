@@ -3,6 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -67,11 +68,12 @@ test('Unread chat message card with correct format', async () => {
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
 
-  // we report to have viewed a chat message, doesn't matter which
-  resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId]}})
+  // we report to have viewed a chat doesn't matter which
+  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
   expect(resp.errors).toBeUndefined()
 
   // verify the card has disappeared
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)

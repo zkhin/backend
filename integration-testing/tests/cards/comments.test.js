@@ -91,8 +91,8 @@ test('Generate comment card', async () => {
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
 
-  // we view a comment, doesn't matter which
-  resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}})
+  // we view that post
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   expect(resp.errors).toBeUndefined()
 
   // verify the card has disappeared
@@ -177,8 +177,8 @@ test('Comment cards are post-specific', async () => {
   expect(resp.data.self.cards.items[1].cardId).toBe(cardId1)
   expect(resp.data.self.cards.items[0].cardId).toBe(cardId2)
 
-  // we view a comment on the first post, doesn't matter which
-  resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId1]}})
+  // we view first post
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
   expect(resp.errors).toBeUndefined()
 
   // verify that card has disappeared, the other remains

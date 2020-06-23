@@ -147,8 +147,8 @@ test('Lifecycle, format for comment activity notification', async () => {
     rejectors.push(reject)
   })
 
-  // we report to have viewed the comment (hence deleting the card)
-  resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}})
+  // we report to have viewed the post (hence deleting the card)
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   expect(resp.errors).toBeUndefined()
 
   // verify the subscription received the notification and in correct format
@@ -223,8 +223,8 @@ test('Lifecycle, format for chat activity notification', async () => {
     rejectors.push(reject)
   })
 
-  // we report to have viewed the message (hence deleting the card)
-  resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId]}})
+  // we report to have viewed the chat (hence deleting the card)
+  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
   expect(resp.errors).toBeUndefined()
 
   // verify the subscription received the notification and in correct format

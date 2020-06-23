@@ -542,12 +542,12 @@ def test_record_views(post_manager, user, user2, posts, caplog):
     assert 'pid-dne' in caplog.records[0].msg
     assert user2.id in caplog.records[0].msg
 
-    # no-op recording views to our own post
+    # recording views on our own post
     assert post_manager.view_dynamo.get_view(post1.id, user.id) is None
     assert post_manager.view_dynamo.get_view(post2.id, user.id) is None
     post_manager.record_views([post1.id, post2.id], user.id)
-    assert post_manager.view_dynamo.get_view(post1.id, user.id) is None
-    assert post_manager.view_dynamo.get_view(post2.id, user.id) is None
+    assert post_manager.view_dynamo.get_view(post1.id, user.id)['viewCount'] == 1
+    assert post_manager.view_dynamo.get_view(post2.id, user.id)['viewCount'] == 1
 
     # another user can record views of our posts
     assert post_manager.view_dynamo.get_view(post1.id, user2.id) is None

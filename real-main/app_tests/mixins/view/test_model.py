@@ -43,9 +43,6 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     model.record_view_count(model.user_id, 5)
     assert model.get_viewed_status(model.user_id) == ViewedStatus.VIEWED
 
-    # check no view item was writen to dynamo for the user
-    assert model.view_dynamo.get_view(model.id, model.user_id) is None
-
 
 @pytest.mark.parametrize(
     'model', pytest.lazy_fixture(['post', 'comment', 'chat_message']),

@@ -30,24 +30,12 @@ def test_serialize(comment_manager, comment, user):
     # serialize as the comment's author
     resp = comment.serialize(user.id)
     assert resp.pop('commentedBy')['userId'] == user.id
-    assert resp.pop('viewedStatus') == ViewedStatus.VIEWED
     assert resp == comment.item
 
-    # serialize as another user that has not viewed the comment
+    # serialize as another user
     other_user_id = 'ouid'
     resp = comment.serialize(other_user_id)
     assert resp.pop('commentedBy')['userId'] == user.id
-    assert resp.pop('viewedStatus') == ViewedStatus.NOT_VIEWED
-    assert resp == comment.item
-
-    # the other user views the comment
-    comment.record_view_count(other_user_id, 1)
-
-    # serialize as another user that *has* viewed the comment
-    other_user_id = 'ouid'
-    resp = comment.serialize(other_user_id)
-    assert resp.pop('commentedBy')['userId'] == user.id
-    assert resp.pop('viewedStatus') == ViewedStatus.VIEWED
     assert resp == comment.item
 
 
