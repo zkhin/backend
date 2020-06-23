@@ -165,7 +165,6 @@ custom:
         kind: PIPELINE
         functions:
           - Comments.batchGet
-          - Comments.filterBy.viewedStatus
           - Users.beginPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
@@ -242,9 +241,6 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Comments.batchGet
-
-      - dataSource: DynamodbDataSource
-        name: Comments.filterBy.viewedStatus
 
       - dataSource: DynamodbDataSource
         name: Chats.batchGet
