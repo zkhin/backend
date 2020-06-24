@@ -433,7 +433,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
 
   // check album has art urls and they have changed root
   resp = await ourClient.query({query: queries.album, variables: {albumId}})

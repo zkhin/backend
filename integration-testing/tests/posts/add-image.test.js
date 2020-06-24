@@ -170,7 +170,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.addPost.postId).toBe(ourPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
 
   // they add another image post with the same image, original should point back to first post
   variables = {postId: theirPostId, imageData}
@@ -179,7 +179,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.addPost.postId).toBe(theirPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
 
   // check each others post objects directly
   resp = await theirClient.query({query: queries.post, variables: {postId: ourPostId}})

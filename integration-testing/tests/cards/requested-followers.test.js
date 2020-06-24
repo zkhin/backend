@@ -41,7 +41,7 @@ test('Requested followers card with correct format', async () => {
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // verify a card was generated for their follow request
-  await misc.sleep(1000) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -62,7 +62,7 @@ test('Requested followers card with correct format', async () => {
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // verify we still have just same card
-  await misc.sleep(1000) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -76,7 +76,7 @@ test('Requested followers card with correct format', async () => {
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
   // verify we still have just same card
-  await misc.sleep(1000) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -90,7 +90,7 @@ test('Requested followers card with correct format', async () => {
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // verify the card has disappeared
-  await misc.sleep(1000) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)

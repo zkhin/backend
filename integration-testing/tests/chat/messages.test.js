@@ -64,7 +64,7 @@ test('Add messages to a direct chat', async () => {
   expect(after >= lastMessageCreatedAt).toBe(true)
 
   // check we see all the messages are there in the expected order
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -143,7 +143,7 @@ test('Report message views', async () => {
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check each message's viewedStatus is as expected for both of us
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -180,7 +180,7 @@ test('Report message views', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check we have now viewed all messages
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -202,7 +202,7 @@ test('Report message views', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check they have now viewed all messages
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -241,7 +241,7 @@ test('Report chat views', async () => {
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check each message's viewedStatus is as expected for us
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -260,7 +260,7 @@ test('Report chat views', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check all messages now appear viewed for us
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -282,7 +282,7 @@ test('Report chat views', async () => {
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check the new messages now appears unviewed for us
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -303,7 +303,7 @@ test('Report chat views', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check all messages now appear viewed for us
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -558,7 +558,7 @@ test('Delete chat message', async () => {
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check that the message has now dissapeared from the db
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
@@ -666,7 +666,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.createDirectChat.chatId).toBe(chatId1)
 
   // we should see an unread chat with unread messages
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
@@ -691,7 +691,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
 
   // check our counts
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(2)
@@ -707,7 +707,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.leaveGroupChat.chatId).toBe(chatId2)
 
   // check counts again
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
@@ -717,7 +717,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check counts again
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
@@ -732,7 +732,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // check counts again
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
@@ -743,7 +743,7 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId3)
 
   // check counts again
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)

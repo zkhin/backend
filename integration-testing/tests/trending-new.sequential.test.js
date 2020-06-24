@@ -159,7 +159,7 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
   // we report to have viewed our own post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check no change in trending posts
   resp = await otherClient.query({query: queries.trendingPosts})
@@ -176,7 +176,7 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
   // they report to have viewed our post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // trending posts should have flipped order
   resp = await otherClient.query({query: queries.trendingPosts})
@@ -194,7 +194,7 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
   // we report to have viewed our their post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // trending posts should have flipped order again
   resp = await otherClient.query({query: queries.trendingPosts})
@@ -215,7 +215,7 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteUser.userId).toBe(theirUserId)
   expect(resp.data.deleteUser.userStatus).toBe('DELETING')
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // verify their post has disappeared from trending
   resp = await otherClient.query({query: queries.trendingPosts})
@@ -262,7 +262,7 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
   // they report to have viewed our post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // they see our post in trending
   resp = await theirClient.query({query: queries.trendingPosts})
@@ -286,7 +286,7 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
   expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.userId).toBe(ourUserId)
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // verify they don't see our post in trending anymore
   resp = await theirClient.query({query: queries.trendingPosts})
@@ -316,7 +316,7 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
   expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(otherUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // verify other no longer sees our post in trending
   resp = await otherClient.query({query: queries.trendingPosts})
@@ -349,7 +349,7 @@ test('Posts that fail verification do not end up in trending', async () => {
   // they report to have viewed the post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check it does not appear in trending
   resp = await theirClient.query({query: queries.trendingPosts})
@@ -416,7 +416,7 @@ test('Views of non-original posts contribute to the original post & user in tren
   // they report to have viewed our non-original post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // trending posts should not have changed, because:
   //  - non-original post can't enter trending
@@ -435,7 +435,7 @@ test('Views of non-original posts contribute to the original post & user in tren
   // other reports to have viewed our non-original post
   resp = await otherClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // other's view should have been contributed to the original post moving up in trending
   resp = await theirClient.query({query: queries.trendingPosts})

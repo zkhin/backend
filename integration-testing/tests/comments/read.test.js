@@ -47,7 +47,7 @@ test('One user adds multiple comments, ordering', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId2)
 
   // check we see both comments, in order, on the post
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   const post = resp.data.post
@@ -249,7 +249,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     })
 
   // check we see the comments correctly
-  await misc.sleep(500)
+  await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -266,7 +266,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     .then((resp) => expect(resp.errors).toBeUndefined())
 
   // check we see the comments correctly
-  await misc.sleep(500)
+  await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -298,7 +298,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     })
 
   // check we see the comments correctly
-  await misc.sleep(500)
+  await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -319,7 +319,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     .then((resp) => expect(resp.errors).toBeUndefined())
 
   // check we see the comments correctly
-  await misc.sleep(500)
+  await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)

@@ -269,7 +269,7 @@ test('Post views on duplicate posts are viewed post and original post', async ()
   expect(resp.data.addPost.postId).toBe(ourPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // they add an image post that's a duplicate of ours
   const theirPostId = uuidv4()

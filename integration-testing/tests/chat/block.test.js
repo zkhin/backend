@@ -3,6 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -124,6 +125,7 @@ test('Blocking a user we are in a group chat with', async () => {
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // check we still see the chat, but don't see them in it and their messages have an authorUserId but no author
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)

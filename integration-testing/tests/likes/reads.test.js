@@ -58,7 +58,7 @@ test('Order of users that have onymously liked a post', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
 
   // all three of us onymously like it
   resp = await other2Client.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})

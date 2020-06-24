@@ -103,7 +103,7 @@ test('Cannot like ARCHIVED posts', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
   resp = await ourClient.mutate({mutation: mutations.archivePost, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.archivePost.postId).toBe(postId)
@@ -459,7 +459,7 @@ test('Like counts show up for posts in feed', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
 
   // get that post from our feed, check its like counts
   resp = await ourClient.query({query: queries.selfFeed})

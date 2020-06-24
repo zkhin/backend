@@ -162,7 +162,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check we see the comment
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentsDisabled).toBe(false)

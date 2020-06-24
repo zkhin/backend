@@ -407,7 +407,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.album.albumId).toBe(albumId)
-  await misc.sleep(1000) // let dynamo converge
+  await misc.sleep(1000) // dynamo
 
   // add another image post in the album
   const postId2 = uuidv4()
@@ -626,7 +626,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId3)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check album post order
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -652,7 +652,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId2)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check album post order
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -678,7 +678,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId1)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check album post order
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
@@ -704,7 +704,7 @@ test('Edit album post order', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId3)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check album again directly, make sure nothing changed
   resp = await ourClient.query({query: queries.album, variables: {albumId}})

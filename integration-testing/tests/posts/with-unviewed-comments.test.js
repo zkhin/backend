@@ -60,7 +60,7 @@ test('Privacy', async () => {
     })
 
   // check that we can't see their list
-  await misc.sleep(500) // dynamo
+  await misc.sleep(1000) // dynamo
   await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data, errors}) => {
     expect(errors).toBeUndefined()
     expect(data.user.userId).toBe(theirUserId)
@@ -105,7 +105,7 @@ test('Add and remove', async () => {
     })
 
   // check that post now has unviewed comments
-  await misc.sleep(500) // dynamo
+  await misc.sleep(1000) // dynamo
   await ourClient.query({query: queries.self}).then(({data, errors}) => {
     expect(errors).toBeUndefined()
     expect(data.self.userId).toBe(ourUserId)
@@ -122,7 +122,7 @@ test('Add and remove', async () => {
     })
 
   // check that post has no unviewed comments
-  await misc.sleep(500) // dynamo
+  await misc.sleep(1000) // dynamo
   await ourClient.query({query: queries.self}).then(({data, errors}) => {
     expect(errors).toBeUndefined()
     expect(data.self.userId).toBe(ourUserId)
@@ -164,7 +164,7 @@ test('Order', async () => {
   }
 
   // pull our posts by unviewed comments, check the order is correct
-  await misc.sleep(500) // dynamo
+  await misc.sleep(1000) // dynamo
   await ourClient.query({query: queries.self}).then(({data, errors}) => {
     expect(errors).toBeUndefined()
     expect(data.self.userId).toBe(ourUserId)
@@ -200,7 +200,7 @@ test('deprecated postsByNewcCommentActivity', async () => {
   resp = await theirClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore'}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check that post now has comment activity
   resp = await ourClient.query({query: queries.self})
@@ -212,7 +212,7 @@ test('deprecated postsByNewcCommentActivity', async () => {
   // we report to have read that comment
   resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}})
   expect(resp.errors).toBeUndefined()
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   // check that post has no comment activity
   resp = await ourClient.query({query: queries.self})

@@ -73,7 +73,7 @@ test('Unread chat message card with correct format', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify the card has disappeared
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)

@@ -40,7 +40,7 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
   expect(resp.errors).toBeUndefined()
 
   // check our followCountsHidden state, and our follow counts, other user can't see our setting
-  await misc.sleep(500) // let dynamo stream handler catch up
+  await misc.sleep(1000) // dynamo
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followCountsHidden).toBeNull()

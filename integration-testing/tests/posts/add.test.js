@@ -31,7 +31,7 @@ test('Add post no expiration', async () => {
   expect(post.postStatus).toBe('COMPLETED')
   expect(post.expiresAt).toBeNull()
   expect(post.originalPost.postId).toBe(postId)
-  await misc.sleep(2000) // let dynamo converge
+  await misc.sleep(2000) // dynamo
 
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()

@@ -42,7 +42,7 @@ test('Add a comments', async () => {
   expect(resp.data.addComment.commentId).toBe(ourCommentId)
 
   // check we can see that comment
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
@@ -62,7 +62,7 @@ test('Add a comments', async () => {
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
   // check we see both comments, in order, on the post
-  await misc.sleep(500)
+  await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
