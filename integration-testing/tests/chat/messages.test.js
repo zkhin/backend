@@ -3,8 +3,8 @@
 const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
-const cognito = require('../../utils/cognito.js')
-const misc = require('../../utils/misc.js')
+const cognito = require('../../utils/cognito')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()

@@ -5,8 +5,8 @@ const uuidv4 = require('uuid/v4')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
 
-const cognito = require('../../utils/cognito.js')
-const misc = require('../../utils/misc.js')
+const cognito = require('../../utils/cognito')
+const misc = require('../../utils/misc')
 const {mutations, subscriptions} = require('../../schema')
 
 const imageHeaders = {'Content-Type': 'image/jpeg'}

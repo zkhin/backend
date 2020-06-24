@@ -5,7 +5,7 @@ const path = require('path')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
-const cognito = require('../../utils/cognito.js')
+const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))

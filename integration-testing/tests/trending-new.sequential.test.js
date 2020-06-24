@@ -1,20 +1,16 @@
 /* eslint-env jest */
 
 /**
- * This test suite should be merged with tests/post-views-trending.test.js
- * before going into production.
- *
- * This is because calls to this mutation alter a global state - namely the
- * trending users/posts indexes. As such, all tests that call this mutaiton
- * have to be run sequentially, and one simple way to get that to happen
- * with jest is to put all the tests in the same test suite.
+ * This test suite cannot run in parrallel with others because it
+ * depends on global state - namely the trending users/posts indexes.
+ * Any call to addPost() in general will affect the trending indexes.
  */
 
 const uuidv4 = require('uuid/v4')
 const rp = require('request-promise-native')
 
-const cognito = require('../utils/cognito.js')
-const misc = require('../utils/misc.js')
+const cognito = require('../utils/cognito')
+const misc = require('../utils/misc')
 const {mutations, queries} = require('../schema')
 
 const imageData = misc.generateRandomJpeg(8, 8)

@@ -6,8 +6,8 @@ const requestImageSize = require('request-image-size')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
-const cognito = require('../utils/cognito.js')
-const misc = require('../utils/misc.js')
+const cognito = require('../utils/cognito')
+const misc = require('../utils/misc')
 const {mutations, queries} = require('../schema')
 
 const jpgHeaders = {'Content-Type': 'image/jpeg'}

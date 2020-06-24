@@ -2,7 +2,7 @@
 
 const uuidv4 = require('uuid/v4')
 
-const cognito = require('../../utils/cognito.js')
+const cognito = require('../../utils/cognito')
 const {mutations} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()

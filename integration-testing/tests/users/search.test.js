@@ -4,8 +4,8 @@ const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
 
-const cognito = require('../../utils/cognito.js')
-const misc = require('../../utils/misc.js')
+const cognito = require('../../utils/cognito')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))

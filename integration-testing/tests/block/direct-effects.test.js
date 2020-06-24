@@ -1,6 +1,6 @@
 /* eslint-env jest */
 
-const cognito = require('../../utils/cognito.js')
+const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
