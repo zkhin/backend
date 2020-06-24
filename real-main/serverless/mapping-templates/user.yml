@@ -127,6 +127,10 @@
   dataSource: DynamodbDataSource
 
 - type: User
+  field: postsWithUnviewedComments
+  dataSource: DynamodbDataSource
+
+- type: User
   field: postsByNewCommentActivity
   dataSource: DynamodbDataSource
 

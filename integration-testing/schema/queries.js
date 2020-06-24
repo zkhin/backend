@@ -25,6 +25,11 @@ module.exports.self = gql`
           postId
         }
       }
+      postsWithUnviewedComments {
+        items {
+          postId
+        }
+      }
       postsByNewCommentActivity {
         items {
           postId
@@ -119,6 +124,11 @@ module.exports.user = gql`
         }
       }
       posts {
+        items {
+          postId
+        }
+      }
+      postsWithUnviewedComments {
         items {
           postId
         }

@@ -320,8 +320,11 @@ type User {
   posts(postStatus: PostStatus, postType: PostType, limit: Int, nextToken: String): PaginatedPosts
   postCount: Int  # only posts with COMPLETED status
 
-  # User's posts that have new comment activity, ordered with most recent first
-  postsByNewCommentActivity(limit: Int, nextToken: String): PaginatedPosts
+  # User's posts that have unviewed comments
+  #   - private to the user themselves
+  #   - ordered with post with most recent comment first
+  postsWithUnviewedComments(limit: Int, nextToken: String): PaginatedPosts
+  postsByNewCommentActivity(limit: Int, nextToken: String): PaginatedPosts  # DEPRECATED use postsWithUnviewedComments
 
   # User's notification cards
   #   - private to the user themselves
@@ -393,7 +396,7 @@ type PaginatedUsers {
 }
 
 type Card {
-  # cardId's will be re-used for well-known cards (ex: you have new comment activity)
+  # cardId's will be re-used for well-known cards (ex: you have new comments)
   cardId: ID!
   title: String!
   subTitle: String
@@ -670,7 +673,7 @@ type Post {
 
   # Have new comments appeared on the post since the last time a view of a comment was reported?
   #   - private to post owner only
-  hasNewCommentActivity: Boolean  # DEPRECATED: use commentsCount
+  hasNewCommentActivity: Boolean  # DEPRECATED: use commentsCount(viewedStatus: NOT_VIEWED)
 }
 
 type PaginatedPosts {
