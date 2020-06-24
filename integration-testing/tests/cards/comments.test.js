@@ -26,7 +26,6 @@ test('Generate comment card', async () => {
     mutation: mutations.addPost,
     variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we comment on our post
@@ -34,12 +33,10 @@ test('Generate comment card', async () => {
     mutation: mutations.addComment,
     variables: {commentId: uuidv4(), postId, text: 'nice post'},
   })
-  expect(resp.errors).toBeUndefined()
 
   // verify no card generated for our comment
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(0)
   expect(resp.data.self.cards.items).toHaveLength(0)
@@ -50,13 +47,11 @@ test('Generate comment card', async () => {
     mutation: mutations.addComment,
     variables: {commentId, postId, text: 'nice post'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // verify a card was generated for their comment
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
@@ -85,24 +80,20 @@ test('Generate comment card', async () => {
     mutation: mutations.addComment,
     variables: {commentId: uuidv4(), postId, text: 'nice post'},
   })
-  expect(resp.errors).toBeUndefined()
 
   // verify we still have just one card
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
 
   // we view that post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  expect(resp.errors).toBeUndefined()
 
   // verify the card has disappeared
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(0)
   expect(resp.data.self.cards.items).toHaveLength(0)
@@ -118,13 +109,11 @@ test('Comment cards are post-specific', async () => {
     mutation: mutations.addPost,
     variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   resp = await ourClient.mutate({
     mutation: mutations.addPost,
     variables: {postId: postId2, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
 
   // they comment on our first post
@@ -133,13 +122,11 @@ test('Comment cards are post-specific', async () => {
     mutation: mutations.addComment,
     variables: {commentId: commentId1, postId: postId1, text: 'nice post'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId1)
 
   // verify a card was generated for their comment
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
@@ -152,13 +139,11 @@ test('Comment cards are post-specific', async () => {
     mutation: mutations.addComment,
     variables: {commentId: commentId2, postId: postId2, text: 'nice post'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId2)
 
   // verify a second card was generated
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(2)
   expect(resp.data.self.cards.items).toHaveLength(2)
@@ -172,13 +157,11 @@ test('Comment cards are post-specific', async () => {
     mutation: mutations.addComment,
     variables: {commentId: commentId3, postId: postId1, text: 'nice post'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId3)
 
   // verify a second card was generated
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(2)
   expect(resp.data.self.cards.items).toHaveLength(2)
@@ -187,12 +170,10 @@ test('Comment cards are post-specific', async () => {
 
   // we view first post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
-  expect(resp.errors).toBeUndefined()
 
   // verify that card has disappeared, the other remains
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)

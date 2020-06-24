@@ -27,7 +27,6 @@ test('Add a comments', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentCount).toBe(0)
   expect(resp.data.addPost.commentsCount).toBe(0)
@@ -38,13 +37,11 @@ test('Add a comments', async () => {
   const ourText = 'nice post'
   variables = {commentId: ourCommentId, postId, text: ourText}
   resp = await ourClient.mutate({mutation: mutations.addComment, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(ourCommentId)
 
   // check we can see that comment
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
@@ -58,13 +55,11 @@ test('Add a comments', async () => {
   const theirText = 'lore ipsum'
   variables = {commentId: theirCommentId, postId, text: theirText}
   resp = await theirClient.mutate({mutation: mutations.addComment, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
   // check we see both comments, in order, on the post
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(2)
   expect(resp.data.post.commentsCount).toBe(2)
@@ -83,14 +78,12 @@ test('Verify commentIds cannot be re-used ', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // they comment on the post
   const commentId = uuidv4()
   variables = {commentId, postId, text: 'nice lore'}
   resp = await theirClient.mutate({mutation: mutations.addComment, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check we cannot add another comment re-using that commentId
@@ -113,12 +106,10 @@ test('Cant add comments if our user is disabled', async () => {
   // we add a post
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we disable ourselves
   resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.disableUser.userId).toBe(ourUserId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
@@ -137,7 +128,6 @@ test('Cant add comments to post with comments disabled', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData, commentsDisabled: true}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentsDisabled).toBe(true)
 
@@ -155,7 +145,6 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
   // they block us
   let variables = {userId: ourUserId}
   let resp = await theirClient.mutate({mutation: mutations.blockUser, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(ourUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
@@ -163,14 +152,12 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
   const theirPostId = uuidv4()
   variables = {postId: theirPostId, imageData}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(theirPostId)
 
   // we add a post
   const ourPostId = uuidv4()
   variables = {postId: ourPostId, imageData}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(ourPostId)
 
   // check we cannot comment on their post
@@ -193,20 +180,17 @@ test('Cant add comments to a post of a private user unless were following them',
   // they go private
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.errors).toBeUndefined()
 
   // they add a post
   const postId = uuidv4()
   variables = {postId, imageData}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // check they can comment on their own post
   let commentId = uuidv4()
   variables = {commentId: commentId, postId, text: 'no way'}
   resp = await theirClient.mutate({mutation: mutations.addComment, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check we cannot comment on the post
@@ -218,7 +202,6 @@ test('Cant add comments to a post of a private user unless were following them',
   // we request to follow them
   variables = {userId: theirUserId}
   resp = await ourClient.mutate({mutation: mutations.followUser, variables})
-  expect(resp.errors).toBeUndefined()
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}
@@ -229,19 +212,16 @@ test('Cant add comments to a post of a private user unless were following them',
   // they accept our follow request
   variables = {userId: ourUserId}
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables})
-  expect(resp.errors).toBeUndefined()
 
   // check we _can_ comment on the post
   commentId = uuidv4()
   variables = {commentId, postId, text: 'nice lore'}
   resp = await ourClient.mutate({mutation: mutations.addComment, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // they change their mind and now deny our following
   variables = {userId: ourUserId}
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables})
-  expect(resp.errors).toBeUndefined()
 
   // check we cannot comment on the post
   variables = {commentId: uuidv4(), postId, text: 'no way'}

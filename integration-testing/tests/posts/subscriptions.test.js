@@ -29,7 +29,6 @@ test('Post message triggers cannot be called from external graphql client', asyn
   // create an image post in pending state
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, postType: 'IMAGE'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('IMAGE')
   expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -68,7 +67,6 @@ test('Cannot subscribe to other users notifications', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData, takenInReal: true}
   let resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
@@ -102,7 +100,6 @@ test('Format for COMPLETED message notifications', async () => {
   const postId1 = uuidv4()
   let variables = {postId: postId1, postType: 'IMAGE'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   let uploadUrl1 = resp.data.addPost.imageUploadUrl
@@ -112,7 +109,6 @@ test('Format for COMPLETED message notifications', async () => {
   const postId2 = uuidv4()
   variables = {postId: postId2, postType: 'IMAGE', takenInReal: true}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   let uploadUrl2 = resp.data.addPost.imageUploadUrl

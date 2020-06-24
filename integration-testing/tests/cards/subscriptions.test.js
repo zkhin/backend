@@ -62,14 +62,12 @@ test('Cannot subscribe to other users notifications', async () => {
     mutation: mutations.addPost,
     variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // we comment on their post (thus generating a card)
   const commentId = uuidv4()
   resp = await ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore!'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // wait for some messages to show up, ensure none did for us but one did for them
@@ -95,7 +93,6 @@ test('Lifecycle, format for comment activity notification', async () => {
     mutation: mutations.addPost,
     variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
@@ -126,12 +123,10 @@ test('Lifecycle, format for comment activity notification', async () => {
   // they comment on our post (thus generating a card)
   const commentId = uuidv4()
   resp = await theirClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore!'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('ADDED')
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
@@ -149,11 +144,9 @@ test('Lifecycle, format for comment activity notification', async () => {
 
   // we report to have viewed the post (hence deleting the card)
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  expect(resp.errors).toBeUndefined()
 
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('DELETED')
   expect(resp.data.onCardNotification.card).toEqual(orgCard)
@@ -173,7 +166,6 @@ test('Lifecycle, format for chat activity notification', async () => {
     mutation: mutations.createDirectChat,
     variables: {userId: theirUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
   // we subscribe to our cards
@@ -203,12 +195,10 @@ test('Lifecycle, format for chat activity notification', async () => {
   // they add a message to the chat (thus generating a card)
   const messageId = uuidv4()
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId, text: 'lore'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId)
 
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('ADDED')
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
@@ -225,11 +215,9 @@ test('Lifecycle, format for chat activity notification', async () => {
 
   // we report to have viewed the chat (hence deleting the card)
   resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
-  expect(resp.errors).toBeUndefined()
 
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('DELETED')
   expect(resp.data.onCardNotification.card).toEqual(orgCard)

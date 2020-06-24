@@ -185,38 +185,32 @@ test('deprecated postsByNewcCommentActivity', async () => {
     mutation: mutations.addPost,
     variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // check that post has no comment activity
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.postsByNewCommentActivity.items).toHaveLength(0)
 
   // they comment on the post
   const commentId = uuidv4()
   resp = await theirClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addComment.commentId).toBe(commentId)
   await misc.sleep(2000) // dynamo
 
   // check that post now has comment activity
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.postsByNewCommentActivity.items).toHaveLength(1)
   expect(resp.data.self.postsByNewCommentActivity.items[0].postId).toBe(postId)
 
   // we report to have read that comment
   resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // check that post has no comment activity
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.postsByNewCommentActivity.items).toHaveLength(0)
 })

@@ -29,14 +29,12 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // we add an image post
   const postId = uuidv4()
   let variables = {postId, imageData: grantDataB64, takenInReal: true}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   await misc.sleepUntilPostCompleted(ourClient, postId)
@@ -50,14 +48,11 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
       fullName: 'test test',
     },
   })
-  expect(resp.errors).toBeUndefined()
   variables = {version: 'v2020-01-01.1'}
   resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables})
-  expect(resp.errors).toBeUndefined()
 
   // retrieve our user object
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   const ourUserFull = resp.data.self
   expect(ourUserFull.userId).toBe(ourUserId)
   expect(ourUserFull.username).toBeTruthy()
@@ -111,7 +106,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // verify they see only a absolutely minimal profile of us
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   const ourUserLimited = resp.data.user
   expect(ourUserLimited.userId).toBe(ourUserFull.userId)
   expect(ourUserLimited.username).toBe(ourUserFull.username)
@@ -185,30 +179,25 @@ test('Blocked cannot see blocker in search results, blocker can see blocked in s
 
   // verify they show up in our search results
   let resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: theirUsername}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(theirUserId)
 
   // verify we show up in their search results
   resp = await theirClient.query({query: queries.searchUsers, variables: {searchToken: ourUsername}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 
   // we block them
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify they still show up in our search results
   resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: theirUsername}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(theirUserId)
 
   // verify we do not show up in their search results
   resp = await theirClient.query({query: queries.searchUsers, variables: {searchToken: ourUsername}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.searchUsers.items).toHaveLength(0)
 })
 
@@ -219,22 +208,17 @@ test('Blocked cannot see blockers follower or followed users lists', async () =>
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify they cannot see our list of followers or followed
   resp = await theirClient.query({query: queries.followedUsers, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedUsers).toBeNull()
   resp = await theirClient.query({query: queries.followerUsers, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerUsers).toBeNull()
 
   // verify we can still see their list of followers or followed
   resp = await ourClient.query({query: queries.followedUsers, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   resp = await ourClient.query({query: queries.followerUsers, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
 })
 
 test('Blocked cannot see blockers posts or stories', async () => {
@@ -244,23 +228,18 @@ test('Blocked cannot see blockers posts or stories', async () => {
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify they cannot see our posts or stories
   resp = await theirClient.query({query: queries.userStories, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.stories).toBeNull()
   resp = await theirClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.posts).toBeNull()
 
   // verify we can see their posts or stories
   resp = await theirClient.query({query: queries.userStories, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.stories.items).toHaveLength(0)
   resp = await theirClient.query({query: queries.userPosts, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.posts.items).toHaveLength(0)
 })
 
@@ -271,18 +250,15 @@ test('Blocked cannot see blockers lists of likes', async () => {
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify they cannot see our lists of likes
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.onymouslyLikedPosts).toBeNull()
   expect(resp.data.user.anonymouslyLikedPosts).toBeNull()
 
   // verify we can see their list of onymous likes
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.onymouslyLikedPosts.items).toHaveLength(0)
   expect(resp.data.user.anonymouslyLikedPosts).toBeNull()
 })
@@ -294,14 +270,12 @@ test('Blocked cannot see directly see blockers posts', async () => {
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // we add an image post, complete it
   const postId1 = uuidv4()
   let variables = {postId: postId1, imageData: grantDataB64}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
@@ -309,17 +283,14 @@ test('Blocked cannot see directly see blockers posts', async () => {
   const postId2 = uuidv4()
   variables = {postId: postId2, imageData: grantDataB64}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // verify they cannot see our post or likers of the post
   resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post).toBeNull()
 
   // verify we can see their post and likers of the post
   resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId2)
 })

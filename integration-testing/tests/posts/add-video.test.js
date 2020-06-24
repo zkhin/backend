@@ -36,7 +36,6 @@ test('Add pending video post minimal', async () => {
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('VIDEO')
   expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -66,7 +65,6 @@ test('Add pending video post maximal', async () => {
     verificationHidden: true,
   }
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('VIDEO')
   expect(resp.data.addPost.postStatus).toBe('PENDING')

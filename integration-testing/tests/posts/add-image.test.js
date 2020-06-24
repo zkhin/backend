@@ -30,7 +30,6 @@ test('Cant use jpeg data for an HEIC image', async () => {
   const postId1 = uuidv4()
   let variables = {postId: postId1, imageData, imageFormat: 'HEIC'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('ERROR')
   expect(resp.data.addPost.image).toBeNull()
@@ -38,7 +37,6 @@ test('Cant use jpeg data for an HEIC image', async () => {
 
   // check the post, make sure it error'd out
   resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId1)
   expect(resp.data.post.postStatus).toBe('ERROR')
   expect(resp.data.post.isVerified).toBeNull()
@@ -47,7 +45,6 @@ test('Cant use jpeg data for an HEIC image', async () => {
   // add a post as HEIC, but actually send up jpeg data
   const postId2 = uuidv4()
   resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageFormat: 'HEIC'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
@@ -58,7 +55,6 @@ test('Cant use jpeg data for an HEIC image', async () => {
 
   // check the post, make sure it error'd out
   resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId2)
   expect(resp.data.post.postStatus).toBe('ERROR')
   expect(resp.data.post.isVerified).toBeNull()
@@ -71,7 +67,6 @@ test('Add image post with image data directly included', async () => {
   // add the post with image data included in the gql call
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('IMAGE')
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
@@ -92,7 +87,6 @@ test('Add image post with image data directly included', async () => {
 
   // double check everything saved to db correctly
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.imageUploadUrl).toBeNull()
@@ -112,7 +106,6 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   const postId = uuidv4()
   let variables = {postId, postType: 'IMAGE'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('PENDING')
@@ -128,14 +121,12 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   const postId2 = uuidv4()
   variables = {postId: postId2}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   uploadUrl = resp.data.addPost.imageUploadUrl
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // check the post has changed status and looks good
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -145,12 +136,10 @@ test('Add image post (with postType specified), check non-duplicates are not mar
 
   // check the originalPost properties don't point at each other
   resp = await ourClient.query({query: queries.post, variables: {postId: postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.originalPost.postId).toBe(postId)
   resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId2)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.originalPost.postId).toBe(postId2)
@@ -166,7 +155,6 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   // we add a image post, complete it, check it's original
   let variables = {postId: ourPostId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(ourPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
@@ -175,7 +163,6 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   // they add another image post with the same image, original should point back to first post
   variables = {postId: theirPostId, imageData}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(theirPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
@@ -183,56 +170,46 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
 
   // check each others post objects directly
   resp = await theirClient.query({query: queries.post, variables: {postId: ourPostId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(ourPostId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.originalPost.postId).toBe(ourPostId)
   resp = await ourClient.query({query: queries.post, variables: {postId: theirPostId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(theirPostId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.originalPost.postId).toBe(ourPostId)
 
   // we block them
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // verify they can't see their post's originalPost
   resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(theirPostId)
   expect(resp.data.post.originalPost).toBeNull()
 
   // we unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unblockUser.userId).toBe(theirUserId)
   expect(resp.data.unblockUser.blockedStatus).toBe('NOT_BLOCKING')
 
   // we go private
   resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // verify they can't see their post's originalPost
   resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(theirPostId)
   expect(resp.data.post.originalPost).toBeNull()
 
   // they request to follow us, we accept
   resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // verify they *can* see their post's originalPost
   resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(theirPostId)
   expect(resp.data.post.originalPost.postId).toBe(ourPostId)
 })
@@ -244,7 +221,6 @@ test('Add post setAsUserPhoto failures', async () => {
   const postId1 = uuidv4()
   let variables = {postId: postId1, postType: 'IMAGE', setAsUserPhoto: true, imageData: 'notimagedata'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('ERROR')
 
@@ -252,7 +228,6 @@ test('Add post setAsUserPhoto failures', async () => {
   const postId2 = uuidv4()
   variables = {postId: postId2, postType: 'IMAGE', setAsUserPhoto: true}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   let uploadUrl = resp.data.addPost.imageUploadUrl
@@ -264,7 +239,6 @@ test('Add post setAsUserPhoto failures', async () => {
 
   // check that our profile photo has not changed
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.photo).toBeNull()
 })
@@ -274,7 +248,6 @@ test('Add post setAsUserPhoto success', async () => {
 
   // check we have no profile photo
   let resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.photo).toBeNull()
 
@@ -282,7 +255,6 @@ test('Add post setAsUserPhoto success', async () => {
   const postId1 = uuidv4()
   let variables = {postId: postId1, postType: 'IMAGE', setAsUserPhoto: true, imageData, takenInReal: true}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
@@ -291,7 +263,6 @@ test('Add post setAsUserPhoto success', async () => {
 
   // check that our profile photo has changed
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.photo.url).toContain(postId1)
 
@@ -299,7 +270,6 @@ test('Add post setAsUserPhoto success', async () => {
   const postId2 = uuidv4()
   variables = {postId: postId2, postType: 'IMAGE', setAsUserPhoto: true, takenInReal: true}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   let uploadUrl = resp.data.addPost.imageUploadUrl
@@ -314,7 +284,6 @@ test('Add post setAsUserPhoto success', async () => {
 
   // check that our profile photo has changed
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.photo.url).toContain(postId2)
 })

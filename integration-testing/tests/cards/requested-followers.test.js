@@ -25,25 +25,21 @@ test('Requested followers card with correct format', async () => {
     mutation: mutations.setUserPrivacyStatus,
     variables: {privacyStatus: 'PRIVATE'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // verify we have no cards
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(0)
   expect(resp.data.self.cards.items).toHaveLength(0)
 
   // other1 requests to follow us
   resp = await other1Client.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // verify a card was generated for their follow request
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
@@ -58,13 +54,11 @@ test('Requested followers card with correct format', async () => {
 
   // other2 requests to follow us
   resp = await other2Client.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // verify we still have just same card
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
@@ -72,13 +66,11 @@ test('Requested followers card with correct format', async () => {
 
   // other1 gives up on following us
   resp = await other1Client.mutate({mutation: mutations.unfollowUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
   // verify we still have just same card
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
@@ -86,13 +78,11 @@ test('Requested followers card with correct format', async () => {
 
   // we accept other2's follow request
   resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: other2UserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // verify the card has disappeared
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(0)
   expect(resp.data.self.cards.items).toHaveLength(0)

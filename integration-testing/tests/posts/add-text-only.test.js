@@ -44,7 +44,6 @@ test('Add text-only post', async () => {
 
   let variables = {postId, text, postType: 'TEXT_ONLY'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('TEXT_ONLY')
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')

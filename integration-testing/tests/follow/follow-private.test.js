@@ -20,33 +20,26 @@ test('Follow a private user - approved', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // we request follow them
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // check we have moved to a REQUESTED state
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedStatus).toBe('REQUESTED')
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerStatus).toBe('REQUESTED')
 
   // they accept the follow request
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // check we have moved to a FOLLOWING state
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedStatus).toBe('FOLLOWING')
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerStatus).toBe('FOLLOWING')
 })
 
@@ -56,25 +49,20 @@ test('Follow a private user - denied', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // we request follow them
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // they deny the follow request
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
 
   // check we have moved to a DENIED state
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedStatus).toBe('DENIED')
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerStatus).toBe('DENIED')
 })
 
@@ -84,33 +72,26 @@ test('Deny & then approve a preivously approved follow request', async () => {
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they decide to deny our following
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
 
   // check we have moved to a DENIED state
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedStatus).toBe('DENIED')
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerStatus).toBe('DENIED')
 
   // they decide to approve our following
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // check we have moved to a FOLLOWING state
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followedStatus).toBe('FOLLOWING')
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.followerStatus).toBe('FOLLOWING')
 })
 
@@ -120,38 +101,30 @@ test('Cancelling follow requests', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // we request follow them
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   // we cancel that request follow them
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
   // we request follow them
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   // they accept the follow request
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
   // we unfollow them
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
   // we request follow them
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   // they deny the follow request
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
   // we cannot unfollow them
   await expect(
@@ -159,11 +132,9 @@ test('Cancelling follow requests', async () => {
   ).rejects.toThrow(/ClientError: .* has status `DENIED`$/)
   // they accept the follow request
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
   // we unfollow them
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 })
 
@@ -172,7 +143,6 @@ test('Private user changing to public has follow requests taken care of', async 
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // two other users
@@ -186,15 +156,12 @@ test('Private user changing to public has follow requests taken care of', async 
 
   // verifiy we have one follow request in REQUESTED, one in DENIED, and none accepted
   resp = await ourClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'REQUESTED'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followerUsers.items).toHaveLength(1)
   expect(resp.data.self.followerUsers.items[0].userId).toBe(other1UserId)
   resp = await ourClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'DENIED'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followerUsers.items).toHaveLength(1)
   expect(resp.data.self.followerUsers.items[0].userId).toBe(other2UserId)
   resp = await ourClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'FOLLOWING'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followerUsers.items).toHaveLength(0)
 
   // now change our profile to public
@@ -202,13 +169,10 @@ test('Private user changing to public has follow requests taken care of', async 
 
   // verifiy we have no follow requests in REQUESTED nor DENIED, and one accepted
   resp = await ourClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'REQUESTED'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followerUsers.items).toHaveLength(0)
   resp = await ourClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'DENIED'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followerUsers.items).toHaveLength(0)
   resp = await ourClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'FOLLOWING'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followerUsers.items).toHaveLength(1)
   expect(resp.data.self.followerUsers.items[0].userId).toBe(other1UserId)
 })

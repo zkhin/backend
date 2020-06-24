@@ -26,7 +26,6 @@ test('Add messages to a direct chat', async () => {
   const [chatId, messageId1, text1] = [uuidv4(), uuidv4(), 'hey this is msg 1']
   let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: text1}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -36,7 +35,6 @@ test('Add messages to a direct chat', async () => {
   const [messageId2, text2] = [uuidv4(), 'msg 2']
   variables = {chatId, messageId: messageId2, text: text2}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
   expect(resp.data.addChatMessage.text).toBe(text2)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
@@ -44,7 +42,6 @@ test('Add messages to a direct chat', async () => {
   const [messageId3, text3] = [uuidv4(), 'msg 3']
   variables = {chatId, messageId: messageId3, text: text3}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
   expect(resp.data.addChatMessage.text).toBe(text3)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
@@ -55,7 +52,6 @@ test('Add messages to a direct chat', async () => {
   let before = moment().toISOString()
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
   let after = moment().toISOString()
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId4)
   expect(resp.data.addChatMessage.text).toBe(text4)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
@@ -66,7 +62,6 @@ test('Add messages to a direct chat', async () => {
   // check we see all the messages are there in the expected order
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
   expect(resp.data.chat.messageCount).toBe(4)
@@ -97,7 +92,6 @@ test('Add messages to a direct chat', async () => {
 
   // check they can also see them, and in reverse order if they want
   resp = await theirClient.query({query: queries.chat, variables: {chatId, reverse: true}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
   expect(resp.data.chat.messageCount).toBe(4)
@@ -123,7 +117,6 @@ test('Report message views', async () => {
   // they open up a chat with us
   let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -132,20 +125,17 @@ test('Report message views', async () => {
   // we add two messages to the chat
   variables = {chatId, messageId: messageId2, text: 'lore'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   variables = {chatId, messageId: messageId3, text: 'lore'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check each message's viewedStatus is as expected for both of us
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -160,7 +150,6 @@ test('Report message views', async () => {
   expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
 
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -177,12 +166,10 @@ test('Report message views', async () => {
   // we report to have viewed the first message (and one we've already viewed, which should be a no-op)
   variables = {messageIds: [messageId1, messageId2]}
   resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables})
-  expect(resp.errors).toBeUndefined()
 
   // check we have now viewed all messages
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -199,12 +186,10 @@ test('Report message views', async () => {
   // they report they have viewed the two message they haven't viewed
   variables = {messageIds: [messageId2, messageId3]}
   resp = await theirClient.mutate({mutation: mutations.reportChatMessageViews, variables})
-  expect(resp.errors).toBeUndefined()
 
   // check they have now viewed all messages
   await misc.sleep(1000)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -227,7 +212,6 @@ test('Report chat views', async () => {
   // they open up a chat with us
   let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -236,14 +220,12 @@ test('Report chat views', async () => {
   // they add a message to the chat
   variables = {chatId, messageId: messageId2, text: 'lore'}
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check each message's viewedStatus is as expected for us
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(2)
   expect(resp.data.chat.messagesCount).toBe(2)
@@ -257,12 +239,10 @@ test('Report chat views', async () => {
 
   // we report to have viewed the chat
   resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
-  expect(resp.errors).toBeUndefined()
 
   // check all messages now appear viewed for us
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(2)
   expect(resp.data.chat.messagesCount).toBe(2)
@@ -277,14 +257,12 @@ test('Report chat views', async () => {
   // they add another message to the chat
   variables = {chatId, messageId: messageId3, text: 'lore'}
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check the new messages now appears unviewed for us
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -300,12 +278,10 @@ test('Report chat views', async () => {
 
   // we report to have viewed the chat again
   resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
-  expect(resp.errors).toBeUndefined()
 
   // check all messages now appear viewed for us
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -321,7 +297,6 @@ test('Report chat views', async () => {
 
   // check all messages appear viewed for them, because they're athor of them all
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -344,12 +319,10 @@ test('Disabled user cannot add, edit, delete or report views of chat messages', 
   const messageId = uuidv4()
   let variables = {chatId, userIds: [], messageId, messageText: 'm1'}
   let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
 
   // we disable ourselves
   resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.disableUser.userId).toBe(ourUserId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
@@ -383,7 +356,6 @@ test('Cant add a message to a chat we are not in', async () => {
   // they open up a chat with us
   let variables = {userId: ourUserId, chatId, messageId, messageText: 'lore'}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
   // verify the rando can't add a message to our chat
@@ -394,7 +366,6 @@ test('Cant add a message to a chat we are not in', async () => {
 
   // check the chat and verify the rando's message didn't get saved
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(1)
   expect(resp.data.chat.messagesCount).toBe(1)
@@ -411,7 +382,6 @@ test('Tag users in a chat message', async () => {
   let text = `hi @${theirUsername}! hi from @${ourUsername}`
   let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: text}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -422,7 +392,6 @@ test('Tag users in a chat message', async () => {
   text = `hi @${theirUsername}!`
   variables = {chatId, messageId: messageId2, text}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
   expect(resp.data.addChatMessage.text).toBe(text)
   expect(resp.data.addChatMessage.textTaggedUsers).toHaveLength(1)
@@ -433,14 +402,12 @@ test('Tag users in a chat message', async () => {
   text = 'not tagging anyone here'
   variables = {chatId, messageId: messageId3, text}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
   expect(resp.data.addChatMessage.text).toBe(text)
   expect(resp.data.addChatMessage.textTaggedUsers).toHaveLength(0)
 
   // check the chat, make sure the tags all look as expected
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
@@ -464,7 +431,6 @@ test('Edit chat message', async () => {
   const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
   let variables = {userId: ourUserId, chatId, messageId, messageText: orgText}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
   // verify neither rando nor us can edit the chat message
@@ -479,11 +445,9 @@ test('Edit chat message', async () => {
   // we report a view of the message
   variables = {messageIds: [messageId]}
   resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables})
-  expect(resp.errors).toBeUndefined()
 
   // check the message hasn't changed
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messages.items).toHaveLength(1)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageId)
@@ -497,7 +461,6 @@ test('Edit chat message', async () => {
   let before = moment().toISOString()
   resp = await theirClient.mutate({mutation: mutations.editChatMessage, variables: {messageId, text: newText}})
   let after = moment().toISOString()
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editChatMessage.messageId).toBe(messageId)
   expect(resp.data.editChatMessage.text).toBe(newText)
   expect(resp.data.editChatMessage.textTaggedUsers).toHaveLength(1)
@@ -511,7 +474,6 @@ test('Edit chat message', async () => {
 
   // check that really stuck in db
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messages.items).toHaveLength(1)
   expect(resp.data.chat.messages.items[0]).toEqual(message)
@@ -519,7 +481,6 @@ test('Edit chat message', async () => {
   // check when we see the message, the viewed status still reflects that we have seen the message
   // even though we haven't seen the edit
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messages.items).toHaveLength(1)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageId)
@@ -535,7 +496,6 @@ test('Delete chat message', async () => {
   const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
   let variables = {userId: ourUserId, chatId, messageId, messageText: orgText}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
   // verify neither rando nor us can delete the chat message
@@ -549,20 +509,17 @@ test('Delete chat message', async () => {
 
   // check the message hasn't changed
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messages.items).toHaveLength(1)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageId)
 
   // check they *can* delete the message
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId)
   await misc.sleep(2000) // dynamo
 
   // check that the message has now dissapeared from the db
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(0)
   expect(resp.data.chat.messagesCount).toBe(0)
@@ -580,19 +537,16 @@ test('User.chats sort order should react to message adds, but not to edits and d
   const [chatId1, messageId11] = [uuidv4(), uuidv4()]
   let variables = {userId: ourUserId, chatId: chatId1, messageId: messageId11, messageText: 'lore ipsum'}
   let resp = await other1Client.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId1)
 
   // other2 opens up a chat with us
   const [chatId2, messageId21] = [uuidv4(), uuidv4()]
   variables = {userId: ourUserId, chatId: chatId2, messageId: messageId21, messageText: 'lore ipsum'}
   resp = await other2Client.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId2)
 
   // verify we see both those chats in correct order
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
   expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
@@ -600,12 +554,10 @@ test('User.chats sort order should react to message adds, but not to edits and d
   // other1 edits their original message
   variables = {messageId: messageId11, text: 'lore ipsum for reals'}
   resp = await other1Client.mutate({mutation: mutations.editChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editChatMessage.messageId).toBe(messageId11)
 
   // verify the order we see chats in has not changed - edits aren't counted as new activity
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
   expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
@@ -613,12 +565,10 @@ test('User.chats sort order should react to message adds, but not to edits and d
   // other1 deletes their original message
   variables = {messageId: messageId11}
   resp = await other1Client.mutate({mutation: mutations.deleteChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId11)
 
   // verify the order we see chats in has not changed - deletes aren't counted as new activity
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
   expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
@@ -627,12 +577,10 @@ test('User.chats sort order should react to message adds, but not to edits and d
   const messageId13 = uuidv4()
   variables = {chatId: chatId1, messageId: messageId13, text: 'new text'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId13)
 
   // verify the order we see chats in has changed
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
   expect(resp.data.self.chats.items[1].chatId).toBe(chatId2)
@@ -641,12 +589,10 @@ test('User.chats sort order should react to message adds, but not to edits and d
   const messageId14 = uuidv4()
   variables = {chatId: chatId1, messageId: messageId14, text: 'new text'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId14)
 
   // verify the order we see chats in has _not_ changed
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
   expect(resp.data.self.chats.items[1].chatId).toBe(chatId2)
@@ -662,23 +608,19 @@ test('User.chatsWithUnviewedMessages', async () => {
     mutation: mutations.createDirectChat,
     variables: {userId: ourUserId, chatId: chatId1, messageId: messageId1, messageText: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId1)
 
   // we should see an unread chat with unread messages
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
 
   // check they can't see our count
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.chatsWithUnviewedMessagesCount).toBeNull()
 
   // they should not see an unread chat with unread messages
   resp = await theirClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
 
   // we open up a group chat with them
@@ -687,39 +629,32 @@ test('User.chatsWithUnviewedMessages', async () => {
     mutation: mutations.createGroupChat,
     variables: {chatId: chatId2, userIds: [theirUserId], messageId: messageId2, messageText: 'm1'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
 
   // check our counts
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(2)
 
   // check their counts
   resp = await theirClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
 
   // we leave the group chat
   resp = await ourClient.mutate({mutation: mutations.leaveGroupChat, variables: {chatId: chatId2}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.leaveGroupChat.chatId).toBe(chatId2)
 
   // check counts again
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
 
   // we report to have viewed their message in the first chat
   resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId1]}})
-  expect(resp.errors).toBeUndefined()
 
   // check counts again
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
 
   // they add a new message to the first chat
@@ -728,23 +663,19 @@ test('User.chatsWithUnviewedMessages', async () => {
     mutation: mutations.addChatMessage,
     variables: {chatId: chatId1, messageId: messageId3, text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // check counts again
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
 
   // they delete that message
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId3}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId3)
 
   // check counts again
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
 })

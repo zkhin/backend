@@ -31,7 +31,6 @@ test('Add image post passes verification', async () => {
   const postId = uuidv4()
   let variables = {postId, takenInReal: true, originalFormat: 'HEIC', originalMetadata: '{}'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('PENDING')
@@ -45,7 +44,6 @@ test('Add image post passes verification', async () => {
 
   // check the post is now verified
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -59,7 +57,6 @@ test('Add image post fails verification', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData: smallGrantDataB64}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -67,7 +64,6 @@ test('Add image post fails verification', async () => {
 
   // check those values stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -81,7 +77,6 @@ test('Add image post verification hidden hides verification state', async () => 
   const postId = uuidv4()
   let variables = {postId, verificationHidden: true, imageData: smallGrantDataB64}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -90,7 +85,6 @@ test('Add image post verification hidden hides verification state', async () => 
 
   // check those values stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -98,25 +92,21 @@ test('Add image post verification hidden hides verification state', async () => 
 
   // change the verification hidden setting of the post
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, verificationHidden: false}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPost.postId).toBe(postId)
   expect(resp.data.editPost.verificationHidden).toBe(false)
 
   // now the real verification status should show up
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.isVerified).toBe(false)
 
   // change the verification hidden setting of the post again
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, verificationHidden: true}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPost.postId).toBe(postId)
   expect(resp.data.editPost.verificationHidden).toBe(true)
 
   // now the real verification status should *not* show up
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.isVerified).toBe(true)
 })
@@ -129,37 +119,31 @@ test('Post verification hidden setting is private to post owner', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData: smallGrantDataB64}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.verificationHidden).toBe(false)
 
   // verify when we look at our post we see the verification hidden setting
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.verificationHidden).toBe(false)
 
   // verify when someone else looks at our post they do *not* see the verification hidden setting
   resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.verificationHidden).toBeNull()
 
   // we set the verification hidden setting
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, verificationHidden: true}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPost.postId).toBe(postId)
   expect(resp.data.editPost.verificationHidden).toBe(true)
 
   // verify when we look at our post we see the verification hidden setting
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.verificationHidden).toBe(true)
 
   // verify when someone else looks at our post they do *not* see the verification hidden setting
   resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.verificationHidden).toBeNull()
 })

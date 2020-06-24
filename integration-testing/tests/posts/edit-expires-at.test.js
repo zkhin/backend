@@ -40,7 +40,6 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
   // they add a post
   let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we try to edit its expiresAt
@@ -57,7 +56,6 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
   // we add a post
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we try to edit its expiresAt to a date in the past
@@ -74,12 +72,10 @@ test('Cant edit Post.expiresAt if we are disabled', async () => {
   // we add a post
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we disable ourselves
   resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.disableUser.userId).toBe(ourUserId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
@@ -97,7 +93,6 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
   // we add a post
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we try to edit its expiresAt to a date in the past, gql schema catches this error not our server code
@@ -112,7 +107,6 @@ test('Add and remove expiresAt from a Post', async () => {
   // we add a post without an expiresAt
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.expiresAt).toBeNull()
 
@@ -120,7 +114,6 @@ test('Add and remove expiresAt from a Post', async () => {
   const expiresAt = moment().add(moment.duration('P1D'))
   variables = {postId, expiresAt: expiresAt.toISOString()}
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
   expect(moment(resp.data.editPostExpiresAt.expiresAt).isSame(expiresAt)).toBe(true)
@@ -128,14 +121,12 @@ test('Add and remove expiresAt from a Post', async () => {
   // we edit the post to remove its expiresAt using null
   variables = {postId, expiresAt: null}
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeNull()
 
   // we edit the post again to give it an expiresAt
   variables = {postId, expiresAt: expiresAt.toISOString()}
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
   expect(moment(resp.data.editPostExpiresAt.expiresAt).isSame(expiresAt)).toBe(true)
@@ -143,7 +134,6 @@ test('Add and remove expiresAt from a Post', async () => {
   // we edit the post to remove its expiresAt using undefined
   variables = {postId}
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeNull()
 })
@@ -156,7 +146,6 @@ test('Edit Post.expiresAt with UTC', async () => {
   // add a post with a lifetime
   let variables = {postId, imageData, lifetime}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
@@ -166,7 +155,6 @@ test('Edit Post.expiresAt with UTC', async () => {
   at.add(moment.duration(lifetime))
   const expiresAt = at.toISOString()
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId, expiresAt}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.editPostExpiresAt
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
@@ -174,7 +162,6 @@ test('Edit Post.expiresAt with UTC', async () => {
 
   // pull the post again to make sure that new value stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
@@ -189,7 +176,6 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   // add a post with a lifetime
   let variables = {postId, imageData, lifetime}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
@@ -201,7 +187,6 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   at.subtract(moment.duration('PT1H30M')) // account for the timezone offset
 
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId, expiresAt}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.editPostExpiresAt
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
@@ -209,7 +194,6 @@ test('Edit Post.expiresAt with non-UTC', async () => {
 
   // pull the post again to make sure that new value stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
@@ -223,37 +207,31 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   // add a post with no lifetime
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.expiresAt).toBeNull()
 
   // check we start with no stories
   resp = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.stories.items).toHaveLength(0)
 
   // set the post's expiresAt, changing it to a story
   const expiresAt = moment().add(moment.duration('PT1H')).toISOString()
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId, expiresAt}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
 
   // check we now have a story
   resp = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.stories.items).toHaveLength(1)
   expect(resp.data.user.stories.items[0].postId).toBe(postId)
 
   // remove the post's expiresAt, changing it to not be a story
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeNull()
 
   // check no longer have a story
   resp = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.stories.items).toHaveLength(0)
 })
 
@@ -264,32 +242,27 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add a post that is also a story
   let variables = {postId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.expiresAt).toBeTruthy()
 
   // check we see them in our first followed stories
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(1)
   expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
 
   // they edit that post so it is no longer a story
   variables = {postId, expiresAt: null}
   resp = await theirClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeNull()
 
   // check that is reflected in our first followed stories
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(0)
 })
 
@@ -302,18 +275,15 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // we follow other
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: otherUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they add a post that is also a story
   let variables = {postId: theirPostId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(theirPostId)
   expect(resp.data.addPost.expiresAt).toBeTruthy()
   const at = moment(resp.data.addPost.expiresAt)
@@ -321,13 +291,11 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   // other adds a post that is also a story
   variables = {postId: otherPostId, imageData, lifetime: 'PT2H'}
   resp = await otherClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(otherPostId)
   expect(resp.data.addPost.expiresAt).toBeTruthy()
 
   // check we see them as expected in our first followed stories
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(2)
   expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
   expect(resp.data.self.followedUsersWithStories.items[1].userId).toBe(otherUserId)
@@ -336,13 +304,11 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   at.add(moment.duration('PT2H'))
   variables = {postId: theirPostId, expiresAt: at.toISOString()}
   resp = await theirClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(theirPostId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
 
   // check we see them as expected in our first followed stories (order reversed from earlier)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(2)
   expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(otherUserId)
   expect(resp.data.self.followedUsersWithStories.items[1].userId).toBe(theirUserId)
@@ -351,13 +317,11 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   at.subtract(moment.duration('PT2H'))
   variables = {postId: theirPostId, expiresAt: at.toISOString()}
   resp = await theirClient.mutate({mutation: mutations.editPostExpiresAt, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editPostExpiresAt.postId).toBe(theirPostId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
 
   // check we see them as expected in our first followed stories (order back to original)
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.followedUsersWithStories.items).toHaveLength(2)
   expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
   expect(resp.data.self.followedUsersWithStories.items[1].userId).toBe(otherUserId)

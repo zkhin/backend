@@ -16,41 +16,43 @@ afterAll(async () => await loginCache.reset())
 test('Query.self for user that exists, matches Query.user', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.self.userId).toBe(ourUserId)
-  const selfItem = resp.data.self
+  const selfItem = await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    return data.self
+  })
 
-  resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.user.userId).toBe(ourUserId)
-  expect(resp.data.user).toEqual(selfItem)
+  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data}) => {
+    expect(data.user.userId).toBe(ourUserId)
+    expect(data.user).toEqual(selfItem)
+  })
 })
 
 test('Query.self for user that does not exist', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // reset user to remove from dynamo
-  let resp = await ourClient.mutate({mutation: mutations.resetUser})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.resetUser.userId).toBe(ourUserId)
+  await ourClient
+    .mutate({mutation: mutations.resetUser})
+    .then(({data}) => expect(data.resetUser.userId).toBe(ourUserId))
 
   // verify system see us as not registered yet
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.errors.length).toBeTruthy()
-  expect(resp.errors[0].message).toEqual('User does not exist')
+  await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toEqual('User does not exist')
+    expect(data).toBeNull()
+  })
 })
 
 test('Query.user matches Query.self', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.self.userId).toBe(ourUserId)
-  const selfItem = resp.data.self
+  const selfItem = await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    return data.self
+  })
 
-  resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
-  expect(resp.data.user.userId).toBe(ourUserId)
-  expect(resp.data.user).toEqual(selfItem)
+  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data}) => {
+    expect(data.user.userId).toBe(ourUserId)
+    expect(data.user).toEqual(selfItem)
+  })
 })

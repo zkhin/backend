@@ -50,54 +50,45 @@ test.skip('If the `real` or `ian` users flag a post, it should be immediately ar
   let variables = {postType: 'TEXT_ONLY', text: 'this is really ofensive'}
   let resp
   resp = await ourClient.mutate({mutation: mutations.addPost, variables: {...{postId: postId1}, ...variables}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   resp = await ourClient.mutate({mutation: mutations.addPost, variables: {...{postId: postId2}, ...variables}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   resp = await ourClient.mutate({mutation: mutations.addPost, variables: {...{postId: postId3}, ...variables}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId3)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // the real user flags the first post
   resp = await realClient.mutate({mutation: mutations.flagPost, variables: {postId: postId1}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.flagPost.postId).toBe(postId1)
   expect(resp.data.flagPost.postStatus).toBe('ARCHIVED')
   expect(resp.data.flagPost.flagStatus).toBe('FLAGGED')
 
   // the ian user flags the second post
   resp = await ianClient.mutate({mutation: mutations.flagPost, variables: {postId: postId2}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.flagPost.postId).toBe(postId2)
   expect(resp.data.flagPost.postStatus).toBe('ARCHIVED')
   expect(resp.data.flagPost.flagStatus).toBe('FLAGGED')
 
   // a rando user flags the third post
   resp = await randoClient.mutate({mutation: mutations.flagPost, variables: {postId: postId3}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.flagPost.postId).toBe(postId3)
   expect(resp.data.flagPost.postStatus).toBe('COMPLETED')
   expect(resp.data.flagPost.flagStatus).toBe('FLAGGED')
 
   // check the first post is really archived
   resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId1)
   expect(resp.data.post.postStatus).toBe('ARCHIVED')
 
   // check the second post is really archived
   resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId2)
   expect(resp.data.post.postStatus).toBe('ARCHIVED')
 
   // check the third post is not archived
   resp = await ourClient.query({query: queries.post, variables: {postId: postId3}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId3)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
 })

@@ -31,7 +31,6 @@ test(
     const postId = uuidv4()
     let variables = {postId, postType: 'VIDEO'}
     let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.addPost.postId).toBe(postId)
     expect(resp.data.addPost.postType).toBe('VIDEO')
     expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -44,7 +43,6 @@ test(
 
     // verify the basic parts of the post is as we expect
     resp = await ourClient.query({query: queries.post, variables: {postId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.postStatus).toBe('COMPLETED')
     expect(resp.data.post.videoUploadUrl).toBeNull()
@@ -107,7 +105,6 @@ test(
     const albumId = uuidv4()
     let variables = {albumId, name: 'first'}
     let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.addAlbum.albumId).toBe(albumId)
     expect(resp.data.addAlbum.postCount).toBe(0)
     expect(resp.data.addAlbum.postsLastUpdatedAt).toBeNull()
@@ -118,7 +115,6 @@ test(
     const postId = uuidv4()
     variables = {postId, postType: 'VIDEO', albumId}
     resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.addPost.postId).toBe(postId)
     expect(resp.data.addPost.postType).toBe('VIDEO')
     expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -132,7 +128,6 @@ test(
 
     // verify the appears as we expect
     resp = await ourClient.query({query: queries.post, variables: {postId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.postStatus).toBe('COMPLETED')
     expect(resp.data.post.videoUploadUrl).toBeNull()
@@ -140,7 +135,6 @@ test(
 
     // check the album
     resp = await ourClient.query({query: queries.album, variables: {albumId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(1)
     expect(resp.data.album.posts.items).toHaveLength(1)
@@ -156,13 +150,11 @@ test(
 
     // remove the post from the album
     resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.editPostAlbum.postId).toBe(postId)
     expect(resp.data.editPostAlbum.album).toBeNull()
 
     // check the album
     resp = await ourClient.query({query: queries.album, variables: {albumId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(0)
     expect(resp.data.album.posts.items).toHaveLength(0)
@@ -177,13 +169,11 @@ test(
 
     // add the post from the album
     resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.editPostAlbum.postId).toBe(postId)
     expect(resp.data.editPostAlbum.album.albumId).toBe(albumId)
 
     // check the album
     resp = await ourClient.query({query: queries.album, variables: {albumId}})
-    expect(resp.errors).toBeUndefined()
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(1)
     expect(resp.data.album.posts.items).toHaveLength(1)

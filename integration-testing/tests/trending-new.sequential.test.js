@@ -37,14 +37,12 @@ test('Post lifecycle, visibility and trending', async () => {
     mutation: mutations.addPost,
     variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // they add an image post that will pass verification, but don't complete it yet
   const postId2 = uuidv4()
   resp = await theirClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, takenInReal: true}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   expect(resp.data.addPost.image).toBeNull()
@@ -52,13 +50,11 @@ test('Post lifecycle, visibility and trending', async () => {
 
   // we check trending posts
   resp = await ourClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
 
   // they check trending posts
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
 
@@ -69,14 +65,12 @@ test('Post lifecycle, visibility and trending', async () => {
 
   // check that shows up in trending posts, their post should be on top
   resp = await ourClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId2)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId1)
 
   // check trending users still empty since the 'free trending point' doesn't apply to users
   resp = await ourClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 
   // they archive their post
@@ -86,7 +80,6 @@ test('Post lifecycle, visibility and trending', async () => {
 
   // their post should have disappeared from trending
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
 
@@ -102,12 +95,10 @@ test('Post lifecycle, visibility and trending', async () => {
 
   // our post should have disappeared from trending, and theirs should not have re-appeared
   resp = await ourClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 
   // check trending users, should be unaffected by post archiving & deleting
   resp = await theirClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 })
 
@@ -122,7 +113,6 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
     mutation: mutations.addPost,
     variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
 
   // they add a post
@@ -131,117 +121,97 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
     mutation: mutations.addPost,
     variables: {postId: postId2, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
 
   // both should show up in trending, in order with ours in the back
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId2)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId1)
 
   // verify we can filter trending posts based on viewed status
   resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
   resp = await ourClient.query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId2)
 
   // trending users should be empty
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 
   // we report to have viewed our own post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // check no change in trending posts
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId2)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId1)
 
   // trending users should still be empty
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 
   // they report to have viewed our post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // trending posts should have flipped order
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId2)
 
   // we should be in trending users
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(1)
   expect(resp.data.trendingUsers.items[0].userId).toBe(ourUserId)
 
   // we report to have viewed our their post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // trending posts should have flipped order again
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId2)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId1)
 
   // we should both be in trending users
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(2)
   expect(resp.data.trendingUsers.items[0].userId).toBe(theirUserId)
   expect(resp.data.trendingUsers.items[1].userId).toBe(ourUserId)
 
   // they delete themselves
   resp = await theirClient.mutate({mutation: mutations.deleteUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteUser.userId).toBe(theirUserId)
   expect(resp.data.deleteUser.userStatus).toBe('DELETING')
   await misc.sleep(2000) // dynamo
 
   // verify their post has disappeared from trending
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
 
   // verify their user has disappeared from trending
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(1)
   expect(resp.data.trendingUsers.items[0].userId).toBe(ourUserId)
 
   // we reset ourselves
   resp = await ourClient.mutate({mutation: mutations.resetUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
   // verify our post has disappeared from trending
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 
   // verify our user has disappeared from trending
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 })
 
@@ -256,76 +226,63 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
     mutation: mutations.addPost,
     variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
 
   // they report to have viewed our post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // they see our post in trending
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
 
   // they see our user in trending
   resp = await theirClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(1)
   expect(resp.data.trendingUsers.items[0].userId).toBe(ourUserId)
 
   // other starts following us
   resp = await otherClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // we go private
   resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.userId).toBe(ourUserId)
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
   await misc.sleep(2000) // dynamo
 
   // verify they don't see our post in trending anymore
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 
   // they see still see our user in trending
   resp = await theirClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(1)
   expect(resp.data.trendingUsers.items[0].userId).toBe(ourUserId)
 
   // verify other, who is following us, sees our post in trending
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(1)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
 
   // other also sees our user in trending
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(1)
   expect(resp.data.trendingUsers.items[0].userId).toBe(ourUserId)
 
   // we block other
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: otherUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(otherUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
   await misc.sleep(2000) // dynamo
 
   // verify other no longer sees our post in trending
   resp = await otherClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 
   // verify other no longer sees our user in trending
   resp = await otherClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 })
 
@@ -336,29 +293,24 @@ test('Posts that fail verification do not end up in trending', async () => {
   // we add a image post that fails verification
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData: imageDataB64}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.isVerified).toBe(false)
 
   // check it does not appear in trending
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 
   // they report to have viewed the post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // check it does not appear in trending
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(0)
 
   // check we do not appear in trending
   resp = await ourClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 })
 
@@ -373,7 +325,6 @@ test('Views of non-original posts contribute to the original post & user in tren
     mutation: mutations.addPost,
     variables: {postId: postId1, takenInReal: true, imageData: imageDataB64},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.isVerified).toBe(true)
@@ -385,7 +336,6 @@ test('Views of non-original posts contribute to the original post & user in tren
     mutation: mutations.addPost,
     variables: {postId: postId2, takenInReal: true, imageData: imageDataB64},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId2)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.isVerified).toBe(true)
@@ -397,56 +347,47 @@ test('Views of non-original posts contribute to the original post & user in tren
     mutation: mutations.addPost,
     variables: {postId: postId3, postType: 'TEXT_ONLY', text: 'lore ipsum'},
   })
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId3)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // the original post and the text post should be in trending, but not the non-original one
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId3)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId1)
 
   // no users should be trending yet
   resp = await theirClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 
   // they report to have viewed our non-original post
   resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // trending posts should not have changed, because:
   //  - non-original post can't enter trending
   //  - they own the original post, so their view doesn't count for it
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId3)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId1)
 
   // no users should be trending yet
   resp = await theirClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 
   // other reports to have viewed our non-original post
   resp = await otherClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
-  expect(resp.errors).toBeUndefined()
   await misc.sleep(2000) // dynamo
 
   // other's view should have been contributed to the original post moving up in trending
   resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingPosts.items).toHaveLength(2)
   expect(resp.data.trendingPosts.items[0].postId).toBe(postId1)
   expect(resp.data.trendingPosts.items[1].postId).toBe(postId3)
 
   // they (who own the original post) should now appear as a trending user
   resp = await theirClient.query({query: queries.trendingUsers})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.trendingUsers.items).toHaveLength(1)
   expect(resp.data.trendingUsers.items[0].userId).toBe(theirUserId)
 })

@@ -43,14 +43,12 @@ test('Uploading image sets width, height and colors', async () => {
   // upload an image post
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.image).toBeNull()
   const uploadUrl = resp.data.addPost.imageUploadUrl
 
   // double check the image post
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.image).toBeNull()
 
@@ -60,7 +58,6 @@ test('Uploading image sets width, height and colors', async () => {
 
   // check width, height and colors are now set
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.image.height).toBe(imageHeight)
@@ -77,7 +74,6 @@ test('Uploading png image results in error', async () => {
   // create a pending image post
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   const uploadUrl = resp.data.addPost.imageUploadUrl
@@ -88,7 +84,6 @@ test('Uploading png image results in error', async () => {
 
   // check that post ended up in an ERROR state
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('ERROR')
 })
@@ -99,7 +94,6 @@ test('Upload heic image', async () => {
   // create a pending image post
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   const uploadUrl = resp.data.addPost.imageUploadUrl
@@ -111,7 +105,6 @@ test('Upload heic image', async () => {
 
   // check that post completed and generated all thumbnails ok
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.isVerified).toBe(true)
@@ -150,7 +143,6 @@ test('Thumbnails built on successful upload', async () => {
   // create a pending image post
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   const uploadUrl = resp.data.addPost.imageUploadUrl
@@ -161,7 +153,6 @@ test('Thumbnails built on successful upload', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId)
 
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   const image = resp.data.post.image
   expect(image).toBeTruthy()

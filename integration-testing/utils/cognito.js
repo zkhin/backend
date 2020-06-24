@@ -82,21 +82,11 @@ const getAppSyncClient = async (creds) => {
     {
       url: appsyncApiUrl,
       region: AWS.config.region,
-      auth: {
-        type: 'AWS_IAM',
-        credentials: credsObj,
-      },
+      auth: {type: 'AWS_IAM', credentials: credsObj},
       disableOffline: true,
     },
-    {
-      defaultOptions: {
-        query: {
-          // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
-          fetchPolicy: 'network-only',
-          errorPolicy: 'all',
-        },
-      },
-    },
+    // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
+    {defaultOptions: {query: {fetchPolicy: 'network-only'}}},
   )
   await client.hydrated()
   return client

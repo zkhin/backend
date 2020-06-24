@@ -21,45 +21,37 @@ test('User.blockedUsers, User.blockedStatus respond correctly to blocking and un
 
   // verify we haven't blocked them
   let resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.userId).toBe(theirUserId)
   expect(resp.data.user.blockedStatus).toBe('NOT_BLOCKING')
 
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.blockedUsers.items).toHaveLength(0)
 
   // block them
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // verify that block shows up
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.userId).toBe(theirUserId)
   expect(resp.data.user.blockedStatus).toBe('BLOCKING')
 
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.blockedUsers.items).toHaveLength(1)
   expect(resp.data.self.blockedUsers.items[0].userId).toBe(theirUserId)
 
   // unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unblockUser.userId).toBe(theirUserId)
   expect(resp.data.unblockUser.blockedStatus).toBe('NOT_BLOCKING')
 
   // verify that block has disappeared
   resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.userId).toBe(theirUserId)
   expect(resp.data.user.blockedStatus).toBe('NOT_BLOCKING')
 
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.blockedUsers.items).toHaveLength(0)
 })
 
@@ -77,7 +69,6 @@ test('Double blocking a user is an error', async () => {
 
   // block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // try to block them again
@@ -105,23 +96,19 @@ test('User.blockedUsers ordering, privacy', async () => {
 
   // we block both of them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: other1UserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(other1UserId)
 
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: other2UserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(other2UserId)
 
   // check that they appear in the right order
   resp = await ourClient.query({query: queries.self})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.blockedUsers.items).toHaveLength(2)
   expect(resp.data.self.blockedUsers.items[0].userId).toBe(other2UserId)
   expect(resp.data.self.blockedUsers.items[1].userId).toBe(other1UserId)
 
   // check another user can't see our blocked users
   resp = await other1Client.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.blockedUsers).toBeNull()
 })
 
@@ -132,17 +119,14 @@ test('We can block & unblock a user that has blocked us', async () => {
 
   // they block us
   let resp = await theirClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(ourUserId)
 
   // verify we can still block them
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify we can still unblock them
   resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.unblockUser.userId).toBe(theirUserId)
 })
 
@@ -152,7 +136,6 @@ test('We cannot block a user if we are disabled', async () => {
 
   // we disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.disableUser.userId).toBe(ourUserId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
@@ -168,13 +151,11 @@ test('We cannot unblock a user if we are disabled', async () => {
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(theirUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // we disable ourselves
   resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.disableUser.userId).toBe(ourUserId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 

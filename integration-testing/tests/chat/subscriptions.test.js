@@ -33,7 +33,6 @@ test('Chat message triggers cannot be called from external graphql client', asyn
   const [chatId, messageId] = [uuidv4(), uuidv4()]
   let variables = {userId: ourUserId, chatId, messageId, messageText: 'lore ipsum'}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId)
@@ -81,7 +80,6 @@ test('Cannot subscribe to other users messages', async () => {
   const [chatId, messageId1, text1] = [uuidv4(), uuidv4(), 'hey this is msg 1']
   let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: text1}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -89,13 +87,11 @@ test('Cannot subscribe to other users messages', async () => {
   // we send a messsage to the chat
   variables = {chatId, messageId: uuidv4(), text: 'lore'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
 
   // they send a messsage to the chat
   variables = {chatId, messageId: uuidv4(), text: 'ipsum'}
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
 
   // wait for some messages to show up, ensure none did
@@ -150,7 +146,6 @@ test('Messages in multiple chats fire', async () => {
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
   let variables = {userId: theirUserId, chatId, messageId: messageId1, messageText: 'msg 1'}
   let resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -159,7 +154,6 @@ test('Messages in multiple chats fire', async () => {
   const messageId2 = uuidv4()
   variables = {chatId, messageId: messageId2, text: 'msg 2'}
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
 
@@ -167,14 +161,12 @@ test('Messages in multiple chats fire', async () => {
   const [chatId2, messageId3] = [uuidv4(), uuidv4()]
   variables = {chatId: chatId2, userIds: [ourUserId, theirUserId], messageId: messageId3, messageText: 'msg 3'}
   resp = await otherClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
 
   // we post a message to the group chat
   const messageId4 = uuidv4()
   variables = {chatId: chatId2, messageId: messageId4, text: 'msg 4'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId4)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId2)
 
@@ -230,7 +222,6 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   const [chatId, messageId1, text1] = [uuidv4(), uuidv4(), 'hey this is msg 1']
   let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: text1}
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
   expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
   expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
@@ -262,7 +253,6 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   const [messageId2, text2] = [uuidv4(), `hi @${ourUsername}!`]
   variables = {chatId, messageId: messageId2, text: text2}
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
   const createdAt = resp.data.addChatMessage.createdAt
@@ -270,7 +260,6 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.userId).toBe(ourUserId)
   expect(resp.data.onChatMessageNotification.type).toBe('ADDED')
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId2)
@@ -290,12 +279,10 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   const postId = uuidv4()
   variables = {postId, imageData: grantDataB64, takenInReal: true}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
 
   // they set that post as their profile photo
   resp = await theirClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.photo.url).toBeTruthy()
 
   // set up a promise for the next notification
@@ -308,7 +295,6 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   const text3 = `this is @${theirUsername}!`
   variables = {messageId: messageId2, text: text3}
   resp = await theirClient.mutate({mutation: mutations.editChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editChatMessage.messageId).toBe(messageId2)
   expect(resp.data.editChatMessage.text).toBe(text3)
   const lastEditedAt = resp.data.editChatMessage.lastEditedAt
@@ -316,7 +302,6 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 
   // verify the subscription received the notification and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.userId).toBe(ourUserId)
   expect(resp.data.onChatMessageNotification.type).toBe('EDITED')
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId2)
@@ -341,12 +326,10 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
   // they delete their message to the chat
   variables = {messageId: messageId2}
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId2)
 
   // verify the subscription received the notificaiton and in correct format
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.userId).toBe(ourUserId)
   expect(resp.data.onChatMessageNotification.type).toBe('DELETED')
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId2)
@@ -376,7 +359,6 @@ test('Notifications for a group chat', async () => {
   const chatId = uuidv4()
   let variables = {chatId, userIds: [other1UserId, other2UserId], messageId: uuidv4(), messageText: 'm1'}
   let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
 
   // we initialize a subscription to new message notifications
@@ -404,12 +386,10 @@ test('Notifications for a group chat', async () => {
   const messageId2 = uuidv4()
   variables = {chatId, messageId: messageId2, text: 'text 2'}
   resp = await other1Client.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
 
   // verify we received the message
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId2)
   expect(resp.data.onChatMessageNotification.message.authorUserId).toBe(other1UserId)
   nextNotification = new Promise((resolve, reject) => {
@@ -420,13 +400,11 @@ test('Notifications for a group chat', async () => {
   // we edit group name to trigger a system message
   variables = {chatId, name: 'new name'}
   resp = await ourClient.mutate({mutation: mutations.editGroupChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.editGroupChat.chatId).toBe(chatId)
   expect(resp.data.editGroupChat.name).toBe('new name')
 
   // verify we received the message
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.message.messageId).toBeTruthy()
   expect(resp.data.onChatMessageNotification.message.text).toContain(ourUsername)
   expect(resp.data.onChatMessageNotification.message.text).toContain('changed the name of the group')
@@ -445,12 +423,10 @@ test('Notifications for a group chat', async () => {
   const messageId3 = uuidv4()
   variables = {chatId, messageId: messageId3, text: 'text 3'}
   resp = await other2Client.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // verify we received the message
   resp = await nextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId3)
   expect(resp.data.onChatMessageNotification.message.authorUserId).toBe(other2UserId)
 
@@ -467,7 +443,6 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
   const chatId = uuidv4()
   let variables = {chatId, userIds: [theirUserId], messageId: uuidv4(), messageText: 'm1'}
   let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
@@ -475,7 +450,6 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
 
   // they block us
   resp = await theirClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.blockUser.userId).toBe(ourUserId)
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
@@ -495,12 +469,10 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
   const messageId2 = uuidv4()
   variables = {chatId, messageId: messageId2, text: 'lore'}
   resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId2)
 
   // verify they received a notifcation for our message with no author
   resp = await theirNextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId2)
   expect(resp.data.onChatMessageNotification.message.authorUserId).toBe(ourUserId)
   expect(resp.data.onChatMessageNotification.message.author).toBeNull()
@@ -520,12 +492,10 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
   const messageId3 = uuidv4()
   variables = {chatId, messageId: messageId3, text: 'ipsum'}
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // verify we received a notifcation for their message
   resp = await ourNextNotification
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.onChatMessageNotification.message.messageId).toBe(messageId3)
   expect(resp.data.onChatMessageNotification.message.authorUserId).toBe(theirUserId)
   expect(resp.data.onChatMessageNotification.message.author).toBeNull()

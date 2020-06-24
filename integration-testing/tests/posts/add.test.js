@@ -24,7 +24,6 @@ test('Add post no expiration', async () => {
 
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.errors).toBeUndefined()
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postType).toBe('IMAGE')
@@ -34,7 +33,6 @@ test('Add post no expiration', async () => {
   await misc.sleep(2000) // dynamo
 
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postType).toBe('IMAGE')
@@ -43,7 +41,6 @@ test('Add post no expiration', async () => {
   expect(post.originalPost.postId).toBe(postId)
 
   resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.user.posts.items).toHaveLength(1)
   post = resp.data.user.posts.items[0]
   expect(post.postId).toBe(postId)
@@ -53,7 +50,6 @@ test('Add post no expiration', async () => {
   expect(post.expiresAt).toBeNull()
 
   resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.self.feed.items).toHaveLength(1)
   expect(resp.data.self.feed.items[0].postId).toEqual(postId)
   expect(resp.data.self.feed.items[0].postType).toBe('IMAGE')
@@ -67,7 +63,6 @@ test('Add post with expiration', async () => {
   const lifetime = 'P7D'
   let variables = {postId, text, lifetime}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   const post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postType).toBe('IMAGE')
@@ -86,7 +81,6 @@ test('Add post with text of empty string same as null text', async () => {
   const postId = uuidv4()
   let variables = {postId, text: ''}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('IMAGE')
   expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -118,7 +112,6 @@ test('Cannot add post with invalid lifetime', async () => {
   // success!
   variables.lifetime = 'P1D'
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
 })
 
 test('Mental health settings default values', async () => {
@@ -127,7 +120,6 @@ test('Mental health settings default values', async () => {
   // no user-level settings set, system-level defaults should appear
   let variables = {postId: uuidv4()}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(variables.postId)
   expect(resp.data.addPost.commentsDisabled).toBe(false)
   expect(resp.data.addPost.likesDisabled).toBe(true)
@@ -137,7 +129,6 @@ test('Mental health settings default values', async () => {
   // set user-level mental health settings to opposite of system defaults
   variables = {commentsDisabled: true, likesDisabled: false, sharingDisabled: true, verificationHidden: true}
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.userId).toBe(ourUserId)
   expect(resp.data.setUserDetails.commentsDisabled).toBe(true)
   expect(resp.data.setUserDetails.likesDisabled).toBe(false)
@@ -147,7 +138,6 @@ test('Mental health settings default values', async () => {
   // check those new user-level settings are used as defaults for a new post
   variables = {postId: uuidv4()}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(variables.postId)
   expect(resp.data.addPost.commentsDisabled).toBe(true)
   expect(resp.data.addPost.likesDisabled).toBe(false)
@@ -157,7 +147,6 @@ test('Mental health settings default values', async () => {
   // change the user-level mental health setting defaults
   variables = {commentsDisabled: false, likesDisabled: true, sharingDisabled: false, verificationHidden: false}
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.setUserDetails.userId).toBe(ourUserId)
   expect(resp.data.setUserDetails.commentsDisabled).toBe(false)
   expect(resp.data.setUserDetails.likesDisabled).toBe(true)
@@ -167,7 +156,6 @@ test('Mental health settings default values', async () => {
   // check those new user-level settings are used as defaults for a new post
   variables = {postId: uuidv4()}
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(variables.postId)
   expect(resp.data.addPost.commentsDisabled).toBe(false)
   expect(resp.data.addPost.likesDisabled).toBe(true)
@@ -188,7 +176,6 @@ test('Mental health settings specify values', async () => {
     verificationHidden: false,
   }
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentsDisabled).toBe(false)
   expect(resp.data.addPost.likesDisabled).toBe(true)
@@ -197,7 +184,6 @@ test('Mental health settings specify values', async () => {
 
   // double check those values stuck
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentsDisabled).toBe(false)
   expect(resp.data.post.likesDisabled).toBe(true)
@@ -214,7 +200,6 @@ test('Mental health settings specify values', async () => {
     verificationHidden: true,
   }
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.commentsDisabled).toBe(true)
   expect(resp.data.addPost.likesDisabled).toBe(false)
@@ -223,7 +208,6 @@ test('Mental health settings specify values', async () => {
 
   // double check those values stuck
   resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentsDisabled).toBe(true)
   expect(resp.data.post.likesDisabled).toBe(false)
@@ -236,7 +220,6 @@ test('Disabled user cannot add a post', async () => {
 
   // we disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.errors).toBeUndefined()
   expect(resp.data.disableUser.userId).toBe(ourUserId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
