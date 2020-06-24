@@ -29,7 +29,6 @@ def test_add_comment(comment_manager, user, post):
 
     # check our starting state
     assert user.item.get('commentCount', 0) == 0
-    assert post.item.get('commentCount', 0) == 0
     assert comment_manager.get_comment(comment_id) is None
 
     # add the comment, verify
@@ -46,42 +45,10 @@ def test_add_comment(comment_manager, user, post):
 
     # check the post counter incremented, no new comment acitivy b/c the post owner commented
     post.refresh_item()
-    assert post.item['commentCount'] == 1
     assert post.item.get('hasNewCommentActivity', False) is False
     user.refresh_item()
     assert user.item['commentCount'] == 1
     assert user.item.get('postHasNewCommentActivityCount', 0) == 0
-
-
-def test_add_comment_increments_unviewed_comments_count(comment_manager, user, post, user2):
-    # check our starting state
-    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 0
-
-    # post owner adds a comment, should not increment count
-    assert comment_manager.add_comment(str(uuid.uuid4()), post.id, user.id, 'lore ipsum')
-    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 0
-
-    # somebody else adds a comment, should increment count
-    assert comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 'lore ipsum')
-    assert post.refresh_item().item.get('commentsUnviewedCount', 0) == 1
-
-
-def test_add_comment_registers_new_comment_activity(comment_manager, user, user2, post):
-    comment_id = 'cid'
-
-    # check starting state
-    post.refresh_item()
-    assert post.item.get('commentCount', 0) == 0
-    assert post.last_new_comment_activity_at is None
-
-    # add the comment, verify
-    comment = comment_manager.add_comment(comment_id, post.id, user2.id, 'lore ipsum')
-    assert comment.id == comment_id
-
-    # check the post counter incremented, and there *is* new comment acitivy
-    post.refresh_item()
-    assert post.item.get('commentCount', 0) == 1
-    assert post.last_new_comment_activity_at
 
 
 def test_add_comment_cant_reuse_ids(comment_manager, user, post):
@@ -91,15 +58,10 @@ def test_add_comment_cant_reuse_ids(comment_manager, user, post):
     # add a comment, verify
     comment = comment_manager.add_comment(comment_id, post.id, user.id, text)
     assert comment.id == comment_id
-    post.refresh_item()
-    assert post.item['commentCount'] == 1
 
     # verify we can't add another
     with pytest.raises(comment_manager.exceptions.CommentException):
         comment_manager.add_comment(comment_id, post.id, user.id, text)
-
-    post.refresh_item()
-    assert post.item['commentCount'] == 1
 
 
 def test_cant_comment_to_post_that_doesnt_exist(comment_manager, user):
@@ -234,7 +196,7 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
 
 
 def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):
-    card_id = CommentCardSpec(user.id, post.id).card_id
+    card_spec = CommentCardSpec(user.id, post.id)
     comment1 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
     comment2 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
 
@@ -253,23 +215,26 @@ def test_record_views(comment_manager, user, user2, user3, post, caplog, card_ma
     assert comment_manager.view_dynamo.get_view(comment2.id, user2.id) is None
 
     # another user can record views of our comments, which does not clear the 'coment activity' indicators
-    post.refresh_item().item.get('hasNewCommentActivity', False) is True
-    assert card_manager.get_card(card_id)
+    post.card_manager.add_card_by_spec_if_dne(card_spec)
+    post.dynamo.set_last_unviewed_comment_at(post.item, pendulum.now('utc'))
+    assert post.refresh_item().item['gsiA3SortKey']
+    assert card_manager.get_card(card_spec.card_id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user3.id) is None
     assert comment_manager.view_dynamo.get_view(comment2.id, user3.id) is None
     comment_manager.record_views([comment1.id, comment2.id, comment1.id], user3.id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user3.id)['viewCount'] == 2
     assert comment_manager.view_dynamo.get_view(comment2.id, user3.id)['viewCount'] == 1
-    post.refresh_item().item.get('hasNewCommentActivity', False) is True
-    assert card_manager.get_card(card_id)
+    assert post.refresh_item().item['gsiA3SortKey']
+    assert card_manager.get_card(card_spec.card_id)
 
     # post owner records views of comment, clears 'comment activity' indicators
-    post.refresh_item().item.get('hasNewCommentActivity', False) is True
-    assert card_manager.get_card(card_id)
+    assert post.refresh_item().item['gsiA3SortKey']
+    assert card_manager.get_card(card_spec.card_id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user.id) is None
     assert comment_manager.view_dynamo.get_view(comment2.id, user.id) is None
     comment_manager.record_views([comment1.id, comment2.id, comment1.id], user.id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user.id)['viewCount'] == 2
     assert comment_manager.view_dynamo.get_view(comment2.id, user.id)['viewCount'] == 1
     post.refresh_item().item.get('hasNewCommentActivity', False) is False
-    assert card_manager.get_card(card_id) is None
+    assert 'gsiA3SortKey' not in post.refresh_item().item
+    assert card_manager.get_card(card_spec.card_id) is None

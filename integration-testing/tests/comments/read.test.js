@@ -47,6 +47,7 @@ test('One user adds multiple comments, ordering', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId2)
 
   // check we see both comments, in order, on the post
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   const post = resp.data.post

@@ -19,6 +19,7 @@ managers = {}
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
+comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
 follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
 
 
@@ -45,6 +46,9 @@ def postprocess_records(event, context):
 
         if pk.startswith('chatMessage/'):
             postprocess_record = chat_message_manager.postprocess_record
+
+        if pk.startswith('comment/'):
+            postprocess_record = comment_manager.postprocess_record
 
         if pk.startswith('following/') or (pk.startswith('user/') and sk.startswith('follower/')):
             postprocess_record = follow_manager.postprocess_record

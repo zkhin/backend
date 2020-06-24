@@ -3,6 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -36,6 +37,7 @@ test('Generate comment card', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify no card generated for our comment
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -52,6 +54,7 @@ test('Generate comment card', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // verify a card was generated for their comment
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -85,6 +88,7 @@ test('Generate comment card', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify we still have just one card
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -96,6 +100,7 @@ test('Generate comment card', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify the card has disappeared
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -132,6 +137,7 @@ test('Comment cards are post-specific', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId1)
 
   // verify a card was generated for their comment
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -150,6 +156,7 @@ test('Comment cards are post-specific', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId2)
 
   // verify a second card was generated
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -169,6 +176,7 @@ test('Comment cards are post-specific', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId3)
 
   // verify a second card was generated
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)
@@ -182,6 +190,7 @@ test('Comment cards are post-specific', async () => {
   expect(resp.errors).toBeUndefined()
 
   // verify that card has disappeared, the other remains
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.self})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.self.userId).toBe(ourUserId)

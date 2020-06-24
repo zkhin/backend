@@ -103,11 +103,11 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.errors).toBeUndefined()
   expect(resp.data.deleteComment.commentId).toBe(commentId2)
 
-  // check there is new comment activity on the post
+  // check there is *no* new comment activity on the post
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.hasNewCommentActivity).toBe(true)
+  expect(resp.data.post.hasNewCommentActivity).toBe(false)
 
   // we report to have viewed comment that was no deleted, again
   resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId1]}})

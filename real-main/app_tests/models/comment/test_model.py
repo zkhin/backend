@@ -86,20 +86,6 @@ def test_forced_delete(comment, comment2, user):
     assert user.item.get('commentForcedDeletionCount', 0) == 1
 
 
-def test_delete_cant_decrement_post_comment_count_below_zero(comment, post_manager):
-    # sneak behind the model and lower the post's comment count
-    transacts = [post_manager.dynamo.transact_decrement_comment_count(comment.item['postId'])]
-    post_manager.dynamo.client.transact_write_items(transacts)
-
-    # deleting the comment should fail
-    with pytest.raises(comment.dynamo.client.exceptions.TransactionCanceledException):
-        comment.delete(deleter_user_id=comment.user_id)
-
-    # verify the comment is still in the DB
-    comment_item = comment.dynamo.get_comment(comment.id)
-    assert comment_item['commentId'] == comment.id
-
-
 def test_delete_cant_decrement_user_comment_count_below_zero(comment, user_manager):
     # sneak behind the model and lower the user's comment count
     transacts = [user_manager.dynamo.transact_comment_deleted(comment.item['userId'])]
@@ -118,11 +104,6 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, co
     post = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='go go')
     comment1 = comment_manager.add_comment('cid1', post.id, user2.id, 'run far')
     comment2 = comment_manager.add_comment('cid2', post.id, user2.id, 'run far')
-    post.refresh_item()
-
-    # clear comment activity
-    post.clear_new_comment_activity()
-    assert post.last_new_comment_activity_at is None
 
     # verify user3 (a rando) cannot delete either of the comments
     with pytest.raises(comment_manager.exceptions.CommentException, match='not authorized to delete'):
@@ -136,14 +117,10 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, co
     # verify post owner can delete a comment that another user left on their post, does not reigster as new activity
     comment1.delete(deleter_user_id=user.id)
     assert comment1.refresh_item().item is None
-    post.refresh_item()
-    assert post.last_new_comment_activity_at is None
 
     # verify comment owner can delete their own comment, does register as new activity
     comment2.delete(deleter_user_id=user2.id)
     assert comment2.refresh_item().item is None
-    post.refresh_item()
-    assert post.last_new_comment_activity_at
 
 
 def test_record_view_count(comment, user, user2, user3):

@@ -7,6 +7,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
+from app.models.card.specs import CommentCardSpec
 
 from . import exceptions
 from .dynamo import CommentDynamo
@@ -80,21 +81,13 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         text_tags = self.user_manager.get_text_tags(text)
         transacts = [
             self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
-            self.post_manager.dynamo.transact_increment_comment_count(
-                post_id, include_comments_unviewed_count=(user_id != post.user_id),
-            ),
             self.user_manager.dynamo.transact_comment_added(user_id),
         ]
         transact_exceptions = [
             exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
-            exceptions.CommentException('Unable to increment Post.commentCount'),
             exceptions.CommentException('Unable to increment User.commentCount'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-
-        # if this comment is from anyone other than post owner, count it as new comment activity
-        if user_id != post.user_id:
-            post.register_new_comment_activity(now=now)
 
         comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
         return self.init_comment(comment_item)
@@ -117,7 +110,9 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         for post_id in post_ids:
             post = self.post_manager.get_post(comment.post_id)
             if user_id == post.user_id:
-                post.clear_new_comment_activity()
+                # maintaining legacy behavior. A view on any comment means that all comments have been viewed, kinda.
+                post.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
+                post.dynamo.set_last_unviewed_comment_at(post.item, None)
 
     def delete_all_by_user(self, user_id):
         for comment_item in self.dynamo.generate_by_user(user_id):
@@ -126,3 +121,15 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def delete_all_on_post(self, post_id):
         for comment_item in self.dynamo.generate_by_post(post_id):
             self.init_comment(comment_item).delete()
+
+    def postprocess_record(self, pk, sk, old_item, new_item):
+        # if this is a new or deleted comment, adjust counters on the post
+        if sk == '-':
+            post_id = (new_item or old_item)['postId']['S']
+            user_id = (new_item or old_item)['userId']['S']
+            created_at = pendulum.parse((new_item or old_item)['commentedAt']['S'])
+            if not old_item and new_item:
+                self.post_manager.postprocess_comment_added(post_id, user_id, created_at)
+            if old_item and not new_item:
+                created_at = pendulum.parse(old_item['commentedAt']['S'])
+                self.post_manager.postprocess_comment_deleted(post_id, user_id, created_at)

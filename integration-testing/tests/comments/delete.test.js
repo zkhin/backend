@@ -48,6 +48,7 @@ test('Delete comments', async () => {
   expect(resp.data.addComment.commentId).toBe(ourCommentId)
 
   // check we see both comments, in order, on the post
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
@@ -64,6 +65,7 @@ test('Delete comments', async () => {
   expect(resp.data.deleteComment.commentId).toBe(theirCommentId)
 
   // check we only see one comment on the post now
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
@@ -79,6 +81,7 @@ test('Delete comments', async () => {
   expect(resp.data.deleteComment.commentId).toBe(ourCommentId)
 
   // check no comments appear on the post now
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
@@ -109,6 +112,7 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
   // check we can see that comment on the post
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
@@ -124,6 +128,7 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp.data.deleteComment.commentId).toBe(theirCommentId)
 
   // check no comments appear on the post now
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)
@@ -193,6 +198,7 @@ test('Cant delete someone elses comment on someone elses post', async () => {
   ).rejects.toThrow(/ClientError: .* not authorized to delete/)
 
   // check they can see that comment on the post
+  await misc.sleep(500)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.postId).toBe(postId)

@@ -3,6 +3,7 @@
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -78,6 +79,7 @@ test('Adding comments: Post owners comments always viewed, others comments are u
     })
 
   // check that comment was counted viewed
+  await misc.sleep(500)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -95,6 +97,7 @@ test('Adding comments: Post owners comments always viewed, others comments are u
     })
 
   // check that comment was counted unviewed
+  await misc.sleep(500)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -126,6 +129,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
     })
 
   // check viewed/unviewed counts
+  await misc.sleep(500)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -140,6 +144,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   })
 
   // check viewed/unviewed counts - no change
+  await misc.sleep(500)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -154,6 +159,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   })
 
   // check viewed/unviewed counts - unviewed have become viewed
+  await misc.sleep(500)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)
@@ -171,6 +177,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
     })
 
   // check viewed/unviewed counts - should have a new unviewed
+  await misc.sleep(500)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.errors).toBeUndefined()
     expect(resp.data.post.postId).toBe(postId)

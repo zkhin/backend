@@ -72,16 +72,10 @@ class Comment(FlagModelMixin, ViewModelMixin):
         # order matters to moto (in test suite), but not on dynamo
         transacts = [
             self.user_manager.dynamo.transact_comment_deleted(self.user_id, forced=forced),
-            self.post_manager.dynamo.transact_decrement_comment_count(self.post_id),
             self.dynamo.transact_delete_comment(self.id),
         ]
-        # TODO: decrement commentsUnviewedCount as appropriate based on timestamps of the comment
-        #       being deleted and the lastViewedAt time for post owner on the post
         self.dynamo.client.transact_write_items(transacts)
 
-        # if this comment is being deleted by anyone other than post owner, count it as new comment activity
-        if deleter_user_id and deleter_user_id != self.post.user_id:
-            self.post.register_new_comment_activity()
         # delete view records on the comment
         self.delete_views()
         return self

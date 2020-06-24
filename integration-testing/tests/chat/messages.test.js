@@ -64,6 +64,7 @@ test('Add messages to a direct chat', async () => {
   expect(after >= lastMessageCreatedAt).toBe(true)
 
   // check we see all the messages are there in the expected order
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -142,6 +143,7 @@ test('Report message views', async () => {
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check each message's viewedStatus is as expected for both of us
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -178,6 +180,7 @@ test('Report message views', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check we have now viewed all messages
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)
@@ -199,6 +202,7 @@ test('Report message views', async () => {
   expect(resp.errors).toBeUndefined()
 
   // check they have now viewed all messages
+  await misc.sleep(500)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.chat.chatId).toBe(chatId)

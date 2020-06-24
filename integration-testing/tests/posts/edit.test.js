@@ -5,6 +5,7 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito.js')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
@@ -161,6 +162,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check we see the comment
+  await misc.sleep(500)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.errors).toBeUndefined()
   expect(resp.data.post.commentsDisabled).toBe(false)

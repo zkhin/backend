@@ -9,6 +9,7 @@ from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
+from app.models.card.specs import CommentCardSpec
 
 from . import enums, exceptions
 from .appsync import PostAppSync
@@ -257,3 +258,19 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
     def delete_all_by_user(self, user_id):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()
+
+    def postprocess_comment_added(self, post_id, commented_by_user_id, created_at):
+        post = self.get_post(post_id)
+        by_post_owner = post.user_id == commented_by_user_id
+        self.dynamo.increment_comment_count(post_id, viewed=by_post_owner)
+        if not by_post_owner:
+            self.dynamo.set_last_unviewed_comment_at(post.item, created_at)
+            self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(post.user_id, post.id))
+
+    def postprocess_comment_deleted(self, post_id, commented_by_user_id, created_at):
+        self.dynamo.decrement_comment_count(post_id, fail_soft=True)
+        # TODO: decrement the commentsUnviewedCount if the comment was unviewed:
+        #   - author is someone other than the post owner
+        #   - the comment was created after the last view by post owner of the post
+        # TODO: if commentsUnviewedCount hits zero, then
+        #       delete the 'last_unviewed_comment_at' index in gsiA3

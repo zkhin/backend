@@ -154,10 +154,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self._user
 
     @property
-    def last_new_comment_activity_at(self):
-        return pendulum.parse(self.item['gsiA3SortKey']) if 'gsiA3SortKey' in self.item else None
-
-    @property
     def is_verified(self):
         return self.item.get('isVerified')
 
@@ -595,22 +591,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         self.item = self.dynamo.set_is_verified(self.id, is_verified)
         return self
 
-    def register_new_comment_activity(self, now=None):
-        now = now or pendulum.now('utc')
-        self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(self.user_id, self.id))
-        self.item = self.dynamo.set_last_new_comment_activity_at(self.item, now)
-        return self
-
-    def clear_new_comment_activity(self):
-        if 'gsiA3SortKey' not in self.item:
-            return self
-
-        # once we've seen the new comment activity for *any* post, we remove the notification card,
-        # even if there are other posts with activity we have not seen
-        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
-        self.item = self.dynamo.set_last_new_comment_activity_at(self.item, None)
-        return self
-
     def set_expires_at(self, expires_at):
         prev_item = self.item.copy() if 'expiresAt' in self.item else None
         if expires_at:
@@ -734,6 +714,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.user_id == user_id:
             self.dynamo.clear_comments_unviewed_count(self.id)
             self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(user_id, self.id))
+            self.dynamo.set_last_unviewed_comment_at(self.item, None)
             return False  # post owner's views don't count for trending, etc.
 
         recorded = self.trending_increment_score(now=viewed_at)

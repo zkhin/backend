@@ -1,4 +1,6 @@
 import decimal
+import logging
+from uuid import uuid4
 
 import pendulum
 import pytest
@@ -801,42 +803,7 @@ def test_generate_expired_post_pks_with_scan(post_dynamo):
     assert expired_posts[1]['sortKey'] == post2['sortKey']
 
 
-def test_transact_increment_decrement_comment_count(post_dynamo):
-    post_id = 'pid'
-
-    # add a post, verify starts with no comment count
-    transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('commentCount', 0) == 0
-
-    # verify we can't decrement count below zero
-    transact = post_dynamo.transact_decrement_comment_count(post_id)
-    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
-        post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('commentCount', 0) == 0
-
-    # increment the count, verify
-    transact = post_dynamo.transact_increment_comment_count(post_id)
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('commentCount', 0) == 1
-
-    # increment the count, verify
-    transact = post_dynamo.transact_increment_comment_count(post_id)
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('commentCount', 0) == 2
-
-    # decrement the count, verify
-    transact = post_dynamo.transact_decrement_comment_count(post_id)
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('commentCount', 0) == 1
-
-
-def test_set_last_new_comment_activity_at(post_dynamo):
+def test_set_last_unviewed_comment_at(post_dynamo):
     user_id = 'uid'
     post_id = 'pid'
 
@@ -849,25 +816,25 @@ def test_set_last_new_comment_activity_at(post_dynamo):
 
     # add some comment activity
     at = pendulum.now('utc')
-    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, at)
+    post_item = post_dynamo.set_last_unviewed_comment_at(post_item, at)
     assert post_item['gsiA3PartitionKey'].split('/') == ['post', 'uid']
     assert pendulum.parse(post_item['gsiA3SortKey']) == at
 
     # update the comment activity
     at = pendulum.now('utc')
-    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, at)
+    post_item = post_dynamo.set_last_unviewed_comment_at(post_item, at)
     assert post_item['gsiA3PartitionKey'].split('/') == ['post', 'uid']
     assert pendulum.parse(post_item['gsiA3SortKey']) == at
 
     # clear the comment activity
     at = pendulum.now('utc')
-    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, None)
+    post_item = post_dynamo.set_last_unviewed_comment_at(post_item, None)
     assert 'gsiA3PartitionKey' not in post_item
     assert 'gsiA3SortKey' not in post_item
 
     # no-op: clear the comment activity again
     at = pendulum.now('utc')
-    post_item = post_dynamo.set_last_new_comment_activity_at(post_item, None)
+    post_item = post_dynamo.set_last_unviewed_comment_at(post_item, None)
     assert 'gsiA3PartitionKey' not in post_item
     assert 'gsiA3SortKey' not in post_item
 
@@ -1100,27 +1067,56 @@ def test_transact_set_album_rank(post_dynamo):
     assert post_item['gsiK3SortKey'] == 0.5
 
 
+def test_increment_decrement_comment_count(post_dynamo, caplog):
+    post_id = str(uuid4())
+
+    # add a post, verify starts with no comment count
+    transact = post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype', text='lore ipsum')
+    post_dynamo.client.transact_write_items([transact])
+    assert 'commentCount' not in post_dynamo.get_post(post_id)
+
+    # verify failing hard on attempted decrement below zero
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.decrement_comment_count(post_id)
+
+    # verify failing soft on attempted decrement below zero
+    with caplog.at_level(logging.WARNING):
+        assert post_dynamo.decrement_comment_count(post_id, fail_soft=True) is None
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement comment count' in caplog.records[0].msg
+    assert post_id in caplog.records[0].msg
+
+    # increment
+    assert post_dynamo.increment_comment_count(post_id)['commentCount'] == 1
+    assert post_dynamo.get_post(post_id)['commentCount'] == 1
+
+    # increment again
+    assert post_dynamo.increment_comment_count(post_id)['commentCount'] == 2
+    assert post_dynamo.get_post(post_id)['commentCount'] == 2
+
+    # decrement
+    assert post_dynamo.decrement_comment_count(post_id)['commentCount'] == 1
+    assert post_dynamo.get_post(post_id)['commentCount'] == 1
+
+
 def test_transact_increment_clear_comments_unviewed_count(post_dynamo):
-    post_id = 'pid'
+    post_id = str(uuid4())
 
     # add a post, check starting state
-    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
+    transacts = [post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype', text='lore ipsum')]
     post_dynamo.client.transact_write_items(transacts)
     assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
 
     # increment
-    transacts = [post_dynamo.transact_increment_comment_count(post_id, True)]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.increment_comment_count(post_id, viewed=False)
     assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 1
 
     # increment
-    transacts = [post_dynamo.transact_increment_comment_count(post_id, True)]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.increment_comment_count(post_id, viewed=False)
     assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 2
 
     # no change
-    transacts = [post_dynamo.transact_increment_comment_count(post_id)]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.increment_comment_count(post_id, viewed=True)
     assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 2
 
     # clear

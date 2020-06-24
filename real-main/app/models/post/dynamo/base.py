@@ -326,7 +326,7 @@ class PostDynamo:
         post_id = keys['partitionKey'].split('/')[1] if keys else None
         return post_id
 
-    def set_last_new_comment_activity_at(self, post_item, at):
+    def set_last_unviewed_comment_at(self, post_item, at):
         "Use `new_value = None` to delete"
         post_id = post_item['postId']
         user_id = post_item['postedByUserId']
@@ -413,29 +413,30 @@ class PostDynamo:
             },
         }
 
-    def transact_increment_comment_count(self, post_id, include_comments_unviewed_count=False):
-        transact = {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'UpdateExpression': 'ADD commentCount :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            },
+    def increment_comment_count(self, post_id, viewed=False):
+        query_kwargs = {
+            'Key': self.pk(post_id),
+            'UpdateExpression': 'ADD commentCount :one',
+            'ExpressionAttributeValues': {':one': 1},
+            'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
         }
-        if include_comments_unviewed_count:
-            transact['Update']['UpdateExpression'] += ', commentsUnviewedCount :one'
-        return transact
+        if not viewed:
+            query_kwargs['UpdateExpression'] += ', commentsUnviewedCount :one'
+        return self.client.update_item(query_kwargs)
 
-    def transact_decrement_comment_count(self, post_id):
-        return {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'UpdateExpression': 'ADD commentCount :negative_one',
-                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
-                # only updates and no going below zero
-                'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
-            },
+    def decrement_comment_count(self, post_id, fail_soft=False):
+        query_kwargs = {
+            'Key': self.pk(post_id),
+            'UpdateExpression': 'ADD commentCount :negative_one',
+            'ExpressionAttributeValues': {':negative_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
         }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if not fail_soft:
+                raise
+            logger.warning(f'Failed to decrement comment count for post `{post_id}`')
 
     def clear_comments_unviewed_count(self, post_id):
         query_kwargs = {
