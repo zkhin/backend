@@ -396,9 +396,33 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
     assert card_manager.get_card(spec2.card_id)
 
 
-def test_postprocess_chat_message_deleted_message_view(
-    chat_manager, card_manager, chat, user1, user2, caplog, chat_message_manager
-):
+def test_postprocess_chat_message_deleted(chat_manager, chat, user1, user2, caplog):
+    # postprocess an add to increment counts, and verify starting state
+    chat_manager.postprocess_chat_message_added(chat.id, user1.id, pendulum.now('utc'))
+    chat.refresh_item().item['messagesCount'] == 1
+    assert chat.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
+    assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 1
+
+    # postprocess a deleted message, verify counts drop as expected
+    chat_manager.postprocess_chat_message_deleted(chat.id, str(uuid4()), user1.id, pendulum.now('utc'))
+    chat.refresh_item().item['messagesCount'] == 0
+    assert chat.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
+    assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 0
+
+    # postprocess a deleted message, verify fails softly and final state
+    with caplog.at_level(logging.WARNING):
+        chat_manager.postprocess_chat_message_deleted(chat.id, str(uuid4()), user1.id, pendulum.now('utc'))
+    assert len(caplog.records) == 2
+    assert 'Failed to decrement message count' in caplog.records[0].msg
+    assert 'Failed to decrement messages unviewed count' in caplog.records[1].msg
+    assert chat.id in caplog.records[0].msg
+    assert chat.id in caplog.records[1].msg
+    chat.refresh_item().item['messagesCount'] == 0
+    assert chat.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
+    assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 0
+
+
+def test_postprocess_chat_message_deleted_message_view(chat_manager, chat, user1, user2, chat_message_manager):
     message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
     message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
 
@@ -435,9 +459,7 @@ def test_postprocess_chat_message_deleted_message_view(
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
 
 
-def test_postprocess_chat_message_deleted_chat_views(
-    chat_manager, card_manager, chat, user1, user2, caplog, chat_message_manager
-):
+def test_postprocess_chat_message_deleted_chat_views(chat_manager, chat, user1, user2, chat_message_manager):
     # each user posts two messages, one of which is 'viewed' by both and the other is not
     message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
     message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
@@ -486,7 +508,7 @@ def test_postprocess_chat_message_deleted_chat_views(
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
 
 
-def test_postprocess_chat_message_view_added(chat_manager, card_manager, chat, user1, user2, caplog):
+def test_postprocess_chat_message_view_added(chat_manager, chat, user1, user2):
     # postprocess adding one message by user1, verify state
     now = pendulum.now('utc')
     chat_manager.postprocess_chat_message_added(chat.id, user1.id, now)

@@ -90,7 +90,7 @@ class ChatMemberDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             if fail_soft:
                 logger.warning(
-                    f'Failed to decrement unviewed message count for chat `{chat_id}` and member `{user_id}`'
+                    f'Failed to decrement messages unviewed count for chat `{chat_id}` and member `{user_id}`'
                 )
                 return
             raise

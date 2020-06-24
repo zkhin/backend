@@ -167,7 +167,7 @@ def test_increment_decrement_messages_unviewed_count(cm_dynamo, caplog):
         cm_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
-    assert all(x in caplog.records[0].msg for x in ['Failed', 'unviewed message count', chat_id, user_id])
+    assert all(x in caplog.records[0].msg for x in ['Failed', 'messages unviewed count', chat_id, user_id])
     assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 0
 
     # fail hard on decrementing below
