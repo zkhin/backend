@@ -276,9 +276,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         for view_item in self.comment_manager.view_dynamo.generate_views(comment_id):
             user_id = view_item['sortKey'].split('/')[1]
             self.comment_manager.view_dynamo.delete_view(comment_id, user_id)
-            comment_view_deleted = comment_view_deleted or (user_id == post.user_id)
+            comment_view_deleted = comment_view_deleted or (post and user_id == post.user_id)
 
-        if commented_by_user_id != post.user_id:
+        if post and commented_by_user_id != post.user_id:
             # has the post owner 'viewed' that comment via reporting a view on the post?
             post_view_item = self.view_dynamo.get_view(post_id, post.user_id)
             post_last_viewed_at = pendulum.parse(post_view_item['lastViewedAt']) if post_view_item else None
