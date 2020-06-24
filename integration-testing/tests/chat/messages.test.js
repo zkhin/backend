@@ -528,6 +528,86 @@ test('Delete chat message', async () => {
   expect(resp.data.chat.messages.items).toHaveLength(0)
 })
 
+test('Deleting chat messages adjusts messages counts correctly', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // they open up a chat with us
+  const [chatId, messageId1] = [uuidv4(), uuidv4()]
+  await theirClient
+    .mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'},
+    })
+    .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
+
+  // we view the chat
+  await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
+
+  // we add  a message to the chat
+  const messageId2 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId: chatId, messageId: messageId2, text: 'ipsum'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId2))
+
+  // they add another message to the chat
+  const messageId3 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId: chatId, messageId: messageId3, text: 'ipsum'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId3))
+
+  // check our message counts look correct
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messagesViewedCount).toBe(2)
+    expect(data.chat.messagesUnviewedCount).toBe(1)
+  })
+
+  // they delete their message we have viewed
+  await theirClient
+    .mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId1}})
+    .then(({data}) => expect(data.deleteChatMessage.messageId).toBe(messageId1))
+
+  // check our message counts look correct
+  await misc.sleep(1000)
+  await theirClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(2)
+    expect(data.chat.messagesViewedCount).toBe(1)
+    expect(data.chat.messagesUnviewedCount).toBe(1)
+  })
+
+  // we delete our message we have viewed
+  await ourClient
+    .mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId2}})
+    .then(({data}) => expect(data.deleteChatMessage.messageId).toBe(messageId2))
+
+  // check our message counts look correct
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(1)
+    expect(data.chat.messagesViewedCount).toBe(0)
+    expect(data.chat.messagesUnviewedCount).toBe(1)
+  })
+
+  // they delete their message we have not viewed
+  await theirClient
+    .mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId3}})
+    .then(({data}) => expect(data.deleteChatMessage.messageId).toBe(messageId3))
+
+  // check our message counts look correct
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(0)
+    expect(data.chat.messagesViewedCount).toBe(0)
+    expect(data.chat.messagesUnviewedCount).toBe(0)
+  })
+})
+
 test('User.chats sort order should react to message adds, but not to edits and deletes', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [other1Client] = await loginCache.getCleanLogin()

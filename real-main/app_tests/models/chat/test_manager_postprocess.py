@@ -23,16 +23,6 @@ def chat(chat_manager, user1, user2):
     yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
 
 
-@pytest.fixture
-def message1(chat_message_manager, chat, user1):
-    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-
-
-@pytest.fixture
-def message2(chat_message_manager, chat, user2):
-    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
-
-
 def test_postprocess_record_member_added(chat_manager, chat, user1):
     typed_pk = chat.member_dynamo.typed_pk(chat.id, user1.id)
     pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
@@ -406,9 +396,12 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
     assert card_manager.get_card(spec2.card_id)
 
 
-def test_postprocess_chat_message_deleted(
-    chat_manager, card_manager, chat, user1, user2, caplog, message1, message2
+def test_postprocess_chat_message_deleted_message_view(
+    chat_manager, card_manager, chat, user1, user2, caplog, chat_message_manager
 ):
+    message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
+    message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+
     # postprocess adding two messages by user1, user2 views one of them
     created_at1 = pendulum.parse(message1.item['createdAt'])
     created_at2 = pendulum.parse(message2.item['createdAt'])
@@ -426,7 +419,7 @@ def test_postprocess_chat_message_deleted(
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
 
     # postprocess deleting the message user2 viewed, verify state
-    chat_manager.postprocess_chat_message_deleted(chat.id, message2.id, user1.id)
+    chat_manager.postprocess_chat_message_deleted(chat.id, message2.id, user1.id, pendulum.now('utc'))
     chat.refresh_item()
     assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
@@ -434,11 +427,65 @@ def test_postprocess_chat_message_deleted(
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
 
     # postprocess deleting the message user2 did not view, verify state
-    chat_manager.postprocess_chat_message_deleted(chat.id, message1.id, user1.id)
+    chat_manager.postprocess_chat_message_deleted(chat.id, message1.id, user1.id, pendulum.now('utc'))
     chat.refresh_item()
     assert chat.item['messagesCount'] == 0
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == created_at2
     assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
+
+
+def test_postprocess_chat_message_deleted_chat_views(
+    chat_manager, card_manager, chat, user1, user2, caplog, chat_message_manager
+):
+    # each user posts two messages, one of which is 'viewed' by both and the other is not
+    message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
+    chat_manager.postprocess_chat_message_added(chat.id, user1.id, message1.created_at)
+
+    message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    chat_manager.postprocess_chat_message_added(chat.id, user2.id, message2.created_at)
+
+    chat_manager.record_views([chat.id], user1.id)
+    chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user1.id)  # postprocess
+
+    chat_manager.record_views([chat.id], user2.id)
+    chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user2.id)  # postprocess
+
+    message3 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
+    chat_manager.postprocess_chat_message_added(chat.id, user1.id, message3.created_at)
+
+    message4 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    chat_manager.postprocess_chat_message_added(chat.id, user2.id, message4.created_at)
+
+    # verify starting state
+    chat.refresh_item()
+    assert chat.item['messagesCount'] == 4
+    assert pendulum.parse(chat.item['lastMessageActivityAt']) == message4.created_at
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
+
+    # postprocess deleting message2, check counts
+    chat_manager.postprocess_chat_message_deleted(chat.id, message2.id, message2.user_id, message2.created_at)
+    assert chat.refresh_item().item['messagesCount'] == 3
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
+
+    # postprocess deleting message3, check counts
+    chat_manager.postprocess_chat_message_deleted(chat.id, message3.id, message3.user_id, message3.created_at)
+    assert chat.refresh_item().item['messagesCount'] == 2
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
+
+    # postprocess deleting message1, check counts
+    chat_manager.postprocess_chat_message_deleted(chat.id, message1.id, message1.user_id, message1.created_at)
+    assert chat.refresh_item().item['messagesCount'] == 1
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
+    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
+
+    # postprocess deleting message4, check counts
+    chat_manager.postprocess_chat_message_deleted(chat.id, message4.id, message4.user_id, message4.created_at)
+    assert chat.refresh_item().item['messagesCount'] == 0
+    assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 0
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
 
 

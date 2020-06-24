@@ -55,18 +55,19 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
     def postprocess_record(self, pk, sk, old_item, new_item):
         message_id = pk.split('/')[1]
 
-        # message added
-        if sk == '-' and not old_item and new_item:
-            chat_id = new_item['chatId']['S']
-            user_id = new_item.get('userId', {}).get('S')  # system messages have no userId
-            created_at = pendulum.parse(new_item['createdAt']['S'])
-            self.chat_manager.postprocess_chat_message_added(chat_id, user_id, created_at)
+        if sk == '-':
+            item = new_item or old_item
+            chat_id = item['chatId']['S']
+            user_id = item.get('userId', {}).get('S')  # system messages have no userId
+            created_at = pendulum.parse(item['createdAt']['S'])
 
-        # message deleted
-        if sk == '-' and old_item and not new_item:
-            chat_id = old_item['chatId']['S']
-            user_id = old_item.get('userId', {}).get('S')  # system messages have no userId
-            self.chat_manager.postprocess_chat_message_deleted(chat_id, message_id, user_id)
+            # message added
+            if not old_item and new_item:
+                self.chat_manager.postprocess_chat_message_added(chat_id, user_id, created_at)
+
+            # message deleted
+            if old_item and not new_item:
+                self.chat_manager.postprocess_chat_message_deleted(chat_id, message_id, user_id, created_at)
 
         # message view added
         if sk.startswith('view/') and not old_item and new_item:

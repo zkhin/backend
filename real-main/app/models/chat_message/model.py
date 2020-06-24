@@ -49,6 +49,7 @@ class ChatMessage(ViewModelMixin):
         self.id = item['messageId']
         self.chat_id = self.item['chatId']
         self.user_id = self.item.get('userId')  # system messages have no userId
+        self.created_at = pendulum.parse(self.item['createdAt'])
 
     @property
     def author(self):

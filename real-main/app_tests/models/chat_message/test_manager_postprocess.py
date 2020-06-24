@@ -65,12 +65,13 @@ def test_postprocess_chat_message_deleted(chat_message_manager, message):
     pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
     old_item = chat_message_manager.dynamo.client.get_typed_item(typed_pk)
     new_item = None
+    created_at = pendulum.parse(message.item['createdAt'])
 
     # postprocess the user message, verify calls correct
     chat_message_manager.chat_manager = Mock(chat_message_manager.chat_manager)
     chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
     assert chat_message_manager.chat_manager.mock_calls == [
-        call.postprocess_chat_message_deleted(message.chat_id, message.id, message.user_id),
+        call.postprocess_chat_message_deleted(message.chat_id, message.id, message.user_id, created_at),
     ]
 
 

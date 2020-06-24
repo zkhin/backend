@@ -174,19 +174,20 @@ class ChatManager(ViewManagerMixin, ManagerBase):
                 self.member_dynamo.increment_messages_unviewed_count(chat_id, user_id)
                 self.card_manager.add_card_by_spec_if_dne(ChatCardSpec(user_id), now=created_at)
 
-    def postprocess_chat_message_deleted(self, chat_id, message_id, author_user_id):
+    def postprocess_chat_message_deleted(self, chat_id, message_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.
         self.dynamo.decrement_messages_count(chat_id, fail_soft=True)
 
         # for each memeber of the chat other than the author
-        #   - if they've viewed the message, delete the view record
-        #   - if they haven't viewed the message, decrement their 'unviewedMessageCount'
+        #   - delete any view record that exists directly on the message
+        #   - determine if the message had status 'unviewed', and if so, then decrement the unviewed message counter
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             if user_id != author_user_id:
-                # TODO: decrement messagesUnviewedCount as appropriate based on timestamps of the message
-                #       being deleted and the lastViewedAt time for this user on the chat
-                resp = self.chat_message_manager.view_dynamo.delete_view(message_id, user_id)
-                if not resp:
+                message_view_deleted = self.chat_message_manager.view_dynamo.delete_view(message_id, user_id)
+                chat_view_item = self.view_dynamo.get_view(chat_id, user_id)
+                chat_last_viewed_at = pendulum.parse(chat_view_item['lastViewedAt']) if chat_view_item else None
+                is_viewed = message_view_deleted or (chat_last_viewed_at and chat_last_viewed_at > created_at)
+                if not is_viewed:
                     self.member_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)
 
     def postprocess_chat_message_view_added(self, chat_id, user_id):
