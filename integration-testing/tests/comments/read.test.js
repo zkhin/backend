@@ -238,8 +238,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
   })
 
   // we report to have viewed the post
-  await ourClient
-    .mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check we see the comments correctly
   await misc.sleep(1000)
@@ -286,8 +285,7 @@ test('Comment viewed status reacts to views Post correctly', async () => {
   })
 
   // we report to have viewed the post again
-  await ourClient
-    .mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check we see the comments correctly
   await misc.sleep(1000)

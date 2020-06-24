@@ -154,8 +154,9 @@ test('Cannot dislike a post we have not liked', async () => {
 
   // add a post
   const postId = uuidv4()
-  let variables = {postId, imageData}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data}) => expect(data.addPost.postId).toBe(postId))
 
   // verify we can't dislike it, since we haven't already liked it
   await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId}})).rejects.toThrow(

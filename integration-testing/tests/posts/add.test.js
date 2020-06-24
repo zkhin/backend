@@ -111,7 +111,9 @@ test('Cannot add post with invalid lifetime', async () => {
 
   // success!
   variables.lifetime = 'P1D'
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables})
+    .then(({data}) => expect(data.addPost.postId).toBe(variables.postId))
 })
 
 test('Mental health settings default values', async () => {

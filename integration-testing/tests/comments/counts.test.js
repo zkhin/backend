@@ -127,8 +127,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   })
 
   // they report a post view
-  await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}}).then((resp) => {
-  })
+  await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check viewed/unviewed counts - no change
   await misc.sleep(1000)
@@ -140,8 +139,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   })
 
   // we report a post view
-  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}}).then((resp) => {
-  })
+  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check viewed/unviewed counts - unviewed have become viewed
   await misc.sleep(1000)
