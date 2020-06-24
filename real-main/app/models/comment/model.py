@@ -1,5 +1,7 @@
 import logging
 
+import pendulum
+
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
 
@@ -39,6 +41,7 @@ class Comment(FlagModelMixin, ViewModelMixin):
         self.id = comment_item['commentId']
         self.user_id = comment_item['userId']
         self.post_id = comment_item['postId']
+        self.created_at = pendulum.parse(comment_item['commentedAt'])
 
     @property
     def post(self):
@@ -76,8 +79,6 @@ class Comment(FlagModelMixin, ViewModelMixin):
         ]
         self.dynamo.client.transact_write_items(transacts)
 
-        # delete view records on the comment
-        self.delete_views()
         return self
 
     def flag(self, user):

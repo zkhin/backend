@@ -246,3 +246,139 @@ test('Can delete comments even if we have comments disabled and the post has com
   expect(resp.data.post.commentsCount).toBe(0)
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
+
+test('Deleting comments in the presence of post views adjusts comment counts on post correctly', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data}) => expect(data.addPost.postId).toBe(postId))
+
+  // they comment on the post
+  const commentId1 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId1, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId1))
+
+  // we view the post
+  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+
+  // we comment on the post
+  const commentId2 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId2, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId2))
+
+  // they comment on the post
+  const commentId3 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId3, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId3))
+
+  // they comment on the post again
+  const commentId4 = uuidv4()
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId4, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId4))
+
+  // check the post has the correct counts
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentCount).toBe(4)
+    expect(data.post.commentsCount).toBe(4)
+    expect(data.post.commentsViewedCount).toBe(2)
+    expect(data.post.commentsUnviewedCount).toBe(2)
+    expect(data.post.comments.items).toHaveLength(4)
+  })
+
+  // check the post appears in the postsWithUnviewedComments
+  await ourClient.query({query: queries.self}).then(({data, errors}) => {
+    expect(errors).toBeUndefined()
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.postsWithUnviewedComments.items).toHaveLength(1)
+    expect(data.self.postsWithUnviewedComments.items[0].postId).toBe(postId)
+  })
+
+  // they delete their last unviewed comment
+  await theirClient
+    .mutate({mutation: mutations.deleteComment, variables: {commentId: commentId4}})
+    .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId4))
+
+  // check the post has the correct counts
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentCount).toBe(3)
+    expect(data.post.commentsCount).toBe(3)
+    expect(data.post.commentsViewedCount).toBe(2)
+    expect(data.post.commentsUnviewedCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(3)
+  })
+
+  // we delete our comment
+  await ourClient
+    .mutate({mutation: mutations.deleteComment, variables: {commentId: commentId2}})
+    .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId2))
+
+  // check the post has the correct counts
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentCount).toBe(2)
+    expect(data.post.commentsCount).toBe(2)
+    expect(data.post.commentsViewedCount).toBe(1)
+    expect(data.post.commentsUnviewedCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(2)
+  })
+
+  // check the post still appears in the postsWithUnviewedComments
+  await ourClient.query({query: queries.self}).then(({data, errors}) => {
+    expect(errors).toBeUndefined()
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.postsWithUnviewedComments.items).toHaveLength(1)
+    expect(data.self.postsWithUnviewedComments.items[0].postId).toBe(postId)
+  })
+
+  // they delete their last unviewed comment
+  await theirClient
+    .mutate({mutation: mutations.deleteComment, variables: {commentId: commentId3}})
+    .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId3))
+
+  // check the post has the correct counts
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentCount).toBe(1)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.commentsViewedCount).toBe(1)
+    expect(data.post.commentsUnviewedCount).toBe(0)
+    expect(data.post.comments.items).toHaveLength(1)
+  })
+
+  // check the post does not appears in the postsWithUnviewedComments
+  await ourClient.query({query: queries.self}).then(({data, errors}) => {
+    expect(errors).toBeUndefined()
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.postsWithUnviewedComments.items).toHaveLength(0)
+  })
+
+  // they delete their viewed comment
+  await theirClient
+    .mutate({mutation: mutations.deleteComment, variables: {commentId: commentId1}})
+    .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId1))
+
+  // check the post has the correct counts
+  await misc.sleep(1000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentCount).toBe(0)
+    expect(data.post.commentsCount).toBe(0)
+    expect(data.post.commentsViewedCount).toBe(0)
+    expect(data.post.commentsUnviewedCount).toBe(0)
+    expect(data.post.comments.items).toHaveLength(0)
+  })
+})

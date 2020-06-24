@@ -440,21 +440,18 @@ def test_postprocess_chat_message_deleted_chat_views(
 ):
     # each user posts two messages, one of which is 'viewed' by both and the other is not
     message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    chat_manager.postprocess_chat_message_added(chat.id, user1.id, message1.created_at)
-
     message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    chat_manager.postprocess_chat_message_added(chat.id, user1.id, message1.created_at)
     chat_manager.postprocess_chat_message_added(chat.id, user2.id, message2.created_at)
 
     chat_manager.record_views([chat.id], user1.id)
-    chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user1.id)  # postprocess
-
     chat_manager.record_views([chat.id], user2.id)
+    chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user1.id)  # postprocess
     chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user2.id)  # postprocess
 
     message3 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    chat_manager.postprocess_chat_message_added(chat.id, user1.id, message3.created_at)
-
     message4 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    chat_manager.postprocess_chat_message_added(chat.id, user1.id, message3.created_at)
     chat_manager.postprocess_chat_message_added(chat.id, user2.id, message4.created_at)
 
     # verify starting state

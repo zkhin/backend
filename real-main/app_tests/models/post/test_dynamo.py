@@ -1099,7 +1099,7 @@ def test_increment_decrement_comment_count(post_dynamo, caplog):
     assert post_dynamo.get_post(post_id)['commentCount'] == 1
 
 
-def test_transact_increment_clear_comments_unviewed_count(post_dynamo):
+def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo, caplog):
     post_id = str(uuid4())
 
     # add a post, check starting state
@@ -1119,6 +1119,14 @@ def test_transact_increment_clear_comments_unviewed_count(post_dynamo):
     post_dynamo.increment_comment_count(post_id, viewed=True)
     assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 2
 
+    # decrement
+    post_dynamo.decrement_comments_unviewed_count(post_id)
+    assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 1
+
+    # increment
+    post_dynamo.increment_comment_count(post_id, viewed=False)
+    assert post_dynamo.get_post(post_id)['commentsUnviewedCount'] == 2
+
     # clear
     assert 'commentsUnviewedCount' not in post_dynamo.clear_comments_unviewed_count(post_id)
     assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
@@ -1126,3 +1134,14 @@ def test_transact_increment_clear_comments_unviewed_count(post_dynamo):
     # check clearing is idemopotent
     assert 'commentsUnviewedCount' not in post_dynamo.clear_comments_unviewed_count(post_id)
     assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
+
+    # check decrement fail hard
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.decrement_comments_unviewed_count(post_id)
+
+    # check decrement fail soft
+    with caplog.at_level(logging.WARNING):
+        assert post_dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True) is None
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement comments unviewed count' in caplog.records[0].msg
+    assert post_id in caplog.records[0].msg

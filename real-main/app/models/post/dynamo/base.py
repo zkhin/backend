@@ -438,6 +438,20 @@ class PostDynamo:
                 raise
             logger.warning(f'Failed to decrement comment count for post `{post_id}`')
 
+    def decrement_comments_unviewed_count(self, post_id, fail_soft=False):
+        query_kwargs = {
+            'Key': self.pk(post_id),
+            'UpdateExpression': 'ADD commentsUnviewedCount :negative_one',
+            'ExpressionAttributeValues': {':negative_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) and commentsUnviewedCount > :zero',
+        }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if not fail_soft:
+                raise
+            logger.warning(f'Failed to decrement comments unviewed count for post `{post_id}`')
+
     def clear_comments_unviewed_count(self, post_id):
         query_kwargs = {
             'Key': self.pk(post_id),

@@ -267,10 +267,29 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.dynamo.set_last_unviewed_comment_at(post.item, created_at)
             self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(post.user_id, post.id))
 
-    def postprocess_comment_deleted(self, post_id, commented_by_user_id, created_at):
+    def postprocess_comment_deleted(self, post_id, comment_id, commented_by_user_id, created_at):
+        post = self.get_post(post_id)
         self.dynamo.decrement_comment_count(post_id, fail_soft=True)
-        # TODO: decrement the commentsUnviewedCount if the comment was unviewed:
-        #   - author is someone other than the post owner
-        #   - the comment was created after the last view by post owner of the post
-        # TODO: if commentsUnviewedCount hits zero, then
-        #       delete the 'last_unviewed_comment_at' index in gsiA3
+
+        # for each view of the comment delete the view record & keep track of whether it was the post owner's view
+        comment_view_deleted = False
+        for view_item in self.comment_manager.view_dynamo.generate_views(comment_id):
+            user_id = view_item['sortKey'].split('/')[1]
+            self.comment_manager.view_dynamo.delete_view(comment_id, user_id)
+            comment_view_deleted = comment_view_deleted or (user_id == post.user_id)
+
+        if commented_by_user_id != post.user_id:
+            # has the post owner 'viewed' that comment via reporting a view on the post?
+            post_view_item = self.view_dynamo.get_view(post_id, post.user_id)
+            post_last_viewed_at = pendulum.parse(post_view_item['lastViewedAt']) if post_view_item else None
+            is_viewed = comment_view_deleted or (post_last_viewed_at and post_last_viewed_at > created_at)
+            if not is_viewed:
+                post_item = self.dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True)
+                # if the comment unviewed count hit zero, then remove post from 'posts with unviewed comments' index
+                if post_item and post_item.get('commentsUnviewedCount', 0) == 0:
+                    self.dynamo.set_last_unviewed_comment_at(post_item, None)
+
+    def postprocess_comment_view_added(self, post_id, user_id):
+        post = self.get_post(post_id)
+        if user_id == post.user_id:
+            self.dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True)

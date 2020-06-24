@@ -45,13 +45,7 @@ def test_delete(comment, post_manager, comment_manager, user, user2, user3):
     assert comment_item['commentId'] == comment.id
 
     # check the user & post's comment count
-    user.refresh_item().item.get('commentCount', 0) == 1
-    post_manager.get_post(comment.item['postId']).item.get('commentCount', 0) == 1
-
-    # add two views to the comment, verify we see them
-    comment.record_view_count(user2.id, 1)
-    comment.record_view_count(user3.id, 1)
-    assert len(list(comment.view_dynamo.generate_views(comment.id))) == 2
+    assert user.refresh_item().item.get('commentCount', 0) == 1
 
     # comment owner deletes the comment
     comment.delete(deleter_user_id=comment.user_id)
@@ -61,11 +55,7 @@ def test_delete(comment, post_manager, comment_manager, user, user2, user3):
     assert comment.dynamo.get_comment(comment.id) is None
 
     # check the user & post's comment count have decremented
-    user.refresh_item().item.get('commentCount', 0) == 0
-    post_manager.get_post(comment.item['postId']).item.get('commentCount', 0) == 0
-
-    # check the two comment views have also been deleted
-    assert len(list(comment.view_dynamo.generate_views(comment.id))) == 0
+    assert user.refresh_item().item.get('commentCount', 0) == 0
 
 
 def test_forced_delete(comment, comment2, user):
