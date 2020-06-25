@@ -69,7 +69,7 @@ class Follow:
         "Returns the status of the follow request"
         if self.status == FollowStatus.FOLLOWING:
             raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING)
-        self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING),
+        self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING)
 
         # async with dynamo stream handler?
         self.feed_manager.add_users_posts_to_feed(self.follower_user_id, self.followed_user_id)

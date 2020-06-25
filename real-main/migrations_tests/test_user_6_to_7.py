@@ -116,7 +116,7 @@ def test_migrate_user_with_zero(dynamo_client, dynamo_table, caplog, user_with_z
     user_pk = {k: user[k] for k in ('partitionKey', 'sortKey')}
 
     # put one archived post in the DB for this user
-    for i in range(0, 1):
+    for _ in range(0, 1):
         post_id = str(uuid.uuid4())
         item = {
             'partitionKey': f'post/{post_id}',
@@ -160,7 +160,7 @@ def test_migrate_user_with_two(dynamo_client, dynamo_table, caplog, user_with_tw
     user_pk = {k: user[k] for k in ('partitionKey', 'sortKey')}
 
     # put three archived posts in the DB for this user
-    for i in range(0, 3):
+    for _ in range(0, 3):
         post_id = str(uuid.uuid4())
         item = {
             'partitionKey': f'post/{post_id}',
@@ -209,8 +209,8 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, user_with_none, u
     user_pk_2 = {k: user_2[k] for k in ('partitionKey', 'sortKey')}
 
     # check initial state
-    dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 6
-    dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 6
+    assert dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 6
+    assert dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 6
 
     # migrate
     migration = Migration(dynamo_client, dynamo_table)
@@ -223,8 +223,8 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, user_with_none, u
     assert sum(1 for rec in caplog.records if user_id_2 in rec.msg) == 4
 
     # check final state
-    dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 7
-    dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 7
+    assert dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 7
+    assert dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 7
 
 
 def test_race_condition_post_archived(dynamo_client, dynamo_table, user_with_two):

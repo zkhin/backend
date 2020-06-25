@@ -16,7 +16,7 @@ def test_transact_add(flag_dynamo):
     now = pendulum.now('utc')
 
     # check no flags
-    flag_dynamo.get(item_id, user_id) is None
+    assert flag_dynamo.get(item_id, user_id) is None
 
     # flag the item
     transacts = [flag_dynamo.transact_add(item_id, user_id, now=now)]

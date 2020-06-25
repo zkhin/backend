@@ -24,8 +24,8 @@ class Like:
             self.dynamo.transact_delete_like(self.liked_by_user_id, self.post_id, like_status),
             self.post_manager.dynamo.transact_decrement_like_count(self.post_id, like_status),
         ]
-        exceptions = [
+        transact_exceptions = [
             self.exceptions.NotLikedWithStatus(self.liked_by_user_id, self.post_id, like_status),
             self.post_manager.exceptions.UnableToDecrementPostLikeCounter(self.post_id),
         ]
-        self.dynamo.client.transact_write_items(transacts, exceptions)
+        self.dynamo.client.transact_write_items(transacts, transact_exceptions)

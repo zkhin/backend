@@ -49,8 +49,8 @@ def message(chat_message_manager, chat, user1):
 
 def test_chat_message_serialize(message, user1, user2, chat):
     # check that user1 has viewed it (since they wrote it) and user2 has not
-    message.serialize(user1.id)['author']['blockerStatus'] == BlockStatus.SELF
-    message.serialize(user2.id)['author']['blockerStatus'] == BlockStatus.NOT_BLOCKING
+    assert message.serialize(user1.id)['author']['blockerStatus'] == BlockStatus.SELF
+    assert message.serialize(user2.id)['author']['blockerStatus'] == BlockStatus.NOT_BLOCKING
 
 
 def test_chat_message_edit(message, user1, user2, card_manager):

@@ -14,11 +14,11 @@ class CachedImage:
     jpeg_content_type = 'image/jpeg'
     heic_content_type = 'image/heic'
 
-    def __init__(self, post_id, image_size, s3_client=None, s3_path=None, source=None):
+    def __init__(self, post_id, img_size, s3_client=None, s3_path=None, source=None):
         assert (s3_client and s3_path) or source, 'Either s3 kwargs or source required'
 
         self.post_id = post_id
-        self.image_size = image_size
+        self.image_size = img_size
         self.s3_client = s3_client
         self.s3_path = s3_path
         self.source = source

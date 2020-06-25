@@ -260,7 +260,7 @@ def test_start_change_email(user):
     user.cognito_client.set_user_attributes(user.id, {'email': prev_email, 'email_verified': 'true'})
 
     # check starting state
-    user.item['email'] == prev_email
+    assert user.item['email'] == prev_email
     attrs = user.cognito_client.get_user_attributes(user.id)
     assert attrs['email'] == prev_email
     assert attrs['email_verified'] == 'true'
@@ -306,7 +306,7 @@ def test_start_change_phone(user):
     user.cognito_client.set_user_attributes(user.id, {'phone': prev_phone, 'phone_verified': 'true'})
 
     # check starting state
-    user.item['phoneNumber'] == prev_phone
+    assert user.item['phoneNumber'] == prev_phone
     attrs = user.cognito_client.get_user_attributes(user.id)
     assert attrs['phone'] == prev_phone
     assert attrs['phone_verified'] == 'true'

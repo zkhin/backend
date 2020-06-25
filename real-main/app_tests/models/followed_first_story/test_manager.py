@@ -60,26 +60,26 @@ def test_generate_batched_follower_user_one(ffs_manager, follow_manager):
 def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
     followed_user_id = 'fid'
 
-    for i in range(5):
+    for _ in range(5):
         follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 1
     assert len(resp[0]) == 5
 
-    for i in range(20):
+    for _ in range(20):
         follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 1
     assert len(resp[0]) == 25
 
-    for i in range(1):
+    for _ in range(1):
         follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 2
     assert len(resp[0]) == 25
     assert len(resp[1]) == 1
 
-    for i in range(0, 25):
+    for _ in range(0, 25):
         follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 3

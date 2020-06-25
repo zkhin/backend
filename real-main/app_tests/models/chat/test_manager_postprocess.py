@@ -399,13 +399,13 @@ def test_postprocess_system_chat_message_added(chat_manager, chat_message_manage
 def test_postprocess_chat_message_deleted(chat_manager, chat, user1, user2, caplog):
     # postprocess an add to increment counts, and verify starting state
     chat_manager.postprocess_chat_message_added(chat.id, user1.id, pendulum.now('utc'))
-    chat.refresh_item().item['messagesCount'] == 1
+    assert chat.refresh_item().item['messagesCount'] == 1
     assert chat.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
     assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 1
 
     # postprocess a deleted message, verify counts drop as expected
     chat_manager.postprocess_chat_message_deleted(chat.id, str(uuid4()), user1.id, pendulum.now('utc'))
-    chat.refresh_item().item['messagesCount'] == 0
+    assert chat.refresh_item().item['messagesCount'] == 0
     assert chat.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
     assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 0
 
@@ -417,7 +417,7 @@ def test_postprocess_chat_message_deleted(chat_manager, chat, user1, user2, capl
     assert 'Failed to decrement messages unviewed count' in caplog.records[1].msg
     assert chat.id in caplog.records[0].msg
     assert chat.id in caplog.records[1].msg
-    chat.refresh_item().item['messagesCount'] == 0
+    assert chat.refresh_item().item['messagesCount'] == 0
     assert chat.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
     assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 0
 

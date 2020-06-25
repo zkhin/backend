@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
 [tool.black]
 line-length = 117
 target-version = ['py38']
@@ -34,6 +38,6 @@ python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 117
+disable = "C, R, import-error, attribute-defined-outside-init, fixme, no-name-in-module, unused-argument, logging-fstring-interpolation, no-member, super-init-not-called, protected-access, broad-except, unused-import, arguments-differ, redefined-outer-name, unsubscriptable-object"

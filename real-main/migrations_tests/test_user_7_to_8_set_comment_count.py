@@ -117,7 +117,7 @@ def test_migrate_user_with_zero(dynamo_client, dynamo_table, caplog, user_with_z
     user_pk = {k: user[k] for k in ('partitionKey', 'sortKey')}
 
     # put one comment in the DB for this user
-    for i in range(0, 1):
+    for _ in range(0, 1):
         comment_id = str(uuid.uuid4())
         item = {
             'partitionKey': f'comment/{comment_id}',
@@ -161,7 +161,7 @@ def test_migrate_user_with_two(dynamo_client, dynamo_table, caplog, user_with_tw
     user_pk = {k: user[k] for k in ('partitionKey', 'sortKey')}
 
     # put three comments in the DB for this user
-    for i in range(0, 3):
+    for _ in range(0, 3):
         comment_id = str(uuid.uuid4())
         item = {
             'partitionKey': f'comment/{comment_id}',
@@ -210,8 +210,8 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, user_with_none, u
     user_pk_2 = {k: user_2[k] for k in ('partitionKey', 'sortKey')}
 
     # check initial state
-    dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 7
-    dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 7
+    assert dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 7
+    assert dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 7
 
     # migrate
     migration = Migration(dynamo_client, dynamo_table)
@@ -224,8 +224,8 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, user_with_none, u
     assert sum(1 for rec in caplog.records if user_id_2 in rec.msg) == 4
 
     # check final state
-    dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 8
-    dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 8
+    assert dynamo_table.get_item(Key=user_pk_1)['Item']['schemaVersion'] == 8
+    assert dynamo_table.get_item(Key=user_pk_2)['Item']['schemaVersion'] == 8
 
 
 def test_race_condition_comment_added(dynamo_client, dynamo_table, user_with_two):

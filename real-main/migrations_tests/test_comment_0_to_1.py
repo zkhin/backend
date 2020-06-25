@@ -71,7 +71,7 @@ def comment_one_recorded_view(dynamo_table):
 def comment_multiple_views(dynamo_table):
     "Comment with some recorded and some unrecorded views"
     comment_id = str(uuid.uuid4())
-    for i in range(5):
+    for _ in range(5):
         view_item = {
             'partitionKey': f'comment/{comment_id}',
             'sortKey': f'view/{uuid.uuid4()}',

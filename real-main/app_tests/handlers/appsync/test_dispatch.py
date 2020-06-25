@@ -4,7 +4,7 @@ import pytest
 
 # turning off route autodiscovery
 os.environ['APPSYNC_ROUTE_AUTODISCOVERY_PATH'] = ''
-from app.handlers.appsync import dispatch, routes  # noqa: E402
+from app.handlers.appsync import dispatch, routes  # noqa: E402 isort:skip
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def setup_one_route():
     routes.clear()
 
     @routes.register('Type.field')
-    def mocked_handler(caller_user_id, arguments, source, context):
+    def mocked_handler(caller_user_id, arguments, source, context):  # pylint: disable=unused-variable
         return {
             'caller_user_id': caller_user_id,
             'arguments': arguments,

@@ -151,8 +151,7 @@ def test_delete_all_by_user(comment_manager, user, post, user2, user3):
     comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
 
     # check post comment count, their comment count
-    post.refresh_item().item.get('commentCount', 0) == 3
-    user3.refresh_item().item.get('commentCount', 0) == 2
+    assert user3.refresh_item().item.get('commentCount', 0) == 2
 
     # delete all the comments by the user, verify it worked
     comment_manager.delete_all_by_user(user3.id)
@@ -163,8 +162,7 @@ def test_delete_all_by_user(comment_manager, user, post, user2, user3):
     assert comment_manager.get_comment(comment_other.id)
 
     # check post & user comment count
-    post.refresh_item().item.get('commentCount', 0) == 1
-    user3.refresh_item().item.get('commentCount', 0) == 0
+    assert user3.refresh_item().item.get('commentCount', 0) == 0
 
 
 def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, user3):
@@ -177,9 +175,8 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
     comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
 
     # check post, user comment count
-    post.refresh_item().item.get('commentCount', 0) == 2
-    user2.refresh_item().item.get('commentCount', 0) == 1
-    user3.refresh_item().item.get('commentCount', 0) == 1
+    assert user2.refresh_item().item.get('commentCount', 0) == 1
+    assert user3.refresh_item().item.get('commentCount', 0) == 1
 
     # delete all the comments on the post, verify it worked
     comment_manager.delete_all_on_post(post.id)
@@ -190,9 +187,8 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
     assert comment_manager.get_comment(comment_other.id)
 
     # check post comment count
-    post.refresh_item().item.get('commentCount', 0) == 0
-    user2.refresh_item().item.get('commentCount', 0) == 0
-    user3.refresh_item().item.get('commentCount', 0) == 0
+    assert user2.refresh_item().item.get('commentCount', 0) == 0
+    assert user3.refresh_item().item.get('commentCount', 0) == 0
 
 
 def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):
@@ -235,6 +231,6 @@ def test_record_views(comment_manager, user, user2, user3, post, caplog, card_ma
     comment_manager.record_views([comment1.id, comment2.id, comment1.id], user.id)
     assert comment_manager.view_dynamo.get_view(comment1.id, user.id)['viewCount'] == 2
     assert comment_manager.view_dynamo.get_view(comment2.id, user.id)['viewCount'] == 1
-    post.refresh_item().item.get('hasNewCommentActivity', False) is False
+    assert post.refresh_item().item.get('hasNewCommentActivity', False) is False
     assert 'gsiA3SortKey' not in post.refresh_item().item
     assert card_manager.get_card(card_spec.card_id) is None

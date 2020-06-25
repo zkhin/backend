@@ -5,8 +5,9 @@ from .exceptions import ClientException
 from .logging import LogLevelContext, logger
 
 
-def handler(required_query_params=[]):
+def handler(required_query_params=None):
     "Decorator to simplify handlers"
+    required_query_params = required_query_params or []
 
     def decorator(func):
         def inner(event, context):

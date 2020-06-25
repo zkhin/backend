@@ -141,7 +141,7 @@ def test_migrate_multiple(
 ):
     post_false, media_false = post_and_media_is_verified_false
     post_true, media_true = post_and_media_is_verified_true
-    post_none, media_none = post_and_media_is_verified_none
+    post_none, _ = post_and_media_is_verified_none
 
     post_id_false = post_false['postId']
     post_id_true = post_true['postId']

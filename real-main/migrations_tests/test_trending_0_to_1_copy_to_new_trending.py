@@ -182,7 +182,7 @@ def test_race_condition_on_adding_new_trending(dynamo_client, dynamo_table, capl
     # check final state
     final_item = dynamo_table.get_item(Key=new_pk)['Item']
     assert final_item.pop('gsiK3SortKey') == pytest.approx(conflict_score + org_score)
-    conflict_item.pop('gsiK3SortKey') == org_score
+    assert conflict_item.pop('gsiK3SortKey') == conflict_score
     assert final_item == conflict_item
 
 

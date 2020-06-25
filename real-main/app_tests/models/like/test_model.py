@@ -51,7 +51,7 @@ def test_dislike(like_manager, like):
 def test_dislike_fail_unable_to_decrement_like_counter(like_manager, like):
     post_id = like.item['postId']
     like_status = like.item['likeStatus']
-    like_status == LikeStatus.ANONYMOUSLY_LIKED
+    assert like_status == LikeStatus.ANONYMOUSLY_LIKED
 
     # verify our initial like counter
     post = like_manager.post_manager.get_post(post_id)

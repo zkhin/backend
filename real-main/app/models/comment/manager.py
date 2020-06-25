@@ -108,7 +108,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                 post_ids.add(comment.post_id)
 
         for post_id in post_ids:
-            post = self.post_manager.get_post(comment.post_id)
+            post = self.post_manager.get_post(post_id)
             if user_id == post.user_id:
                 # maintaining legacy behavior. A view on any comment means that all comments have been viewed, kinda.
                 post.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))

@@ -53,7 +53,6 @@ def requested_follow(follow_manager, users_private):
 
 
 def test_accept(users_private, requested_follow):
-    our_user, their_user = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
@@ -67,7 +66,7 @@ def test_accept(users_private, requested_follow):
 
 
 def test_accept_follow_request_with_story(users_private, their_post, requested_follow, feed_manager):
-    our_user, their_user = users_private
+    our_user, _ = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
@@ -136,7 +135,7 @@ def test_deny_follow_request_that_was_previously_approved(users_private, request
 
 
 def test_deny_follow_request_user_had_liked_post(users_private, their_post, requested_follow, like_manager):
-    our_user, their_user = users_private
+    our_user, _ = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
@@ -174,7 +173,6 @@ def test_unfollow_public_user_we_were_following(users, follow):
 
 
 def test_unfollow_private_user_we_had_requested_to_follow(users_private, requested_follow):
-    our_user, their_user = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
@@ -184,7 +182,7 @@ def test_unfollow_private_user_we_had_requested_to_follow(users_private, request
 
 
 def test_unfollow_private_user_we_were_following(users_private, their_post, requested_follow, like_manager):
-    our_user, their_user = users_private
+    our_user, _ = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
