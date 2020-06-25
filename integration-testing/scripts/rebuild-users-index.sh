@@ -8,19 +8,19 @@ set +a
 
 rightNow=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 effectiveNow=${1:-$rightNow}
-concurrency=10  # somewhat arbitrary
+maxItems=100  # somewhat arbitrary
 
 nextToken=""
 while :; do
 
-  echo "Pulling up to $concurrency user profiles to update to lastManuallyReindexedAt = $effectiveNow"
+  echo "Pulling up to $maxItems user profiles to update to lastManuallyReindexedAt = $effectiveNow"
   cmd=(aws dynamodb scan)
   cmd+=('--table-name')
   cmd+=($DYNAMO_TABLE)
   cmd+=('--projection-expression')
   cmd+=('partitionKey, sortKey')
   cmd+=('--max-items')
-  cmd+=($concurrency)
+  cmd+=($maxItems)
   cmd+=('--filter-expression')
   cmd+=('sortKey = :sk and ( attribute_not_exists(lastManuallyReindexedAt) or lastManuallyReindexedAt < :now )')
   cmd+=('--expression-attribute-values')
@@ -33,6 +33,7 @@ while :; do
   resp=$("${cmd[@]}")
   nextToken=$(echo $resp | jq -r .NextToken)
   itemsCnt=$(echo $resp | jq '.Items | length')
+  echo "Recieved $itemsCnt user profiles from dynamo."
   echo $resp | jq --compact-output '.Items[]' | while read item; do
 
     cmd=(aws dynamodb update-item)
