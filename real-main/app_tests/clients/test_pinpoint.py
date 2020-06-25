@@ -2,6 +2,7 @@
 
 import os
 import uuid
+from unittest.mock import Mock, call
 
 import dotenv
 import pytest
@@ -10,10 +11,33 @@ from app.clients import PinpointClient
 
 
 @pytest.fixture
-def pinpoint_client():
+def real_pinpoint_client():
     dotenv.load_dotenv()
     app_id = os.environ.get('PINPOINT_APPLICATION_ID')
     yield PinpointClient(app_id=app_id)
+
+
+@pytest.fixture
+def mocked_pinpoint_client():
+    pinpoint_client = PinpointClient(app_id='testing-pinpoint-app-id')
+    pinpoint_client.client = Mock(pinpoint_client.client)
+    yield pinpoint_client
+
+
+def test_send_user_apns(mocked_pinpoint_client):
+    user_id = str(uuid.uuid4())
+    mocked_pinpoint_client.send_user_apns(user_id, 'the-url', 'the-title', 'the-body')
+    assert mocked_pinpoint_client.client.mock_calls == [
+        call.send_users_messages(
+            ApplicationId='testing-pinpoint-app-id',
+            SendUsersMessageRequest={
+                'MessageConfiguration': {
+                    'APNSMessage': {'Action': 'URL', 'Body': 'the-body', 'Title': 'the-title', 'Url': 'the-url'}
+                },
+                'Users': {user_id: {}},
+            },
+        )
+    ]
 
 
 @pytest.mark.skip(reason='Requires live Pinpoint Application')
@@ -25,7 +49,8 @@ def pinpoint_client():
         ('APNS', 'apns-token-1', 'apns-token-2'),
     ),
 )
-def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1, address2):
+def test_update_and_delete_user_endpoint(real_pinpoint_client, channel_type, address1, address2):
+    pinpoint_client = real_pinpoint_client
     user_id = str(uuid.uuid4())
     assert pinpoint_client.get_user_endpoints(user_id, channel_type=channel_type) == {}
 
@@ -70,7 +95,8 @@ def test_update_and_delete_user_endpoint(pinpoint_client, channel_type, address1
 
 
 @pytest.mark.skip(reason='Requires live Pinpoint Application')
-def test_enable_disable_and_delete_user_endpoints(pinpoint_client):
+def test_enable_disable_and_delete_user_endpoints(real_pinpoint_client):
+    pinpoint_client = real_pinpoint_client
     user_id = str(uuid.uuid4())
     email = str(uuid.uuid4())[:8] + '-test@real.app'
     phone = '+14155551212'

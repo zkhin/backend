@@ -14,6 +14,16 @@ class PinpointClient:
         self.app_id = app_id
         self.client = boto3.client('pinpoint')
 
+    def send_user_apns(self, user_id, url, title, body):
+        kwargs = {
+            'ApplicationId': self.app_id,
+            'SendUsersMessageRequest': {
+                'MessageConfiguration': {'APNSMessage': {'Action': 'URL', 'Body': body, 'Title': title, 'Url': url}},
+                'Users': {user_id: {}},
+            },
+        }
+        self.client.send_users_messages(**kwargs)
+
     def update_user_endpoint(self, user_id, channel_type, address):
         """
         Set the user's endpoint of type `channel_type` to `address`.
