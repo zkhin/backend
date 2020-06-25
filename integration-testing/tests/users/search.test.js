@@ -15,6 +15,7 @@ const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
+  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 
 beforeEach(async () => await loginCache.clean())
@@ -283,4 +284,36 @@ test('User search returns urls for profile pics', async () => {
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
   expect(resp.data.searchUsers.items[0].photo.url).toBeTruthy()
+})
+
+test('User search prioritizes exact match on username', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const name = misc.shortRandomString()
+
+  // make our username match that name exactly, fullname not match
+  await ourClient
+    .mutate({mutation: mutations.setUserDetails, variables: {username: name, fullName: misc.shortRandomString()}})
+    .then(({data}) => {
+      expect(data.setUserDetails.userId).toBe(ourUserId)
+      expect(data.setUserDetails.username).toBe(name)
+    })
+
+  // they set their username to have ours as a prefix, and set their full name to contain it
+  await theirClient
+    .mutate({
+      mutation: mutations.setUserDetails,
+      variables: {username: name + misc.shortRandomString(), fullName: name + ' ' + misc.shortRandomString()},
+    })
+    .then(({data}) => expect(data.setUserDetails.userId).toBe(theirUserId))
+
+  // give the search index a good chunk of time to update
+  await misc.sleep(3000)
+
+  // do a search with our username, check that we show up as first result
+  await ourClient.query({query: queries.searchUsers, variables: {searchToken: name}}).then(({data}) => {
+    expect(data.searchUsers.items).toHaveLength(2)
+    expect(data.searchUsers.items[0].userId).toBe(ourUserId)
+    expect(data.searchUsers.items[1].userId).toBe(theirUserId)
+  })
 })

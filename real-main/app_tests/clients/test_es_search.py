@@ -28,7 +28,6 @@ def test_build_user_document_minimal(elasticsearch_client):
     expected_user_doc = {
         'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
         'username': 'TESTER-gotSOMEcaseotxxie',
-        'privacyStatus': 'PUBLIC',
     }
     assert elasticsearch_client.build_user_doc(dynamo_user_doc) == expected_user_doc
 
@@ -50,13 +49,9 @@ def test_build_user_document_maximal(elasticsearch_client):
         'postcount': 10,
     }
     expected_user_doc = {
-        'phoneNumber': '+14158745464',
-        'privacyStatus': 'PUBLIC',
         'userId': 'us-east-1:bca9f0ae-76e4-4ac9-a750-c691cbda505b',
-        'email': 'success@simulator.amazonses.com',
         'username': 'TESTER-o7jow8',
         'fullName': 'Joe Shmoe',
-        'bio': 'Staying classy, just like San Diego',
     }
     assert elasticsearch_client.build_user_doc(dynamo_user_doc) == expected_user_doc
 

@@ -20,15 +20,17 @@
   "params": {
     "headers": {},
     "queryString": {},
-    "body":{
+    "body": {
       "from": $util.defaultIfNull($ctx.args.nextToken, 0),
       "size": $limit,
       "query": {
-        "multi_match": {
-          "query": $util.toJson($query),
-          "fields": ["username^2", "fullName"],
-          "slop": 2,
-          "type": "phrase_prefix"
+        "bool": {
+          "should": [
+            {"match_bool_prefix": {"username": {"query": $util.toJson($query), "boost": 2}}},
+            {"match_bool_prefix": {"fullName": $util.toJson($query)}},
+            {"match": {"username": {"query": $util.toJson($query), "boost": 2}}},
+            {"match": {"fullName": $util.toJson($query)}}
+          ]
         }
       }
     }

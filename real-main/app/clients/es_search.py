@@ -16,13 +16,9 @@ class ESSearchClient:
     service = 'es'
     headers = {'Content-Type': 'application/json'}
     keys = [
-        'phoneNumber',
-        'privacyStatus',
         'userId',
-        'email',
         'username',
         'fullName',
-        'bio',
     ]
 
     def __init__(self, domain=ES_SEARCH_DOMAIN):
@@ -42,6 +38,14 @@ class ESSearchClient:
                 session_token=credentials.token,
             )
         return self._awsauth
+
+    def query_users(self, query):
+        "`query` should be dict-like structure that can be serialized to json"
+        url = f'https://{self.domain}/users/_search'
+        resp = requests.get(url, auth=self.awsauth, json={'query': query}, headers=self.headers)
+        if resp.status_code != 200:
+            logging.warning(f'ElasticSearch: Recieved non-200 response of {resp.status_code} when querying users')
+        return resp.json()
 
     def build_user_url(self, user_id):
         return f'https://{self.domain}/users/_doc/{user_id}'
