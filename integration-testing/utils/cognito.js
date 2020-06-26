@@ -77,12 +77,12 @@ const generateRRUuid = (callerData) => {
 }
 
 const getAppSyncClient = async (creds) => {
-  const credsObj = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
+  const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const client = new AWSAppSyncClient(
     {
       url: appsyncApiUrl,
       region: AWS.config.region,
-      auth: {type: 'AWS_IAM', credentials: credsObj},
+      auth: {type: 'AWS_IAM', credentials},
       disableOffline: true,
     },
     // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
@@ -103,52 +103,62 @@ const getAppSyncLogin = async (newUserPhone) => {
   const password = myUuid + '-1.Aa' // fulfill password requirements
 
   // try to sign the user in, and if that doesn't work, create the user
-  let idToken, userId, userNeedsReset
   const AuthParameters = {USERNAME: email, PASSWORD: password}
-
+  let idToken
+  let reusingExistingUser = true
   try {
     // succeds if the user already exists
-    const authResp = await userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-    idToken = authResp.AuthenticationResult.IdToken
-    userNeedsReset = true
-    userId = jwtDecode(idToken)['cognito:username']
+    idToken = await userPoolClient
+      .initiateAuth({AuthFlow, AuthParameters})
+      .promise()
+      .then(({AuthenticationResult}) => AuthenticationResult.IdToken)
   } catch (err) {
     if (err.code !== 'NotAuthorizedException') throw err
     // user does not exist, we must create them. No need to reset it later on, as new user starts fresh
-    userNeedsReset = false
+    reusingExistingUser = false
 
-    // get an unathenticated ID from the identity pool
-    const idResp = await identityPoolClient.getId().promise()
-    userId = idResp.IdentityId
-
+    // get an unathenticated ID from the identity pool, then
     // create user in the user pool, using the 'identity id' from the identity pool as the user pool 'username'
-    const UserAttributes = [
-      {Name: 'family_name', Value: familyName},
-      {Name: 'email', Value: email},
-    ]
-    if (newUserPhone) UserAttributes.push({Name: 'phone_number', Value: newUserPhone})
-    const ClientMetadata = {autoConfirmUser: 'true'}
-    await userPoolClient.signUp({Username: userId, Password: password, UserAttributes, ClientMetadata}).promise()
+    const userId = await identityPoolClient
+      .getId()
+      .promise()
+      .then(({IdentityId}) => IdentityId)
+
+    await userPoolClient
+      .signUp({
+        Username: userId,
+        Password: password,
+        UserAttributes: [
+          {Name: 'family_name', Value: familyName},
+          {Name: 'email', Value: email},
+          ...(newUserPhone ? [{Name: 'phone_number', Value: newUserPhone}] : []),
+        ],
+        ClientMetadata: {autoConfirmUser: 'true'},
+      })
+      .promise()
 
     // sign the user in
-    const authResp = await userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-    idToken = authResp.AuthenticationResult.IdToken
+    idToken = await userPoolClient
+      .initiateAuth({AuthFlow, AuthParameters})
+      .promise()
+      .then(({AuthenticationResult}) => AuthenticationResult.IdToken)
   }
-  const Logins = {[userPoolLoginsKey]: idToken}
+  const userId = jwtDecode(idToken)['cognito:username']
 
   // get some credentials to use with the graphql client
   // note that for a new user, this step also adds an entry in the 'Logins' array of the entry in
   // in the identity pool for the entry in the user pool.
-  const credsResp = await identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  const appSyncClient = await getAppSyncClient(credsResp.Credentials)
+  const appSyncClient = await identityPoolClient
+    .getCredentialsForIdentity({IdentityId: userId, Logins: {[userPoolLoginsKey]: idToken}})
+    .promise()
+    .then(({Credentials}) => getAppSyncClient(Credentials))
 
   const username = familyName + myUuid.substring(24)
-  if (userNeedsReset) {
-    // one call resets the user and then does the equivalent of calling Mutation.createCognitoOnlyUser()
-    await appSyncClient.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
-  } else {
-    await appSyncClient.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
-  }
+  await appSyncClient.mutate(
+    reusingExistingUser
+      ? {mutation: mutations.resetUser, variables: {newUsername: username}}
+      : {mutation: mutations.createCognitoOnlyUser, variables: {username}},
+  )
 
   return [appSyncClient, userId, password, email, username]
 }
