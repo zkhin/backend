@@ -49,8 +49,9 @@ _Once per deployment_
 
 Pinpoint must be manually configured to send Apple Push notifications. After first deployment, from the [Pinpoint console](https://console.aws.amazon.com/pinpoint/home?region=us-east-1)
   - navigate REAL Pinpoint Project -> Settings -> Push notifications -> Edit -> Apple Push Notification Service
-  - Enable APNS and choose 'Certificate credentials' as authentication type
-  - The p12 certificate and its password are available from the frontend iOS team
+  - Enable APNS and choose 'Key credentials' as authentication type
+    - Our 'Bundle identifier' is `app.real.mobile` and our 'Team identifier' is `YA5Y244F5C`
+    - A 'Key ID' corresponding 'Authentication key (.p8 file)' are available from the frontend iOS team
 
 #### SecretsManager
 
