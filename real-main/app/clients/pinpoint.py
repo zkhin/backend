@@ -14,15 +14,17 @@ class PinpointClient:
         self.app_id = app_id
         self.client = boto3.client('pinpoint')
 
-    def send_user_apns(self, user_id, url, title, body):
+    def send_user_apns(self, user_id, url, title, body=None):
+        "Returns a bool representing if the APNS was successfully sent"
+        apns_msg = {'Action': 'URL', 'Title': title, 'Url': url}
+        if body:
+            apns_msg['Body'] = body
         kwargs = {
             'ApplicationId': self.app_id,
-            'SendUsersMessageRequest': {
-                'MessageConfiguration': {'APNSMessage': {'Action': 'URL', 'Body': body, 'Title': title, 'Url': url}},
-                'Users': {user_id: {}},
-            },
+            'SendUsersMessageRequest': {'MessageConfiguration': {'APNSMessage': apns_msg}, 'Users': {user_id: {}}},
         }
-        self.client.send_users_messages(**kwargs)
+        result = self.client.send_users_messages(**kwargs)['SendUsersMessageResponse']['Result'][user_id]
+        return 'SUCCESSFUL' in (v['DeliveryStatus'] for k, v in result.items())
 
     def update_user_endpoint(self, user_id, channel_type, address):
         """

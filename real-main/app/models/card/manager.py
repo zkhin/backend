@@ -28,6 +28,8 @@ class CardManager:
             self.appsync = CardAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = CardDynamo(clients['dynamo'])
+        if 'pinpoint' in clients:
+            self.pinpoint_client = clients['pinpoint']
 
     def get_card(self, card_id, strongly_consistent=False):
         item = self.dynamo.get_card(card_id, strongly_consistent=strongly_consistent)
@@ -35,8 +37,9 @@ class CardManager:
 
     def init_card(self, item):
         kwargs = {
-            'card_appsync': self.appsync,
-            'card_dynamo': self.dynamo,
+            'card_appsync': getattr(self, 'appsync', None),
+            'card_dynamo': getattr(self, 'dynamo', None),
+            'pinpoint_client': getattr(self, 'pinpoint_client', None),
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
         }

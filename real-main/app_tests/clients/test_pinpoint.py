@@ -26,7 +26,69 @@ def mocked_pinpoint_client():
 
 def test_send_user_apns(mocked_pinpoint_client):
     user_id = str(uuid.uuid4())
-    mocked_pinpoint_client.send_user_apns(user_id, 'the-url', 'the-title', 'the-body')
+    sample_success_resp = {
+        'ResponseMetadata': {},
+        'SendUsersMessageResponse': {
+            'ApplicationId': '',
+            'RequestId': '',
+            'Result': {
+                user_id: {
+                    str(uuid.uuid4()): {
+                        'Address': 'email-addr@real.app',
+                        'DeliveryStatus': 'PERMANENT_FAILURE',
+                        'StatusCode': 400,
+                        'StatusMessage': 'Either template or email message must be specified',
+                    },
+                    str(uuid.uuid4()): {
+                        'Address': '123456778890abccdef123456778890aaaaaaaaaaaaaabbbbbbbbbbbcccccccc',
+                        'DeliveryStatus': 'SUCCESSFUL',
+                        'StatusCode': 200,
+                        'StatusMessage': '',
+                    },
+                }
+            },
+        },
+    }
+    sample_failure_resp = {
+        'ResponseMetadata': {},
+        'SendUsersMessageResponse': {
+            'ApplicationId': '',
+            'RequestId': '',
+            'Result': {
+                user_id: {
+                    str(uuid.uuid4()): {
+                        'Address': '123456778890abccdef123456778890aaaaaaaaaaaaaabbbbbbbbbbbcccccccc',
+                        'DeliveryStatus': 'PERMANENT_FAILURE',
+                        'StatusCode': 400,
+                        'StatusMessage': 'No endpoints found for userId.',
+                    },
+                }
+            },
+        },
+    }
+
+    # test a success
+    mocked_pinpoint_client.client.reset_mock()
+    mocked_pinpoint_client.client.configure_mock(**{'send_users_messages.return_value': sample_success_resp})
+    resp = mocked_pinpoint_client.send_user_apns(user_id, 'the-url', 'the-title', 'the-body')
+    assert resp is True
+    assert mocked_pinpoint_client.client.mock_calls == [
+        call.send_users_messages(
+            ApplicationId='testing-pinpoint-app-id',
+            SendUsersMessageRequest={
+                'MessageConfiguration': {
+                    'APNSMessage': {'Action': 'URL', 'Body': 'the-body', 'Title': 'the-title', 'Url': 'the-url'}
+                },
+                'Users': {user_id: {}},
+            },
+        )
+    ]
+
+    # test a failure due to missing APNS token
+    mocked_pinpoint_client.client.reset_mock()
+    mocked_pinpoint_client.client.configure_mock(**{'send_users_messages.return_value': sample_failure_resp})
+    resp = mocked_pinpoint_client.send_user_apns(user_id, 'the-url', 'the-title', 'the-body')
+    assert resp is False
     assert mocked_pinpoint_client.client.mock_calls == [
         call.send_users_messages(
             ApplicationId='testing-pinpoint-app-id',

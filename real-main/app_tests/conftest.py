@@ -152,8 +152,8 @@ def block_manager(dynamo_client):
 
 
 @pytest.fixture
-def card_manager(dynamo_client, appsync_client):
-    yield models.CardManager({'appsync': appsync_client, 'dynamo': dynamo_client})
+def card_manager(dynamo_client, appsync_client, pinpoint_client):
+    yield models.CardManager({'appsync': appsync_client, 'dynamo': dynamo_client, 'pinpoint': pinpoint_client})
 
 
 @pytest.fixture

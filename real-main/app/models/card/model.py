@@ -12,9 +12,12 @@ class Card:
     enums = enums
     exceptions = exceptions
 
-    def __init__(self, item, card_appsync=None, card_dynamo=None, post_manager=None, user_manager=None):
+    def __init__(
+        self, item, card_appsync=None, card_dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None
+    ):
         self.appsync = card_appsync
         self.dynamo = card_dynamo
+        self.pinpoint_client = pinpoint_client
         self.post_manager = post_manager
         self.user_manager = user_manager
 
@@ -53,6 +56,13 @@ class Card:
 
     def get_image_url(self, size):
         return self.post.get_image_readonly_url(size) if self.post else None
+
+    def notify_user(self):
+        "Returns bool indicating if notification was successfully sent to user"
+        # just APNS for now
+        return self.pinpoint_client.send_user_apns(
+            self.user_id, self.item['action'], self.item['title'], body=self.item.get('subTitle')
+        )
 
     def delete(self):
         transacts = [

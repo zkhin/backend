@@ -48,6 +48,17 @@ def test_serialize(user, card):
     assert resp['subTitle'] == card.item['subTitle']
 
 
+def test_notify_user(user, card):
+    mocked_resp = {}
+    card.pinpoint_client.configure_mock(**{'send_user_apns.return_value': mocked_resp})
+    assert card.pinpoint_client.mock_calls == []
+    resp = card.notify_user()
+    assert resp is mocked_resp
+    assert card.pinpoint_client.mock_calls == [
+        call.send_user_apns(user.id, 'https://action', 'card title', body=None)
+    ]
+
+
 def test_delete(card, user, appsync_client):
     appsync_client.reset_mock()
 
