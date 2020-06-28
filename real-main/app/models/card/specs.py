@@ -46,7 +46,7 @@ class CommentCardSpec(CardSpec):
         self.post_id = post_id
         self.user_id = user_id
         self.card_id = f'{user_id}:COMMENT_ACTIVITY:{post_id}'
-        self.action = f'https://real.app/chat/post/{post_id}'
+        self.action = f'https://real.app/user/{user_id}/post/{post_id}/comments'
 
 
 class ChatCardSpec(CardSpec):

@@ -132,7 +132,7 @@ test('Lifecycle, format for comment activity notification', async () => {
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
   expect(resp.data.onCardNotification.card.title).toBe('You have new comments')
   expect(resp.data.onCardNotification.card.subTitle).toBeNull()
-  expect(resp.data.onCardNotification.card.action).toMatch(RegExp('^https://real.app/chat/post/'))
+  expect(resp.data.onCardNotification.card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*/comments$'))
   expect(resp.data.onCardNotification.card.action).toContain(postId)
   const orgCard = resp.data.onCardNotification.card
 

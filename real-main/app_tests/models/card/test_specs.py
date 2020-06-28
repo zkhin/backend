@@ -30,7 +30,7 @@ def test_comment_card_spec(user, post):
     assert spec.post_id == post.id
     assert user.id in spec.card_id
     assert post.id in spec.card_id
-    assert 'https://real.app/chat/' in spec.action
+    assert spec.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
     assert post.id in spec.action
 
 

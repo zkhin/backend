@@ -78,8 +78,8 @@ test('List cards', async () => {
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(2)
   expect(resp.data.self.cards.items).toHaveLength(2)
-  expect(resp.data.self.cards.items[0].action).toContain('chat')
-  expect(resp.data.self.cards.items[1].action).toContain('chat')
+  expect(resp.data.self.cards.items[0].action).toContain('https://real.app/')
+  expect(resp.data.self.cards.items[1].action).toContain('https://real.app/')
 })
 
 test('Delete card, generate new card after deleting', async () => {
