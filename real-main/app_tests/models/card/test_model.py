@@ -4,7 +4,6 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card.enums import CardNotificationType
 from app.models.card.specs import CommentCardSpec
 from app.models.post.enums import PostType
 from app.utils import image_size
@@ -74,20 +73,10 @@ def test_notify_user(user, card):
     ]
 
 
-def test_delete(card, user, appsync_client):
-    # verify starting state
-    appsync_client.reset_mock()
+def test_delete(card, user):
     assert card.dynamo.get_card(card.id)
-
-    # delete the card, verify state
     card.delete()
     assert card.dynamo.get_card(card.id) is None
-
-    # check the notifiation was triggered
-    assert len(appsync_client.mock_calls) == 1
-    assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
-    assert appsync_client.send.call_args.args[1]['input']['type'] == CardNotificationType.DELETED
-    assert appsync_client.send.call_args.args[1]['input']['cardId'] == card.id
 
 
 def test_get_image_url(card, post, comment_card):

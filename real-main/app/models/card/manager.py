@@ -37,7 +37,6 @@ class CardManager:
 
     def init_card(self, item):
         kwargs = {
-            'card_appsync': getattr(self, 'appsync', None),
             'card_dynamo': getattr(self, 'dynamo', None),
             'pinpoint_client': getattr(self, 'pinpoint_client', None),
             'post_manager': self.post_manager,
@@ -54,9 +53,6 @@ class CardManager:
             'notify_user_at': notify_user_at,
         }
         card_item = self.dynamo.add_card(card_id, user_id, title, action, **add_card_kwargs)
-        self.appsync.trigger_notification(
-            enums.CardNotificationType.ADDED, user_id, card_id, title, action, sub_title=sub_title
-        )
         return self.init_card(card_item)
 
     def add_card_by_spec_if_dne(self, spec, now=None):
@@ -100,10 +96,28 @@ class CardManager:
         return total_count, success_count
 
     def postprocess_record(self, pk, sk, old_item, new_item):
-        # adjust card count on user as needed
         if sk == '-':
-            user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
-            if new_item and not old_item:
-                self.user_manager.dynamo.increment_card_count(user_id)
-            if not new_item and old_item:
-                self.user_manager.dynamo.decrement_card_count(user_id, fail_soft=True)
+            self.postprocess_card_adjust_user_card_count(old_item, new_item)
+            self.postprocess_card_send_gql_notifications(old_item, new_item)
+
+    def postprocess_card_adjust_user_card_count(self, old_item, new_item):
+        user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
+        if new_item and not old_item:
+            self.user_manager.dynamo.increment_card_count(user_id)
+        if not new_item and old_item:
+            self.user_manager.dynamo.decrement_card_count(user_id, fail_soft=True)
+
+    def postprocess_card_send_gql_notifications(self, old_item, new_item):
+        user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
+        card_id = (new_item or old_item)['partitionKey'].split('/')[1]
+        title = (new_item or old_item)['title']
+        action = (new_item or old_item)['action']
+        sub_title = (new_item or old_item).get('subTitle')
+        if new_item and not old_item:
+            self.appsync.trigger_notification(
+                enums.CardNotificationType.ADDED, user_id, card_id, title, action, sub_title=sub_title
+            )
+        if not new_item and old_item:
+            self.appsync.trigger_notification(
+                enums.CardNotificationType.DELETED, user_id, card_id, title, action, sub_title=sub_title,
+            )

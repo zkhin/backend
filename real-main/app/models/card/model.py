@@ -12,10 +12,7 @@ class Card:
     enums = enums
     exceptions = exceptions
 
-    def __init__(
-        self, item, card_appsync=None, card_dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None
-    ):
-        self.appsync = card_appsync
+    def __init__(self, item, card_dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None):
         self.dynamo = card_dynamo
         self.pinpoint_client = pinpoint_client
         self.post_manager = post_manager
@@ -74,12 +71,4 @@ class Card:
 
     def delete(self):
         self.dynamo.delete_card(self.id)
-        self.appsync.trigger_notification(
-            enums.CardNotificationType.DELETED,
-            self.user_id,
-            self.id,
-            self.item['title'],
-            self.item['action'],
-            sub_title=self.item.get('subTitle'),
-        )
         return self

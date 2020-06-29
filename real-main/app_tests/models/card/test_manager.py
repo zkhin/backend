@@ -4,7 +4,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card import enums, specs
+from app.models.card import specs
 from app.models.post.enums import PostType
 
 
@@ -38,10 +38,7 @@ comment_card_spec1 = comment_card_spec
 comment_card_spec2 = comment_card_spec
 
 
-def test_add_card_minimal(card_manager, user, appsync_client):
-    # check starting state
-    appsync_client.reset_mock()
-
+def test_add_card_minimal(card_manager, user):
     # add card
     before = pendulum.now('utc')
     title, action = 'card title', 'https://action'
@@ -55,12 +52,6 @@ def test_add_card_minimal(card_manager, user, appsync_client):
     assert card.item['title'] == title
     assert card.item['action'] == action
     assert 'subTitle' not in card.item
-
-    # check the notifiation was triggered
-    assert len(appsync_client.mock_calls) == 1
-    assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
-    assert appsync_client.send.call_args.args[1]['input']['type'] == enums.CardNotificationType.ADDED
-    assert appsync_client.send.call_args.args[1]['input']['cardId'] == card.id
 
     # verify can add another card with same title and action
     assert card_manager.add_card(user.id, title, action)
