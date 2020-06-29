@@ -54,9 +54,10 @@ class CardManager:
             'notify_user_at': notify_user_at,
         }
         card_item = self.dynamo.add_card(card_id, user_id, title, action, **add_card_kwargs)
-        card = self.init_card(card_item)
-        self.appsync.trigger_notification(enums.CardNotificationType.ADDED, card)
-        return card
+        self.appsync.trigger_notification(
+            enums.CardNotificationType.ADDED, user_id, card_id, title, action, sub_title=sub_title
+        )
+        return self.init_card(card_item)
 
     def add_card_by_spec_if_dne(self, spec, now=None):
         if self.get_card(spec.card_id):

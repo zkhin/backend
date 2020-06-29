@@ -74,5 +74,12 @@ class Card:
 
     def delete(self):
         self.dynamo.delete_card(self.id)
-        self.appsync.trigger_notification(enums.CardNotificationType.DELETED, self)
+        self.appsync.trigger_notification(
+            enums.CardNotificationType.DELETED,
+            self.user_id,
+            self.id,
+            self.item['title'],
+            self.item['action'],
+            sub_title=self.item.get('subTitle'),
+        )
         return self

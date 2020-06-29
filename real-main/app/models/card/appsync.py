@@ -9,7 +9,7 @@ class CardAppSync:
     def __init__(self, appsync_client):
         self.client = appsync_client
 
-    def trigger_notification(self, notification_type, card):
+    def trigger_notification(self, notification_type, user_id, card_id, title, action, sub_title=None):
         mutation = gql.gql(
             '''
             mutation TriggerCardNotification ($input: CardNotificationInput!) {
@@ -27,11 +27,11 @@ class CardAppSync:
         '''
         )
         input_obj = {
-            'userId': card.user_id,
+            'userId': user_id,
             'type': notification_type,
-            'cardId': card.id,
-            'title': card.item['title'],
-            'subTitle': card.item.get('subTitle'),
-            'action': card.item['action'],
+            'cardId': card_id,
+            'title': title,
+            'subTitle': sub_title,
+            'action': action,
         }
         self.client.send(mutation, {'input': input_obj})
