@@ -95,6 +95,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.postprocess_requested_followers_card(user_id, old_item, new_item)
 
     def postprocess_elasticsearch(self, old_item, new_item):
+        user_id = (new_item or old_item)['userId']
         # if we're manually rebuilding the index, treat everything as new
         new_reindexed_at = new_item.get('lastManuallyReindexedAt')
         old_reindexed_at = old_item.get('lastManuallyReindexedAt')
@@ -102,11 +103,11 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             old_item = {}
 
         if new_item and old_item:
-            self.elasticsearch_client.update_user(old_item, new_item)
+            self.elasticsearch_client.update_user(user_id, old_item, new_item)
         if new_item and not old_item:
-            self.elasticsearch_client.add_user(new_item)
+            self.elasticsearch_client.add_user(user_id, new_item)
         if not new_item and old_item:
-            self.elasticsearch_client.delete_user(old_item)
+            self.elasticsearch_client.delete_user(user_id)
 
     def postprocess_pinpoint(self, user_id, old_item, new_item):
         # check if this was a user deletion

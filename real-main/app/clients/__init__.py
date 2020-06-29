@@ -3,7 +3,7 @@ __all__ = [
     'CloudFrontClient',
     'CognitoClient',
     'DynamoClient',
-    'ESSearchClient',
+    'ElasticSearchClient',
     'FacebookClient',
     'GoogleClient',
     'MediaConvertClient',
@@ -17,7 +17,7 @@ from .appsync import AppSyncClient
 from .cloudfront import CloudFrontClient
 from .cognito import CognitoClient
 from .dynamo import DynamoClient
-from .es_search import ESSearchClient
+from .elasticsearch import ElasticSearchClient
 from .facebook import FacebookClient
 from .google import GoogleClient
 from .mediaconvert import MediaConvertClient

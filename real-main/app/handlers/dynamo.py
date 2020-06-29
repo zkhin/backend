@@ -13,7 +13,7 @@ xray.patch_all()
 clients = {
     'appsync': clients.AppSyncClient(),
     'dynamo': clients.DynamoClient(),
-    'elasticsearch': clients.ESSearchClient(),
+    'elasticsearch': clients.ElasticSearchClient(),
     'pinpoint': clients.PinpointClient(),
 }
 

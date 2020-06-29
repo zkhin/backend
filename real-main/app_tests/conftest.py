@@ -100,7 +100,7 @@ def dynamo_client():
 
 @pytest.fixture
 def elasticsearch_client():
-    yield mock.Mock(clients.ESSearchClient(domain='my-es-domain.com'))
+    yield mock.Mock(clients.ElasticSearchClient(domain='my-es-domain.com'))
 
 
 @pytest.fixture
