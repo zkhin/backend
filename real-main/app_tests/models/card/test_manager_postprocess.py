@@ -17,31 +17,24 @@ def card(user, card_manager):
 
 
 def test_postprocess_record_card_added_edited_deleted(card_manager, card, user, caplog):
-    typed_pk = card.dynamo.typed_pk(card.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
+    pk, sk = card.item['partitionKey'], card.item['sortKey']
     assert 'cardCount' not in user.refresh_item().item
 
     # simulate adding
-    old_item = None
-    new_item = card.dynamo.client.get_typed_item(typed_pk)
-    card_manager.postprocess_record(pk, sk, old_item, new_item)
+    card_manager.postprocess_record(pk, sk, None, card.item)
     assert user.refresh_item().item['cardCount'] == 1
 
     # simulate editing
-    old_item = new_item
-    new_item = card.dynamo.client.get_typed_item(typed_pk)
-    card_manager.postprocess_record(pk, sk, old_item, new_item)
+    card_manager.postprocess_record(pk, sk, card.item, card.item)
     assert user.refresh_item().item['cardCount'] == 1
 
     # simulate deleting
-    old_item = new_item
-    new_item = None
-    card_manager.postprocess_record(pk, sk, old_item, new_item)
+    card_manager.postprocess_record(pk, sk, card.item, None)
     assert user.refresh_item().item['cardCount'] == 0
 
     # simulate deleting again, verify fails softly
     with caplog.at_level(logging.WARNING):
-        card_manager.postprocess_record(pk, sk, old_item, new_item)
+        card_manager.postprocess_record(pk, sk, card.item, None)
     assert len(caplog.records) == 1
     assert 'Failed to decrement' in caplog.records[0].msg
     assert 'cardCount' in caplog.records[0].msg

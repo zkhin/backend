@@ -51,7 +51,7 @@ class ESSearchClient:
         return f'https://{self.domain}/users/_doc/{user_id}'
 
     def build_user_doc(self, dynamodb_user_item):
-        return {k: next(iter(dynamodb_user_item[k].values())) for k in self.keys if k in dynamodb_user_item}
+        return {k: dynamodb_user_item[k] for k in self.keys if k in dynamodb_user_item}
 
     def add_user(self, dynamodb_new_user_item):
         doc = self.build_user_doc(dynamodb_new_user_item)

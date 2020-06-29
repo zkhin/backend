@@ -19,11 +19,11 @@ def test_build_user_url(elasticsearch_client):
 
 def test_build_user_document_minimal(elasticsearch_client):
     dynamo_user_doc = {
-        'sortKey': {'S': 'profile'},
-        'partitionKey': {'S': 'user/us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'privacyStatus': {'S': 'PUBLIC'},
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'TESTER-gotSOMEcaseotxxie'},
+        'sortKey': 'profile',
+        'partitionKey': 'user/us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'privacyStatus': 'PUBLIC',
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'TESTER-gotSOMEcaseotxxie',
     }
     expected_user_doc = {
         'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
@@ -34,19 +34,19 @@ def test_build_user_document_minimal(elasticsearch_client):
 
 def test_build_user_document_maximal(elasticsearch_client):
     dynamo_user_doc = {
-        'phoneNumber': {'S': '+14158745464'},
-        'sortKey': {'S': 'profile'},
-        'partitionKey': {'S': 'user/us-east-1:bca9f0ae-76e4-4ac9-a750-c691cbda505b'},
-        'privacyStatus': {'S': 'PUBLIC'},
-        'userId': {'S': 'us-east-1:bca9f0ae-76e4-4ac9-a750-c691cbda505b'},
-        'email': {'S': 'success@simulator.amazonses.com'},
-        'username': {'S': 'TESTER-o7jow8'},
-        'fullName': {'S': 'Joe Shmoe'},
-        'bio': {'S': 'Staying classy, just like San Diego'},
-        'photoPath': {'S': 'somewhere/good'},
+        'phoneNumber': '+14155551212',
+        'sortKey': 'profile',
+        'partitionKey': 'user/us-east-1:bca9f0ae-76e4-4ac9-a750-c691cbda505b',
+        'privacyStatus': 'PUBLIC',
+        'userId': 'us-east-1:bca9f0ae-76e4-4ac9-a750-c691cbda505b',
+        'email': 'success@simulator.amazonses.com',
+        'username': 'TESTER-o7jow8',
+        'fullName': 'Joe Shmoe',
+        'bio': 'Staying classy, just like San Diego',
+        'photoPath': 'somewhere/good',
         'followerCount': 42,
         'followedCount': 54,
-        'postcount': 10,
+        'postCount': 10,
     }
     expected_user_doc = {
         'userId': 'us-east-1:bca9f0ae-76e4-4ac9-a750-c691cbda505b',
@@ -61,8 +61,8 @@ def test_add_user(elasticsearch_client, monkeypatch):
     monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
 
     dynamo_user_doc = {
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'TESTER-gotSOMEcaseotxxie'},
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'TESTER-gotSOMEcaseotxxie',
     }
     doc = elasticsearch_client.build_user_doc(dynamo_user_doc)
     url = elasticsearch_client.build_user_url(doc['userId'])
@@ -81,12 +81,12 @@ def test_update_user(elasticsearch_client, monkeypatch):
     monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
 
     old_dynamo_user_doc = {
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'something-else'},
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'something-else',
     }
     new_dynamo_user_doc = {
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'TESTER-gotSOMEcaseotxxie'},
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'TESTER-gotSOMEcaseotxxie',
     }
     new_doc = elasticsearch_client.build_user_doc(new_dynamo_user_doc)
     url = elasticsearch_client.build_user_url(new_doc['userId'])
@@ -105,8 +105,8 @@ def test_delete_user(elasticsearch_client, monkeypatch):
     monkeypatch.setenv('AWS_SECRET_ACCESS_KEY', 'bar')
 
     dynamo_user_doc = {
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'meh'},
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'meh',
     }
     doc = elasticsearch_client.build_user_doc(dynamo_user_doc)
     url = elasticsearch_client.build_user_url(doc['userId'])
@@ -121,12 +121,12 @@ def test_delete_user(elasticsearch_client, monkeypatch):
 
 def test_updates_without_change_in_index_fields_dont_get_sent_to_elasticsearch(elasticsearch_client):
     old_dynamo_user_doc = {
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'same-thing'},
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'same-thing',
     }
     new_dynamo_user_doc = {
-        'userId': {'S': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1'},
-        'username': {'S': 'same-thing'},
+        'userId': 'us-east-1:088d2841-7089-4136-88a0-8aa3e5ae9ce1',
+        'username': 'same-thing',
     }
     with requests_mock.mock() as m:
         elasticsearch_client.update_user(old_dynamo_user_doc, new_dynamo_user_doc)

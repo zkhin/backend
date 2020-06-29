@@ -96,8 +96,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def postprocess_elasticsearch(self, old_item, new_item):
         # if we're manually rebuilding the index, treat everything as new
-        new_reindexed_at = new_item.get('lastManuallyReindexedAt', {}).get('S')
-        old_reindexed_at = old_item.get('lastManuallyReindexedAt', {}).get('S')
+        new_reindexed_at = new_item.get('lastManuallyReindexedAt')
+        old_reindexed_at = old_item.get('lastManuallyReindexedAt')
         if new_reindexed_at and new_reindexed_at != old_reindexed_at:
             old_item = {}
 
@@ -116,8 +116,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
         # check for a change of email, phone
         for dynamo_name, pinpoint_name in (('email', 'EMAIL'), ('phoneNumber', 'SMS')):
-            value = new_item.get(dynamo_name, {}).get('S')
-            if old_item.get(dynamo_name, {}).get('S') == value:
+            value = new_item.get(dynamo_name)
+            if old_item.get(dynamo_name) == value:
                 continue
             if value:
                 self.pinpoint_client.update_user_endpoint(user_id, pinpoint_name, value)
@@ -125,8 +125,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 self.pinpoint_client.delete_user_endpoint(user_id, pinpoint_name)
 
         # check if this was a change in user status
-        status = new_item.get('userStatus', {}).get('S', enums.UserStatus.ACTIVE)
-        if old_item and old_item.get('userStatus', {}).get('S', enums.UserStatus.ACTIVE) != status:
+        status = new_item.get('userStatus', enums.UserStatus.ACTIVE)
+        if old_item and old_item.get('userStatus', enums.UserStatus.ACTIVE) != status:
             if status == enums.UserStatus.ACTIVE:
                 self.pinpoint_client.enable_user_endpoints(user_id)
             if status == enums.UserStatus.DISABLED:
@@ -135,8 +135,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 self.pinpoint_client.delete_user_endpoints(user_id)
 
     def postprocess_requested_followers_card(self, user_id, old_item, new_item):
-        old_requested_followers_count = int((old_item or {}).get('followersRequestedCount', {}).get('N', '0'))
-        new_requested_followers_count = int((new_item or {}).get('followersRequestedCount', {}).get('N', '0'))
+        old_requested_followers_count = (old_item or {}).get('followersRequestedCount', 0)
+        new_requested_followers_count = (new_item or {}).get('followersRequestedCount', 0)
         card_spec = RequestedFollowersCardSpec(user_id)
 
         if old_requested_followers_count == 0 and new_requested_followers_count > 0:

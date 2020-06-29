@@ -1,5 +1,7 @@
 import logging
 
+from boto3.dynamodb.types import TypeDeserializer
+
 from app import clients, models
 from app.logging import LogLevelContext, handler_logging
 
@@ -23,15 +25,18 @@ comment_manager = managers.get('comment') or models.CommentManager(clients, mana
 follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
+# https://stackoverflow.com/a/46738251
+type_deserializer = TypeDeserializer()
+
 
 @handler_logging
 def postprocess_records(event, context):
     for record in event['Records']:
 
-        pk = record['dynamodb']['Keys']['partitionKey']['S']
-        sk = record['dynamodb']['Keys']['sortKey']['S']
-        old_item = record['dynamodb'].get('OldImage', {})
-        new_item = record['dynamodb'].get('NewImage', {})
+        pk = type_deserializer.deserialize(record['dynamodb']['Keys']['partitionKey'])
+        sk = type_deserializer.deserialize(record['dynamodb']['Keys']['sortKey'])
+        old_item = {k: type_deserializer.deserialize(v) for k, v in record['dynamodb'].get('OldImage', {}).items()}
+        new_item = {k: type_deserializer.deserialize(v) for k, v in record['dynamodb'].get('NewImage', {}).items()}
 
         op = 'edit' if old_item and new_item else 'add' if not old_item else 'delete' if not new_item else 'unknown'
         with LogLevelContext(logger, logging.INFO):

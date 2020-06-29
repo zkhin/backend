@@ -28,13 +28,12 @@ def comment(comment_manager, post, user2):
 
 
 def test_postprocess_record(comment_manager, comment, post, user2, user):
-    typed_pk = comment.dynamo.typed_pk(comment.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
+    pk, sk = comment.item['partitionKey'], comment.item['sortKey']
     commented_at = pendulum.parse(comment.item['commentedAt'])
 
     # simulate a new comment, verify calls
     old_item = None
-    new_item = comment.dynamo.client.get_typed_item(typed_pk)
+    new_item = comment.refresh_item().item
     comment_manager.post_manager = Mock(comment_manager.post_manager)
     comment_manager.postprocess_record(pk, sk, old_item, new_item)
     assert comment_manager.post_manager.mock_calls == [
@@ -43,7 +42,7 @@ def test_postprocess_record(comment_manager, comment, post, user2, user):
 
     # simulate a editing a comment, verify no calls
     old_item = new_item
-    new_item = comment.dynamo.client.get_typed_item(typed_pk)
+    new_item = comment.refresh_item().item
     comment_manager.post_manager = Mock(comment_manager.post_manager)
     comment_manager.postprocess_record(pk, sk, old_item, new_item)
     assert comment_manager.post_manager.mock_calls == []
@@ -59,10 +58,8 @@ def test_postprocess_record(comment_manager, comment, post, user2, user):
 
     # simulate a comment view, verify calls
     comment.record_view_count(user.id, 1)
-    typed_pk = comment.view_dynamo.typed_pk(comment.id, user.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
-    old_item = None
-    new_item = comment.dynamo.client.get_typed_item(typed_pk)
+    view_item = comment.view_dynamo.get_view(comment.id, user.id)
+    pk, sk = view_item['partitionKey'], view_item['sortKey']
     comment_manager.post_manager = Mock(comment_manager.post_manager)
-    comment_manager.postprocess_record(pk, sk, old_item, new_item)
+    comment_manager.postprocess_record(pk, sk, None, view_item)
     assert comment_manager.post_manager.mock_calls == [call.postprocess_comment_view_added(post.id, user.id)]

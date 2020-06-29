@@ -102,7 +102,7 @@ class CardManager:
     def postprocess_record(self, pk, sk, old_item, new_item):
         # adjust card count on user as needed
         if sk == '-':
-            user_id = (new_item or old_item)['gsiA1PartitionKey']['S'].split('/')[1]
+            user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
             if new_item and not old_item:
                 self.user_manager.dynamo.increment_card_count(user_id)
             if not new_item and old_item:

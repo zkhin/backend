@@ -31,45 +31,36 @@ def system_message(chat_message_manager, chat):
 
 
 def test_postprocess_chat_message_added(chat_message_manager, message):
-    typed_pk = chat_message_manager.dynamo.typed_pk(message.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
-    old_item = None
-    new_item = chat_message_manager.dynamo.client.get_typed_item(typed_pk)
+    pk, sk = message.item['partitionKey'], message.item['sortKey']
     created_at = pendulum.parse(message.item['createdAt'])
 
     # postprocess the user message, verify calls correct
     chat_message_manager.chat_manager = Mock(chat_message_manager.chat_manager)
-    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    chat_message_manager.postprocess_record(pk, sk, None, message.item)
     assert chat_message_manager.chat_manager.mock_calls == [
         call.postprocess_chat_message_added(message.chat_id, message.user_id, created_at),
     ]
 
 
 def test_postprocess_system_chat_message_added(chat_message_manager, system_message):
-    typed_pk = chat_message_manager.dynamo.typed_pk(system_message.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
-    old_item = None
-    new_item = chat_message_manager.dynamo.client.get_typed_item(typed_pk)
+    pk, sk = system_message.item['partitionKey'], system_message.item['sortKey']
     created_at = pendulum.parse(system_message.item['createdAt'])
 
     # postprocess the user message, verify calls correct
     chat_message_manager.chat_manager = Mock(chat_message_manager.chat_manager)
-    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    chat_message_manager.postprocess_record(pk, sk, None, system_message.item)
     assert chat_message_manager.chat_manager.mock_calls == [
         call.postprocess_chat_message_added(system_message.chat_id, None, created_at),
     ]
 
 
 def test_postprocess_chat_message_deleted(chat_message_manager, message):
-    typed_pk = chat_message_manager.dynamo.typed_pk(message.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
-    old_item = chat_message_manager.dynamo.client.get_typed_item(typed_pk)
-    new_item = None
+    pk, sk = message.item['partitionKey'], message.item['sortKey']
     created_at = pendulum.parse(message.item['createdAt'])
 
     # postprocess the user message, verify calls correct
     chat_message_manager.chat_manager = Mock(chat_message_manager.chat_manager)
-    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    chat_message_manager.postprocess_record(pk, sk, message.item, None)
     assert chat_message_manager.chat_manager.mock_calls == [
         call.postprocess_chat_message_deleted(message.chat_id, message.id, message.user_id, created_at),
     ]
@@ -78,14 +69,12 @@ def test_postprocess_chat_message_deleted(chat_message_manager, message):
 def test_postprocess_chat_message_view_added(chat_message_manager, message, user2):
     # create a view by user2
     message.view_dynamo.add_view(message.id, user2.id, 1, pendulum.now('utc'))
-    typed_pk = message.view_dynamo.typed_pk(message.id, user2.id)
-    pk, sk = typed_pk['partitionKey']['S'], typed_pk['sortKey']['S']
-    old_item = None
-    new_item = message.view_dynamo.client.get_typed_item(typed_pk)
+    view_item = message.view_dynamo.get_view(message.id, user2.id)
+    pk, sk = view_item['partitionKey'], view_item['sortKey']
 
     # postprocess adding that message view, verify calls correct
     chat_message_manager.chat_manager = Mock(chat_message_manager.chat_manager)
-    chat_message_manager.postprocess_record(pk, sk, old_item, new_item)
+    chat_message_manager.postprocess_record(pk, sk, None, view_item)
     assert chat_message_manager.chat_manager.mock_calls == [
         call.postprocess_chat_message_view_added(message.chat_id, user2.id),
     ]

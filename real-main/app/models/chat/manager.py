@@ -144,8 +144,8 @@ class ChatManager(ViewManagerMixin, ManagerBase):
         # if this is a member record, check if we went to or from zero unviewed messages
         if sk.startswith('member/'):
             user_id = sk.split('/')[1]
-            old_count = int(old_item.get('messagesUnviewedCount', {}).get('N', '0')) if old_item else 0
-            new_count = int(new_item.get('messagesUnviewedCount', {}).get('N', '0')) if new_item else 0
+            old_count = (old_item or {}).get('messagesUnviewedCount', 0)
+            new_count = (new_item or {}).get('messagesUnviewedCount', 0)
             if old_count == 0 and new_count != 0:
                 self.user_manager.dynamo.increment_chats_with_unviewed_messages_count(user_id)
             if old_count != 0 and new_count == 0:

@@ -55,8 +55,8 @@ class FollowManager:
             followed_user_id = pk[len('user/') :]
             follower_user_id = sk[len('follower/') :]
 
-        old_status = old_item['followStatus']['S'] if old_item else enums.FollowStatus.NOT_FOLLOWING
-        new_status = new_item['followStatus']['S'] if new_item else enums.FollowStatus.NOT_FOLLOWING
+        old_status = old_item['followStatus'] if old_item else enums.FollowStatus.NOT_FOLLOWING
+        new_status = new_item['followStatus'] if new_item else enums.FollowStatus.NOT_FOLLOWING
 
         # incr/decr followedCount and followerCount if follow status changed to/from FOLLOWING and something else
         if old_status != enums.FollowStatus.FOLLOWING and new_status == enums.FollowStatus.FOLLOWING:

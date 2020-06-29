@@ -56,10 +56,9 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
         message_id = pk.split('/')[1]
 
         if sk == '-':
-            item = new_item or old_item
-            chat_id = item['chatId']['S']
-            user_id = item.get('userId', {}).get('S')  # system messages have no userId
-            created_at = pendulum.parse(item['createdAt']['S'])
+            chat_id = (new_item or old_item)['chatId']
+            user_id = (new_item or old_item).get('userId')  # system messages have no userId
+            created_at = pendulum.parse((new_item or old_item)['createdAt'])
 
             # message added
             if not old_item and new_item:

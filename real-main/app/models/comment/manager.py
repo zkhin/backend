@@ -127,13 +127,12 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
         # if this is a new or deleted comment, adjust counters on the post
         if sk == '-':
-            post_id = (new_item or old_item)['postId']['S']
-            user_id = (new_item or old_item)['userId']['S']
-            created_at = pendulum.parse((new_item or old_item)['commentedAt']['S'])
+            post_id = (new_item or old_item)['postId']
+            user_id = (new_item or old_item)['userId']
+            created_at = pendulum.parse((new_item or old_item)['commentedAt'])
             if not old_item and new_item:
                 self.post_manager.postprocess_comment_added(post_id, user_id, created_at)
             if old_item and not new_item:
-                created_at = pendulum.parse(old_item['commentedAt']['S'])
                 self.post_manager.postprocess_comment_deleted(post_id, comment_id, user_id, created_at)
 
         # comment view added
