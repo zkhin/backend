@@ -26,6 +26,7 @@ provider:
     ES_SEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
     PINPOINT_APPLICATION_ID: !Ref PinpointApp
+    USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, ''}  # default to disabled for all envs for now
 
     # Note: use of cloudformation variables with 'placeholder' is to avoid resource dependency loops
     CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
@@ -401,6 +402,18 @@ functions:
           event: s3:ObjectCreated:Put
           rules:
             - suffix: /video-hls/video.m3u8
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  sendUserNotifications:
+    name: ${self:provider.stackName}-sendUserNotifications
+    handler: app.handlers.cron.send_user_notifications
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 minute)'
     alarms:
       - functionErrors
       - functionThrottles

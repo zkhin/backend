@@ -45,6 +45,10 @@ class Card:
     def has_thumbnail(self):
         return bool(self.spec and self.spec.post_id)
 
+    @property
+    def notify_user_at(self):
+        return pendulum.parse(self.item['gsiK1SortKey']) if 'gsiK1SortKey' in self.item else None
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_card(self.id, strongly_consistent=strongly_consistent)
         return self
@@ -63,6 +67,10 @@ class Card:
         return self.pinpoint_client.send_user_apns(
             self.user_id, self.item['action'], self.item['title'], body=self.item.get('subTitle')
         )
+
+    def clear_notify_user_at(self):
+        self.item = self.dynamo.clear_notify_user_at(self.id)
+        return self
 
     def delete(self):
         transacts = [

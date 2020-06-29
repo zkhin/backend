@@ -1,5 +1,7 @@
 import re
 
+import pendulum
+
 from .exceptions import MalformedCardId
 
 
@@ -41,6 +43,7 @@ class CardSpec:
 class CommentCardSpec(CardSpec):
 
     title = 'You have new comments'
+    notify_user_after = pendulum.duration(hours=24)
 
     def __init__(self, user_id, post_id):
         self.post_id = post_id
@@ -54,6 +57,7 @@ class ChatCardSpec(CardSpec):
     title = 'You have new messages'
     action = 'https://real.app/chat/'
     post_id = None
+    notify_user_after = pendulum.duration(minutes=5)
 
     def __init__(self, user_id):
         self.user_id = user_id
@@ -65,6 +69,7 @@ class RequestedFollowersCardSpec(CardSpec):
     title = 'You have pending follow requests'
     action = 'https://real.app/chat/'
     post_id = None
+    notify_user_after = None
 
     def __init__(self, user_id):
         self.user_id = user_id

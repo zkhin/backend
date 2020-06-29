@@ -1,3 +1,4 @@
+from unittest.mock import call
 from uuid import uuid4
 
 import pendulum
@@ -12,6 +13,9 @@ def user(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
+
+
+user2 = user
 
 
 @pytest.fixture
@@ -71,17 +75,27 @@ def test_add_card_minimal(card_manager, user, appsync_client):
 def test_add_card_maximal(card_manager, user):
     card_id = 'cid'
     title, sub_title, action = 'card title', 'sub', 'https://action'
-    now = pendulum.now('utc')
+    created_at = pendulum.now('utc')
+    notify_user_at = pendulum.now('utc')
 
     # check starting state
     assert card_manager.get_card(card_id) is None
     assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # add card, check format
-    card = card_manager.add_card(user.id, title, action, card_id=card_id, sub_title=sub_title, now=now)
+    card = card_manager.add_card(
+        user.id,
+        title,
+        action,
+        card_id=card_id,
+        sub_title=sub_title,
+        created_at=created_at,
+        notify_user_at=notify_user_at,
+    )
     assert card.id == card_id
     assert card.user_id == user.id
-    assert card.created_at == now
+    assert card.created_at == created_at
+    assert card.notify_user_at == notify_user_at
     assert card.item['title'] == title
     assert card.item['action'] == action
     assert card.item['subTitle'] == sub_title
@@ -107,6 +121,10 @@ def test_add_and_remove_card_by_spec(user, spec, card_manager):
     assert card.item['title'] == spec.title
     assert card.item['action'] == spec.action
     assert before < card.created_at < after
+    if spec.notify_user_after:
+        assert card.notify_user_at == card.created_at + spec.notify_user_after
+    else:
+        assert card.notify_user_at is None
 
     # add the card again, verify no-op
     card_manager.add_card_by_spec_if_dne(spec)
@@ -172,3 +190,88 @@ def test_truncate_cards(card_manager, user):
     assert card_manager.get_card(card_id_1) is None
     assert card_manager.get_card(card_id_2) is None
     assert user.refresh_item().item.get('cardCount', 0) == 2
+
+
+def test_notify_users(card_manager, pinpoint_client, user, user2):
+    # add a card with a notification in the far future
+    notify_user_at1 = pendulum.now('utc') + pendulum.duration(hours=1)
+    card1 = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at1)
+    assert card1.notify_user_at == notify_user_at1
+
+    # run notificiations, verify none sent and no db changes
+    cnts = card_manager.notify_users()
+    assert cnts == (0, 0)
+    assert pinpoint_client.mock_calls == []
+    assert card1.item == card1.refresh_item().item
+
+    # add another card with a notification in the immediate future
+    notify_user_at2 = pendulum.now('utc') + pendulum.duration(seconds=1)
+    card2 = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at2)
+    assert card2.notify_user_at == notify_user_at2
+
+    # run notificiations, verify none sent and no db changes
+    cnts = card_manager.notify_users()
+    assert cnts == (0, 0)
+    assert pinpoint_client.mock_calls == []
+    assert card1.item == card1.refresh_item().item
+    assert card2.item == card2.refresh_item().item
+
+    # add another card with a notification in the immediate past
+    notify_user_at3 = pendulum.now('utc')
+    card3 = card_manager.add_card(user.id, 'title3', 'https://action3', notify_user_at=notify_user_at3)
+    assert card3.notify_user_at == notify_user_at3
+
+    # run notificiations, verify one sent
+    cnts = card_manager.notify_users()
+    assert cnts == (1, 1)
+    assert pinpoint_client.mock_calls == [
+        call.send_user_apns(user.id, 'https://action3', 'title3', body=None),
+    ]
+    assert card1.item == card1.refresh_item().item
+    assert card2.item == card2.refresh_item().item
+    assert card3.refresh_item().item is None
+
+    # two cards with a notification in past
+    notify_user_at4 = pendulum.now('utc') - pendulum.duration(seconds=1)
+    notify_user_at5 = pendulum.now('utc') - pendulum.duration(hours=1)
+    card4 = card_manager.add_card(user.id, 'title4', 'https://a4', sub_title='s', notify_user_at=notify_user_at4)
+    card5 = card_manager.add_card(user2.id, 'title5', 'https://a5', notify_user_at=notify_user_at5)
+    assert card4.notify_user_at == notify_user_at4
+    assert card5.notify_user_at == notify_user_at5
+
+    # run notificiations, verify both sent
+    pinpoint_client.reset_mock()
+    cnts = card_manager.notify_users()
+    assert cnts == (2, 2)
+    assert pinpoint_client.mock_calls == [
+        call.send_user_apns(user2.id, 'https://a5', 'title5', body=None),
+        call.send_user_apns(user.id, 'https://a4', 'title4', body='s'),
+    ]
+    assert card1.item == card1.refresh_item().item
+    assert card2.item == card2.refresh_item().item
+    assert card4.refresh_item().item is None
+    assert card5.refresh_item().item is None
+
+
+def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
+    # add card with a notification in the immediate past
+    notify_user_at = pendulum.now('utc')
+    card = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at)
+    assert card.notify_user_at == notify_user_at
+
+    # configure our mock to report a failed message send
+    pinpoint_client.configure_mock(**{'send_user_apns.return_value': False})
+
+    # run notificiations, verify attempted send and correct DB changes upon failure
+    cnts = card_manager.notify_users()
+    assert cnts == (1, 0)
+    assert pinpoint_client.mock_calls == [
+        call.send_user_apns(user.id, 'https://action', 'title', body=None),
+    ]
+    org_item = card.item
+    card.refresh_item()
+    assert 'gsiK1PartitionKey' not in card.item
+    assert 'gsiK1SortKey' not in card.item
+    assert org_item.pop('gsiK1PartitionKey')
+    assert org_item.pop('gsiK1SortKey')
+    assert card.item == org_item

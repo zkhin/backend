@@ -1,6 +1,7 @@
 from unittest.mock import Mock, call
 from uuid import uuid4
 
+import pendulum
 import pytest
 
 from app.models.card.enums import CardNotificationType
@@ -46,6 +47,20 @@ def test_serialize(user, card):
     assert resp['title'] == card.item['title']
     assert resp['action'] == card.item['action']
     assert resp['subTitle'] == card.item['subTitle']
+
+
+def test_clear_notify_user_at(user, card_manager):
+    # create a card with a notify_user_at, verify
+    card = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=pendulum.now('utc'))
+    assert card.notify_user_at
+
+    # clear it, verify
+    assert card.clear_notify_user_at().notify_user_at is None
+    assert card.notify_user_at is None
+
+    # verify idempotent
+    assert card.clear_notify_user_at().notify_user_at is None
+    assert card.notify_user_at is None
 
 
 def test_notify_user(user, card):
