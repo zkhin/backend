@@ -73,14 +73,6 @@ class Card:
         return self
 
     def delete(self):
-        transacts = [
-            self.dynamo.transact_delete_card(self.id),
-            self.user_manager.dynamo.transact_card_deleted(self.user_id),
-        ]
-        transact_exceptions = [
-            self.exceptions.CardDoesNotExist(self.id),
-            self.exceptions.CardException('Unable to register card deleted on user item'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        self.dynamo.delete_card(self.id)
         self.appsync.trigger_notification(enums.CardNotificationType.DELETED, self)
         return self

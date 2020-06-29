@@ -4,6 +4,7 @@ import pendulum
 import pytest
 
 from app.models.card.dynamo import CardDynamo
+from app.models.card.exceptions import CardAlreadyExists
 
 
 @pytest.fixture
@@ -11,7 +12,7 @@ def card_dynamo(dynamo_client):
     yield CardDynamo(dynamo_client)
 
 
-def test_transact_add_card_minimal(card_dynamo):
+def test_add_card_minimal(card_dynamo):
     card_id = 'cid'
     user_id = 'uid'
     title = 'you should know this'
@@ -19,12 +20,11 @@ def test_transact_add_card_minimal(card_dynamo):
 
     # add the card to the DB
     before = pendulum.now('utc')
-    transact = card_dynamo.transact_add_card(card_id, user_id, title, action)
-    card_dynamo.client.transact_write_items([transact])
+    card_item = card_dynamo.add_card(card_id, user_id, title, action)
     after = pendulum.now('utc')
 
     # retrieve the card and verify the format is as we expect
-    card_item = card_dynamo.get_card(card_id)
+    assert card_dynamo.get_card(card_id) == card_item
     created_at_str = card_item['gsiA1SortKey'][len('card/') :]
     assert before < pendulum.parse(created_at_str) < after
     assert card_item == {
@@ -38,11 +38,11 @@ def test_transact_add_card_minimal(card_dynamo):
     }
 
     # verify we can't add that card again
-    with pytest.raises(card_dynamo.client.exceptions.TransactionCanceledException):
-        card_dynamo.client.transact_write_items([transact])
+    with pytest.raises(CardAlreadyExists):
+        card_dynamo.add_card(card_id, user_id, title, action)
 
 
-def test_transact_add_card_maximal(card_dynamo):
+def test_add_card_maximal(card_dynamo):
     card_id = 'cid'
     user_id = 'uid'
     title = 'you should know this'
@@ -52,13 +52,12 @@ def test_transact_add_card_maximal(card_dynamo):
     notify_user_at = pendulum.now('utc')
 
     # add the card to the DB
-    transact = card_dynamo.transact_add_card(
+    card_item = card_dynamo.add_card(
         card_id, user_id, title, action, sub_title=sub_title, created_at=created_at, notify_user_at=notify_user_at
     )
-    card_dynamo.client.transact_write_items([transact])
 
     # retrieve the card and verify the format is as we expect
-    card_item = card_dynamo.get_card(card_id)
+    assert card_dynamo.get_card(card_id) == card_item
     assert card_item == {
         'partitionKey': 'card/cid',
         'sortKey': '-',
@@ -76,9 +75,7 @@ def test_transact_add_card_maximal(card_dynamo):
 def test_clear_notify_user_at(card_dynamo):
     # add a card with a notify_user_at, verify
     card_id = str(uuid4())
-    transact = card_dynamo.transact_add_card(card_id, 'uid', 't', 'a', notify_user_at=pendulum.now('utc'))
-    card_dynamo.client.transact_write_items([transact])
-    org_card_item = card_dynamo.get_card(card_id)
+    org_card_item = card_dynamo.add_card(card_id, 'uid', 't', 'a', notify_user_at=pendulum.now('utc'))
     assert 'gsiK1PartitionKey' in org_card_item
     assert 'gsiK1SortKey' in org_card_item
 
@@ -96,25 +93,17 @@ def test_clear_notify_user_at(card_dynamo):
     assert card_dynamo.get_card(card_id) == card_item
 
 
-def test_transact_delete_card(card_dynamo):
-    # cant delelte card that DNE
-    card_id = 'cid'
-    transact = card_dynamo.transact_delete_card(card_id)
-    with pytest.raises(card_dynamo.client.exceptions.TransactionCanceledException):
-        card_dynamo.client.transact_write_items([transact])
+def test_delete_card(card_dynamo):
+    # delelte a card that DNE
+    card_id = str(uuid4())
+    assert card_dynamo.delete_card(card_id) is None
 
-    # add the card
-    transact = card_dynamo.transact_add_card(card_id, 'uid', 'title', 'https://go.go')
-    card_dynamo.client.transact_write_items([transact])
-
-    # verify we can see the card in the DB
+    # add the card, verify
+    card_dynamo.add_card(card_id, 'uid', 'title', 'https://go.go')
     assert card_dynamo.get_card(card_id)
 
-    # delete the card
-    transact = card_dynamo.transact_delete_card(card_id)
-    card_dynamo.client.transact_write_items([transact])
-
-    # verify the card is no longer in the db
+    # delete the card, verify
+    card_dynamo.delete_card(card_id)
     assert card_dynamo.get_card(card_id) is None
 
 
@@ -122,15 +111,13 @@ def test_generate_cards_by_user(card_dynamo):
     user_id = 'uid'
 
     # add a card by an unrelated user
-    transact = card_dynamo.transact_add_card('coid', 'uoid', 'title', 'https://a.b')
-    card_dynamo.client.transact_write_items([transact])
+    card_dynamo.add_card('coid', 'uoid', 'title', 'https://a.b')
 
     # user has no cards, generate them
     assert list(card_dynamo.generate_cards_by_user(user_id)) == []
 
     # add one card
-    transact = card_dynamo.transact_add_card('cid1', user_id, 'title1', 'https://a.b')
-    card_dynamo.client.transact_write_items([transact])
+    card_dynamo.add_card('cid1', user_id, 'title1', 'https://a.b')
 
     # generate the one card
     card_items = list(card_dynamo.generate_cards_by_user(user_id))
@@ -139,8 +126,7 @@ def test_generate_cards_by_user(card_dynamo):
     assert card_items[0]['title'] == 'title1'
 
     # add another card
-    transact = card_dynamo.transact_add_card('cid2', user_id, 'title2', 'https://c.d')
-    card_dynamo.client.transact_write_items([transact])
+    card_dynamo.add_card('cid2', user_id, 'title2', 'https://c.d')
 
     # generate two cards, check order
     card_items = list(card_dynamo.generate_cards_by_user(user_id))
@@ -159,8 +145,7 @@ def test_generate_cards_by_user(card_dynamo):
 
 def test_generate_card_ids_by_notify_user_at(card_dynamo):
     # add a card with no user notification
-    transact = card_dynamo.transact_add_card('coid', 'uoid', 'title', 'https://a.b')
-    card_dynamo.client.transact_write_items([transact])
+    card_dynamo.add_card('coid', 'uoid', 'title', 'https://a.b')
 
     # generate no cards
     card_ids = list(card_dynamo.generate_card_ids_by_notify_user_at(pendulum.now('utc')))
@@ -169,10 +154,7 @@ def test_generate_card_ids_by_notify_user_at(card_dynamo):
     # add one card
     card_id_1 = str(uuid4())
     notify_user_at_1 = pendulum.now('utc')
-    transact = card_dynamo.transact_add_card(
-        card_id_1, 'uid', 'title1', 'https://a.b', notify_user_at=notify_user_at_1
-    )
-    card_dynamo.client.transact_write_items([transact])
+    card_dynamo.add_card(card_id_1, 'uid', 'title1', 'https://a.b', notify_user_at=notify_user_at_1)
 
     # dont generate the card
     card_ids = list(
@@ -187,10 +169,7 @@ def test_generate_card_ids_by_notify_user_at(card_dynamo):
     # add another card
     card_id_2 = str(uuid4())
     notify_user_at_2 = notify_user_at_1 + pendulum.duration(minutes=1)
-    transact = card_dynamo.transact_add_card(
-        card_id_2, 'uid2', 'title2', 'https://c.d', notify_user_at=notify_user_at_2
-    )
-    card_dynamo.client.transact_write_items([transact])
+    card_dynamo.add_card(card_id_2, 'uid2', 'title2', 'https://c.d', notify_user_at=notify_user_at_2)
 
     # don't generate either card
     card_ids = list(

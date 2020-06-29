@@ -322,24 +322,6 @@ class UserDynamo:
             kwargs['ExpressionAttributeValues'][':positive_one'] = {'N': '1'}
         return {'Update': kwargs}
 
-    def transact_card_added(self, user_id):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD cardCount :positive_one',
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
-        }
-        return {'Update': kwargs}
-
-    def transact_card_deleted(self, user_id):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD cardCount :negative_one',
-            'ConditionExpression': 'attribute_exists(partitionKey) AND cardCount > :zero',
-            'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
-        }
-        return {'Update': kwargs}
-
     def _increment_count(self, attribute_name, user_id):
         query_kwargs = {
             'Key': self.pk(user_id),
@@ -365,6 +347,12 @@ class UserDynamo:
                 logger.warning(f'Failed to decrement {attribute_name} for user `{user_id}`')
                 return
             raise
+
+    def increment_card_count(self, user_id):
+        return self._increment_count('cardCount', user_id)
+
+    def decrement_card_count(self, user_id, fail_soft=False):
+        return self._decrement_count('cardCount', user_id, fail_soft=fail_soft)
 
     def increment_chats_with_unviewed_messages_count(self, user_id):
         return self._increment_count('chatsWithUnviewedMessagesCount', user_id)

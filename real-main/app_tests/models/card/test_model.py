@@ -75,18 +75,13 @@ def test_notify_user(user, card):
 
 
 def test_delete(card, user, appsync_client):
-    appsync_client.reset_mock()
-
     # verify starting state
+    appsync_client.reset_mock()
     assert card.dynamo.get_card(card.id)
-    assert user.refresh_item().item.get('cardCount', 0) == 1
 
-    # delete the card
+    # delete the card, verify state
     card.delete()
-
-    # verify final state
     assert card.dynamo.get_card(card.id) is None
-    assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # check the notifiation was triggered
     assert len(appsync_client.mock_calls) == 1

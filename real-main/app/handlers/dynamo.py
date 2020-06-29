@@ -16,11 +16,12 @@ clients = {
 }
 
 managers = {}
-user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
 follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
 
 @handler_logging
@@ -38,8 +39,8 @@ def postprocess_records(event, context):
 
         postprocess_record = None
 
-        if pk.startswith('user/') and sk == 'profile':
-            postprocess_record = user_manager.postprocess_record
+        if pk.startswith('card/'):
+            postprocess_record = card_manager.postprocess_record
 
         if pk.startswith('chat/'):
             postprocess_record = chat_manager.postprocess_record
@@ -52,6 +53,9 @@ def postprocess_records(event, context):
 
         if pk.startswith('following/') or (pk.startswith('user/') and sk.startswith('follower/')):
             postprocess_record = follow_manager.postprocess_record
+
+        if pk.startswith('user/') and sk == 'profile':
+            postprocess_record = user_manager.postprocess_record
 
         if postprocess_record:
             try:

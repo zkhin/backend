@@ -41,7 +41,6 @@ comment_card_spec2 = comment_card_spec
 def test_add_card_minimal(card_manager, user, appsync_client):
     # check starting state
     appsync_client.reset_mock()
-    assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # add card
     before = pendulum.now('utc')
@@ -50,7 +49,6 @@ def test_add_card_minimal(card_manager, user, appsync_client):
     after = pendulum.now('utc')
 
     # check final state
-    assert user.refresh_item().item.get('cardCount', 0) == 1
     assert card_manager.get_card(card.id)
     assert before < card.created_at < after
     assert card.user_id == user.id
@@ -80,7 +78,6 @@ def test_add_card_maximal(card_manager, user):
 
     # check starting state
     assert card_manager.get_card(card_id) is None
-    assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # add card, check format
     card = card_manager.add_card(
@@ -101,7 +98,6 @@ def test_add_card_maximal(card_manager, user):
     assert card.item['subTitle'] == sub_title
 
     # check final state
-    assert user.refresh_item().item.get('cardCount', 0) == 1
     assert card_manager.get_card(card.id)
 
 
@@ -165,12 +161,10 @@ def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comm
 def test_truncate_cards(card_manager, user):
     # verify starting state
     assert list(card_manager.dynamo.generate_cards_by_user(user.id)) == []
-    assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # test truncate with no cards
     card_manager.truncate_cards(user.id)
     assert list(card_manager.dynamo.generate_cards_by_user(user.id)) == []
-    assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # add two cards
     card_id_1, card_id_2 = 'cid1', 'cid2'
@@ -182,14 +176,12 @@ def test_truncate_cards(card_manager, user):
     assert len(cards) == 2
     assert cards[0]['partitionKey'] == 'card/cid1'
     assert cards[1]['partitionKey'] == 'card/cid2'
-    assert user.refresh_item().item.get('cardCount', 0) == 2
 
     # test truncate the cards, verify they have disappeared but user count is unchanged
     card_manager.truncate_cards(user.id)
     assert list(card_manager.dynamo.generate_cards_by_user(user.id)) == []
     assert card_manager.get_card(card_id_1) is None
     assert card_manager.get_card(card_id_2) is None
-    assert user.refresh_item().item.get('cardCount', 0) == 2
 
 
 def test_notify_users(card_manager, pinpoint_client, user, user2):

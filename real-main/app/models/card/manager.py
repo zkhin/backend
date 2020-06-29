@@ -53,16 +53,8 @@ class CardManager:
             'created_at': created_at,
             'notify_user_at': notify_user_at,
         }
-        transacts = [
-            self.dynamo.transact_add_card(card_id, user_id, title, action, **add_card_kwargs),
-            self.user_manager.dynamo.transact_card_added(user_id),
-        ]
-        transact_exceptions = [
-            self.exceptions.CardAlreadyExists(card_id),
-            self.exceptions.CardException('Unable to register card added on user item'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-        card = self.get_card(card_id, strongly_consistent=True)
+        card_item = self.dynamo.add_card(card_id, user_id, title, action, **add_card_kwargs)
+        card = self.init_card(card_item)
         self.appsync.trigger_notification(enums.CardNotificationType.ADDED, card)
         return card
 
@@ -82,10 +74,7 @@ class CardManager:
         card = self.get_card(spec.card_id)
         if not card:
             return
-        try:
-            card.delete()
-        except self.exceptions.CardDoesNotExist:
-            pass
+        card.delete()
 
     def truncate_cards(self, user_id):
         # delete all cards for the user without bothering to adjust User.cardCount
@@ -108,3 +97,12 @@ class CardManager:
                 # give up on the first failure for now
                 card.clear_notify_user_at()
         return total_count, success_count
+
+    def postprocess_record(self, pk, sk, old_item, new_item):
+        # adjust card count on user as needed
+        if sk == '-':
+            user_id = (new_item or old_item)['gsiA1PartitionKey']['S'].split('/')[1]
+            if new_item and not old_item:
+                self.user_manager.dynamo.increment_card_count(user_id)
+            if not new_item and old_item:
+                self.user_manager.dynamo.decrement_card_count(user_id, fail_soft=True)

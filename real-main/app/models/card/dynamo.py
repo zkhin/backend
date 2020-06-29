@@ -2,6 +2,8 @@ import logging
 
 import pendulum
 
+from .exceptions import CardAlreadyExists
+
 logger = logging.getLogger()
 
 
@@ -24,33 +26,30 @@ class CardDynamo:
     def get_card(self, card_id, strongly_consistent=False):
         return self.client.get_item(self.pk(card_id), ConsistentRead=strongly_consistent)
 
-    def transact_add_card(
-        self, card_id, user_id, title, action, sub_title=None, created_at=None, notify_user_at=None
-    ):
+    def add_card(self, card_id, user_id, title, action, sub_title=None, created_at=None, notify_user_at=None):
         created_at = created_at or pendulum.now('utc')
         query_kwargs = {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '0'},
-                    'partitionKey': {'S': f'card/{card_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'user/{user_id}'},
-                    'gsiA1SortKey': {'S': f'card/{created_at.to_iso8601_string()}'},
-                    'title': {'S': title},
-                    'action': {'S': action},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            }
+            'Item': {
+                **self.pk(card_id),
+                'schemaVersion': 0,
+                'gsiA1PartitionKey': f'user/{user_id}',
+                'gsiA1SortKey': f'card/{created_at.to_iso8601_string()}',
+                'title': title,
+                'action': action,
+            },
         }
         if sub_title:
-            query_kwargs['Put']['Item']['subTitle'] = {'S': sub_title}
+            query_kwargs['Item']['subTitle'] = sub_title
         if notify_user_at:
-            query_kwargs['Put']['Item']['gsiK1PartitionKey'] = {'S': 'card'}
-            query_kwargs['Put']['Item']['gsiK1SortKey'] = {'S': notify_user_at.to_iso8601_string()}
-        return query_kwargs
+            query_kwargs['Item']['gsiK1PartitionKey'] = 'card'
+            query_kwargs['Item']['gsiK1SortKey'] = notify_user_at.to_iso8601_string()
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise CardAlreadyExists(card_id)
 
-    def transact_delete_card(self, card_id):
-        return {'Delete': {'Key': self.typed_pk(card_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}}
+    def delete_card(self, card_id):
+        return self.client.delete_item(self.pk(card_id))
 
     def clear_notify_user_at(self, card_id):
         query_kwargs = {
