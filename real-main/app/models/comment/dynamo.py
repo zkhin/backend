@@ -27,39 +27,32 @@ class CommentDynamo:
     def get_comment(self, comment_id, strongly_consistent=False):
         return self.client.get_item(self.pk(comment_id), ConsistentRead=strongly_consistent)
 
-    def transact_add_comment(self, comment_id, post_id, user_id, text, text_tags, commented_at=None):
+    def add_comment(self, comment_id, post_id, user_id, text, text_tags, commented_at=None):
         commented_at = commented_at or pendulum.now('utc')
         commented_at_str = commented_at.to_iso8601_string()
-        return {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '1'},
-                    'partitionKey': {'S': f'comment/{comment_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'comment/{post_id}'},
-                    'gsiA1SortKey': {'S': commented_at_str},
-                    'gsiA2PartitionKey': {'S': f'comment/{user_id}'},
-                    'gsiA2SortKey': {'S': commented_at_str},
-                    'commentId': {'S': comment_id},
-                    'postId': {'S': post_id},
-                    'userId': {'S': user_id},
-                    'commentedAt': {'S': commented_at_str},
-                    'text': {'S': text},
-                    'textTags': {
-                        'L': [
-                            {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
-                            for text_tag in text_tags
-                        ]
-                    },
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            }
+        query_kwargs = {
+            'Item': {
+                **self.pk(comment_id),
+                'schemaVersion': 1,
+                'gsiA1PartitionKey': f'comment/{post_id}',
+                'gsiA1SortKey': commented_at_str,
+                'gsiA2PartitionKey': f'comment/{user_id}',
+                'gsiA2SortKey': commented_at_str,
+                'commentId': comment_id,
+                'postId': post_id,
+                'userId': user_id,
+                'commentedAt': commented_at_str,
+                'text': text,
+                'textTags': text_tags,
+            },
         }
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise exceptions.CommentAlreadyExists(comment_id)
 
-    def transact_delete_comment(self, comment_id):
-        return {
-            'Delete': {'Key': self.typed_pk(comment_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
-        }
+    def delete_comment(self, comment_id):
+        return self.client.delete_item(self.pk(comment_id))
 
     def transact_increment_flag_count(self, comment_id):
         return {

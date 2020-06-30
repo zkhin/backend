@@ -675,59 +675,6 @@ def test_transact_post_deleted(user_dynamo):
         )
 
 
-def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):
-    user_id = 'user-id'
-    transact_added = user_dynamo.transact_comment_added(user_id)
-    transact_deleted_willfull = user_dynamo.transact_comment_deleted(user_id)
-    transact_deleted_forced = user_dynamo.transact_comment_deleted(user_id, forced=True)
-
-    # set up & verify starting state
-    user_dynamo.add_user(user_id, 'username')
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item.get('commentCount', 0) == 0
-    assert user_item.get('commentDeletedCount', 0) == 0
-    assert user_item.get('commentForcedDeletionCount', 0) == 0
-
-    # three comments, one by one
-    user_dynamo.client.transact_write_items([transact_added])
-    assert user_dynamo.get_user(user_id).get('commentCount', 0) == 1
-    user_dynamo.client.transact_write_items([transact_added])
-    assert user_dynamo.get_user(user_id).get('commentCount', 0) == 2
-    user_dynamo.client.transact_write_items([transact_added])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('commentCount', 0) == 3
-    assert user_item.get('commentDeletedCount', 0) == 0
-    assert user_item.get('commentForcedDeletionCount', 0) == 0
-
-    # delete one comment, forced
-    user_dynamo.client.transact_write_items([transact_deleted_forced])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('commentCount', 0) == 2
-    assert user_item.get('commentDeletedCount', 0) == 1
-    assert user_item.get('commentForcedDeletionCount', 0) == 1
-
-    # delete another comment, not forced
-    user_dynamo.client.transact_write_items([transact_deleted_willfull])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('commentCount', 0) == 1
-    assert user_item.get('commentDeletedCount', 0) == 2
-    assert user_item.get('commentForcedDeletionCount', 0) == 1
-
-    # delete one comment, forced
-    user_dynamo.client.transact_write_items([transact_deleted_forced])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('commentCount', 0) == 0
-    assert user_item.get('commentDeletedCount', 0) == 3
-    assert user_item.get('commentForcedDeletionCount', 0) == 2
-
-    # verify can't go negative
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([transact_deleted_willfull])
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([transact_deleted_forced])
-
-
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
     [
@@ -737,14 +684,13 @@ def test_transact_comment_added_and_transact_comment_deleted(user_dynamo):
             'decrement_chats_with_unviewed_messages_count',
             'chatsWithUnviewedMessagesCount',
         ],
+        ['increment_comment_count', 'decrement_comment_count', 'commentCount'],
         ['increment_followed_count', 'decrement_followed_count', 'followedCount'],
         ['increment_follower_count', 'decrement_follower_count', 'followerCount'],
         ['increment_followers_requested_count', 'decrement_followers_requested_count', 'followersRequestedCount'],
     ],
 )
-def test_increment_decrement_chats_with_unviewed_messages_count(
-    user_dynamo, caplog, incrementor_name, decrementor_name, attribute_name
-):
+def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
     incrementor = getattr(user_dynamo, incrementor_name)
     decrementor = getattr(user_dynamo, decrementor_name)
 
@@ -787,3 +733,27 @@ def test_increment_decrement_chats_with_unviewed_messages_count(
     with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)
     assert user_dynamo.get_user(user_id)[attribute_name] == 0
+
+
+@pytest.mark.parametrize(
+    'incrementor_name, attribute_name',
+    [
+        ['increment_comment_deleted_count', 'commentDeletedCount'],
+        ['increment_comment_forced_deletion_count', 'commentForcedDeletionCount'],
+    ],
+)
+def test_increment_count(user_dynamo, caplog, incrementor_name, attribute_name):
+    incrementor = getattr(user_dynamo, incrementor_name)
+
+    # add the user to the DB, verify it is in DB
+    user_id, username = str(uuid4()), str(uuid4())[:8]
+    user_dynamo.add_user(user_id, username)
+    assert attribute_name not in user_dynamo.get_user(user_id)
+
+    # increment
+    assert incrementor(user_id)[attribute_name] == 1
+    assert user_dynamo.get_user(user_id)[attribute_name] == 1
+
+    # increment
+    assert incrementor(user_id)[attribute_name] == 2
+    assert user_dynamo.get_user(user_id)[attribute_name] == 2

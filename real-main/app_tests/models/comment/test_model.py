@@ -44,9 +44,6 @@ def test_delete(comment, post_manager, comment_manager, user, user2, user3):
     comment_item = comment.dynamo.get_comment(comment.id)
     assert comment_item['commentId'] == comment.id
 
-    # check the user & post's comment count
-    assert user.refresh_item().item.get('commentCount', 0) == 1
-
     # comment owner deletes the comment
     comment.delete(deleter_user_id=comment.user_id)
 
@@ -54,15 +51,10 @@ def test_delete(comment, post_manager, comment_manager, user, user2, user3):
     assert comment.item['commentId'] == comment.id
     assert comment.dynamo.get_comment(comment.id) is None
 
-    # check the user & post's comment count have decremented
-    assert user.refresh_item().item.get('commentCount', 0) == 0
-
 
 def test_forced_delete(comment, comment2, user):
     # verify starting counts
     user.refresh_item()
-    assert user.item.get('commentCount', 0) == 2
-    assert user.item.get('commentDeletedCount', 0) == 0
     assert user.item.get('commentForcedDeletionCount', 0) == 0
 
     # normal delete one of them, force delete the other
@@ -71,23 +63,7 @@ def test_forced_delete(comment, comment2, user):
 
     # verify final counts
     user.refresh_item()
-    assert user.item.get('commentCount', 0) == 0
-    assert user.item.get('commentDeletedCount', 0) == 2
     assert user.item.get('commentForcedDeletionCount', 0) == 1
-
-
-def test_delete_cant_decrement_user_comment_count_below_zero(comment, user_manager):
-    # sneak behind the model and lower the user's comment count
-    transacts = [user_manager.dynamo.transact_comment_deleted(comment.item['userId'])]
-    user_manager.dynamo.client.transact_write_items(transacts)
-
-    # deleting the comment should fail
-    with pytest.raises(comment.dynamo.client.exceptions.TransactionCanceledException):
-        comment.delete(deleter_user_id=comment.user_id)
-
-    # verify the comment is still in the DB
-    comment_item = comment.dynamo.get_comment(comment.id)
-    assert comment_item['commentId'] == comment.id
 
 
 def test_only_post_owner_and_comment_owner_can_delete_a_comment(

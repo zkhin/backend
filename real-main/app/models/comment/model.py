@@ -72,12 +72,9 @@ class Comment(FlagModelMixin, ViewModelMixin):
         # delete any flags of the comment
         self.flag_dynamo.delete_all_for_item(self.id)
 
-        # order matters to moto (in test suite), but not on dynamo
-        transacts = [
-            self.user_manager.dynamo.transact_comment_deleted(self.user_id, forced=forced),
-            self.dynamo.transact_delete_comment(self.id),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
+        self.dynamo.delete_comment(self.id)
+        if forced:
+            self.user_manager.dynamo.increment_comment_forced_deletion_count(self.user_id)
 
         return self
 

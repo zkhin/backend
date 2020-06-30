@@ -38,7 +38,9 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def postprocessor(self):
         if not hasattr(self, '_postprocessor'):
             self._postprocessor = CommentPostProcessor(
-                dynamo=getattr(self, 'dynamo', None), post_manager=self.post_manager,
+                dynamo=getattr(self, 'dynamo', None),
+                post_manager=self.post_manager,
+                user_manager=self.user_manager,
             )
         return self._postprocessor
 
@@ -88,17 +90,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                     raise exceptions.CommentException(msg)
 
         text_tags = self.user_manager.get_text_tags(text)
-        transacts = [
-            self.dynamo.transact_add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now),
-            self.user_manager.dynamo.transact_comment_added(user_id),
-        ]
-        transact_exceptions = [
-            exceptions.CommentException(f'Unable to add comment with id `{comment_id}`... id already used?'),
-            exceptions.CommentException('Unable to increment User.commentCount'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-
-        comment_item = self.dynamo.get_comment(comment_id, strongly_consistent=True)
+        comment_item = self.dynamo.add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now)
         return self.init_comment(comment_item)
 
     def record_views(self, comment_ids, user_id, viewed_at=None):

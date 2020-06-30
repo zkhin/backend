@@ -6,22 +6,25 @@ logger = logging.getLogger()
 
 
 class CommentPostProcessor:
-    def __init__(self, dynamo=None, post_manager=None):
+    def __init__(self, dynamo=None, post_manager=None, user_manager=None):
         self.dynamo = dynamo
         self.post_manager = post_manager
+        self.user_manager = user_manager
 
     def run(self, pk, sk, old_item, new_item):
         comment_id = pk.split('/')[1]
 
-        # if this is a new or deleted comment, adjust counters on the post
+        # comment added, edited or deleted
         if sk == '-':
             post_id = (new_item or old_item)['postId']
             user_id = (new_item or old_item)['userId']
             created_at = pendulum.parse((new_item or old_item)['commentedAt'])
-            if not old_item and new_item:
+            if not old_item and new_item:  # comment added?
                 self.post_manager.postprocessor.comment_added(post_id, user_id, created_at)
-            if old_item and not new_item:
+                self.user_manager.postprocessor.comment_added(user_id)
+            if old_item and not new_item:  # comment deleted?
                 self.post_manager.postprocessor.comment_deleted(post_id, comment_id, user_id, created_at)
+                self.user_manager.postprocessor.comment_deleted(user_id)
 
         # comment view added
         if sk.startswith('view/') and not old_item and new_item:

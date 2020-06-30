@@ -89,7 +89,7 @@ test('Verify commentIds cannot be re-used ', async () => {
   // check we cannot add another comment re-using that commentId
   await expect(
     ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'i agree'}}),
-  ).rejects.toThrow(/ClientError: Unable to add comment /)
+  ).rejects.toThrow(/ClientError: Comment .* already exists/)
 })
 
 test('Cant add comments to post that doesnt exist', async () => {

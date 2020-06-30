@@ -28,7 +28,6 @@ def test_add_comment(comment_manager, user, post):
     comment_id = 'cid'
 
     # check our starting state
-    assert user.item.get('commentCount', 0) == 0
     assert comment_manager.get_comment(comment_id) is None
 
     # add the comment, verify
@@ -47,7 +46,6 @@ def test_add_comment(comment_manager, user, post):
     post.refresh_item()
     assert post.item.get('hasNewCommentActivity', False) is False
     user.refresh_item()
-    assert user.item['commentCount'] == 1
     assert user.item.get('postHasNewCommentActivityCount', 0) == 0
 
 
@@ -150,9 +148,6 @@ def test_delete_all_by_user(comment_manager, user, post, user2, user3):
     comment_1 = comment_manager.add_comment('cid1', post.id, user3.id, 'lore')
     comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
 
-    # check post comment count, their comment count
-    assert user3.refresh_item().item.get('commentCount', 0) == 2
-
     # delete all the comments by the user, verify it worked
     comment_manager.delete_all_by_user(user3.id)
     assert comment_manager.get_comment(comment_1.id) is None
@@ -160,9 +155,6 @@ def test_delete_all_by_user(comment_manager, user, post, user2, user3):
 
     # verify the unrelated comment was untouched
     assert comment_manager.get_comment(comment_other.id)
-
-    # check post & user comment count
-    assert user3.refresh_item().item.get('commentCount', 0) == 0
 
 
 def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, user3):
@@ -174,10 +166,6 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
     comment_1 = comment_manager.add_comment('cid1', post.id, user2.id, 'lore')
     comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
 
-    # check post, user comment count
-    assert user2.refresh_item().item.get('commentCount', 0) == 1
-    assert user3.refresh_item().item.get('commentCount', 0) == 1
-
     # delete all the comments on the post, verify it worked
     comment_manager.delete_all_on_post(post.id)
     assert comment_manager.get_comment(comment_1.id) is None
@@ -185,10 +173,6 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
 
     # verify the unrelated comment was untouched
     assert comment_manager.get_comment(comment_other.id)
-
-    # check post comment count
-    assert user2.refresh_item().item.get('commentCount', 0) == 0
-    assert user3.refresh_item().item.get('commentCount', 0) == 0
 
 
 def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):

@@ -8,7 +8,8 @@ logger = logging.getLogger()
 
 
 class UserPostProcessor:
-    def __init__(self, elasticsearch_client=None, pinpoint_client=None, card_manager=None):
+    def __init__(self, dynamo=None, elasticsearch_client=None, pinpoint_client=None, card_manager=None):
+        self.dynamo = dynamo
         self.elasticsearch_client = elasticsearch_client
         self.pinpoint_client = pinpoint_client
         self.card_manager = card_manager
@@ -84,3 +85,10 @@ class UserPostProcessor:
             )
         else:
             self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
+
+    def comment_added(self, user_id):
+        self.dynamo.increment_comment_count(user_id)
+
+    def comment_deleted(self, user_id):
+        self.dynamo.decrement_comment_count(user_id, fail_soft=True)
+        self.dynamo.increment_comment_deleted_count(user_id)

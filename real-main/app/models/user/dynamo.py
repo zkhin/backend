@@ -297,31 +297,6 @@ class UserDynamo:
             kwargs['ConditionExpression'] += ' and #ctd > :zero'
         return {'Update': kwargs}
 
-    def transact_comment_added(self, user_id):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD commentCount :positive_one',
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
-        }
-        return {'Update': kwargs}
-
-    def transact_comment_deleted(self, user_id, forced=False):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD commentCount :negative_one, commentDeletedCount :positive_one',
-            'ConditionExpression': 'attribute_exists(partitionKey) AND commentCount > :zero',
-            'ExpressionAttributeValues': {
-                ':negative_one': {'N': '-1'},
-                ':positive_one': {'N': '1'},
-                ':zero': {'N': '0'},
-            },
-        }
-        if forced:
-            kwargs['UpdateExpression'] += ', commentForcedDeletionCount :positive_one'
-            kwargs['ExpressionAttributeValues'][':positive_one'] = {'N': '1'}
-        return {'Update': kwargs}
-
     def _increment_count(self, attribute_name, user_id):
         query_kwargs = {
             'Key': self.pk(user_id),
@@ -359,6 +334,18 @@ class UserDynamo:
 
     def decrement_chats_with_unviewed_messages_count(self, user_id, fail_soft=False):
         return self._decrement_count('chatsWithUnviewedMessagesCount', user_id, fail_soft=fail_soft)
+
+    def increment_comment_count(self, user_id):
+        return self._increment_count('commentCount', user_id)
+
+    def decrement_comment_count(self, user_id, fail_soft=False):
+        return self._decrement_count('commentCount', user_id, fail_soft=fail_soft)
+
+    def increment_comment_deleted_count(self, user_id):
+        return self._increment_count('commentDeletedCount', user_id)
+
+    def increment_comment_forced_deletion_count(self, user_id):
+        return self._increment_count('commentForcedDeletionCount', user_id)
 
     def increment_followed_count(self, user_id):
         return self._increment_count('followedCount', user_id)
