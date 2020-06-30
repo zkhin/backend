@@ -56,7 +56,7 @@ def postprocess_records(event, context):
         if pk.startswith('comment/'):
             postprocessor = comment_manager.postprocessor
 
-        if pk.startswith('following/') or (pk.startswith('user/') and sk.startswith('follower/')):
+        if pk.startswith('user/') and sk.startswith('follower/'):
             postprocessor = follow_manager.postprocessor
 
         if pk.startswith('user/') and sk == 'profile':

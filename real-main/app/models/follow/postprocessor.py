@@ -10,14 +10,8 @@ class FollowPostProcessor:
         self.user_manager = user_manager
 
     def run(self, pk, sk, old_item, new_item):
-        try:
-            # old pk format
-            _, follower_user_id, followed_user_id = pk.split('/')
-        except ValueError:
-            # new pk format
-            followed_user_id = pk[len('user/') :]
-            follower_user_id = sk[len('follower/') :]
-
+        followed_user_id = pk[len('user/') :]
+        follower_user_id = sk[len('follower/') :]
         old_status = old_item['followStatus'] if old_item else FollowStatus.NOT_FOLLOWING
         new_status = new_item['followStatus'] if new_item else FollowStatus.NOT_FOLLOWING
 
