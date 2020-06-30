@@ -42,28 +42,28 @@ def postprocess_records(event, context):
         with LogLevelContext(logger, logging.INFO):
             logger.info(f'Post-processing `{op}` operation of record `{pk}`, `{sk}`')
 
-        postprocess_record = None
+        postprocessor = None
 
         if pk.startswith('card/'):
-            postprocess_record = card_manager.postprocess_record
+            postprocessor = card_manager.postprocessor
 
         if pk.startswith('chat/'):
-            postprocess_record = chat_manager.postprocess_record
+            postprocessor = chat_manager.postprocessor
 
         if pk.startswith('chatMessage/'):
-            postprocess_record = chat_message_manager.postprocess_record
+            postprocessor = chat_message_manager.postprocessor
 
         if pk.startswith('comment/'):
-            postprocess_record = comment_manager.postprocess_record
+            postprocessor = comment_manager.postprocessor
 
         if pk.startswith('following/') or (pk.startswith('user/') and sk.startswith('follower/')):
-            postprocess_record = follow_manager.postprocess_record
+            postprocessor = follow_manager.postprocessor
 
         if pk.startswith('user/') and sk == 'profile':
-            postprocess_record = user_manager.postprocess_record
+            postprocessor = user_manager.postprocessor
 
-        if postprocess_record:
+        if postprocessor:
             try:
-                postprocess_record(pk, sk, old_item, new_item)
+                postprocessor.run(pk, sk, old_item, new_item)
             except Exception as err:
                 logger.exception(str(err))

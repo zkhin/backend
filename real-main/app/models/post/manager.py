@@ -9,12 +9,12 @@ from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
-from app.models.card.specs import CommentCardSpec
 
 from . import enums, exceptions
 from .appsync import PostAppSync
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
 from .model import Post
+from .postprocessor import PostPostProcessor
 
 logger = logging.getLogger()
 
@@ -48,6 +48,17 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.dynamo = PostDynamo(clients['dynamo'])
             self.image_dynamo = PostImageDynamo(clients['dynamo'])
             self.original_metadata_dynamo = PostOriginalMetadataDynamo(clients['dynamo'])
+
+    @property
+    def postprocessor(self):
+        if not hasattr(self, '_postprocessor'):
+            self._postprocessor = PostPostProcessor(
+                dynamo=getattr(self, 'dynamo', None),
+                view_dynamo=getattr(self, 'view_dynamo', None),
+                card_manager=self.card_manager,
+                comment_manager=self.comment_manager,
+            )
+        return self._postprocessor
 
     def get_model(self, item_id, strongly_consistent=False):
         return self.get_post(item_id, strongly_consistent=strongly_consistent)
@@ -258,38 +269,3 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
     def delete_all_by_user(self, user_id):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()
-
-    def postprocess_comment_added(self, post_id, commented_by_user_id, created_at):
-        post = self.get_post(post_id)
-        by_post_owner = post.user_id == commented_by_user_id
-        self.dynamo.increment_comment_count(post_id, viewed=by_post_owner)
-        if not by_post_owner:
-            self.dynamo.set_last_unviewed_comment_at(post.item, created_at)
-            self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(post.user_id, post.id))
-
-    def postprocess_comment_deleted(self, post_id, comment_id, commented_by_user_id, created_at):
-        post = self.get_post(post_id)
-        self.dynamo.decrement_comment_count(post_id, fail_soft=True)
-
-        # for each view of the comment delete the view record & keep track of whether it was the post owner's view
-        comment_view_deleted = False
-        for view_item in self.comment_manager.view_dynamo.generate_views(comment_id):
-            user_id = view_item['sortKey'].split('/')[1]
-            self.comment_manager.view_dynamo.delete_view(comment_id, user_id)
-            comment_view_deleted = comment_view_deleted or (post and user_id == post.user_id)
-
-        if post and commented_by_user_id != post.user_id:
-            # has the post owner 'viewed' that comment via reporting a view on the post?
-            post_view_item = self.view_dynamo.get_view(post_id, post.user_id)
-            post_last_viewed_at = pendulum.parse(post_view_item['lastViewedAt']) if post_view_item else None
-            is_viewed = comment_view_deleted or (post_last_viewed_at and post_last_viewed_at > created_at)
-            if not is_viewed:
-                post_item = self.dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True)
-                # if the comment unviewed count hit zero, then remove post from 'posts with unviewed comments' index
-                if post_item and post_item.get('commentsUnviewedCount', 0) == 0:
-                    self.dynamo.set_last_unviewed_comment_at(post_item, None)
-
-    def postprocess_comment_view_added(self, post_id, user_id):
-        post = self.get_post(post_id)
-        if user_id == post.user_id:
-            self.dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True)

@@ -9,6 +9,7 @@ from . import enums, exceptions
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
 from .model import Card
+from .postprocessor import CardPostProcessor
 
 logger = logging.getLogger()
 
@@ -30,6 +31,14 @@ class CardManager:
             self.dynamo = CardDynamo(clients['dynamo'])
         if 'pinpoint' in clients:
             self.pinpoint_client = clients['pinpoint']
+
+    @property
+    def postprocessor(self):
+        if not hasattr(self, '_postprocessor'):
+            self._postprocessor = CardPostProcessor(
+                appsync=getattr(self, 'appsync', None), user_manager=self.user_manager,
+            )
+        return self._postprocessor
 
     def get_card(self, card_id, strongly_consistent=False):
         item = self.dynamo.get_card(card_id, strongly_consistent=strongly_consistent)
@@ -74,7 +83,7 @@ class CardManager:
         card.delete()
 
     def truncate_cards(self, user_id):
-        # delete all cards for the user without bothering to adjust User.cardCount
+        # delete all cards for the user
         with self.dynamo.client.table.batch_writer() as batch:
             for card_pk in self.dynamo.generate_cards_by_user(user_id, pks_only=True):
                 batch.delete_item(Key=card_pk)
@@ -94,30 +103,3 @@ class CardManager:
                 # give up on the first failure for now
                 card.clear_notify_user_at()
         return total_count, success_count
-
-    def postprocess_record(self, pk, sk, old_item, new_item):
-        if sk == '-':
-            self.postprocess_card_adjust_user_card_count(old_item, new_item)
-            self.postprocess_card_send_gql_notifications(old_item, new_item)
-
-    def postprocess_card_adjust_user_card_count(self, old_item, new_item):
-        user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
-        if new_item and not old_item:
-            self.user_manager.dynamo.increment_card_count(user_id)
-        if not new_item and old_item:
-            self.user_manager.dynamo.decrement_card_count(user_id, fail_soft=True)
-
-    def postprocess_card_send_gql_notifications(self, old_item, new_item):
-        user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
-        card_id = (new_item or old_item)['partitionKey'].split('/')[1]
-        title = (new_item or old_item)['title']
-        action = (new_item or old_item)['action']
-        sub_title = (new_item or old_item).get('subTitle')
-        if new_item and not old_item:
-            self.appsync.trigger_notification(
-                enums.CardNotificationType.ADDED, user_id, card_id, title, action, sub_title=sub_title
-            )
-        if not new_item and old_item:
-            self.appsync.trigger_notification(
-                enums.CardNotificationType.DELETED, user_id, card_id, title, action, sub_title=sub_title,
-            )

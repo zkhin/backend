@@ -6,6 +6,7 @@ from app.models.user.enums import UserPrivacyStatus
 from . import enums, exceptions
 from .dynamo import FollowDynamo
 from .model import Follow
+from .postprocessor import FollowPostProcessor
 
 logger = logging.getLogger()
 
@@ -31,6 +32,12 @@ class FollowManager:
         if 'dynamo' in clients:
             self.dynamo = FollowDynamo(clients['dynamo'])
 
+    @property
+    def postprocessor(self):
+        if not hasattr(self, '_postprocessor'):
+            self._postprocessor = FollowPostProcessor(user_manager=self.user_manager)
+        return self._postprocessor
+
     def get_follow(self, follower_user_id, followed_user_id, strongly_consistent=False):
         item = self.dynamo.get_following(follower_user_id, followed_user_id, strongly_consistent=strongly_consistent)
         return self.init_follow(item) if item else None
@@ -45,32 +52,6 @@ class FollowManager:
             post_manager=self.post_manager,
             user_manager=self.user_manager,
         )
-
-    def postprocess_record(self, pk, sk, old_item, new_item):
-        try:
-            # old pk format
-            _, follower_user_id, followed_user_id = pk.split('/')
-        except ValueError:
-            # new pk format
-            followed_user_id = pk[len('user/') :]
-            follower_user_id = sk[len('follower/') :]
-
-        old_status = old_item['followStatus'] if old_item else enums.FollowStatus.NOT_FOLLOWING
-        new_status = new_item['followStatus'] if new_item else enums.FollowStatus.NOT_FOLLOWING
-
-        # incr/decr followedCount and followerCount if follow status changed to/from FOLLOWING and something else
-        if old_status != enums.FollowStatus.FOLLOWING and new_status == enums.FollowStatus.FOLLOWING:
-            self.user_manager.dynamo.increment_followed_count(follower_user_id)
-            self.user_manager.dynamo.increment_follower_count(followed_user_id)
-        if old_status == enums.FollowStatus.FOLLOWING and new_status != enums.FollowStatus.FOLLOWING:
-            self.user_manager.dynamo.decrement_followed_count(follower_user_id, fail_soft=True)
-            self.user_manager.dynamo.decrement_follower_count(followed_user_id, fail_soft=True)
-
-        # incr/decr followersRequestedCount if follow status changed to/from REQUESTED and something else
-        if old_status != enums.FollowStatus.REQUESTED and new_status == enums.FollowStatus.REQUESTED:
-            self.user_manager.dynamo.increment_followers_requested_count(followed_user_id)
-        if old_status == enums.FollowStatus.REQUESTED and new_status != enums.FollowStatus.REQUESTED:
-            self.user_manager.dynamo.decrement_followers_requested_count(followed_user_id, fail_soft=True)
 
     def get_follow_status(self, follower_user_id, followed_user_id):
         if follower_user_id == followed_user_id:

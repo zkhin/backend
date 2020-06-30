@@ -13,6 +13,7 @@ from . import exceptions
 from .appsync import ChatMessageAppSync
 from .dynamo import ChatMessageDynamo
 from .model import ChatMessage
+from .postprocessor import ChatMessagePostProcessor
 
 logger = logging.getLogger()
 
@@ -37,6 +38,14 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
         if 'dynamo' in clients:
             self.dynamo = ChatMessageDynamo(clients['dynamo'])
 
+    @property
+    def postprocessor(self):
+        if not hasattr(self, '_postprocessor'):
+            self._postprocessor = ChatMessagePostProcessor(
+                dynamo=getattr(self, 'dynamo', None), chat_manager=self.chat_manager,
+            )
+        return self._postprocessor
+
     def get_chat_message(self, message_id, strongly_consistent=False):
         item = self.dynamo.get_chat_message(message_id, strongly_consistent=strongly_consistent)
         return self.init_chat_message(item) if item else None
@@ -51,28 +60,6 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
             'user_manager': self.user_manager,
         }
         return ChatMessage(item, **kwargs)
-
-    def postprocess_record(self, pk, sk, old_item, new_item):
-        message_id = pk.split('/')[1]
-
-        if sk == '-':
-            chat_id = (new_item or old_item)['chatId']
-            user_id = (new_item or old_item).get('userId')  # system messages have no userId
-            created_at = pendulum.parse((new_item or old_item)['createdAt'])
-
-            # message added
-            if not old_item and new_item:
-                self.chat_manager.postprocess_chat_message_added(chat_id, user_id, created_at)
-
-            # message deleted
-            if old_item and not new_item:
-                self.chat_manager.postprocess_chat_message_deleted(chat_id, message_id, user_id, created_at)
-
-        # message view added
-        if sk.startswith('view/') and not old_item and new_item:
-            user_id = sk.split('/')[1]
-            message = self.get_chat_message(message_id)
-            self.chat_manager.postprocess_chat_message_view_added(message.chat_id, user_id)
 
     def add_chat_message(self, message_id, text, chat_id, user_id, now=None):
         now = now or pendulum.now('utc')

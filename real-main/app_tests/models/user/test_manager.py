@@ -467,20 +467,3 @@ def test_username_tag_regex(user_manager):
 
     # uglies
     assert re.findall(reg, 'hi @._._ @4_. @A_A\n@B.4\r@333!?') == ['@._._', '@4_.', '@A_A', '@B.4', '@333']
-
-
-def test_postprocess_record(user_manager):
-    # use simulated update to disable a user
-    user_id = str(uuid.uuid4())
-    pk = f'user/{user_id}'
-    sk = 'profile'
-    old_item = {'userId': {'S': user_id}}
-    new_item = {'userId': {'S': user_id}}
-
-    user_manager.postprocess_elasticsearch = mock.Mock(user_manager.postprocess_elasticsearch)
-    user_manager.postprocess_pinpoint = mock.Mock(user_manager.postprocess_pinpoint)
-    user_manager.postprocess_requested_followers_card = mock.Mock(user_manager.postprocess_requested_followers_card)
-    user_manager.postprocess_record(pk, sk, old_item, new_item)
-    assert user_manager.postprocess_elasticsearch.mock_calls == [mock.call(old_item, new_item)]
-    assert user_manager.postprocess_pinpoint.mock_calls == [mock.call(user_id, old_item, new_item)]
-    assert user_manager.postprocess_requested_followers_card.mock_calls == [mock.call(user_id, old_item, new_item)]

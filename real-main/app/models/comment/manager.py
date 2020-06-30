@@ -12,6 +12,7 @@ from app.models.card.specs import CommentCardSpec
 from . import exceptions
 from .dynamo import CommentDynamo
 from .model import Comment
+from .postprocessor import CommentPostProcessor
 
 logger = logging.getLogger()
 
@@ -32,6 +33,14 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
+
+    @property
+    def postprocessor(self):
+        if not hasattr(self, '_postprocessor'):
+            self._postprocessor = CommentPostProcessor(
+                dynamo=getattr(self, 'dynamo', None), post_manager=self.post_manager,
+            )
+        return self._postprocessor
 
     def get_model(self, item_id):
         return self.get_comment(item_id)
@@ -121,22 +130,3 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def delete_all_on_post(self, post_id):
         for comment_item in self.dynamo.generate_by_post(post_id):
             self.init_comment(comment_item).delete()
-
-    def postprocess_record(self, pk, sk, old_item, new_item):
-        comment_id = pk.split('/')[1]
-
-        # if this is a new or deleted comment, adjust counters on the post
-        if sk == '-':
-            post_id = (new_item or old_item)['postId']
-            user_id = (new_item or old_item)['userId']
-            created_at = pendulum.parse((new_item or old_item)['commentedAt'])
-            if not old_item and new_item:
-                self.post_manager.postprocess_comment_added(post_id, user_id, created_at)
-            if old_item and not new_item:
-                self.post_manager.postprocess_comment_deleted(post_id, comment_id, user_id, created_at)
-
-        # comment view added
-        if sk.startswith('view/') and not old_item and new_item:
-            user_id = sk.split('/')[1]
-            comment = self.get_comment(comment_id)
-            self.post_manager.postprocess_comment_view_added(comment.post_id, user_id)

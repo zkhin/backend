@@ -6,11 +6,11 @@ import re
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
-from app.models.card.specs import RequestedFollowersCardSpec
 
 from . import enums, exceptions
 from .dynamo import UserDynamo
 from .model import User
+from .postprocessor import UserPostProcessor
 from .validate import UserValidate
 
 logger = logging.getLogger()
@@ -59,6 +59,16 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.placeholder_photos_directory = placeholder_photos_directory
 
     @property
+    def postprocessor(self):
+        if not hasattr(self, '_postprocessor'):
+            self._postprocessor = UserPostProcessor(
+                elasticsearch_client=getattr(self, 'elasticsearch_client', None),
+                pinpoint_client=getattr(self, 'pinpoint_client', None),
+                card_manager=self.card_manager,
+            )
+        return self._postprocessor
+
+    @property
     def real_user_id(self):
         "The userId of the 'real' user, if they exist"
         if not hasattr(self, '_real_user_id'):
@@ -87,64 +97,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'post_manager': getattr(self, 'post_manager', None),
         }
         return User(user_item, self.clients, **kwargs) if user_item else None
-
-    def postprocess_record(self, pk, sk, old_item, new_item):
-        user_id = pk[len('user/') :]
-        self.postprocess_elasticsearch(old_item, new_item)
-        self.postprocess_pinpoint(user_id, old_item, new_item)
-        self.postprocess_requested_followers_card(user_id, old_item, new_item)
-
-    def postprocess_elasticsearch(self, old_item, new_item):
-        user_id = (new_item or old_item)['userId']
-        # if we're manually rebuilding the index, treat everything as new
-        new_reindexed_at = new_item.get('lastManuallyReindexedAt')
-        old_reindexed_at = old_item.get('lastManuallyReindexedAt')
-        if new_reindexed_at and new_reindexed_at != old_reindexed_at:
-            old_item = {}
-
-        if new_item and old_item:
-            self.elasticsearch_client.update_user(user_id, old_item, new_item)
-        if new_item and not old_item:
-            self.elasticsearch_client.add_user(user_id, new_item)
-        if not new_item and old_item:
-            self.elasticsearch_client.delete_user(user_id)
-
-    def postprocess_pinpoint(self, user_id, old_item, new_item):
-        # check if this was a user deletion
-        if old_item and not new_item:
-            self.pinpoint_client.delete_user_endpoints(user_id)
-            return
-
-        # check for a change of email, phone
-        for dynamo_name, pinpoint_name in (('email', 'EMAIL'), ('phoneNumber', 'SMS')):
-            value = new_item.get(dynamo_name)
-            if old_item.get(dynamo_name) == value:
-                continue
-            if value:
-                self.pinpoint_client.update_user_endpoint(user_id, pinpoint_name, value)
-            else:
-                self.pinpoint_client.delete_user_endpoint(user_id, pinpoint_name)
-
-        # check if this was a change in user status
-        status = new_item.get('userStatus', enums.UserStatus.ACTIVE)
-        if old_item and old_item.get('userStatus', enums.UserStatus.ACTIVE) != status:
-            if status == enums.UserStatus.ACTIVE:
-                self.pinpoint_client.enable_user_endpoints(user_id)
-            if status == enums.UserStatus.DISABLED:
-                self.pinpoint_client.disable_user_endpoints(user_id)
-            if status == enums.UserStatus.DELETING:
-                self.pinpoint_client.delete_user_endpoints(user_id)
-
-    def postprocess_requested_followers_card(self, user_id, old_item, new_item):
-        old_requested_followers_count = (old_item or {}).get('followersRequestedCount', 0)
-        new_requested_followers_count = (new_item or {}).get('followersRequestedCount', 0)
-        card_spec = RequestedFollowersCardSpec(user_id)
-
-        if old_requested_followers_count == 0 and new_requested_followers_count > 0:
-            self.card_manager.add_card_by_spec_if_dne(card_spec)
-
-        if old_requested_followers_count > 0 and new_requested_followers_count == 0:
-            self.card_manager.remove_card_by_spec_if_exists(card_spec)
 
     def get_available_placeholder_photo_codes(self):
         # don't want to foce the test suite to always pass in this parameter
