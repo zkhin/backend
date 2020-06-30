@@ -417,6 +417,7 @@ type CardNotification {
 
 enum CardNotificationType {
   ADDED
+  EDITED
   DELETED
 }
 

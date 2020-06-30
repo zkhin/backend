@@ -80,7 +80,9 @@ def test_send_gql_notifications(card_postprocessor, card, user, caplog, appsync_
     # simulate editing
     appsync_client.reset_mock()
     card_postprocessor.send_gql_notifications(card.item, card.item)
-    assert len(appsync_client.mock_calls) == 0
+    assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
+    assert appsync_client.send.call_args.args[1]['input']['type'] == CardNotificationType.EDITED
+    assert appsync_client.send.call_args.args[1]['input']['cardId'] == card.id
 
     # simulate deleting
     appsync_client.reset_mock()

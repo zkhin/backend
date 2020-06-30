@@ -32,6 +32,10 @@ class CardPostProcessor:
             self.appsync.trigger_notification(
                 CardNotificationType.ADDED, user_id, card_id, title, action, sub_title=sub_title
             )
+        if new_item and old_item:
+            self.appsync.trigger_notification(
+                CardNotificationType.EDITED, user_id, card_id, title, action, sub_title=sub_title
+            )
         if not new_item and old_item:
             self.appsync.trigger_notification(
                 CardNotificationType.DELETED, user_id, card_id, title, action, sub_title=sub_title,

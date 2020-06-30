@@ -22,16 +22,20 @@ test('Card message triggers cannot be called from external graphql client', asyn
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // verify we can't call the trigger method, even with well-formed input
-  const input = {
-    userId: ourUserId,
-    type: 'ADDED',
-    cardId: uuidv4(),
-    title: 'title',
-    action: 'https://real.app/go',
-  }
-  await expect(ourClient.mutate({mutation: mutations.triggerCardNotification, variables: {input}})).rejects.toThrow(
-    /ClientError: Access denied/,
-  )
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.triggerCardNotification,
+      variables: {
+        input: {
+          userId: ourUserId,
+          type: 'ADDED',
+          cardId: uuidv4(),
+          title: 'title',
+          action: 'https://real.app/go',
+        },
+      },
+    }),
+  ).rejects.toThrow(/ClientError: Access denied/)
 })
 
 test('Cannot subscribe to other users notifications', async () => {
@@ -58,17 +62,20 @@ test('Cannot subscribe to other users notifications', async () => {
 
   // they create a post
   const postId = uuidv4()
-  let resp = await theirClient.mutate({
-    mutation: mutations.addPost,
-    variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
-  })
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  await theirClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
+    })
+    .then(({data}) => {
+      expect(data.addPost.postId).toBe(postId)
+      expect(data.addPost.postStatus).toBe('COMPLETED')
+    })
 
   // we comment on their post (thus generating a card)
-  const commentId = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore!'}})
-  expect(resp.data.addComment.commentId).toBe(commentId)
+  await ourClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: uuidv4(), postId, text: 'lore!'}})
+    .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // wait for some messages to show up, ensure none did for us but one did for them
   await misc.sleep(5000)
@@ -81,148 +88,4 @@ test('Cannot subscribe to other users notifications', async () => {
   // shut down the subscription
   theirSub.unsubscribe()
   await theirSubInitTimeout
-})
-
-test('Lifecycle, format for comment activity notification', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-
-  // we add a post
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({
-    mutation: mutations.addPost,
-    variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'},
-  })
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-
-  // we subscribe to our cards
-  const [resolvers, rejectors] = [[], []]
-
-  const sub = await ourClient
-    .subscribe({query: subscriptions.onCardNotification, variables: {userId: ourUserId}})
-    .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
-      },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
-    })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
-
-  // set up a promise that will resolve to the next message received from the subscription
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
-
-  // they comment on our post (thus generating a card)
-  const commentId = uuidv4()
-  resp = await theirClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore!'}})
-  expect(resp.data.addComment.commentId).toBe(commentId)
-
-  // verify the subscription received the notification and in correct format
-  resp = await nextNotification
-  expect(resp.data.onCardNotification.userId).toBe(ourUserId)
-  expect(resp.data.onCardNotification.type).toBe('ADDED')
-  expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
-  expect(resp.data.onCardNotification.card.title).toBe('You have 1 new comment')
-  expect(resp.data.onCardNotification.card.subTitle).toBeNull()
-  expect(resp.data.onCardNotification.card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*/comments$'))
-  expect(resp.data.onCardNotification.card.action).toContain(postId)
-  const orgCard = resp.data.onCardNotification.card
-
-  // set up a promise that will resolve to the next message received from the subscription
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
-
-  // we report to have viewed the post (hence deleting the card)
-  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-
-  // verify the subscription received the notification and in correct format
-  resp = await nextNotification
-  expect(resp.data.onCardNotification.userId).toBe(ourUserId)
-  expect(resp.data.onCardNotification.type).toBe('DELETED')
-  expect(resp.data.onCardNotification.card).toEqual(orgCard)
-
-  // shut down the subscription
-  sub.unsubscribe()
-  await subInitTimeout
-})
-
-test('Lifecycle, format for chat activity notification', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-
-  // we start a chat with them
-  const chatId = uuidv4()
-  let resp = await ourClient.mutate({
-    mutation: mutations.createDirectChat,
-    variables: {userId: theirUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'},
-  })
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
-
-  // we subscribe to our cards
-  const [resolvers, rejectors] = [[], []]
-
-  const sub = await ourClient
-    .subscribe({query: subscriptions.onCardNotification, variables: {userId: ourUserId}})
-    .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
-      },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
-    })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
-
-  // set up a promise that will resolve to the next message received from the subscription
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
-
-  // they add a message to the chat (thus generating a card)
-  const messageId = uuidv4()
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId, text: 'lore'}})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId)
-
-  // verify the subscription received the notification and in correct format
-  resp = await nextNotification
-  expect(resp.data.onCardNotification.userId).toBe(ourUserId)
-  expect(resp.data.onCardNotification.type).toBe('ADDED')
-  expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
-  expect(resp.data.onCardNotification.card.title).toBe('You have 1 chat with new messages')
-  expect(resp.data.onCardNotification.card.subTitle).toBeNull()
-  expect(resp.data.onCardNotification.card.action).toBe('https://real.app/chat/')
-  const orgCard = resp.data.onCardNotification.card
-
-  // set up a promise that will resolve to the next message received from the subscription
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
-
-  // we report to have viewed the chat (hence deleting the card)
-  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
-
-  // verify the subscription received the notification and in correct format
-  resp = await nextNotification
-  expect(resp.data.onCardNotification.userId).toBe(ourUserId)
-  expect(resp.data.onCardNotification.type).toBe('DELETED')
-  expect(resp.data.onCardNotification.card).toEqual(orgCard)
-
-  // shut down the subscription
-  sub.unsubscribe()
-  await subInitTimeout
 })
