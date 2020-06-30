@@ -56,7 +56,7 @@ test('List cards', async () => {
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
   // verify list & count that one card
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
@@ -73,7 +73,7 @@ test('List cards', async () => {
   resp = await theirClient.mutate({mutation: mutations.addComment, variables})
 
   // verify list & count for those two cards, including order (most recent first)
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(2)
@@ -91,22 +91,22 @@ test('Delete card, generate new card after deleting', async () => {
     /ClientError: No card .* found/,
   )
 
-  // they start a direct chat with us
+  // they start a direct chat with us, verify generates us a card
   const chatId = uuidv4()
-  let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
-  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
+  await theirClient
+    .mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'},
+    })
+    .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
   await misc.sleep(2000) // dynamo
-
-  // verify we see the card, and its count
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.cardCount).toBe(1)
-  expect(resp.data.self.cards.items).toHaveLength(1)
-  expect(resp.data.self.cards.items[0].cardId).toBeTruthy()
-  expect(resp.data.self.cards.items[0].cardId).toBeTruthy()
-  const card = resp.data.self.cards.items[0]
+  const card = await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    expect(data.self.cards.items[0].cardId).toBeTruthy()
+    return data.self.cards.items[0]
+  })
 
   // verify they can't delete our card
   await expect(
@@ -114,24 +114,39 @@ test('Delete card, generate new card after deleting', async () => {
   ).rejects.toThrow(/ClientError: Caller.* does not own Card /)
 
   // verify we can delete our card
-  resp = await ourClient.mutate({mutation: mutations.deleteCard, variables: {cardId: card.cardId}})
-  expect(resp.data.deleteCard).toEqual(card)
+  await ourClient
+    .mutate({mutation: mutations.deleteCard, variables: {cardId: card.cardId}})
+    .then(({data}) => expect(data.deleteCard).toEqual(card))
+  await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(0)
+    expect(data.self.cards.items).toHaveLength(0)
+  })
 
-  // verify the card and its count are gone
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.cardCount).toBe(0)
-  expect(resp.data.self.cards.items).toHaveLength(0)
+  // they add a message to a chat that already has new messages - verify no new card generated
+  await theirClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'lore ipsum'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBeTruthy())
+  await misc.sleep(2000) // dynamo
+  await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(0)
+    expect(data.self.cards.items).toHaveLength(0)
+  })
 
-  // they add a message
-  variables = {chatId, messageId: uuidv4(), text: 'lore ipsum'}
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-
-  // verify we see the card and it's exactly like the old card (even same cardId)
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.cardCount).toBe(1)
-  expect(resp.data.self.cards.items).toHaveLength(1)
-  expect(resp.data.self.cards.items[0]).toEqual(card)
+  // they open up a group chat with us, verify card generated same as old one with a different title
+  await theirClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId: uuidv4(), userIds: [ourUserId], messageId: uuidv4(), messageText: 'm1'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBeTruthy())
+  await misc.sleep(2000) // dynamo
+  await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    expect(data.self.cards.items[0].cardId).toBe(card.cardId)
+    expect(data.self.cards.items[0].title).not.toBe(card.title)
+  })
 })

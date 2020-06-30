@@ -21,7 +21,6 @@ class Chat(ViewModelMixin):
         dynamo=None,
         member_dynamo=None,
         block_manager=None,
-        card_manager=None,
         chat_message_manager=None,
         user_manager=None,
         **kwargs,
@@ -33,8 +32,6 @@ class Chat(ViewModelMixin):
             self.member_dynamo = member_dynamo
         if block_manager:
             self.block_manager = block_manager
-        if card_manager:
-            self.card_manager = card_manager
         if chat_message_manager:
             self.chat_message_manager = chat_message_manager
         if user_manager:

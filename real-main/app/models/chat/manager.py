@@ -64,7 +64,6 @@ class ChatManager(ViewManagerMixin, ManagerBase):
             'member_dynamo': getattr(self, 'member_dynamo', None),
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
-            'card_manager': self.card_manager,
             'chat_message_manager': self.chat_message_manager,
             'user_manager': self.user_manager,
         }

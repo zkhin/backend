@@ -1,7 +1,5 @@
 import pendulum
 
-from app.models.card.specs import ChatCardSpec
-
 
 class ChatPostProcessor:
     def __init__(
@@ -28,18 +26,17 @@ class ChatPostProcessor:
             user_id = sk.split('/')[1]
             old_count = (old_item or {}).get('messagesUnviewedCount', 0)
             new_count = (new_item or {}).get('messagesUnviewedCount', 0)
-            if old_count == 0 and new_count != 0:
+            if old_count == 0 and new_count > 0:
                 self.user_manager.dynamo.increment_chats_with_unviewed_messages_count(user_id)
-            if old_count != 0 and new_count == 0:
+            if old_count > 0 and new_count == 0:
                 self.user_manager.dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
 
-        # if this is a view record, clear unviewed messages and the chat card
+        # if this is a view record, clear unviewed messages
         if sk.startswith('view/'):
             user_id = sk.split('/')[1]
             # only adds or edits of view items
             if new_item:
                 self.member_dynamo.clear_messages_unviewed_count(chat_id, user_id)
-                self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
 
     def chat_message_added(self, chat_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.
@@ -49,12 +46,13 @@ class ChatPostProcessor:
         # for each memeber of the chat
         #   - update the last message activity timestamp (controls chat ordering)
         #   - for everyone except the author, increment their 'messagesUnviewedCount'
-        #     and add a 'You have new chat messages' card if it doesn't already exist
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             self.member_dynamo.update_last_message_activity_at(chat_id, user_id, created_at, fail_soft=True)
             if user_id != author_user_id:
                 self.member_dynamo.increment_messages_unviewed_count(chat_id, user_id)
-                self.card_manager.add_card_by_spec_if_dne(ChatCardSpec(user_id), now=created_at)
+                # TODO
+                # we can be in a state where the user manually dismissed a card, and this view does not
+                # change the user's overall count of chats with unread messages, but should still create a card
 
     def chat_message_deleted(self, chat_id, message_id, author_user_id, created_at):
         # Note that dynamo has no support for batch updates.

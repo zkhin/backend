@@ -72,6 +72,21 @@ def test_add_card_maximal(card_dynamo):
     }
 
 
+def test_update_title(card_dynamo):
+    # add a card, check title
+    card_id = str(uuid4())
+    org_card_item = card_dynamo.add_card(card_id, 'uid', 'first-title', 'a')
+    assert card_dynamo.get_card(card_id) == org_card_item
+    assert org_card_item['title'] == 'first-title'
+
+    # update title, verify
+    card_item = card_dynamo.update_title(card_id, 'new title')
+    assert card_dynamo.get_card(card_id) == card_item
+    assert card_item['title'] == 'new title'
+    org_card_item['title'] = card_item['title']
+    assert org_card_item == card_item
+
+
 def test_clear_notify_user_at(card_dynamo):
     # add a card with a notify_user_at, verify
     card_id = str(uuid4())

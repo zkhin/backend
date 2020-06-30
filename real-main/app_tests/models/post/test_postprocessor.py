@@ -28,16 +28,48 @@ def post(post_manager, user):
     yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
 
 
-def test_comment_added(post_postprocessor, post, user, user2, card_manager):
-    card_spec = CommentCardSpec(user.id, post.id)
+def test_run_keep_card_insync(post_postprocessor, post, card_manager):
+    pk, sk = post.item['partitionKey'], post.item['sortKey']
 
+    # verify starting state
+    card_spec = CommentCardSpec(post.user_id, post.id)
+    assert card_manager.get_card(card_spec.card_id) is None
+
+    # no change to our field
+    old_item = post.item
+    new_item = {**old_item, 'unrelated': 42}
+    post_postprocessor.run(pk, sk, old_item, new_item)
+    assert card_manager.get_card(card_spec.card_id) is None
+
+    # add card
+    old_item = new_item
+    new_item = {**old_item, 'commentsUnviewedCount': 1}
+    post_postprocessor.run(pk, sk, old_item, new_item)
+    card = card_manager.get_card(card_spec.card_id)
+    assert card.id == card_spec.card_id
+
+    # change card title
+    old_item = new_item
+    new_item = {**old_item, 'commentsUnviewedCount': 2}
+    post_postprocessor.run(pk, sk, old_item, new_item)
+    new_card = card_manager.get_card(card_spec.card_id)
+    assert new_card.id == card_spec.card_id
+    assert new_card.item['title'] != card.item['title']
+
+    # delete card
+    old_item = new_item
+    new_item = {**old_item, 'commentsUnviewedCount': 0}
+    post_postprocessor.run(pk, sk, old_item, new_item)
+    assert card_manager.get_card(card_spec.card_id) is None
+
+
+def test_comment_added(post_postprocessor, post, user, user2):
     # verify starting state
     post.refresh_item()
     assert 'commentCount' not in post.item
     assert 'commentsUnviewedCount' not in post.item
     assert 'gsiA3PartitionKey' not in post.item
     assert 'gsiA3SortKey' not in post.item
-    assert card_manager.get_card(card_spec.card_id) is None
 
     # postprocess a comment by the owner, which is already viewed
     post_postprocessor.comment_added(post.id, user.id, 'unused')
@@ -46,7 +78,6 @@ def test_comment_added(post_postprocessor, post, user, user2, card_manager):
     assert 'commentsUnviewedCount' not in post.item
     assert 'gsiA3PartitionKey' not in post.item
     assert 'gsiA3SortKey' not in post.item
-    assert card_manager.get_card(card_spec.card_id) is None
 
     # postprocess a comment by other, which has not yet been viewed
     now = pendulum.now('utc')
@@ -56,7 +87,6 @@ def test_comment_added(post_postprocessor, post, user, user2, card_manager):
     assert post.item['commentsUnviewedCount'] == 1
     assert post.item['gsiA3PartitionKey'].split('/') == ['post', user.id]
     assert pendulum.parse(post.item['gsiA3SortKey']) == now
-    assert card_manager.get_card(card_spec.card_id)
 
     # postprocess another comment by other, which has not yet been viewed
     now = pendulum.now('utc')
@@ -66,12 +96,18 @@ def test_comment_added(post_postprocessor, post, user, user2, card_manager):
     assert post.item['commentsUnviewedCount'] == 2
     assert post.item['gsiA3PartitionKey'].split('/') == ['post', user.id]
     assert pendulum.parse(post.item['gsiA3SortKey']) == now
-    assert card_manager.get_card(card_spec.card_id)
 
 
 def test_comment_deleted(post_postprocessor, post, user2, caplog):
-    # postprocess an add to increment counts, and verify starting state
+    # postprocess an two adds to increment counts, and verify starting state
     post_postprocessor.comment_added(post.id, user2.id, pendulum.now('utc'))
+    post_postprocessor.comment_added(post.id, user2.id, pendulum.now('utc'))
+    post.refresh_item()
+    assert post.item['commentCount'] == 2
+    assert post.item['commentsUnviewedCount'] == 2
+
+    # postprocess a deleted comment, verify counts drop as expected
+    post_postprocessor.comment_deleted(post.id, str(uuid4()), user2.id, pendulum.now('utc'))
     post.refresh_item()
     assert post.item['commentCount'] == 1
     assert post.item['commentsUnviewedCount'] == 1

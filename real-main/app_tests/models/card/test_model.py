@@ -28,7 +28,7 @@ def post(user, post_manager):
 
 @pytest.fixture
 def comment_card(user, card_manager, post):
-    yield card_manager.add_card_by_spec_if_dne(CommentCardSpec(user.id, post.id))
+    yield card_manager.add_or_update_card_by_spec(CommentCardSpec(user.id, post.id, unviewed_comments_count=42))
 
 
 def test_serialize(user, card):

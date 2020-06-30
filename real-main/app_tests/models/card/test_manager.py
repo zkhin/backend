@@ -20,18 +20,18 @@ user2 = user
 
 @pytest.fixture
 def chat_card_spec(user):
-    yield specs.ChatCardSpec(user.id)
+    yield specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=2)
 
 
 @pytest.fixture
 def requested_followers_card_spec(user):
-    yield specs.RequestedFollowersCardSpec(user.id)
+    yield specs.RequestedFollowersCardSpec(user.id, requested_followers_count=3)
 
 
 @pytest.fixture
 def comment_card_spec(user, post_manager):
     post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
-    yield specs.CommentCardSpec(user.id, post.id)
+    yield specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=4)
 
 
 comment_card_spec1 = comment_card_spec
@@ -101,7 +101,7 @@ def test_add_and_remove_card_by_spec(user, spec, card_manager):
 
     # add the card, verify state
     before = pendulum.now('utc')
-    card_manager.add_card_by_spec_if_dne(spec)
+    card_manager.add_or_update_card_by_spec(spec)
     after = pendulum.now('utc')
     card = card_manager.get_card(spec.card_id)
     assert card.id == spec.card_id
@@ -114,7 +114,7 @@ def test_add_and_remove_card_by_spec(user, spec, card_manager):
         assert card.notify_user_at is None
 
     # add the card again, verify no-op
-    card_manager.add_card_by_spec_if_dne(spec)
+    card_manager.add_or_update_card_by_spec(spec)
     new_card = card_manager.get_card(spec.card_id)
     assert new_card.id == spec.card_id
     assert new_card.item['title'] == spec.title
@@ -130,6 +130,28 @@ def test_add_and_remove_card_by_spec(user, spec, card_manager):
     assert card_manager.get_card(spec.card_id) is None
 
 
+def test_add_or_update_card_by_spec(card_manager, user):
+    org_spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=3)
+    new_spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=1)
+    assert ' 3 chats ' in org_spec.title
+    assert ' 1 chat ' in new_spec.title
+    assert org_spec.card_id == new_spec.card_id
+    card_id = org_spec.card_id
+
+    # add the card, verify
+    card = card_manager.add_or_update_card_by_spec(org_spec)
+    assert card_manager.get_card(card_id).item == card.item
+    assert card.item['title'] == org_spec.title
+    org_card = card
+
+    # update the card, verify
+    card = card_manager.add_or_update_card_by_spec(new_spec)
+    assert card_manager.get_card(card_id).item == card.item
+    assert card.item['title'] == new_spec.title
+    org_card.item['title'] = card.item['title']
+    assert org_card.item == card.item
+
+
 def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comment_card_spec2):
     spec1 = comment_card_spec1
     spec2 = comment_card_spec2
@@ -139,12 +161,12 @@ def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comm
     assert card_manager.get_card(spec2.card_id) is None
 
     # add the card, verify state
-    card_manager.add_card_by_spec_if_dne(spec1)
+    card_manager.add_or_update_card_by_spec(spec1)
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id) is None
 
     # add the other card, verify state and no conflict
-    card_manager.add_card_by_spec_if_dne(spec2)
+    card_manager.add_or_update_card_by_spec(spec2)
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id)
 

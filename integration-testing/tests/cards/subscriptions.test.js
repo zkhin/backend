@@ -130,7 +130,7 @@ test('Lifecycle, format for comment activity notification', async () => {
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('ADDED')
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
-  expect(resp.data.onCardNotification.card.title).toBe('You have new comments')
+  expect(resp.data.onCardNotification.card.title).toBe('You have 1 new comment')
   expect(resp.data.onCardNotification.card.subTitle).toBeNull()
   expect(resp.data.onCardNotification.card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*/comments$'))
   expect(resp.data.onCardNotification.card.action).toContain(postId)
@@ -202,7 +202,7 @@ test('Lifecycle, format for chat activity notification', async () => {
   expect(resp.data.onCardNotification.userId).toBe(ourUserId)
   expect(resp.data.onCardNotification.type).toBe('ADDED')
   expect(resp.data.onCardNotification.card.cardId).toBeTruthy()
-  expect(resp.data.onCardNotification.card.title).toBe('You have new messages')
+  expect(resp.data.onCardNotification.card.title).toBe('You have 1 chat with new messages')
   expect(resp.data.onCardNotification.card.subTitle).toBeNull()
   expect(resp.data.onCardNotification.card.action).toBe('https://real.app/chat/')
   const orgCard = resp.data.onCardNotification.card

@@ -1,6 +1,6 @@
 import logging
 
-from app.models.card.specs import RequestedFollowersCardSpec
+from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 
 from .enums import UserStatus
 
@@ -18,6 +18,7 @@ class UserPostProcessor:
         self.handle_elasticsearch(old_item, new_item)
         self.handle_pinpoint(user_id, old_item, new_item)
         self.handle_requested_followers_card(user_id, old_item, new_item)
+        self.handle_chats_with_new_messages_card(user_id, old_item, new_item)
 
     def handle_elasticsearch(self, old_item, new_item):
         user_id = (new_item or old_item)['userId']
@@ -61,12 +62,25 @@ class UserPostProcessor:
                 self.pinpoint_client.delete_user_endpoints(user_id)
 
     def handle_requested_followers_card(self, user_id, old_item, new_item):
-        old_requested_followers_count = (old_item or {}).get('followersRequestedCount', 0)
-        new_requested_followers_count = (new_item or {}).get('followersRequestedCount', 0)
-        card_spec = RequestedFollowersCardSpec(user_id)
+        old_cnt = (old_item or {}).get('followersRequestedCount', 0)
+        new_cnt = (new_item or {}).get('followersRequestedCount', 0)
+        if new_cnt == old_cnt:
+            return
+        if new_cnt > 0:
+            self.card_manager.add_or_update_card_by_spec(
+                RequestedFollowersCardSpec(user_id, requested_followers_count=new_cnt)
+            )
+        else:
+            self.card_manager.remove_card_by_spec_if_exists(RequestedFollowersCardSpec(user_id))
 
-        if old_requested_followers_count == 0 and new_requested_followers_count > 0:
-            self.card_manager.add_card_by_spec_if_dne(card_spec)
-
-        if old_requested_followers_count > 0 and new_requested_followers_count == 0:
-            self.card_manager.remove_card_by_spec_if_exists(card_spec)
+    def handle_chats_with_new_messages_card(self, user_id, old_item, new_item):
+        old_cnt = (old_item or {}).get('chatsWithUnviewedMessagesCount', 0)
+        new_cnt = (new_item or {}).get('chatsWithUnviewedMessagesCount', 0)
+        if new_cnt == old_cnt:
+            return
+        if new_cnt > 0:
+            self.card_manager.add_or_update_card_by_spec(
+                ChatCardSpec(user_id, chats_with_unviewed_messages_count=new_cnt)
+            )
+        else:
+            self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))

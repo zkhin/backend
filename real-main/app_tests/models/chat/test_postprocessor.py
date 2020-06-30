@@ -6,8 +6,6 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card.specs import ChatCardSpec
-
 
 @pytest.fixture
 def chat_postprocessor(chat_manager):
@@ -140,8 +138,7 @@ def test_run_member_deleted(chat_postprocessor, chat, user1):
     assert chat_postprocessor.user_manager.mock_calls == []
 
 
-def test_run_view_added_edited_deleted(chat_postprocessor, card_manager, chat, user1):
-    card_spec = ChatCardSpec(user1.id)
+def test_run_view_added_edited_deleted(chat_postprocessor, chat, user1):
     pk, sk = itemgetter('partitionKey', 'sortKey')(chat.view_dynamo.pk(chat.id, user1.id))
 
     # simulate a new view
@@ -150,10 +147,6 @@ def test_run_view_added_edited_deleted(chat_postprocessor, card_manager, chat, u
     assert new_item['viewCount'] == 2
     old_item = None
 
-    # set up the card
-    card_manager.add_card_by_spec_if_dne(card_spec)
-    assert card_manager.get_card(card_spec.card_id)
-
     # set up the messagesUnviewedCount so it can be cleared
     chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
     assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
@@ -161,17 +154,12 @@ def test_run_view_added_edited_deleted(chat_postprocessor, card_manager, chat, u
     # postprocess the add, verify state changed
     chat_postprocessor.run(pk, sk, old_item, new_item)
     assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert card_manager.get_card(card_spec.card_id) is None
 
     # simulate recording another view on a chat that's already been viewed
     old_item = new_item
     chat.record_view_count(user1.id, 3)
     new_item = chat.view_dynamo.get_view(chat.id, user1.id)
     assert new_item['viewCount'] == 5
-
-    # set up the card again
-    card_manager.add_card_by_spec_if_dne(card_spec)
-    assert card_manager.get_card(card_spec.card_id)
 
     # set up the messagesUnviewedCount so it can be cleared
     chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
@@ -180,15 +168,10 @@ def test_run_view_added_edited_deleted(chat_postprocessor, card_manager, chat, u
     # postprocess the edit, verify state changed
     chat_postprocessor.run(pk, sk, old_item, new_item)
     assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert card_manager.get_card(card_spec.card_id) is None
 
     # simulate deleting the view record altogether
     old_item = new_item
     new_item = None
-
-    # set up the card again
-    card_manager.add_card_by_spec_if_dne(card_spec)
-    assert card_manager.get_card(card_spec.card_id)
 
     # set up the messagesUnviewedCount so it can be cleared
     chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
@@ -197,13 +180,9 @@ def test_run_view_added_edited_deleted(chat_postprocessor, card_manager, chat, u
     # postprocess the delete, verify state did not change
     chat_postprocessor.run(pk, sk, old_item, new_item)
     assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
-    assert card_manager.get_card(card_spec.card_id)
 
 
-def test_chat_message_added(chat_postprocessor, card_manager, chat, user1, user2, caplog):
-    spec1 = ChatCardSpec(user1.id)
-    spec2 = ChatCardSpec(user2.id)
-
+def test_chat_message_added(chat_postprocessor, chat, user1, user2, caplog):
     # verify starting state
     chat.refresh_item()
     assert 'messagesCount' not in chat.item
@@ -214,8 +193,6 @@ def test_chat_message_added(chat_postprocessor, card_manager, chat, user1, user2
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', chat.item['createdAt']]
     assert 'messagesUnviewedCount' not in user1_member_item
     assert 'messagesUnviewedCount' not in user2_member_item
-    assert card_manager.get_card(spec1.card_id) is None
-    assert card_manager.get_card(spec2.card_id) is None
 
     # postprocess adding a message by user1, verify state
     now = pendulum.now('utc')
@@ -229,8 +206,6 @@ def test_chat_message_added(chat_postprocessor, card_manager, chat, user1, user2
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert 'messagesUnviewedCount' not in user1_member_item
     assert user2_member_item['messagesUnviewedCount'] == 1
-    assert card_manager.get_card(spec1.card_id) is None
-    assert card_manager.get_card(spec2.card_id)
 
     # postprocess adding a message by user2, verify state
     now = pendulum.now('utc')
@@ -244,8 +219,6 @@ def test_chat_message_added(chat_postprocessor, card_manager, chat, user1, user2
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user1_member_item['messagesUnviewedCount'] == 1
     assert user2_member_item['messagesUnviewedCount'] == 1
-    assert card_manager.get_card(spec1.card_id)
-    assert card_manager.get_card(spec2.card_id)
 
     # postprocess adding a another message by user2 out of order
     before = pendulum.now('utc').subtract(seconds=5)
@@ -268,14 +241,9 @@ def test_chat_message_added(chat_postprocessor, card_manager, chat, user1, user2
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user1_member_item['messagesUnviewedCount'] == 2
     assert user2_member_item['messagesUnviewedCount'] == 1
-    assert card_manager.get_card(spec1.card_id)
-    assert card_manager.get_card(spec2.card_id)
 
 
-def test_chat_message_added_system_message(chat_postprocessor, card_manager, chat, user1, user2):
-    spec1 = ChatCardSpec(user1.id)
-    spec2 = ChatCardSpec(user2.id)
-
+def test_chat_message_added_system_message(chat_postprocessor, chat, user1, user2):
     # verify starting state
     chat.refresh_item()
     assert 'messagesCount' not in chat.item
@@ -286,8 +254,6 @@ def test_chat_message_added_system_message(chat_postprocessor, card_manager, cha
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', chat.item['createdAt']]
     assert 'messagesUnviewedCount' not in user1_member_item
     assert 'messagesUnviewedCount' not in user2_member_item
-    assert card_manager.get_card(spec1.card_id) is None
-    assert card_manager.get_card(spec2.card_id) is None
 
     # postprocess adding a message by the system, verify state
     now = pendulum.now('utc')
@@ -301,8 +267,6 @@ def test_chat_message_added_system_message(chat_postprocessor, card_manager, cha
     assert user2_member_item['gsiK2SortKey'].split('/') == ['chat', now.to_iso8601_string()]
     assert user1_member_item['messagesUnviewedCount'] == 1
     assert user2_member_item['messagesUnviewedCount'] == 1
-    assert card_manager.get_card(spec1.card_id)
-    assert card_manager.get_card(spec2.card_id)
 
 
 def test_chat_message_deleted(chat_postprocessor, chat, user1, user2, caplog):

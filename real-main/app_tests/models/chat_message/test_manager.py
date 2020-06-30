@@ -194,12 +194,12 @@ def test_record_views(chat_message_manager, chat, user2, user3, caplog):
 
 
 def test_record_views_removes_card(chat_message_manager, chat, user2, user3, card_manager):
-    spec2 = ChatCardSpec(user2.id)
-    spec3 = ChatCardSpec(user3.id)
+    spec2 = ChatCardSpec(user2.id, chats_with_unviewed_messages_count=42)
+    spec3 = ChatCardSpec(user3.id, chats_with_unviewed_messages_count=42)
 
     # add the well-known card for both users, check starting state
-    card_manager.add_card_by_spec_if_dne(spec2)
-    card_manager.add_card_by_spec_if_dne(spec3)
+    card_manager.add_or_update_card_by_spec(spec2)
+    card_manager.add_or_update_card_by_spec(spec3)
     assert card_manager.get_card(spec2.card_id)
     assert card_manager.get_card(spec3.card_id)
 

@@ -59,7 +59,7 @@ test('Generate comment card', async () => {
   // verify that card has expected format
   let card = resp.data.self.cards.items[0]
   expect(card.cardId).toBeTruthy()
-  expect(card.title).toBe('You have new comments')
+  expect(card.title).toBe('You have 1 new comment')
   expect(card.subTitle).toBeNull()
   expect(card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*/comments$'))
   expect(card.action).toContain(postId)
@@ -81,12 +81,13 @@ test('Generate comment card', async () => {
     variables: {commentId: uuidv4(), postId, text: 'nice post'},
   })
 
-  // verify we still have just one card
+  // verify we still have just one card, with updated title
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
+  expect(resp.data.self.cards.items[0].title).toBe('You have 2 new comments')
 
   // we view that post
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})

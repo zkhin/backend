@@ -47,7 +47,7 @@ test('Requested followers card with correct format', async () => {
   // verify that card has expected format
   let card = resp.data.self.cards.items[0]
   expect(card.cardId).toBeTruthy()
-  expect(card.title).toBe('You have pending follow requests')
+  expect(card.title).toBe('You have 1 pending follow request')
   expect(card.subTitle).toBeNull()
   expect(card.action).toBe('https://real.app/chat/')
   expect(card.thumbnail).toBeFalsy()
@@ -56,25 +56,27 @@ test('Requested followers card with correct format', async () => {
   resp = await other2Client.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
-  // verify we still have just same card
+  // verify we still have just same card, new title
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
   expect(resp.data.self.cards.items[0].cardId).toBe(card.cardId)
+  expect(resp.data.self.cards.items[0].title).toBe('You have 2 pending follow requests')
 
   // other1 gives up on following us
   resp = await other1Client.mutate({mutation: mutations.unfollowUser, variables: {userId: ourUserId}})
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
-  // verify we still have just same card
+  // verify we still have just same card, new title
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.cardCount).toBe(1)
   expect(resp.data.self.cards.items).toHaveLength(1)
   expect(resp.data.self.cards.items[0].cardId).toBe(card.cardId)
+  expect(resp.data.self.cards.items[0].title).toBe('You have 1 pending follow request')
 
   // we accept other2's follow request
   resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: other2UserId}})

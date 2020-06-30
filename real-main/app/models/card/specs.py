@@ -36,41 +36,44 @@ class CardSpec:
 
         return None
 
-    def __eq__(self, other):
-        return self.card_id == other.card_id
-
 
 class CommentCardSpec(CardSpec):
 
-    title = 'You have new comments'
     notify_user_after = pendulum.duration(hours=24)
 
-    def __init__(self, user_id, post_id):
+    def __init__(self, user_id, post_id, unviewed_comments_count=None):
         self.post_id = post_id
         self.user_id = user_id
         self.card_id = f'{user_id}:COMMENT_ACTIVITY:{post_id}'
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/comments'
+        if unviewed_comments_count is not None:
+            cnt = unviewed_comments_count
+            self.title = f'You have {cnt} new comment{"s" if cnt > 1 else ""}'
 
 
 class ChatCardSpec(CardSpec):
 
-    title = 'You have new messages'
     action = 'https://real.app/chat/'
     post_id = None
     notify_user_after = pendulum.duration(minutes=5)
 
-    def __init__(self, user_id):
+    def __init__(self, user_id, chats_with_unviewed_messages_count=None):
         self.user_id = user_id
         self.card_id = f'{user_id}:CHAT_ACTIVITY'
+        if chats_with_unviewed_messages_count is not None:
+            cnt = chats_with_unviewed_messages_count
+            self.title = f'You have {cnt} chat{"s" if cnt > 1 else ""} with new messages'
 
 
 class RequestedFollowersCardSpec(CardSpec):
 
-    title = 'You have pending follow requests'
     action = 'https://real.app/chat/'
     post_id = None
     notify_user_after = None
 
-    def __init__(self, user_id):
+    def __init__(self, user_id, requested_followers_count=None):
         self.user_id = user_id
         self.card_id = f'{user_id}:REQUESTED_FOLLOWERS'
+        if requested_followers_count is not None:
+            cnt = requested_followers_count
+            self.title = f'You have {cnt} pending follow request{"s" if cnt > 1 else ""}'

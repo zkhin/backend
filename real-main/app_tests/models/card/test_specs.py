@@ -25,7 +25,7 @@ post2 = post
 
 def test_comment_card_spec(user, post):
     spec = specs.CommentCardSpec(user.id, post.id)
-    assert spec.title == 'You have new comments'
+    assert not hasattr(spec, 'title')
     assert spec.user_id == user.id
     assert spec.post_id == post.id
     assert user.id in spec.card_id
@@ -34,25 +34,58 @@ def test_comment_card_spec(user, post):
     assert post.id in spec.action
 
 
+def test_comment_card_spec_titles(user, post):
+    spec = specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=1)
+    assert spec.title == 'You have 1 new comment'
+
+    spec = specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=2)
+    assert spec.title == 'You have 2 new comments'
+
+    spec = specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=42)
+    assert spec.title == 'You have 42 new comments'
+
+
 def test_comment_card_specs_are_per_post(user, post1, post2):
-    assert specs.CommentCardSpec(user.id, post1.id) == specs.CommentCardSpec(user.id, post1.id)
-    assert specs.CommentCardSpec(user.id, post1.id) != specs.CommentCardSpec(user.id, post2.id)
+    assert specs.CommentCardSpec(user.id, post1.id).card_id == specs.CommentCardSpec(user.id, post1.id).card_id
+    assert specs.CommentCardSpec(user.id, post1.id).card_id != specs.CommentCardSpec(user.id, post2.id).card_id
 
 
 def test_chat_card_spec(user):
     spec = specs.ChatCardSpec(user.id)
-    assert spec.title == 'You have new messages'
+    assert not hasattr(spec, 'title')
     assert spec.user_id == user.id
     assert user.id in spec.card_id
     assert spec.action == 'https://real.app/chat/'
+
+
+def test_chat_card_spec_titles(user):
+    spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=1)
+    assert spec.title == 'You have 1 chat with new messages'
+
+    spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=2)
+    assert spec.title == 'You have 2 chats with new messages'
+
+    spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=42)
+    assert spec.title == 'You have 42 chats with new messages'
 
 
 def test_requested_followers_card_spec(user):
     spec = specs.RequestedFollowersCardSpec(user.id)
-    assert spec.title == 'You have pending follow requests'
+    assert not hasattr(spec, 'title')
     assert spec.user_id == user.id
     assert user.id in spec.card_id
     assert spec.action == 'https://real.app/chat/'
+
+
+def test_requested_followers_card_spec_titles(user):
+    spec = specs.RequestedFollowersCardSpec(user.id, requested_followers_count=1)
+    assert spec.title == 'You have 1 pending follow request'
+
+    spec = specs.RequestedFollowersCardSpec(user.id, requested_followers_count=2)
+    assert spec.title == 'You have 2 pending follow requests'
+
+    spec = specs.RequestedFollowersCardSpec(user.id, requested_followers_count=42)
+    assert spec.title == 'You have 42 pending follow requests'
 
 
 def test_from_card_id():

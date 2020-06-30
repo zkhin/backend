@@ -192,7 +192,7 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
 
 
 def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):
-    card_spec = CommentCardSpec(user.id, post.id)
+    card_spec = CommentCardSpec(user.id, post.id, unviewed_comments_count=42)
     comment1 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
     comment2 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
 
@@ -211,7 +211,7 @@ def test_record_views(comment_manager, user, user2, user3, post, caplog, card_ma
     assert comment_manager.view_dynamo.get_view(comment2.id, user2.id) is None
 
     # another user can record views of our comments, which does not clear the 'coment activity' indicators
-    post.card_manager.add_card_by_spec_if_dne(card_spec)
+    post.card_manager.add_or_update_card_by_spec(card_spec)
     post.dynamo.set_last_unviewed_comment_at(post.item, pendulum.now('utc'))
     assert post.refresh_item().item['gsiA3SortKey']
     assert card_manager.get_card(card_spec.card_id)

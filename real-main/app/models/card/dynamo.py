@@ -48,6 +48,14 @@ class CardDynamo:
         except self.client.exceptions.ConditionalCheckFailedException:
             raise CardAlreadyExists(card_id)
 
+    def update_title(self, card_id, title):
+        query_kwargs = {
+            'Key': self.pk(card_id),
+            'UpdateExpression': 'SET title = :title',
+            'ExpressionAttributeValues': {':title': title},
+        }
+        return self.client.update_item(query_kwargs)
+
     def delete_card(self, card_id):
         return self.client.delete_item(self.pk(card_id))
 

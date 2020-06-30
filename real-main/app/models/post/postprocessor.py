@@ -14,6 +14,22 @@ class PostPostProcessor:  # unfortunate namenaming
         self.card_manager = card_manager
         self.comment_manager = comment_manager
 
+    def run(self, pk, sk, old_item, new_item):
+        post_id = pk.split('/')[1]
+
+        if sk == '-':
+            # keep card in sync with unviewed comment count
+            posted_by_user_id = (new_item or old_item)['postedByUserId']
+            old_count = (old_item or {}).get('commentsUnviewedCount', 0)
+            new_count = (new_item or {}).get('commentsUnviewedCount', 0)
+            if old_count != new_count:
+                if new_count > 0:
+                    self.card_manager.add_or_update_card_by_spec(
+                        CommentCardSpec(posted_by_user_id, post_id, unviewed_comments_count=new_count)
+                    )
+                else:
+                    self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(posted_by_user_id, post_id))
+
     def comment_added(self, post_id, commented_by_user_id, created_at):
         post_item = self.dynamo.get_post(post_id)
         posted_by_user_id = post_item['postedByUserId']
@@ -21,7 +37,6 @@ class PostPostProcessor:  # unfortunate namenaming
         self.dynamo.increment_comment_count(post_id, viewed=by_post_owner)
         if not by_post_owner:
             self.dynamo.set_last_unviewed_comment_at(post_item, created_at)
-            self.card_manager.add_card_by_spec_if_dne(CommentCardSpec(posted_by_user_id, post_id))
 
     def comment_deleted(self, post_id, comment_id, commented_by_user_id, created_at):
         post_item = self.dynamo.get_post(post_id)

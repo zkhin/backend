@@ -64,9 +64,7 @@ class CardManager:
         card_item = self.dynamo.add_card(card_id, user_id, title, action, **add_card_kwargs)
         return self.init_card(card_item)
 
-    def add_card_by_spec_if_dne(self, spec, now=None):
-        if self.get_card(spec.card_id):
-            return
+    def add_or_update_card_by_spec(self, spec, now=None):
         now = now or pendulum.now('utc')
         notify_user_at = now + spec.notify_user_after if spec.notify_user_after else None
         try:
@@ -74,7 +72,8 @@ class CardManager:
                 spec.user_id, spec.title, spec.action, spec.card_id, created_at=now, notify_user_at=notify_user_at,
             )
         except self.exceptions.CardAlreadyExists:
-            pass
+            card_item = self.dynamo.update_title(spec.card_id, spec.title)
+            return self.init_card(card_item)
 
     def remove_card_by_spec_if_exists(self, spec, now=None):
         card = self.get_card(spec.card_id)
