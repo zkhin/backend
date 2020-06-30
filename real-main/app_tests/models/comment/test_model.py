@@ -90,7 +90,9 @@ def test_delete_cant_decrement_user_comment_count_below_zero(comment, user_manag
     assert comment_item['commentId'] == comment.id
 
 
-def test_only_post_owner_and_comment_owner_can_delete_a_comment(post_manager, comment_manager, user, user2, user3):
+def test_only_post_owner_and_comment_owner_can_delete_a_comment(
+    post_manager, comment_manager, user, user2, user3
+):
     post = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='go go')
     comment1 = comment_manager.add_comment('cid1', post.id, user2.id, 'run far')
     comment2 = comment_manager.add_comment('cid2', post.id, user2.id, 'run far')

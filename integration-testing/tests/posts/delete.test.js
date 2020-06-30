@@ -113,7 +113,9 @@ test('Invalid attempts to delete posts', async () => {
   const postId = uuidv4()
 
   // verify can't delete post that doens't exist
-  await expect(ourClient.mutate({mutation: mutations.deletePost, variables: {postId}})).rejects.toThrow('not exist')
+  await expect(ourClient.mutate({mutation: mutations.deletePost, variables: {postId}})).rejects.toThrow(
+    'not exist',
+  )
 
   // create a post
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})

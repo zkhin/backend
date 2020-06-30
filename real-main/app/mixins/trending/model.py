@@ -34,7 +34,9 @@ class TrendingModelMixin:
     def trending_increment_score(self, now=None, retry_count=0):
         "Return a boolean indicating if the score was incremented or not"
         if retry_count > 0:
-            logger.warning(f'trending_increment_score() for item `{self.item_type}:{self.id}` retry {retry_count}')
+            logger.warning(
+                f'trending_increment_score() for item `{self.item_type}:{self.id}` retry {retry_count}'
+            )
         if retry_count > 2:
             raise Exception(
                 f'trending_increment_score() failed for item `{self.item_type}:{self.id}` after {retry_count} tries'

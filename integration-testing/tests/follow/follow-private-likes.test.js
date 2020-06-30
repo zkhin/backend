@@ -28,7 +28,10 @@ test('When we stop following a private user, any likes of ours on their posts di
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they go private
-  resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  resp = await theirClient.mutate({
+    mutation: mutations.setUserPrivacyStatus,
+    variables: {privacyStatus: 'PRIVATE'},
+  })
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // they add two posts
@@ -93,7 +96,10 @@ test('When a private user decides to deny our following, any likes of ours on th
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // they go private
-  resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  resp = await theirClient.mutate({
+    mutation: mutations.setUserPrivacyStatus,
+    variables: {privacyStatus: 'PRIVATE'},
+  })
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // they add two posts

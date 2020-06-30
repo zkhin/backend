@@ -39,7 +39,9 @@ class FollowManager:
         return self._postprocessor
 
     def get_follow(self, follower_user_id, followed_user_id, strongly_consistent=False):
-        item = self.dynamo.get_following(follower_user_id, followed_user_id, strongly_consistent=strongly_consistent)
+        item = self.dynamo.get_following(
+            follower_user_id, followed_user_id, strongly_consistent=strongly_consistent
+        )
         return self.init_follow(item) if item else None
 
     def init_follow(self, follow_item):

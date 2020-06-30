@@ -77,9 +77,9 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 
   // verify we can't edit or delete the existing album
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'new'}})).rejects.toThrow(
-    /ClientError: User .* is not ACTIVE/,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'new'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
   await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
@@ -88,7 +88,10 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
 test('Add album with empty string description, treated as null', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'r', description: ''}})
+  let resp = await ourClient.mutate({
+    mutation: mutations.addAlbum,
+    variables: {albumId, name: 'r', description: ''},
+  })
   expect(resp.data.addAlbum.albumId).toBe(albumId)
   expect(resp.data.addAlbum.description).toBeNull()
 })

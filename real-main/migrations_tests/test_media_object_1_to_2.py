@@ -18,8 +18,12 @@ def media_object_with_s3(request, dynamo_table, s3_bucket):
     for size in SIZES:
         old_path = f'{user_id}/post/{post_id}/media/{media_id}/{size}.jpg'
         new_path = f'{user_id}/post/{post_id}/image/{size}.jpg'
-        s3_bucket.put_object(Key=old_path, Body=bytes(size, encoding='utf8'), ContentType='application/octet-stream')
-        s3_bucket.put_object(Key=new_path, Body=bytes(size, encoding='utf8'), ContentType='application/octet-stream')
+        s3_bucket.put_object(
+            Key=old_path, Body=bytes(size, encoding='utf8'), ContentType='application/octet-stream'
+        )
+        s3_bucket.put_object(
+            Key=new_path, Body=bytes(size, encoding='utf8'), ContentType='application/octet-stream'
+        )
     # add to dynamo
     media_object = {
         'partitionKey': f'media/{media_id}',

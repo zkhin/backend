@@ -231,8 +231,8 @@ prmt.get(prmtSchema, async (err, result) => {
             res.write('<script src="https://cdn.jsdelivr.net/npm/hls.js@v0.13.2"></script>')
             res.write('<script>')
             res.write(`var video = document.getElementById("${videoId}");`)
-            res.write(`if (video.canPlayType("${hlsType}")) { video.src = "${videoMasterM3U8}" }`)
-            res.write(`else { var hls = new Hls(); hls.loadSource("${videoMasterM3U8}"); hls.attachMedia(video) }`)
+            res.write(`if (video.canPlayType("${hlsType}")) {video.src = "${videoMasterM3U8}"}`)
+            res.write(`else {var hls = new Hls(); hls.loadSource("${videoMasterM3U8}"); hls.attachMedia(video)}`)
             res.write('</script>')
           }
           if (post.postType === 'IMAGE' || post.postType === 'VIDEO') {

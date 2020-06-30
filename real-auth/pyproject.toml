@@ -3,7 +3,7 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.black]
-line-length = 117
+line-length = 114
 target-version = ['py38']
 skip-string-normalization = true
 exclude = '''
@@ -19,7 +19,7 @@ exclude = '''
 # this config requires a version of isort with this issue fixed
 # https://github.com/timothycrosley/isort/issues/1117
 [tool.isort]
-line_length = 117
+line_length = 114
 known_first_party = "app,migrations"
 default_section = "THIRDPARTY"
 multi_line_output = 3
@@ -41,5 +41,5 @@ aws-xray-sdk = "^2.5.0"
 pytest = "^5.4.1"
 
 [tool.pylint.'MESSAGES CONTROL']
-max-line-length = 117
+max-line-length = 114
 disable = "C, R, import-error, attribute-defined-outside-init, fixme, no-name-in-module, unused-argument, logging-fstring-interpolation, no-member, super-init-not-called, protected-access, broad-except, unused-import, arguments-differ, redefined-outer-name, unsubscriptable-object"

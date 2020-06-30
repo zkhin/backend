@@ -307,9 +307,9 @@ test.skip('Cant add video post to album (yet)', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // verify can't move the video post into that album
-  await expect(ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})).rejects.toThrow(
-    'ClientError lsadfkjasldkfj',
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}}),
+  ).rejects.toThrow('ClientError lsadfkjasldkfj')
 })
 
 test('Adding an existing post to album not in COMPLETED status has no affect on Album.post & friends', async () => {

@@ -122,7 +122,9 @@ def test_text_only_posts_trend(post_manager, user, user2):
 def test_non_verified_image_posts_dont_trend(post_manager, user, user2, image_data_b64):
     # create an original post that fails verification
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': False})
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post = post_manager.add_post(
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}
+    )
     assert post.type == PostType.IMAGE
     assert post.is_verified is False
     assert post.original_post_id == post.id

@@ -29,7 +29,7 @@ class PostVerificationClient:
         # synchronous for now. Note this generally runs in an async env already: an s3-object-created handler
         resp = requests.post(api_url, headers=headers, json=data)
         if resp.status_code != 200:
-            raise Exception(f'Error from post verification service: `{resp.status_code}` with body: `{resp.text}`')
+            raise Exception(f'Post verification service error `{resp.status_code}` with body `{resp.text}`')
         try:
             return resp.json()['data']['isVerified']
         except Exception:

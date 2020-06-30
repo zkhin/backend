@@ -36,4 +36,4 @@ class AppSyncClient:
         )
         resp = transport.execute(query, variables)
         if resp.errors:
-            raise Exception(f'Error querying appsync: `{resp.errors}` with query `{query}`, variables `{variables}`')
+            raise Exception(f'Appsync resp error: `{resp.errors}` from query `{query}`, variables `{variables}`')

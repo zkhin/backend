@@ -93,9 +93,9 @@ test('Edit post failures for for various scenarios', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't edit
-  await expect(ourClient.mutate({mutation: mutations.editPost, variables: {postId, text: 'new2'}})).rejects.toThrow(
-    /ClientError: User .* is not ACTIVE/,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.editPost, variables: {postId, text: 'new2'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 test('Edit post edits the copies of posts in followers feeds', async () => {

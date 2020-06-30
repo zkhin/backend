@@ -607,7 +607,13 @@ module.exports.createDirectChat = gql`
 `
 
 module.exports.createGroupChat = gql`
-  mutation CreateGroupChat($chatId: ID!, $name: String, $userIds: [ID!]!, $messageId: ID!, $messageText: String!) {
+  mutation CreateGroupChat(
+    $chatId: ID!
+    $name: String
+    $userIds: [ID!]!
+    $messageId: ID!
+    $messageText: String!
+  ) {
     createGroupChat(
       chatId: $chatId
       name: $name

@@ -97,7 +97,9 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
 
   // we try to edit its expiresAt to a date in the past, gql schema catches this error not our server code
   variables = {postId, expiresAt: '2019-01-01T01:01:01'}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow('GraphQL error')
+  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
+    'GraphQL error',
+  )
 })
 
 test('Add and remove expiresAt from a Post', async () => {

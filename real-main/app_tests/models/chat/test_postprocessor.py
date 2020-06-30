@@ -332,7 +332,9 @@ def test_chat_message_deleted_message_view(chat_postprocessor, chat, user1, user
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
 
 
-def test_chat_message_deleted_chat_views(chat_postprocessor, chat, user1, user2, chat_message_manager, chat_manager):
+def test_chat_message_deleted_chat_views(
+    chat_postprocessor, chat, user1, user2, chat_message_manager, chat_manager
+):
     # each user posts two messages, one of which is 'viewed' by both and the other is not
     message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
     message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)

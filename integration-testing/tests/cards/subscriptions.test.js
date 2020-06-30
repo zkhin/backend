@@ -47,10 +47,12 @@ test('Cannot subscribe to other users notifications', async () => {
   // the subscription next() method is never triggered
   const ourNotifications = []
   const theirNotifications = []
-  await ourClient.subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}}).subscribe({
-    next: (resp) => ourNotifications.push(resp),
-    error: (resp) => console.log(resp),
-  })
+  await ourClient
+    .subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}})
+    .subscribe({
+      next: (resp) => ourNotifications.push(resp),
+      error: (resp) => console.log(resp),
+    })
   const theirSub = await theirClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}})
     .subscribe({

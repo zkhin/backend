@@ -53,7 +53,9 @@ class CardManager:
         }
         return Card(item, **kwargs)
 
-    def add_card(self, user_id, title, action, card_id=None, sub_title=None, created_at=None, notify_user_at=None):
+    def add_card(
+        self, user_id, title, action, card_id=None, sub_title=None, created_at=None, notify_user_at=None
+    ):
         created_at = created_at or pendulum.now('utc')
         card_id = card_id or str(uuid.uuid4())
         add_card_kwargs = {
@@ -69,7 +71,12 @@ class CardManager:
         notify_user_at = now + spec.notify_user_after if spec.notify_user_after else None
         try:
             return self.add_card(
-                spec.user_id, spec.title, spec.action, spec.card_id, created_at=now, notify_user_at=notify_user_at,
+                spec.user_id,
+                spec.title,
+                spec.action,
+                spec.card_id,
+                created_at=now,
+                notify_user_at=notify_user_at,
             )
         except self.exceptions.CardAlreadyExists:
             card_item = self.dynamo.update_title(spec.card_id, spec.title)

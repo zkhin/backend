@@ -55,7 +55,8 @@ class FollowedFirstStoryManager:
             None,
         )
         ffs_now = next(
-            iter(sorted(filter(lambda s: s is not None, [db_story, story_now]), key=lambda s: s['expiresAt'])), None
+            iter(sorted(filter(lambda s: s is not None, [db_story, story_now]), key=lambda s: s['expiresAt'])),
+            None,
         )
 
         if ffs_prev and not ffs_now:

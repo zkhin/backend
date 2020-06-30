@@ -41,7 +41,9 @@ describe.skip('google user', () => {
     const logins = {[cognito.googleLoginsKey]: googleIdToken}
     let resp = await cognito.identityPoolClient.getId({Logins: logins}).promise()
     const userId = resp['IdentityId']
-    resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins: logins}).promise()
+    resp = await cognito.identityPoolClient
+      .getCredentialsForIdentity({IdentityId: userId, Logins: logins})
+      .promise()
 
     // get appsync client with those creds
     client = await cognito.getAppSyncClient(resp['Credentials'])

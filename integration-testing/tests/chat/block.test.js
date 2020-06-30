@@ -158,7 +158,9 @@ test('Creating a group chat with users with have a blocking relationship skips t
   expect(resp.data.createGroupChat.chatId).toBe(chatId1)
   expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
+  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, otherUserId].sort(),
+  )
 
   // check they cannot see that chat
   resp = await theirClient.query({query: queries.chat, variables: {chatId: chatId1}})

@@ -213,7 +213,9 @@ def test_transact_set_post_status(post_dynamo):
     # set post status *with* specifying an original post id
     new_status = 'new new'
     original_post_id = 'opid'
-    transacts = [post_dynamo.transact_set_post_status(new_post_item, new_status, original_post_id=original_post_id)]
+    transacts = [
+        post_dynamo.transact_set_post_status(new_post_item, new_status, original_post_id=original_post_id)
+    ]
     post_dynamo.client.transact_write_items(transacts)
     new_post_item = post_dynamo.get_post(post_id)
     assert new_post_item.pop('postStatus') == new_status
@@ -357,7 +359,11 @@ def test_get_first_with_checksum(post_dynamo):
     post_id_1 = 'pid'
     posted_at_1 = pendulum.now('utc')
     post_dynamo.client.transact_write_items(
-        [post_dynamo.transact_add_pending_post('uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1)]
+        [
+            post_dynamo.transact_add_pending_post(
+                'uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1
+            )
+        ]
     )
     posted_at_str_1 = posted_at_1.to_iso8601_string()
     post_dynamo.set_checksum(post_id_1, posted_at_str_1, checksum)
@@ -367,7 +373,11 @@ def test_get_first_with_checksum(post_dynamo):
     post_id_2 = 'pid2'
     posted_at_2 = pendulum.now('utc')
     post_dynamo.client.transact_write_items(
-        [post_dynamo.transact_add_pending_post('uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2)]
+        [
+            post_dynamo.transact_add_pending_post(
+                'uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2
+            )
+        ]
     )
     posted_at_str_2 = posted_at_2.to_iso8601_string()
     post_dynamo.set_checksum(post_id_2, posted_at_str_2, checksum)
@@ -495,7 +505,9 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     post_id = 'post-id'
     text = 'lore ipsum'
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)]
+    transacts = [
+        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)
+    ]
     post_dynamo.client.transact_write_items(transacts)
 
     org_post_item = post_dynamo.get_post(post_id)
@@ -535,7 +547,9 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
 
     # now add it to the DB, with a lifetime
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)]
+    transacts = [
+        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)
+    ]
     post_dynamo.client.transact_write_items(transacts)
     new_post_item = post_dynamo.get_post(post_id)
     assert new_post_item['postId'] == post_id
@@ -559,10 +573,14 @@ def test_get_next_completed_post_to_expire_one_post(post_dynamo):
     post_id_1 = 'post-id-1'
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
 
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id_1, 'ptype', text='t', expires_at=expires_at)]
+    transacts = [
+        post_dynamo.transact_add_pending_post(user_id, post_id_1, 'ptype', text='t', expires_at=expires_at)
+    ]
     post_dynamo.client.transact_write_items(transacts)
     post_item = post_dynamo.get_post(post_id_1)
-    post_dynamo.client.transact_write_items([post_dynamo.transact_set_post_status(post_item, PostStatus.COMPLETED)])
+    post_dynamo.client.transact_write_items(
+        [post_dynamo.transact_set_post_status(post_item, PostStatus.COMPLETED)]
+    )
 
     assert post_dynamo.get_next_completed_post_to_expire(user_id)['postId'] == post_id_1
 

@@ -33,7 +33,7 @@ def test_verify_image_success_maximal(post_verification_client, requests_mock):
     requests_mock.post('https://url-root/verify/image', json={'errors': [], 'data': {'isVerified': False}})
 
     # do the call
-    result = post_verification_client.verify_image('https://image-url', taken_in_real=True, original_format='pink')
+    result = post_verification_client.verify_image('https://url', taken_in_real=True, original_format='pink')
     assert result is False
 
     # configure requests mock
@@ -43,7 +43,7 @@ def test_verify_image_success_maximal(post_verification_client, requests_mock):
     assert req.url == 'https://url-root/verify/image'
     assert req.json() == {
         'metadata': {'takenInReal': True, 'originalFormat': 'pink'},
-        'url': 'https://image-url',
+        'url': 'https://url',
     }
     assert req._request.headers['x-api-key'] == 'the-api-key'
 

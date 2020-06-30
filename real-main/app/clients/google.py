@@ -21,9 +21,9 @@ class GoogleClient:
         # https://developers.google.com/identity/sign-in/web/backend-auth#calling-the-tokeninfo-endpoint
         # https://googleapis.dev/python/google-auth/latest/reference/google.oauth2.id_token.html
         # raises ValueError on expired token
-        id_info = google_id_token.verify_oauth2_token(id_token, google_requests.Request(session=self.cached_session))
-        if id_info.get('aud') not in self.client_ids.values():
-            raise ValueError(f'Token wrong audience: `{id_info["aud"]}`')
-        if not id_info.get('email_verified') or not id_info.get('email'):
+        info = google_id_token.verify_oauth2_token(id_token, google_requests.Request(session=self.cached_session))
+        if info.get('aud') not in self.client_ids.values():
+            raise ValueError(f'Token wrong audience: `{info["aud"]}`')
+        if not info.get('email_verified') or not info.get('email'):
             raise ValueError('Token does not contain verified email')
-        return id_info['email']
+        return info['email']

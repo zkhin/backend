@@ -35,9 +35,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
         self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
-        self.followed_first_story_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(
-            clients, managers=managers
-        )
+        self.followed_first_story_manager = managers.get(
+            'followed_first_story'
+        ) or models.FollowedFirstStoryManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 

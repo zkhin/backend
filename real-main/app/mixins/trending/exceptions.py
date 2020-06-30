@@ -17,4 +17,4 @@ class TrendingDNEOrAttributeMismatch(TrendingException):
         self.item_id = item_id
 
     def __str__(self):
-        return f'Trending for `{self.item_type}:{self.item_id}` does not exist or does not have expected attributes'
+        return f'Trending for `{self.item_type}:{self.item_id}` DNE or does not have expected attributes'

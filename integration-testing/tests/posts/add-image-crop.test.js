@@ -179,7 +179,10 @@ test('Valid jpeg crop, metadata preserved', async () => {
   // add the post with a crop
   const postId = uuidv4()
   const crop = {upperLeft: {x: 10, y: 20}, lowerRight: {x: 30, y: 40}}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData: grantData, crop}})
+  let resp = await ourClient.mutate({
+    mutation: mutations.addPost,
+    variables: {postId, imageData: grantData, crop},
+  })
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   let urlNative = resp.data.addPost.image.url

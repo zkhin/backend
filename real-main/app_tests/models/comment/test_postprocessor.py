@@ -67,4 +67,6 @@ def test_run(comment_postprocessor, comment, post, user2, user):
     pk, sk = view_item['partitionKey'], view_item['sortKey']
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
     comment_postprocessor.run(pk, sk, None, view_item)
-    assert comment_postprocessor.post_manager.mock_calls == [call.postprocessor.comment_view_added(post.id, user.id)]
+    assert comment_postprocessor.post_manager.mock_calls == [
+        call.postprocessor.comment_view_added(post.id, user.id)
+    ]

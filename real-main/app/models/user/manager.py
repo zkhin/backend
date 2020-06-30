@@ -124,7 +124,9 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         email = attrs.get('email') if attrs.get('email_verified', 'false') == 'true' else None
         phone = attrs.get('phone_number') if attrs.get('phone_number_verified', 'false') == 'true' else None
         if not email and not phone:
-            raise self.exceptions.UserValidationException(f'User `{user_id}` has neither verified email nor phone')
+            raise self.exceptions.UserValidationException(
+                f'User `{user_id}` has neither verified email nor phone'
+            )
 
         # set the lowercased version of username in cognito
         # this is part of allowing case-insensitive logins
@@ -139,7 +141,12 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         photo_code = self.get_random_placeholder_photo_code()
         try:
             item = self.dynamo.add_user(
-                user_id, username, full_name=full_name, email=email, phone=phone, placeholder_photo_code=photo_code
+                user_id,
+                username,
+                full_name=full_name,
+                email=email,
+                phone=phone,
+                placeholder_photo_code=photo_code,
             )
         except self.exceptions.UserAlreadyExists:
             # un-claim the username in cognito

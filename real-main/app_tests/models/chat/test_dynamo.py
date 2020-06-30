@@ -250,12 +250,16 @@ def test_update_last_message_activity_at(chat_dynamo, caplog):
 
     # verify we can update from not set
     now = pendulum.now('utc')
-    assert pendulum.parse(chat_dynamo.update_last_message_activity_at(chat_id, now)['lastMessageActivityAt']) == now
+    assert (
+        pendulum.parse(chat_dynamo.update_last_message_activity_at(chat_id, now)['lastMessageActivityAt']) == now
+    )
     assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now
 
     # verify we can update from set
     now = pendulum.now('utc')
-    assert pendulum.parse(chat_dynamo.update_last_message_activity_at(chat_id, now)['lastMessageActivityAt']) == now
+    assert (
+        pendulum.parse(chat_dynamo.update_last_message_activity_at(chat_id, now)['lastMessageActivityAt']) == now
+    )
     assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now
 
     # verify we can fail soft
@@ -265,7 +269,8 @@ def test_update_last_message_activity_at(chat_dynamo, caplog):
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert all(
-        x in caplog.records[0].msg for x in ['Failed', 'last message activity', chat_id, before.to_iso8601_string()]
+        x in caplog.records[0].msg
+        for x in ['Failed', 'last message activity', chat_id, before.to_iso8601_string()]
     )
     assert resp is None
     assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now

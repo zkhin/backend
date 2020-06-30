@@ -768,11 +768,11 @@ def dislike_post(caller_user, arguments, source, context):
     if not like:
         raise ClientException(f'User has not liked post `{post_id}`, thus cannot dislike it')
 
-    prev_like_status = like.item['likeStatus']
+    prev_status = like.item['likeStatus']
     like.dislike()
 
     resp = post_manager.init_post(post).serialize(caller_user.id)
-    post_like_count = 'onymousLikeCount' if prev_like_status == LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
+    post_like_count = 'onymousLikeCount' if prev_status == LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
     resp[post_like_count] -= 1
     resp['likeStatus'] = LikeStatus.NOT_LIKED
     return resp
@@ -974,11 +974,11 @@ def create_direct_chat(caller_user, arguments, source, context):
     now = pendulum.now('utc')
     try:
         chat = chat_manager.add_direct_chat(chat_id, caller_user.id, user_id, now=now)
-        message = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user.id, now=now)
+        msg = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user.id, now=now)
     except chat_manager.exceptions.ChatException as err:
         raise ClientException(str(err))
 
-    message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED, user_ids=[user_id])
+    msg.trigger_notifications(msg.enums.ChatMessageNotificationType.ADDED, user_ids=[user_id])
     chat.refresh_item(strongly_consistent=True)
     return chat.item
 

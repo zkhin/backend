@@ -184,7 +184,10 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(resp.data.self.feed.items).toHaveLength(0)
 
   // they change from private to public
-  resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PUBLIC'}})
+  resp = await theirClient.mutate({
+    mutation: mutations.setUserPrivacyStatus,
+    variables: {privacyStatus: 'PUBLIC'},
+  })
   expect(resp.data.setUserDetails.privacyStatus).toBe('PUBLIC')
 
   // our follow request should have gone though, so their two posts should now be in our feed

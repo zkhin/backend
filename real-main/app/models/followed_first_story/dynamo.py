@@ -30,5 +30,8 @@ class FollowedFirstStoryDynamo:
         assert len(follower_user_ids) <= 25, 'Dynamo batch writer cannot handle more than 25 writes at a time'
         with self.client.table.batch_writer() as batch:
             for follower_user_id in follower_user_ids:
-                pk = {'partitionKey': f'followedFirstStory/{follower_user_id}/{posted_by_user_id}', 'sortKey': '-'}
+                pk = {
+                    'partitionKey': f'followedFirstStory/{follower_user_id}/{posted_by_user_id}',
+                    'sortKey': '-',
+                }
                 batch.delete_item(Key=pk)

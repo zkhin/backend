@@ -31,7 +31,9 @@ def completed_post(post_manager, user, image_data_b64):
     yield post_manager.add_post(user, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
-def test_cant_process_image_upload_various_errors(post_manager, user, pending_post, text_only_post, completed_post):
+def test_cant_process_image_upload_various_errors(
+    post_manager, user, pending_post, text_only_post, completed_post
+):
     with pytest.raises(AssertionError, match='IMAGE'):
         text_only_post.process_image_upload()
 

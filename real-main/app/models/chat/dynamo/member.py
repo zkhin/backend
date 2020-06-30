@@ -119,4 +119,6 @@ class ChatMemberDynamo:
             ),
             'IndexName': 'GSI-K2',
         }
-        return map(lambda item: item['partitionKey'][len('chat/') :], self.client.generate_all_query(query_kwargs))
+        return map(
+            lambda item: item['partitionKey'][len('chat/') :], self.client.generate_all_query(query_kwargs)
+        )

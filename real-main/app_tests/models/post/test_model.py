@@ -70,7 +70,9 @@ def pending_image_post_heic(post_manager, user2):
 
 @pytest.fixture
 def image_post(user, post_manager, grant_data_b64):
-    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    yield post_manager.add_post(
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64}
+    )
 
 
 @pytest.fixture
@@ -385,7 +387,11 @@ def test_set(post, user):
     # do some edits
     new_text = f'its a new dawn, right @{user.item["username"]}, its a new day'
     post.set(
-        text=new_text, comments_disabled=True, likes_disabled=True, sharing_disabled=True, verification_hidden=True
+        text=new_text,
+        comments_disabled=True,
+        likes_disabled=True,
+        sharing_disabled=True,
+        verification_hidden=True,
     )
 
     # verify new values

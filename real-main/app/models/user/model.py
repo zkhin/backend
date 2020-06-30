@@ -242,7 +242,9 @@ class User(TrendingModelMixin):
         try:
             self.cognito_client.set_user_attributes(self.id, {'preferred_username': username.lower()})
         except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
-            raise exceptions.UserValidationException(f'Username `{username}` already taken (case-insensitive cmp)')
+            raise exceptions.UserValidationException(
+                f'Username `{username}` already taken (case-insensitive cmp)'
+            )
 
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
         return self
@@ -316,7 +318,9 @@ class User(TrendingModelMixin):
         # verify we actually need to do anything
         old_value = self.item.get(names['dynamo'])
         if old_value == attribute_value:
-            raise exceptions.UserVerificationException(f'User {attribute_name} already set to `{attribute_value}`')
+            raise exceptions.UserVerificationException(
+                f'User {attribute_name} already set to `{attribute_value}`'
+            )
 
         # first we set the users email to the new, unverified one, while also setting it to another property
         # this sends the verification email to the user
@@ -344,7 +348,9 @@ class User(TrendingModelMixin):
         user_attrs = self.cognito_client.get_user_attributes(self.id)
         value = user_attrs.get(f'custom:unverified_{names["short"]}')
         if not value:
-            raise exceptions.UserVerificationException(f'No unverified email found to validate for user `{self.id}`')
+            raise exceptions.UserVerificationException(
+                f'No unverified email found to validate for user `{self.id}`'
+            )
 
         # try to do the validation
         try:

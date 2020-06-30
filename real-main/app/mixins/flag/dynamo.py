@@ -33,7 +33,10 @@ class FlagDynamo:
     def transact_delete(self, item_id, user_id):
         return {
             'Delete': {
-                'Key': {'partitionKey': {'S': f'{self.item_type}/{item_id}'}, 'sortKey': {'S': f'flag/{user_id}'}},
+                'Key': {
+                    'partitionKey': {'S': f'{self.item_type}/{item_id}'},
+                    'sortKey': {'S': f'flag/{user_id}'},
+                },
                 'ConditionExpression': 'attribute_exists(partitionKey)',
             }
         }

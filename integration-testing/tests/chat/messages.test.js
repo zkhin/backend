@@ -547,13 +547,19 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
   // we add  a message to the chat
   const messageId2 = uuidv4()
   await ourClient
-    .mutate({mutation: mutations.addChatMessage, variables: {chatId: chatId, messageId: messageId2, text: 'ipsum'}})
+    .mutate({
+      mutation: mutations.addChatMessage,
+      variables: {chatId: chatId, messageId: messageId2, text: 'ipsum'},
+    })
     .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId2))
 
   // they add another message to the chat
   const messageId3 = uuidv4()
   await theirClient
-    .mutate({mutation: mutations.addChatMessage, variables: {chatId: chatId, messageId: messageId3, text: 'ipsum'}})
+    .mutate({
+      mutation: mutations.addChatMessage,
+      variables: {chatId: chatId, messageId: messageId3, text: 'ipsum'},
+    })
     .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId3))
 
   // check our message counts look correct
@@ -730,7 +736,10 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
 
   // we report to have viewed their message in the first chat
-  resp = await ourClient.mutate({mutation: mutations.reportChatMessageViews, variables: {messageIds: [messageId1]}})
+  resp = await ourClient.mutate({
+    mutation: mutations.reportChatMessageViews,
+    variables: {messageIds: [messageId1]},
+  })
 
   // check counts again
   await misc.sleep(1000) // dynamo

@@ -89,7 +89,7 @@ class TrendingManagerMixin:
                 self.trending_dynamo.delete(item_id, expected_score=current_score)
             except exceptions.TrendingDNEOrAttributeMismatch:
                 # race condition, the item must have recieved a boost in score
-                logging.warning(f'Lost race condition, not deleting trending for item `{self.item_type}:{item_id}`')
+                logging.warning(f'Lost race condition, not deleting trending for `{self.item_type}:{item_id}`')
             else:
                 deleted += 1
             if deleted >= max_to_delete:

@@ -21,7 +21,10 @@ class PinpointClient:
             apns_msg['Body'] = body
         kwargs = {
             'ApplicationId': self.app_id,
-            'SendUsersMessageRequest': {'MessageConfiguration': {'APNSMessage': apns_msg}, 'Users': {user_id: {}}},
+            'SendUsersMessageRequest': {
+                'MessageConfiguration': {'APNSMessage': apns_msg},
+                'Users': {user_id: {}},
+            },
         }
         result = self.client.send_users_messages(**kwargs)['SendUsersMessageResponse']['Result'][user_id]
         return 'SUCCESSFUL' in (v['DeliveryStatus'] for k, v in result.items())

@@ -446,7 +446,9 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, theirUserId].sort(),
+  )
 
   // they block us
   resp = await theirClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})

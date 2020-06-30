@@ -48,7 +48,9 @@ def chats_with_new_messages_card_spec(user):
         ],
     ],
 )
-def test_handle_card_no_change(handle_method, card_manager, user, attribute_name, card_spec, old_count, new_count):
+def test_handle_card_no_change(
+    handle_method, card_manager, user, attribute_name, card_spec, old_count, new_count
+):
     old_item = {'userId': user.id}
     if old_count is not None:
         old_item[attribute_name] = old_count

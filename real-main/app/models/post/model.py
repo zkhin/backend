@@ -121,10 +121,16 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 self.id, image_size.K4, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.K4)
             )
             self.p1080_jpeg_cache = CachedImage(
-                self.id, image_size.P1080, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P1080)
+                self.id,
+                image_size.P1080,
+                s3_client=s3_uploads_client,
+                s3_path=self.get_image_path(image_size.P1080),
             )
             self.p480_jpeg_cache = CachedImage(
-                self.id, image_size.P480, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P480)
+                self.id,
+                image_size.P480,
+                s3_client=s3_uploads_client,
+                s3_path=self.get_image_path(image_size.P480),
             )
             self.p64_jpeg_cache = CachedImage(
                 self.id, image_size.P64, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P64)
@@ -241,7 +247,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 image.thumbnail(cache.image_size.max_dimensions, resample=PIL.Image.LANCZOS)
                 image.save(fh, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             except Exception as err:
-                raise exceptions.PostException(f'Unable to thumbnail image data as jpeg for post `{self.id}`: {err}')
+                raise exceptions.PostException(f'Unable to thumbnail image as jpeg for post `{self.id}`: {err}')
             cache.set(image=image)
             cache.flush()
 
@@ -537,7 +543,12 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self
 
     def set(
-        self, text=None, comments_disabled=None, likes_disabled=None, sharing_disabled=None, verification_hidden=None
+        self,
+        text=None,
+        comments_disabled=None,
+        likes_disabled=None,
+        sharing_disabled=None,
+        verification_hidden=None,
     ):
         args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
         if all(v is None for v in args):
@@ -567,7 +578,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         try:
             colors = colorthief.ColorThief(self.native_jpeg_cache.get_fh()).get_palette(color_count=5)
         except Exception as err:
-            logger.warning(f'ColorTheif failed to calculate color palette with error `{err}` for post `{self.id}`')
+            logger.warning(f'ColorTheif failed to get palette with error `{err}` for post `{self.id}`')
         else:
             self._image_item = self.image_dynamo.set_colors(self.id, colors)
         return self

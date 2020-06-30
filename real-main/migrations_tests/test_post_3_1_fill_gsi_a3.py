@@ -81,7 +81,9 @@ def test_migrate_none(dynamo_client, dynamo_table, caplog, post_already_migrated
     assert all(dynamo_table.get_item(Key=post_pk)['Item'] == post for post_pk, post in post_keys_to_items)
 
 
-def test_migrate_has_no_new_comment_activity(dynamo_client, dynamo_table, caplog, post_has_no_new_comment_activity):
+def test_migrate_has_no_new_comment_activity(
+    dynamo_client, dynamo_table, caplog, post_has_no_new_comment_activity
+):
     post = post_has_no_new_comment_activity
 
     # check starting state

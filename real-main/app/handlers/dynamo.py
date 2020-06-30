@@ -27,19 +27,19 @@ post_manager = managers.get('post') or models.PostManager(clients, managers=mana
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
 # https://stackoverflow.com/a/46738251
-type_deserializer = TypeDeserializer()
+deserialize = TypeDeserializer().deserialize
 
 
 @handler_logging
 def postprocess_records(event, context):
     for record in event['Records']:
 
-        pk = type_deserializer.deserialize(record['dynamodb']['Keys']['partitionKey'])
-        sk = type_deserializer.deserialize(record['dynamodb']['Keys']['sortKey'])
-        old_item = {k: type_deserializer.deserialize(v) for k, v in record['dynamodb'].get('OldImage', {}).items()}
-        new_item = {k: type_deserializer.deserialize(v) for k, v in record['dynamodb'].get('NewImage', {}).items()}
+        pk = deserialize(record['dynamodb']['Keys']['partitionKey'])
+        sk = deserialize(record['dynamodb']['Keys']['sortKey'])
+        old_item = {k: deserialize(v) for k, v in record['dynamodb'].get('OldImage', {}).items()}
+        new_item = {k: deserialize(v) for k, v in record['dynamodb'].get('NewImage', {}).items()}
 
-        op = 'edit' if old_item and new_item else 'add' if not old_item else 'delete' if not new_item else 'unknown'
+        op = 'edit' if old_item and new_item else 'add' if not old_item else 'delete' if not new_item else 'unkn'
         with LogLevelContext(logger, logging.INFO):
             logger.info(f'Post-processing `{op}` operation of record `{pk}`, `{sk}`')
 

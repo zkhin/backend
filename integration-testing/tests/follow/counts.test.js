@@ -78,7 +78,10 @@ test('Follow counts public user', async () => {
 test('Follow counts private user', async () => {
   // create two new users, both private
   const [u1Client, u1UserId] = await loginCache.getCleanLogin()
-  let resp = await u1Client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  let resp = await u1Client.mutate({
+    mutation: mutations.setUserPrivacyStatus,
+    variables: {privacyStatus: 'PRIVATE'},
+  })
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
   expect(resp.data.setUserDetails.followedCount).toBe(0)
   expect(resp.data.setUserDetails.followerCount).toBe(0)

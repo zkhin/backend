@@ -29,7 +29,10 @@ def test_add_users_posts_to_feed(feed_manager, post_manager, user, cognito_clien
     feed_manager.add_users_posts_to_feed(feed_user_id, user.id)
 
     # verify those posts made it to the feed
-    assert sorted([f['postId'] for f in feed_manager.dynamo.generate_feed(feed_user_id)]) == [post_id_1, post_id_2]
+    assert sorted([f['postId'] for f in feed_manager.dynamo.generate_feed(feed_user_id)]) == [
+        post_id_1,
+        post_id_2,
+    ]
 
 
 def test_delete_users_posts_from_feed(feed_manager):

@@ -72,9 +72,9 @@ test('Double blocking a user is an error', async () => {
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // try to block them again
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})).rejects.toThrow(
-    /ClientError: .* has already blocked /,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* has already blocked /)
 })
 
 test('Trying to block or unblock yourself is an error', async () => {
@@ -140,9 +140,9 @@ test('We cannot block a user if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't block them
-  await expect(ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})).rejects.toThrow(
-    /ClientError: User .* is not ACTIVE/,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 test('We cannot unblock a user if we are disabled', async () => {

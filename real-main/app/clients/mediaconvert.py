@@ -93,7 +93,11 @@ class MediaConvertClient:
                 "Inputs": [
                     {
                         "AudioSelectors": {
-                            "Audio Selector 1": {"Offset": 0, "DefaultSelection": "DEFAULT", "ProgramSelection": 1}
+                            "Audio Selector 1": {
+                                "Offset": 0,
+                                "DefaultSelection": "DEFAULT",
+                                "ProgramSelection": 1,
+                            }
                         },
                         "VideoSelector": {"ColorSpace": "FOLLOW", "Rotate": "AUTO", "AlphaBehavior": "DISCARD"},
                         "FilterEnable": "AUTO",

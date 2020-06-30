@@ -35,7 +35,12 @@ def test_trigger_notification(card_appsync, user, card, appsync_client):
 
     # trigger, check client was called correctly
     card_appsync.trigger_notification(
-        'card-notif-type', card.user_id, card.id, card.item['title'], card.item['action'], card.item.get('subTitle')
+        'card-notif-type',
+        card.user_id,
+        card.id,
+        card.item['title'],
+        card.item['action'],
+        card.item.get('subTitle'),
     )
     assert len(appsync_client.mock_calls) == 1
     assert len(appsync_client.send.call_args.kwargs) == 0

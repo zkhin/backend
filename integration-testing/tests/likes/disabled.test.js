@@ -129,7 +129,10 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
   expect(resp.data.addPost.postId).toBe(theirPostId)
 
   // we disable our likes
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: true}})
+  resp = await ourClient.mutate({
+    mutation: mutations.setUserMentalHealthSettings,
+    variables: {likesDisabled: true},
+  })
   expect(resp.data.setUserDetails.likesDisabled).toBe(true)
 
   // verify we can't like their post
@@ -207,7 +210,10 @@ test('Verify likes preserved through period in which user disables their likes',
   expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
 
   // now we disable likes
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: true}})
+  resp = await ourClient.mutate({
+    mutation: mutations.setUserMentalHealthSettings,
+    variables: {likesDisabled: true},
+  })
   expect(resp.data.setUserDetails.likesDisabled).toBe(true)
 
   // verify we cant see likes on the post
@@ -218,7 +224,10 @@ test('Verify likes preserved through period in which user disables their likes',
   expect(resp.data.post.onymouslyLikedBy).toBeNull()
 
   // now we enable likes
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: false}})
+  resp = await ourClient.mutate({
+    mutation: mutations.setUserMentalHealthSettings,
+    variables: {likesDisabled: false},
+  })
   expect(resp.data.setUserDetails.likesDisabled).toBe(false)
 
   // verify the original likes now show up on the post

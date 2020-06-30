@@ -61,7 +61,9 @@ def test_token_email_not_verified():
 
 def test_token_no_email():
     with mock.patch('app.clients.google.google_id_token') as google_id_token:
-        google_id_token.verify_oauth2_token.return_value = {k: v for k, v in google_id_info.items() if k != 'email'}
+        google_id_token.verify_oauth2_token.return_value = {
+            k: v for k, v in google_id_info.items() if k != 'email'
+        }
         google_client = GoogleClient(client_ids_getter)
         with pytest.raises(ValueError, match='verified email'):
             google_client.get_verified_email(None)

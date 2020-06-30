@@ -193,9 +193,13 @@ def test_generate_card_ids_by_notify_user_at(card_dynamo):
     assert card_ids == []
 
     # generate just one card
-    card_ids = list(card_dynamo.generate_card_ids_by_notify_user_at(notify_user_at_1 + pendulum.duration(seconds=1)))
+    card_ids = list(
+        card_dynamo.generate_card_ids_by_notify_user_at(notify_user_at_1 + pendulum.duration(seconds=1))
+    )
     assert card_ids == [card_id_1]
 
     # generate both cards, check order
-    card_ids = list(card_dynamo.generate_card_ids_by_notify_user_at(notify_user_at_1 + pendulum.duration(minutes=2)))
+    card_ids = list(
+        card_dynamo.generate_card_ids_by_notify_user_at(notify_user_at_1 + pendulum.duration(minutes=2))
+    )
     assert card_ids == [card_id_1, card_id_2]

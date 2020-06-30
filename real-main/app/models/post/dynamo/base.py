@@ -246,7 +246,8 @@ class PostDynamo:
         verification_hidden=None,
     ):
         assert any(
-            k is not None for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden)
+            k is not None
+            for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden)
         ), 'Action-less post edit requested'
 
         exp_actions = collections.defaultdict(list)

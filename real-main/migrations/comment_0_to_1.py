@@ -25,7 +25,9 @@ class Migration:
     def generate_all_comments_to_migrate(self):
         "Return a generator of all items that need to be migrated"
         scan_kwargs = {
-            'FilterExpression': ('begins_with(partitionKey, :pk_prefix) AND sortKey = :sk AND schemaVersion = :sv'),
+            'FilterExpression': (
+                'begins_with(partitionKey, :pk_prefix) AND sortKey = :sk AND schemaVersion = :sv'
+            ),
             'ExpressionAttributeValues': {':pk_prefix': 'comment/', ':sk': '-', ':sv': 0},
         }
         while True:

@@ -104,7 +104,9 @@ def test_trending_deflate_item_no_recursion_with_last_deflated_at_assumption(man
     item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
     assert pendulum.parse(item['lastDeflatedAt']) == created_at
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.4))
-    keys = {k: v for k, v in item.items() if k in ('partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey')}
+    keys = {
+        k: v for k, v in item.items() if k in ('partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey')
+    }
 
     # do the deflation, next day, so the common case assumption (that the job is run once per day) should hold
     now = pendulum.parse('2020-06-08T18:00:00Z')
@@ -125,7 +127,9 @@ def test_trending_deflate_item_with_recursion_with_last_deflated_at_assumption(m
     item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
     assert pendulum.parse(item['lastDeflatedAt']) == created_at
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.4))
-    keys = {k: v for k, v in item.items() if k in ('partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey')}
+    keys = {
+        k: v for k, v in item.items() if k in ('partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey')
+    }
 
     # do a deflation run two days later, so the common case asumption fails
     now = pendulum.parse('2020-06-09T18:00:00Z')

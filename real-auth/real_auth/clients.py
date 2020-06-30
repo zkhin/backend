@@ -33,7 +33,9 @@ class CognitoClient:
     def confirm_user(self, user_id, code):
         "Confirm the user. Returns True for success, False for failure"
         try:
-            self.user_pool_client.confirm_sign_up(ClientId=self.client_id, Username=user_id, ConfirmationCode=code)
+            self.user_pool_client.confirm_sign_up(
+                ClientId=self.client_id, Username=user_id, ConfirmationCode=code
+            )
         except Exception:
             return False
         return True

@@ -60,7 +60,9 @@ describe('cognito-only user', () => {
     const userId = idResp['IdentityId']
 
     // get credentials for that user
-    resp = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins: logins}).promise()
+    resp = await cognito.identityPoolClient
+      .getCredentialsForIdentity({IdentityId: userId, Logins: logins})
+      .promise()
 
     // get appsync client with those creds
     client = await cognito.getAppSyncClient(resp['Credentials'])

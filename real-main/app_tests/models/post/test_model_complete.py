@@ -255,20 +255,26 @@ def test_which_posts_get_free_trending(post_manager, user, image_data_b64, grant
 
     # verify a image post that fails verification but is original does not get free trending
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': False})
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64})
+    post = post_manager.add_post(
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64}
+    )
     assert post.is_verified is False
     assert post.original_post_id == post.id
     assert post.trending_item is None
 
     # verify a image post that passes verification and is original gets free trending
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': True})
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post = post_manager.add_post(
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}
+    )
     assert post.is_verified is True
     assert post.original_post_id == post.id
     assert post.trending_item
 
     # verify a image post that passes verification but is not original does not get free trending
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64})
+    post = post_manager.add_post(
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}
+    )
     assert post.is_verified is True
     assert post.original_post_id != post.id
     assert post.trending_item is None

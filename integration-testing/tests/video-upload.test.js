@@ -90,7 +90,10 @@ test(
 
     // make sure the cookies work for other urls that will be needed to play the video
     // note that the exact path here is dependent on the AWS MediaConvert settings
-    const anotherUrl = videoUrl.replace('video.m3u8', 'video_Ott_Hls_Ts_Avc_Aac_16x9_1280x720p_30Hz_3500Kbps.m3u8')
+    const anotherUrl = videoUrl.replace(
+      'video.m3u8',
+      'video_Ott_Hls_Ts_Avc_Aac_16x9_1280x720p_30Hz_3500Kbps.m3u8',
+    )
     await rp.get({url: anotherUrl, jar})
   },
   90 * 1000,

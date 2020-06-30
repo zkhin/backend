@@ -410,7 +410,9 @@ def test_add_post_settings_default_to_user_level_settings(post_manager, user):
         assert post.item.get(stringcase.camelcase(k)) is v
 
     # create a post with all the settings speficied to the opposite as user defaults, verify all good
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, **{k: not v for k, v in defaults.items()})
+    post = post_manager.add_post(
+        user, str(uuid.uuid4()), PostType.IMAGE, **{k: not v for k, v in defaults.items()}
+    )
     for k, v in defaults.items():
         assert post.item.get(stringcase.camelcase(k)) is (not v)
 

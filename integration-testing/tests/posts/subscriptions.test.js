@@ -41,9 +41,9 @@ test('Post message triggers cannot be called from external graphql client', asyn
     postStatus: 'COMPLETED',
     isVerified: false,
   }
-  await expect(ourClient.mutate({mutation: mutations.triggerPostNotification, variables: {input}})).rejects.toThrow(
-    /ClientError: Access denied/,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.triggerPostNotification, variables: {input}}),
+  ).rejects.toThrow(/ClientError: Access denied/)
 })
 
 test('Cannot subscribe to other users notifications', async () => {
@@ -54,14 +54,12 @@ test('Cannot subscribe to other users notifications', async () => {
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
   // the subscription next() method is never triggered
   const notifications = []
-  await ourClient.subscribe({query: subscriptions.onPostNotification, variables: {userId: theirUserId}}).subscribe({
-    next: (resp) => {
-      notifications.push(resp)
-    },
-    error: (resp) => {
-      console.log(resp)
-    },
-  })
+  await ourClient
+    .subscribe({query: subscriptions.onPostNotification, variables: {userId: theirUserId}})
+    .subscribe({
+      next: (resp) => notifications.push(resp),
+      error: (resp) => console.log(resp),
+    })
 
   // they create an image post, complete it
   const postId = uuidv4()

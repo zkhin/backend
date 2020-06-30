@@ -60,9 +60,9 @@ test('Cant follow someone if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't follow them
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
-    /ClientError: User .* is not ACTIVE/,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 test('Cant unfollow someone if we are disabled', async () => {
@@ -93,9 +93,9 @@ test('Try to double follow a user', async () => {
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // we cannot follow them again
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
-    /ClientError: .* already /,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* already /)
 
   // verify we're still in following them
   resp = await theirClient.query({query: queries.ourFollowerUsers})
@@ -107,7 +107,10 @@ test('Try to double follow a user', async () => {
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
   // change the other user to private
-  resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  resp = await theirClient.mutate({
+    mutation: mutations.setUserPrivacyStatus,
+    variables: {privacyStatus: 'PRIVATE'},
+  })
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // we follow them, goes to REQUESTED
@@ -115,9 +118,9 @@ test('Try to double follow a user', async () => {
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
 
   // we cannot follow them again
-  await expect(ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})).rejects.toThrow(
-    /ClientError: .* already /,
-  )
+  await expect(
+    ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}),
+  ).rejects.toThrow(/ClientError: .* already /)
 
   // verify we're still in REQUESTED state
   resp = await theirClient.query({query: queries.ourFollowerUsers, variables: {followStatus: 'REQUESTED'}})

@@ -160,12 +160,14 @@ def test_migrate_multiple(
 
     # spot check result
     media_items = dynamo_table.scan(
-        FilterExpression='begins_with(partitionKey, :pk_prefix)', ExpressionAttributeValues={':pk_prefix': 'media/'},
+        FilterExpression='begins_with(partitionKey, :pk_prefix)',
+        ExpressionAttributeValues={':pk_prefix': 'media/'},
     )['Items']
     assert [m for m in media_items if 'isVerified' in m] == []
 
     post_items = dynamo_table.scan(
-        FilterExpression='begins_with(partitionKey, :pk_prefix)', ExpressionAttributeValues={':pk_prefix': 'post/'},
+        FilterExpression='begins_with(partitionKey, :pk_prefix)',
+        ExpressionAttributeValues={':pk_prefix': 'post/'},
     )['Items']
     assert [p['postId'] for p in post_items if p.get('isVerified') is True] == [post_id_true]
     assert [p['postId'] for p in post_items if p.get('isVerified') is False] == [post_id_false]

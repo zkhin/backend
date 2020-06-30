@@ -27,4 +27,6 @@ def test_run(user_postprocessor):
     assert user_postprocessor.handle_elasticsearch.mock_calls == [call(old_item, new_item)]
     assert user_postprocessor.handle_pinpoint.mock_calls == [call(user_id, old_item, new_item)]
     assert user_postprocessor.handle_requested_followers_card.mock_calls == [call(user_id, old_item, new_item)]
-    assert user_postprocessor.handle_chats_with_new_messages_card.mock_calls == [call(user_id, old_item, new_item)]
+    assert user_postprocessor.handle_chats_with_new_messages_card.mock_calls == [
+        call(user_id, old_item, new_item)
+    ]

@@ -25,7 +25,13 @@ test('Create and edit a group chat', async () => {
 
   // we create a group chat with all of us in it, check details are correct
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  let variables = {chatId, name: 'x', userIds: [other1UserId, other2UserId], messageId: messageId1, messageText: 'm'}
+  let variables = {
+    chatId,
+    name: 'x',
+    userIds: [other1UserId, other2UserId],
+    messageId: messageId1,
+    messageText: 'm',
+  }
   let before = moment().toISOString()
   let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
   let after = moment().toISOString()
@@ -168,7 +174,9 @@ test('Creating a group chat with our userId in the listed userIds has no affect'
   expect(resp.data.createGroupChat.name).toBeNull()
   expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, theirUserId].sort(),
+  )
 })
 
 test('Cannot create, edit, add others to or leave a group chat if we are disabled', async () => {
@@ -220,7 +228,9 @@ test('Exclude users from list of users in a chat', async () => {
   expect(resp.data.createGroupChat.name).toBeNull()
   expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, theirUserId].sort(),
+  )
 
   // check chat users, all included
   resp = await ourClient.query({query: queries.chatUsers, variables: {chatId}})
@@ -363,7 +373,9 @@ test('Cant add a users that does not exist to a group', async () => {
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
   expect(resp.data.addToGroupChat.userCount).toBe(2)
   expect(resp.data.addToGroupChat.usersCount).toBe(2)
-  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, theirUserId].sort(),
+  )
   expect(resp.data.addToGroupChat.messages.items).toHaveLength(3)
   expect(resp.data.addToGroupChat.messages.items[1].messageId).toBe(messageId)
   expect(resp.data.addToGroupChat.messages.items[2].text).toContain('added')
@@ -382,7 +394,9 @@ test('Add someone to a group chat that is already there is a no-op', async () =>
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
   expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other1UserId].sort())
+  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, other1UserId].sort(),
+  )
 
   // check adding to them to the chat again does nothing
   variables = {chatId, userIds: [other1UserId]}
@@ -390,7 +404,9 @@ test('Add someone to a group chat that is already there is a no-op', async () =>
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
   expect(resp.data.addToGroupChat.userCount).toBe(2)
   expect(resp.data.addToGroupChat.usersCount).toBe(2)
-  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other1UserId].sort())
+  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
+    [ourUserId, other1UserId].sort(),
+  )
 
   // check adding to them and another user to the chat at the same time adds the other user
   variables = {chatId, userIds: [other1UserId, other2UserId]}

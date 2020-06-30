@@ -36,13 +36,19 @@ describe('Read and write properties our our own profile', () => {
     let resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
     expect(resp.data.user.privacyStatus).toBe('PUBLIC')
 
-    resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    resp = await ourClient.mutate({
+      mutation: mutations.setUserPrivacyStatus,
+      variables: {privacyStatus: 'PRIVATE'},
+    })
     expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
     resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
     expect(resp.data.user.privacyStatus).toBe('PRIVATE')
 
-    resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PUBLIC'}})
+    resp = await ourClient.mutate({
+      mutation: mutations.setUserPrivacyStatus,
+      variables: {privacyStatus: 'PUBLIC'},
+    })
     expect(resp.data.setUserDetails.privacyStatus).toBe('PUBLIC')
 
     resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
@@ -230,7 +236,10 @@ test('Read properties of another private user', async () => {
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
-  await theirClient.mutate({mutation: mutations.setUserDetails, variables: {bio: theirBio, fullName: theirFullName}})
+  await theirClient.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {bio: theirBio, fullName: theirFullName},
+  })
 
   // verify they can see all their properties (make sure they're all set correctly)
   resp = await theirClient.query({query: queries.self})
@@ -333,7 +342,10 @@ test('Read properties of another public user', async () => {
   const theirFullName = 'HG Wells'
   const theirPhone = '+14155551212'
   const [theirClient, theirUserId, , theirEmail] = await cognito.getAppSyncLogin(theirPhone)
-  await theirClient.mutate({mutation: mutations.setUserDetails, variables: {bio: theirBio, fullName: theirFullName}})
+  await theirClient.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {bio: theirBio, fullName: theirFullName},
+  })
 
   // verify they can see all their properties (make sure they're all set correctly)
   let resp = await theirClient.query({query: queries.self})
@@ -423,7 +435,10 @@ test('User accepted EULA version - get, set, privacy', async () => {
   expect(resp.data.self.acceptedEULAVersion).toBeNull()
 
   // we change our accepted version
-  resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '2019-11-14'}})
+  resp = await ourClient.mutate({
+    mutation: mutations.setUserAcceptedEULAVersion,
+    variables: {version: '2019-11-14'},
+  })
   expect(resp.data.setUserAcceptedEULAVersion.acceptedEULAVersion).toBe('2019-11-14')
 
   // check to make sure that version stuck
@@ -480,7 +495,10 @@ test('User likesDisabled - get, set, privacy', async () => {
   expect(resp.data.self.likesDisabled).toBe(true)
 
   // we change it
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: false}})
+  resp = await ourClient.mutate({
+    mutation: mutations.setUserMentalHealthSettings,
+    variables: {likesDisabled: false},
+  })
   expect(resp.data.setUserDetails.likesDisabled).toBe(false)
 
   // check to make sure that version stuck

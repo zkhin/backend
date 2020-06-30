@@ -80,7 +80,7 @@ class ChatManager(ViewManagerMixin, ManagerBase):
         if self.block_manager.is_blocked(created_by_user_id, with_user_id):
             raise exceptions.ChatException(f'User `{created_by_user_id}` has blocked user `{with_user_id}`')
         if self.block_manager.is_blocked(with_user_id, created_by_user_id):
-            raise exceptions.ChatException(f'User `{created_by_user_id}` has been blocked by user `{with_user_id}`')
+            raise exceptions.ChatException(f'User `{created_by_user_id}` has been blocked by `{with_user_id}`')
 
         # can't add a chat if one already exists between the two users
         if self.get_direct_chat(created_by_user_id, with_user_id):

@@ -47,13 +47,19 @@ test('Report post views', async () => {
   expect(resp.data.post.viewedByCount).toBe(0)
 
   // other1 reports to have viewed both posts
-  resp = await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  resp = await other1Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1, postId2]},
+  })
 
   // other2 reports to have viewed one post
   resp = await other2Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
 
   // we report to have viewed both posts (should not be recorded on our own posts)
-  resp = await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  resp = await other1Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1, postId2]},
+  })
 
   // verify our view counts are correct
   resp = await ourClient.query({query: queries.self})
@@ -142,13 +148,19 @@ test('Report post views on non-completed posts are ignored', async () => {
   expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
 
   // other1 reports to have viewed both posts
-  resp = await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  resp = await other1Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1, postId2]},
+  })
 
   // other2 reports to have viewed one post
   resp = await other2Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
 
   // we report to have viewed both posts (should not be recorded on our own posts)
-  resp = await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1, postId2]}})
+  resp = await other1Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1, postId2]},
+  })
 
   // verify the two posts have no viewed by counts
   resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
