@@ -489,26 +489,21 @@ test('User commentsDisabled - get, set, privacy', async () => {
 
 test('User likesDisabled - get, set, privacy', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-
-  // we should default to true
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.likesDisabled).toBe(true)
-
-  // we change it
-  resp = await ourClient.mutate({
-    mutation: mutations.setUserMentalHealthSettings,
-    variables: {likesDisabled: false},
-  })
-  expect(resp.data.setUserDetails.likesDisabled).toBe(false)
-
-  // check to make sure that version stuck
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.likesDisabled).toBe(false)
-
-  // check another user can't see values
   const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.likesDisabled).toBeNull()
+
+  // we should default to false
+  await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.likesDisabled).toBe(false))
+
+  // we change it, verify that stuck
+  await ourClient
+    .mutate({mutation: mutations.setUserMentalHealthSettings, variables: {likesDisabled: true}})
+    .then(({data}) => expect(data.setUserDetails.likesDisabled).toBe(true))
+  await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.likesDisabled).toBe(true))
+
+  // check another user can't see our values
+  await theirClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data}) => expect(data.user.likesDisabled).toBeNull())
 })
 
 test('User sharingDisabled - get, set, privacy', async () => {
