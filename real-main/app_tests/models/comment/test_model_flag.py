@@ -36,14 +36,14 @@ def test_is_user_forced_disabling_criteria_met(comment):
     assert comment.is_user_forced_disabling_criteria_met() is return_value
 
 
-def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, user2, user3, follow_manager):
+def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, user2, user3, follower_manager):
     # set the post owner to private, verify user3 can't flag
     user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
     with pytest.raises(CommentException, match='not have access'):
         comment.flag(user3)
 
     # request to follow - verify still can't flag
-    following = follow_manager.request_to_follow(user3, user)
+    following = follower_manager.request_to_follow(user3, user)
     with pytest.raises(CommentException, match='not have access'):
         comment.flag(user3)
 

@@ -71,7 +71,7 @@ def test_cant_like_post_blocked(like_manager, block_manager, user1, user2, user1
 
 
 def test_cant_like_post_of_private_user_without_following(
-    like_manager, follow_manager, user1, user1_posts, user2
+    like_manager, follower_manager, user1, user1_posts, user2
 ):
     post = user1_posts[0]
     # user 1 goes private
@@ -82,21 +82,21 @@ def test_cant_like_post_of_private_user_without_following(
         like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)
 
     # user 2 requests to follow
-    follow_manager.request_to_follow(user2, user1)
+    follower_manager.request_to_follow(user2, user1)
 
     # user 2 still can't like their post
     with pytest.raises(LikeException):
         like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)
 
     # user 1 first denies the follow request
-    follow_manager.get_follow(user2.id, user1.id).deny()
+    follower_manager.get_follow(user2.id, user1.id).deny()
 
     # user 2 still can't like their post
     with pytest.raises(LikeException):
         like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)
 
     # user 1 now accepts the follow request
-    follow_manager.get_follow(user2.id, user1.id).accept()
+    follower_manager.get_follow(user2.id, user1.id).accept()
 
     # user 2 can now like the post
     like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)

@@ -60,7 +60,7 @@ test('Try to double-accept a follow request', async () => {
   // they try to accept the follow request again
   await expect(
     theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}}),
-  ).rejects.toThrow(/ClientError: .* already has status /)
+  ).rejects.toThrow(/ClientError: .* already follows user .* with status /)
 })
 
 test('Try to double-deny a follow request', async () => {
@@ -82,7 +82,7 @@ test('Try to double-deny a follow request', async () => {
   // they try to accept the follow request again
   await expect(
     theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}}),
-  ).rejects.toThrow(/ClientError: .* already has status /)
+  ).rejects.toThrow(/ClientError: .* already follows user .* with status /)
 })
 
 test('Cant accept/deny non-existent follow requests', async () => {

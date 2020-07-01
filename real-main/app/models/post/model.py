@@ -42,8 +42,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         card_manager=None,
         comment_manager=None,
         feed_manager=None,
-        follow_manager=None,
         followed_first_story_manager=None,
+        follower_manager=None,
         like_manager=None,
         post_manager=None,
         user_manager=None,
@@ -79,8 +79,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.comment_manager = comment_manager
         if feed_manager:
             self.feed_manager = feed_manager
-        if follow_manager:
-            self.follow_manager = follow_manager
+        if follower_manager:
+            self.follower_manager = follower_manager
         if followed_first_story_manager:
             self.followed_first_story_manager = followed_first_story_manager
         if like_manager:
@@ -700,8 +700,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # if the post is from a private user then we must be a follower to flag the post
         posted_by_user = self.user_manager.get_user(self.user_id)
         if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
-            follow = self.follow_manager.get_follow(user.id, self.user_id)
-            if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
+            follow = self.follower_manager.get_follow(user.id, self.user_id)
+            if not follow or follow.status != self.follower_manager.enums.FollowStatus.FOLLOWING:
                 raise exceptions.PostException(f'User does not have access to post `{self.id}`')
 
         super().flag(user)

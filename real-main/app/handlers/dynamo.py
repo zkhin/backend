@@ -22,7 +22,7 @@ card_manager = managers.get('card') or models.CardManager(clients, managers=mana
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
-follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
@@ -61,7 +61,7 @@ def postprocess_records(event, context):
             postprocessor = post_manager.postprocessor
 
         if pk.startswith('user/') and sk.startswith('follower/'):
-            postprocessor = follow_manager.postprocessor
+            postprocessor = follower_manager.postprocessor
 
         if pk.startswith('user/') and sk == 'profile':
             postprocessor = user_manager.postprocessor

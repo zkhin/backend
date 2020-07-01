@@ -17,7 +17,7 @@ class BlockManager:
         managers = managers or {}
         managers['block'] = self
         self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 
         self.clients = clients
@@ -38,12 +38,12 @@ class BlockManager:
         block_item = self.dynamo.add_block(blocker_user.id, blocked_user.id)
 
         # force-unfollow them if we're following them
-        follow = self.follow_manager.get_follow(blocker_user.id, blocked_user.id)
+        follow = self.follower_manager.get_follow(blocker_user.id, blocked_user.id)
         if follow:
             follow.unfollow(force=True)
 
         # force-unfollow us if they're following us
-        follow = self.follow_manager.get_follow(blocked_user.id, blocker_user.id)
+        follow = self.follower_manager.get_follow(blocked_user.id, blocker_user.id)
         if follow:
             follow.unfollow(force=True)
 

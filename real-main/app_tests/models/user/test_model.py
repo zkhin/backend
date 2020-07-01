@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from app.models.follow.enums import FollowStatus
+from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserStatus
 
 
@@ -225,21 +225,21 @@ def test_set_privacy_status_from_public_to_private(user):
 
 
 def test_set_privacy_status_from_private_to_public(user_manager, user, user2, user3):
-    follow_manager = user_manager.follow_manager
+    follower_manager = user_manager.follower_manager
     privacy_status = user.enums.UserPrivacyStatus.PRIVATE
     user.set_privacy_status(privacy_status)
     assert user.item['privacyStatus'] == privacy_status
 
     # set up a follow request in REQUESTED state
-    follow_manager.request_to_follow(user2, user)
+    follower_manager.request_to_follow(user2, user)
 
     # set up a follow request in DENIED state
-    follow_manager.request_to_follow(user3, user).deny()
+    follower_manager.request_to_follow(user3, user).deny()
 
     # check we can see those two request
-    resp = list(follow_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.REQUESTED))
+    resp = list(follower_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.REQUESTED))
     assert len(resp) == 1
-    resp = list(follow_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.DENIED))
+    resp = list(follower_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.DENIED))
     assert len(resp) == 1
 
     # change to private
@@ -248,9 +248,9 @@ def test_set_privacy_status_from_private_to_public(user_manager, user, user2, us
     assert user.item['privacyStatus'] == privacy_status
 
     # check those two requests disappeared
-    resp = list(follow_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.REQUESTED))
+    resp = list(follower_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.REQUESTED))
     assert len(resp) == 0
-    resp = list(follow_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.DENIED))
+    resp = list(follower_manager.dynamo.generate_follower_items(user.id, follow_status=FollowStatus.DENIED))
     assert len(resp) == 0
 
 
@@ -427,9 +427,9 @@ def test_serailize_blocker(user, user2, block_manager):
     assert resp == user.item
 
 
-def test_serailize_followed(user, user2, follow_manager):
+def test_serailize_followed(user, user2, follower_manager):
     # caller follows them
-    follow_manager.request_to_follow(user2, user)
+    follower_manager.request_to_follow(user2, user)
     user.refresh_item()
 
     resp = user.serialize(user2.id)

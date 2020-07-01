@@ -226,24 +226,24 @@ def test_create_cognito_only_user_follow_real_user_doesnt_exist(user_manager, co
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     user = user_manager.create_cognito_only_user(user_id, username)
-    assert list(user.follow_manager.dynamo.generate_followed_items(user.id)) == []
+    assert list(user.follower_manager.dynamo.generate_followed_items(user.id)) == []
 
 
-def test_follow_real_user_exists(user_manager, cognito_only_user1, follow_manager, real_user):
+def test_follow_real_user_exists(user_manager, cognito_only_user1, follower_manager, real_user):
     # verify no followers (ensures cognito_only_user1 fixture generated before real_user)
-    assert list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+    assert list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
 
     # follow that real user
     user_manager.follow_real_user(cognito_only_user1)
-    followeds = list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id))
+    followeds = list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
 
 
-def test_follow_real_user_doesnt_exist(user_manager, cognito_only_user1, follow_manager):
-    assert list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+def test_follow_real_user_doesnt_exist(user_manager, cognito_only_user1, follower_manager):
+    assert list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
     user_manager.follow_real_user(cognito_only_user1)
-    assert list(follow_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+    assert list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
 
 
 def test_create_cognito_only_user_follow_real_user_if_exists(user_manager, cognito_client, real_user):
@@ -251,7 +251,7 @@ def test_create_cognito_only_user_follow_real_user_if_exists(user_manager, cogni
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     user = user_manager.create_cognito_only_user(user_id, username)
-    followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
+    followeds = list(user.follower_manager.dynamo.generate_followed_items(user.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
 
@@ -288,7 +288,7 @@ def test_create_facebook_user_success(user_manager, real_user):
     ]
 
     # check we are following the real user
-    followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
+    followeds = list(user.follower_manager.dynamo.generate_followed_items(user.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
 
@@ -341,7 +341,7 @@ def test_create_google_user_success(user_manager, real_user):
     ]
 
     # check we are following the real user
-    followeds = list(user.follow_manager.dynamo.generate_followed_items(user.id))
+    followeds = list(user.follower_manager.dynamo.generate_followed_items(user.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
 

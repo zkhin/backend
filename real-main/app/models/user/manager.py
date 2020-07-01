@@ -45,7 +45,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
         self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
@@ -93,7 +93,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'card_manager': getattr(self, 'card_manager', None),
             'chat_manager': getattr(self, 'chat_manager', None),
             'comment_manager': getattr(self, 'comment_manager', None),
-            'follow_manager': getattr(self, 'follow_manager', None),
+            'follower_manager': getattr(self, 'follower_manager', None),
             'like_manager': getattr(self, 'like_manager', None),
             'post_manager': getattr(self, 'post_manager', None),
         }
@@ -233,7 +233,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     def follow_real_user(self, user):
         real_user = self.get_user_by_username('real')
         if real_user and real_user.id != user.id:
-            self.follow_manager.request_to_follow(user, real_user)
+            self.follower_manager.request_to_follow(user, real_user)
 
     def get_text_tags(self, text):
         """

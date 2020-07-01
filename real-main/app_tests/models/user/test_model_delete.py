@@ -13,7 +13,7 @@ def user(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     user = user_manager.create_cognito_only_user(user_id, username)
-    user.follow_manager = mock.Mock(user.follow_manager)
+    user.follower_manager = mock.Mock(user.follower_manager)
     user.post_manager = mock.Mock(user.post_manager)
     user.comment_manager = mock.Mock(user.comment_manager)
     user.like_manager = mock.Mock(user.like_manager)
@@ -109,7 +109,7 @@ def test_delete_user_with_profile_pic(user):
 
 def test_delete_user_managers_all_called(user):
     # check starting state
-    assert user.follow_manager.mock_calls == []
+    assert user.follower_manager.mock_calls == []
     assert user.post_manager.mock_calls == []
     assert user.comment_manager.mock_calls == []
     assert user.like_manager.mock_calls == []
@@ -120,7 +120,7 @@ def test_delete_user_managers_all_called(user):
 
     # delete user, check final state
     user.delete()
-    assert user.follow_manager.mock_calls == [
+    assert user.follower_manager.mock_calls == [
         mock.call.reset_followed_items(user.id),
         mock.call.reset_follower_items(user.id),
     ]

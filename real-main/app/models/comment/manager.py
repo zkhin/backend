@@ -27,7 +27,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         managers = managers or {}
         managers['comment'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
@@ -57,7 +57,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             'flag_dynamo': getattr(self, 'flag_dynamo', None),
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
-            'follow_manager': self.follow_manager,
+            'follower_manager': self.follower_manager,
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
         }
@@ -84,7 +84,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             # if post owner is private, must be a follower to comment
             poster = self.user_manager.get_user(post.user_id)
             if poster.item['privacyStatus'] == poster.enums.UserPrivacyStatus.PRIVATE:
-                follow = self.follow_manager.get_follow(user_id, post.user_id)
+                follow = self.follower_manager.get_follow(user_id, post.user_id)
                 if not follow or follow.status != follow.enums.FollowStatus.FOLLOWING:
                     msg = f'Post owner `{post.user_id}` is private and user `{user_id}` is not a follower'
                     raise exceptions.CommentException(msg)

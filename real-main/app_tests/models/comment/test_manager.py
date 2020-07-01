@@ -103,7 +103,7 @@ def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, pos
     assert comment.id == comment_id
 
 
-def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, post, follow_manager, user2):
+def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, post, follower_manager, user2):
     comment_id = 'cid'
     commenter = user2
 
@@ -115,17 +115,17 @@ def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, 
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # request to follow, verify can't comment
-    follow_manager.request_to_follow(commenter, user)
+    follower_manager.request_to_follow(commenter, user)
     with pytest.raises(comment_manager.exceptions.CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # deny the follow request, verify can't comment
-    follow_manager.get_follow(commenter.id, user.id).deny()
+    follower_manager.get_follow(commenter.id, user.id).deny()
     with pytest.raises(comment_manager.exceptions.CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # accept the follow request, verify can comment
-    follow_manager.get_follow(commenter.id, user.id).accept()
+    follower_manager.get_follow(commenter.id, user.id).accept()
     comment = comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
     assert comment.id == comment_id
 

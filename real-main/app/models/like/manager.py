@@ -18,7 +18,7 @@ class LikeManager:
         managers = managers or {}
         managers['like'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
-        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
@@ -46,8 +46,8 @@ class LikeManager:
         posted_by_user = self.user_manager.get_user(post.user_id)
         if user.id != posted_by_user.id:
             if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
-                follow = self.follow_manager.get_follow(user.id, posted_by_user.id)
-                if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
+                follow = self.follower_manager.get_follow(user.id, posted_by_user.id)
+                if not follow or follow.status != self.follower_manager.enums.FollowStatus.FOLLOWING:
                     raise exceptions.LikeException(f'User does not have access to post `{post.id}`')
 
         if post.status != self.post_manager.enums.PostStatus.COMPLETED:

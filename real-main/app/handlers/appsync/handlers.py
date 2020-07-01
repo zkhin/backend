@@ -42,7 +42,7 @@ chat_manager = managers.get('chat') or models.ChatManager(clients, managers=mana
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
 ffs_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
-follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
@@ -308,13 +308,13 @@ def follow_user(caller_user, arguments, source, context):
         raise ClientException(f'No user profile found for followed `{followed_user_id}`')
 
     try:
-        follow = follow_manager.request_to_follow(follower_user, followed_user)
-    except follow_manager.exceptions.FollowException as err:
+        follow = follower_manager.request_to_follow(follower_user, followed_user)
+    except follower_manager.exceptions.FollowerException as err:
         raise ClientException(str(err))
 
     resp = followed_user.serialize(caller_user.id)
     resp['followedStatus'] = follow.status
-    if follow.status == follow_manager.enums.FollowStatus.FOLLOWING:
+    if follow.status == follower_manager.enums.FollowStatus.FOLLOWING:
         resp['followerCount'] = followed_user.item.get('followerCount', 0) + 1
     return resp
 
@@ -325,13 +325,13 @@ def unfollow_user(caller_user, arguments, source, context):
     follower_user = caller_user
     followed_user_id = arguments['userId']
 
-    follow = follow_manager.get_follow(follower_user.id, followed_user_id)
+    follow = follower_manager.get_follow(follower_user.id, followed_user_id)
     if not follow:
         raise ClientException(f'User `{follower_user.id}` is not following `{followed_user_id}`')
 
     try:
         follow.unfollow()
-    except follow_manager.exceptions.FollowException as err:
+    except follower_manager.exceptions.FollowerException as err:
         raise ClientException(str(err))
 
     resp = user_manager.get_user(followed_user_id, strongly_consistent=True).serialize(caller_user.id)
@@ -345,13 +345,13 @@ def accept_follower_user(caller_user, arguments, source, context):
     followed_user = caller_user
     follower_user_id = arguments['userId']
 
-    follow = follow_manager.get_follow(follower_user_id, followed_user.id)
+    follow = follower_manager.get_follow(follower_user_id, followed_user.id)
     if not follow:
         raise ClientException(f'User `{follower_user_id}` has not requested to follow user `{followed_user.id}`')
 
     try:
         follow.accept()
-    except follow_manager.exceptions.FollowException as err:
+    except follower_manager.exceptions.FollowerException as err:
         raise ClientException(str(err))
 
     resp = user_manager.get_user(follower_user_id, strongly_consistent=True).serialize(caller_user.id)
@@ -365,13 +365,13 @@ def deny_follower_user(caller_user, arguments, source, context):
     followed_user = caller_user
     follower_user_id = arguments['userId']
 
-    follow = follow_manager.get_follow(follower_user_id, followed_user.id)
+    follow = follower_manager.get_follow(follower_user_id, followed_user.id)
     if not follow:
         raise ClientException(f'User `{follower_user_id}` has not requested to follow user `{followed_user.id}`')
 
     try:
         follow.deny()
-    except follow_manager.exceptions.FollowException as err:
+    except follower_manager.exceptions.FollowerException as err:
         raise ClientException(str(err))
 
     resp = user_manager.get_user(follower_user_id, strongly_consistent=True).serialize(caller_user.id)

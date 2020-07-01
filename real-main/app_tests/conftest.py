@@ -185,8 +185,8 @@ def feed_manager(dynamo_client):
 
 
 @pytest.fixture
-def follow_manager(dynamo_client):
-    yield models.FollowManager({'dynamo': dynamo_client})
+def follower_manager(dynamo_client):
+    yield models.FollowerManager({'dynamo': dynamo_client})
 
 
 @pytest.fixture

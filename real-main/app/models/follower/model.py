@@ -8,7 +8,7 @@ from .enums import FollowStatus
 logger = logging.getLogger()
 
 
-class Follow:
+class Follower:
 
     enums = enums
     exceptions = exceptions
@@ -49,7 +49,9 @@ class Follow:
     def unfollow(self, force=False):
         "Returns the status of the follow request"
         if not force and self.status == FollowStatus.DENIED:
-            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
+            raise exceptions.FollowerAlreadyHasStatus(
+                self.follower_user_id, self.followed_user_id, FollowStatus.DENIED
+            )
         self.dynamo.delete_following(self.item)
 
         if self.status == FollowStatus.FOLLOWING:
@@ -68,7 +70,7 @@ class Follow:
     def accept(self):
         "Returns the status of the follow request"
         if self.status == FollowStatus.FOLLOWING:
-            raise exceptions.AlreadyHasStatus(
+            raise exceptions.FollowerAlreadyHasStatus(
                 self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING
             )
         self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING)
@@ -86,7 +88,9 @@ class Follow:
     def deny(self):
         "Returns the status of the follow request"
         if self.status == FollowStatus.DENIED:
-            raise exceptions.AlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
+            raise exceptions.FollowerAlreadyHasStatus(
+                self.follower_user_id, self.followed_user_id, FollowStatus.DENIED
+            )
         self.dynamo.update_following_status(self.item, FollowStatus.DENIED)
 
         if self.status == FollowStatus.FOLLOWING:

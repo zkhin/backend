@@ -7,7 +7,7 @@ from boto3.dynamodb.conditions import Key
 logger = logging.getLogger()
 
 
-class FollowDynamo:
+class FollowerDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 

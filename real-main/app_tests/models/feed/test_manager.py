@@ -101,7 +101,7 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
     assert list(feed_manager.dynamo.generate_feed(another_user.id)) == []
 
     # they follow us
-    feed_manager.follow_manager.dynamo.add_following(their_user.id, our_user.id, 'FOLLOWING')
+    feed_manager.follower_manager.dynamo.add_following(their_user.id, our_user.id, 'FOLLOWING')
 
     # add a post to all our followers and us
     posted_at = pendulum.now('utc').to_iso8601_string()
@@ -124,7 +124,7 @@ def test_delete_post_from_followers_feeds(feed_manager, user_manager):
     another_user = user_manager.init_user({'userId': 'auid', 'privacyStatus': 'PUBLIC'})
 
     # they follow us
-    feed_manager.follow_manager.dynamo.add_following(their_user.id, our_user.id, 'FOLLOWING')
+    feed_manager.follower_manager.dynamo.add_following(their_user.id, our_user.id, 'FOLLOWING')
 
     # add a post to all our followers and us
     posted_at = pendulum.now('utc').to_iso8601_string()

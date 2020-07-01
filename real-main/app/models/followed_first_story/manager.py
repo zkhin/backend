@@ -3,7 +3,7 @@ import logging
 import more_itertools
 
 from app import models
-from app.models.follow.enums import FollowStatus
+from app.models.follower.enums import FollowStatus
 
 from .dynamo import FollowedFirstStoryDynamo
 
@@ -14,7 +14,7 @@ class FollowedFirstStoryManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['followed_first_story'] = self
-        self.follow_manager = managers.get('follow') or models.FollowManager(clients, managers=managers)
+        self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
         self.clients = clients
@@ -27,7 +27,7 @@ class FollowedFirstStoryManager:
         The lists are of length 25 or less, so they can be used with the dynamo batch writer.
         """
         # functional programming in python feels... clumsy
-        iterator = self.follow_manager.dynamo.generate_follower_items(followed_user_id)
+        iterator = self.follower_manager.dynamo.generate_follower_items(followed_user_id)
         iterator = filter(lambda item: item['followStatus'] == FollowStatus.FOLLOWING, iterator)
         iterator = map(lambda item: item['followerUserId'], iterator)
         iterator = more_itertools.chunked(iterator, 25)

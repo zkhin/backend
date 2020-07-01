@@ -3,12 +3,12 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.follow.enums import FollowStatus
+from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostType
 
 
 @pytest.fixture
-def following_users(user_manager, follow_manager, cognito_client):
+def following_users(user_manager, follower_manager, cognito_client):
     "A pair of user ids for which one follows the other"
     our_user_id, our_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     their_user_id, their_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
@@ -16,7 +16,7 @@ def following_users(user_manager, follow_manager, cognito_client):
     cognito_client.create_verified_user_pool_entry(their_user_id, their_username, f'{their_username}@real.app')
     our_user = user_manager.create_cognito_only_user(our_user_id, our_username)
     their_user = user_manager.create_cognito_only_user(their_user_id, their_username)
-    follow_manager.dynamo.add_following(our_user.id, their_user.id, FollowStatus.FOLLOWING)
+    follower_manager.dynamo.add_following(our_user.id, their_user.id, FollowStatus.FOLLOWING)
     yield (our_user, their_user)
 
 
@@ -40,47 +40,47 @@ def test_generate_batched_follower_user_ids_none(ffs_manager):
     assert resp == []
 
 
-def test_generate_batched_follower_user_ids_filters_out_wrong_status(ffs_manager, follow_manager):
+def test_generate_batched_follower_user_ids_filters_out_wrong_status(ffs_manager, follower_manager):
     followed_user_id = 'fid'
-    follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.REQUESTED)
+    follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.REQUESTED)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert resp == []
 
 
-def test_generate_batched_follower_user_one(ffs_manager, follow_manager):
+def test_generate_batched_follower_user_one(ffs_manager, follower_manager):
     followed_user_id = 'fid'
     follower_user_id = 'followeruid'
-    follow_manager.dynamo.add_following(follower_user_id, followed_user_id, FollowStatus.FOLLOWING)
+    follower_manager.dynamo.add_following(follower_user_id, followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 1
     assert len(resp[0]) == 1
     assert resp[0][0] == follower_user_id
 
 
-def test_generate_batched_follower_user_many(ffs_manager, follow_manager):
+def test_generate_batched_follower_user_many(ffs_manager, follower_manager):
     followed_user_id = 'fid'
 
     for _ in range(5):
-        follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 1
     assert len(resp[0]) == 5
 
     for _ in range(20):
-        follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 1
     assert len(resp[0]) == 25
 
     for _ in range(1):
-        follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 2
     assert len(resp[0]) == 25
     assert len(resp[1]) == 1
 
     for _ in range(0, 25):
-        follow_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
+        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
     resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
     assert len(resp) == 3
     assert len(resp[0]) == 25

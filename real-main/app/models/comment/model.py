@@ -20,7 +20,7 @@ class Comment(FlagModelMixin, ViewModelMixin):
         comment_item,
         dynamo=None,
         block_manager=None,
-        follow_manager=None,
+        follower_manager=None,
         post_manager=None,
         user_manager=None,
         **kwargs,
@@ -30,8 +30,8 @@ class Comment(FlagModelMixin, ViewModelMixin):
             self.dynamo = dynamo
         if block_manager:
             self.block_manager = block_manager
-        if follow_manager:
-            self.follow_manager = follow_manager
+        if follower_manager:
+            self.follower_manager = follower_manager
         if post_manager:
             self.post_manager = post_manager
         if user_manager:
@@ -82,8 +82,8 @@ class Comment(FlagModelMixin, ViewModelMixin):
         # if comment is on a post is from a private user then we must be a follower of the post owner
         posted_by_user = self.user_manager.get_user(self.post.user_id)
         if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
-            follow = self.follow_manager.get_follow(user.id, self.user_id)
-            if not follow or follow.status != self.follow_manager.enums.FollowStatus.FOLLOWING:
+            follow = self.follower_manager.get_follow(user.id, self.user_id)
+            if not follow or follow.status != self.follower_manager.enums.FollowStatus.FOLLOWING:
                 raise exceptions.CommentException(f'User does not have access to comment `{self.id}`')
 
         super().flag(user)

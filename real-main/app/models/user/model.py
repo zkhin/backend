@@ -40,7 +40,7 @@ class User(TrendingModelMixin):
         card_manager=None,
         chat_manager=None,
         comment_manager=None,
-        follow_manager=None,
+        follower_manager=None,
         like_manager=None,
         post_manager=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
@@ -64,8 +64,8 @@ class User(TrendingModelMixin):
             self.chat_manager = chat_manager
         if comment_manager:
             self.comment_manager = comment_manager
-        if follow_manager:
-            self.follow_manager = follow_manager
+        if follower_manager:
+            self.follower_manager = follower_manager
         if like_manager:
             self.like_manager = like_manager
         if post_manager:
@@ -131,7 +131,7 @@ class User(TrendingModelMixin):
         assert self.item
         resp = self.item.copy()
         resp['blockerStatus'] = self.block_manager.get_block_status(self.id, caller_user_id)
-        resp['followedStatus'] = self.follow_manager.get_follow_status(caller_user_id, self.id)
+        resp['followedStatus'] = self.follower_manager.get_follow_status(caller_user_id, self.id)
         return resp
 
     def enable(self):
@@ -162,8 +162,8 @@ class User(TrendingModelMixin):
 
         # for REQUESTED and DENIED, just delete them
         # for FOLLOWING, unfollow so that the other user's counts remain correct
-        self.follow_manager.reset_followed_items(self.id)
-        self.follow_manager.reset_follower_items(self.id)
+        self.follower_manager.reset_followed_items(self.id)
+        self.follower_manager.reset_follower_items(self.id)
 
         # unflag everything we've flagged
         self.post_manager.unflag_all_by_user(self.id)
@@ -225,8 +225,8 @@ class User(TrendingModelMixin):
 
         # are we changing from private to public?
         if old_privacy_status == UserPrivacyStatus.PRIVATE and privacy_status == UserPrivacyStatus.PUBLIC:
-            self.follow_manager.accept_all_requested_follow_requests(self.id)
-            self.follow_manager.delete_all_denied_follow_requests(self.id)
+            self.follower_manager.accept_all_requested_follow_requests(self.id)
+            self.follower_manager.delete_all_denied_follow_requests(self.id)
 
         self.item = self.dynamo.set_user_privacy_status(self.id, privacy_status)
         return self

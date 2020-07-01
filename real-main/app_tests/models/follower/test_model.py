@@ -3,7 +3,7 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.follow.enums import FollowStatus
+from app.models.follower.enums import FollowStatus
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
@@ -22,7 +22,7 @@ def users(user_manager, cognito_client):
 
 
 @pytest.fixture
-def their_post(follow_manager, users, post_manager):
+def their_post(follower_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
     post = post_manager.add_post(
         users[1], str(uuid.uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
@@ -31,14 +31,14 @@ def their_post(follow_manager, users, post_manager):
 
 
 @pytest.fixture
-def follow(follow_manager, users):
+def follow(follower_manager, users):
     our_user, their_user = users
-    follow_manager.request_to_follow(our_user, their_user)
-    yield follow_manager.get_follow(our_user.id, their_user.id)
+    follower_manager.request_to_follow(our_user, their_user)
+    yield follower_manager.get_follow(our_user.id, their_user.id)
 
 
 @pytest.fixture
-def users_private(follow_manager, users):
+def users_private(follower_manager, users):
     "Us and them, they are private"
     our_user, their_user = users
     their_user.set_privacy_status(UserPrivacyStatus.PRIVATE)
@@ -46,10 +46,10 @@ def users_private(follow_manager, users):
 
 
 @pytest.fixture
-def requested_follow(follow_manager, users_private):
+def requested_follow(follower_manager, users_private):
     our_user, their_user = users_private
-    follow_manager.request_to_follow(our_user, their_user)
-    yield follow_manager.get_follow(our_user.id, their_user.id)
+    follower_manager.request_to_follow(our_user, their_user)
+    yield follower_manager.get_follow(our_user.id, their_user.id)
 
 
 def test_accept(users_private, requested_follow):
@@ -61,7 +61,7 @@ def test_accept(users_private, requested_follow):
     assert follow.refresh_item().status == FollowStatus.FOLLOWING
 
     # verify we can't double accept
-    with pytest.raises(follow.exceptions.AlreadyHasStatus):
+    with pytest.raises(follow.exceptions.FollowerAlreadyHasStatus):
         follow.accept()
 
 
@@ -108,7 +108,7 @@ def test_deny_follow_request(users_private, requested_follow):
     assert their_user.item.get('followedCount', 0) == 0
 
     # vierfy they can't deny our follow request again
-    with pytest.raises(follow.exceptions.AlreadyHasStatus):
+    with pytest.raises(follow.exceptions.FollowerAlreadyHasStatus):
         follow.deny()
 
 

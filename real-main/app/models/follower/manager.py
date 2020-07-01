@@ -4,21 +4,21 @@ from app import models
 from app.models.user.enums import UserPrivacyStatus
 
 from . import enums, exceptions
-from .dynamo import FollowDynamo
-from .model import Follow
-from .postprocessor import FollowPostProcessor
+from .dynamo import FollowerDynamo
+from .model import Follower
+from .postprocessor import FollowerPostProcessor
 
 logger = logging.getLogger()
 
 
-class FollowManager:
+class FollowerManager:
 
     enums = enums
     exceptions = exceptions
 
     def __init__(self, clients, managers=None):
         managers = managers or {}
-        managers['follow'] = self
+        managers['follower'] = self
         self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.ffs_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(
             clients, managers=managers
@@ -30,12 +30,12 @@ class FollowManager:
 
         self.clients = clients
         if 'dynamo' in clients:
-            self.dynamo = FollowDynamo(clients['dynamo'])
+            self.dynamo = FollowerDynamo(clients['dynamo'])
 
     @property
     def postprocessor(self):
         if not hasattr(self, '_postprocessor'):
-            self._postprocessor = FollowPostProcessor(user_manager=self.user_manager)
+            self._postprocessor = FollowerPostProcessor(user_manager=self.user_manager)
         return self._postprocessor
 
     def get_follow(self, follower_user_id, followed_user_id, strongly_consistent=False):
@@ -45,7 +45,7 @@ class FollowManager:
         return self.init_follow(item) if item else None
 
     def init_follow(self, follow_item):
-        return Follow(
+        return Follower(
             follow_item,
             self.dynamo,
             ffs_manager=self.ffs_manager,
@@ -78,15 +78,15 @@ class FollowManager:
     def request_to_follow(self, follower_user, followed_user):
         "Returns the status of the follow request"
         if self.get_follow(follower_user.id, followed_user.id):
-            raise exceptions.AlreadyFollowing(follower_user.id, followed_user.id)
+            raise exceptions.FollowerAlreadyExists(follower_user.id, followed_user.id)
 
         # can't follow a user that has blocked us
         if self.block_manager.is_blocked(followed_user.id, follower_user.id):
-            raise exceptions.FollowException(f'User has been blocked by user `{followed_user.id}`')
+            raise exceptions.FollowerException(f'User has been blocked by user `{followed_user.id}`')
 
         # can't follow a user we have blocked
         if self.block_manager.is_blocked(follower_user.id, followed_user.id):
-            raise exceptions.FollowException(f'User has blocked user `{followed_user.id}`')
+            raise exceptions.FollowerException(f'User has blocked user `{followed_user.id}`')
 
         follow_status = (
             enums.FollowStatus.REQUESTED

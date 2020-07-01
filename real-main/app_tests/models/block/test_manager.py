@@ -19,10 +19,10 @@ blocker_user_2 = blocker_user
 blocked_user_2 = blocker_user
 
 
-def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_user):
+def test_block_unfollows(block_manager, follower_manager, blocker_user, blocked_user):
     # mock out calls to the follow manager
-    block_manager.follow_manager = mock.Mock(follow_manager)
-    block_manager.follow_manager.exceptions = follow_manager.exceptions
+    block_manager.follower_manager = mock.Mock(follower_manager)
+    block_manager.follower_manager.exceptions = follower_manager.exceptions
 
     block_item = block_manager.block(blocker_user, blocked_user)
     assert block_item['blockerUserId'] == blocker_user.id
@@ -33,7 +33,7 @@ def test_block_unfollows(block_manager, follow_manager, blocker_user, blocked_us
     assert resp is not None
 
     # check following manager was called to clear any followings
-    assert block_manager.follow_manager.mock_calls == [
+    assert block_manager.follower_manager.mock_calls == [
         mock.call.get_follow(blocker_user.id, blocked_user.id),
         mock.call.get_follow().unfollow(force=True),
         mock.call.get_follow(blocked_user.id, blocker_user.id),

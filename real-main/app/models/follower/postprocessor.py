@@ -5,7 +5,7 @@ from .enums import FollowStatus
 logger = logging.getLogger()
 
 
-class FollowPostProcessor:
+class FollowerPostProcessor:
     def __init__(self, user_manager=None):
         self.user_manager = user_manager
 
