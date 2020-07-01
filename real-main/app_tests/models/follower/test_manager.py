@@ -268,11 +268,18 @@ def test_generate_follower_user_ids(follower_manager, users, other_users):
     assert uids == [their_user.id]
 
     # other follows us
-    assert follower_manager.request_to_follow(other_user, our_user).status == FollowStatus.FOLLOWING
+    our_user.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    assert follower_manager.request_to_follow(other_user, our_user).status == FollowStatus.REQUESTED
 
-    # check we have two followers
+    # check we have two followers items
     uids = list(follower_manager.generate_follower_user_ids(our_user.id))
     assert sorted(uids) == sorted([their_user.id, other_user.id])
+
+    # check we can filter them down according to status
+    uids = list(follower_manager.generate_follower_user_ids(our_user.id, follow_status=FollowStatus.FOLLOWING))
+    assert uids == [their_user.id]
+    uids = list(follower_manager.generate_follower_user_ids(our_user.id, follow_status=FollowStatus.REQUESTED))
+    assert uids == [other_user.id]
 
 
 def test_generate_followed_user_ids(follower_manager, users, other_users):
@@ -291,8 +298,15 @@ def test_generate_followed_user_ids(follower_manager, users, other_users):
     assert uids == [their_user.id]
 
     # we follow other
-    assert follower_manager.request_to_follow(our_user, other_user).status == FollowStatus.FOLLOWING
+    other_user.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    assert follower_manager.request_to_follow(our_user, other_user).status == FollowStatus.REQUESTED
 
     # check we have two followeds
     uids = list(follower_manager.generate_followed_user_ids(our_user.id))
     assert sorted(uids) == sorted([their_user.id, other_user.id])
+
+    # check we can filter them down according to status
+    uids = list(follower_manager.generate_followed_user_ids(our_user.id, follow_status=FollowStatus.FOLLOWING))
+    assert uids == [their_user.id]
+    uids = list(follower_manager.generate_followed_user_ids(our_user.id, follow_status=FollowStatus.REQUESTED))
+    assert uids == [other_user.id]

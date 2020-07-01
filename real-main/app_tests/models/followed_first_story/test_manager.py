@@ -34,60 +34,6 @@ def followed_posts(post_manager, dynamo_client, following_users):
     yield [post.item for post in posts]
 
 
-def test_generate_batched_follower_user_ids_none(ffs_manager):
-    followed_user_id = 'fid'
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert resp == []
-
-
-def test_generate_batched_follower_user_ids_filters_out_wrong_status(ffs_manager, follower_manager):
-    followed_user_id = 'fid'
-    follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.REQUESTED)
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert resp == []
-
-
-def test_generate_batched_follower_user_one(ffs_manager, follower_manager):
-    followed_user_id = 'fid'
-    follower_user_id = 'followeruid'
-    follower_manager.dynamo.add_following(follower_user_id, followed_user_id, FollowStatus.FOLLOWING)
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert len(resp) == 1
-    assert len(resp[0]) == 1
-    assert resp[0][0] == follower_user_id
-
-
-def test_generate_batched_follower_user_many(ffs_manager, follower_manager):
-    followed_user_id = 'fid'
-
-    for _ in range(5):
-        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert len(resp) == 1
-    assert len(resp[0]) == 5
-
-    for _ in range(20):
-        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert len(resp) == 1
-    assert len(resp[0]) == 25
-
-    for _ in range(1):
-        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert len(resp) == 2
-    assert len(resp[0]) == 25
-    assert len(resp[1]) == 1
-
-    for _ in range(0, 25):
-        follower_manager.dynamo.add_following(str(uuid.uuid4()), followed_user_id, FollowStatus.FOLLOWING)
-    resp = list(ffs_manager.generate_batched_follower_user_ids(followed_user_id))
-    assert len(resp) == 3
-    assert len(resp[0]) == 25
-    assert len(resp[1]) == 25
-    assert len(resp[2]) == 1
-
-
 def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, followed_posts, dynamo_client):
     follower_user, followed_user = following_users
     post = followed_posts[0]

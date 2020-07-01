@@ -63,15 +63,15 @@ class FollowerManager:
             return enums.FollowStatus.NOT_FOLLOWING
         return follow.status
 
-    def generate_follower_user_ids(self, followed_user_id):
+    def generate_follower_user_ids(self, followed_user_id, follow_status=None):
         "Return a generator that produces user ids of users that follow the given user"
-        gen = self.dynamo.generate_follower_items(followed_user_id)
+        gen = self.dynamo.generate_follower_items(followed_user_id, follow_status=follow_status)
         gen = map(lambda item: item['followerUserId'], gen)
         return gen
 
-    def generate_followed_user_ids(self, follower_user_id):
+    def generate_followed_user_ids(self, follower_user_id, follow_status=None):
         "Return a generator that produces user ids of users given user follows"
-        gen = self.dynamo.generate_followed_items(follower_user_id)
+        gen = self.dynamo.generate_followed_items(follower_user_id, follow_status=follow_status)
         gen = map(lambda item: item['followedUserId'], gen)
         return gen
 
