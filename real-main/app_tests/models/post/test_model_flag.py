@@ -29,12 +29,6 @@ def test_remove_from_flagging(post):
     assert post.archive.mock_calls == [mock.call(forced=True)]
 
 
-def test_is_user_forced_disabling_criteria_met(post):
-    return_value = {}
-    post.user.is_forced_disabling_criteria_met_by_posts = mock.Mock(return_value=return_value)
-    assert post.is_user_forced_disabling_criteria_met() is return_value
-
-
 def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, follower_manager):
     # can't flag post of private user we're not following
     user.set_privacy_status(UserPrivacyStatus.PRIVATE)

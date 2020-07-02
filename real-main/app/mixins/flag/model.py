@@ -45,14 +45,6 @@ class FlagModelMixin:
             logger.warning(f'Force removing {self.item_type} `{self.id}`')
             self.remove_from_flagging()
 
-            # force disable the user?
-            self.user.refresh_item(strongly_consistent=True)
-            if self.is_user_forced_disabling_criteria_met():
-                logger.warning(f'Force disabling user `{self.user.id}`')
-                self.user.disable()
-                # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
-                logger.warning(f'USER_FORCE_DISABLED: user `{self.user.id}` with username `{self.user.username}`')
-
         return self
 
     def unflag(self, user_id):
@@ -70,9 +62,6 @@ class FlagModelMixin:
         return self
 
     def remove_from_flagging(self):
-        raise NotImplementedError('Must be implemented by model class')
-
-    def is_user_forced_disabling_criteria_met(self):
         raise NotImplementedError('Must be implemented by model class')
 
     def is_crowdsourced_forced_removal_criteria_met(self):

@@ -352,7 +352,6 @@ functions:
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     alarms:
-      - functionUsersForceDisabled
       - functionErrors
       - functionThrottles
 
@@ -521,6 +520,7 @@ functions:
       - functionErrors
       - functionLoggedErrors
       - functionThrottles
+      - functionUsersForceDisabled
 
 # keep this miminal for smaller packages and thus faster deployments
 package:

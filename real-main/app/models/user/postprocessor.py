@@ -8,21 +8,30 @@ logger = logging.getLogger()
 
 
 class UserPostProcessor:
-    def __init__(self, dynamo=None, elasticsearch_client=None, pinpoint_client=None, card_manager=None):
+    def __init__(
+        self, dynamo=None, manager=None, elasticsearch_client=None, pinpoint_client=None, card_manager=None
+    ):
         self.dynamo = dynamo
+        self.manager = manager
         self.elasticsearch_client = elasticsearch_client
         self.pinpoint_client = pinpoint_client
         self.card_manager = card_manager
 
     def run(self, pk, sk, old_item, new_item):
+        assert sk == 'profile', 'Should only be called for user profile item'
         user_id = pk[len('user/') :]
-        self.handle_elasticsearch(old_item, new_item)
+        self.handle_elasticsearch(user_id, old_item, new_item)
         self.handle_pinpoint(user_id, old_item, new_item)
         self.handle_requested_followers_card(user_id, old_item, new_item)
         self.handle_chats_with_new_messages_card(user_id, old_item, new_item)
 
-    def handle_elasticsearch(self, old_item, new_item):
-        user_id = (new_item or old_item)['userId']
+        if new_item.get('commentForcedDeletionCount', 0) > old_item.get('commentForcedDeletionCount', 0):
+            self.forced_comment_deletion(new_item)
+
+        if new_item.get('postForcedArchivingCount', 0) > old_item.get('postForcedArchivingCount', 0):
+            self.forced_post_archiving(new_item)
+
+    def handle_elasticsearch(self, user_id, old_item, new_item):
         # if we're manually rebuilding the index, treat everything as new
         new_reindexed_at = new_item.get('lastManuallyReindexedAt')
         old_reindexed_at = old_item.get('lastManuallyReindexedAt')
@@ -85,6 +94,24 @@ class UserPostProcessor:
             )
         else:
             self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
+
+    def forced_comment_deletion(self, new_item):
+        user = self.manager.init_user(new_item)
+        if user.is_forced_disabling_criteria_met_by_comments():
+            user.disable()
+            # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
+            logger.warning(
+                f'USER_FORCE_DISABLED: user `{user.id}` with username `{user.username}` disabled due to comments'
+            )
+
+    def forced_post_archiving(self, new_item):
+        user = self.manager.init_user(new_item)
+        if user.is_forced_disabling_criteria_met_by_posts():
+            user.disable()
+            # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
+            logger.warning(
+                f'USER_FORCE_DISABLED: user `{user.id}` with username `{user.username}` disabled due to posts'
+            )
 
     def comment_added(self, user_id):
         self.dynamo.increment_comment_count(user_id)

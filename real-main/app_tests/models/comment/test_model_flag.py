@@ -31,12 +31,6 @@ def test_remove_from_flagging(comment):
     assert comment.delete.mock_calls == [mock.call(forced=True)]
 
 
-def test_is_user_forced_disabling_criteria_met(comment):
-    return_value = {}
-    comment.user.is_forced_disabling_criteria_met_by_comments = mock.Mock(return_value=return_value)
-    assert comment.is_user_forced_disabling_criteria_met() is return_value
-
-
 def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, user2, user3, follower_manager):
     # set the post owner to private, verify user3 can't flag
     user.set_privacy_status(UserPrivacyStatus.PRIVATE)

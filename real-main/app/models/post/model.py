@@ -719,9 +719,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def remove_from_flagging(self):
         self.archive(forced=True)
 
-    def is_user_forced_disabling_criteria_met(self):
-        return self.user.is_forced_disabling_criteria_met_by_posts()
-
     def record_view_count(self, user_id, view_count, viewed_at=None):
         if self.status != PostStatus.COMPLETED:
             logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{self.id}`')
