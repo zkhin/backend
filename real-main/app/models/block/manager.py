@@ -2,17 +2,13 @@ import logging
 
 from app import models
 
-from . import enums, exceptions
 from .dynamo import BlockDynamo
+from .enums import BlockStatus
 
 logger = logging.getLogger()
 
 
 class BlockManager:
-
-    enums = enums
-    exceptions = exceptions
-
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['block'] = self
@@ -30,9 +26,9 @@ class BlockManager:
 
     def get_block_status(self, blocker_user_id, blocked_user_id):
         if blocker_user_id == blocked_user_id:
-            return enums.BlockStatus.SELF
+            return BlockStatus.SELF
         block_item = self.dynamo.get_block(blocker_user_id, blocked_user_id)
-        return enums.BlockStatus.BLOCKING if block_item else enums.BlockStatus.NOT_BLOCKING
+        return BlockStatus.BLOCKING if block_item else BlockStatus.NOT_BLOCKING
 
     def block(self, blocker_user, blocked_user):
         block_item = self.dynamo.add_block(blocker_user.id, blocked_user.id)

@@ -2,16 +2,12 @@ import logging
 
 import pendulum
 
-from . import enums, exceptions, specs
+from .specs import CardSpec
 
 logger = logging.getLogger()
 
 
 class Card:
-
-    enums = enums
-    exceptions = exceptions
-
     def __init__(self, item, card_dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None):
         self.dynamo = card_dynamo
         self.pinpoint_client = pinpoint_client
@@ -23,7 +19,7 @@ class Card:
         self.id = item['partitionKey'][len('card/') :]
         self.user_id = item['gsiA1PartitionKey'][len('user/') :]
         self.created_at = pendulum.parse(item['gsiA1SortKey'][len('card/') :])
-        self.spec = specs.CardSpec.from_card_id(self.id)
+        self.spec = CardSpec.from_card_id(self.id)
 
     @property
     def user(self):

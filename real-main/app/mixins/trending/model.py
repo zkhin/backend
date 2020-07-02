@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pendulum
 
-from . import exceptions
+from .exceptions import TrendingAlreadyExists, TrendingDNEOrAttributeMismatch
 
 logger = logging.getLogger()
 
@@ -11,7 +11,6 @@ logger = logging.getLogger()
 class TrendingModelMixin:
 
     score_inflation_per_day = 2
-    trending_exceptions = exceptions
 
     def __init__(self, trending_dynamo=None, **kwargs):
         super().__init__(**kwargs)
@@ -49,14 +48,14 @@ class TrendingModelMixin:
         if self.trending_item:
             try:
                 self._trending_item = self.trending_dynamo.add_score(self.id, inflated_score, last_deflated_at)
-            except exceptions.TrendingDNEOrAttributeMismatch:
+            except TrendingDNEOrAttributeMismatch:
                 pass
             else:
                 return True
         else:
             try:
                 self._trending_item = self.trending_dynamo.add(self.id, inflated_score, now=now)
-            except exceptions.TrendingAlreadyExists:
+            except TrendingAlreadyExists:
                 pass
             else:
                 return True

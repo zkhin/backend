@@ -3,6 +3,7 @@ from unittest import mock
 
 import pytest
 
+from app.models.block.exceptions import AlreadyBlocked, NotBlocked
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostType
 
@@ -22,7 +23,6 @@ blocked_user_2 = blocker_user
 def test_block_unfollows(block_manager, follower_manager, blocker_user, blocked_user):
     # mock out calls to the follow manager
     block_manager.follower_manager = mock.Mock(follower_manager)
-    block_manager.follower_manager.exceptions = follower_manager.exceptions
 
     block_item = block_manager.block(blocker_user, blocked_user)
     assert block_item['blockerUserId'] == blocker_user.id
@@ -107,7 +107,7 @@ def test_cant_double_block(block_manager, blocker_user, blocked_user):
     assert block_item['blockerUserId'] == blocker_user.id
     assert block_item['blockedUserId'] == blocked_user.id
 
-    with pytest.raises(block_manager.exceptions.AlreadyBlocked):
+    with pytest.raises(AlreadyBlocked):
         block_manager.block(blocker_user, blocked_user)
 
 
@@ -128,7 +128,7 @@ def test_unblock(block_manager, blocker_user, blocked_user):
 
 
 def test_cant_unblock_if_not_blocked(block_manager, blocker_user, blocked_user):
-    with pytest.raises(block_manager.exceptions.NotBlocked):
+    with pytest.raises(NotBlocked):
         block_manager.unblock(blocker_user, blocked_user)
 
 

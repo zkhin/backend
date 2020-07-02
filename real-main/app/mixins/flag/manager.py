@@ -1,16 +1,11 @@
 import logging
 
-from . import enums, exceptions
 from .dynamo import FlagDynamo
 
 logger = logging.getLogger()
 
 
 class FlagManagerMixin:
-
-    flag_enums = enums
-    flag_exceptions = exceptions
-
     def __init__(self, clients, managers=None):
         super().__init__(clients, managers=managers)
         if 'dynamo' in clients:

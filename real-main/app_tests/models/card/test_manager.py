@@ -5,6 +5,7 @@ import pendulum
 import pytest
 
 from app.models.card import specs
+from app.models.card.exceptions import CardAlreadyExists
 from app.models.post.enums import PostType
 
 
@@ -57,7 +58,7 @@ def test_add_card_minimal(card_manager, user):
     assert card_manager.add_card(user.id, title, action)
 
     # verify can't another card with same cardId
-    with pytest.raises(card_manager.exceptions.CardAlreadyExists):
+    with pytest.raises(CardAlreadyExists):
         card_manager.add_card(user.id, title, action, card.id)
 
 

@@ -8,7 +8,8 @@ import PIL.Image
 
 from app.utils import image_size
 
-from . import art, exceptions
+from . import art
+from .exceptions import AlbumException
 
 logger = logging.getLogger()
 
@@ -17,7 +18,6 @@ CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOU
 
 class Album:
 
-    exceptions = exceptions
     jpeg_content_type = 'image/jpeg'
 
     def __init__(
@@ -55,7 +55,7 @@ class Album:
 
     def update(self, name=None, description=None):
         if name == '':
-            raise exceptions.AlbumException('All albums must have names')
+            raise AlbumException('All albums must have names')
         self.item = self.dynamo.set(self.id, name=name, description=description)
         return self
 
@@ -75,8 +75,8 @@ class Album:
             self.dynamo.transact_delete_album(self.id),
         ]
         transact_exceptions = [
-            exceptions.AlbumException(f'Unable to decrement album count for user `{self.user_id}`'),
-            exceptions.AlbumException(f'Album `{self.id}` does not exist'),
+            AlbumException(f'Unable to decrement album count for user `{self.user_id}`'),
+            AlbumException(f'Album `{self.id}` does not exist'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         return self

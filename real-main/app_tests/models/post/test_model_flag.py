@@ -4,6 +4,8 @@ from unittest import mock
 import pytest
 
 from app.models.post.enums import PostType
+from app.models.post.exceptions import PostException
+from app.models.user.enums import UserPrivacyStatus
 
 
 @pytest.fixture
@@ -35,18 +37,18 @@ def test_is_user_forced_disabling_criteria_met(post):
 
 def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, follower_manager):
     # can't flag post of private user we're not following
-    user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
-    with pytest.raises(post.exceptions.PostException, match='not have access'):
+    user.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    with pytest.raises(PostException, match='not have access'):
         post.flag(user2)
 
     # request to follow - still can't flag
     following = follower_manager.request_to_follow(user2, user)
-    with pytest.raises(post.exceptions.PostException, match='not have access'):
+    with pytest.raises(PostException, match='not have access'):
         post.flag(user2)
 
     # deny the follow request - still can't flag
     following.deny()
-    with pytest.raises(post.exceptions.PostException, match='not have access'):
+    with pytest.raises(PostException, match='not have access'):
         post.flag(user2)
 
     # check no flags

@@ -7,8 +7,6 @@ import pendulum
 from app.mixins.view.model import ViewModelMixin
 from app.models.block.enums import BlockStatus
 
-from . import enums, exceptions
-
 logger = logging.getLogger()
 
 
@@ -23,8 +21,6 @@ class DecimalJsonEncoder(json.JSONEncoder):
 
 class ChatMessage(ViewModelMixin):
 
-    enums = enums
-    exceptions = exceptions
     item_type = 'chatMessage'
 
     def __init__(

@@ -5,6 +5,7 @@ import pytest
 
 from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType
+from app.models.user.enums import UserPrivacyStatus
 
 
 @pytest.fixture
@@ -38,7 +39,7 @@ def test_is_user_forced_disabling_criteria_met(comment):
 
 def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, user2, user3, follower_manager):
     # set the post owner to private, verify user3 can't flag
-    user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
+    user.set_privacy_status(UserPrivacyStatus.PRIVATE)
     with pytest.raises(CommentException, match='not have access'):
         comment.flag(user3)
 

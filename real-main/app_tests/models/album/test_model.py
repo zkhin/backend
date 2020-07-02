@@ -5,6 +5,7 @@ from unittest import mock
 
 import pytest
 
+from app.models.album.exceptions import AlbumException
 from app.models.post.enums import PostType
 from app.utils import image_size
 
@@ -56,7 +57,7 @@ def test_update(album):
     assert 'description' not in album.item
 
     # check can't delete name
-    with pytest.raises(album.exceptions.AlbumException):
+    with pytest.raises(AlbumException):
         album.update(name='')
 
 
@@ -120,7 +121,7 @@ def test_delete_cant_decrement_album_count_below_zero(user, album):
     assert user.item.get('albumCount', 0) == 0
 
     # verify deletion fails
-    with pytest.raises(album.exceptions.AlbumException):
+    with pytest.raises(AlbumException):
         album.delete()
 
     # verify album still exists

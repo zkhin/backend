@@ -7,9 +7,9 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from . import enums, exceptions
 from .dynamo import UserDynamo
 from .enums import UserPrivacyStatus, UserStatus
+from .exceptions import UserException, UserValidationException, UserVerificationException
 from .validate import UserValidate
 
 logger = logging.getLogger()
@@ -26,8 +26,6 @@ CONTACT_ATTRIBUTE_NAMES = {
 
 class User(TrendingModelMixin):
 
-    enums = enums
-    exceptions = exceptions
     client_names = ['cloudfront', 'cognito', 'dynamo', 'pinpoint', 's3_uploads']
     item_type = 'user'
 
@@ -140,7 +138,7 @@ class User(TrendingModelMixin):
         elif self.status == UserStatus.DISABLED:
             self.item = self.dynamo.set_user_status(self.id, UserStatus.ACTIVE)
         elif self.status == UserStatus.DELETING:
-            raise exceptions.UserException(f'Cannot enable user `{self.id}` in status `{self.status}`')
+            raise UserException(f'Cannot enable user `{self.id}` in status `{self.status}`')
         else:
             raise Exception(f'Unrecognized user status `{self.status}`')
         return self
@@ -151,7 +149,7 @@ class User(TrendingModelMixin):
         elif self.status == UserStatus.DISABLED:
             pass
         elif self.status == UserStatus.DELETING:
-            raise exceptions.UserException(f'Cannot disable user `{self.id}` in status `{self.status}`')
+            raise UserException(f'Cannot disable user `{self.id}` in status `{self.status}`')
         else:
             raise Exception(f'Unrecognized user status `{self.status}`')
         return self
@@ -242,9 +240,7 @@ class User(TrendingModelMixin):
         try:
             self.cognito_client.set_user_attributes(self.id, {'preferred_username': username.lower()})
         except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
-            raise exceptions.UserValidationException(
-                f'Username `{username}` already taken (case-insensitive cmp)'
-            )
+            raise UserValidationException(f'Username `{username}` already taken (case-insensitive cmp)')
 
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
         return self
@@ -259,15 +255,15 @@ class User(TrendingModelMixin):
         if post_id:
             post = self.post_manager.get_post(post_id)
             if not post:
-                raise exceptions.UserException(f'Post `{post_id}` not found')
+                raise UserException(f'Post `{post_id}` not found')
             if post.type != PostType.IMAGE:
-                raise exceptions.UserException(f'Post `{post_id}` does not have type `{PostType.IMAGE}`')
+                raise UserException(f'Post `{post_id}` does not have type `{PostType.IMAGE}`')
             if post.status != PostStatus.COMPLETED:
-                raise exceptions.UserException(f'Post `{post_id}` does not have status `{PostStatus.COMPLETED}`')
+                raise UserException(f'Post `{post_id}` does not have status `{PostStatus.COMPLETED}`')
             if post.user_id != self.id:
-                raise exceptions.UserException(f'Post `{post_id}` does not belong to this user')
+                raise UserException(f'Post `{post_id}` does not belong to this user')
             if post.item.get('isVerified') is not True:
-                raise exceptions.UserException(f'Post `{post_id}` is not verified')
+                raise UserException(f'Post `{post_id}` is not verified')
 
             # add the new s3 objects
             self.add_photo_s3_objects(post)
@@ -280,7 +276,7 @@ class User(TrendingModelMixin):
         return self
 
     def add_photo_s3_objects(self, post):
-        assert post.type == post.enums.PostType.IMAGE
+        assert post.type == PostType.IMAGE
         for size in image_size.JPEGS:
             source_path = post.get_s3_image_path(size)
             dest_path = self.get_photo_path(size, photo_post_id=post.id)
@@ -318,9 +314,7 @@ class User(TrendingModelMixin):
         # verify we actually need to do anything
         old_value = self.item.get(names['dynamo'])
         if old_value == attribute_value:
-            raise exceptions.UserVerificationException(
-                f'User {attribute_name} already set to `{attribute_value}`'
-            )
+            raise UserVerificationException(f'User {attribute_name} already set to `{attribute_value}`')
 
         # first we set the users email to the new, unverified one, while also setting it to another property
         # this sends the verification email to the user
@@ -348,15 +342,13 @@ class User(TrendingModelMixin):
         user_attrs = self.cognito_client.get_user_attributes(self.id)
         value = user_attrs.get(f'custom:unverified_{names["short"]}')
         if not value:
-            raise exceptions.UserVerificationException(
-                f'No unverified email found to validate for user `{self.id}`'
-            )
+            raise UserVerificationException(f'No unverified email found to validate for user `{self.id}`')
 
         # try to do the validation
         try:
             self.cognito_client.verify_user_attribute(access_token, names['cognito'], verification_code)
         except self.cognito_client.user_pool_client.exceptions.CodeMismatchException:
-            raise exceptions.UserVerificationException('Verification code is invalid')
+            raise UserVerificationException('Verification code is invalid')
 
         # success, update cognito, dynamo, then delete the temporary attribute in cognito
         attrs = {

@@ -6,6 +6,7 @@ import pytest
 
 from app.models import FeedManager, FollowedFirstStoryManager, LikeManager
 from app.models.post.enums import PostStatus, PostType
+from app.models.post.exceptions import PostException
 
 
 @pytest.fixture
@@ -47,7 +48,7 @@ def test_archive_post_wrong_status(post_manager, post):
     post.refresh_item()
 
     # verify we can't archive a post if we're in the process of deleting it
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post.archive()
 
     # change the post to DELETING status
@@ -56,7 +57,7 @@ def test_archive_post_wrong_status(post_manager, post):
     post.refresh_item()
 
     # verify we can't archive a post if we're in the process of deleting it
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post.archive()
 
 

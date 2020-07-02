@@ -3,6 +3,8 @@ import uuid
 import pendulum
 import pytest
 
+from app.models.album.exceptions import AlbumException
+
 
 @pytest.fixture
 def user(user_manager, cognito_client):
@@ -75,12 +77,12 @@ def test_add_album_errors(album_manager, user):
     album_id = 'aid'
 
     # user doesn't exist
-    with pytest.raises(album_manager.exceptions.AlbumException):
+    with pytest.raises(AlbumException):
         album_manager.add_album('uid-dne', album_id, 'album name')
 
     # already used the album_id
     album_manager.add_album(user.id, album_id, 'album name')
-    with pytest.raises(album_manager.exceptions.AlbumException):
+    with pytest.raises(AlbumException):
         album_manager.add_album(user.id, album_id, 'album name')
 
 

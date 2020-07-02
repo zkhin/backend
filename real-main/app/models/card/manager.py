@@ -5,9 +5,9 @@ import pendulum
 
 from app import models
 
-from . import enums, exceptions
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
+from .exceptions import CardAlreadyExists
 from .model import Card
 from .postprocessor import CardPostProcessor
 
@@ -15,10 +15,6 @@ logger = logging.getLogger()
 
 
 class CardManager:
-
-    enums = enums
-    exceptions = exceptions
-
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['card'] = self
@@ -78,7 +74,7 @@ class CardManager:
                 created_at=now,
                 notify_user_at=notify_user_at,
             )
-        except self.exceptions.CardAlreadyExists:
+        except CardAlreadyExists:
             card_item = self.dynamo.update_title(spec.card_id, spec.title)
             return self.init_card(card_item)
 

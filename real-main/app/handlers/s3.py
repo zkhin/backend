@@ -5,6 +5,7 @@ import urllib
 from app import clients, models
 from app.logging import LogLevelContext, handler_logging
 from app.models.post.enums import PostStatus, PostType
+from app.models.post.exceptions import PostException
 
 from . import xray
 
@@ -66,7 +67,7 @@ def image_post_uploaded(event, context):
 
     try:
         post.process_image_upload()
-    except post_manager.exceptions.PostException as err:
+    except PostException as err:
         logger.warning(str(err))
         post.error()
 
@@ -101,7 +102,7 @@ def video_post_uploaded(event, context):
 
     try:
         post.start_processing_video_upload()
-    except post.exceptions.PostException as err:
+    except PostException as err:
         logger.warning(str(err))
         post.error()
 
@@ -130,6 +131,6 @@ def video_post_processed(event, context):
 
     try:
         post.finish_processing_video_upload()
-    except post.exceptions.PostException as err:
+    except PostException as err:
         logger.warning(str(err))
         post.error()

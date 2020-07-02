@@ -1,19 +1,20 @@
 import logging
 
 from app import models
+from app.models.follower.enums import FollowStatus
+from app.models.post.enums import PostStatus
+from app.models.post.exceptions import PostDoesNotExist
+from app.models.user.enums import UserPrivacyStatus
 
-from . import enums, exceptions
 from .dynamo import LikeDynamo
+from .enums import LikeStatus
+from .exceptions import AlreadyLiked, LikeException
 from .model import Like
 
 logger = logging.getLogger()
 
 
 class LikeManager:
-
-    enums = enums
-    exceptions = exceptions
-
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['like'] = self
@@ -36,44 +37,44 @@ class LikeManager:
     def like_post(self, user, post, like_status, now=None):
         # can't like a post of a user that has blocked us
         if self.block_manager.is_blocked(post.user_id, user.id):
-            raise exceptions.LikeException(f'User has been blocked by owner of post `{post.id}`')
+            raise LikeException(f'User has been blocked by owner of post `{post.id}`')
 
         # can't like a post of a user we have blocked
         if self.block_manager.is_blocked(user.id, post.user_id):
-            raise exceptions.LikeException(f'User has blocked owner of post `{post.id}`')
+            raise LikeException(f'User has blocked owner of post `{post.id}`')
 
         # if the post is from a private user (other than ourselves) then we must be a follower to like the post
         posted_by_user = self.user_manager.get_user(post.user_id)
         if user.id != posted_by_user.id:
-            if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
+            if posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
                 follow = self.follower_manager.get_follow(user.id, posted_by_user.id)
-                if not follow or follow.status != self.follower_manager.enums.FollowStatus.FOLLOWING:
-                    raise exceptions.LikeException(f'User does not have access to post `{post.id}`')
+                if not follow or follow.status != FollowStatus.FOLLOWING:
+                    raise LikeException(f'User does not have access to post `{post.id}`')
 
-        if post.status != self.post_manager.enums.PostStatus.COMPLETED:
-            raise exceptions.LikeException(f'Cannot like posts with status `{post.status}`')
+        if post.status != PostStatus.COMPLETED:
+            raise LikeException(f'Cannot like posts with status `{post.status}`')
 
         if post.item.get('likesDisabled'):
-            raise exceptions.LikeException(f'Likes are disabled for this post `{post.id}`')
+            raise LikeException(f'Likes are disabled for this post `{post.id}`')
 
         if posted_by_user.item.get('likesDisabled'):
-            raise exceptions.LikeException(f'Owner of this post (user `{posted_by_user.id}` has disabled likes')
+            raise LikeException(f'Owner of this post (user `{posted_by_user.id}` has disabled likes')
 
         if user.item.get('likesDisabled'):
-            raise exceptions.LikeException(f'Caller `{user.id}` has disabled likes')
+            raise LikeException(f'Caller `{user.id}` has disabled likes')
 
         transacts = [
             self.dynamo.transact_add_like(user.id, post.item, like_status),
             self.post_manager.dynamo.transact_increment_like_count(post.id, like_status),
         ]
         transact_exceptions = [
-            self.exceptions.AlreadyLiked(user.id, post.id),
-            post.exceptions.PostDoesNotExist(post.id),
+            AlreadyLiked(user.id, post.id),
+            PostDoesNotExist(post.id),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 
         # increment the correct like counter on the in-memory copy of the post
-        attr = 'onymousLikeCount' if like_status == enums.LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
+        attr = 'onymousLikeCount' if like_status == LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
         post.item[attr] = post.item.get(attr, 0) + 1
 
     def dislike_all_of_post(self, post_id):

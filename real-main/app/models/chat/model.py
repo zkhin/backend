@@ -4,15 +4,14 @@ import pendulum
 
 from app.mixins.view.model import ViewModelMixin
 
-from . import enums, exceptions
+from .enums import ChatType
+from .exceptions import ChatException
 
 logger = logging.getLogger()
 
 
 class Chat(ViewModelMixin):
 
-    enums = enums
-    exceptions = exceptions
     item_type = 'chat'
 
     def __init__(
@@ -52,8 +51,8 @@ class Chat(ViewModelMixin):
         return bool(self.member_dynamo.get(self.id, user_id))
 
     def edit(self, edited_by_user, name=None):
-        if self.type != enums.ChatType.GROUP:
-            raise exceptions.ChatException(f'Cannot edit non-GROUP chat `{self.id}`')
+        if self.type != ChatType.GROUP:
+            raise ChatException(f'Cannot edit non-GROUP chat `{self.id}`')
 
         if name is None:
             return
@@ -64,8 +63,8 @@ class Chat(ViewModelMixin):
 
     def add(self, added_by_user, user_ids, now=None):
         now = now or pendulum.now('utc')
-        if self.type != enums.ChatType.GROUP:
-            raise exceptions.ChatException(f'Cannot add users to non-GROUP chat `{self.id}`')
+        if self.type != ChatType.GROUP:
+            raise ChatException(f'Cannot add users to non-GROUP chat `{self.id}`')
 
         users = []
         for user_id in set(user_ids):
@@ -91,13 +90,13 @@ class Chat(ViewModelMixin):
                 self.user_manager.dynamo.transact_increment_chat_count(user_id),
             ]
             transact_exceptions = [
-                exceptions.ChatException(f'Unable to add chat membership of user `{user_id} in chat `{self.id}`'),
+                ChatException(f'Unable to add chat membership of user `{user_id} in chat `{self.id}`'),
                 Exception(f'Unable to increment Chat.userCount for chat `{self.id}`'),
                 Exception(f'Unable to increment User.chatCount for chat `{user_id}`'),
             ]
             try:
                 self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-            except exceptions.ChatException:
+            except ChatException:
                 # user is already in the chat, nothing to do
                 pass
             else:
@@ -109,8 +108,8 @@ class Chat(ViewModelMixin):
             self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
 
     def leave(self, user):
-        if self.type != enums.ChatType.GROUP:
-            raise exceptions.ChatException(f'Cannot leave non-GROUP chat `{self.id}`')
+        if self.type != ChatType.GROUP:
+            raise ChatException(f'Cannot leave non-GROUP chat `{self.id}`')
 
         # leave the chat
         transacts = [
@@ -119,7 +118,7 @@ class Chat(ViewModelMixin):
             self.user_manager.dynamo.transact_decrement_chat_count(user.id),
         ]
         transact_exceptions = [
-            exceptions.ChatException(f'Unable to delete chat membership of user `{user.id}` in chat `{self.id}`'),
+            ChatException(f'Unable to delete chat membership of user `{user.id}` in chat `{self.id}`'),
             Exception(f'Unable to decrement Chat.userCount for chat `{self.id}`'),
             Exception(f'Unable to decrement User.chatCount for chat `{user.id}`'),
         ]
@@ -136,14 +135,14 @@ class Chat(ViewModelMixin):
         return self
 
     def delete_group_chat(self):
-        assert self.type == enums.ChatType.GROUP, 'may not be called for non-GROUP chats'
+        assert self.type == ChatType.GROUP, 'may not be called for non-GROUP chats'
 
         transacts = [self.dynamo.transact_delete(self.id, expected_user_count=0)]
         self.dynamo.client.transact_write_items(transacts)
         self.chat_message_manager.truncate_chat_messages(self.id)
 
     def delete_direct_chat(self):
-        assert self.type == enums.ChatType.DIRECT, 'may not be called for non-DIRECT chats'
+        assert self.type == ChatType.DIRECT, 'may not be called for non-DIRECT chats'
         user_id_1, user_id_2 = self.item['gsiA1PartitionKey'].split('/')[1:3]
 
         # first delete the chat and the memberships (so the chat never appears with no messages)

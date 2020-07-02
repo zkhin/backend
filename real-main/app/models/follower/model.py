@@ -2,17 +2,13 @@ import logging
 
 from app.models.user.enums import UserPrivacyStatus
 
-from . import enums, exceptions
 from .enums import FollowStatus
+from .exceptions import FollowerAlreadyHasStatus
 
 logger = logging.getLogger()
 
 
 class Follower:
-
-    enums = enums
-    exceptions = exceptions
-
     def __init__(
         self,
         follow_item,
@@ -49,9 +45,7 @@ class Follower:
     def unfollow(self, force=False):
         "Returns the status of the follow request"
         if not force and self.status == FollowStatus.DENIED:
-            raise exceptions.FollowerAlreadyHasStatus(
-                self.follower_user_id, self.followed_user_id, FollowStatus.DENIED
-            )
+            raise FollowerAlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
         self.dynamo.delete_following(self.item)
 
         if self.status == FollowStatus.FOLLOWING:
@@ -70,9 +64,7 @@ class Follower:
     def accept(self):
         "Returns the status of the follow request"
         if self.status == FollowStatus.FOLLOWING:
-            raise exceptions.FollowerAlreadyHasStatus(
-                self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING
-            )
+            raise FollowerAlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING)
         self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING)
 
         # async with dynamo stream handler?
@@ -88,9 +80,7 @@ class Follower:
     def deny(self):
         "Returns the status of the follow request"
         if self.status == FollowStatus.DENIED:
-            raise exceptions.FollowerAlreadyHasStatus(
-                self.follower_user_id, self.followed_user_id, FollowStatus.DENIED
-            )
+            raise FollowerAlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
         self.dynamo.update_following_status(self.item, FollowStatus.DENIED)
 
         if self.status == FollowStatus.FOLLOWING:

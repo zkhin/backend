@@ -10,6 +10,7 @@ import pytest
 
 from app.models import FollowedFirstStoryManager
 from app.models.post.enums import PostStatus, PostType
+from app.models.post.exceptions import PostException
 from app.models.post.model import Post
 from app.utils import image_size
 
@@ -422,7 +423,7 @@ def test_set_cant_create_contentless_post(post_manager, post):
     assert post.image_item is None
 
     # verify we can't set the text to null on that post
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post.set(text='')
 
     # check no changes anywhere
@@ -456,7 +457,7 @@ def test_serailize(user, post, user_manager):
 
 def test_error_failure(post_manager, post):
     # verify can't change a completed post to error
-    with pytest.raises(post_manager.exceptions.PostException, match='PENDING'):
+    with pytest.raises(PostException, match='PENDING'):
         post.error()
 
 
@@ -496,12 +497,12 @@ def test_error_processing_post(post_manager, user):
 
 def test_set_album_errors(album_manager, post_manager, user_manager, post, post_with_media, user):
     # album doesn't exist
-    with pytest.raises(post_manager.exceptions.PostException, match='does not exist'):
+    with pytest.raises(PostException, match='does not exist'):
         post_with_media.set_album('aid-dne')
 
     # album is owned by a different user
     album = album_manager.add_album(user.id, 'aid-2', 'album name')
-    with pytest.raises(post_manager.exceptions.PostException, match='belong to different users'):
+    with pytest.raises(PostException, match='belong to different users'):
         post_with_media.set_album(album.id)
 
 
@@ -679,19 +680,19 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
     assert post4.item['gsiK3SortKey'] == 0
 
     # verify can't change order with post that DNE
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post2.set_album_order('pid-dne')
 
     # verify can't change order using post from diff users
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post1.set_album_order(post2.id)
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post2.set_album_order(post1.id)
 
     # verify can't change order with posts in diff albums
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post4.set_album_order(post2.id)
-    with pytest.raises(post_manager.exceptions.PostException):
+    with pytest.raises(PostException):
         post2.set_album_order(post4.id)
 
     # verify *can* change order if everything correct
@@ -878,7 +879,7 @@ def test_fill_native_jpeg_cache_from_heic_bad_heic_data(pending_image_post, s3_u
     s3_jpeg_path = post.get_image_path(image_size.NATIVE)
     assert not s3_uploads_client.exists(s3_jpeg_path)
 
-    with pytest.raises(post.exceptions.PostException, match='Unable to read HEIC'):
+    with pytest.raises(PostException, match='Unable to read HEIC'):
         post.fill_native_jpeg_cache_from_heic()
 
     # verify there's still no native jpeg

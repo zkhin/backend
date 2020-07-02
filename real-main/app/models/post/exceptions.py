@@ -25,7 +25,3 @@ class UnableToDecrementPostLikeCounter(PostException):
 
     def __str__(self):
         return f'Post `{self.post_id}` either does not exist or has a like counter of < 1'
-
-
-generic = PostException
-dne = PostDoesNotExist

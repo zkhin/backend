@@ -5,6 +5,8 @@ from unittest import mock
 
 import pytest
 
+from app.models.user.exceptions import UserAlreadyExists, UserValidationException
+
 
 @pytest.fixture
 def cognito_only_user1(user_manager, cognito_client):
@@ -90,7 +92,7 @@ def test_create_cognito_user_aleady_exists(user_manager, cognito_client):
     assert user.cognito_client.get_user_attributes(user.id)['preferred_username'] == username
 
     # try to create the user again, this time with a diff username
-    with pytest.raises(user.exceptions.UserAlreadyExists):
+    with pytest.raises(UserAlreadyExists):
         user_manager.create_cognito_only_user(user_id, 'diffusername')
 
     # verify that did not affect either dynamo, cognito or pinpoint
@@ -164,7 +166,7 @@ def test_create_cognito_user_with_non_verified_email_and_phone(user_manager, cog
     assert user is None
 
     # check can't create the user
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_cognito_only_user(user_id, username, full_name=full_name)
 
 
@@ -173,7 +175,7 @@ def test_create_cognito_only_user_invalid_username(user_manager):
     invalid_username = '-'
     full_name = 'my-full-name'
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_cognito_only_user(user_id, invalid_username, full_name=full_name)
 
 
@@ -192,10 +194,10 @@ def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user
     exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user_manager.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_cognito_only_user(user_id, username_1)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_cognito_only_user(user_id, username_2)
 
 
@@ -212,7 +214,7 @@ def test_create_cognito_only_user_username_released_if_user_not_found_in_user_po
     )
 
     # create the first user that doesn't exist in the user pool, should fail
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_cognito_only_user(user_id_1, username)
 
     # should be able to now use that same username with the other user
@@ -298,14 +300,14 @@ def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
     exception = user_manager.cognito_client.user_pool_client.exceptions.UsernameExistsException({}, None)
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
 
 
@@ -352,14 +354,14 @@ def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
     exception = user_manager.cognito_client.user_pool_client.exceptions.UsernameExistsException({}, None)
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
+    with pytest.raises(UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
-    with pytest.raises(user_manager.exceptions.UserValidationException, match='already exists'):
+    with pytest.raises(UserValidationException, match='already exists'):
         user_manager.create_google_user('uid', 'uname', 'google-id-token')
 
 
@@ -373,7 +375,7 @@ def test_create_google_user_invalid_id_token(user_manager, caplog):
 
     # create the google user, check it is as expected
     with caplog.at_level(logging.WARNING):
-        with pytest.raises(user_manager.exceptions.UserValidationException, match='wrong flavor'):
+        with pytest.raises(UserValidationException, match='wrong flavor'):
             user_manager.create_google_user(user_id, username, google_token)
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'

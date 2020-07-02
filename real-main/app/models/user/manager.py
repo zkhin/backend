@@ -7,8 +7,8 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 
-from . import enums, exceptions
 from .dynamo import UserDynamo
+from .exceptions import UserAlreadyExists, UserValidationException
 from .model import User
 from .postprocessor import UserPostProcessor
 from .validate import UserValidate
@@ -20,8 +20,6 @@ S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTOR
 
 class UserManager(TrendingManagerMixin, ManagerBase):
 
-    enums = enums
-    exceptions = exceptions
     client_names = [
         'cloudfront',
         'cognito',
@@ -118,25 +116,21 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         try:
             attrs = self.cognito_client.get_user_attributes(user_id)
         except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
-            raise self.exceptions.UserValidationException(
+            raise UserValidationException(
                 f'No entry found in cognito user pool with cognito username `{user_id}`'
             )
         preferred_username = attrs.get('preferred_username', None)
         email = attrs.get('email') if attrs.get('email_verified', 'false') == 'true' else None
         phone = attrs.get('phone_number') if attrs.get('phone_number_verified', 'false') == 'true' else None
         if not email and not phone:
-            raise self.exceptions.UserValidationException(
-                f'User `{user_id}` has neither verified email nor phone'
-            )
+            raise UserValidationException(f'User `{user_id}` has neither verified email nor phone')
 
         # set the lowercased version of username in cognito
         # this is part of allowing case-insensitive logins
         try:
             self.cognito_client.set_user_attributes(user_id, {'preferred_username': username.lower()})
         except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
-            raise self.exceptions.UserValidationException(
-                f'Username `{username}` already taken (case-insensitive comparison)'
-            )
+            raise UserValidationException(f'Username `{username}` already taken (case-insensitive comparison)')
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
@@ -149,7 +143,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 phone=phone,
                 placeholder_photo_code=photo_code,
             )
-        except self.exceptions.UserAlreadyExists:
+        except UserAlreadyExists:
             # un-claim the username in cognito
             if preferred_username:
                 self.cognito_client.set_user_attributes(user_id, {'preferred_username': preferred_username})
@@ -168,7 +162,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
         email = self.facebook_client.get_verified_email(facebook_access_token).lower()
         if not email:
-            raise self.exceptions.UserValidationException('Unable to retrieve email with that token')
+            raise UserValidationException('Unable to retrieve email with that token')
 
         # set the user up in cognito, claims the username at the same time
         try:
@@ -181,7 +175,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.cognito_client.user_pool_client.exceptions.AliasExistsException,
             self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
         ):
-            raise self.exceptions.UserValidationException(
+            raise UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
             )
 
@@ -204,7 +198,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         except ValueError as err:
             msg = f'Unable to extract verified email from google id token: {err}'
             logger.warning(msg)
-            raise self.exceptions.UserValidationException(msg)
+            raise UserValidationException(msg)
 
         # set the user up in cognito
         try:
@@ -217,7 +211,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.cognito_client.user_pool_client.exceptions.AliasExistsException,
             self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
         ):
-            raise self.exceptions.UserValidationException(
+            raise UserValidationException(
                 f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
             )
 

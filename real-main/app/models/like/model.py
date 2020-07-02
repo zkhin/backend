@@ -1,15 +1,13 @@
 import logging
 
-from . import enums, exceptions
+from app.models.post.exceptions import UnableToDecrementPostLikeCounter
+
+from .exceptions import NotLikedWithStatus
 
 logger = logging.getLogger()
 
 
 class Like:
-
-    enums = enums
-    exceptions = exceptions
-
     def __init__(self, like_item, like_dynamo, post_manager=None):
         self.dynamo = like_dynamo
         if post_manager:
@@ -25,7 +23,7 @@ class Like:
             self.post_manager.dynamo.transact_decrement_like_count(self.post_id, like_status),
         ]
         transact_exceptions = [
-            self.exceptions.NotLikedWithStatus(self.liked_by_user_id, self.post_id, like_status),
-            self.post_manager.exceptions.UnableToDecrementPostLikeCounter(self.post_id),
+            NotLikedWithStatus(self.liked_by_user_id, self.post_id, like_status),
+            UnableToDecrementPostLikeCounter(self.post_id),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)

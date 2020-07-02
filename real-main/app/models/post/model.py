@@ -10,20 +10,29 @@ from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
 from app.models.card.specs import CommentCardSpec
+from app.models.follower.enums import FollowStatus
+from app.models.user.enums import UserPrivacyStatus
+from app.models.user.exceptions import UserException
 from app.utils import image_size
 
-from . import enums, exceptions
 from .cached_image import CachedImage
 from .enums import PostNotificationType, PostStatus, PostType
+from .exceptions import PostDoesNotExist, PostException
 from .text_image import generate_text_image
 
 logger = logging.getLogger()
 
+# keep in sync with object created handlers defined serverless.yml
+VIDEO_ORIGINAL_FILENAME = 'video-original.mov'
+VIDEO_HLS_PREFIX = 'video-hls/video'
+VIDEO_POSTER_PREFIX = 'video-poster/poster'
+IMAGE_DIR = 'image'
+
 
 class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
-    enums = enums
-    exceptions = exceptions
+    exception_dne = PostDoesNotExist
+    exception_generic = PostException
     item_type = 'post'
 
     def __init__(
@@ -180,22 +189,22 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return '/'.join([self.item['postedByUserId'], 'post', self.item['postId'], 'image', size.filename])
 
     def get_original_video_path(self):
-        return f'{self.s3_prefix}/{enums.VIDEO_ORIGINAL_FILENAME}'
+        return f'{self.s3_prefix}/{VIDEO_ORIGINAL_FILENAME}'
 
     def get_poster_video_path_prefix(self):
-        return f'{self.s3_prefix}/{enums.VIDEO_POSTER_PREFIX}'
+        return f'{self.s3_prefix}/{VIDEO_POSTER_PREFIX}'
 
     def get_poster_path(self):
-        return f'{self.s3_prefix}/{enums.VIDEO_POSTER_PREFIX}.0000000.jpg'
+        return f'{self.s3_prefix}/{VIDEO_POSTER_PREFIX}.0000000.jpg'
 
     def get_image_path(self, size):
-        return f'{self.s3_prefix}/{enums.IMAGE_DIR}/{size.filename}'
+        return f'{self.s3_prefix}/{IMAGE_DIR}/{size.filename}'
 
     def get_hls_video_path_prefix(self):
-        return f'{self.s3_prefix}/{enums.VIDEO_HLS_PREFIX}'
+        return f'{self.s3_prefix}/{VIDEO_HLS_PREFIX}'
 
     def get_hls_master_m3u8_url(self):
-        path = f'{self.s3_prefix}/{enums.VIDEO_HLS_PREFIX}.m3u8'
+        path = f'{self.s3_prefix}/{VIDEO_HLS_PREFIX}.m3u8'
         return self.cloudfront_client.generate_unsigned_url(path)
 
     def get_hls_access_cookies(self):
@@ -247,7 +256,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 image.thumbnail(cache.image_size.max_dimensions, resample=PIL.Image.LANCZOS)
                 image.save(fh, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             except Exception as err:
-                raise exceptions.PostException(f'Unable to thumbnail image as jpeg for post `{self.id}`: {err}')
+                raise PostException(f'Unable to thumbnail image as jpeg for post `{self.id}`: {err}')
             cache.set(image=image)
             cache.flush()
 
@@ -301,14 +310,14 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         lr_x, lr_y = crop['lowerRight']['x'], crop['lowerRight']['y']
 
         if lr_y > cur_height:
-            raise exceptions.PostException('Image not tall enough to crop as requested')
+            raise PostException('Image not tall enough to crop as requested')
         if lr_x > cur_width:
-            raise exceptions.PostException('Image not wide enough to crop as requested')
+            raise PostException('Image not wide enough to crop as requested')
 
         try:
             image = image.crop((ul_x, ul_y, lr_x, lr_y))
         except Exception as err:
-            raise exceptions.PostException(f'Unable to crop image for post `{self.id}`: {err}')
+            raise PostException(f'Unable to crop image for post `{self.id}`: {err}')
 
         self.native_jpeg_cache.set(image=image)
 
@@ -348,7 +357,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     def error(self):
         if self.status not in (PostStatus.PENDING, PostStatus.PROCESSING):
-            raise exceptions.PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
+            raise PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
 
         transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ERROR)]
         self.dynamo.client.transact_write_items(transacts)
@@ -362,7 +371,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         if self.status in (PostStatus.COMPLETED, PostStatus.ARCHIVED, PostStatus.DELETING):
             msg = f'Refusing to change post `{self.id}` with status `{self.status}` to `{PostStatus.COMPLETED}`'
-            raise exceptions.PostException(msg)
+            raise PostException(msg)
 
         # Determine the original_post_id, if this post isn't original
         original_post_id = None
@@ -396,7 +405,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if set_as_user_photo:
             try:
                 self.user.update_photo(self.id)
-            except self.user.exceptions.UserException as err:
+            except UserException as err:
                 logger.warning(f'Unable to set user photo with post `{self.id}`: {err}')
 
         # update the first story if needed
@@ -421,7 +430,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def archive(self, forced=False):
         "Transition the post to ARCHIVED status"
         if self.status != PostStatus.COMPLETED:
-            raise exceptions.PostException(f'Cannot archive post with status `{self.status}`')
+            raise PostException(f'Cannot archive post with status `{self.status}`')
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
@@ -458,7 +467,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def restore(self):
         "Transition the post out of ARCHIVED status"
         if self.status != PostStatus.ARCHIVED:
-            raise exceptions.PostException(f'Post `{self.id}` is not archived (has status `{self.status}`)')
+            raise PostException(f'Post `{self.id}` is not archived (has status `{self.status}`)')
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
@@ -552,10 +561,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     ):
         args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
         if all(v is None for v in args):
-            raise exceptions.PostException('Empty edit requested')
+            raise PostException('Empty edit requested')
 
         if self.type == PostType.TEXT_ONLY and text == '':
-            raise exceptions.PostException('Cannot set text to null on text-only post')
+            raise PostException('Cannot set text to null on text-only post')
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
@@ -625,10 +634,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         album_rank = album.get_next_last_rank() if album and self.status == PostStatus.COMPLETED else None
         if album_id:
             if not album:
-                raise exceptions.PostException(f'Album `{album_id}` does not exist')
+                raise PostException(f'Album `{album_id}` does not exist')
             if album.user_id != self.user_id:
                 msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
-                raise exceptions.PostException(msg)
+                raise PostException(msg)
 
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
         if self.status == PostStatus.COMPLETED:
@@ -654,20 +663,20 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def set_album_order(self, preceding_post_id):
         album_id = self.item.get('albumId')
         if not album_id:
-            raise exceptions.PostException(f'Post `{self.id}` is not in an album')
+            raise PostException(f'Post `{self.id}` is not in an album')
 
         preceding_post = None
         if preceding_post_id:
             preceding_post = self.post_manager.get_post(preceding_post_id)
 
             if not preceding_post:
-                raise exceptions.PostException(f'Preceding post `{preceding_post_id}` does not exist')
+                raise PostException(f'Preceding post `{preceding_post_id}` does not exist')
 
             if preceding_post.user_id != self.user_id:
-                raise exceptions.PostException(f'Preceding post `{preceding_post_id}` does not belong to caller')
+                raise PostException(f'Preceding post `{preceding_post_id}` does not belong to caller')
 
             if preceding_post.item.get('albumId') != album_id:
-                raise exceptions.PostException(f'Preceding post `{preceding_post_id}` is not in album post is in')
+                raise PostException(f'Preceding post `{preceding_post_id}` is not in album post is in')
 
         # determine the post's new rank
         album = self.album_manager.get_album(album_id)
@@ -699,10 +708,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def flag(self, user):
         # if the post is from a private user then we must be a follower to flag the post
         posted_by_user = self.user_manager.get_user(self.user_id)
-        if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
+        if posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
             follow = self.follower_manager.get_follow(user.id, self.user_id)
-            if not follow or follow.status != self.follower_manager.enums.FollowStatus.FOLLOWING:
-                raise exceptions.PostException(f'User does not have access to post `{self.id}`')
+            if not follow or follow.status != FollowStatus.FOLLOWING:
+                raise PostException(f'User does not have access to post `{self.id}`')
 
         super().flag(user)
         return self
@@ -714,7 +723,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self.user.is_forced_disabling_criteria_met_by_posts()
 
     def record_view_count(self, user_id, view_count, viewed_at=None):
-        if self.status != enums.PostStatus.COMPLETED:
+        if self.status != PostStatus.COMPLETED:
             logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{self.id}`')
             return False
 

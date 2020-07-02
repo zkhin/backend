@@ -2,8 +2,8 @@ import logging
 
 import pendulum
 
-from . import exceptions
 from .dynamo import TrendingDynamo
+from .exceptions import TrendingDNEOrAttributeMismatch
 
 logger = logging.getLogger()
 
@@ -11,7 +11,6 @@ logger = logging.getLogger()
 class TrendingManagerMixin:
 
     score_inflation_per_day = 2
-    trending_exceptions = exceptions
 
     min_count_to_keep = 10 * 1000
     min_score_to_keep = 0.5
@@ -66,7 +65,7 @@ class TrendingManagerMixin:
 
         try:
             self.trending_dynamo.deflate_score(item_id, current_score, new_score, last_deflation_at.date(), now)
-        except exceptions.TrendingDNEOrAttributeMismatch:
+        except TrendingDNEOrAttributeMismatch:
             logging.warning(
                 f'Trending deflate (common case assumption?) failure, trying again for `{self.item_type}:{item_id}`'
             )
@@ -87,7 +86,7 @@ class TrendingManagerMixin:
                 break
             try:
                 self.trending_dynamo.delete(item_id, expected_score=current_score)
-            except exceptions.TrendingDNEOrAttributeMismatch:
+            except TrendingDNEOrAttributeMismatch:
                 # race condition, the item must have recieved a boost in score
                 logging.warning(f'Lost race condition, not deleting trending for `{self.item_type}:{item_id}`')
             else:

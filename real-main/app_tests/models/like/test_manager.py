@@ -5,6 +5,7 @@ import pytest
 from app.models.like.enums import LikeStatus
 from app.models.like.exceptions import AlreadyLiked, LikeException
 from app.models.post.enums import PostType
+from app.models.user.enums import UserPrivacyStatus
 
 
 @pytest.fixture
@@ -75,7 +76,7 @@ def test_cant_like_post_of_private_user_without_following(
 ):
     post = user1_posts[0]
     # user 1 goes private
-    user1.set_privacy_status(user1.enums.UserPrivacyStatus.PRIVATE)
+    user1.set_privacy_status(UserPrivacyStatus.PRIVATE)
 
     # user 2 can't like their post
     with pytest.raises(LikeException):

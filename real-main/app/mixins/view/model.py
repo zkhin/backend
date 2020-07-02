@@ -2,16 +2,13 @@ import logging
 
 import pendulum
 
-from . import enums, exceptions
+from .enums import ViewedStatus
+from .exceptions import ViewAlreadyExists
 
 logger = logging.getLogger()
 
 
 class ViewModelMixin:
-
-    view_enums = enums
-    view_exceptions = exceptions
-
     def __init__(self, view_dynamo=None, **kwargs):
         super().__init__(**kwargs)
         if view_dynamo:
@@ -29,11 +26,11 @@ class ViewModelMixin:
         by this method.
         """
         if self.user_id == user_id:  # owner of the item
-            return enums.ViewedStatus.VIEWED
+            return ViewedStatus.VIEWED
         elif self.view_dynamo.get_view(self.id, user_id):
-            return enums.ViewedStatus.VIEWED
+            return ViewedStatus.VIEWED
         else:
-            return enums.ViewedStatus.NOT_VIEWED
+            return ViewedStatus.NOT_VIEWED
 
     def delete_views(self):
         view_item_generator = self.view_dynamo.generate_views(self.id, pks_only=True)
@@ -48,7 +45,7 @@ class ViewModelMixin:
         else:
             try:
                 self.view_dynamo.add_view(self.id, user_id, view_count, viewed_at)
-            except exceptions.ViewAlreadyExists:
+            except ViewAlreadyExists:
                 # we lost a race condition to add the view, so still need to record our data
                 self.view_dynamo.increment_view_count(self.id, user_id, view_count, viewed_at)
             else:

@@ -3,6 +3,7 @@ import uuid
 import pytest
 
 from app.mixins.view.enums import ViewedStatus
+from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType
 
 
@@ -74,9 +75,9 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(
     comment2 = comment_manager.add_comment('cid2', post.id, user2.id, 'run far')
 
     # verify user3 (a rando) cannot delete either of the comments
-    with pytest.raises(comment_manager.exceptions.CommentException, match='not authorized to delete'):
+    with pytest.raises(CommentException, match='not authorized to delete'):
         comment1.delete(deleter_user_id=user3.id)
-    with pytest.raises(comment_manager.exceptions.CommentException, match='not authorized to delete'):
+    with pytest.raises(CommentException, match='not authorized to delete'):
         comment2.delete(deleter_user_id=user3.id)
 
     assert comment1.refresh_item().item

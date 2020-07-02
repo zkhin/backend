@@ -9,9 +9,9 @@ from app.mixins.base import ManagerBase
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.card.specs import ChatCardSpec
 
-from . import exceptions
 from .appsync import ChatMessageAppSync
 from .dynamo import ChatMessageDynamo
+from .enums import ChatMessageNotificationType
 from .model import ChatMessage
 from .postprocessor import ChatMessagePostProcessor
 
@@ -20,7 +20,6 @@ logger = logging.getLogger()
 
 class ChatMessageManager(ViewManagerMixin, ManagerBase):
 
-    exceptions = exceptions
     item_type = 'chatMessage'
 
     def __init__(self, clients, managers=None):
@@ -108,7 +107,7 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
         user_id = None
         message_id = str(uuid.uuid4())
         message = self.add_chat_message(message_id, text, chat_id, user_id, now=now)
-        message.trigger_notifications(message.enums.ChatMessageNotificationType.ADDED, user_ids=user_ids)
+        message.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=user_ids)
         return message
 
     def record_views(self, message_ids, user_id, viewed_at=None):

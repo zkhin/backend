@@ -4,7 +4,8 @@ from unittest import mock
 import pytest
 
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserStatus
+from app.models.user.enums import UserPrivacyStatus, UserStatus
+from app.models.user.exceptions import UserException, UserValidationException, UserVerificationException
 
 
 @pytest.fixture
@@ -59,7 +60,7 @@ def test_invalid_username(user):
     user.cognito_client = mock.Mock()
 
     invalid_username = '-'
-    with pytest.raises(user.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user.update_username(invalid_username)
 
     assert user.item['username'] != invalid_username
@@ -97,7 +98,7 @@ def test_cant_update_username_to_one_already_taken(user, user2):
     user.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
 
     # verify we can't update to that username
-    with pytest.raises(user.exceptions.UserValidationException):
+    with pytest.raises(UserValidationException):
         user.update_username(username.upper())
 
 
@@ -198,14 +199,14 @@ def test_disable_enable_user_status(user):
     user.refresh_item()
     assert user.status == UserStatus.DELETING
 
-    with pytest.raises(user.exceptions.UserException, match='Cannot enable user .* in status'):
+    with pytest.raises(UserException, match='Cannot enable user .* in status'):
         user.enable()
-    with pytest.raises(user.exceptions.UserException, match='Cannot disable user .* in status'):
+    with pytest.raises(UserException, match='Cannot disable user .* in status'):
         user.disable()
 
 
 def test_set_privacy_status_no_change(user):
-    privacy_status = user.enums.UserPrivacyStatus.PUBLIC
+    privacy_status = UserPrivacyStatus.PUBLIC
     user.set_privacy_status(privacy_status)
 
     org_user_item = user.item
@@ -215,18 +216,18 @@ def test_set_privacy_status_no_change(user):
 
 
 def test_set_privacy_status_from_public_to_private(user):
-    privacy_status = user.enums.UserPrivacyStatus.PUBLIC
+    privacy_status = UserPrivacyStatus.PUBLIC
     user.set_privacy_status(privacy_status)
     assert user.item['privacyStatus'] == privacy_status
 
-    privacy_status = user.enums.UserPrivacyStatus.PRIVATE
+    privacy_status = UserPrivacyStatus.PRIVATE
     user.set_privacy_status(privacy_status)
     assert user.item['privacyStatus'] == privacy_status
 
 
 def test_set_privacy_status_from_private_to_public(user_manager, user, user2, user3):
     follower_manager = user_manager.follower_manager
-    privacy_status = user.enums.UserPrivacyStatus.PRIVATE
+    privacy_status = UserPrivacyStatus.PRIVATE
     user.set_privacy_status(privacy_status)
     assert user.item['privacyStatus'] == privacy_status
 
@@ -243,7 +244,7 @@ def test_set_privacy_status_from_private_to_public(user_manager, user, user2, us
     assert len(resp) == 1
 
     # change to private
-    privacy_status = user.enums.UserPrivacyStatus.PUBLIC
+    privacy_status = UserPrivacyStatus.PUBLIC
     user.set_privacy_status(privacy_status)
     assert user.item['privacyStatus'] == privacy_status
 
@@ -351,7 +352,7 @@ def test_start_change_email_same_as_existing(user):
     user.item = user.dynamo.set_user_details(user.id, email=prev_email)
 
     new_email = prev_email
-    with pytest.raises(user.exceptions.UserVerificationException):
+    with pytest.raises(UserVerificationException):
         user.start_change_contact_attribute('email', new_email)
 
 
@@ -378,7 +379,7 @@ def test_finish_change_email_no_unverified_email(user):
     org_email = user.item['email']
     access_token = {}
     verification_code = {}
-    with pytest.raises(user.exceptions.UserVerificationException):
+    with pytest.raises(UserVerificationException):
         user.finish_change_contact_attribute('email', access_token, verification_code)
     assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
     assert user.item['email'] == org_email
@@ -396,7 +397,7 @@ def test_finish_change_email_wrong_verification_code(user):
 
     access_token = {}
     verification_code = {}
-    with pytest.raises(user.exceptions.UserVerificationException):
+    with pytest.raises(UserVerificationException):
         user.finish_change_contact_attribute('email', access_token, verification_code)
     assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
     assert user.item['email'] == org_email

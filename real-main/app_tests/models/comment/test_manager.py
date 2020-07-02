@@ -5,7 +5,9 @@ import pendulum
 import pytest
 
 from app.models.card.specs import CommentCardSpec
+from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType
+from app.models.user.enums import UserPrivacyStatus
 
 
 @pytest.fixture
@@ -58,13 +60,13 @@ def test_add_comment_cant_reuse_ids(comment_manager, user, post):
     assert comment.id == comment_id
 
     # verify we can't add another
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, user.id, text)
 
 
 def test_cant_comment_to_post_that_doesnt_exist(comment_manager, user):
     # verify we can't add another
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment('cid', 'dne-pid', user.id, 't')
 
 
@@ -73,7 +75,7 @@ def test_cant_comment_on_post_with_comments_disabled(comment_manager, user, post
 
     # disable comments on the post, verify we cannot add a comment
     post.set(comments_disabled=True)
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, user.id, 't')
 
     # enable comments on the post, verify we now can comment
@@ -88,13 +90,13 @@ def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, pos
 
     # owner blocks commenter, verify cannot comment
     block_manager.block(user, commenter)
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # owner unblocks commenter, commenter blocks owner, verify cannot comment
     block_manager.unblock(user, commenter)
     block_manager.block(commenter, user)
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # we commenter unblocks owner, verify now can comment
@@ -108,20 +110,20 @@ def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, 
     commenter = user2
 
     # post owner goes private
-    user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
+    user.set_privacy_status(UserPrivacyStatus.PRIVATE)
 
     # verify we can't comment on their post
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # request to follow, verify can't comment
     follower_manager.request_to_follow(commenter, user)
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # deny the follow request, verify can't comment
     follower_manager.get_follow(commenter.id, user.id).deny()
-    with pytest.raises(comment_manager.exceptions.CommentException):
+    with pytest.raises(CommentException):
         comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
 
     # accept the follow request, verify can comment
@@ -134,7 +136,7 @@ def test_private_user_can_comment_on_own_post(comment_manager, user, post):
     comment_id = 'cid'
 
     # post owner goes private
-    user.set_privacy_status(user.enums.UserPrivacyStatus.PRIVATE)
+    user.set_privacy_status(UserPrivacyStatus.PRIVATE)
 
     comment = comment_manager.add_comment(comment_id, post.id, user.id, 't')
     assert comment.id == comment_id

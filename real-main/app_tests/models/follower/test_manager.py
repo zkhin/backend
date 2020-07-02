@@ -4,6 +4,7 @@ import pendulum
 import pytest
 
 from app.models.follower.enums import FollowStatus
+from app.models.follower.exceptions import FollowerAlreadyExists, FollowerException
 from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
 
@@ -155,7 +156,7 @@ def test_request_to_follow_double_follow(follower_manager, users):
     assert follower_manager.request_to_follow(our_user, their_user).status == FollowStatus.FOLLOWING
 
     # try to follow them again
-    with pytest.raises(follower_manager.exceptions.FollowerAlreadyExists):
+    with pytest.raises(FollowerAlreadyExists):
         follower_manager.request_to_follow(our_user, their_user)
 
 
@@ -168,11 +169,11 @@ def test_request_to_follow_blocker_blocked_user(follower_manager, users, block_m
     assert block_item['blockedUserId'] == our_user.id
 
     # verify we can't follow them
-    with pytest.raises(follower_manager.exceptions.FollowerException, match='block'):
+    with pytest.raises(FollowerException, match='block'):
         follower_manager.request_to_follow(our_user, their_user)
 
     # verify they can't follow us
-    with pytest.raises(follower_manager.exceptions.FollowerException, match='block'):
+    with pytest.raises(FollowerException, match='block'):
         follower_manager.request_to_follow(their_user, our_user)
 
 

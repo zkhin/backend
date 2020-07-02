@@ -1,10 +1,3 @@
-# keep in sync with object created handlers defined serverless.yml
-VIDEO_ORIGINAL_FILENAME = 'video-original.mov'
-VIDEO_HLS_PREFIX = 'video-hls/video'
-VIDEO_POSTER_PREFIX = 'video-poster/poster'
-IMAGE_DIR = 'image'
-
-
 class PostStatus:
     PENDING = 'PENDING'
     PROCESSING = 'PROCESSING'

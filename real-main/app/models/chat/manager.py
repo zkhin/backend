@@ -7,8 +7,9 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.view.manager import ViewManagerMixin
 
-from . import enums, exceptions
 from .dynamo import ChatDynamo, ChatMemberDynamo
+from .enums import ChatType
+from .exceptions import ChatException
 from .model import Chat
 from .postprocessor import ChatPostProcessor
 
@@ -17,8 +18,6 @@ logger = logging.getLogger()
 
 class ChatManager(ViewManagerMixin, ManagerBase):
 
-    enums = enums
-    exceptions = exceptions
     item_type = 'chat'
 
     def __init__(self, clients, managers=None):
@@ -74,23 +73,23 @@ class ChatManager(ViewManagerMixin, ManagerBase):
 
         # can't direct chat with ourselves
         if created_by_user_id == with_user_id:
-            raise exceptions.ChatException(f'User `{created_by_user_id}` cannot open direct chat with themselves')
+            raise ChatException(f'User `{created_by_user_id}` cannot open direct chat with themselves')
 
         # can't chat if there's a blocking relationship, either direction
         if self.block_manager.is_blocked(created_by_user_id, with_user_id):
-            raise exceptions.ChatException(f'User `{created_by_user_id}` has blocked user `{with_user_id}`')
+            raise ChatException(f'User `{created_by_user_id}` has blocked user `{with_user_id}`')
         if self.block_manager.is_blocked(with_user_id, created_by_user_id):
-            raise exceptions.ChatException(f'User `{created_by_user_id}` has been blocked by `{with_user_id}`')
+            raise ChatException(f'User `{created_by_user_id}` has been blocked by `{with_user_id}`')
 
         # can't add a chat if one already exists between the two users
         if self.get_direct_chat(created_by_user_id, with_user_id):
-            raise exceptions.ChatException(
+            raise ChatException(
                 f'Chat already exists between user `{created_by_user_id}` and user `{with_user_id}`',
             )
 
         transacts = [
             self.dynamo.transact_add(
-                chat_id, enums.ChatType.DIRECT, created_by_user_id, with_user_id=with_user_id, now=now,
+                chat_id, ChatType.DIRECT, created_by_user_id, with_user_id=with_user_id, now=now,
             ),
             self.member_dynamo.transact_add(chat_id, created_by_user_id, now=now),
             self.member_dynamo.transact_add(chat_id, with_user_id, now=now),
@@ -98,11 +97,11 @@ class ChatManager(ViewManagerMixin, ManagerBase):
             self.user_manager.dynamo.transact_increment_chat_count(with_user_id),
         ]
         transact_exceptions = [
-            exceptions.ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
-            exceptions.ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
-            exceptions.ChatException(f'Unable to add user `{with_user_id}` to chat `{chat_id}`'),
-            exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
-            exceptions.ChatException(f'Unable to increment User.chatCount for user `{with_user_id}`'),
+            ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
+            ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
+            ChatException(f'Unable to add user `{with_user_id}` to chat `{chat_id}`'),
+            ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
+            ChatException(f'Unable to increment User.chatCount for user `{with_user_id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 
@@ -113,14 +112,14 @@ class ChatManager(ViewManagerMixin, ManagerBase):
 
         # create the group chat with just caller in it
         transacts = [
-            self.dynamo.transact_add(chat_id, enums.ChatType.GROUP, created_by_user.id, name=name, now=now),
+            self.dynamo.transact_add(chat_id, ChatType.GROUP, created_by_user.id, name=name, now=now),
             self.member_dynamo.transact_add(chat_id, created_by_user.id, now=now),
             self.user_manager.dynamo.transact_increment_chat_count(created_by_user.id),
         ]
         transact_exceptions = [
-            exceptions.ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
-            exceptions.ChatException(f'Unable to add user `{created_by_user.id}` to chat `{chat_id}`'),
-            exceptions.ChatException(f'Unable to increment User.chatCount for user `{created_by_user.id}`'),
+            ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
+            ChatException(f'Unable to add user `{created_by_user.id}` to chat `{chat_id}`'),
+            ChatException(f'Unable to increment User.chatCount for user `{created_by_user.id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 
@@ -134,7 +133,7 @@ class ChatManager(ViewManagerMixin, ManagerBase):
             if not chat:
                 logger.warning(f'Unable to find chat `{chat_id}` that user `{user_id}` is member of, ignoring')
                 continue
-            if chat.type == enums.ChatType.DIRECT:
+            if chat.type == ChatType.DIRECT:
                 chat.delete_direct_chat()
             else:
                 user = user or self.user_manager.get_user(user_id)

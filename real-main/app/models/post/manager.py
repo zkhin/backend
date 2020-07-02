@@ -10,9 +10,10 @@ from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
 
-from . import enums, exceptions
 from .appsync import PostAppSync
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
+from .enums import PostType
+from .exceptions import PostException
 from .model import Post
 from .postprocessor import PostPostProcessor
 
@@ -21,8 +22,6 @@ logger = logging.getLogger()
 
 class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, ManagerBase):
 
-    enums = enums
-    exceptions = exceptions
     item_type = 'post'
 
     def __init__(self, clients, managers=None):
@@ -112,28 +111,28 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         now = now or pendulum.now('utc')
         text = None if text == '' else text  # treat empty string as equivalent of null
 
-        if post_type == enums.PostType.TEXT_ONLY:
+        if post_type == PostType.TEXT_ONLY:
             if not text:
-                raise exceptions.PostException('Cannot add text-only post without text')
+                raise PostException('Cannot add text-only post without text')
             if image_input:
-                raise exceptions.PostException('Cannot add text-only post with ImageInput')
+                raise PostException('Cannot add text-only post with ImageInput')
             if set_as_user_photo:
-                raise exceptions.PostException('Cannot add text-only post with setAsUserPhoto')
+                raise PostException('Cannot add text-only post with setAsUserPhoto')
 
-        elif post_type == enums.PostType.VIDEO:
+        elif post_type == PostType.VIDEO:
             if image_input:
-                raise exceptions.PostException('Cannot add video post with ImageInput')
+                raise PostException('Cannot add video post with ImageInput')
             if set_as_user_photo:
-                raise exceptions.PostException('Cannot add video post with setAsUserPhoto')
+                raise PostException('Cannot add video post with setAsUserPhoto')
 
-        elif post_type == enums.PostType.IMAGE:
+        elif post_type == PostType.IMAGE:
             if image_input and (crop := image_input.get('crop')):
                 for pt, coord in itertools.product(('upperLeft', 'lowerRight'), ('x', 'y')):
                     if crop[pt][coord] < 0:
-                        raise exceptions.PostException(f'Image crop {pt}.{coord} cannot be negative')
+                        raise PostException(f'Image crop {pt}.{coord} cannot be negative')
                 for coord in ('x', 'y'):
                     if crop['upperLeft'][coord] >= crop['lowerRight'][coord]:
-                        raise exceptions.PostException(
+                        raise PostException(
                             f'Image crop lowerRight.{coord} must be strictly greater than upperLeft.{coord}',
                         )
         else:
@@ -142,7 +141,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
             msg = f'Refusing to add post `{post_id}` for user `{posted_by_user.id}` with non-positive lifetime'
-            raise exceptions.PostException(msg)
+            raise PostException(msg)
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
 
@@ -160,10 +159,10 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if album_id:
             album = self.album_manager.get_album(album_id)
             if not album:
-                raise exceptions.PostException(f'Album `{album_id}` does not exist')
+                raise PostException(f'Album `{album_id}` does not exist')
             if album.user_id != posted_by_user.id:
                 msg = f'Album `{album_id}` does not belong to caller user `{posted_by_user.id}`'
-                raise exceptions.PostException(msg)
+                raise PostException(msg)
 
         # add the pending post & media to dynamo in a transaction
         transacts = [
@@ -183,7 +182,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 set_as_user_photo=set_as_user_photo,
             )
         ]
-        if post_type == enums.PostType.IMAGE:
+        if post_type == PostType.IMAGE:
             # 'image_input' is straight from graphql, format dictated by schema
             image_input = image_input or {}
             transacts.append(
@@ -203,15 +202,15 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         post = self.init_post(post_item)
 
         # text-only posts can be completed immediately
-        if post.type == enums.PostType.TEXT_ONLY:
+        if post.type == PostType.TEXT_ONLY:
             post.complete(now=now)
 
-        if post.type == enums.PostType.IMAGE:
+        if post.type == PostType.IMAGE:
             if image_data := image_input.get('imageData'):
                 post.refresh_image_item(strongly_consistent=True)
                 try:
                     post.process_image_upload(image_data=image_data, now=now)
-                except exceptions.PostException as err:
+                except PostException as err:
                     logger.warning(str(err))
                     post.error()
 

@@ -16,7 +16,3 @@ class CommentAlreadyExists(CommentException):
 
     def __str__(self):
         return f'Comment `{self.comment_id}` already exists'
-
-
-generic = CommentException
-dne = CommentDoesNotExist

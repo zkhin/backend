@@ -4,6 +4,7 @@ import pendulum
 import pytest
 
 from app.models.follower.enums import FollowStatus
+from app.models.follower.exceptions import FollowerAlreadyHasStatus
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
@@ -61,7 +62,7 @@ def test_accept(users_private, requested_follow):
     assert follow.refresh_item().status == FollowStatus.FOLLOWING
 
     # verify we can't double accept
-    with pytest.raises(follow.exceptions.FollowerAlreadyHasStatus):
+    with pytest.raises(FollowerAlreadyHasStatus):
         follow.accept()
 
 
@@ -108,7 +109,7 @@ def test_deny_follow_request(users_private, requested_follow):
     assert their_user.item.get('followedCount', 0) == 0
 
     # vierfy they can't deny our follow request again
-    with pytest.raises(follow.exceptions.FollowerAlreadyHasStatus):
+    with pytest.raises(FollowerAlreadyHasStatus):
         follow.deny()
 
 

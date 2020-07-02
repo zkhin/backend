@@ -6,6 +6,7 @@ import pytest
 import stringcase
 
 from app.models.post.enums import PostStatus, PostType
+from app.models.post.exceptions import PostException
 from app.utils import image_size
 
 
@@ -46,37 +47,37 @@ def test_get_post_dne(post_manager):
 
 def test_add_post_errors(post_manager, user):
     # try to add a post without any content (no text or media)
-    with pytest.raises(post_manager.exceptions.PostException, match='without text'):
+    with pytest.raises(PostException, match='without text'):
         post_manager.add_post(user, 'pid', PostType.TEXT_ONLY)
 
     # try to add a post with a negative lifetime value
     lifetime_duration = pendulum.duration(hours=-1)
-    with pytest.raises(post_manager.exceptions.PostException, match='non-positive lifetime'):
+    with pytest.raises(PostException, match='non-positive lifetime'):
         post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration)
 
     # try to add a post with a zero lifetime value
     lifetime_duration = pendulum.duration(hours=0)
-    with pytest.raises(post_manager.exceptions.PostException, match='non-positive lifetime'):
+    with pytest.raises(PostException, match='non-positive lifetime'):
         post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='t', lifetime_duration=lifetime_duration)
 
     # try to add a text-only post with a media_upload
-    with pytest.raises(post_manager.exceptions.PostException, match='with ImageInput'):
+    with pytest.raises(PostException, match='with ImageInput'):
         post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='t', image_input={'mediaId': 'mid'})
 
     # try to add a text-only post with a media_upload
-    with pytest.raises(post_manager.exceptions.PostException, match='with setAsUserPhoto'):
+    with pytest.raises(PostException, match='with setAsUserPhoto'):
         post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='t', set_as_user_photo=True)
 
     # try to add a text-only post with no text
-    with pytest.raises(post_manager.exceptions.PostException, match='without text'):
+    with pytest.raises(PostException, match='without text'):
         post_manager.add_post(user, 'pid', PostType.TEXT_ONLY)
 
     # try to add a video post with a media_upload
-    with pytest.raises(post_manager.exceptions.PostException, match='with ImageInput'):
+    with pytest.raises(PostException, match='with ImageInput'):
         post_manager.add_post(user, 'pid', PostType.VIDEO, image_input={'mediaId': 'mid'})
 
     # try to add a video post as profile pic
-    with pytest.raises(post_manager.exceptions.PostException, match='with setAsUserPhoto'):
+    with pytest.raises(PostException, match='with setAsUserPhoto'):
         post_manager.add_post(user, 'pid', PostType.VIDEO, set_as_user_photo=True)
 
     # try to add post with invalid post type
@@ -94,7 +95,7 @@ def test_add_post_errors(post_manager, user):
     ],
 )
 def test_add_post_negative_crop_cordinate_errors(post_manager, crop, user):
-    with pytest.raises(post_manager.exceptions.PostException, match='cannot be negative'):
+    with pytest.raises(PostException, match='cannot be negative'):
         post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'crop': crop})
 
 
@@ -106,7 +107,7 @@ def test_add_post_negative_crop_cordinate_errors(post_manager, crop, user):
     ],
 )
 def test_add_post_emptry_crop_area_errors(post_manager, crop, user):
-    with pytest.raises(post_manager.exceptions.PostException, match='must be strictly greater than'):
+    with pytest.raises(PostException, match='must be strictly greater than'):
         post_manager.add_post(user.id, 'pid', PostType.IMAGE, image_input={'crop': crop})
 
 
@@ -146,11 +147,11 @@ def test_add_text_with_tags_post(post_manager, user):
 
 def test_add_post_album_errors(user_manager, post_manager, user, album, user2):
     # can't create post with album that doesn't exist
-    with pytest.raises(post_manager.exceptions.PostException, match='does not exist'):
+    with pytest.raises(PostException, match='does not exist'):
         post_manager.add_post(user, 'pid-4', PostType.IMAGE, album_id='aid-dne')
 
     # can't create post in somebody else's album
-    with pytest.raises(post_manager.exceptions.PostException, match='does not belong to'):
+    with pytest.raises(PostException, match='does not belong to'):
         post_manager.add_post(user2, 'pid-4', PostType.IMAGE, album_id=album.id)
 
     # verify we can add without error
@@ -523,7 +524,7 @@ def test_delete_older_expired_posts(post_manager, user, caplog):
 def test_set_post_status_to_error(post_manager, user_manager, user):
     # create a COMPLETED post, verify cannot transition it to ERROR
     post = post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
-    with pytest.raises(post_manager.exceptions.PostException, match='PENDING'):
+    with pytest.raises(PostException, match='PENDING'):
         post.error()
 
     # add a PENDING post, transition it to ERROR, verify all good

@@ -4,17 +4,14 @@ import pendulum
 
 from app import models
 
-from . import exceptions
 from .dynamo import AlbumDynamo
+from .exceptions import AlbumException
 from .model import Album
 
 logger = logging.getLogger()
 
 
 class AlbumManager:
-
-    exceptions = exceptions
-
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['album'] = self
@@ -49,8 +46,8 @@ class AlbumManager:
             self.dynamo.transact_add_album(album_id, caller_user_id, name, description, created_at=now),
         ]
         transact_exceptions = [
-            exceptions.AlbumException('Unable to increment User.albumCount'),
-            exceptions.AlbumException(f'Unable to add album with id `{album_id}`... id already used?'),
+            AlbumException('Unable to increment User.albumCount'),
+            AlbumException(f'Unable to add album with id `{album_id}`... id already used?'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 

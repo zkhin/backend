@@ -8,6 +8,7 @@ import pytest
 from app.models import FeedManager, FollowedFirstStoryManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
+from app.models.user.exceptions import UserException
 from app.utils import image_size
 
 
@@ -233,7 +234,7 @@ def test_complete_with_set_as_user_photo(post_manager, user, post_with_media, po
 
 def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, post_set_as_user_photo, caplog):
     # set up mocks
-    post_set_as_user_photo.user.update_photo = mock.Mock(side_effect=user.exceptions.UserException('nope'))
+    post_set_as_user_photo.user.update_photo = mock.Mock(side_effect=UserException('nope'))
     post_set_as_user_photo.appsync.trigger_notification = mock.Mock()
 
     # complete the post with use_as_user_photo with an exception throw from setting the photo, and

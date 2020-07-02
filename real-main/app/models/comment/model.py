@@ -4,15 +4,18 @@ import pendulum
 
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
+from app.models.follower.enums import FollowStatus
+from app.models.user.enums import UserPrivacyStatus
 
-from . import exceptions
+from .exceptions import CommentDoesNotExist, CommentException
 
 logger = logging.getLogger()
 
 
 class Comment(FlagModelMixin, ViewModelMixin):
 
-    exceptions = exceptions
+    exception_dne = CommentDoesNotExist
+    exception_generic = CommentException
     item_type = 'comment'
 
     def __init__(
@@ -67,7 +70,7 @@ class Comment(FlagModelMixin, ViewModelMixin):
     def delete(self, deleter_user_id=None, forced=False):
         # users may only delete their own comments or comments on their posts
         if deleter_user_id and deleter_user_id not in (self.post.user_id, self.user_id):
-            raise exceptions.CommentException(f'User is not authorized to delete comment `{self.id}`')
+            raise CommentException(f'User is not authorized to delete comment `{self.id}`')
 
         # delete any flags of the comment
         self.flag_dynamo.delete_all_for_item(self.id)
@@ -81,10 +84,10 @@ class Comment(FlagModelMixin, ViewModelMixin):
     def flag(self, user):
         # if comment is on a post is from a private user then we must be a follower of the post owner
         posted_by_user = self.user_manager.get_user(self.post.user_id)
-        if posted_by_user.item['privacyStatus'] != self.user_manager.enums.UserPrivacyStatus.PUBLIC:
+        if posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
             follow = self.follower_manager.get_follow(user.id, self.user_id)
-            if not follow or follow.status != self.follower_manager.enums.FollowStatus.FOLLOWING:
-                raise exceptions.CommentException(f'User does not have access to comment `{self.id}`')
+            if not follow or follow.status != FollowStatus.FOLLOWING:
+                raise CommentException(f'User does not have access to comment `{self.id}`')
 
         super().flag(user)
 
