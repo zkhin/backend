@@ -40,8 +40,8 @@ def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, 
 
     # check no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
@@ -53,8 +53,8 @@ def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, 
 
     # check still no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
@@ -68,8 +68,8 @@ def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_users, fol
 
     # check no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
@@ -85,8 +85,8 @@ def test_refresh_after_add_story_in_db(ffs_manager, following_users, followed_po
 
     # check no ffs in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
@@ -112,8 +112,8 @@ def test_refresh_after_add_story_order(ffs_manager, following_users, followed_po
 
     # check ffs exists in the DB
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
@@ -156,8 +156,8 @@ def test_refresh_remove_story_order(ffs_manager, following_users, followed_posts
 
     # refresh the ffs, make sure it's what we expect
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']
@@ -206,8 +206,8 @@ def test_refresh_change_story_order(ffs_manager, following_users, followed_posts
 
     # refresh the ffs, make sure it's what we expect
     followed_first_story_pk = {
-        'partitionKey': f'followedFirstStory/{follower_user.id}/{followed_user.id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user.id}',
+        'sortKey': f'follower/{follower_user.id}/firstStory',
     }
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']

@@ -80,12 +80,12 @@ def test_request_to_follow_public_user(follower_manager, users):
     our_feed_by_them = list(follower_manager.feed_manager.dynamo.generate_feed(our_user.id))
     assert len(our_feed_by_them) == 0
 
-    # check the followedFirstStory
+    # check the firstStory
     follow = follower_manager.get_follow(our_user.id, their_user.id)
     follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user_id}',
+        'sortKey': f'follower/{follower_user_id}/firstStory',
     }
     ffs = follower_manager.dynamo.client.get_item(pk)
     assert ffs is None
@@ -103,12 +103,12 @@ def test_request_to_follow_public_user_with_story(follower_manager, users, their
     assert len(our_feed_by_them) == 1
     assert our_feed_by_them[0]['postId'] == their_post.id
 
-    # check the followedFirstStory
+    # check the firstStory
     follow = follower_manager.get_follow(our_user.id, their_user.id)
     follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user_id}',
+        'sortKey': f'follower/{follower_user_id}/firstStory',
     }
     ffs = follower_manager.dynamo.client.get_item(pk)
     assert ffs['postId'] == their_post.id
@@ -137,12 +137,12 @@ def test_request_to_follow_private_user(follower_manager, users):
     our_feed_by_them = list(follower_manager.feed_manager.dynamo.generate_feed(our_user.id))
     assert len(our_feed_by_them) == 0
 
-    # check the followedFirstStory
+    # check the firstStory
     follow = follower_manager.get_follow(our_user.id, their_user.id)
     follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
     pk = {
-        'partitionKey': f'followedFirstStory/{follower_user_id}/{followed_user_id}',
-        'sortKey': '-',
+        'partitionKey': f'user/{followed_user_id}',
+        'sortKey': f'follower/{follower_user_id}/firstStory',
     }
     ffs = follower_manager.dynamo.client.get_item(pk)
     assert ffs is None

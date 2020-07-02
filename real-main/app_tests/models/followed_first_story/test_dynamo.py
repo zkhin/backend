@@ -41,14 +41,14 @@ def test_set_correct_format(ffs_dynamo, story):
     item = resp['Items'][0]
     assert item == {
         'schemaVersion': 1,
-        'partitionKey': 'followedFirstStory/f-uid/pb-uid',
-        'sortKey': '-',
+        'partitionKey': 'user/pb-uid',
+        'sortKey': 'follower/f-uid/firstStory',
         'gsiA1PartitionKey': 'followedFirstStory/f-uid',
         'gsiA1SortKey': 'e-at',
+        'gsiA2PartitionKey': 'follower/f-uid/firstStory',
+        'gsiA2SortKey': 'e-at',
         'postedByUserId': 'pb-uid',
         'postId': 'pid',
-        'postedAt': 'p-at',
-        'expiresAt': 'e-at',
     }
 
 
@@ -61,26 +61,29 @@ def test_set_all_and_delete_all(ffs_dynamo, story):
     ffs_dynamo.set_all((uid for uid in ['f-uid-2', 'f-uid-3']), story)
     resp = ffs_dynamo.client.table.scan()
     assert resp['Count'] == 2
-    pks = sorted(map(lambda item: item['partitionKey'], resp['Items']))
-    assert pks == ['followedFirstStory/f-uid-2/pb-uid', 'followedFirstStory/f-uid-3/pb-uid']
+    assert all(item['partitionKey'] == 'user/pb-uid' for item in resp['Items'])
+    sks = sorted(map(lambda item: item['sortKey'], resp['Items']))
+    assert sks == ['follower/f-uid-2/firstStory', 'follower/f-uid-3/firstStory']
 
     # put another item in the DB, check DB again
     ffs_dynamo.set_all((uid for uid in ['f-uid-1']), story)
     resp = ffs_dynamo.client.table.scan()
     assert resp['Count'] == 3
-    pks = sorted(map(lambda item: item['partitionKey'], resp['Items']))
-    assert pks == [
-        'followedFirstStory/f-uid-1/pb-uid',
-        'followedFirstStory/f-uid-2/pb-uid',
-        'followedFirstStory/f-uid-3/pb-uid',
+    assert all(item['partitionKey'] == 'user/pb-uid' for item in resp['Items'])
+    sks = sorted(map(lambda item: item['sortKey'], resp['Items']))
+    assert sks == [
+        'follower/f-uid-1/firstStory',
+        'follower/f-uid-2/firstStory',
+        'follower/f-uid-3/firstStory',
     ]
 
     # delete two items from the DB, check
     ffs_dynamo.delete_all((uid for uid in ['f-uid-1', 'f-uid-3']), story['postedByUserId'])
     resp = ffs_dynamo.client.table.scan()
     assert resp['Count'] == 1
-    pks = sorted(map(lambda item: item['partitionKey'], resp['Items']))
-    assert pks == ['followedFirstStory/f-uid-2/pb-uid']
+    assert all(item['partitionKey'] == 'user/pb-uid' for item in resp['Items'])
+    sks = sorted(map(lambda item: item['sortKey'], resp['Items']))
+    assert sks == ['follower/f-uid-2/firstStory']
 
     # delete remaing item from the DB, check
     ffs_dynamo.delete_all((uid for uid in ['f-uid-2']), story['postedByUserId'])
