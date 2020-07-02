@@ -8,7 +8,6 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import FollowedFirstStoryManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.post.model import Post
@@ -300,7 +299,7 @@ def test_set_expires_at(post):
 
     # set the expires at to something
     now = pendulum.now('utc')
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.set_expires_at(now)
     assert post.item['expiresAt'] == now.to_iso8601_string()
 
@@ -308,13 +307,13 @@ def test_set_expires_at(post):
     post.refresh_item()
     assert post.item['expiresAt'] == now.to_iso8601_string()
 
-    # check that the followed_first_story_manager was called correctly
-    assert post.followed_first_story_manager.mock_calls == [
-        mock.call.refresh_after_story_change(story_prev=None, story_now=post.item),
+    # check that the follower_manager was called correctly
+    assert post.follower_manager.mock_calls == [
+        mock.call.refresh_first_story(story_prev=None, story_now=post.item)
     ]
 
     # set the expires at to something else
-    post.followed_first_story_manager.reset_mock()
+    post.follower_manager.reset_mock()
     now = pendulum.now('utc')
     post_org_item = post.item.copy()
     post.set_expires_at(now)
@@ -324,9 +323,9 @@ def test_set_expires_at(post):
     post.refresh_item()
     assert post.item['expiresAt'] == now.to_iso8601_string()
 
-    # check that the followed_first_story_manager was called correctly
-    assert post.followed_first_story_manager.mock_calls == [
-        mock.call.refresh_after_story_change(story_prev=post_org_item, story_now=post.item),
+    # check that the follower_manager was called correctly
+    assert post.follower_manager.mock_calls == [
+        mock.call.refresh_first_story(story_prev=post_org_item, story_now=post.item),
     ]
 
 
@@ -336,7 +335,7 @@ def test_clear_expires_at(post_with_expiration):
     assert 'expiresAt' in post.item
 
     # remove the expires at
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post_org_item = post.item.copy()
     post.set_expires_at(None)
     assert 'expiresAt' not in post.item
@@ -345,9 +344,9 @@ def test_clear_expires_at(post_with_expiration):
     post.refresh_item()
     assert 'expiresAt' not in post.item
 
-    # check that the followed_first_story_manager was called correctly
-    assert post.followed_first_story_manager.mock_calls == [
-        mock.call.refresh_after_story_change(story_prev=post_org_item, story_now=None),
+    # check that the follower_manager was called correctly
+    assert post.follower_manager.mock_calls == [
+        mock.call.refresh_first_story(story_prev=post_org_item, story_now=None),
     ]
 
 

@@ -6,7 +6,6 @@ __all__ = [
     'ChatMessageManager',
     'CommentManager',
     'FeedManager',
-    'FollowedFirstStoryManager',
     'FollowerManager',
     'LikeManager',
     'PostManager',
@@ -20,7 +19,6 @@ from .chat.manager import ChatManager
 from .chat_message.manager import ChatMessageManager
 from .comment.manager import CommentManager
 from .feed.manager import FeedManager
-from .followed_first_story.manager import FollowedFirstStoryManager
 from .follower.manager import FollowerManager
 from .like.manager import LikeManager
 from .post.manager import PostManager

@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger()
 
 
-class FollowedFirstStoryDynamo:
+class FirstStoryDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 

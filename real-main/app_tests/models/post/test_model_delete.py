@@ -4,7 +4,7 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import CommentManager, FeedManager, FollowedFirstStoryManager, LikeManager
+from app.models import CommentManager, FeedManager, LikeManager
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
@@ -58,7 +58,7 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
     post.feed_manager = mock.Mock(FeedManager({}))
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.like_manager = mock.Mock(LikeManager({}))
 
     # delete the post
@@ -82,8 +82,8 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
-    assert post.followed_first_story_manager.mock_calls == [
-        mock.call.refresh_after_story_change(story_prev=post_item),
+    assert post.follower_manager.mock_calls == [
+        mock.call.refresh_first_story(story_prev=post_item),
     ]
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
@@ -105,7 +105,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # delete the post
@@ -131,7 +131,7 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
     ]
-    assert post.followed_first_story_manager.mock_calls == []
+    assert post.follower_manager.mock_calls == []
     assert post.feed_manager.mock_calls == []
 
 
@@ -147,7 +147,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # delete the post
@@ -177,7 +177,7 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
     ]
-    assert post.followed_first_story_manager.mock_calls == []
+    assert post.follower_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
@@ -203,7 +203,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # delete the post
@@ -231,7 +231,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
     ]
-    assert post.followed_first_story_manager.mock_calls == []
+    assert post.follower_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]

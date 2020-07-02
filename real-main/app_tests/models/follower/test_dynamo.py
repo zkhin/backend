@@ -3,7 +3,7 @@ import uuid
 import pendulum
 import pytest
 
-from app.models.follower.dynamo import FollowerDynamo
+from app.models.follower.dynamo.base import FollowerDynamo
 from app.models.follower.enums import FollowStatus
 
 

@@ -4,7 +4,7 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import FeedManager, FollowedFirstStoryManager, LikeManager
+from app.models import FeedManager, LikeManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 
@@ -74,7 +74,7 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
 
     # mock out some calls to far-flung other managers
     post.like_manager = mock.Mock(LikeManager({}))
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # archive the post
@@ -91,8 +91,8 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
     ]
-    assert post.followed_first_story_manager.mock_calls == [
-        mock.call.refresh_after_story_change(story_prev=post.item),
+    assert post.follower_manager.mock_calls == [
+        mock.call.refresh_first_story(story_prev=post.item),
     ]
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
@@ -114,7 +114,7 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
 
     # mock out some calls to far-flung other managers
     post.like_manager = mock.Mock(LikeManager({}))
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # archive the post
@@ -134,7 +134,7 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     assert post.like_manager.mock_calls == [
         mock.call.dislike_all_of_post(post.id),
     ]
-    assert post.followed_first_story_manager.mock_calls == []
+    assert post.follower_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]

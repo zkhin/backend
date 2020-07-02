@@ -55,7 +55,6 @@ card_manager = managers.get('card') or models.CardManager(clients, managers=mana
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
-ffs_manager = managers.get('followed_first_story') or models.FollowedFirstStoryManager(clients, managers=managers)
 follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)

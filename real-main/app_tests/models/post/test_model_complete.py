@@ -5,7 +5,7 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import FeedManager, FollowedFirstStoryManager
+from app.models import FeedManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.user.exceptions import UserException
@@ -91,7 +91,7 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
@@ -107,7 +107,7 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # check correct calls happened to far-flung other managers
-    assert post.followed_first_story_manager.mock_calls == []
+    assert post.follower_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
@@ -124,7 +124,7 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
     posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
@@ -138,9 +138,7 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # check correct calls happened to far-flung other managers
-    assert post.followed_first_story_manager.mock_calls == [
-        mock.call.refresh_after_story_change(story_now=post.item)
-    ]
+    assert post.follower_manager.mock_calls == [mock.call.refresh_first_story(story_now=post.item)]
     assert post.feed_manager.mock_calls == [
         mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
@@ -159,7 +157,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     post_manager.clients['s3_uploads'].put_object(path, image_data, 'application/octet-stream')
 
     # mock out some calls to far-flung other managers
-    post.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
@@ -180,7 +178,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert posted_by_user.item.get('postCount', 0) == 1
 
     # check correct calls happened to far-flung other managers
-    assert post.followed_first_story_manager.mock_calls == []
+    assert post.follower_manager.mock_calls == []
     assert post.feed_manager.mock_calls == [
         mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
     ]
@@ -196,9 +194,9 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
     post2.s3_uploads_client.put_object(path2, b'anything', 'application/octet-stream')
 
     # mock out some calls to far-flung other managers
-    post1.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post1.follower_manager = mock.Mock(post1.follower_manager)
     post1.feed_manager = mock.Mock(FeedManager({}))
-    post2.followed_first_story_manager = mock.Mock(FollowedFirstStoryManager({}))
+    post2.follower_manager = mock.Mock(post2.follower_manager)
     post2.feed_manager = mock.Mock(FeedManager({}))
 
     # complete the post that has the earlier postedAt, should not get an originalPostId

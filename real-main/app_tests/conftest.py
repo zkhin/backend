@@ -190,11 +190,6 @@ def follower_manager(dynamo_client):
 
 
 @pytest.fixture
-def ffs_manager(dynamo_client):
-    yield models.FollowedFirstStoryManager({'dynamo': dynamo_client})
-
-
-@pytest.fixture
 def like_manager(dynamo_client):
     yield models.LikeManager({'dynamo': dynamo_client})
 

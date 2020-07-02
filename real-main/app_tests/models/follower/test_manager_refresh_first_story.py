@@ -34,7 +34,9 @@ def followed_posts(post_manager, dynamo_client, following_users):
     yield [post.item for post in posts]
 
 
-def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, followed_posts, dynamo_client):
+def test_refresh_after_remove_story_not_yet_in_db(
+    follower_manager, following_users, followed_posts, dynamo_client
+):
     follower_user, followed_user = following_users
     post = followed_posts[0]
 
@@ -49,7 +51,7 @@ def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, 
     post['expiresAt'] = pendulum.now('utc').to_iso8601_string()
 
     # refresh as if after remove, story isn't in the DB
-    ffs_manager.refresh_after_story_change(story_prev=post)
+    follower_manager.refresh_first_story(story_prev=post)
 
     # check still no ffs in the DB
     followed_first_story_pk = {
@@ -59,7 +61,7 @@ def test_refresh_after_remove_story_not_yet_in_db(ffs_manager, following_users, 
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
 
-def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_users, followed_posts, dynamo_client):
+def test_refresh_after_add_story_not_yet_in_db(follower_manager, following_users, followed_posts, dynamo_client):
     follower_user, followed_user = following_users
     post = followed_posts[0]
 
@@ -74,12 +76,14 @@ def test_refresh_after_add_story_not_yet_in_db(ffs_manager, following_users, fol
     assert dynamo_client.get_item(followed_first_story_pk) is None
 
     # refresh as if after add, story isn't yet in the DB, check ffs now in db
-    ffs_manager.refresh_after_story_change(story_now=post)
+    follower_manager.refresh_first_story(story_now=post)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post['postId']
 
 
-def test_refresh_after_add_story_in_db(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+def test_refresh_after_add_story_in_db(
+    follower_manager, following_users, followed_posts, dynamo_client, post_manager
+):
     follower_user, followed_user = following_users
     post = followed_posts[0]
 
@@ -92,12 +96,14 @@ def test_refresh_after_add_story_in_db(ffs_manager, following_users, followed_po
 
     # add story to DB, refresh, check ffs now in db
     post = post_manager.dynamo.set_expires_at(post, pendulum.now('utc'))
-    ffs_manager.refresh_after_story_change(story_now=post)
+    follower_manager.refresh_first_story(story_now=post)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post['postId']
 
 
-def test_refresh_after_add_story_order(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+def test_refresh_after_add_story_order(
+    follower_manager, following_users, followed_posts, dynamo_client, post_manager
+):
     follower_user, followed_user = following_users
     post1, post2, post3 = followed_posts[:3]
 
@@ -108,7 +114,7 @@ def test_refresh_after_add_story_order(ffs_manager, following_users, followed_po
 
     # change the middle post to a story, save to db
     post2 = post_manager.dynamo.set_expires_at(post2, in_two_hours)
-    ffs_manager.refresh_after_story_change(story_now=post2)
+    follower_manager.refresh_first_story(story_now=post2)
 
     # check ffs exists in the DB
     followed_first_story_pk = {
@@ -120,18 +126,20 @@ def test_refresh_after_add_story_order(ffs_manager, following_users, followed_po
 
     # change the last post to a story, save to db, ffs should not have chagned
     post3 = post_manager.dynamo.set_expires_at(post3, in_three_hours)
-    ffs_manager.refresh_after_story_change(story_now=post3)
+    follower_manager.refresh_first_story(story_now=post3)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
 
     # change the first post to a story, save to db, ffs should now be the new one
     post1 = post_manager.dynamo.set_expires_at(post1, in_one_hour)
-    ffs_manager.refresh_after_story_change(story_now=post1)
+    follower_manager.refresh_first_story(story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']
 
 
-def test_refresh_remove_story_order(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+def test_refresh_remove_story_order(
+    follower_manager, following_users, followed_posts, dynamo_client, post_manager
+):
     follower_user, followed_user = following_users
     post1, post2, post3, post4, post5 = followed_posts
 
@@ -144,15 +152,15 @@ def test_refresh_remove_story_order(ffs_manager, following_users, followed_posts
 
     # make all of those stories
     post1 = post_manager.dynamo.set_expires_at(post1, in_one_hour)
-    ffs_manager.refresh_after_story_change(story_now=post1)
+    follower_manager.refresh_first_story(story_now=post1)
     post2 = post_manager.dynamo.set_expires_at(post2, in_two_hours)
-    ffs_manager.refresh_after_story_change(story_now=post2)
+    follower_manager.refresh_first_story(story_now=post2)
     post3 = post_manager.dynamo.set_expires_at(post3, in_three_hours)
-    ffs_manager.refresh_after_story_change(story_now=post3)
+    follower_manager.refresh_first_story(story_now=post3)
     post4 = post_manager.dynamo.set_expires_at(post4, in_four_hours)
-    ffs_manager.refresh_after_story_change(story_now=post4)
+    follower_manager.refresh_first_story(story_now=post4)
     post5 = post_manager.dynamo.set_expires_at(post5, in_five_hours)
-    ffs_manager.refresh_after_story_change(story_now=post5)
+    follower_manager.refresh_first_story(story_now=post5)
 
     # refresh the ffs, make sure it's what we expect
     followed_first_story_pk = {
@@ -164,30 +172,32 @@ def test_refresh_remove_story_order(ffs_manager, following_users, followed_posts
 
     # remove one from DB that doesn't change order, check ffs should not have changed
     post_manager.dynamo.remove_expires_at(post3['postId'])
-    ffs_manager.refresh_after_story_change(story_prev=post3)
+    follower_manager.refresh_first_story(story_prev=post3)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']
 
     # remove one from DB that does change order, check ffs should have changed
     post_manager.dynamo.remove_expires_at(post1['postId'])
-    ffs_manager.refresh_after_story_change(story_prev=post1)
+    follower_manager.refresh_first_story(story_prev=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
 
     # do the refresh first and removal second (dynamo order of operations not guaranteed), should not change order
-    ffs_manager.refresh_after_story_change(story_prev=post4)
+    follower_manager.refresh_first_story(story_prev=post4)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
     post_manager.dynamo.remove_expires_at(post4['postId'])
 
     # do the refresh first and removal second (dynamo order of operations not guaranteed), should change order
-    ffs_manager.refresh_after_story_change(story_prev=post2)
+    follower_manager.refresh_first_story(story_prev=post2)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post5['postId']
     post_manager.dynamo.remove_expires_at(post2['postId'])
 
 
-def test_refresh_change_story_order(ffs_manager, following_users, followed_posts, dynamo_client, post_manager):
+def test_refresh_change_story_order(
+    follower_manager, following_users, followed_posts, dynamo_client, post_manager
+):
     follower_user, followed_user = following_users
     post1, post2 = followed_posts[:2]
 
@@ -200,9 +210,9 @@ def test_refresh_change_story_order(ffs_manager, following_users, followed_posts
 
     # make all of those stories
     post1 = post_manager.dynamo.set_expires_at(post1, in_two_hours)
-    ffs_manager.refresh_after_story_change(story_now=post1)
+    follower_manager.refresh_first_story(story_now=post1)
     post2 = post_manager.dynamo.set_expires_at(post2, in_three_hours)
-    ffs_manager.refresh_after_story_change(story_now=post2)
+    follower_manager.refresh_first_story(story_now=post2)
 
     # refresh the ffs, make sure it's what we expect
     followed_first_story_pk = {
@@ -215,41 +225,41 @@ def test_refresh_change_story_order(ffs_manager, following_users, followed_posts
     # move post1 expiresAt up, does not change ordering
     story_prev = post1.copy()
     post1 = post_manager.dynamo.set_expires_at(post1, in_one_hour)
-    ffs_manager.refresh_after_story_change(story_prev=story_prev, story_now=post1)
+    follower_manager.refresh_first_story(story_prev=story_prev, story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']
 
     # move post1 expiresAt back, does not change ordering
     story_prev = post1.copy()
     post1 = post_manager.dynamo.set_expires_at(post1, in_two_hours)
-    ffs_manager.refresh_after_story_change(story_prev=story_prev, story_now=post1)
+    follower_manager.refresh_first_story(story_prev=story_prev, story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']
 
     # move post1 expiresAt back, does change ordering
     story_prev = post1.copy()
     post1 = post_manager.dynamo.set_expires_at(post1, in_four_hours)
-    ffs_manager.refresh_after_story_change(story_prev=story_prev, story_now=post1)
+    follower_manager.refresh_first_story(story_prev=story_prev, story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
 
     # move post1 expiresAt back, does not change ordering
     story_prev = post1.copy()
     post1 = post_manager.dynamo.set_expires_at(post1, in_five_hours)
-    ffs_manager.refresh_after_story_change(story_prev=story_prev, story_now=post1)
+    follower_manager.refresh_first_story(story_prev=story_prev, story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
 
     # move post1 expiresAt up, does not change ordering
     story_prev = post1.copy()
     post1 = post_manager.dynamo.set_expires_at(post1, in_four_hours)
-    ffs_manager.refresh_after_story_change(story_prev=story_prev, story_now=post1)
+    follower_manager.refresh_first_story(story_prev=story_prev, story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post2['postId']
 
     # move post1 expiresAt up, does change ordering
     story_prev = post1.copy()
     post1 = post_manager.dynamo.set_expires_at(post1, in_two_hours)
-    ffs_manager.refresh_after_story_change(story_prev=story_prev, story_now=post1)
+    follower_manager.refresh_first_story(story_prev=story_prev, story_now=post1)
     resp = dynamo_client.get_item(followed_first_story_pk)
     assert resp['postId'] == post1['postId']

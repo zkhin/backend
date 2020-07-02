@@ -51,7 +51,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         card_manager=None,
         comment_manager=None,
         feed_manager=None,
-        followed_first_story_manager=None,
         follower_manager=None,
         like_manager=None,
         post_manager=None,
@@ -90,8 +89,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.feed_manager = feed_manager
         if follower_manager:
             self.follower_manager = follower_manager
-        if followed_first_story_manager:
-            self.followed_first_story_manager = followed_first_story_manager
         if like_manager:
             self.like_manager = like_manager
         if post_manager:
@@ -410,7 +407,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # update the first story if needed
         if self.item.get('expiresAt'):
-            self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
+            self.follower_manager.refresh_first_story(story_now=self.item)
 
         # add post to feeds
         self.feed_manager.add_post_to_followers_feeds(self.user_id, self.item)
@@ -450,7 +447,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # if it was the first followed story, refresh that
         if self.item.get('expiresAt'):
-            self.followed_first_story_manager.refresh_after_story_change(story_prev=self.item)
+            self.follower_manager.refresh_first_story(story_prev=self.item)
 
         # delete the trending index, if it exists
         self.trending_delete()
@@ -486,7 +483,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # refresh the first story if needed
         if self.item.get('expiresAt'):
-            self.followed_first_story_manager.refresh_after_story_change(story_now=self.item)
+            self.follower_manager.refresh_first_story(story_now=self.item)
 
         # update feeds
         self.feed_manager.add_post_to_followers_feeds(self.user_id, self.item)
@@ -525,7 +522,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # if it was the first followed story, refresh that
         if self.item.get('expiresAt'):
-            self.followed_first_story_manager.refresh_after_story_change(story_prev=self.item)
+            self.follower_manager.refresh_first_story(story_prev=self.item)
 
         # remove it from feeds, user post count
         if prev_post_status == PostStatus.COMPLETED:
@@ -619,7 +616,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.item = self.dynamo.remove_expires_at(self.id)
         now_item = self.item.copy() if 'expiresAt' in self.item else None
         if prev_item or now_item:
-            self.followed_first_story_manager.refresh_after_story_change(story_prev=prev_item, story_now=now_item)
+            self.follower_manager.refresh_first_story(story_prev=prev_item, story_now=now_item)
         return self
 
     def set_album(self, album_id):

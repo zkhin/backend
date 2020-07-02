@@ -28,15 +28,15 @@ def follower_item(follower_manager, user1, user2):
 
 
 @pytest.fixture
-def follower_first_story_item(ffs_manager):
+def follower_first_story_item(follower_manager):
     user_id1, user_id2 = str(uuid4()), str(uuid4())
     post_item = {
         'postedByUserId': user_id2,
         'postId': str(uuid4()),
         'expiresAt': pendulum.now('utc').to_iso8601_string(),
     }
-    ffs_manager.dynamo.set_all((uid for uid in [user_id1]), post_item)
-    yield ffs_manager.dynamo.client.get_item(
+    follower_manager.first_story_dynamo.set_all((uid for uid in [user_id1]), post_item)
+    yield follower_manager.dynamo.client.get_item(
         {'partitionKey': f'user/{user_id2}', 'sortKey': f'follower/{user_id1}/firstStory'}
     )
 

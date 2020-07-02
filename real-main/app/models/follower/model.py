@@ -13,20 +13,19 @@ class Follower:
         self,
         follow_item,
         follow_dynamo,
+        first_story_dynamo,
         feed_manager=None,
-        ffs_manager=None,
         like_manager=None,
         post_manager=None,
         user_manager=None,
     ):
         self.dynamo = follow_dynamo
+        self.first_story_dynamo = first_story_dynamo
         self.followed_user_id = follow_item['followedUserId']
         self.follower_user_id = follow_item['followerUserId']
         self.item = follow_item
         if feed_manager:
             self.feed_manager = feed_manager
-        if ffs_manager:
-            self.ffs_manager = ffs_manager
         if like_manager:
             self.like_manager = like_manager
         if post_manager:
@@ -51,7 +50,7 @@ class Follower:
         if self.status == FollowStatus.FOLLOWING:
             # async with dynamo stream handler?
             self.feed_manager.delete_users_posts_from_feed(self.follower_user_id, self.followed_user_id)
-            self.ffs_manager.dynamo.delete_all([self.follower_user_id], self.followed_user_id)
+            self.first_story_dynamo.delete_all([self.follower_user_id], self.followed_user_id)
 
             # if the user is a private user, then we no longer have access to their posts thus we clear our likes
             followed_user_item = self.user_manager.dynamo.get_user(self.followed_user_id)
@@ -72,7 +71,7 @@ class Follower:
 
         post = self.post_manager.dynamo.get_next_completed_post_to_expire(self.followed_user_id)
         if post:
-            self.ffs_manager.dynamo.set_all([self.follower_user_id], post)
+            self.first_story_dynamo.set_all([self.follower_user_id], post)
 
         self.item['followStatus'] = FollowStatus.FOLLOWING
         return self
@@ -86,7 +85,7 @@ class Follower:
         if self.status == FollowStatus.FOLLOWING:
             # async with sns?
             self.feed_manager.delete_users_posts_from_feed(self.follower_user_id, self.followed_user_id)
-            self.ffs_manager.dynamo.delete_all([self.follower_user_id], self.followed_user_id)
+            self.first_story_dynamo.delete_all([self.follower_user_id], self.followed_user_id)
 
             # clear any likes that were droped on the followed's posts by the follower
             self.like_manager.dislike_all_by_user_from_user(self.follower_user_id, self.followed_user_id)
