@@ -1,6 +1,7 @@
 import logging
 from uuid import uuid4
 
+import pendulum
 import pytest
 
 from app.models.follower.enums import FollowStatus
@@ -24,6 +25,43 @@ user2 = user1
 @pytest.fixture
 def follower_item(follower_manager, user1, user2):
     yield follower_manager.dynamo.add_following(user1.id, user2.id, 'placeholder')
+
+
+@pytest.fixture
+def follower_first_story_item(ffs_manager):
+    user_id1, user_id2 = str(uuid4()), str(uuid4())
+    post_item = {
+        'postedByUserId': user_id2,
+        'postId': str(uuid4()),
+        'expiresAt': pendulum.now('utc').to_iso8601_string(),
+    }
+    ffs_manager.dynamo.set_all((uid for uid in [user_id1]), post_item)
+    yield ffs_manager.dynamo.client.get_item(
+        {'partitionKey': f'user/{user_id2}', 'sortKey': f'follower/{user_id1}/firstStory'}
+    )
+
+
+def test_does_nothing_for_ffs_item(follower_postprocessor, follower_first_story_item, dynamo_client):
+    item = follower_first_story_item
+    pk, sk = item['partitionKey'], item['sortKey']
+    # check starting state
+    assert dynamo_client.table.scan()['Items'] == [item]
+
+    # process an add, check nothing changed
+    follower_postprocessor.run(pk, sk, None, item)
+    assert dynamo_client.table.scan()['Items'] == [item]
+
+    # process an edit, check nothing changed
+    follower_postprocessor.run(pk, sk, item, item)
+    assert dynamo_client.table.scan()['Items'] == [item]
+
+    # delete item from DB, check state
+    dynamo_client.table.delete_item(Key={'partitionKey': pk, 'sortKey': sk})
+    assert dynamo_client.table.scan()['Items'] == []
+
+    # process a delete, check nothing changed
+    follower_postprocessor.run(pk, sk, item, None)
+    assert dynamo_client.table.scan()['Items'] == []
 
 
 # all the expected state changes that increment the follower & followed counts
