@@ -19,7 +19,7 @@ class FollowedFirstStoryManager:
             self.dynamo = FollowedFirstStoryDynamo(clients['dynamo'])
 
     def refresh_after_story_change(self, story_prev=None, story_now=None):
-        "Refresh the followedFirstStory items, if needed, after the a story has changed."
+        "Refresh the firstStory items, if needed, after the a story has changed."
         assert story_prev or story_now
         if story_prev:
             assert 'expiresAt' in story_prev

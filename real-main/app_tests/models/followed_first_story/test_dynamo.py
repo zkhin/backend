@@ -43,11 +43,8 @@ def test_set_correct_format(ffs_dynamo, story):
         'schemaVersion': 1,
         'partitionKey': 'user/pb-uid',
         'sortKey': 'follower/f-uid/firstStory',
-        'gsiA1PartitionKey': 'followedFirstStory/f-uid',
-        'gsiA1SortKey': 'e-at',
         'gsiA2PartitionKey': 'follower/f-uid/firstStory',
         'gsiA2SortKey': 'e-at',
-        'postedByUserId': 'pb-uid',
         'postId': 'pid',
     }
 

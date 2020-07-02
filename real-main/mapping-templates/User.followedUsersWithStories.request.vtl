@@ -17,13 +17,13 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiA1PartitionKey = :pk and gsiA1SortKey < :skMax",
+    "expression": "gsiA2PartitionKey = :pk and gsiA2SortKey < :skMax",
     "expressionValues": {
-      ":pk": { "S": "followedFirstStory/$targetUserId" },
+      ":pk": { "S": "follower/$targetUserId/firstStory" },
       ":skMax": { "S": "$skMax" }
     }
   },
-  "index": "GSI-A1",
+  "index": "GSI-A2",
   "limit": $limit
   #if ($ctx.args.nextToken)
     , "nextToken": "$ctx.args.nextToken"
