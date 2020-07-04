@@ -37,7 +37,7 @@ def test_run(comment_postprocessor, comment, post, user2, user):
     commented_at = pendulum.parse(comment.item['commentedAt'])
 
     # simulate a new comment, verify calls
-    old_item = None
+    old_item = {}
     new_item = comment.refresh_item().item
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
     comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
@@ -58,7 +58,7 @@ def test_run(comment_postprocessor, comment, post, user2, user):
 
     # simulate a deleteing a comment, verify calls
     old_item = new_item
-    new_item = None
+    new_item = {}
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
     comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
     comment_postprocessor.run(pk, sk, old_item, new_item)
@@ -73,7 +73,7 @@ def test_run(comment_postprocessor, comment, post, user2, user):
     pk, sk = view_item['partitionKey'], view_item['sortKey']
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
     comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
-    comment_postprocessor.run(pk, sk, None, view_item)
+    comment_postprocessor.run(pk, sk, {}, view_item)
     assert comment_postprocessor.post_manager.mock_calls == [
         call.postprocessor.comment_view_added(post.id, user.id)
     ]

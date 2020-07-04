@@ -41,7 +41,7 @@ def test_run_chat_message_added(chat_message_postprocessor, message):
 
     # postprocess the user message, verify calls correct
     chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
-    chat_message_postprocessor.run(pk, sk, None, message.item)
+    chat_message_postprocessor.run(pk, sk, {}, message.item)
     assert chat_message_postprocessor.chat_manager.mock_calls == [
         call.postprocessor.chat_message_added(message.chat_id, message.user_id, created_at),
     ]
@@ -53,7 +53,7 @@ def test_run_system_chat_message_added(chat_message_postprocessor, system_messag
 
     # postprocess the user message, verify calls correct
     chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
-    chat_message_postprocessor.run(pk, sk, None, system_message.item)
+    chat_message_postprocessor.run(pk, sk, {}, system_message.item)
     assert chat_message_postprocessor.chat_manager.mock_calls == [
         call.postprocessor.chat_message_added(system_message.chat_id, None, created_at),
     ]
@@ -65,7 +65,7 @@ def test_run_chat_message_deleted(chat_message_postprocessor, message):
 
     # postprocess the user message, verify calls correct
     chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
-    chat_message_postprocessor.run(pk, sk, message.item, None)
+    chat_message_postprocessor.run(pk, sk, message.item, {})
     assert chat_message_postprocessor.chat_manager.mock_calls == [
         call.postprocessor.chat_message_deleted(message.chat_id, message.id, message.user_id, created_at),
     ]
@@ -79,7 +79,7 @@ def test_run_chat_message_view_added(chat_message_postprocessor, message, user2)
 
     # postprocess adding that message view, verify calls correct
     chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
-    chat_message_postprocessor.run(pk, sk, None, view_item)
+    chat_message_postprocessor.run(pk, sk, {}, view_item)
     assert chat_message_postprocessor.chat_manager.mock_calls == [
         call.postprocessor.chat_message_view_added(message.chat_id, user2.id),
     ]

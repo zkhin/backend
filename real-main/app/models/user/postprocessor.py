@@ -72,8 +72,8 @@ class UserPostProcessor:
                 self.pinpoint_client.delete_user_endpoints(user_id)
 
     def handle_requested_followers_card(self, user_id, old_item, new_item):
-        old_cnt = (old_item or {}).get('followersRequestedCount', 0)
-        new_cnt = (new_item or {}).get('followersRequestedCount', 0)
+        old_cnt = old_item.get('followersRequestedCount', 0)
+        new_cnt = new_item.get('followersRequestedCount', 0)
         if new_cnt == old_cnt:
             return
         if new_cnt > 0:
@@ -84,8 +84,8 @@ class UserPostProcessor:
             self.card_manager.remove_card_by_spec_if_exists(RequestedFollowersCardSpec(user_id))
 
     def handle_chats_with_new_messages_card(self, user_id, old_item, new_item):
-        old_cnt = (old_item or {}).get('chatsWithUnviewedMessagesCount', 0)
-        new_cnt = (new_item or {}).get('chatsWithUnviewedMessagesCount', 0)
+        old_cnt = old_item.get('chatsWithUnviewedMessagesCount', 0)
+        new_cnt = new_item.get('chatsWithUnviewedMessagesCount', 0)
         if new_cnt == old_cnt:
             return
         if new_cnt > 0:

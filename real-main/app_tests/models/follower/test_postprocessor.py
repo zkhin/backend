@@ -48,7 +48,7 @@ def test_does_nothing_for_ffs_item(follower_postprocessor, follower_first_story_
     assert dynamo_client.table.scan()['Items'] == [item]
 
     # process an add, check nothing changed
-    follower_postprocessor.run(pk, sk, None, item)
+    follower_postprocessor.run(pk, sk, {}, item)
     assert dynamo_client.table.scan()['Items'] == [item]
 
     # process an edit, check nothing changed
@@ -60,13 +60,13 @@ def test_does_nothing_for_ffs_item(follower_postprocessor, follower_first_story_
     assert dynamo_client.table.scan()['Items'] == []
 
     # process a delete, check nothing changed
-    follower_postprocessor.run(pk, sk, item, None)
+    follower_postprocessor.run(pk, sk, item, {})
     assert dynamo_client.table.scan()['Items'] == []
 
 
 # all the expected state changes that increment the follower & followed counts
 @pytest.mark.parametrize(
-    'old_follow_status, new_follow_status',
+    'old_status, new_status',
     [
         [None, FollowStatus.FOLLOWING],
         [FollowStatus.REQUESTED, FollowStatus.FOLLOWING],
@@ -74,21 +74,15 @@ def test_does_nothing_for_ffs_item(follower_postprocessor, follower_first_story_
     ],
 )
 def test_run_increments_follower_followed_counts(
-    follower_postprocessor, follower_manager, user1, user2, follower_item, old_follow_status, new_follow_status
+    follower_postprocessor, follower_manager, user1, user2, follower_item, old_status, new_status
 ):
     pk, sk = follower_item['partitionKey'], follower_item['sortKey']
 
-    if old_follow_status:
-        old_item = follower_manager.dynamo.update_following_status(follower_item, old_follow_status)
-        assert old_item['followStatus'] == old_follow_status
-    else:
-        old_item = None
+    old_item = follower_manager.dynamo.update_following_status(follower_item, old_status) if old_status else {}
+    assert old_item.get('followStatus') == old_status
 
-    if new_follow_status:
-        new_item = follower_manager.dynamo.update_following_status(follower_item, new_follow_status)
-        assert new_item['followStatus'] == new_follow_status
-    else:
-        new_item = None
+    new_item = follower_manager.dynamo.update_following_status(follower_item, new_status) if new_status else {}
+    assert new_item.get('followStatus') == new_status
 
     # check starting state, postprocess, check final state, repeat
     assert user1.refresh_item().item.get('followedCount', 0) == 0
@@ -103,7 +97,7 @@ def test_run_increments_follower_followed_counts(
 
 # all the expected state changes that don't change the follower & followed counts
 @pytest.mark.parametrize(
-    'old_follow_status, new_follow_status',
+    'old_status, new_status',
     [
         [None, FollowStatus.REQUESTED],
         [FollowStatus.REQUESTED, FollowStatus.DENIED],
@@ -112,21 +106,15 @@ def test_run_increments_follower_followed_counts(
     ],
 )
 def test_run_no_change_follower_followed_counts(
-    follower_postprocessor, follower_manager, user1, user2, follower_item, old_follow_status, new_follow_status
+    follower_postprocessor, follower_manager, user1, user2, follower_item, old_status, new_status
 ):
     pk, sk = follower_item['partitionKey'], follower_item['sortKey']
 
-    if old_follow_status:
-        old_item = follower_manager.dynamo.update_following_status(follower_item, old_follow_status)
-        assert old_item['followStatus'] == old_follow_status
-    else:
-        old_item = None
+    old_item = follower_manager.dynamo.update_following_status(follower_item, old_status) if old_status else {}
+    assert old_item.get('followStatus') == old_status
 
-    if new_follow_status:
-        new_item = follower_manager.dynamo.update_following_status(follower_item, new_follow_status)
-        assert new_item['followStatus'] == new_follow_status
-    else:
-        new_item = None
+    new_item = follower_manager.dynamo.update_following_status(follower_item, new_status) if new_status else {}
+    assert new_item.get('followStatus') == new_status
 
     # check starting state, postprocess, check final state, repeat
     assert user1.refresh_item().item.get('followedCount', 0) == 0
@@ -141,39 +129,25 @@ def test_run_no_change_follower_followed_counts(
 
 # all the expected state changes that decrement the follower & followed counts
 @pytest.mark.parametrize(
-    'old_follow_status, new_follow_status',
-    [[FollowStatus.FOLLOWING, FollowStatus.DENIED], [FollowStatus.FOLLOWING, None]],
+    'old_status, new_status', [[FollowStatus.FOLLOWING, FollowStatus.DENIED], [FollowStatus.FOLLOWING, None]],
 )
 def test_run_decrements_follower_followed_counts(
-    follower_postprocessor,
-    follower_manager,
-    user1,
-    user2,
-    follower_item,
-    old_follow_status,
-    new_follow_status,
-    caplog,
+    follower_postprocessor, follower_manager, user1, user2, follower_item, old_status, new_status, caplog,
 ):
     pk, sk = follower_item['partitionKey'], follower_item['sortKey']
 
     # do an increment to get a count in db so we can decrement, check state
-    old_item = None
+    old_item = {}
     new_item = follower_manager.dynamo.update_following_status(follower_item, FollowStatus.FOLLOWING)
     follower_postprocessor.run(pk, sk, old_item, new_item)
     assert user1.refresh_item().item.get('followedCount', 0) == 1
     assert user2.refresh_item().item.get('followerCount', 0) == 1
 
-    if old_follow_status:
-        old_item = follower_manager.dynamo.update_following_status(follower_item, old_follow_status)
-        assert old_item['followStatus'] == old_follow_status
-    else:
-        old_item = None
+    old_item = follower_manager.dynamo.update_following_status(follower_item, old_status) if old_status else {}
+    assert old_item.get('followStatus') == old_status
 
-    if new_follow_status:
-        new_item = follower_manager.dynamo.update_following_status(follower_item, new_follow_status)
-        assert new_item['followStatus'] == new_follow_status
-    else:
-        new_item = None
+    new_item = follower_manager.dynamo.update_following_status(follower_item, new_status) if new_status else {}
+    assert new_item.get('followStatus') == new_status
 
     # check starting state, postprocess, check final state
     assert user1.refresh_item().item.get('followedCount', 0) == 1
@@ -197,24 +171,18 @@ def test_run_decrements_follower_followed_counts(
 
 # all the expected state changes that increment the requested follower count
 @pytest.mark.parametrize(
-    'old_follow_status, new_follow_status', [[None, FollowStatus.REQUESTED]],
+    'old_status, new_status', [[None, FollowStatus.REQUESTED]],
 )
 def test_run_increments_followers_requested_count(
-    follower_postprocessor, follower_manager, user1, user2, follower_item, old_follow_status, new_follow_status
+    follower_postprocessor, follower_manager, user1, user2, follower_item, old_status, new_status
 ):
     pk, sk = follower_item['partitionKey'], follower_item['sortKey']
 
-    if old_follow_status:
-        old_item = follower_manager.dynamo.update_following_status(follower_item, old_follow_status)
-        assert old_item['followStatus'] == old_follow_status
-    else:
-        old_item = None
+    old_item = follower_manager.dynamo.update_following_status(follower_item, old_status) if old_status else {}
+    assert old_item.get('followStatus') == old_status
 
-    if new_follow_status:
-        new_item = follower_manager.dynamo.update_following_status(follower_item, new_follow_status)
-        assert new_item['followStatus'] == new_follow_status
-    else:
-        new_item = None
+    new_item = follower_manager.dynamo.update_following_status(follower_item, new_status) if new_status else {}
+    assert new_item.get('followStatus') == new_status
 
     # check starting state, postprocess, check final state, repeat
     assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
@@ -226,7 +194,7 @@ def test_run_increments_followers_requested_count(
 
 # all the expected state changes that don't change the requested follower count
 @pytest.mark.parametrize(
-    'old_follow_status, new_follow_status',
+    'old_status, new_status',
     [
         [None, FollowStatus.FOLLOWING],
         [FollowStatus.FOLLOWING, FollowStatus.DENIED],
@@ -236,21 +204,15 @@ def test_run_increments_followers_requested_count(
     ],
 )
 def test_run_no_change_followers_requested_count(
-    follower_postprocessor, follower_manager, user1, user2, follower_item, old_follow_status, new_follow_status
+    follower_postprocessor, follower_manager, user1, user2, follower_item, old_status, new_status
 ):
     pk, sk = follower_item['partitionKey'], follower_item['sortKey']
 
-    if old_follow_status:
-        old_item = follower_manager.dynamo.update_following_status(follower_item, old_follow_status)
-        assert old_item['followStatus'] == old_follow_status
-    else:
-        old_item = None
+    old_item = follower_manager.dynamo.update_following_status(follower_item, old_status) if old_status else {}
+    assert old_item.get('followStatus') == old_status
 
-    if new_follow_status:
-        new_item = follower_manager.dynamo.update_following_status(follower_item, new_follow_status)
-        assert new_item['followStatus'] == new_follow_status
-    else:
-        new_item = None
+    new_item = follower_manager.dynamo.update_following_status(follower_item, new_status) if new_status else {}
+    assert new_item.get('followStatus') == new_status
 
     # check starting state, postprocess, check final state, repeat
     assert user2.refresh_item().item.get('followersRequestedCount', 0) == 0
@@ -262,7 +224,7 @@ def test_run_no_change_followers_requested_count(
 
 # all the expected state changes that decrement the requested follower count
 @pytest.mark.parametrize(
-    'old_follow_status, new_follow_status',
+    'old_status, new_status',
     [
         [FollowStatus.REQUESTED, FollowStatus.FOLLOWING],
         [FollowStatus.REQUESTED, FollowStatus.DENIED],
@@ -270,34 +232,21 @@ def test_run_no_change_followers_requested_count(
     ],
 )
 def test_run_decrements_followers_requested_count(
-    follower_postprocessor,
-    follower_manager,
-    user1,
-    user2,
-    follower_item,
-    old_follow_status,
-    new_follow_status,
-    caplog,
+    follower_postprocessor, follower_manager, user1, user2, follower_item, old_status, new_status, caplog,
 ):
     pk, sk = follower_item['partitionKey'], follower_item['sortKey']
 
     # do an increment to get a count in db so we can decrement, check state
-    old_item = None
+    old_item = {}
     new_item = follower_manager.dynamo.update_following_status(follower_item, FollowStatus.REQUESTED)
     follower_postprocessor.run(pk, sk, old_item, new_item)
     assert user2.refresh_item().item.get('followersRequestedCount', 0) == 1
 
-    if old_follow_status:
-        old_item = follower_manager.dynamo.update_following_status(follower_item, old_follow_status)
-        assert old_item['followStatus'] == old_follow_status
-    else:
-        old_item = None
+    old_item = follower_manager.dynamo.update_following_status(follower_item, old_status) if old_status else {}
+    assert old_item.get('followStatus') == old_status
 
-    if new_follow_status:
-        new_item = follower_manager.dynamo.update_following_status(follower_item, new_follow_status)
-        assert new_item['followStatus'] == new_follow_status
-    else:
-        new_item = None
+    new_item = follower_manager.dynamo.update_following_status(follower_item, new_status) if new_status else {}
+    assert new_item.get('followStatus') == new_status
 
     # check starting state, postprocess, check final state
     assert user2.refresh_item().item.get('followersRequestedCount', 0) == 1

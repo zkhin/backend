@@ -29,7 +29,7 @@ def chat(chat_manager, user1, user2):
 
 def test_run_member_added(chat_postprocessor, chat, user1):
     pk, sk = itemgetter('partitionKey', 'sortKey')(chat.member_dynamo.pk(chat.id, user1.id))
-    old_item = None
+    old_item = {}
 
     # simulate adding member with no unviewed message count
     new_item = chat.member_dynamo.get(chat.id, user1.id)
@@ -106,7 +106,7 @@ def test_run_member_edited(chat_postprocessor, chat, user1):
 
 def test_run_member_deleted(chat_postprocessor, chat, user1):
     pk, sk = itemgetter('partitionKey', 'sortKey')(chat.member_dynamo.pk(chat.id, user1.id))
-    new_item = None
+    new_item = {}
 
     # simulate deleting member with no unviewed message count
     old_item = chat.member_dynamo.get(chat.id, user1.id)
@@ -145,7 +145,7 @@ def test_run_view_added_edited_deleted(chat_postprocessor, chat, user1):
     chat.record_view_count(user1.id, 2)
     new_item = chat.view_dynamo.get_view(chat.id, user1.id)
     assert new_item['viewCount'] == 2
-    old_item = None
+    old_item = {}
 
     # set up the messagesUnviewedCount so it can be cleared
     chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
@@ -171,7 +171,7 @@ def test_run_view_added_edited_deleted(chat_postprocessor, chat, user1):
 
     # simulate deleting the view record altogether
     old_item = new_item
-    new_item = None
+    new_item = {}
 
     # set up the messagesUnviewedCount so it can be cleared
     chat.member_dynamo.increment_messages_unviewed_count(chat.id, user1.id)
@@ -257,7 +257,7 @@ def test_chat_message_added_system_message(chat_postprocessor, chat, user1, user
 
     # postprocess adding a message by the system, verify state
     now = pendulum.now('utc')
-    chat_postprocessor.chat_message_added(chat.id, None, now)
+    chat_postprocessor.chat_message_added(chat.id, {}, now)
     chat.refresh_item()
     assert chat.item['messagesCount'] == 1
     assert pendulum.parse(chat.item['lastMessageActivityAt']) == now

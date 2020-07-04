@@ -45,7 +45,7 @@ def test_adjust_user_card_count(card_postprocessor, card, user, caplog):
     assert 'cardCount' not in user.refresh_item().item
 
     # simulate adding
-    card_postprocessor.adjust_user_card_count(None, card.item)
+    card_postprocessor.adjust_user_card_count({}, card.item)
     assert user.refresh_item().item['cardCount'] == 1
 
     # simulate editing
@@ -53,12 +53,12 @@ def test_adjust_user_card_count(card_postprocessor, card, user, caplog):
     assert user.refresh_item().item['cardCount'] == 1
 
     # simulate deleting
-    card_postprocessor.adjust_user_card_count(card.item, None)
+    card_postprocessor.adjust_user_card_count(card.item, {})
     assert user.refresh_item().item['cardCount'] == 0
 
     # simulate deleting again, verify fails softly
     with caplog.at_level(logging.WARNING):
-        card_postprocessor.adjust_user_card_count(card.item, None)
+        card_postprocessor.adjust_user_card_count(card.item, {})
     assert len(caplog.records) == 1
     assert 'Failed to decrement' in caplog.records[0].msg
     assert 'cardCount' in caplog.records[0].msg
@@ -71,7 +71,7 @@ def test_send_gql_notifications(card_postprocessor, card, user, caplog, appsync_
 
     # simulate adding
     appsync_client.reset_mock()
-    card_postprocessor.send_gql_notifications(None, card.item)
+    card_postprocessor.send_gql_notifications({}, card.item)
     assert len(appsync_client.mock_calls) == 1
     assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
     assert appsync_client.send.call_args.args[1]['input']['type'] == CardNotificationType.ADDED
@@ -86,7 +86,7 @@ def test_send_gql_notifications(card_postprocessor, card, user, caplog, appsync_
 
     # simulate deleting
     appsync_client.reset_mock()
-    card_postprocessor.send_gql_notifications(card.item, None)
+    card_postprocessor.send_gql_notifications(card.item, {})
     assert len(appsync_client.mock_calls) == 1
     assert 'triggerCardNotification' in str(appsync_client.send.call_args.args[0])
     assert appsync_client.send.call_args.args[1]['input']['type'] == CardNotificationType.DELETED

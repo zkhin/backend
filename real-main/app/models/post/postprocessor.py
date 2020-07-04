@@ -20,8 +20,8 @@ class PostPostProcessor:  # unfortunate namenaming
         if sk == '-':
             # keep card in sync with unviewed comment count
             posted_by_user_id = (new_item or old_item)['postedByUserId']
-            old_count = (old_item or {}).get('commentsUnviewedCount', 0)
-            new_count = (new_item or {}).get('commentsUnviewedCount', 0)
+            old_count = old_item.get('commentsUnviewedCount', 0)
+            new_count = new_item.get('commentsUnviewedCount', 0)
             if old_count != new_count:
                 if new_count > 0:
                     self.card_manager.add_or_update_card_by_spec(
