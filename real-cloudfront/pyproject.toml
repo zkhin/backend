@@ -15,17 +15,9 @@ exclude = '''
 )
 '''
 
-# https://github.com/psf/black/blob/master/docs/compatible_configs.md#isort
-# this config requires a version of isort with this issue fixed
-# https://github.com/timothycrosley/isort/issues/1117
 [tool.isort]
+profile = "black"
 line_length = 114
-known_first_party = "app,migrations"
-default_section = "THIRDPARTY"
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
 
 [tool.poetry]
 name = "real-cloudfront"

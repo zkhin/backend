@@ -62,8 +62,7 @@ jobs:
         python-version: 3.8
 
     - name: Install black, flake8 (for pyflakes)
-      # waiting on isort 5.0 https://github.com/timothycrosley/isort/issues/1117
-      run: pip install black flake8 git+https://github.com/timothycrosley/isort.git@158b22e2
+      run: pip install black flake8 isort
 
     - name: Lint real-auth
       working-directory: real-auth
