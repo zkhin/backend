@@ -169,4 +169,4 @@ class FollowerManager:
                 self.first_story_dynamo.set_all(follower_uids_generator, ffs_now)
 
         if not ffs_prev and not ffs_now:
-            assert False, 'Should be unreachable condition'
+            raise AssertionError('Should be unreachable condition')

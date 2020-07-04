@@ -119,6 +119,7 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, following1, follo
     ]
     for key, new_key, item in zip(keys, new_keys, items):
         assert dynamo_table.get_item(Key=key)['Item'] == item
+        assert 'Item' not in dynamo_table.get_item(Key=new_key)
 
     # migrate, check logging
     migration = Migration(dynamo_client, dynamo_table)

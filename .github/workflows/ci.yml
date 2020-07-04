@@ -61,8 +61,8 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: Install black, flake8 (for pyflakes)
-      run: pip install black flake8 isort
+    - name: Install python lint tools
+      run: pip install black flake8 flake8-bugbear isort
 
     - name: Lint real-auth
       working-directory: real-auth
