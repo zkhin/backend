@@ -77,12 +77,21 @@ class CardDynamo:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
 
-    def generate_card_ids_by_notify_user_at(self, cutoff_at):
+    def generate_card_ids_by_notify_user_at(self, cutoff_at, only_user_ids=None):
         query_kwargs = {
             'KeyConditionExpression': 'gsiK1PartitionKey = :c AND gsiK1SortKey <= :at',
             'ExpressionAttributeValues': {':c': 'card', ':at': cutoff_at.to_iso8601_string()},
             'IndexName': 'GSI-K1',
         }
+        if only_user_ids:
+            query_kwargs['FilterExpression'] = (
+                'gsiA1PartitionKey IN ('
+                + ', '.join([f':gsia1pk_{index}' for index in range(len(only_user_ids))])
+                + ')'
+            )
+            query_kwargs['ExpressionAttributeValues'].update(
+                {f':gsia1pk_{index}': f'user/{user_id}' for index, user_id in enumerate(only_user_ids)}
+            )
         gen = self.client.generate_all_query(query_kwargs)
         gen = (item['partitionKey'].split('/')[1] for item in gen)
         return gen

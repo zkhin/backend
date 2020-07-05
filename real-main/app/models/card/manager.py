@@ -90,11 +90,24 @@ class CardManager:
             for card_pk in self.dynamo.generate_cards_by_user(user_id, pks_only=True):
                 batch.delete_item(Key=card_pk)
 
-    def notify_users(self, now=None):
-        "Send out push notifications to all users for cards as needed"
+    def notify_users(self, now=None, only_usernames=None):
+        """
+        Send out push notifications to all users for cards as needed.
+        Use `only_usernames` if you don't want to send notifcations to all users.
+        """
+        # determine which users we should be sending notifcations to, if we're only doing some
+        if only_usernames is None:
+            only_user_ids = None
+        elif only_usernames == []:
+            return 0, 0
+        else:
+            only_users = [self.user_manager.get_user_by_username(username) for username in only_usernames]
+            only_user_ids = [user.id for user in only_users if user]
+
+        # send on notifcations for cards for those users
         now = pendulum.now('utc')
         total_count, success_count = 0, 0
-        for card_id in self.dynamo.generate_card_ids_by_notify_user_at(now):
+        for card_id in self.dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=only_user_ids):
             card = self.get_card(card_id)
             success = card.notify_user()
             total_count += 1

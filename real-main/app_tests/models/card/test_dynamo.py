@@ -203,3 +203,51 @@ def test_generate_card_ids_by_notify_user_at(card_dynamo):
         card_dynamo.generate_card_ids_by_notify_user_at(notify_user_at_1 + pendulum.duration(minutes=2))
     )
     assert card_ids == [card_id_1, card_id_2]
+
+
+def test_generate_card_ids_by_notify_user_at_only_user_ids(card_dynamo):
+    user_id_1, user_id_2, user_id_3 = [str(uuid4()), str(uuid4()), str(uuid4())]
+    now = pendulum.now('utc')
+
+    # add one card for the first one, two for the second, and three for the third
+    card_id_10 = card_dynamo.add_card(str(uuid4()), user_id_1, 't', 'a', notify_user_at=now)['partitionKey'][5:]
+    card_id_20 = card_dynamo.add_card(str(uuid4()), user_id_2, 't', 'a', notify_user_at=now)['partitionKey'][5:]
+    card_id_21 = card_dynamo.add_card(str(uuid4()), user_id_2, 't', 'a', notify_user_at=now)['partitionKey'][5:]
+    card_id_30 = card_dynamo.add_card(str(uuid4()), user_id_3, 't', 'a', notify_user_at=now)['partitionKey'][5:]
+    card_id_31 = card_dynamo.add_card(str(uuid4()), user_id_3, 't', 'a', notify_user_at=now)['partitionKey'][5:]
+    card_id_32 = card_dynamo.add_card(str(uuid4()), user_id_3, 't', 'a', notify_user_at=now)['partitionKey'][5:]
+
+    # generate none of them, generate all of them based on time
+    assert list(card_dynamo.generate_card_ids_by_notify_user_at(now - pendulum.duration(days=1))) == []
+    assert sorted(list(card_dynamo.generate_card_ids_by_notify_user_at(now))) == sorted(
+        [card_id_10, card_id_20, card_id_21, card_id_30, card_id_31, card_id_32]
+    )
+
+    # filter based on one user
+    assert sorted(
+        list(card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_1]))
+    ) == sorted([card_id_10])
+    assert sorted(
+        list(card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_2]))
+    ) == sorted([card_id_20, card_id_21])
+    assert sorted(
+        list(card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_3]))
+    ) == sorted([card_id_30, card_id_31, card_id_32])
+
+    # filter based on two users
+    assert sorted(
+        list(card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_1, user_id_2]))
+    ) == sorted([card_id_10, card_id_20, card_id_21])
+    assert sorted(
+        list(card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_2, user_id_3]))
+    ) == sorted([card_id_20, card_id_21, card_id_30, card_id_31, card_id_32])
+    assert sorted(
+        list(card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_3, user_id_1]))
+    ) == sorted([card_id_30, card_id_31, card_id_32, card_id_10])
+
+    # filter based on all three users
+    assert sorted(
+        list(
+            card_dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=[user_id_1, user_id_2, user_id_3])
+        )
+    ) == sorted([card_id_10, card_id_20, card_id_21, card_id_30, card_id_31, card_id_32])

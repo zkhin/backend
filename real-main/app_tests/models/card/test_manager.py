@@ -17,6 +17,7 @@ def user(user_manager, cognito_client):
 
 
 user2 = user
+user3 = user
 
 
 @pytest.fixture
@@ -281,3 +282,69 @@ def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
     assert org_item.pop('gsiK1PartitionKey')
     assert org_item.pop('gsiK1SortKey')
     assert card.item == org_item
+
+
+def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2, user3):
+    # add one notification for each user in immediate past, verify they're there
+    now = pendulum.now('utc')
+    card1 = card_manager.add_card(user.id, 'title1', 'https://a1', notify_user_at=now)
+    card2 = card_manager.add_card(user2.id, 'title2', 'https://a2', notify_user_at=now)
+    card3 = card_manager.add_card(user3.id, 'title3', 'https://a3', notify_user_at=now)
+    assert card1.item == card1.refresh_item().item
+    assert card2.item == card2.refresh_item().item
+    assert card3.item == card3.refresh_item().item
+
+    # run notificiations for just two of the users, verify just those two sent
+    pinpoint_client.reset_mock()
+    cnts = card_manager.notify_users(only_usernames=[user.username, user3.username])
+    assert cnts == (2, 2)
+    assert pinpoint_client.mock_calls == [
+        call.send_user_apns(user.id, 'https://a1', 'title1', body=None),
+        call.send_user_apns(user3.id, 'https://a3', 'title3', body=None),
+    ]
+    assert card1.refresh_item().item is None
+    assert card2.item == card2.refresh_item().item
+    assert card3.refresh_item().item is None
+
+    # re-add those cards for which we just sent notificaitons
+    card1 = card_manager.add_card(user.id, 'title1', 'https://a1', notify_user_at=now)
+    card3 = card_manager.add_card(user3.id, 'title3', 'https://a3', notify_user_at=now)
+    assert card1.item == card1.refresh_item().item
+    assert card3.item == card3.refresh_item().item
+
+    # run notificiations for just one of the user, verify just that one sent
+    pinpoint_client.reset_mock()
+    cnts = card_manager.notify_users(only_usernames=[user2.username])
+    assert cnts == (1, 1)
+    assert pinpoint_client.mock_calls == [
+        call.send_user_apns(user2.id, 'https://a2', 'title2', body=None),
+    ]
+    assert card1.item == card1.refresh_item().item
+    assert card2.refresh_item().item is None
+    assert card3.item == card3.refresh_item().item
+
+    # re-add a cards for which we just sent notificaitons
+    card2 = card_manager.add_card(user2.id, 'title2', 'https://a2', notify_user_at=now)
+    assert card2.item == card2.refresh_item().item
+
+    # run notificiations for no users, verify none sent
+    pinpoint_client.reset_mock()
+    cnts = card_manager.notify_users(only_usernames=[])
+    assert cnts == (0, 0)
+    assert pinpoint_client.mock_calls == []
+    assert card1.item == card1.refresh_item().item
+    assert card2.item == card2.refresh_item().item
+    assert card3.item == card3.refresh_item().item
+
+    # run notificiations for all users, verify all sent
+    pinpoint_client.reset_mock()
+    cnts = card_manager.notify_users()
+    assert cnts == (3, 3)
+    assert pinpoint_client.mock_calls == [
+        call.send_user_apns(user.id, 'https://a1', 'title1', body=None),
+        call.send_user_apns(user3.id, 'https://a3', 'title3', body=None),
+        call.send_user_apns(user2.id, 'https://a2', 'title2', body=None),
+    ]
+    assert card1.refresh_item().item is None
+    assert card2.refresh_item().item is None
+    assert card3.refresh_item().item is None
