@@ -68,8 +68,7 @@ class FlagModelMixin:
         # the item should be force-archived if (directly from spec):
         #   - over 5 users have viewed the item and
         #   - at least 10% of them have flagged it
-        viewed_by_count = self.item.get('viewedByCount', 0)
         flag_count = self.item.get('flagCount', 0)
-        if viewed_by_count > 5 and flag_count > viewed_by_count / 10:
+        if self.viewed_by_count > 5 and flag_count > self.viewed_by_count / 10:
             return True
         return False

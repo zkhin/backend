@@ -173,6 +173,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def original_post_id(self):
         return self.item.get('originalPostId', self.id)
 
+    @property
+    def viewed_by_count(self):
+        return self.item.get('viewedByCount', 0)
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self

@@ -100,26 +100,46 @@ def test_unflag(model, user2):
         model.unflag(user2.id)
 
 
-@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
-def test_is_crowdsourced_forced_removal_criteria_met(model, user2, user3, user4, user5, user6, user7):
+def test_is_crowdsourced_forced_removal_criteria_met_post(post, user2, user3, user4, user5, user6, user7):
     # should archive if over 5 users have viewed the model and more than 10% have flagged it
     # one flag, verify shouldn't force-archive
-    model.flag(user2)
-    assert model.is_crowdsourced_forced_removal_criteria_met() is False
+    post.flag(user2)
+    assert post.is_crowdsourced_forced_removal_criteria_met() is False
 
     # get 5 views, verify still shouldn't force-archive
-    model.record_view_count(user2.id, 1)
-    model.record_view_count(user3.id, 1)
-    model.record_view_count(user4.id, 1)
-    model.record_view_count(user5.id, 1)
-    model.record_view_count(user6.id, 1)
-    model.refresh_item()
-    assert model.is_crowdsourced_forced_removal_criteria_met() is False
+    post.record_view_count(user2.id, 1)
+    post.record_view_count(user3.id, 1)
+    post.record_view_count(user4.id, 1)
+    post.record_view_count(user5.id, 1)
+    post.record_view_count(user6.id, 1)
+    post.refresh_item()
+    assert post.is_crowdsourced_forced_removal_criteria_met() is False
 
     # get a 6th view, verify should force-archive now
-    model.record_view_count(user7.id, 1)
-    model.refresh_item()
-    assert model.is_crowdsourced_forced_removal_criteria_met() is True
+    post.record_view_count(user7.id, 1)
+    post.refresh_item()
+    assert post.is_crowdsourced_forced_removal_criteria_met() is True
+
+
+def test_is_crowdsourced_forced_removal_criteria_met_comment(comment, user2, user3, user4, user5, user6, user7):
+    # should archive if over 5 users have viewed the model and more than 10% have flagged it
+    # one flag, verify shouldn't force-archive
+    comment.flag(user2)
+    assert comment.is_crowdsourced_forced_removal_criteria_met() is False
+
+    # get 5 views, verify still shouldn't force-archive
+    comment.post.record_view_count(user2.id, 1)
+    comment.post.record_view_count(user3.id, 1)
+    comment.post.record_view_count(user4.id, 1)
+    comment.post.record_view_count(user5.id, 1)
+    comment.post.record_view_count(user6.id, 1)
+    comment.post.refresh_item()
+    assert comment.is_crowdsourced_forced_removal_criteria_met() is False
+
+    # get a 6th view, verify should force-archive now
+    comment.post.record_view_count(user7.id, 1)
+    comment.post.refresh_item()
+    assert comment.is_crowdsourced_forced_removal_criteria_met() is True
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))

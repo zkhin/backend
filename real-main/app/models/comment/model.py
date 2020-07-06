@@ -58,6 +58,10 @@ class Comment(FlagModelMixin, ViewModelMixin):
             self._user = self.user_manager.get_user(self.user_id)
         return self._user
 
+    @property
+    def viewed_by_count(self):
+        return self.post.item.get('viewedByCount', 0)
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_comment(self.id, strongly_consistent=strongly_consistent)
         return self
