@@ -17,7 +17,7 @@ from app.utils import image_size
 
 from .cached_image import CachedImage
 from .enums import PostNotificationType, PostStatus, PostType
-from .exceptions import PostDoesNotExist, PostException
+from .exceptions import PostException
 from .text_image import generate_text_image
 
 logger = logging.getLogger()
@@ -31,8 +31,6 @@ IMAGE_DIR = 'image'
 
 class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
-    exception_dne = PostDoesNotExist
-    exception_generic = PostException
     item_type = 'post'
 
     def __init__(
@@ -716,9 +714,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         super().flag(user)
         return self
-
-    def remove_from_flagging(self):
-        self.archive(forced=True)
 
     def record_view_count(self, user_id, view_count, viewed_at=None):
         if self.status != PostStatus.COMPLETED:

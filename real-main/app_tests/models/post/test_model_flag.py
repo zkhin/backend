@@ -1,5 +1,4 @@
 import uuid
-from unittest import mock
 
 import pytest
 
@@ -21,12 +20,6 @@ user2 = user
 @pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
-
-
-def test_remove_from_flagging(post):
-    post.archive = mock.Mock()
-    post.remove_from_flagging()
-    assert post.archive.mock_calls == [mock.call(forced=True)]
 
 
 def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, follower_manager):
@@ -55,6 +48,5 @@ def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, 
     post.flag(user2)
 
     # check the flag exists
-    assert post.item.get('flagCount', 0) == 1
-    assert post.refresh_item().item.get('flagCount', 0) == 1
+    assert post.item.get('flagCount', 0) == 1  # count incremented in mem only at this point
     assert len(list(post.flag_dynamo.generate_by_item(post.id))) == 1

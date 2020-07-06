@@ -54,25 +54,37 @@ class CommentDynamo:
     def delete_comment(self, comment_id):
         return self.client.delete_item(self.pk(comment_id))
 
-    def transact_increment_flag_count(self, comment_id):
-        return {
-            'Update': {
-                'Key': self.typed_pk(comment_id),
-                'UpdateExpression': 'ADD flagCount :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            }
+    def _increment_count(self, attribute_name, comment_id):
+        query_kwargs = {
+            'Key': self.pk(comment_id),
+            'UpdateExpression': 'ADD #attrName :one',
+            'ExpressionAttributeNames': {'#attrName': attribute_name},
+            'ExpressionAttributeValues': {':one': 1},
+            'ConditionExpression': 'attribute_exists(partitionKey)',
         }
+        return self.client.update_item(query_kwargs)
 
-    def transact_decrement_flag_count(self, comment_id):
-        return {
-            'Update': {
-                'Key': self.typed_pk(comment_id),
-                'UpdateExpression': 'ADD flagCount :neg_one',
-                'ExpressionAttributeValues': {':neg_one': {'N': '-1'}, ':zero': {'N': '0'}},
-                'ConditionExpression': 'attribute_exists(partitionKey) AND flagCount > :zero',
-            }
+    def _decrement_count(self, attribute_name, comment_id, fail_soft=False):
+        query_kwargs = {
+            'Key': self.pk(comment_id),
+            'UpdateExpression': 'ADD #attrName :neg_one',
+            'ExpressionAttributeNames': {'#attrName': attribute_name},
+            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
         }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            if fail_soft:
+                logger.warning(f'Failed to decrement {attribute_name} for comment `{comment_id}`')
+                return
+            raise
+
+    def increment_flag_count(self, comment_id):
+        return self._increment_count('flagCount', comment_id)
+
+    def decrement_flag_count(self, comment_id, fail_soft=False):
+        return self._decrement_count('flagCount', comment_id, fail_soft=fail_soft)
 
     def increment_viewed_by_count(self, comment_id):
         query_kwargs = {

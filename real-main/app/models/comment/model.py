@@ -7,15 +7,13 @@ from app.mixins.view.model import ViewModelMixin
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus
 
-from .exceptions import CommentDoesNotExist, CommentException
+from .exceptions import CommentException
 
 logger = logging.getLogger()
 
 
 class Comment(FlagModelMixin, ViewModelMixin):
 
-    exception_dne = CommentDoesNotExist
-    exception_generic = CommentException
     item_type = 'comment'
 
     def __init__(
@@ -94,9 +92,6 @@ class Comment(FlagModelMixin, ViewModelMixin):
                 raise CommentException(f'User does not have access to comment `{self.id}`')
 
         super().flag(user)
-
-    def remove_from_flagging(self):
-        self.delete(forced=True)
 
     def record_view_count(self, user_id, view_count, viewed_at=None):
         # don't count views of user's own comments

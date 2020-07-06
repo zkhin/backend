@@ -409,35 +409,6 @@ def test_post_set_is_verified(post_dynamo):
     assert post_dynamo.get_post(post_id)['isVerified'] is False
 
 
-def test_transact_increment_decrement_flag_count(post_dynamo):
-    post_id = 'pid'
-
-    # add a post
-    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-
-    # check it has no flags
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('flagCount', 0) == 0
-
-    # check first increment works
-    transacts = [post_dynamo.transact_increment_flag_count(post_id)]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('flagCount', 0) == 1
-
-    # check decrement works
-    transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
-    assert post_item.get('flagCount', 0) == 0
-
-    # check can't decrement below zero
-    transacts = [post_dynamo.transact_decrement_flag_count(post_id)]
-    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
-        post_dynamo.client.transact_write_items(transacts)
-
-
 def test_batch_get_posted_by_user_ids_not_found(post_dynamo):
     post_id = 'my-post-id'
     resp = post_dynamo.batch_get_posted_by_user_ids([post_id])
@@ -1163,3 +1134,53 @@ def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo,
     assert len(caplog.records) == 1
     assert 'Failed to decrement comments unviewed count' in caplog.records[0].msg
     assert post_id in caplog.records[0].msg
+
+
+@pytest.mark.parametrize(
+    'incrementor_name, decrementor_name, attribute_name',
+    [['increment_flag_count', 'decrement_flag_count', 'flagCount']],
+)
+def test_increment_decrement_count(post_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
+    incrementor = getattr(post_dynamo, incrementor_name)
+    decrementor = getattr(post_dynamo, decrementor_name)
+
+    # add the post to the DB, verify it is in DB
+    post_id = str(uuid4())
+    transact = post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype')
+    post_dynamo.client.transact_write_items([transact])
+    assert attribute_name not in post_dynamo.get_post(post_id)
+
+    # verify can't decrement below zero
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        decrementor(post_id)
+    assert attribute_name not in post_dynamo.get_post(post_id)
+
+    # increment
+    assert incrementor(post_id)[attribute_name] == 1
+    assert post_dynamo.get_post(post_id)[attribute_name] == 1
+
+    # increment
+    assert incrementor(post_id)[attribute_name] == 2
+    assert post_dynamo.get_post(post_id)[attribute_name] == 2
+
+    # decrement
+    assert decrementor(post_id)[attribute_name] == 1
+    assert post_dynamo.get_post(post_id)[attribute_name] == 1
+
+    # decrement
+    assert decrementor(post_id)[attribute_name] == 0
+    assert post_dynamo.get_post(post_id)[attribute_name] == 0
+
+    # verify fail soft on trying to decrement below zero
+    with caplog.at_level(logging.WARNING):
+        resp = decrementor(post_id, fail_soft=True)
+    assert resp is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, post_id])
+    assert post_dynamo.get_post(post_id)[attribute_name] == 0
+
+    # verify fail hard on trying to decrement below zero
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        decrementor(post_id)
+    assert post_dynamo.get_post(post_id)[attribute_name] == 0

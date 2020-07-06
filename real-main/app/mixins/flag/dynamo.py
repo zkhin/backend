@@ -3,6 +3,8 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
+from .exceptions import AlreadyFlagged, NotFlagged
+
 logger = logging.getLogger()
 
 
@@ -14,32 +16,29 @@ class FlagDynamo:
     def get(self, item_id, user_id):
         return self.client.get_item({'partitionKey': f'{self.item_type}/{item_id}', 'sortKey': f'flag/{user_id}'})
 
-    def transact_add(self, item_id, user_id, now=None):
+    def add(self, item_id, user_id, now=None):
         now = now or pendulum.now('utc')
-        return {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '0'},
-                    'partitionKey': {'S': f'{self.item_type}/{item_id}'},
-                    'sortKey': {'S': f'flag/{user_id}'},
-                    'gsiK1PartitionKey': {'S': f'flag/{user_id}'},
-                    'gsiK1SortKey': {'S': self.item_type},
-                    'createdAt': {'S': now.to_iso8601_string()},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',
-            }
+        query_kwargs = {
+            'Item': {
+                'schemaVersion': 0,
+                'partitionKey': f'{self.item_type}/{item_id}',
+                'sortKey': f'flag/{user_id}',
+                'gsiK1PartitionKey': f'flag/{user_id}',
+                'gsiK1SortKey': self.item_type,
+                'createdAt': now.to_iso8601_string(),
+            },
         }
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise AlreadyFlagged(self.item_type, item_id, user_id)
 
-    def transact_delete(self, item_id, user_id):
-        return {
-            'Delete': {
-                'Key': {
-                    'partitionKey': {'S': f'{self.item_type}/{item_id}'},
-                    'sortKey': {'S': f'flag/{user_id}'},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
-        }
+    def delete(self, item_id, user_id):
+        deleted = self.client.delete_item(
+            {'partitionKey': f'{self.item_type}/{item_id}', 'sortKey': f'flag/{user_id}'}
+        )
+        if not deleted:
+            raise NotFlagged(self.item_type, item_id, user_id)
 
     def delete_all_for_item(self, item_id):
         with self.client.table.batch_writer() as batch:

@@ -731,7 +731,7 @@ def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrem
 
     # verify fail hard on trying to decrement below zero
     with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
-        user_dynamo.decrement_chats_with_unviewed_messages_count(user_id)
+        decrementor(user_id)
     assert user_dynamo.get_user(user_id)[attribute_name] == 0
 
 

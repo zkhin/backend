@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import Mock, call
 from uuid import uuid4
 
@@ -78,3 +79,56 @@ def test_run(comment_postprocessor, comment, post, user2, user):
         call.postprocessor.comment_view_added(post.id, user.id)
     ]
     assert comment_postprocessor.user_manager.mock_calls == []
+
+
+def test_comment_flag_added(comment_postprocessor, comment, user2):
+    # check starting state
+    assert comment.refresh_item().item.get('flagCount', 0) == 0
+
+    # commentprocess, verify flagCount is incremented & not force deleted
+    comment_postprocessor.comment_flag_added(comment.id, user2.id)
+    assert comment.refresh_item().item.get('flagCount', 0) == 1
+
+
+def test_comment_flag_added_force_archive_by_admin(comment_postprocessor, comment, user2, caplog):
+    # configure and check starting state
+    assert comment.refresh_item().item.get('flagCount', 0) == 0
+    user2.update_username(comment.flag_admin_usernames[0])
+
+    # commentprocess, verify comment is force-deleted
+    with caplog.at_level(logging.WARNING):
+        comment_postprocessor.comment_flag_added(comment.id, user2.id)
+    assert len(caplog.records) == 1
+    assert 'Force deleting comment' in caplog.records[0].msg
+    assert comment.refresh_item().item is None
+
+
+def test_comment_flag_added_force_archive_by_crowdsourced_criteria(comment_postprocessor, comment, user2, caplog):
+    # configure and check starting state
+    assert comment.refresh_item().item.get('flagCount', 0) == 0
+    for _ in range(6):
+        comment.post.dynamo.increment_viewed_by_count(comment.post.id)
+
+    # commentprocess, verify flagCount is incremented and force archived
+    with caplog.at_level(logging.WARNING):
+        comment_postprocessor.comment_flag_added(comment.id, user2.id)
+    assert len(caplog.records) == 1
+    assert 'Force deleting comment' in caplog.records[0].msg
+    assert comment.refresh_item().item is None
+
+
+def test_comment_flag_deleted(comment_postprocessor, comment, user2, caplog):
+    # configure and check starting state
+    comment_postprocessor.comment_flag_added(comment.id, user2.id)
+    assert comment.refresh_item().item.get('flagCount', 0) == 1
+
+    # commentprocess, verify flagCount is decremented
+    comment_postprocessor.comment_flag_deleted(comment.id)
+    assert comment.refresh_item().item.get('flagCount', 0) == 0
+
+    # commentprocess again, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        comment_postprocessor.comment_flag_deleted(comment.id)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement flagCount' in caplog.records[0].msg
+    assert comment.refresh_item().item.get('flagCount', 0) == 0

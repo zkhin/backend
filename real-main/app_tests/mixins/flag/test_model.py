@@ -1,6 +1,4 @@
-import logging
 import uuid
-from unittest import mock
 
 import pytest
 
@@ -39,17 +37,17 @@ def test_flag_success(model, user2):
     assert model.item.get('flagCount', 0) == 0
     assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 0
 
-    # flag it, verify
+    # flag it, verify count incremented in memory but not yet in DB
     model.flag(user2)
     assert model.item.get('flagCount', 0) == 1
-    assert model.refresh_item().item.get('flagCount', 0) == 1
+    assert model.refresh_item().item.get('flagCount', 0) == 0
     assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 1
 
     # verify we can't flag the post second time
     with pytest.raises(FlagException, match='already been flagged'):
         model.flag(user2)
-    assert model.item.get('flagCount', 0) == 1
-    assert model.refresh_item().item.get('flagCount', 0) == 1
+    assert model.item.get('flagCount', 0) == 0
+    assert model.refresh_item().item.get('flagCount', 0) == 0
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
@@ -83,16 +81,17 @@ def test_cant_flag_model_of_user_we_are_blocking(model, user, user2, block_manag
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_unflag(model, user2):
-    # flag the model, verify worked
+    # flag the model and do the post-processing counter increment
     model.flag(user2)
+    model.dynamo.increment_flag_count(model.id)
     assert model.item.get('flagCount', 0) == 1
     assert model.refresh_item().item.get('flagCount', 0) == 1
     assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 1
 
-    # unflag, verify worked
+    # unflag, verify counter decremented in mem but not yet in dynamo
     model.unflag(user2.id)
     assert model.item.get('flagCount', 0) == 0
-    assert model.refresh_item().item.get('flagCount', 0) == 0
+    assert model.refresh_item().item.get('flagCount', 0) == 1
     assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 0
 
     # verify can't unflag if we haven't flagged
@@ -103,7 +102,8 @@ def test_unflag(model, user2):
 def test_is_crowdsourced_forced_removal_criteria_met_post(post, user2, user3, user4, user5, user6, user7):
     # should archive if over 5 users have viewed the model and more than 10% have flagged it
     # one flag, verify shouldn't force-archive
-    post.flag(user2)
+    post.dynamo.increment_flag_count(post.id)
+    post.refresh_item()
     assert post.is_crowdsourced_forced_removal_criteria_met() is False
 
     # get 5 views, verify still shouldn't force-archive
@@ -124,7 +124,8 @@ def test_is_crowdsourced_forced_removal_criteria_met_post(post, user2, user3, us
 def test_is_crowdsourced_forced_removal_criteria_met_comment(comment, user2, user3, user4, user5, user6, user7):
     # should archive if over 5 users have viewed the model and more than 10% have flagged it
     # one flag, verify shouldn't force-archive
-    comment.flag(user2)
+    comment.dynamo.increment_flag_count(comment.id)
+    comment.refresh_item()
     assert comment.is_crowdsourced_forced_removal_criteria_met() is False
 
     # get 5 views, verify still shouldn't force-archive
@@ -140,36 +141,3 @@ def test_is_crowdsourced_forced_removal_criteria_met_comment(comment, user2, use
     comment.post.record_view_count(user7.id, 1)
     comment.post.refresh_item()
     assert comment.is_crowdsourced_forced_removal_criteria_met() is True
-
-
-@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
-def test_flag_force_remove_by_crowdsourced_criteria(model, user2, user3, caplog):
-    model.remove_from_flagging = mock.Mock()
-
-    # test without force-removal
-    model.is_crowdsourced_forced_removal_criteria_met = mock.Mock(return_value=False)
-    with caplog.at_level(logging.WARNING):
-        model.flag(user2)
-    assert len(caplog.records) == 0
-    assert model.remove_from_flagging.mock_calls == []
-
-    # test with force-removal
-    model.is_crowdsourced_forced_removal_criteria_met = mock.Mock(return_value=True)
-    with caplog.at_level(logging.WARNING):
-        model.flag(user3)
-    assert len(caplog.records) == 1
-    assert 'Force removing' in caplog.records[0].msg
-    assert model.id in caplog.records[0].msg
-    assert model.remove_from_flagging.mock_calls == [mock.call()]
-
-
-@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
-def test_flag_force_archive_by_admin(model, user2, caplog):
-    model.remove_from_flagging = mock.Mock()
-    model.flag_admin_usernames = user2.username
-    with caplog.at_level(logging.WARNING):
-        model.flag(user2)
-    assert len(caplog.records) == 1
-    assert 'Force removing' in caplog.records[0].msg
-    assert model.id in caplog.records[0].msg
-    assert model.remove_from_flagging.mock_calls == [mock.call()]

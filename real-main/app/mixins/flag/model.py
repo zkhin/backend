@@ -1,6 +1,6 @@
 import logging
 
-from .exceptions import AlreadyFlagged, FlagException, NotFlagged
+from .exceptions import FlagException
 
 logger = logging.getLogger()
 
@@ -29,40 +29,14 @@ class FlagModelMixin:
             raise FlagException(f'User cant flag their own {self.item_type} `{self.id}`')
 
         # write to the db
-        transacts = [
-            self.flag_dynamo.transact_add(self.id, user.id),
-            self.dynamo.transact_increment_flag_count(self.id),
-        ]
-        transact_exceptions = [
-            AlreadyFlagged(self.item_type, self.id, user.id),
-            self.exception_dne(self.id),
-        ]
-        self.flag_dynamo.client.transact_write_items(transacts, transact_exceptions)
+        self.flag_dynamo.add(self.id, user.id)
         self.item['flagCount'] = self.item.get('flagCount', 0) + 1
-
-        # force archive the item?
-        if user.username in self.flag_admin_usernames or self.is_crowdsourced_forced_removal_criteria_met():
-            logger.warning(f'Force removing {self.item_type} `{self.id}`')
-            self.remove_from_flagging()
-
         return self
 
     def unflag(self, user_id):
-        transacts = [
-            self.flag_dynamo.transact_delete(self.id, user_id),
-            self.dynamo.transact_decrement_flag_count(self.id),
-        ]
-        transact_exceptions = [
-            NotFlagged(self.item_type, self.id, user_id),
-            self.exception_generic(f'Post `{self.id}` does not exist or has no flagCount'),
-        ]
-        self.flag_dynamo.client.transact_write_items(transacts, transact_exceptions)
-
+        self.flag_dynamo.delete(self.id, user_id)
         self.item['flagCount'] = self.item.get('flagCount', 0) - 1
         return self
-
-    def remove_from_flagging(self):
-        raise NotImplementedError('Must be implemented by model class')
 
     def is_crowdsourced_forced_removal_criteria_met(self):
         # the item should be force-archived if (directly from spec):

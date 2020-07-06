@@ -40,6 +40,7 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         if not hasattr(self, '_postprocessor'):
             self._postprocessor = CommentPostProcessor(
                 dynamo=getattr(self, 'dynamo', None),
+                manager=self,
                 post_manager=self.post_manager,
                 user_manager=self.user_manager,
             )

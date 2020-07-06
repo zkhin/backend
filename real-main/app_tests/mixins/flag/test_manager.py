@@ -37,8 +37,6 @@ comment2 = comment
 def test_unflag_all_by_user(manager, model1, model2, user2):
     # check we haven't flagged anything
     assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
-    assert model1.refresh_item().item.get('flagCount', 0) == 0
-    assert model2.refresh_item().item.get('flagCount', 0) == 0
 
     # unflag all, check
     manager.unflag_all_by_user(user2.id)
@@ -48,11 +46,7 @@ def test_unflag_all_by_user(manager, model1, model2, user2):
     model1.flag(user2)
     model2.flag(user2)
     assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == [model1.id, model2.id]
-    assert model1.refresh_item().item['flagCount'] == 1
-    assert model2.refresh_item().item['flagCount'] == 1
 
     # unflag all, check
     manager.unflag_all_by_user(user2.id)
     assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
-    assert model1.refresh_item().item.get('flagCount', 0) == 0
-    assert model2.refresh_item().item.get('flagCount', 0) == 0

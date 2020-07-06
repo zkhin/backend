@@ -5,7 +5,7 @@ import pendulum
 import pytest
 
 from app.models.card.specs import CommentCardSpec
-from app.models.post.enums import PostType
+from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
@@ -242,3 +242,59 @@ def test_comment_view_added(post_postprocessor, post, user, user2):
     # another view by post owner
     post_postprocessor.comment_view_added(post.id, user.id)
     assert post.refresh_item().item['commentsUnviewedCount'] == 0
+
+
+def test_post_flag_added(post_postprocessor, post, user2):
+    # check starting state
+    assert post.refresh_item().item.get('flagCount', 0) == 0
+
+    # postprocess, verify flagCount is incremented & not force achived
+    post_postprocessor.post_flag_added(post.id, user2.id)
+    assert post.refresh_item().item.get('flagCount', 0) == 1
+    assert post.status != PostStatus.ARCHIVED
+
+
+def test_post_flag_added_force_archive_by_admin(post_postprocessor, post, user2, caplog):
+    # configure and check starting state
+    assert post.refresh_item().item.get('flagCount', 0) == 0
+    user2.update_username(post.flag_admin_usernames[0])
+
+    # postprocess, verify flagCount is incremented and force archived
+    with caplog.at_level(logging.WARNING):
+        post_postprocessor.post_flag_added(post.id, user2.id)
+    assert len(caplog.records) == 1
+    assert 'Force archiving post' in caplog.records[0].msg
+    assert post.refresh_item().item.get('flagCount', 0) == 1
+    assert post.status == PostStatus.ARCHIVED
+
+
+def test_post_flag_added_force_archive_by_crowdsourced_criteria(post_postprocessor, post, user2, caplog):
+    # configure and check starting state
+    assert post.refresh_item().item.get('flagCount', 0) == 0
+    for _ in range(6):
+        post.dynamo.increment_viewed_by_count(post.id)
+
+    # postprocess, verify flagCount is incremented and force archived
+    with caplog.at_level(logging.WARNING):
+        post_postprocessor.post_flag_added(post.id, user2.id)
+    assert len(caplog.records) == 1
+    assert 'Force archiving post' in caplog.records[0].msg
+    assert post.refresh_item().item.get('flagCount', 0) == 1
+    assert post.status == PostStatus.ARCHIVED
+
+
+def test_post_flag_deleted(post_postprocessor, post, user2, caplog):
+    # configure and check starting state
+    post_postprocessor.post_flag_added(post.id, user2.id)
+    assert post.refresh_item().item.get('flagCount', 0) == 1
+
+    # postprocess, verify flagCount is decremented
+    post_postprocessor.post_flag_deleted(post.id)
+    assert post.refresh_item().item.get('flagCount', 0) == 0
+
+    # postprocess again, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        post_postprocessor.post_flag_deleted(post.id)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement flagCount' in caplog.records[0].msg
+    assert post.refresh_item().item.get('flagCount', 0) == 0

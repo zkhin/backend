@@ -1,5 +1,4 @@
 import uuid
-from unittest import mock
 
 import pytest
 
@@ -23,12 +22,6 @@ def comment(post_manager, comment_manager, user):
 
 user2 = user
 user3 = user
-
-
-def test_remove_from_flagging(comment):
-    comment.delete = mock.Mock()
-    comment.remove_from_flagging()
-    assert comment.delete.mock_calls == [mock.call(forced=True)]
 
 
 def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, user2, user3, follower_manager):
@@ -57,6 +50,5 @@ def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, use
     comment.flag(user3)
 
     # check the flag exists
-    assert comment.item.get('flagCount', 0) == 1
-    assert comment.refresh_item().item.get('flagCount', 0) == 1
+    assert comment.item.get('flagCount', 0) == 1  # count incremented in mem only at this point
     assert len(list(comment.flag_dynamo.generate_by_item(comment.id))) == 1
