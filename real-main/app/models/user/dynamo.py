@@ -7,7 +7,7 @@ from boto3.dynamodb.conditions import Key
 from app.models.post.enums import PostStatus
 
 from .enums import UserPrivacyStatus, UserStatus
-from .exceptions import UserAlreadyExists, UserDoesNotExist
+from .exceptions import UserAlreadyExists
 
 logger = logging.getLogger()
 
@@ -230,17 +230,6 @@ class UserDynamo:
     def transact_decrement_chat_count(self, user_id):
         return self._transact_decrement_count(user_id, 'chatCount')
 
-    def increment_post_viewed_by_count(self, user_id):
-        query_kwargs = {
-            'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD postViewedByCount :one',
-            'ExpressionAttributeValues': {':one': 1},
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise UserDoesNotExist(user_id)
-
     def transact_post_completed(self, user_id):
         kwargs = {
             'Key': self.typed_pk(user_id),
@@ -297,70 +286,49 @@ class UserDynamo:
             kwargs['ConditionExpression'] += ' and #ctd > :zero'
         return {'Update': kwargs}
 
-    def _increment_count(self, attribute_name, user_id):
-        query_kwargs = {
-            'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD #attrName :one',
-            'ExpressionAttributeNames': {'#attrName': attribute_name},
-            'ExpressionAttributeValues': {':one': 1},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }
-        return self.client.update_item(query_kwargs)
-
-    def _decrement_count(self, attribute_name, user_id, fail_soft=False):
-        query_kwargs = {
-            'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD #attrName :neg_one',
-            'ExpressionAttributeNames': {'#attrName': attribute_name},
-            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if fail_soft:
-                logger.warning(f'Failed to decrement {attribute_name} for user `{user_id}`')
-                return
-            raise
-
     def increment_card_count(self, user_id):
-        return self._increment_count('cardCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'cardCount')
 
     def decrement_card_count(self, user_id, fail_soft=False):
-        return self._decrement_count('cardCount', user_id, fail_soft=fail_soft)
+        return self.client.decrement_count(self.pk(user_id), 'cardCount', fail_soft=fail_soft)
 
     def increment_chats_with_unviewed_messages_count(self, user_id):
-        return self._increment_count('chatsWithUnviewedMessagesCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'chatsWithUnviewedMessagesCount')
 
     def decrement_chats_with_unviewed_messages_count(self, user_id, fail_soft=False):
-        return self._decrement_count('chatsWithUnviewedMessagesCount', user_id, fail_soft=fail_soft)
+        return self.client.decrement_count(
+            self.pk(user_id), 'chatsWithUnviewedMessagesCount', fail_soft=fail_soft
+        )
 
     def increment_comment_count(self, user_id):
-        return self._increment_count('commentCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'commentCount')
 
     def decrement_comment_count(self, user_id, fail_soft=False):
-        return self._decrement_count('commentCount', user_id, fail_soft=fail_soft)
+        return self.client.decrement_count(self.pk(user_id), 'commentCount', fail_soft=fail_soft)
 
     def increment_comment_deleted_count(self, user_id):
-        return self._increment_count('commentDeletedCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'commentDeletedCount')
 
     def increment_comment_forced_deletion_count(self, user_id):
-        return self._increment_count('commentForcedDeletionCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'commentForcedDeletionCount')
 
     def increment_followed_count(self, user_id):
-        return self._increment_count('followedCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'followedCount')
 
     def decrement_followed_count(self, user_id, fail_soft=False):
-        return self._decrement_count('followedCount', user_id, fail_soft=fail_soft)
+        return self.client.decrement_count(self.pk(user_id), 'followedCount', fail_soft=fail_soft)
 
     def increment_follower_count(self, user_id):
-        return self._increment_count('followerCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'followerCount')
 
     def decrement_follower_count(self, user_id, fail_soft=False):
-        return self._decrement_count('followerCount', user_id, fail_soft=fail_soft)
+        return self.client.decrement_count(self.pk(user_id), 'followerCount', fail_soft=fail_soft)
 
     def increment_followers_requested_count(self, user_id):
-        return self._increment_count('followersRequestedCount', user_id)
+        return self.client.increment_count(self.pk(user_id), 'followersRequestedCount')
 
     def decrement_followers_requested_count(self, user_id, fail_soft=False):
-        return self._decrement_count('followersRequestedCount', user_id, fail_soft=fail_soft)
+        return self.client.decrement_count(self.pk(user_id), 'followersRequestedCount', fail_soft=fail_soft)
+
+    def increment_post_viewed_by_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'postViewedByCount')

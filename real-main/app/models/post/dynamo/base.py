@@ -163,37 +163,14 @@ class PostDynamo:
             }
         }
 
-    def _increment_count(self, attribute_name, post_id):
-        query_kwargs = {
-            'Key': self.pk(post_id),
-            'UpdateExpression': 'ADD #attrName :one',
-            'ExpressionAttributeNames': {'#attrName': attribute_name},
-            'ExpressionAttributeValues': {':one': 1},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }
-        return self.client.update_item(query_kwargs)
-
-    def _decrement_count(self, attribute_name, post_id, fail_soft=False):
-        query_kwargs = {
-            'Key': self.pk(post_id),
-            'UpdateExpression': 'ADD #attrName :neg_one',
-            'ExpressionAttributeNames': {'#attrName': attribute_name},
-            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if fail_soft:
-                logger.warning(f'Failed to decrement {attribute_name} for post `{post_id}`')
-                return
-            raise
-
     def increment_flag_count(self, post_id):
-        return self._increment_count('flagCount', post_id)
+        return self.client.increment_count(self.pk(post_id), 'flagCount')
 
     def decrement_flag_count(self, post_id, fail_soft=False):
-        return self._decrement_count('flagCount', post_id, fail_soft=fail_soft)
+        return self.client.decrement_count(self.pk(post_id), 'flagCount', fail_soft=fail_soft)
+
+    def increment_viewed_by_count(self, post_id):
+        return self.client.increment_count(self.pk(post_id), 'viewedByCount')
 
     def transact_set_post_status(self, post_item, status, original_post_id=None, album_rank=None):
         album_id = post_item.get('albumId')
@@ -235,17 +212,6 @@ class PostDynamo:
             transact['Update']['UpdateExpression'] += ' REMOVE setAsUserPhoto'
 
         return transact
-
-    def increment_viewed_by_count(self, post_id):
-        query_kwargs = {
-            'Key': self.pk(post_id),
-            'UpdateExpression': 'ADD viewedByCount :one',
-            'ExpressionAttributeValues': {':one': 1},
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.PostDoesNotExist(post_id)
 
     def set(
         self,
@@ -438,32 +404,10 @@ class PostDynamo:
         return self.client.update_item(query_kwargs)
 
     def decrement_comment_count(self, post_id, fail_soft=False):
-        query_kwargs = {
-            'Key': self.pk(post_id),
-            'UpdateExpression': 'ADD commentCount :negative_one',
-            'ExpressionAttributeValues': {':negative_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) and commentCount > :zero',
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if not fail_soft:
-                raise
-            logger.warning(f'Failed to decrement comment count for post `{post_id}`')
+        return self.client.decrement_count(self.pk(post_id), 'commentCount', fail_soft=fail_soft)
 
     def decrement_comments_unviewed_count(self, post_id, fail_soft=False):
-        query_kwargs = {
-            'Key': self.pk(post_id),
-            'UpdateExpression': 'ADD commentsUnviewedCount :negative_one',
-            'ExpressionAttributeValues': {':negative_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) and commentsUnviewedCount > :zero',
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if not fail_soft:
-                raise
-            logger.warning(f'Failed to decrement comments unviewed count for post `{post_id}`')
+        return self.client.decrement_count(self.pk(post_id), 'commentsUnviewedCount', fail_soft=fail_soft)
 
     def clear_comments_unviewed_count(self, post_id):
         query_kwargs = {

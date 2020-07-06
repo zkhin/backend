@@ -139,43 +139,6 @@ def test_generate_chat_ids_by_chat(cm_dynamo):
     assert list(cm_dynamo.generate_chat_ids_by_user(user_id)) == [chat_id_1, chat_id_2]
 
 
-def test_increment_decrement_messages_unviewed_count(cm_dynamo, caplog):
-    # add the chat to the DB, verify it is in DB
-    chat_id, user_id = str(uuid4()), str(uuid4())
-    transact = cm_dynamo.transact_add(chat_id, user_id)
-    cm_dynamo.client.transact_write_items([transact])
-    assert 'messagesUnviewedCount' not in cm_dynamo.get(chat_id, user_id)
-
-    # increment
-    assert cm_dynamo.increment_messages_unviewed_count(chat_id, user_id)['messagesUnviewedCount'] == 1
-    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 1
-
-    # increment
-    assert cm_dynamo.increment_messages_unviewed_count(chat_id, user_id)['messagesUnviewedCount'] == 2
-    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 2
-
-    # decrement
-    assert cm_dynamo.decrement_messages_unviewed_count(chat_id, user_id)['messagesUnviewedCount'] == 1
-    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 1
-
-    # decrement
-    assert cm_dynamo.decrement_messages_unviewed_count(chat_id, user_id)['messagesUnviewedCount'] == 0
-    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 0
-
-    # fail soft on decrementing below
-    with caplog.at_level(logging.WARNING):
-        cm_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)
-    assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'WARNING'
-    assert all(x in caplog.records[0].msg for x in ['Failed', 'messages unviewed count', chat_id, user_id])
-    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 0
-
-    # fail hard on decrementing below
-    with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
-        cm_dynamo.decrement_messages_unviewed_count(chat_id, user_id)
-    assert cm_dynamo.get(chat_id, user_id)['messagesUnviewedCount'] == 0
-
-
 def test_increment_clear_messages_unviewed_count(cm_dynamo, caplog):
     # add the chat to the DB, verify it is in DB
     chat_id, user_id = str(uuid4()), str(uuid4())
@@ -198,3 +161,55 @@ def test_increment_clear_messages_unviewed_count(cm_dynamo, caplog):
     # check clear is idempotent
     assert 'messagesUnviewedCount' not in cm_dynamo.clear_messages_unviewed_count(chat_id, user_id)
     assert 'messagesUnviewedCount' not in cm_dynamo.get(chat_id, user_id)
+
+
+@pytest.mark.parametrize(
+    'incrementor_name, decrementor_name, attribute_name',
+    [['increment_messages_unviewed_count', 'decrement_messages_unviewed_count', 'messagesUnviewedCount']],
+)
+def test_increment_decrement_count(cm_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
+    incrementor = getattr(cm_dynamo, incrementor_name)
+    decrementor = getattr(cm_dynamo, decrementor_name) if decrementor_name else None
+    chat_id, user_id = str(uuid4()), str(uuid4())
+
+    # can't increment comment that doesnt exist
+    with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
+        incrementor(chat_id, user_id)
+    if decrementor:
+        with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
+            decrementor(chat_id, user_id)
+
+    # add the user to the DB, verify it is in DB
+    transact = cm_dynamo.transact_add(chat_id, user_id)
+    cm_dynamo.client.transact_write_items([transact])
+    assert attribute_name not in cm_dynamo.get(chat_id, user_id)
+
+    # increment twice, verify
+    assert incrementor(chat_id, user_id)[attribute_name] == 1
+    assert cm_dynamo.get(chat_id, user_id)[attribute_name] == 1
+    assert incrementor(chat_id, user_id)[attribute_name] == 2
+    assert cm_dynamo.get(chat_id, user_id)[attribute_name] == 2
+
+    # all done if there's no decrementor method
+    if not decrementor:
+        return
+
+    # decrement twice, verify
+    assert decrementor(chat_id, user_id)[attribute_name] == 1
+    assert cm_dynamo.get(chat_id, user_id)[attribute_name] == 1
+    assert decrementor(chat_id, user_id)[attribute_name] == 0
+    assert cm_dynamo.get(chat_id, user_id)[attribute_name] == 0
+
+    # verify fail soft on trying to decrement below zero
+    with caplog.at_level(logging.WARNING):
+        resp = decrementor(chat_id, user_id, fail_soft=True)
+    assert resp is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, chat_id, user_id])
+    assert cm_dynamo.get(chat_id, user_id)[attribute_name] == 0
+
+    # verify fail hard on trying to decrement below zero
+    with pytest.raises(cm_dynamo.client.exceptions.ConditionalCheckFailedException):
+        decrementor(chat_id, user_id)
+    assert cm_dynamo.get(chat_id, user_id)[attribute_name] == 0

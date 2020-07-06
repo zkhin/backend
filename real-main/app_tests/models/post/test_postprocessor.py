@@ -122,8 +122,8 @@ def test_comment_deleted(post_postprocessor, post, user2, caplog):
     with caplog.at_level(logging.WARNING):
         post_postprocessor.comment_deleted(post.id, str(uuid4()), user2.id, pendulum.now('utc'))
     assert len(caplog.records) == 2
-    assert 'Failed to decrement comment count' in caplog.records[0].msg
-    assert 'Failed to decrement comments unviewed count' in caplog.records[1].msg
+    assert 'Failed to decrement commentCount' in caplog.records[0].msg
+    assert 'Failed to decrement commentsUnviewedCount' in caplog.records[1].msg
     assert post.id in caplog.records[0].msg
     assert post.id in caplog.records[1].msg
     post.refresh_item()

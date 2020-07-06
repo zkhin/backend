@@ -5,7 +5,7 @@ import pendulum
 import pytest
 
 from app.models.comment.dynamo import CommentDynamo
-from app.models.comment.exceptions import CommentAlreadyExists, CommentDoesNotExist
+from app.models.comment.exceptions import CommentAlreadyExists
 
 
 @pytest.fixture
@@ -120,84 +120,51 @@ def test_generate_by_user(comment_dynamo):
     assert comment_items[1]['commentId'] == comment_id_2
 
 
-def test_increment_viewed_by_count(comment_dynamo):
-    # verify can't increment for comment that doesnt exist
-    comment_id = 'comment-id'
-    with pytest.raises(CommentDoesNotExist):
-        comment_dynamo.increment_viewed_by_count(comment_id)
-
-    # create the comment
-    comment_dynamo.add_comment(comment_id, 'pd', 'uid', 'lore ipsum', [])
-
-    # verify it has no view count
-    comment_item = comment_dynamo.get_comment(comment_id)
-    assert comment_item.get('viewedByCount', 0) == 0
-
-    # record a view
-    comment_item = comment_dynamo.increment_viewed_by_count(comment_id)
-    assert comment_item['commentId'] == comment_id
-    assert comment_item['viewedByCount'] == 1
-
-    # verify it really got the view count
-    comment_item = comment_dynamo.get_comment(comment_id)
-    assert comment_item['commentId'] == comment_id
-    assert comment_item['viewedByCount'] == 1
-
-    # record another view
-    comment_item = comment_dynamo.increment_viewed_by_count(comment_id)
-    assert comment_item['commentId'] == comment_id
-    assert comment_item['viewedByCount'] == 2
-
-    # verify it really got the view count
-    comment_item = comment_dynamo.get_comment(comment_id)
-    assert comment_item['commentId'] == comment_id
-    assert comment_item['viewedByCount'] == 2
-
-
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
-    [['increment_flag_count', 'decrement_flag_count', 'flagCount']],
+    [
+        ['increment_flag_count', 'decrement_flag_count', 'flagCount'],
+        ['increment_viewed_by_count', None, 'viewedByCount'],
+    ],
 )
 def test_increment_decrement_count(comment_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
     incrementor = getattr(comment_dynamo, incrementor_name)
-    decrementor = getattr(comment_dynamo, decrementor_name)
+    decrementor = getattr(comment_dynamo, decrementor_name) if decrementor_name else None
+    comment_id = str(uuid4())
+
+    # can't increment comment that doesnt exist
+    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+        incrementor(comment_id)
+    if decrementor:
+        with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+            decrementor(comment_id)
 
     # add the comment to the DB, verify it is in DB
-    comment_id = str(uuid4())
     comment_dynamo.add_comment(comment_id, str(uuid4()), str(uuid4()), 'lore', [])
     assert attribute_name not in comment_dynamo.get_comment(comment_id)
 
-    # verify can't decrement below zero
-    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
-        decrementor(comment_id)
-    assert attribute_name not in comment_dynamo.get_comment(comment_id)
-
-    # increment
     assert incrementor(comment_id)[attribute_name] == 1
     assert comment_dynamo.get_comment(comment_id)[attribute_name] == 1
-
-    # increment
     assert incrementor(comment_id)[attribute_name] == 2
     assert comment_dynamo.get_comment(comment_id)[attribute_name] == 2
 
-    # decrement
-    assert decrementor(comment_id)[attribute_name] == 1
-    assert comment_dynamo.get_comment(comment_id)[attribute_name] == 1
+    if decrementor:
+        # decrement twice, verify
+        assert decrementor(comment_id)[attribute_name] == 1
+        assert comment_dynamo.get_comment(comment_id)[attribute_name] == 1
+        assert decrementor(comment_id)[attribute_name] == 0
+        assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0
 
-    # decrement
-    assert decrementor(comment_id)[attribute_name] == 0
-    assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0
+        # verify fail soft on trying to decrement below zero
+        with caplog.at_level(logging.WARNING):
+            resp = decrementor(comment_id, fail_soft=True)
+        assert resp is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, comment_id])
+        assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0
 
-    # verify fail soft on trying to decrement below zero
-    with caplog.at_level(logging.WARNING):
-        resp = decrementor(comment_id, fail_soft=True)
-    assert resp is None
-    assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'WARNING'
-    assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, comment_id])
-    assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0
-
-    # verify fail hard on trying to decrement below zero
-    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
-        decrementor(comment_id)
-    assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0
+        # verify fail hard on trying to decrement below zero
+        with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
+            decrementor(comment_id)
+        assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0

@@ -1,11 +1,13 @@
 import base64
 import json
+import logging
 import os
 import re
 
 import boto3
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
+logger = logging.getLogger()
 
 
 class DynamoClient:
@@ -34,20 +36,8 @@ class DynamoClient:
         if 'ConditionExpression' in query_kwargs:
             cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
         query_kwargs['ConditionExpression'] = cond_exp
-
         self.table.put_item(**query_kwargs)
         return query_kwargs.get('Item')
-
-    def update_item(self, query_kwargs):
-        "Update an item and return the new item"
-        # ensure query fails if the item does not exist
-        cond_exp = 'attribute_exists(partitionKey)'
-        if 'ConditionExpression' in query_kwargs:
-            cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
-        query_kwargs['ConditionExpression'] = cond_exp
-
-        query_kwargs['ReturnValues'] = 'ALL_NEW'
-        return self.table.update_item(**query_kwargs).get('Attributes')
 
     def get_item(self, pk, **kwargs):
         "Get an item by its primary key"
@@ -70,6 +60,41 @@ class DynamoClient:
             kwargs['RequestItems'][self.table_name]['ProjectionExpression'] = projection_expression
         return self.boto3_client.batch_get_item(**kwargs)['Responses'][self.table_name]
 
+    def update_item(self, query_kwargs):
+        "Update an item and return the new item"
+        # ensure query fails if the item does not exist
+        cond_exp = 'attribute_exists(partitionKey)'
+        if 'ConditionExpression' in query_kwargs:
+            cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
+        query_kwargs['ConditionExpression'] = cond_exp
+        query_kwargs['ReturnValues'] = 'ALL_NEW'
+        return self.table.update_item(**query_kwargs).get('Attributes')
+
+    def increment_count(self, key, attribute_name):
+        query_kwargs = {
+            'Key': key,
+            'UpdateExpression': 'ADD #attrName :one',
+            'ExpressionAttributeNames': {'#attrName': attribute_name},
+            'ExpressionAttributeValues': {':one': 1},
+            'ConditionExpression': 'attribute_exists(partitionKey)',
+        }
+        return self.update_item(query_kwargs)
+
+    def decrement_count(self, key, attribute_name, fail_soft=False):
+        query_kwargs = {
+            'Key': key,
+            'UpdateExpression': 'ADD #attrName :neg_one',
+            'ExpressionAttributeNames': {'#attrName': attribute_name},
+            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
+            'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
+        }
+        try:
+            return self.update_item(query_kwargs)
+        except self.exceptions.ConditionalCheckFailedException:
+            if not fail_soft:
+                raise
+            logger.warning(f'Failed to decrement {attribute_name} for key `{key}`')
+
     def delete_item(self, pk, **kwargs):
         "Delete an item and return what was deleted"
         return_values = kwargs.pop('ReturnValues', 'ALL_OLD')
@@ -87,14 +112,11 @@ class DynamoClient:
 
     def query(self, query_kwargs, limit=None, next_token=None):
         "Query the table and return items & pagination token from the result"
-
         if limit:
             query_kwargs['Limit'] = limit
         if next_token:
             query_kwargs['ExclusiveStartKey'] = self.decode_pagination_token(next_token)
-
         resp = self.table.query(**query_kwargs)
-
         last_key = resp.get('LastEvaluatedKey')
         return {
             'items': resp['Items'],

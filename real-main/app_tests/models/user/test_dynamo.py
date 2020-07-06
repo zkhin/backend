@@ -7,7 +7,7 @@ import pytest
 from app.models.post.enums import PostStatus
 from app.models.user.dynamo import UserDynamo
 from app.models.user.enums import UserPrivacyStatus, UserStatus
-from app.models.user.exceptions import UserAlreadyExists, UserDoesNotExist
+from app.models.user.exceptions import UserAlreadyExists
 
 
 @pytest.fixture
@@ -498,45 +498,6 @@ def test_increment_decrement_chat_count(user_dynamo):
     assert user_item['chatCount'] == 0
 
 
-def test_increment_post_viewed_by_count_doesnt_exist(user_dynamo):
-    user_id = 'doesnt-exist'
-    with pytest.raises(UserDoesNotExist):
-        user_dynamo.increment_post_viewed_by_count(user_id)
-
-
-def test_increment_user_post_viewed_by_count(user_dynamo):
-    # create a user
-    user_id = 'user-id'
-    user_item = user_dynamo.add_user(user_id, 'username')
-    assert user_item['userId'] == user_id
-    assert user_item.get('postViewedByCount', 0) == 0
-
-    # verify it has no view count
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item.get('postViewedByCount', 0) == 0
-
-    # record a view
-    user_item = user_dynamo.increment_post_viewed_by_count(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item['postViewedByCount'] == 1
-
-    # verify it really got the view count
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item['postViewedByCount'] == 1
-
-    # record some more views
-    user_item = user_dynamo.increment_post_viewed_by_count(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item['postViewedByCount'] == 2
-
-    # verify it really got the view count
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item['postViewedByCount'] == 2
-
-
 def test_transact_post_completed(user_dynamo):
     # set up & verify starting state
     user_id = 'user-id'
@@ -685,38 +646,43 @@ def test_transact_post_deleted(user_dynamo):
             'chatsWithUnviewedMessagesCount',
         ],
         ['increment_comment_count', 'decrement_comment_count', 'commentCount'],
+        ['increment_comment_deleted_count', None, 'commentDeletedCount'],
+        ['increment_comment_forced_deletion_count', None, 'commentForcedDeletionCount'],
         ['increment_followed_count', 'decrement_followed_count', 'followedCount'],
         ['increment_follower_count', 'decrement_follower_count', 'followerCount'],
         ['increment_followers_requested_count', 'decrement_followers_requested_count', 'followersRequestedCount'],
+        ['increment_post_viewed_by_count', None, 'postViewedByCount'],
     ],
 )
 def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
     incrementor = getattr(user_dynamo, incrementor_name)
-    decrementor = getattr(user_dynamo, decrementor_name)
+    decrementor = getattr(user_dynamo, decrementor_name) if decrementor_name else None
+    user_id = str(uuid4())
+
+    # can't increment comment that doesnt exist
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        incrementor(user_id)
+    if decrementor:
+        with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+            decrementor(user_id)
 
     # add the user to the DB, verify it is in DB
-    user_id, username = str(uuid4()), str(uuid4())[:8]
-    user_dynamo.add_user(user_id, username)
+    user_dynamo.add_user(user_id, str(uuid4())[:8])
     assert attribute_name not in user_dynamo.get_user(user_id)
 
-    # verify can't decrement below zero
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
-        decrementor(user_id)
-    assert attribute_name not in user_dynamo.get_user(user_id)
-
-    # increment
+    # increment twice, verify
     assert incrementor(user_id)[attribute_name] == 1
     assert user_dynamo.get_user(user_id)[attribute_name] == 1
-
-    # increment
     assert incrementor(user_id)[attribute_name] == 2
     assert user_dynamo.get_user(user_id)[attribute_name] == 2
 
-    # decrement
+    # all done if there's no decrementor method
+    if not decrementor:
+        return
+
+    # decrement twice, verify
     assert decrementor(user_id)[attribute_name] == 1
     assert user_dynamo.get_user(user_id)[attribute_name] == 1
-
-    # decrement
     assert decrementor(user_id)[attribute_name] == 0
     assert user_dynamo.get_user(user_id)[attribute_name] == 0
 
@@ -733,27 +699,3 @@ def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrem
     with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
         decrementor(user_id)
     assert user_dynamo.get_user(user_id)[attribute_name] == 0
-
-
-@pytest.mark.parametrize(
-    'incrementor_name, attribute_name',
-    [
-        ['increment_comment_deleted_count', 'commentDeletedCount'],
-        ['increment_comment_forced_deletion_count', 'commentForcedDeletionCount'],
-    ],
-)
-def test_increment_count(user_dynamo, caplog, incrementor_name, attribute_name):
-    incrementor = getattr(user_dynamo, incrementor_name)
-
-    # add the user to the DB, verify it is in DB
-    user_id, username = str(uuid4()), str(uuid4())[:8]
-    user_dynamo.add_user(user_id, username)
-    assert attribute_name not in user_dynamo.get_user(user_id)
-
-    # increment
-    assert incrementor(user_id)[attribute_name] == 1
-    assert user_dynamo.get_user(user_id)[attribute_name] == 1
-
-    # increment
-    assert incrementor(user_id)[attribute_name] == 2
-    assert user_dynamo.get_user(user_id)[attribute_name] == 2

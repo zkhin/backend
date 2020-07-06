@@ -70,30 +70,12 @@ class ChatMemberDynamo:
             raise
 
     def increment_messages_unviewed_count(self, chat_id, user_id):
-        query_kwargs = {
-            'Key': self.pk(chat_id, user_id),
-            'UpdateExpression': 'ADD messagesUnviewedCount :one',
-            'ExpressionAttributeValues': {':one': 1},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }
-        return self.client.update_item(query_kwargs)
+        return self.client.increment_count(self.pk(chat_id, user_id), 'messagesUnviewedCount')
 
     def decrement_messages_unviewed_count(self, chat_id, user_id, fail_soft=False):
-        query_kwargs = {
-            'Key': self.pk(chat_id, user_id),
-            'UpdateExpression': 'ADD messagesUnviewedCount :neg_one',
-            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND messagesUnviewedCount > :zero',
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if fail_soft:
-                logger.warning(
-                    f'Failed to decrement messages unviewed count for chat `{chat_id}` and member `{user_id}`'
-                )
-                return
-            raise
+        return self.client.decrement_count(
+            self.pk(chat_id, user_id), 'messagesUnviewedCount', fail_soft=fail_soft
+        )
 
     def clear_messages_unviewed_count(self, chat_id, user_id):
         query_kwargs = {

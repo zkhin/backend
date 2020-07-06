@@ -99,28 +99,10 @@ class ChatDynamo:
             raise
 
     def increment_messages_count(self, chat_id):
-        query_kwargs = {
-            'Key': self.pk(chat_id),
-            'UpdateExpression': 'ADD messagesCount :one',
-            'ExpressionAttributeValues': {':one': 1},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }
-        return self.client.update_item(query_kwargs)
+        return self.client.increment_count(self.pk(chat_id), 'messagesCount')
 
     def decrement_messages_count(self, chat_id, fail_soft=False):
-        query_kwargs = {
-            'Key': self.pk(chat_id),
-            'UpdateExpression': 'ADD messagesCount :neg_one',
-            'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND messagesCount > :zero',
-        }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if fail_soft:
-                logger.warning(f'Failed to decrement message count for chat `{chat_id}`')
-                return
-            raise
+        return self.client.decrement_count(self.pk(chat_id), 'messagesCount', fail_soft=fail_soft)
 
     def transact_delete(self, chat_id, expected_user_count=None):
         query_kwargs = {

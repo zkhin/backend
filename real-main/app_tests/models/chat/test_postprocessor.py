@@ -286,8 +286,8 @@ def test_chat_message_deleted(chat_postprocessor, chat, user1, user2, caplog):
     with caplog.at_level(logging.WARNING):
         chat_postprocessor.chat_message_deleted(chat.id, str(uuid4()), user1.id, pendulum.now('utc'))
     assert len(caplog.records) == 2
-    assert 'Failed to decrement message count' in caplog.records[0].msg
-    assert 'Failed to decrement messages unviewed count' in caplog.records[1].msg
+    assert 'Failed to decrement messagesCount' in caplog.records[0].msg
+    assert 'Failed to decrement messagesUnviewedCount' in caplog.records[1].msg
     assert chat.id in caplog.records[0].msg
     assert chat.id in caplog.records[1].msg
     assert chat.refresh_item().item['messagesCount'] == 0
