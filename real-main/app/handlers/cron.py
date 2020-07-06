@@ -15,13 +15,11 @@ USER_NOTIFICATIONS_ONLY_USERNAMES = os.environ.get('USER_NOTIFICATIONS_ONLY_USER
 logger = logging.getLogger()
 xray.patch_all()
 
-cognito_client = clients.CognitoClient()
-dynamo_client = clients.DynamoClient()
-s3_uploads_client = clients.S3Client(S3_UPLOADS_BUCKET)
 clients = {
-    'dynamo': dynamo_client,
-    'cognito': cognito_client,
-    's3_uploads': s3_uploads_client,
+    'dynamo': clients.DynamoClient(),
+    'cognito': clients.CognitoClient(),
+    'pinpoint': clients.PinpointClient(),
+    's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
 }
 
 managers = {}
@@ -69,6 +67,8 @@ def send_user_notifications(event, context):
             logger.info('User notifications disabled')
         return
     only_usernames = USER_NOTIFICATIONS_ONLY_USERNAMES.split(' ') if USER_NOTIFICATIONS_ONLY_USERNAMES else None
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Preparing to send notifications as needed to users: {only_usernames or "all"}')
     now = pendulum.now('utc')
     total_cnt, success_cnt = card_manager.notify_users(now=now, only_usernames=only_usernames)
     with LogLevelContext(logger, logging.INFO):

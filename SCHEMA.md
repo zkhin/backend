@@ -47,7 +47,7 @@ We have no local secondary indexes.
 | `feed/{userId}/{postId}` | `-` | `2` | `userId`, `postId`, `postedAt`, `postedByUserId`, | `feed/{userId}` | `{postedAt}` | | | | | | | `feed/{userId}/{postedByUserId}` | `{postedAt}` |
 | `like/{likedByUserId}/{postId}` | `-` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount`, `rankCount`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` |
-| `card/{cardId}` | `-` | `0` | `title`, `subTitle`, `action` | `user/{userId}` | `card/{createdAt}` | | | | | `card` | `{notifyUserAt}` |
+| `card/{cardId}` | `-` | `0` | `title`, `subTitle`, `action` | `user/{userId}` | `card/{createdAt}` | | | | | `card` | `{notifyUserAt}/{userId}` |
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdByUserId`, `createdAt`, `lastMessageActivityAt`, `messagesCount`, `userCount` | `chat/{userId1}/{userId2}` | `-` |
 | `chat/{chatId}` | `member/{userId}` | `1` | `messagesUnviewedCount` | | | | | | | `chat/{chatId}` | `member/{joinedAt}` | `member/{userId}` | `chat/{lastMessageActivityAt}` |
 | `chat/{chatId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount` | | | | | | | `chat/{chatId}` | `view/{firstViewedAt}` |

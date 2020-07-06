@@ -40,7 +40,7 @@ class Card:
 
     @property
     def notify_user_at(self):
-        return pendulum.parse(self.item['gsiK1SortKey']) if 'gsiK1SortKey' in self.item else None
+        return pendulum.parse(self.item['gsiK1SortKey'].split('/')[0]) if 'gsiK1SortKey' in self.item else None
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_card(self.id, strongly_consistent=strongly_consistent)

@@ -42,7 +42,7 @@ class CardDynamo:
             query_kwargs['Item']['subTitle'] = sub_title
         if notify_user_at:
             query_kwargs['Item']['gsiK1PartitionKey'] = 'card'
-            query_kwargs['Item']['gsiK1SortKey'] = notify_user_at.to_iso8601_string()
+            query_kwargs['Item']['gsiK1SortKey'] = notify_user_at.to_iso8601_string() + '/' + user_id
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
@@ -79,19 +79,14 @@ class CardDynamo:
 
     def generate_card_ids_by_notify_user_at(self, cutoff_at, only_user_ids=None):
         query_kwargs = {
-            'KeyConditionExpression': 'gsiK1PartitionKey = :c AND gsiK1SortKey <= :at',
-            'ExpressionAttributeValues': {':c': 'card', ':at': cutoff_at.to_iso8601_string()},
+            'KeyConditionExpression': 'gsiK1PartitionKey = :c AND gsiK1SortKey < :at_trailing',
+            'ExpressionAttributeValues': {':c': 'card', ':at_trailing': cutoff_at.to_iso8601_string() + '/~'},
             'IndexName': 'GSI-K1',
         }
-        if only_user_ids:
-            query_kwargs['FilterExpression'] = (
-                'gsiA1PartitionKey IN ('
-                + ', '.join([f':gsia1pk_{index}' for index in range(len(only_user_ids))])
-                + ')'
-            )
-            query_kwargs['ExpressionAttributeValues'].update(
-                {f':gsia1pk_{index}': f'user/{user_id}' for index, user_id in enumerate(only_user_ids)}
-            )
         gen = self.client.generate_all_query(query_kwargs)
+        # Note dynamo does not let you apply a FilterExpression to the index/key used in a query
+        # 'Filter Expression can only contain non-primary key attributes'
+        if only_user_ids:
+            gen = (item for item in gen if item['gsiK1SortKey'].split('/')[-1] in only_user_ids)
         gen = (item['partitionKey'].split('/')[1] for item in gen)
         return gen

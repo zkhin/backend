@@ -68,7 +68,7 @@ def test_add_card_maximal(card_dynamo):
         'action': action,
         'subTitle': sub_title,
         'gsiK1PartitionKey': 'card',
-        'gsiK1SortKey': notify_user_at.to_iso8601_string(),
+        'gsiK1SortKey': notify_user_at.to_iso8601_string() + '/uid',
     }
 
 

@@ -141,7 +141,7 @@ test('Delete card, generate new card after deleting', async () => {
       variables: {chatId: uuidv4(), userIds: [ourUserId], messageId: uuidv4(), messageText: 'm1'},
     })
     .then(({data}) => expect(data.createGroupChat.chatId).toBeTruthy())
-  await misc.sleep(2000) // dynamo
+  await misc.sleep(3000) // dynamo
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
