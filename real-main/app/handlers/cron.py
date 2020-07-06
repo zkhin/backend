@@ -10,6 +10,7 @@ from . import xray
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 USER_NOTIFICATIONS_ENABLED = os.environ.get('USER_NOTIFICATIONS_ENABLED')
+USER_NOTIFICATIONS_ONLY_USERNAMES = os.environ.get('USER_NOTIFICATIONS_ONLY_USERNAMES')
 
 logger = logging.getLogger()
 xray.patch_all()
@@ -67,7 +68,8 @@ def send_user_notifications(event, context):
         with LogLevelContext(logger, logging.INFO):
             logger.info('User notifications disabled')
         return
+    only_usernames = USER_NOTIFICATIONS_ONLY_USERNAMES.split(' ') if USER_NOTIFICATIONS_ONLY_USERNAMES else None
     now = pendulum.now('utc')
-    total_cnt, success_cnt = card_manager.notify_users(now=now)
+    total_cnt, success_cnt = card_manager.notify_users(now=now, only_usernames=only_usernames)
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'User notifications sent successfully: {success_cnt} out of {total_cnt}')

@@ -26,7 +26,9 @@ provider:
     ELASTICSEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
     PINPOINT_APPLICATION_ID: !Ref PinpointApp
-    USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, ''}  # default to disabled for all envs for now
+
+    USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, 'true'}
+    USER_NOTIFICATIONS_ONLY_USERNAMES: ${env:USER_NOTIFICATIONS_ONLY_USERNAMES, 'azim ian mike'}
 
     # Note: use of cloudformation variables with 'placeholder' is to avoid resource dependency loops
     CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
