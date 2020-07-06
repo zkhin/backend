@@ -11,6 +11,11 @@
   #return ('VIEWED')
 #end
 
+## All posts by the REAL user are considered viewed
+#if ($postedByUserId == '${realUserId}')
+  #return ('VIEWED')
+#end
+
 {
     "version": "2018-05-29",
     "operation": "GetItem",

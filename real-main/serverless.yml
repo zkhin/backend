@@ -26,6 +26,7 @@ provider:
     ELASTICSEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
     PINPOINT_APPLICATION_ID: !Ref PinpointApp
+    REAL_USER_ID: ${env:REAL_USER_ID, 'us-east-1:8a4d7c3b-809e-4182-859c-a2bdafa1a8ae'}  # default is correct value for production
 
     USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, 'true'}
     USER_NOTIFICATIONS_ONLY_USERNAMES: ${env:USER_NOTIFICATIONS_ONLY_USERNAMES, 'azim ian mike'}
@@ -125,6 +126,7 @@ custom:
       table: ${self:provider.environment.DYNAMO_TABLE}
       frontendResourcesDomain: ${self:provider.environment.CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN}
       lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
+      realUserId: ${self:provider.environment.REAL_USER_ID}
     xrayEnabled: true
 
     mappingTemplates:
