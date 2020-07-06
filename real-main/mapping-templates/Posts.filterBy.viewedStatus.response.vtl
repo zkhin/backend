@@ -10,7 +10,7 @@
 #foreach ($post in $ctx.prev.result)
   #if ($util.isNull($post.viewedStatus))
     #set ($index = $ctx.stash.postIdToIndex[$post.postId])
-    #if ($util.isNull($ctx.result.data.${table}[$index]))
+    #if ($util.isNull($ctx.result.data.${dynamoTable}[$index]))
       $util.qr($post.put('viewedStatus', 'NOT_VIEWED'))
     #else
       $util.qr($post.put('viewedStatus', 'VIEWED'))

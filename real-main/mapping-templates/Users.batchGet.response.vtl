@@ -11,8 +11,8 @@
   #else
     ## item is a userId
     #set ($index = $ctx.stash.userIdToIndex[$item])
-    #if (! $util.isNull($ctx.result.data.${table}[$index]))
-      #set ($user = $ctx.result.data.${table}[$index])
+    #if (! $util.isNull($ctx.result.data.${dynamoTable}[$index]))
+      #set ($user = $ctx.result.data.${dynamoTable}[$index])
       $util.qr($users.add($user))
     #end
   #end

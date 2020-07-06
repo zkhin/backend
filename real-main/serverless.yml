@@ -123,7 +123,7 @@ custom:
     logConfig:
       level: ERROR
     substitutions:
-      table: ${self:provider.environment.DYNAMO_TABLE}
+      dynamoTable: ${self:provider.environment.DYNAMO_TABLE}
       frontendResourcesDomain: ${self:provider.environment.CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN}
       lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
       realUserId: ${self:provider.environment.REAL_USER_ID}

@@ -8,7 +8,7 @@
 #foreach ($user in $ctx.prev.result)
   #if ($util.isNull($user.blockerStatus))
     #set ($index = $ctx.stash.userIdToIndex[$user.userId])
-    #if ($util.isNull($ctx.result.data.${table}[$index]))
+    #if ($util.isNull($ctx.result.data.${dynamoTable}[$index]))
       $util.qr($user.put('blockerStatus', 'NOT_BLOCKING'))
     #else
       $util.qr($user.put('blockerStatus', 'BLOCKING'))

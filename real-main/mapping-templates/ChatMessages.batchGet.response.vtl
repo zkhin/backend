@@ -12,8 +12,8 @@
   #else
     ## item is a messageId
     #set ($index = $ctx.stash.messageIdToIndex[$item])
-    #if (! $util.isNull($ctx.result.data.${table}[$index]))
-      #set ($chatMessage = $ctx.result.data.${table}[$index])
+    #if (! $util.isNull($ctx.result.data.${dynamoTable}[$index]))
+      #set ($chatMessage = $ctx.result.data.${dynamoTable}[$index])
       $util.qr($chatMessages.add($chatMessage))
     #end
   #end

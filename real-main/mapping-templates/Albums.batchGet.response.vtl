@@ -12,8 +12,8 @@
   #else
     ## item is a albumId
     #set ($index = $ctx.stash.albumIdToIndex[$item])
-    #if (! $util.isNull($ctx.result.data.${table}[$index]))
-      #set ($album = $ctx.result.data.${table}[$index])
+    #if (! $util.isNull($ctx.result.data.${dynamoTable}[$index]))
+      #set ($album = $ctx.result.data.${dynamoTable}[$index])
       $util.qr($albums.add($album))
     #end
   #end

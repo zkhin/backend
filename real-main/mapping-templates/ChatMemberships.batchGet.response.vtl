@@ -13,8 +13,8 @@
     ## item is a [chatId, userId] list
     #set ($lookupKey = "$item[0]/$item[1]")
     #set ($index = $ctx.stash.idsToIndex[$lookupKey])
-    #if (! $util.isNull($ctx.result.data.${table}[$index]))
-      #set ($chatMembership = $ctx.result.data.${table}[$index])
+    #if (! $util.isNull($ctx.result.data.${dynamoTable}[$index]))
+      #set ($chatMembership = $ctx.result.data.${dynamoTable}[$index])
       $util.qr($chatMemberships.add($chatMembership))
     #end
   #end

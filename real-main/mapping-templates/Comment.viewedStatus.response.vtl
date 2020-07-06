@@ -2,8 +2,8 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($commentView = $ctx.result.data.${table}[0])
-#set ($postView = $ctx.result.data.${table}[1])
+#set ($commentView = $ctx.result.data.${dynamoTable}[0])
+#set ($postView = $ctx.result.data.${dynamoTable}[1])
 
 #if (!$util.isNull($commentView))
   #return ('VIEWED')

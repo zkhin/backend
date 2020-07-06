@@ -12,8 +12,8 @@
   #else
     ## item is a postId
     #set ($index = $ctx.stash.postIdToIndex[$item])
-    #if (! $util.isNull($ctx.result.data.${table}[$index]))
-      #set ($post = $ctx.result.data.${table}[$index])
+    #if (! $util.isNull($ctx.result.data.${dynamoTable}[$index]))
+      #set ($post = $ctx.result.data.${dynamoTable}[$index])
       $util.qr($posts.add($post))
     #end
   #end
