@@ -77,8 +77,10 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
         self.item = self.dynamo.edit_chat_message(self.id, text, text_tags, now=now)
         return self
 
-    def delete(self):
+    def delete(self, forced=False):
         self.item = self.dynamo.delete_chat_message(self.id)
+        if forced:
+            self.user_manager.dynamo.increment_chat_message_forced_deletion_count(self.user_id)
         self.delete_views()
         self.flag_dynamo.delete_all_for_item(self.id)
         return self
@@ -135,3 +137,9 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
 
         super().record_view_count(user_id, view_count, viewed_at=viewed_at)
         return True
+
+    def is_crowdsourced_forced_removal_criteria_met(self):
+        # force-delete the chat message if at least 10% of the members of the chat have flagged it
+        flag_count = self.item.get('flagCount', 0)
+        user_count = self.chat.item.get('userCount', 0)
+        return flag_count > user_count / 10

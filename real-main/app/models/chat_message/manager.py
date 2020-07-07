@@ -42,7 +42,7 @@ class ChatMessageManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def postprocessor(self):
         if not hasattr(self, '_postprocessor'):
             self._postprocessor = ChatMessagePostProcessor(
-                dynamo=getattr(self, 'dynamo', None), chat_manager=self.chat_manager,
+                dynamo=getattr(self, 'dynamo', None), manager=self, chat_manager=self.chat_manager,
             )
         return self._postprocessor
 

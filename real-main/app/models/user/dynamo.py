@@ -292,6 +292,9 @@ class UserDynamo:
     def decrement_card_count(self, user_id, fail_soft=False):
         return self.client.decrement_count(self.pk(user_id), 'cardCount', fail_soft=fail_soft)
 
+    def increment_chat_message_forced_deletion_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'chatMessagesForcedDeletionCount')
+
     def increment_chats_with_unviewed_messages_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatsWithUnviewedMessagesCount')
 

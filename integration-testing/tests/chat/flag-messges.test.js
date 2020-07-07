@@ -88,14 +88,8 @@ test('Flag message failures', async () => {
     /User .* is not ACTIVE/,
   )
 
-  // can't double flag message
-  await ourClient.mutate({mutation, variables: {messageId: messageId2}}).then(({data}) => {
-    expect(data.flagChatMessage.messageId).toBe(messageId2)
-    expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
-  })
-  await expect(ourClient.mutate({mutation, variables: {messageId: messageId2}})).rejects.toThrow(
-    /ChatMessage .* has already been flagged by user/,
-  )
+  // can't double flag message - can't test this as without 10+ members in the chat,
+  // every message that is flagged is immediately force-deleted
 })
 
 test('Flag message success', async () => {
@@ -123,10 +117,17 @@ test('Flag message success', async () => {
     expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
   })
 
-  // check they see our message as flagged now
+  // 50% of participants in chat have flagged message, so check it was auto-deleted
   await misc.sleep(2000)
   await theirClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
-    expect(data.chat.messages.items[0].messageId).toBe(messageId)
-    expect(data.chat.messages.items[0].flagStatus).toBe('FLAGGED')
+    expect(data.chat.messages.items).toHaveLength(0)
   })
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data.chat.messages.items).toHaveLength(0)
+  })
+
+  // It would be nice to check the case when the flagged message is not auto-deleted,
+  // (less than 10% of participants in chat have flagged the message)
+  // but that would require a chat with at least 10 users, and running that integration
+  // test would be too slow to be worth it. Already covered by unit tests anyway.
 })

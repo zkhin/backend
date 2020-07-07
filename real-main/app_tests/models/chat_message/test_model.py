@@ -183,3 +183,30 @@ def test_cant_flag_chat_message_of_chat_we_are_not_in(chat, message, user1, user
 
     # verify user2 can flag without exception
     assert message.flag(user2)
+
+
+def test_is_crowdsourced_forced_removal_criteria_met(message):
+    # check starting state
+    assert message.item.get('flagCount', 0) == 0
+    assert message.chat.item.get('userCount', 0) == 2
+    assert message.is_crowdsourced_forced_removal_criteria_met() is False
+
+    # simulate a flag in a direct chat
+    message.item['flagCount'] = 1
+    assert message.is_crowdsourced_forced_removal_criteria_met() is True
+
+    # simulate nine-person chat
+    message.chat.item['userCount'] = 9
+    message.item['flagCount'] = 0
+    assert message.is_crowdsourced_forced_removal_criteria_met() is False
+    message.item['flagCount'] = 1
+    assert message.is_crowdsourced_forced_removal_criteria_met() is True
+
+    # simulate ten-person chat
+    message.chat.item['userCount'] = 10
+    message.item['flagCount'] = 0
+    assert message.is_crowdsourced_forced_removal_criteria_met() is False
+    message.item['flagCount'] = 1
+    assert message.is_crowdsourced_forced_removal_criteria_met() is False
+    message.item['flagCount'] = 2
+    assert message.is_crowdsourced_forced_removal_criteria_met() is True

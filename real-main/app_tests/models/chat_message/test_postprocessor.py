@@ -117,16 +117,42 @@ def test_run_chat_message_flag(chat_message_postprocessor, message, user2):
 
 
 def test_chat_message_flag_added(chat_message_postprocessor, message, user2):
-    # check starting state
+    # check & configure starting state
     assert message.refresh_item().item.get('flagCount', 0) == 0
+    transact = message.chat.dynamo.transact_increment_user_count(message.chat_id)
+    for _ in range(8):
+        message.dynamo.client.transact_write_items([transact])
+    assert message.chat.refresh_item().item['userCount'] == 10  # just above cutoff for one flag
 
     # messageprocess, verify flagCount is incremented & not force achived
     chat_message_postprocessor.message_flag_added(message.id, user2.id)
     assert message.refresh_item().item.get('flagCount', 0) == 1
 
 
+def test_chat_message_flag_added_force_delete_by_crowdsourced_criteria(
+    chat_message_postprocessor, message, user2, caplog
+):
+    # configure and check starting state
+    assert message.refresh_item().item.get('flagCount', 0) == 0
+    transact = message.chat.dynamo.transact_increment_user_count(message.chat_id)
+    for _ in range(7):
+        message.dynamo.client.transact_write_items([transact])
+    assert message.chat.refresh_item().item['userCount'] == 9  # just below 10% cutoff for one flag
+
+    # postprocess, verify flagCount is incremented and force archived
+    with caplog.at_level(logging.WARNING):
+        chat_message_postprocessor.message_flag_added(message.id, user2.id)
+    assert len(caplog.records) == 1
+    assert 'Force deleting chat message' in caplog.records[0].msg
+    assert message.refresh_item().item is None
+
+
 def test_chat_message_flag_deleted(chat_message_postprocessor, message, user2, caplog):
     # configure and check starting state
+    transact = message.chat.dynamo.transact_increment_user_count(message.chat_id)
+    for _ in range(8):
+        message.dynamo.client.transact_write_items([transact])
+    assert message.chat.refresh_item().item['userCount'] == 10  # just above cutoff for one flag
     chat_message_postprocessor.message_flag_added(message.id, user2.id)
     assert message.refresh_item().item.get('flagCount', 0) == 1
 
