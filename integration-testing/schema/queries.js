@@ -472,6 +472,7 @@ module.exports.chat = gql`
       messages(reverse: $reverse) {
         items {
           ...ChatMessageFragment
+          flagStatus
           viewedStatus
         }
       }

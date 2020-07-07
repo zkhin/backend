@@ -51,7 +51,8 @@ We have no local secondary indexes.
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdByUserId`, `createdAt`, `lastMessageActivityAt`, `messagesCount`, `userCount` | `chat/{userId1}/{userId2}` | `-` |
 | `chat/{chatId}` | `member/{userId}` | `1` | `messagesUnviewedCount` | | | | | | | `chat/{chatId}` | `member/{joinedAt}` | `member/{userId}` | `chat/{lastMessageActivityAt}` |
 | `chat/{chatId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount` | | | | | | | `chat/{chatId}` | `view/{firstViewedAt}` |
-| `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `lastEditedAt`, `text`, `textTags:[{tag, userId}]` | `chatMessage/{chatId}` | `{createdAt}` |
+| `chatMessage/{messageId}` | `-` | `0` | `messageId`, `chatId`, `userId`, `createdAt`, `flagCount`, `lastEditedAt`, `text`, `textTags:[{tag, userId}]` | `chatMessage/{chatId}` | `{createdAt}` |
+| `chatMessage/{messageId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `chatMessage` |
 | `chatMessage/{messageId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount` | | | | | | | `chatMessage/{messageId}` | `view/{firstViewedAt}` |
 
 ### Notes

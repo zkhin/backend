@@ -90,8 +90,7 @@ class Comment(FlagModelMixin, ViewModelMixin):
             follow = self.follower_manager.get_follow(user.id, self.user_id)
             if not follow or follow.status != FollowStatus.FOLLOWING:
                 raise CommentException(f'User does not have access to comment `{self.id}`')
-
-        super().flag(user)
+        return super().flag(user)
 
     def record_view_count(self, user_id, view_count, viewed_at=None):
         # don't count views of user's own comments

@@ -4,8 +4,11 @@ import logging
 
 import pendulum
 
+from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
 from app.models.block.enums import BlockStatus
+
+from .exceptions import ChatMessageException
 
 logger = logging.getLogger()
 
@@ -19,7 +22,7 @@ class DecimalJsonEncoder(json.JSONEncoder):
         return super(DecimalJsonEncoder, self).default(obj)
 
 
-class ChatMessage(ViewModelMixin):
+class ChatMessage(FlagModelMixin, ViewModelMixin):
 
     item_type = 'chatMessage'
 
@@ -77,7 +80,15 @@ class ChatMessage(ViewModelMixin):
     def delete(self):
         self.item = self.dynamo.delete_chat_message(self.id)
         self.delete_views()
+        self.flag_dynamo.delete_all_for_item(self.id)
         return self
+
+    def flag(self, user):
+        if not self.user_id:
+            raise ChatMessageException('Cannot flag system chat message')
+        if not self.chat.is_member(user.id):
+            raise ChatMessageException(f'User is not part of chat of message `{self.id}`')
+        return super().flag(user)
 
     def trigger_notifications(self, notification_type, user_ids=None):
         """

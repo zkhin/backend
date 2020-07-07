@@ -597,6 +597,7 @@ module.exports.createDirectChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          flagStatus
           viewedStatus
         }
       }
@@ -625,6 +626,7 @@ module.exports.createGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          flagStatus
           viewedStatus
         }
       }
@@ -641,6 +643,7 @@ module.exports.editGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          flagStatus
           viewedStatus
         }
       }
@@ -657,6 +660,7 @@ module.exports.addToGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          flagStatus
           viewedStatus
         }
       }
@@ -673,6 +677,7 @@ module.exports.leaveGroupChat = gql`
       messages {
         items {
           ...ChatMessageFragment
+          flagStatus
           viewedStatus
         }
       }
@@ -692,6 +697,7 @@ module.exports.addChatMessage = gql`
   mutation AddChatMessage($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage(chatId: $chatId, messageId: $messageId, text: $text) {
       ...ChatMessageFragment
+      flagStatus
       viewedStatus
     }
   }
@@ -702,6 +708,7 @@ module.exports.editChatMessage = gql`
   mutation EditChatMessage($messageId: ID!, $text: String!) {
     editChatMessage(messageId: $messageId, text: $text) {
       ...ChatMessageFragment
+      flagStatus
       viewedStatus
     }
   }
@@ -712,10 +719,20 @@ module.exports.deleteChatMessage = gql`
   mutation DeleteChatMessage($messageId: ID!) {
     deleteChatMessage(messageId: $messageId) {
       ...ChatMessageFragment
+      flagStatus
       viewedStatus
     }
   }
   ${fragments.chatMessage}
+`
+
+module.exports.flagChatMessage = gql`
+  mutation FlagChatMessage($messageId: ID!) {
+    flagChatMessage(messageId: $messageId) {
+      messageId
+      flagStatus
+    }
+  }
 `
 
 module.exports.reportChatMessageViews = gql`

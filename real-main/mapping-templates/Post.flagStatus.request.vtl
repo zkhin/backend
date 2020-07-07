@@ -5,10 +5,10 @@
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
 {
-    "version": "2018-05-29",
-    "operation": "GetItem",
-    "key": {
-        "partitionKey": { "S": "post/$ctx.source.postId" },
-        "sortKey": { "S": "flag/$callerUserId" }
-    }
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "post/$ctx.source.postId" },
+    "sortKey": { "S": "flag/$callerUserId" }
+  }
 }

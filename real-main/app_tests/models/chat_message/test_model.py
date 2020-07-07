@@ -7,6 +7,7 @@ import pytest
 
 from app.mixins.view.enums import ViewedStatus
 from app.models.block.enums import BlockStatus
+from app.models.chat_message.exceptions import ChatMessageException
 from app.models.post.enums import PostType
 
 
@@ -166,3 +167,19 @@ def test_record_view_count(message, user1, user2):
     # rando can record views
     assert message.record_view_count(user2.id, 2) is True
     assert message.get_viewed_status(user2.id) == ViewedStatus.VIEWED
+
+
+def test_cant_flag_chat_message_of_chat_we_are_not_in(chat, message, user1, user2, user3):
+    # user3 is not part of the chat, check they can't flag it
+    with pytest.raises(ChatMessageException, match='User is not part of chat of message'):
+        message.flag(user3)
+
+    # user3 is not part of the chat, check they can't flag it
+    org_user_id = message.user_id
+    message.user_id = None
+    with pytest.raises(ChatMessageException, match='Cannot flag system chat message'):
+        message.flag(user2)
+    message.user_id = org_user_id
+
+    # verify user2 can flag without exception
+    assert message.flag(user2)

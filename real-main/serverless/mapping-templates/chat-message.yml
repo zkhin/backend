@@ -25,3 +25,7 @@
 - type: ChatMessage
   field: viewedStatus
   dataSource: DynamodbDataSource
+
+- type: ChatMessage
+  field: flagStatus
+  dataSource: DynamodbDataSource

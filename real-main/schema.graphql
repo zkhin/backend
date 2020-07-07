@@ -236,6 +236,7 @@ type Mutation {
   addChatMessage(chatId: ID!, messageId: ID!, text: String!): ChatMessage
   editChatMessage(messageId: ID!, text: String!): ChatMessage
   deleteChatMessage(messageId: ID!): ChatMessage
+  flagChatMessage(messageId: ID!): ChatMessage
   reportChatMessageViews(messageIds: [ID!]!): Boolean  # DEPRECATED: use reportChatViews
 
   # Used internally to fire subscription events. Calling externally is an error.
@@ -462,6 +463,7 @@ type ChatMessage {
   authorUserId: ID  # null if this is a system message (ex: 'user X left the chat')
   author: User  # null if either system message, or user deleted, or blocked/er by/of caller
   viewedStatus: ViewedStatus!  # has the caller viewed this message?
+  flagStatus: FlagStatus!  # has the caller flagged this message?
 }
 
 type PaginatedChatMessages {

@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import Mock, call
 from uuid import uuid4
 
@@ -83,3 +84,59 @@ def test_run_chat_message_view_added(chat_message_postprocessor, message, user2)
     assert chat_message_postprocessor.chat_manager.mock_calls == [
         call.postprocessor.chat_message_view_added(message.chat_id, user2.id),
     ]
+
+
+def test_run_chat_message_flag(chat_message_postprocessor, message, user2):
+    # create a flag by user2
+    message.flag_dynamo.add(message.id, user2.id)
+    flag_item = message.flag_dynamo.get(message.id, user2.id)
+    pk, sk = flag_item['partitionKey'], flag_item['sortKey']
+
+    # set up mocks
+    chat_message_postprocessor.message_flag_added = Mock()
+    chat_message_postprocessor.message_flag_deleted = Mock()
+
+    # postprocess adding that message flag, verify calls correct
+    chat_message_postprocessor.run(pk, sk, {}, flag_item)
+    assert chat_message_postprocessor.message_flag_added.mock_calls == [call(message.id, user2.id)]
+    assert chat_message_postprocessor.message_flag_deleted.mock_calls == []
+
+    # reset mocks
+    chat_message_postprocessor.message_flag_added = Mock()
+    chat_message_postprocessor.message_flag_deleted = Mock()
+
+    # postprocess editing that message flag, verify calls correct
+    chat_message_postprocessor.run(pk, sk, flag_item, flag_item)
+    assert chat_message_postprocessor.message_flag_added.mock_calls == []
+    assert chat_message_postprocessor.message_flag_deleted.mock_calls == []
+
+    # postprocess deleting that message flag, verify calls correct
+    chat_message_postprocessor.run(pk, sk, flag_item, {})
+    assert chat_message_postprocessor.message_flag_added.mock_calls == []
+    assert chat_message_postprocessor.message_flag_deleted.mock_calls == [call(message.id)]
+
+
+def test_chat_message_flag_added(chat_message_postprocessor, message, user2):
+    # check starting state
+    assert message.refresh_item().item.get('flagCount', 0) == 0
+
+    # messageprocess, verify flagCount is incremented & not force achived
+    chat_message_postprocessor.message_flag_added(message.id, user2.id)
+    assert message.refresh_item().item.get('flagCount', 0) == 1
+
+
+def test_chat_message_flag_deleted(chat_message_postprocessor, message, user2, caplog):
+    # configure and check starting state
+    chat_message_postprocessor.message_flag_added(message.id, user2.id)
+    assert message.refresh_item().item.get('flagCount', 0) == 1
+
+    # messageprocess, verify flagCount is decremented
+    chat_message_postprocessor.message_flag_deleted(message.id)
+    assert message.refresh_item().item.get('flagCount', 0) == 0
+
+    # messageprocess again, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        chat_message_postprocessor.message_flag_deleted(message.id)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement flagCount' in caplog.records[0].msg
+    assert message.refresh_item().item.get('flagCount', 0) == 0

@@ -81,6 +81,36 @@ def test_run(comment_postprocessor, comment, post, user2, user):
     assert comment_postprocessor.user_manager.mock_calls == []
 
 
+def test_run_comment_flag(comment_postprocessor, comment, user2):
+    # create a flag by user2
+    comment.flag_dynamo.add(comment.id, user2.id)
+    flag_item = comment.flag_dynamo.get(comment.id, user2.id)
+    pk, sk = flag_item['partitionKey'], flag_item['sortKey']
+
+    # set up mocks
+    comment_postprocessor.comment_flag_added = Mock()
+    comment_postprocessor.comment_flag_deleted = Mock()
+
+    # commentprocess adding that comment flag, verify calls correct
+    comment_postprocessor.run(pk, sk, {}, flag_item)
+    assert comment_postprocessor.comment_flag_added.mock_calls == [call(comment.id, user2.id)]
+    assert comment_postprocessor.comment_flag_deleted.mock_calls == []
+
+    # reset mocks
+    comment_postprocessor.comment_flag_added = Mock()
+    comment_postprocessor.comment_flag_deleted = Mock()
+
+    # commentprocess editing that comment flag, verify calls correct
+    comment_postprocessor.run(pk, sk, flag_item, flag_item)
+    assert comment_postprocessor.comment_flag_added.mock_calls == []
+    assert comment_postprocessor.comment_flag_deleted.mock_calls == []
+
+    # commentprocess deleting that comment flag, verify calls correct
+    comment_postprocessor.run(pk, sk, flag_item, {})
+    assert comment_postprocessor.comment_flag_added.mock_calls == []
+    assert comment_postprocessor.comment_flag_deleted.mock_calls == [call(comment.id)]
+
+
 def test_comment_flag_added(comment_postprocessor, comment, user2):
     # check starting state
     assert comment.refresh_item().item.get('flagCount', 0) == 0

@@ -12,6 +12,7 @@ from app.models.block.exceptions import AlreadyBlocked, NotBlocked
 from app.models.card.exceptions import CardException
 from app.models.chat.exceptions import ChatException
 from app.models.chat_message.enums import ChatMessageNotificationType
+from app.models.chat_message.exceptions import ChatMessageException
 from app.models.comment.exceptions import CommentException
 from app.models.follower.enums import FollowStatus
 from app.models.follower.exceptions import FollowerException
@@ -1131,6 +1132,25 @@ def delete_chat_message(caller_user, arguments, source, context):
 
     message.trigger_notifications(ChatMessageNotificationType.DELETED)
     return message.serialize(caller_user.id)
+
+
+@routes.register('Mutation.flagChatMessage')
+@validate_caller
+def flag_chat_message(caller_user, arguments, source, context):
+    message_id = arguments['messageId']
+
+    message = chat_message_manager.get_chat_message(message_id)
+    if not message:
+        raise ClientException(f'ChatMessage `{message_id}` does not exist')
+
+    try:
+        message.flag(caller_user)
+    except (ChatMessageException, FlagException) as err:
+        raise ClientException(str(err))
+
+    resp = message.serialize(caller_user.id)
+    resp['flagStatus'] = FlagStatus.FLAGGED
+    return resp
 
 
 @routes.register('Mutation.reportChatMessageViews')

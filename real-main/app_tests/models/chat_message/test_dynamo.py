@@ -1,3 +1,6 @@
+import logging
+from uuid import uuid4
+
 import pendulum
 import pytest
 
@@ -142,3 +145,52 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
     assert len(pks) == 2
     assert pks[0] == {'partitionKey': 'chatMessage/mid1', 'sortKey': '-'}
     assert pks[1] == {'partitionKey': 'chatMessage/mid2', 'sortKey': '-'}
+
+
+@pytest.mark.parametrize(
+    'incrementor_name, decrementor_name, attribute_name',
+    [['increment_flag_count', 'decrement_flag_count', 'flagCount']],
+)
+def test_increment_decrement_count(
+    chat_message_dynamo, caplog, incrementor_name, decrementor_name, attribute_name
+):
+    incrementor = getattr(chat_message_dynamo, incrementor_name)
+    decrementor = getattr(chat_message_dynamo, decrementor_name) if decrementor_name else None
+    message_id = str(uuid4())
+
+    # can't increment message that doesnt exist
+    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+        incrementor(message_id)
+    if decrementor:
+        with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+            decrementor(message_id)
+
+    # add the message to the DB, verify it is in DB
+    chat_message_dynamo.add_chat_message(message_id, str(uuid4()), str(uuid4()), 'lore', [], pendulum.now('utc'))
+    assert attribute_name not in chat_message_dynamo.get_chat_message(message_id)
+
+    assert incrementor(message_id)[attribute_name] == 1
+    assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 1
+    assert incrementor(message_id)[attribute_name] == 2
+    assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 2
+
+    if decrementor:
+        # decrement twice, verify
+        assert decrementor(message_id)[attribute_name] == 1
+        assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 1
+        assert decrementor(message_id)[attribute_name] == 0
+        assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 0
+
+        # verify fail soft on trying to decrement below zero
+        with caplog.at_level(logging.WARNING):
+            resp = decrementor(message_id, fail_soft=True)
+        assert resp is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, message_id])
+        assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 0
+
+        # verify fail hard on trying to decrement below zero
+        with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+            decrementor(message_id)
+        assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 0

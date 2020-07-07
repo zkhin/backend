@@ -8,7 +8,7 @@
   "version": "2018-05-29",
   "operation": "GetItem",
   "key": {
-    "partitionKey": { "S": "comment/$ctx.source.commentId" },
+    "partitionKey": { "S": "chatMessage/$ctx.source.messageId" },
     "sortKey": { "S": "flag/$callerUserId" }
   }
 }

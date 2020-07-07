@@ -6,6 +6,7 @@ import pendulum
 
 from app import models
 from app.mixins.base import ManagerBase
+from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.card.specs import ChatCardSpec
 
@@ -18,7 +19,7 @@ from .postprocessor import ChatMessagePostProcessor
 logger = logging.getLogger()
 
 
-class ChatMessageManager(ViewManagerMixin, ManagerBase):
+class ChatMessageManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
     item_type = 'chatMessage'
 
@@ -53,6 +54,7 @@ class ChatMessageManager(ViewManagerMixin, ManagerBase):
         kwargs = {
             'chat_message_appsync': self.appsync,
             'chat_message_dynamo': self.dynamo,
+            'flag_dynamo': getattr(self, 'flag_dynamo', None),
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
             'chat_manager': self.chat_manager,

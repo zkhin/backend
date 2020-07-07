@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import Mock, call
 from uuid import uuid4
 
 import pendulum
@@ -61,6 +62,36 @@ def test_run_keep_card_insync(post_postprocessor, post, card_manager):
     new_item = {**old_item, 'commentsUnviewedCount': 0}
     post_postprocessor.run(pk, sk, old_item, new_item)
     assert card_manager.get_card(card_spec.card_id) is None
+
+
+def test_run_post_flag(post_postprocessor, post, user2):
+    # create a flag by user2
+    post.flag_dynamo.add(post.id, user2.id)
+    flag_item = post.flag_dynamo.get(post.id, user2.id)
+    pk, sk = flag_item['partitionKey'], flag_item['sortKey']
+
+    # set up mocks
+    post_postprocessor.post_flag_added = Mock()
+    post_postprocessor.post_flag_deleted = Mock()
+
+    # postprocess adding that post flag, verify calls correct
+    post_postprocessor.run(pk, sk, {}, flag_item)
+    assert post_postprocessor.post_flag_added.mock_calls == [call(post.id, user2.id)]
+    assert post_postprocessor.post_flag_deleted.mock_calls == []
+
+    # reset mocks
+    post_postprocessor.post_flag_added = Mock()
+    post_postprocessor.post_flag_deleted = Mock()
+
+    # postprocess editing that post flag, verify calls correct
+    post_postprocessor.run(pk, sk, flag_item, flag_item)
+    assert post_postprocessor.post_flag_added.mock_calls == []
+    assert post_postprocessor.post_flag_deleted.mock_calls == []
+
+    # postprocess deleting that post flag, verify calls correct
+    post_postprocessor.run(pk, sk, flag_item, {})
+    assert post_postprocessor.post_flag_added.mock_calls == []
+    assert post_postprocessor.post_flag_deleted.mock_calls == [call(post.id)]
 
 
 def test_comment_added(post_postprocessor, post, user, user2):

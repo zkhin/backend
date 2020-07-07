@@ -712,8 +712,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             if not follow or follow.status != FollowStatus.FOLLOWING:
                 raise PostException(f'User does not have access to post `{self.id}`')
 
-        super().flag(user)
-        return self
+        return super().flag(user)
 
     def record_view_count(self, user_id, view_count, viewed_at=None):
         if self.status != PostStatus.COMPLETED:
