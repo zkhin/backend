@@ -43,6 +43,4 @@ class FlagModelMixin:
         #   - over 5 users have viewed the item and
         #   - at least 10% of them have flagged it
         flag_count = self.item.get('flagCount', 0)
-        if self.viewed_by_count > 5 and flag_count > self.viewed_by_count / 10:
-            return True
-        return False
+        return self.viewed_by_count > 5 and flag_count > self.viewed_by_count / 10

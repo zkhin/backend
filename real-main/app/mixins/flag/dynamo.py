@@ -1,7 +1,6 @@
 import logging
 
 import pendulum
-from boto3.dynamodb.conditions import Key
 
 from .exceptions import AlreadyFlagged, NotFlagged
 
@@ -13,16 +12,21 @@ class FlagDynamo:
         self.item_type = item_type
         self.client = dynamo_client
 
+    def pk(self, item_id, user_id):
+        return {
+            'partitionKey': f'{self.item_type}/{item_id}',
+            'sortKey': f'flag/{user_id}',
+        }
+
     def get(self, item_id, user_id):
-        return self.client.get_item({'partitionKey': f'{self.item_type}/{item_id}', 'sortKey': f'flag/{user_id}'})
+        return self.client.get_item(self.pk(item_id, user_id))
 
     def add(self, item_id, user_id, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
+                **self.pk(item_id, user_id),
                 'schemaVersion': 0,
-                'partitionKey': f'{self.item_type}/{item_id}',
-                'sortKey': f'flag/{user_id}',
                 'gsiK1PartitionKey': f'flag/{user_id}',
                 'gsiK1SortKey': self.item_type,
                 'createdAt': now.to_iso8601_string(),
@@ -34,9 +38,7 @@ class FlagDynamo:
             raise AlreadyFlagged(self.item_type, item_id, user_id)
 
     def delete(self, item_id, user_id):
-        deleted = self.client.delete_item(
-            {'partitionKey': f'{self.item_type}/{item_id}', 'sortKey': f'flag/{user_id}'}
-        )
+        deleted = self.client.delete_item(self.pk(item_id, user_id))
         if not deleted:
             raise NotFlagged(self.item_type, item_id, user_id)
 
@@ -47,9 +49,8 @@ class FlagDynamo:
 
     def generate_by_item(self, item_id, pks_only=False):
         query_kwargs = {
-            'KeyConditionExpression': (
-                Key('partitionKey').eq(f'{self.item_type}/{item_id}') & Key('sortKey').begins_with('flag/')
-            ),
+            'KeyConditionExpression': 'partitionKey = :pk AND begins_with(sortKey, :sk_prefix)',
+            'ExpressionAttributeValues': {':pk': f'{self.item_type}/{item_id}', ':sk_prefix': 'flag/'},
         }
         if pks_only:
             query_kwargs['ProjectionExpression'] = 'partitionKey, sortKey'
@@ -58,9 +59,8 @@ class FlagDynamo:
     def generate_item_ids_by_user(self, user_id):
         query_kwargs = {
             'ProjectionExpression': 'partitionKey',
-            'KeyConditionExpression': (
-                Key('gsiK1PartitionKey').eq(f'flag/{user_id}') & Key('gsiK1SortKey').eq(self.item_type)
-            ),
+            'KeyConditionExpression': 'gsiK1PartitionKey = :pk AND gsiK1SortKey = :sk',
+            'ExpressionAttributeValues': {':pk': f'flag/{user_id}', ':sk': self.item_type},
             'IndexName': 'GSI-K1',
         }
         prefix_len = len(self.item_type) + 1
