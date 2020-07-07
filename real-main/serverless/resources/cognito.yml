@@ -22,6 +22,7 @@ Resources:
       OpenIdConnectProviderARNs:
         - 'arn:aws:iam::#{AWS::AccountId}:oidc-provider/accounts.google.com'
       SupportedLoginProviders:
+        appleid.apple.com: 'app.real.mobile'
         graph.facebook.com: '864583797262307'
 
   CognitoIdentityPoolRoles:
