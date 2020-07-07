@@ -43,9 +43,12 @@ def chat(chat_manager, user1, user2):
 
 @pytest.fixture
 def message(chat_message_manager, chat, user1):
-    message_id = 'mid'
-    text = 'lore ipsum'
-    yield chat_message_manager.add_chat_message(message_id, text, chat.id, user1.id)
+    yield chat_message_manager.add_chat_message('mid', 'lore ipsum', chat.id, user1.id)
+
+
+@pytest.fixture
+def system_message(chat_message_manager, chat):
+    yield chat_message_manager.add_system_message(chat.id, 'system lore')
 
 
 def test_chat_message_serialize(message, user1, user2, chat):
@@ -212,13 +215,33 @@ def test_is_crowdsourced_forced_removal_criteria_met(message):
     assert message.is_crowdsourced_forced_removal_criteria_met() is True
 
 
-def test_on_add(message):
+def test_on_add(message, system_message):
+    # set up mocks, verify starting statdeletee
     message._chat = mock.Mock(message.chat)
+    system_message._chat = mock.Mock(system_message.chat)
+    assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 0
+
+    # react to the add of the normal message, verify
     message.on_add()
     assert message.chat.mock_calls == [mock.call.on_message_add(message)]
+    assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
+
+    # react to the add of the system message, verify
+    system_message.on_add()
+    assert system_message.chat.mock_calls == [mock.call.on_message_add(system_message)]
 
 
-def test_on_delete(message):
+def test_on_delete(message, system_message):
+    # set up mocks, verify starting state
     message._chat = mock.Mock(message.chat)
+    system_message._chat = mock.Mock(system_message.chat)
+    assert message.author.refresh_item().item.get('chatMessagesDeletionCount', 0) == 0
+
+    # react to the delete of the normal message, verify
     message.on_delete()
     assert message.chat.mock_calls == [mock.call.on_message_delete(message)]
+    assert message.author.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1
+
+    # react to the delete of the system message, verify
+    system_message.on_delete()
+    assert system_message.chat.mock_calls == [mock.call.on_message_delete(system_message)]

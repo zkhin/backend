@@ -80,7 +80,7 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
     def delete(self, forced=False):
         self.item = self.dynamo.delete_chat_message(self.id)
         if forced:
-            self.user_manager.dynamo.increment_chat_message_forced_deletion_count(self.user_id)
+            self.user_manager.dynamo.increment_chat_messages_forced_deletion_count(self.user_id)
         self.delete_views()
         self.flag_dynamo.delete_all_for_item(self.id)
         return self
@@ -146,6 +146,10 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
 
     def on_add(self):
         self.chat.on_message_add(self)
+        if self.author:
+            self.author.dynamo.increment_chat_messages_creation_count(self.author.id)
 
     def on_delete(self):
         self.chat.on_message_delete(self)
+        if self.author:
+            self.author.dynamo.increment_chat_messages_deletion_count(self.author.id)

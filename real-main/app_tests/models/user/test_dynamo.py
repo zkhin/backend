@@ -640,7 +640,9 @@ def test_transact_post_deleted(user_dynamo):
     'incrementor_name, decrementor_name, attribute_name',
     [
         ['increment_card_count', 'decrement_card_count', 'cardCount'],
-        ['increment_chat_message_forced_deletion_count', None, 'chatMessagesForcedDeletionCount'],
+        ['increment_chat_messages_creation_count', None, 'chatMessagesCreationCount'],
+        ['increment_chat_messages_deletion_count', None, 'chatMessagesDeletionCount'],
+        ['increment_chat_messages_forced_deletion_count', None, 'chatMessagesForcedDeletionCount'],
         [
             'increment_chats_with_unviewed_messages_count',
             'decrement_chats_with_unviewed_messages_count',
