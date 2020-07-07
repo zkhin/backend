@@ -38,37 +38,25 @@ def system_message(chat_message_manager, chat):
 
 def test_run_chat_message_added(chat_message_postprocessor, message):
     pk, sk = message.item['partitionKey'], message.item['sortKey']
-    created_at = pendulum.parse(message.item['createdAt'])
 
     # postprocess the user message, verify calls correct
-    chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
+    chat_message_postprocessor.manager = Mock(chat_message_postprocessor.manager)
     chat_message_postprocessor.run(pk, sk, {}, message.item)
-    assert chat_message_postprocessor.chat_manager.mock_calls == [
-        call.postprocessor.chat_message_added(message.chat_id, message.user_id, created_at),
-    ]
-
-
-def test_run_system_chat_message_added(chat_message_postprocessor, system_message):
-    pk, sk = system_message.item['partitionKey'], system_message.item['sortKey']
-    created_at = pendulum.parse(system_message.item['createdAt'])
-
-    # postprocess the user message, verify calls correct
-    chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
-    chat_message_postprocessor.run(pk, sk, {}, system_message.item)
-    assert chat_message_postprocessor.chat_manager.mock_calls == [
-        call.postprocessor.chat_message_added(system_message.chat_id, None, created_at),
+    assert chat_message_postprocessor.manager.mock_calls == [
+        call.init_chat_message(message.item),
+        call.init_chat_message().on_add(),
     ]
 
 
 def test_run_chat_message_deleted(chat_message_postprocessor, message):
     pk, sk = message.item['partitionKey'], message.item['sortKey']
-    created_at = pendulum.parse(message.item['createdAt'])
 
     # postprocess the user message, verify calls correct
-    chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
+    chat_message_postprocessor.manager = Mock(chat_message_postprocessor.manager)
     chat_message_postprocessor.run(pk, sk, message.item, {})
-    assert chat_message_postprocessor.chat_manager.mock_calls == [
-        call.postprocessor.chat_message_deleted(message.chat_id, message.id, message.user_id, created_at),
+    assert chat_message_postprocessor.manager.mock_calls == [
+        call.init_chat_message(message.item),
+        call.init_chat_message().on_delete(),
     ]
 
 

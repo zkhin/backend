@@ -1,21 +1,9 @@
-import pendulum
-
-
 class ChatPostProcessor:
     def __init__(
-        self,
-        dynamo=None,
-        member_dynamo=None,
-        view_dynamo=None,
-        card_manager=None,
-        chat_message_manager=None,
-        user_manager=None,
+        self, dynamo=None, member_dynamo=None, user_manager=None,
     ):
         self.dynamo = dynamo
         self.member_dynamo = member_dynamo
-        self.view_dynamo = view_dynamo
-        self.card_manager = card_manager
-        self.chat_message_manager = chat_message_manager
         self.user_manager = user_manager
 
     def run(self, pk, sk, old_item, new_item):
@@ -37,38 +25,6 @@ class ChatPostProcessor:
             # only adds or edits of view items
             if new_item:
                 self.member_dynamo.clear_messages_unviewed_count(chat_id, user_id)
-
-    def chat_message_added(self, chat_id, author_user_id, created_at):
-        # Note that dynamo has no support for batch updates.
-        self.dynamo.update_last_message_activity_at(chat_id, created_at, fail_soft=True)
-        self.dynamo.increment_messages_count(chat_id)
-
-        # for each memeber of the chat
-        #   - update the last message activity timestamp (controls chat ordering)
-        #   - for everyone except the author, increment their 'messagesUnviewedCount'
-        for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
-            self.member_dynamo.update_last_message_activity_at(chat_id, user_id, created_at, fail_soft=True)
-            if user_id != author_user_id:
-                self.member_dynamo.increment_messages_unviewed_count(chat_id, user_id)
-                # TODO
-                # we can be in a state where the user manually dismissed a card, and this view does not
-                # change the user's overall count of chats with unread messages, but should still create a card
-
-    def chat_message_deleted(self, chat_id, message_id, author_user_id, created_at):
-        # Note that dynamo has no support for batch updates.
-        self.dynamo.decrement_messages_count(chat_id, fail_soft=True)
-
-        # for each memeber of the chat other than the author
-        #   - delete any view record that exists directly on the message
-        #   - determine if the message had status 'unviewed', and if so, then decrement the unviewed message counter
-        for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
-            if user_id != author_user_id:
-                message_view_deleted = self.chat_message_manager.view_dynamo.delete_view(message_id, user_id)
-                chat_view_item = self.view_dynamo.get_view(chat_id, user_id)
-                chat_last_viewed_at = pendulum.parse(chat_view_item['lastViewedAt']) if chat_view_item else None
-                is_viewed = message_view_deleted or (chat_last_viewed_at and chat_last_viewed_at > created_at)
-                if not is_viewed:
-                    self.member_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)
 
     def chat_message_view_added(self, chat_id, user_id):
         self.member_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)

@@ -157,3 +157,39 @@ class Chat(ViewModelMixin):
 
         # second iterate through the messages and delete them
         self.chat_message_manager.truncate_chat_messages(self.id)
+
+    def on_message_add(self, message):
+        # Note that dynamo has no support for batch updates.
+        self.dynamo.update_last_message_activity_at(self.id, message.created_at, fail_soft=True)
+        self.dynamo.increment_messages_count(self.id)
+
+        # for each memeber of the chat
+        #   - update the last message activity timestamp (controls chat ordering)
+        #   - for everyone except the author, increment their 'messagesUnviewedCount'
+        for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
+            self.member_dynamo.update_last_message_activity_at(
+                self.id, user_id, message.created_at, fail_soft=True
+            )
+            if user_id != message.user_id:
+                self.member_dynamo.increment_messages_unviewed_count(self.id, user_id)
+                # TODO
+                # we can be in a state where the user manually dismissed a card, and this view does not
+                # change the user's overall count of chats with unread messages, but should still create a card
+
+    def on_message_delete(self, message):
+        # Note that dynamo has no support for batch updates.
+        self.dynamo.decrement_messages_count(self.id, fail_soft=True)
+
+        # for each memeber of the chat other than the author
+        #   - delete any view record that exists directly on the message
+        #   - determine if the message had status 'unviewed', and if so, then decrement the unviewed message counter
+        for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
+            if user_id != message.user_id:
+                message_view_deleted = self.chat_message_manager.view_dynamo.delete_view(message.id, user_id)
+                chat_view_item = self.view_dynamo.get_view(self.id, user_id)
+                chat_last_viewed_at = pendulum.parse(chat_view_item['lastViewedAt']) if chat_view_item else None
+                is_viewed = message_view_deleted or (
+                    chat_last_viewed_at and chat_last_viewed_at > message.created_at
+                )
+                if not is_viewed:
+                    self.member_dynamo.decrement_messages_unviewed_count(self.id, user_id, fail_soft=True)

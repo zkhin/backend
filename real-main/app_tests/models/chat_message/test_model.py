@@ -210,3 +210,15 @@ def test_is_crowdsourced_forced_removal_criteria_met(message):
     assert message.is_crowdsourced_forced_removal_criteria_met() is False
     message.item['flagCount'] = 2
     assert message.is_crowdsourced_forced_removal_criteria_met() is True
+
+
+def test_on_add(message):
+    message._chat = mock.Mock(message.chat)
+    message.on_add()
+    assert message.chat.mock_calls == [mock.call.on_message_add(message)]
+
+
+def test_on_delete(message):
+    message._chat = mock.Mock(message.chat)
+    message.on_delete()
+    assert message.chat.mock_calls == [mock.call.on_message_delete(message)]

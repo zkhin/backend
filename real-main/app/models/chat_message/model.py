@@ -143,3 +143,9 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
         flag_count = self.item.get('flagCount', 0)
         user_count = self.chat.item.get('userCount', 0)
         return flag_count > user_count / 10
+
+    def on_add(self):
+        self.chat.on_message_add(self)
+
+    def on_delete(self):
+        self.chat.on_message_delete(self)
