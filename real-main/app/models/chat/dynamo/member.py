@@ -31,7 +31,7 @@ class ChatMemberDynamo:
         return {
             'Put': {
                 'Item': {
-                    'schemaVersion': {'N': '0'},
+                    'schemaVersion': {'N': '1'},
                     'partitionKey': {'S': f'chat/{chat_id}'},
                     'sortKey': {'S': f'member/{user_id}'},
                     'gsiK1PartitionKey': {'S': f'chat/{chat_id}'},

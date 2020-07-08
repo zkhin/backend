@@ -27,7 +27,7 @@ def test_transact_add(cm_dynamo):
     assert item == {
         'partitionKey': 'chat/cid2',
         'sortKey': 'member/uid',
-        'schemaVersion': 0,
+        'schemaVersion': 1,
         'gsiK1PartitionKey': 'chat/cid2',
         'gsiK1SortKey': f'member/{joined_at_str}',
         'gsiK2PartitionKey': 'member/uid',
