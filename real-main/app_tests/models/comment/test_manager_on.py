@@ -26,16 +26,30 @@ def comment(comment_manager, post, user2):
     yield comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
 
 
-def test_on_flag_added(comment_manager, comment, user2):
+def test_on_flag_added(comment_manager, comment, user2, caplog):
     # check starting state
     assert comment.refresh_item().item.get('flagCount', 0) == 0
 
     # commentprocess, verify flagCount is incremented & not force deleted
-    comment_manager.on_flag_added(comment.id, user2.id)
+    with caplog.at_level(logging.WARNING):
+        comment_manager.on_flag_added(comment.id, user2.id)
+    assert len(caplog.records) == 0
     assert comment.refresh_item().item.get('flagCount', 0) == 1
 
 
-def test_on_flag_added_force_archive_by_admin(comment_manager, comment, user2, caplog):
+def test_on_flag_added_force_delete_by_post_owner(comment_manager, comment, user, caplog):
+    # configure and check starting state
+    assert comment.refresh_item().item.get('flagCount', 0) == 0
+
+    # commentprocess, verify comment is force-deleted
+    with caplog.at_level(logging.WARNING):
+        comment_manager.on_flag_added(comment.id, user.id)
+    assert len(caplog.records) == 1
+    assert 'Force deleting comment' in caplog.records[0].msg
+    assert comment.refresh_item().item is None
+
+
+def test_on_flag_added_force_delete_by_admin(comment_manager, comment, user2, caplog):
     # configure and check starting state
     assert comment.refresh_item().item.get('flagCount', 0) == 0
     user2.update_username(comment.flag_admin_usernames[0])
@@ -48,7 +62,7 @@ def test_on_flag_added_force_archive_by_admin(comment_manager, comment, user2, c
     assert comment.refresh_item().item is None
 
 
-def test_on_flag_added_force_archive_by_crowdsourced_criteria(comment_manager, comment, user2, caplog):
+def test_on_flag_added_force_delete_by_crowdsourced_criteria(comment_manager, comment, user2, caplog):
     # configure and check starting state
     assert comment.refresh_item().item.get('flagCount', 0) == 0
     for _ in range(6):

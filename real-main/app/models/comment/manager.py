@@ -131,6 +131,10 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
         # force delete the comment?
         user = self.user_manager.get_user(user_id)
-        if user.username in comment.flag_admin_usernames or comment.is_crowdsourced_forced_removal_criteria_met():
+        if (
+            user_id == comment.post.user_id
+            or user.username in comment.flag_admin_usernames
+            or comment.is_crowdsourced_forced_removal_criteria_met()
+        ):
             logger.warning(f'Force deleting comment `{comment_id}` from flagging')
             comment.delete(forced=True)
