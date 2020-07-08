@@ -273,7 +273,7 @@ def test_create_facebook_user_success(user_manager, real_user):
     user_manager.cognito_client.link_identity_pool_entries = mock.Mock()
 
     # create the facebook user, check it is as expected
-    user = user_manager.create_facebook_user(user_id, username, fb_token, full_name=full_name)
+    user = user_manager.create_federated_user('facebook', user_id, username, fb_token, full_name=full_name)
     assert user.id == user_id
     assert user.item['username'] == username
     assert user.item['fullName'] == full_name
@@ -286,7 +286,7 @@ def test_create_facebook_user_success(user_manager, real_user):
     ]
     assert user_manager.cognito_client.get_user_pool_id_token.mock_calls == [mock.call(user_id)]
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
-        mock.call(user_id, cognito_id_token=cognito_token, facebook_access_token=fb_token),
+        mock.call(user_id, cognito_token=cognito_token, facebook_token=fb_token),
     ]
 
     # check we are following the real user
@@ -301,14 +301,14 @@ def test_create_facebook_user_user_id_or_email_taken(user_manager, caplog):
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(UserValidationException):
-        user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
+        user_manager.create_federated_user('facebook', 'uid', 'uname', 'facebook-access-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(UserValidationException):
-        user_manager.create_facebook_user('uid', 'uname', 'facebook-access-token')
+        user_manager.create_federated_user('facebook', 'uid', 'uname', 'facebook-access-token')
 
 
 def test_create_google_user_success(user_manager, real_user):
@@ -326,7 +326,7 @@ def test_create_google_user_success(user_manager, real_user):
     user_manager.cognito_client.link_identity_pool_entries = mock.Mock()
 
     # create the google user, check it is as expected
-    user = user_manager.create_google_user(user_id, username, google_token, full_name=full_name)
+    user = user_manager.create_federated_user('google', user_id, username, google_token, full_name=full_name)
     assert user.id == user_id
     assert user.item['username'] == username
     assert user.item['fullName'] == full_name
@@ -339,7 +339,7 @@ def test_create_google_user_success(user_manager, real_user):
     ]
     assert user_manager.cognito_client.get_user_pool_id_token.mock_calls == [mock.call(user_id)]
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
-        mock.call(user_id, cognito_id_token=cognito_token, google_id_token=google_token),
+        mock.call(user_id, cognito_token=cognito_token, google_token=google_token),
     ]
 
     # check we are following the real user
@@ -355,14 +355,14 @@ def test_create_google_user_user_id_or_email_taken(user_manager, caplog):
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(UserValidationException, match='already exists'):
-        user_manager.create_google_user('uid', 'uname', 'google-id-token')
+        user_manager.create_federated_user('google', 'uid', 'uname', 'google-id-token')
 
     # configure cognito to respond as if email is already taken
     exception = user_manager.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
 
     with pytest.raises(UserValidationException, match='already exists'):
-        user_manager.create_google_user('uid', 'uname', 'google-id-token')
+        user_manager.create_federated_user('google', 'uid', 'uname', 'google-id-token')
 
 
 def test_create_google_user_invalid_id_token(user_manager, caplog):
@@ -376,7 +376,7 @@ def test_create_google_user_invalid_id_token(user_manager, caplog):
     # create the google user, check it is as expected
     with caplog.at_level(logging.WARNING):
         with pytest.raises(UserValidationException, match='wrong flavor'):
-            user_manager.create_google_user(user_id, username, google_token)
+            user_manager.create_federated_user('google', user_id, username, google_token)
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert 'wrong flavor' in caplog.records[0].msg

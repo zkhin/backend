@@ -46,16 +46,19 @@ class CognitoClient:
         )
         return resp['AuthenticationResult']['IdToken']
 
-    def link_identity_pool_entries(
-        self, user_id, cognito_id_token=None, facebook_access_token=None, google_id_token=None,
-    ):
+    def link_identity_pool_entries(self, user_id, cognito_token=None, facebook_token=None, google_token=None):
+        """
+        the `cognito_token`, if provided, should be the cognito id token.
+        The `facebook_token`, if provided, should be the facebook access token.
+        The `google_token`, if provided, should be the google id token.
+        """
         logins = {}
-        if cognito_id_token:
-            logins[self.userPoolLoginsKey] = cognito_id_token
-        if facebook_access_token:
-            logins[self.facebookLoginsKey] = facebook_access_token
-        if google_id_token:
-            logins[self.googleLoginsKey] = google_id_token
+        if cognito_token:
+            logins[self.userPoolLoginsKey] = cognito_token
+        if facebook_token:
+            logins[self.facebookLoginsKey] = facebook_token
+        if google_token:
+            logins[self.googleLoginsKey] = google_token
         self.identity_pool_client.get_credentials_for_identity(IdentityId=user_id, Logins=logins)
 
     def set_user_attributes(self, user_id, attrs):

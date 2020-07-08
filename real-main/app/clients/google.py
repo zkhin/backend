@@ -23,7 +23,7 @@ class GoogleClient:
         # raises ValueError on expired token
         info = google_id_token.verify_oauth2_token(id_token, google_requests.Request(session=self.cached_session))
         if info.get('aud') not in self.client_ids.values():
-            raise ValueError(f'Token wrong audience: `{info["aud"]}`')
+            raise ValueError(f'Google token wrong audience: `{info["aud"]}`')
         if not info.get('email_verified') or not info.get('email'):
-            raise ValueError('Token does not contain verified email')
+            raise ValueError('Google token does not contain verified email')
         return info['email']

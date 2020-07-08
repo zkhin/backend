@@ -57,8 +57,8 @@ type Query {
 type Mutation {
   # Set up a new user account
   createCognitoOnlyUser(username: String!, fullName: String): User
-  createGoogleUser(username: String!, fullName: String, googleIdToken: String!): User
   createFacebookUser(username: String!, fullName: String, facebookAccessToken: String!): User
+  createGoogleUser(username: String!, fullName: String, googleIdToken: String!): User
 
   # Change email, with verification. Use these mutations - do not update the user pool directly.
   startChangeUserEmail(email: AWSEmail!): User

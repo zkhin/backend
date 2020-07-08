@@ -93,7 +93,9 @@ def create_facebook_user(caller_user_id, arguments, source, context):
     full_name = arguments.get('fullName')
     facebook_token = arguments['facebookAccessToken']
     try:
-        user = user_manager.create_facebook_user(caller_user_id, username, facebook_token, full_name=full_name)
+        user = user_manager.create_federated_user(
+            'facebook', caller_user_id, username, facebook_token, full_name=full_name
+        )
     except UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)
@@ -105,7 +107,9 @@ def create_google_user(caller_user_id, arguments, source, context):
     full_name = arguments.get('fullName')
     google_id_token = arguments['googleIdToken']
     try:
-        user = user_manager.create_google_user(caller_user_id, username, google_id_token, full_name=full_name)
+        user = user_manager.create_federated_user(
+            'google', caller_user_id, username, google_id_token, full_name=full_name
+        )
     except UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)

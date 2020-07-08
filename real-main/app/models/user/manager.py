@@ -150,58 +150,28 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.follow_real_user(user)
         return user
 
-    def create_facebook_user(self, user_id, username, facebook_access_token, full_name=None):
+    def create_federated_user(self, provider, user_id, username, token, full_name=None):
+        assert provider in ('facebook', 'google'), f'Unrecognized identity provider `{provider}`'
+        provider_client = self.clients[provider]
+
         # do operations that do not alter state first
         self.validate.username(username)
         full_name = None if full_name == '' else full_name  # treat empty string like null
 
-        email = self.facebook_client.get_verified_email(facebook_access_token).lower()
-        if not email:
-            raise UserValidationException('Unable to retrieve email with that token')
+        try:
+            email = provider_client.get_verified_email(token).lower()
+        except ValueError as err:
+            logger.warning(str(err))
+            raise UserValidationException(str(err))
 
         # set the user up in cognito, claims the username at the same time
         try:
             self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
-            cognito_id_token = self.cognito_client.get_user_pool_id_token(user_id)
-            self.cognito_client.link_identity_pool_entries(
-                user_id, cognito_id_token=cognito_id_token, facebook_access_token=facebook_access_token
-            )
-        except (
-            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
-            self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
-        ):
-            raise UserValidationException(
-                f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
-            )
-
-        # create new user in the DB, have them follow the real user if they exist
-        photo_code = self.get_random_placeholder_photo_code()
-        item = self.dynamo.add_user(
-            user_id, username, full_name=full_name, email=email, placeholder_photo_code=photo_code
-        )
-        user = self.init_user(item)
-        self.follow_real_user(user)
-        return user
-
-    def create_google_user(self, user_id, username, google_id_token, full_name=None):
-        # do operations that do not alter state first
-        self.validate.username(username)
-        full_name = None if full_name == '' else full_name  # treat empty string like null
-
-        try:
-            email = self.google_client.get_verified_email(google_id_token).lower()
-        except ValueError as err:
-            msg = f'Unable to extract verified email from google id token: {err}'
-            logger.warning(msg)
-            raise UserValidationException(msg)
-
-        # set the user up in cognito
-        try:
-            self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
-            cognito_id_token = self.cognito_client.get_user_pool_id_token(user_id)
-            self.cognito_client.link_identity_pool_entries(
-                user_id, cognito_id_token=cognito_id_token, google_id_token=google_id_token
-            )
+            tokens = {
+                'cognito_token': self.cognito_client.get_user_pool_id_token(user_id),
+                provider + '_token': token,
+            }
+            self.cognito_client.link_identity_pool_entries(user_id, **tokens)
         except (
             self.cognito_client.user_pool_client.exceptions.AliasExistsException,
             self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
