@@ -18,6 +18,7 @@ def user(user_manager, cognito_client):
 @pytest.mark.parametrize(
     'attribute_name, method_name',
     [
+        ['chatMessagesForcedDeletionCount', 'disable_by_forced_chat_message_deletions_if_necessary'],
         ['commentForcedDeletionCount', 'disable_by_forced_comment_deletions_if_necessary'],
         ['postForcedArchivingCount', 'disable_by_forced_post_archivings_if_necessary'],
         ['followersRequestedCount', 'refresh_requested_followers_card'],

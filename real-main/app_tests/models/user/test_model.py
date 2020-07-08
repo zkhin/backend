@@ -537,6 +537,28 @@ def test_is_forced_disabling_criteria_met_by_comments(user):
     assert user.is_forced_disabling_criteria_met_by_comments() is True
 
 
+def test_is_forced_disabling_criteria_met_by_chat_messages(user):
+    # check starting state
+    assert user.item.get('chatMessagesCreationCount', 0) == 0
+    assert user.item.get('chatMessagesForcedDeletionCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+
+    # first comment was force-disabled, shouldn't disable the user
+    user.item['chatMessagesCreationCount'] = 1
+    user.item['chatMessagesForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+
+    # just below criteria cutoff
+    user.item['chatMessagesCreationCount'] = 5
+    user.item['chatMessagesForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+
+    # just above criteria cutoff
+    user.item['chatMessagesCreationCount'] = 6
+    user.item['chatMessagesForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met_by_chat_messages() is True
+
+
 def test_set_user_accepted_eula_version(user):
     assert 'acceptedEULAVersion' not in user.item
 
@@ -583,6 +605,11 @@ def test_set_apns_token(user):
 @pytest.mark.parametrize(
     'method_name, check_method_name, log_pattern',
     [
+        [
+            'disable_by_forced_chat_message_deletions_if_necessary',
+            'is_forced_disabling_criteria_met_by_chat_messages',
+            'due to chat messages',
+        ],
         [
             'disable_by_forced_comment_deletions_if_necessary',
             'is_forced_disabling_criteria_met_by_comments',

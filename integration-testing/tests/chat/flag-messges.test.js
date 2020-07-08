@@ -131,3 +131,37 @@ test('Flag message success', async () => {
   // but that would require a chat with at least 10 users, and running that integration
   // test would be too slow to be worth it. Already covered by unit tests anyway.
 })
+
+test('User disabled from flagged messages', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we create a direct chat with them
+  const [chatId, messageId] = [uuidv4(), uuidv4()]
+  await ourClient
+    .mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: theirUserId, chatId, messageId, messageText: 'lore ipsum'},
+    })
+    .then(({data}) => expect(data.createDirectChat.messages.items.map((i) => i.messageId)).toContain(messageId))
+
+  // we add five more messages to the chat
+  for (const i of Array(5).keys()) {
+    await ourClient
+      .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'msg ' + i}})
+      .then(({data}) => expect(data.addChatMessage.messageId).toBeTruthy())
+  }
+
+  // they flag one of our messages
+  await theirClient.mutate({mutation: mutations.flagChatMessage, variables: {messageId}}).then(({data}) => {
+    expect(data.flagChatMessage.messageId).toBe(messageId)
+    expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
+  })
+
+  // that catches the auto-disabling criteria, check we were disabled and hence can't add another message
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.userStatus).toBe('DISABLED'))
+  await expect(
+    ourClient.mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'a'}}),
+  ).rejects.toThrow(/User .* is not ACTIVE/)
+})

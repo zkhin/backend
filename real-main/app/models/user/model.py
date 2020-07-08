@@ -104,13 +104,17 @@ class User(TrendingModelMixin):
             return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
+    def is_forced_disabling_criteria_met_by_chat_messages(self):
+        # matching post criteria
+        total_count = self.item.get('chatMessagesCreationCount', 0)
+        forced_deleted_count = self.item.get('chatMessagesForcedDeletionCount', 0)
+        return total_count > 5 and forced_deleted_count > total_count / 10
+
     def is_forced_disabling_criteria_met_by_comments(self):
         # matching post criteria
         total_comment_count = self.item.get('commentCount', 0) + self.item.get('commentDeletedCount', 0)
         forced_deleted_count = self.item.get('commentForcedDeletionCount', 0)
-        if total_comment_count > 5 and forced_deleted_count > total_comment_count / 10:
-            return True
-        return False
+        return total_comment_count > 5 and forced_deleted_count > total_comment_count / 10
 
     def is_forced_disabling_criteria_met_by_posts(self):
         # forced disabling criteria, (directly from spec):
@@ -118,9 +122,7 @@ class User(TrendingModelMixin):
         #   - their forced post archivings is at least 10% of their total post count
         total_post_count = self.item.get('postCount', 0) + self.item.get('postArchivedCount', 0)
         forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
-        if total_post_count > 5 and forced_archiving_count > total_post_count / 10:
-            return True
-        return False
+        return total_post_count > 5 and forced_archiving_count > total_post_count / 10
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_user(self.id, strongly_consistent=strongly_consistent)
@@ -362,6 +364,11 @@ class User(TrendingModelMixin):
         return self
 
     def on_add_or_edit(self, old_item):
+        if self.item.get('chatMessagesForcedDeletionCount', 0) != old_item.get(
+            'chatMessagesForcedDeletionCount', 0
+        ):
+            self.disable_by_forced_chat_message_deletions_if_necessary()
+
         if self.item.get('commentForcedDeletionCount', 0) != old_item.get('commentForcedDeletionCount', 0):
             self.disable_by_forced_comment_deletions_if_necessary()
 
@@ -397,6 +404,14 @@ class User(TrendingModelMixin):
         self.card_manager.remove_card_by_spec_if_exists(RequestedFollowersCardSpec(self.id))
         self.elasticsearch_client.delete_user(self.id)
         self.pinpoint_client.delete_user_endpoints(self.id)
+
+    def disable_by_forced_chat_message_deletions_if_necessary(self):
+        if self.is_forced_disabling_criteria_met_by_chat_messages():
+            self.disable()
+            # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
+            logger.warning(
+                f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled due to chat messages'
+            )
 
     def disable_by_forced_comment_deletions_if_necessary(self):
         if self.is_forced_disabling_criteria_met_by_comments():
