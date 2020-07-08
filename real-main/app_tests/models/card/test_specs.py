@@ -34,6 +34,17 @@ def test_comment_card_spec(user, post):
     assert post.id in spec.action
 
 
+def test_post_views_card_spec(user, post):
+    spec = specs.PostViewsCardSpec(user.id, post.id)
+    assert spec.user_id == user.id
+    assert spec.post_id == post.id
+    assert user.id in spec.card_id
+    assert post.id in spec.card_id
+    assert spec.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
+    assert post.id in spec.action
+    assert spec.title == 'You have new views'
+
+
 def test_comment_card_spec_titles(user, post):
     spec = specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=1)
     assert spec.title == 'You have 1 new comment'

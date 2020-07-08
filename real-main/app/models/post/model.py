@@ -9,7 +9,7 @@ import PIL.Image
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
-from app.models.card.specs import CommentCardSpec
+from app.models.card.specs import CommentCardSpec, PostViewsCardSpec
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus
 from app.models.user.exceptions import UserException
@@ -771,8 +771,13 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.item.get('commentsUnviewedCount', 0) != old_item.get('commentsUnviewedCount', 0):
             self.refresh_comments_card()
 
+        # card should only be created once per post, when it goes over 5 views
+        if self.item.get('viewedByCount', 0) > 5 and old_item.get('viewedByCount', 0) <= 5:
+            self.card_manager.add_or_update_card_by_spec(PostViewsCardSpec(self.user_id, self.id))
+
     def on_delete(self):
         self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
+        self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(self.user_id, self.id))
 
     def refresh_comments_card(self):
         cnt = self.item.get('commentsUnviewedCount', 0)
