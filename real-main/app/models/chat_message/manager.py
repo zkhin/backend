@@ -46,6 +46,9 @@ class ChatMessageManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             )
         return self._postprocessor
 
+    def get_model(self, item_id, strongly_consistent=False):
+        return self.get_chat_message(item_id, strongly_consistent=strongly_consistent)
+
     def get_chat_message(self, message_id, strongly_consistent=False):
         item = self.dynamo.get_chat_message(message_id, strongly_consistent=strongly_consistent)
         return self.init_chat_message(item) if item else None
@@ -127,3 +130,12 @@ class ChatMessageManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                 views_recorded = True
         if views_recorded:
             self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
+
+    def on_flag_added(self, message_id, user_id):
+        chat_message_item = self.dynamo.increment_flag_count(message_id)
+        chat_message = self.init_chat_message(chat_message_item)
+
+        # force delete the chat_message?
+        if chat_message.is_crowdsourced_forced_removal_criteria_met():
+            logger.warning(f'Force deleting chat message `{message_id}` from flagging')
+            chat_message.delete(forced=True)

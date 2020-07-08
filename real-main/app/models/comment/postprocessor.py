@@ -33,23 +33,10 @@ class CommentPostProcessor:
             comment_item = self.dynamo.get_comment(comment_id)
             self.post_manager.postprocessor.comment_view_added(comment_item['postId'], user_id)
 
-        # could try to consolidate this in a FlagPostProcessor
+        # could try to consolidate this in the flag mixin
         if sk.startswith('flag/'):
             user_id = sk.split('/')[1]
             if not old_item and new_item:
-                self.comment_flag_added(comment_id, user_id)
+                self.manager.on_flag_added(comment_id, user_id)
             if old_item and not new_item:
-                self.comment_flag_deleted(comment_id)
-
-    def comment_flag_added(self, comment_id, user_id):
-        comment_item = self.dynamo.increment_flag_count(comment_id)
-        comment = self.manager.init_comment(comment_item)
-
-        # force delete the comment?
-        user = self.user_manager.get_user(user_id)
-        if user.username in comment.flag_admin_usernames or comment.is_crowdsourced_forced_removal_criteria_met():
-            logger.warning(f'Force deleting comment `{comment_id}` from flagging')
-            comment.delete(forced=True)
-
-    def comment_flag_deleted(self, comment_id):
-        self.dynamo.decrement_flag_count(comment_id, fail_soft=True)
+                self.manager.on_flag_deleted(comment_id)

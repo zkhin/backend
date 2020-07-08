@@ -113,18 +113,20 @@ test('Follower can flag comment on post of private user, non-follower cannot', a
 
   // we add a post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.data.addPost.postId).toBe(postId)
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data}) => expect(data.addPost.postId).toBe(postId))
 
   // we add a comment to our post
   const commentId = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore'}})
-  expect(resp.data.addComment.commentId).toBe(commentId)
+  await ourClient
+    .mutate({mutation: mutations.addComment, variables: {commentId, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId))
 
   // we go private
-  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
-  expect(resp.data.setUserDetails.userId).toBe(ourUserId)
-  expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
+  await ourClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data}) => expect(data.setUserDetails.privacyStatus).toBe('PRIVATE'))
 
   // verify they can't flag their comment
   await expect(theirClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
@@ -132,29 +134,72 @@ test('Follower can flag comment on post of private user, non-follower cannot', a
   )
 
   // they request to follow us
-  resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
+  await theirClient
+    .mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
+    .then(({data}) => expect(data.followUser.followedStatus).toBe('REQUESTED'))
 
   // we accept their follow requqest
-  resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
-  expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
+  await ourClient
+    .mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
+    .then(({data}) => expect(data.acceptFollowerUser.followerStatus).toBe('FOLLOWING'))
 
   // verify they have not flagged the comment
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
-  expect(resp.data.post.comments.items[0].flagStatus).toBe('NOT_FLAGGED')
+  await theirClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items[0].commentId).toBe(commentId)
+    expect(data.post.comments.items[0].flagStatus).toBe('NOT_FLAGGED')
+  })
 
   // verify they can now flag the comment
-  resp = await theirClient.mutate({mutation: mutations.flagComment, variables: {commentId}})
-  expect(resp.data.flagComment.commentId).toBe(commentId)
-  expect(resp.data.flagComment.flagStatus).toBe('FLAGGED')
+  await theirClient.mutate({mutation: mutations.flagComment, variables: {commentId}}).then(({data}) => {
+    expect(data.flagComment.commentId).toBe(commentId)
+    expect(data.flagComment.flagStatus).toBe('FLAGGED')
+  })
 
   // verify the comment flag stuck
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
-  expect(resp.data.post.comments.items[0].flagStatus).toBe('FLAGGED')
+  await theirClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items[0].commentId).toBe(commentId)
+    expect(data.post.comments.items[0].flagStatus).toBe('FLAGGED')
+  })
+})
+
+test('Post owner can flag comments on their own posts', async () => {
+  const [ourClient] = await loginCache.getCleanLogin()
+  const [theirClient] = await loginCache.getCleanLogin()
+
+  // we add a post
+  const postId = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data}) => expect(data.addPost.postId).toBe(postId))
+
+  // they add two comments to our post
+  const [commentId1, commentId2] = [uuidv4(), uuidv4()]
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId1, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId1))
+  await theirClient
+    .mutate({mutation: mutations.addComment, variables: {commentId: commentId2, postId, text: 'lore'}})
+    .then(({data}) => expect(data.addComment.commentId).toBe(commentId2))
+
+  // verify we can flag the first comment (as public post owner user)
+  await ourClient.mutate({mutation: mutations.flagComment, variables: {commentId: commentId1}}).then(({data}) => {
+    expect(data.flagComment.commentId).toBe(commentId1)
+    expect(data.flagComment.flagStatus).toBe('FLAGGED')
+  })
+
+  // we go private
+  await ourClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data}) => expect(data.setUserDetails.privacyStatus).toBe('PRIVATE'))
+
+  // verify we can flag the second comment (as private post owner user)
+  await misc.sleep(2000)
+  await ourClient.mutate({mutation: mutations.flagComment, variables: {commentId: commentId2}}).then(({data}) => {
+    expect(data.flagComment.commentId).toBe(commentId2)
+    expect(data.flagComment.flagStatus).toBe('FLAGGED')
+  })
 })
 
 test('Cannot flag comment that does not exist', async () => {

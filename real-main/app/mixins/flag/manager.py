@@ -15,3 +15,9 @@ class FlagManagerMixin:
         for item_id in self.flag_dynamo.generate_item_ids_by_user(user_id):
             # this could be performance and edge-case optimized
             self.get_model(item_id).unflag(user_id)
+
+    def on_flag_added(self, item_id, user_id):
+        raise NotImplementedError('Subclasses must implement')
+
+    def on_flag_deleted(self, item_id):
+        self.dynamo.decrement_flag_count(item_id, fail_soft=True)

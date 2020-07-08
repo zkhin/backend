@@ -28,18 +28,6 @@ class ChatMessagePostProcessor:
         if sk.startswith('flag/'):
             user_id = sk.split('/')[1]
             if not old_item and new_item:
-                self.message_flag_added(message_id, user_id)
+                self.manager.on_flag_added(message_id, user_id)
             if old_item and not new_item:
-                self.message_flag_deleted(message_id)
-
-    def message_flag_added(self, message_id, user_id):
-        chat_message_item = self.dynamo.increment_flag_count(message_id)
-        chat_message = self.manager.init_chat_message(chat_message_item)
-
-        # force delete the chat_message?
-        if chat_message.is_crowdsourced_forced_removal_criteria_met():
-            logger.warning(f'Force deleting chat message `{message_id}` from flagging')
-            chat_message.delete(forced=True)
-
-    def message_flag_deleted(self, message_id):
-        self.dynamo.decrement_flag_count(message_id, fail_soft=True)
+                self.manager.on_flag_deleted(message_id)

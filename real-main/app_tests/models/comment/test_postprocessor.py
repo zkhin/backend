@@ -1,5 +1,4 @@
-import logging
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
 import pendulum
@@ -87,78 +86,20 @@ def test_run_comment_flag(comment_postprocessor, comment, user2):
     flag_item = comment.flag_dynamo.get(comment.id, user2.id)
     pk, sk = flag_item['partitionKey'], flag_item['sortKey']
 
-    # set up mocks
-    comment_postprocessor.comment_flag_added = Mock()
-    comment_postprocessor.comment_flag_deleted = Mock()
-
     # commentprocess adding that comment flag, verify calls correct
-    comment_postprocessor.run(pk, sk, {}, flag_item)
-    assert comment_postprocessor.comment_flag_added.mock_calls == [call(comment.id, user2.id)]
-    assert comment_postprocessor.comment_flag_deleted.mock_calls == []
-
-    # reset mocks
-    comment_postprocessor.comment_flag_added = Mock()
-    comment_postprocessor.comment_flag_deleted = Mock()
+    with patch.object(comment_postprocessor, 'manager') as manager_mock:
+        comment_postprocessor.run(pk, sk, {}, flag_item)
+    assert manager_mock.on_flag_added.mock_calls == [call(comment.id, user2.id)]
+    assert manager_mock.on_flag_deleted.mock_calls == []
 
     # commentprocess editing that comment flag, verify calls correct
-    comment_postprocessor.run(pk, sk, flag_item, flag_item)
-    assert comment_postprocessor.comment_flag_added.mock_calls == []
-    assert comment_postprocessor.comment_flag_deleted.mock_calls == []
+    with patch.object(comment_postprocessor, 'manager') as manager_mock:
+        comment_postprocessor.run(pk, sk, flag_item, flag_item)
+    assert manager_mock.on_flag_added.mock_calls == []
+    assert manager_mock.on_flag_deleted.mock_calls == []
 
     # commentprocess deleting that comment flag, verify calls correct
-    comment_postprocessor.run(pk, sk, flag_item, {})
-    assert comment_postprocessor.comment_flag_added.mock_calls == []
-    assert comment_postprocessor.comment_flag_deleted.mock_calls == [call(comment.id)]
-
-
-def test_comment_flag_added(comment_postprocessor, comment, user2):
-    # check starting state
-    assert comment.refresh_item().item.get('flagCount', 0) == 0
-
-    # commentprocess, verify flagCount is incremented & not force deleted
-    comment_postprocessor.comment_flag_added(comment.id, user2.id)
-    assert comment.refresh_item().item.get('flagCount', 0) == 1
-
-
-def test_comment_flag_added_force_archive_by_admin(comment_postprocessor, comment, user2, caplog):
-    # configure and check starting state
-    assert comment.refresh_item().item.get('flagCount', 0) == 0
-    user2.update_username(comment.flag_admin_usernames[0])
-
-    # commentprocess, verify comment is force-deleted
-    with caplog.at_level(logging.WARNING):
-        comment_postprocessor.comment_flag_added(comment.id, user2.id)
-    assert len(caplog.records) == 1
-    assert 'Force deleting comment' in caplog.records[0].msg
-    assert comment.refresh_item().item is None
-
-
-def test_comment_flag_added_force_archive_by_crowdsourced_criteria(comment_postprocessor, comment, user2, caplog):
-    # configure and check starting state
-    assert comment.refresh_item().item.get('flagCount', 0) == 0
-    for _ in range(6):
-        comment.post.dynamo.increment_viewed_by_count(comment.post.id)
-
-    # commentprocess, verify flagCount is incremented and force archived
-    with caplog.at_level(logging.WARNING):
-        comment_postprocessor.comment_flag_added(comment.id, user2.id)
-    assert len(caplog.records) == 1
-    assert 'Force deleting comment' in caplog.records[0].msg
-    assert comment.refresh_item().item is None
-
-
-def test_comment_flag_deleted(comment_postprocessor, comment, user2, caplog):
-    # configure and check starting state
-    comment_postprocessor.comment_flag_added(comment.id, user2.id)
-    assert comment.refresh_item().item.get('flagCount', 0) == 1
-
-    # commentprocess, verify flagCount is decremented
-    comment_postprocessor.comment_flag_deleted(comment.id)
-    assert comment.refresh_item().item.get('flagCount', 0) == 0
-
-    # commentprocess again, verify fails softly
-    with caplog.at_level(logging.WARNING):
-        comment_postprocessor.comment_flag_deleted(comment.id)
-    assert len(caplog.records) == 1
-    assert 'Failed to decrement flagCount' in caplog.records[0].msg
-    assert comment.refresh_item().item.get('flagCount', 0) == 0
+    with patch.object(comment_postprocessor, 'manager') as manager_mock:
+        comment_postprocessor.run(pk, sk, flag_item, {})
+    assert manager_mock.on_flag_added.mock_calls == []
+    assert manager_mock.on_flag_deleted.mock_calls == [call(comment.id)]

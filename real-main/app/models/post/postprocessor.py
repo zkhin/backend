@@ -6,14 +6,11 @@ logger = logging.getLogger()
 
 
 class PostPostProcessor:  # unfortunate namenaming
-    def __init__(
-        self, dynamo=None, view_dynamo=None, manager=None, comment_manager=None, user_manager=None,
-    ):
+    def __init__(self, dynamo=None, view_dynamo=None, manager=None, comment_manager=None):
         self.dynamo = dynamo
         self.view_dynamo = view_dynamo
         self.manager = manager
         self.comment_manager = comment_manager
-        self.user_manager = user_manager
 
     def run(self, pk, sk, old_item, new_item):
         if sk == '-':
@@ -27,9 +24,9 @@ class PostPostProcessor:  # unfortunate namenaming
             post_id = pk.split('/')[1]
             user_id = sk.split('/')[1]
             if not old_item and new_item:
-                self.post_flag_added(post_id, user_id)
+                self.manager.on_flag_added(post_id, user_id)
             if old_item and not new_item:
-                self.post_flag_deleted(post_id)
+                self.manager.on_flag_deleted(post_id)
 
     def comment_added(self, post_id, commented_by_user_id, created_at):
         post_item = self.dynamo.get_post(post_id)
@@ -67,16 +64,3 @@ class PostPostProcessor:  # unfortunate namenaming
         posted_by_user_id = post_item['postedByUserId']
         if user_id == posted_by_user_id:
             self.dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True)
-
-    def post_flag_added(self, post_id, user_id):
-        post_item = self.dynamo.increment_flag_count(post_id)
-        post = self.manager.init_post(post_item)
-
-        # force archive the post?
-        user = self.user_manager.get_user(user_id)
-        if user.username in post.flag_admin_usernames or post.is_crowdsourced_forced_removal_criteria_met():
-            logger.warning(f'Force archiving post `{post_id}` from flagging')
-            post.archive(forced=True)
-
-    def post_flag_deleted(self, post_id):
-        self.dynamo.decrement_flag_count(post_id, fail_soft=True)

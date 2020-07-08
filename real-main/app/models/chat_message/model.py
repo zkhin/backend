@@ -151,6 +151,7 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
                 self.author.dynamo.increment_chat_messages_creation_count(self.author.id)
 
     def on_delete(self):
-        self.chat.on_message_delete(self)
+        if self.chat:
+            self.chat.on_message_delete(self)
         if self.author:
             self.author.dynamo.increment_chat_messages_deletion_count(self.author.id)

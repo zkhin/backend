@@ -124,3 +124,13 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def delete_all_on_post(self, post_id):
         for comment_item in self.dynamo.generate_by_post(post_id):
             self.init_comment(comment_item).delete()
+
+    def on_flag_added(self, comment_id, user_id):
+        comment_item = self.dynamo.increment_flag_count(comment_id)
+        comment = self.init_comment(comment_item)
+
+        # force delete the comment?
+        user = self.user_manager.get_user(user_id)
+        if user.username in comment.flag_admin_usernames or comment.is_crowdsourced_forced_removal_criteria_met():
+            logger.warning(f'Force deleting comment `{comment_id}` from flagging')
+            comment.delete(forced=True)

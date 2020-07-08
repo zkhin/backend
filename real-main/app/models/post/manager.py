@@ -53,7 +53,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 view_dynamo=getattr(self, 'view_dynamo', None),
                 manager=self,
                 comment_manager=self.comment_manager,
-                user_manager=self.user_manager,
             )
         return self._postprocessor
 
@@ -265,3 +264,13 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
     def delete_all_by_user(self, user_id):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()
+
+    def on_flag_added(self, post_id, user_id):
+        post_item = self.dynamo.increment_flag_count(post_id)
+        post = self.init_post(post_item)
+
+        # force archive the post?
+        user = self.user_manager.get_user(user_id)
+        if user.username in post.flag_admin_usernames or post.is_crowdsourced_forced_removal_criteria_met():
+            logger.warning(f'Force archiving post `{post_id}` from flagging')
+            post.archive(forced=True)

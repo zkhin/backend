@@ -74,44 +74,40 @@ test('Cant flag a post if we are disabled', async () => {
   )
 })
 
-test('Follower can flag post of private user', async () => {
+test('Follower can flag post of private user, non-follower cannot', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
-  let variables = {postId, imageData}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId)
-
-  // they follow us
-  resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data}) => expect(data.addPost.postId).toBe(postId))
 
   // we go private
-  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  await ourClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data}) => expect(data.setUserDetails.privacyStatus).toBe('PRIVATE'))
 
-  // they flag that post
-  resp = await theirClient.mutate({mutation: mutations.flagPost, variables: {postId}})
-  expect(resp.data.flagPost.postId).toBe(postId)
-})
-
-test('Non-follower cannot flag post of private user', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-
-  // we add a post
-  const postId = uuidv4()
-  let variables = {postId, imageData}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId)
-
-  // we go private
-  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
-
-  // they try to flag that post
+  // verify non-follower cannot flag the post
   await expect(theirClient.mutate({mutation: mutations.flagPost, variables: {postId}})).rejects.toThrow(
     /ClientError: .* does not have access to post/,
   )
+
+  // they request to follow us
+  await theirClient
+    .mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
+    .then(({data}) => expect(data.followUser.followedStatus).toBe('REQUESTED'))
+
+  // we accept their follow requqest
+  await ourClient
+    .mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
+    .then(({data}) => expect(data.acceptFollowerUser.followerStatus).toBe('FOLLOWING'))
+
+  // verify follower can flag the post
+  await theirClient
+    .mutate({mutation: mutations.flagPost, variables: {postId}})
+    .then(({data}) => expect(data.flagPost.flagStatus).toBe('FLAGGED'))
 })
 
 test('Cannot flag post that does not exist', async () => {

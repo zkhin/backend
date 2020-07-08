@@ -86,7 +86,7 @@ class Comment(FlagModelMixin, ViewModelMixin):
     def flag(self, user):
         # if comment is on a post is from a private user then we must be a follower of the post owner
         posted_by_user = self.user_manager.get_user(self.post.user_id)
-        if posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
+        if user.id != posted_by_user.id and posted_by_user.item['privacyStatus'] != UserPrivacyStatus.PUBLIC:
             follow = self.follower_manager.get_follow(user.id, self.user_id)
             if not follow or follow.status != FollowStatus.FOLLOWING:
                 raise CommentException(f'User does not have access to comment `{self.id}`')
