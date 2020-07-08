@@ -59,13 +59,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     @property
     def postprocessor(self):
         if not hasattr(self, '_postprocessor'):
-            self._postprocessor = UserPostProcessor(
-                dynamo=getattr(self, 'dynamo', None),
-                manager=self,
-                elasticsearch_client=getattr(self, 'elasticsearch_client', None),
-                pinpoint_client=getattr(self, 'pinpoint_client', None),
-                card_manager=self.card_manager,
-            )
+            self._postprocessor = UserPostProcessor(dynamo=getattr(self, 'dynamo', None), manager=self)
         return self._postprocessor
 
     @property

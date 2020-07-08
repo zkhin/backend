@@ -1,8 +1,10 @@
+import logging
 import uuid
 from unittest import mock
 
 import pytest
 
+from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus, UserStatus
 from app.models.user.exceptions import UserException, UserValidationException, UserVerificationException
@@ -576,3 +578,115 @@ def test_set_apns_token(user):
     user.pinpoint_client.reset_mock()
     user.set_apns_token(None)
     assert user.pinpoint_client.mock_calls == [mock.call.delete_user_endpoint(user.id, 'APNS')]
+
+
+@pytest.mark.parametrize(
+    'method_name, check_method_name, log_pattern',
+    [
+        [
+            'disable_by_forced_comment_deletions_if_necessary',
+            'is_forced_disabling_criteria_met_by_comments',
+            'due to comments',
+        ],
+        [
+            'disable_by_forced_post_archivings_if_necessary',
+            'is_forced_disabling_criteria_met_by_posts',
+            'due to posts',
+        ],
+    ],
+)
+def test_disable_if_necessary(user, method_name, check_method_name, log_pattern, caplog):
+    # test does not call
+    with caplog.at_level(logging.WARNING), mock.patch.object(user, check_method_name, return_value=False):
+        getattr(user, method_name)()
+    assert len(caplog.records) == 0
+    assert user.refresh_item().status == UserStatus.ACTIVE
+
+    # test calls
+    with caplog.at_level(logging.WARNING), mock.patch.object(user, check_method_name, return_value=True):
+        getattr(user, method_name)()
+    assert len(caplog.records) == 1
+    assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
+    assert user.id in caplog.records[0].msg
+    assert user.username in caplog.records[0].msg
+    assert log_pattern in caplog.records[0].msg
+    assert user.refresh_item().status == UserStatus.DISABLED
+
+
+@pytest.mark.parametrize(
+    'method_name, card_spec_class, dynamo_attribute',
+    [
+        ['refresh_requested_followers_card', RequestedFollowersCardSpec, 'followersRequestedCount'],
+        ['refresh_chats_with_new_messages_card', ChatCardSpec, 'chatsWithUnviewedMessagesCount'],
+    ],
+)
+def test_refresh_requested_card(user, method_name, card_spec_class, dynamo_attribute):
+    card_id = card_spec_class(user.id).card_id
+    user.card_manager = mock.Mock(user.card_manager)
+    assert user.item.get(dynamo_attribute) is None
+
+    # refresh with None
+    with mock.patch.object(user, 'card_manager') as mocked_card_manager:
+        getattr(user, method_name)()
+    card_spec = mocked_card_manager.mock_calls[0].args[0]
+    assert card_spec.card_id == card_id
+    assert mocked_card_manager.mock_calls == [mock.call.remove_card_by_spec_if_exists(card_spec)]
+
+    # refresh with zero
+    user.item[dynamo_attribute] = 0
+    with mock.patch.object(user, 'card_manager') as mocked_card_manager:
+        getattr(user, method_name)()
+    card_spec = mocked_card_manager.mock_calls[0].args[0]
+    assert card_spec.card_id == card_id
+    assert mocked_card_manager.mock_calls == [mock.call.remove_card_by_spec_if_exists(card_spec)]
+
+    # refresh with one
+    user.item[dynamo_attribute] = 1
+    with mock.patch.object(user, 'card_manager') as mocked_card_manager:
+        getattr(user, method_name)()
+    card_spec = mocked_card_manager.mock_calls[0].args[0]
+    assert card_spec.card_id == card_id
+    assert ' 1 ' in card_spec.title
+    assert mocked_card_manager.mock_calls == [mock.call.add_or_update_card_by_spec(card_spec)]
+
+    # refresh with two
+    user.item[dynamo_attribute] = 2
+    with mock.patch.object(user, 'card_manager') as mocked_card_manager:
+        getattr(user, method_name)()
+    card_spec = mocked_card_manager.mock_calls[0].args[0]
+    assert card_spec.card_id == card_id
+    assert ' 2 ' in card_spec.title
+    assert mocked_card_manager.mock_calls == [mock.call.add_or_update_card_by_spec(card_spec)]
+
+
+def test_refresh_pinpoint_attribute(user):
+    user.pinpoint_client = mock.Mock(user.pinpoint_client)
+
+    # test no value
+    user.item.pop('dy_name', None)
+    with mock.patch.object(user, 'pinpoint_client') as mocked_pinpoint_client:
+        user.refresh_pinpoint_attribute('pp_name', 'dy_name')
+    assert mocked_pinpoint_client.mock_calls == [mock.call.delete_user_endpoint(user.id, 'pp_name')]
+
+    # test with value
+    user.item['dy_name'] = 'the-val'
+    with mock.patch.object(user, 'pinpoint_client') as mocked_pinpoint_client:
+        user.refresh_pinpoint_attribute('pp_name', 'dy_name')
+    assert mocked_pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user.id, 'pp_name', 'the-val')]
+
+
+def test_refresh_pinpoint_by_user_status(user):
+    assert user.status == UserStatus.ACTIVE
+    with mock.patch.object(user, 'pinpoint_client') as mocked_pinpoint_client:
+        user.refresh_pinpoint_by_user_status()
+    assert mocked_pinpoint_client.mock_calls == [mock.call.enable_user_endpoints(user.id)]
+
+    user.item['userStatus'] = UserStatus.DISABLED
+    with mock.patch.object(user, 'pinpoint_client') as mocked_pinpoint_client:
+        user.refresh_pinpoint_by_user_status()
+    assert mocked_pinpoint_client.mock_calls == [mock.call.disable_user_endpoints(user.id)]
+
+    user.item['userStatus'] = UserStatus.DELETING
+    with mock.patch.object(user, 'pinpoint_client') as mocked_pinpoint_client:
+        user.refresh_pinpoint_by_user_status()
+    assert mocked_pinpoint_client.mock_calls == [mock.call.delete_user_endpoints(user.id)]

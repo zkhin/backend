@@ -1,5 +1,5 @@
 import logging
-from unittest.mock import Mock, call
+from unittest.mock import call, patch
 from uuid import uuid4
 
 import pytest
@@ -18,65 +18,29 @@ def user(user_manager, cognito_client):
 
 
 def test_run(user_postprocessor):
-    # use simulated update to disable a user
     user_id = str(uuid4())
     pk = f'user/{user_id}'
     sk = 'profile'
     old_item = {'userId': {'S': user_id}}
     new_item = {'userId': {'S': user_id}}
 
-    user_postprocessor.handle_elasticsearch = Mock(user_postprocessor.handle_elasticsearch)
-    user_postprocessor.handle_pinpoint = Mock(user_postprocessor.handle_pinpoint)
-    user_postprocessor.handle_requested_followers_card = Mock(user_postprocessor.handle_requested_followers_card)
-    user_postprocessor.handle_chats_with_new_messages_card = Mock(
-        user_postprocessor.handle_chats_with_new_messages_card
-    )
-    user_postprocessor.run(pk, sk, old_item, new_item)
-    assert user_postprocessor.handle_elasticsearch.mock_calls == [call(user_id, old_item, new_item)]
-    assert user_postprocessor.handle_pinpoint.mock_calls == [call(user_id, old_item, new_item)]
-    assert user_postprocessor.handle_requested_followers_card.mock_calls == [call(user_id, old_item, new_item)]
-    assert user_postprocessor.handle_chats_with_new_messages_card.mock_calls == [
-        call(user_id, old_item, new_item)
-    ]
+    with pytest.raises(AssertionError):
+        user_postprocessor.run(pk, 'wrong-sk', old_item, new_item)
 
+    # test an edit
+    with patch.object(user_postprocessor, 'manager') as manager_mock:
+        user_postprocessor.run(pk, sk, old_item, new_item)
+    assert manager_mock.mock_calls == [call.init_user(new_item), call.init_user().on_add_or_edit(old_item)]
 
-@pytest.mark.parametrize(
-    'method_name, attribute_name',
-    [
-        ['forced_comment_deletion', 'commentForcedDeletionCount'],
-        ['forced_post_archiving', 'postForcedArchivingCount'],
-    ],
-)
-def test_run_calls_forced_X(user_postprocessor, method_name, attribute_name):
-    pk, sk = f'user/{uuid4()}', 'profile'
-    setattr(user_postprocessor, method_name, Mock(getattr(user_postprocessor, method_name)))
-    assert getattr(user_postprocessor, method_name).mock_calls == []
+    # test an add
+    with patch.object(user_postprocessor, 'manager') as manager_mock:
+        user_postprocessor.run(pk, sk, None, new_item)
+    assert manager_mock.mock_calls == [call.init_user(new_item), call.init_user().on_add_or_edit(None)]
 
-    # cases where it should not be called
-    user_postprocessor.run(pk, sk, {}, {})
-    user_postprocessor.run(pk, sk, {}, {attribute_name: 0})
-    user_postprocessor.run(pk, sk, {attribute_name: 0}, {})
-    user_postprocessor.run(pk, sk, {attribute_name: 0}, {attribute_name: 0})
-    user_postprocessor.run(pk, sk, {attribute_name: 1}, {attribute_name: 1})
-    user_postprocessor.run(pk, sk, {attribute_name: 1}, {attribute_name: 0})
-    user_postprocessor.run(pk, sk, {attribute_name: 2}, {attribute_name: 0})
-    user_postprocessor.run(pk, sk, {attribute_name: 2}, {attribute_name: 2})
-
-    # cases where it should be called
-    user_postprocessor.run(pk, sk, {}, {attribute_name: 1})
-    assert getattr(user_postprocessor, method_name).mock_calls == [call({attribute_name: 1})]
-
-    getattr(user_postprocessor, method_name).reset_mock()
-    user_postprocessor.run(pk, sk, {attribute_name: 0}, {attribute_name: 1})
-    assert getattr(user_postprocessor, method_name).mock_calls == [call({attribute_name: 1})]
-
-    getattr(user_postprocessor, method_name).reset_mock()
-    user_postprocessor.run(pk, sk, {attribute_name: 1}, {attribute_name: 2})
-    assert getattr(user_postprocessor, method_name).mock_calls == [call({attribute_name: 2})]
-
-    getattr(user_postprocessor, method_name).reset_mock()
-    user_postprocessor.run(pk, sk, {attribute_name: 1}, {attribute_name: 3, 'other': 'lore'})
-    assert getattr(user_postprocessor, method_name).mock_calls == [call({attribute_name: 3, 'other': 'lore'})]
+    # test a delete
+    with patch.object(user_postprocessor, 'manager') as manager_mock:
+        user_postprocessor.run(pk, sk, old_item, None)
+    assert manager_mock.mock_calls == [call.init_user(old_item), call.init_user().on_delete()]
 
 
 def test_comment_added(user_postprocessor, user):
@@ -125,53 +89,3 @@ def test_comment_deleted(user_postprocessor, user, caplog):
     # check for unexpected state changes
     del new_item['commentCount'], org_item['commentCount'], new_item['commentDeletedCount']
     assert new_item == org_item
-
-
-def test_forced_comment_deletion_unmet(user_postprocessor, user, caplog):
-    user.is_forced_disabling_criteria_met_by_comments = Mock(return_value=False)
-    user.disable = Mock()
-    user_postprocessor.manager.init_user = Mock(return_value=user)
-
-    with caplog.at_level(logging.WARNING):
-        user_postprocessor.forced_comment_deletion(user.item)
-    assert caplog.records == []
-    assert user.disable.mock_calls == []
-
-
-def test_forced_comment_deletion_met(user_postprocessor, user, caplog):
-    user.is_forced_disabling_criteria_met_by_comments = Mock(return_value=True)
-    user.disable = Mock()
-    user_postprocessor.manager.init_user = Mock(return_value=user)
-
-    with caplog.at_level(logging.WARNING):
-        user_postprocessor.forced_comment_deletion(user.item)
-    assert len(caplog.records) == 1
-    assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
-    assert user.id in caplog.records[0].msg
-    assert 'due to comments' in caplog.records[0].msg
-    assert user.disable.mock_calls == [call()]
-
-
-def test_forced_post_archiving_unmet(user_postprocessor, user, caplog):
-    user.is_forced_disabling_criteria_met_by_posts = Mock(return_value=False)
-    user.disable = Mock()
-    user_postprocessor.manager.init_user = Mock(return_value=user)
-
-    with caplog.at_level(logging.WARNING):
-        user_postprocessor.forced_post_archiving(user.item)
-    assert caplog.records == []
-    assert user.disable.mock_calls == []
-
-
-def test_forced_post_archiving_met(user_postprocessor, user, caplog):
-    user.is_forced_disabling_criteria_met_by_posts = Mock(return_value=True)
-    user.disable = Mock()
-    user_postprocessor.manager.init_user = Mock(return_value=user)
-
-    with caplog.at_level(logging.WARNING):
-        user_postprocessor.forced_post_archiving(user.item)
-    assert len(caplog.records) == 1
-    assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
-    assert user.id in caplog.records[0].msg
-    assert 'due to posts' in caplog.records[0].msg
-    assert user.disable.mock_calls == [call()]

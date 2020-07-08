@@ -4,6 +4,7 @@ import os
 import stringcase
 
 from app.mixins.trending.model import TrendingModelMixin
+from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
@@ -26,7 +27,7 @@ CONTACT_ATTRIBUTE_NAMES = {
 
 class User(TrendingModelMixin):
 
-    client_names = ['cloudfront', 'cognito', 'dynamo', 'pinpoint', 's3_uploads']
+    client_names = ['cloudfront', 'cognito', 'elasticsearch', 'dynamo', 'pinpoint', 's3_uploads']
     item_type = 'user'
 
     def __init__(
@@ -359,3 +360,83 @@ class User(TrendingModelMixin):
         self.item = self.dynamo.set_user_details(self.id, **{names['short']: value})
         self.cognito_client.clear_user_attribute(self.id, f'custom:unverified_{names["short"]}')
         return self
+
+    def on_add_or_edit(self, old_item):
+        if self.item.get('commentForcedDeletionCount', 0) != old_item.get('commentForcedDeletionCount', 0):
+            self.disable_by_forced_comment_deletions_if_necessary()
+
+        if self.item.get('postForcedArchivingCount', 0) != old_item.get('postForcedArchivingCount', 0):
+            self.disable_by_forced_post_archivings_if_necessary()
+
+        if self.item.get('followersRequestedCount', 0) != old_item.get('followersRequestedCount', 0):
+            self.refresh_requested_followers_card()
+
+        if self.item.get('chatsWithUnviewedMessagesCount', 0) != old_item.get(
+            'chatsWithUnviewedMessagesCount', 0
+        ):
+            self.refresh_chats_with_new_messages_card()
+
+        if self.item.get('email') != old_item.get('email'):
+            self.refresh_pinpoint_attribute('EMAIL', 'email')
+
+        if self.item.get('phoneNumber') != old_item.get('phoneNumber'):
+            self.refresh_pinpoint_attribute('SMS', 'phoneNumber')
+
+        if self.status != old_item.get('userStatus', UserStatus.ACTIVE):
+            self.refresh_pinpoint_by_user_status()
+
+        if (
+            self.username != old_item.get('username')
+            or self.item.get('fullName') != old_item.get('fullName')
+            or self.item.get('lastManuallyReindexedAt') != old_item.get('lastManuallyReindexedAt')
+        ):
+            self.elasticsearch_client.put_user(self.id, self.username, self.item.get('fullName'))
+
+    def on_delete(self):
+        self.card_manager.remove_card_by_spec_if_exists(ChatCardSpec(self.id))
+        self.card_manager.remove_card_by_spec_if_exists(RequestedFollowersCardSpec(self.id))
+        self.elasticsearch_client.delete_user(self.id)
+        self.pinpoint_client.delete_user_endpoints(self.id)
+
+    def disable_by_forced_comment_deletions_if_necessary(self):
+        if self.is_forced_disabling_criteria_met_by_comments():
+            self.disable()
+            # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
+            logger.warning(f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled due to comments')
+
+    def disable_by_forced_post_archivings_if_necessary(self):
+        if self.is_forced_disabling_criteria_met_by_posts():
+            self.disable()
+            # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
+            logger.warning(f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled due to posts')
+
+    def refresh_requested_followers_card(self):
+        cnt = self.item.get('followersRequestedCount', 0)
+        card_spec = RequestedFollowersCardSpec(self.id, requested_followers_count=cnt)
+        if cnt > 0:
+            self.card_manager.add_or_update_card_by_spec(card_spec)
+        else:
+            self.card_manager.remove_card_by_spec_if_exists(card_spec)
+
+    def refresh_chats_with_new_messages_card(self):
+        cnt = self.item.get('chatsWithUnviewedMessagesCount', 0)
+        card_spec = ChatCardSpec(self.id, chats_with_unviewed_messages_count=cnt)
+        if cnt > 0:
+            self.card_manager.add_or_update_card_by_spec(card_spec)
+        else:
+            self.card_manager.remove_card_by_spec_if_exists(card_spec)
+
+    def refresh_pinpoint_attribute(self, pinpoint_name, dynamo_name):
+        value = self.item.get(dynamo_name)
+        if value is not None:
+            self.pinpoint_client.update_user_endpoint(self.id, pinpoint_name, value)
+        else:
+            self.pinpoint_client.delete_user_endpoint(self.id, pinpoint_name)
+
+    def refresh_pinpoint_by_user_status(self):
+        if self.status == UserStatus.ACTIVE:
+            self.pinpoint_client.enable_user_endpoints(self.id)
+        if self.status == UserStatus.DISABLED:
+            self.pinpoint_client.disable_user_endpoints(self.id)
+        if self.status == UserStatus.DELETING:
+            self.pinpoint_client.delete_user_endpoints(self.id)
