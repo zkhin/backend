@@ -36,6 +36,7 @@ xray.patch_all()
 
 secrets_manager_client = clients.SecretsManagerClient()
 clients = {
+    'apple': clients.AppleClient(),
     'appsync': clients.AppSyncClient(),
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': clients.CognitoClient(),
@@ -82,6 +83,20 @@ def create_cognito_only_user(caller_user_id, arguments, source, context):
     full_name = arguments.get('fullName')
     try:
         user = user_manager.create_cognito_only_user(caller_user_id, username, full_name=full_name)
+    except UserException as err:
+        raise ClientException(str(err))
+    return user.serialize(caller_user_id)
+
+
+@routes.register('Mutation.createAppleUser')
+def create_apple_user(caller_user_id, arguments, source, context):
+    username = arguments['username']
+    full_name = arguments.get('fullName')
+    apple_token = arguments['appleIdToken']
+    try:
+        user = user_manager.create_federated_user(
+            'apple', caller_user_id, username, apple_token, full_name=full_name
+        )
     except UserException as err:
         raise ClientException(str(err))
     return user.serialize(caller_user_id)

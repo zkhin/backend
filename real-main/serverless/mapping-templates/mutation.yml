@@ -5,6 +5,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: createAppleUser
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: createFacebookUser
   dataSource: LambdaDataSource
   request: Lambda.request.vtl

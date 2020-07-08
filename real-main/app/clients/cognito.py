@@ -23,6 +23,7 @@ class CognitoClient:
         self.userPoolLoginsKey = f'cognito-idp.{aws_region}.amazonaws.com/{user_pool_id}'
         self.googleLoginsKey = 'accounts.google.com'
         self.facebookLoginsKey = 'graph.facebook.com'
+        self.appleLoginsKey = 'appleid.apple.com'
 
     def create_verified_user_pool_entry(self, user_id, username, email):
         # set them up in the user pool
@@ -46,13 +47,18 @@ class CognitoClient:
         )
         return resp['AuthenticationResult']['IdToken']
 
-    def link_identity_pool_entries(self, user_id, cognito_token=None, facebook_token=None, google_token=None):
+    def link_identity_pool_entries(
+        self, user_id, apple_token=None, cognito_token=None, facebook_token=None, google_token=None
+    ):
         """
-        the `cognito_token`, if provided, should be the cognito id token.
+        The `apple_token`, if provided, should be the apple id token.
+        The `cognito_token`, if provided, should be the cognito id token.
         The `facebook_token`, if provided, should be the facebook access token.
         The `google_token`, if provided, should be the google id token.
         """
         logins = {}
+        if apple_token:
+            logins[self.appleLoginsKey] = apple_token
         if cognito_token:
             logins[self.userPoolLoginsKey] = cognito_token
         if facebook_token:

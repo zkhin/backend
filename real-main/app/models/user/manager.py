@@ -21,6 +21,7 @@ S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTOR
 class UserManager(TrendingManagerMixin, ManagerBase):
 
     client_names = [
+        'apple',
         'cloudfront',
         'cognito',
         'elasticsearch',
@@ -151,7 +152,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         return user
 
     def create_federated_user(self, provider, user_id, username, token, full_name=None):
-        assert provider in ('facebook', 'google'), f'Unrecognized identity provider `{provider}`'
+        assert provider in ('apple', 'facebook', 'google'), f'Unrecognized identity provider `{provider}`'
         provider_client = self.clients[provider]
 
         # do operations that do not alter state first

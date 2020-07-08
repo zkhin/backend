@@ -15,9 +15,9 @@ module.exports.createCognitoOnlyUser = gql`
   }
 `
 
-module.exports.createGoogleUser = gql`
-  mutation CreateGoogleUser($username: String!, $fullName: String, $googleIdToken: String!) {
-    createGoogleUser(username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {
+module.exports.createAppleUser = gql`
+  mutation CreateAppleUser($username: String!, $fullName: String, $appleIdToken: String!) {
+    createAppleUser(username: $username, fullName: $fullName, appleIdToken: $appleIdToken) {
       userId
       username
       fullName
@@ -29,6 +29,17 @@ module.exports.createGoogleUser = gql`
 module.exports.createFacebookUser = gql`
   mutation CreateFacebookUser($username: String!, $fullName: String, $facebookAccessToken: String!) {
     createFacebookUser(username: $username, fullName: $fullName, facebookAccessToken: $facebookAccessToken) {
+      userId
+      username
+      fullName
+      email
+    }
+  }
+`
+
+module.exports.createGoogleUser = gql`
+  mutation CreateGoogleUser($username: String!, $fullName: String, $googleIdToken: String!) {
+    createGoogleUser(username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {
       userId
       username
       fullName

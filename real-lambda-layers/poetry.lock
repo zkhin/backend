@@ -340,6 +340,19 @@ cffi = ">=1.0.0"
 
 [[package]]
 category = "main"
+description = "JSON Web Token implementation in Python"
+name = "pyjwt"
+optional = false
+python-versions = "*"
+version = "1.7.1"
+
+[package.extras]
+crypto = ["cryptography (>=1.4)"]
+flake8 = ["flake8", "flake8-import-order", "pep8-naming"]
+test = ["pytest (>=4.0.1,<5.0.0)", "pytest-cov (>=2.6.0,<3.0.0)", "pytest-runner (>=4.2,<5.0.0)"]
+
+[[package]]
+category = "main"
 description = "Extensions to the standard Python datetime module"
 name = "python-dateutil"
 optional = false
@@ -455,7 +468,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "f16948fc6864d321fcc4e498d87405baecdb315df2ab8a0033826aea9ead498b"
+content-hash = "1c595cc11c311ff8718553a0328b491a0ddd004999c0eeb01355b3eca4f144cc"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -698,6 +711,10 @@ pyheif = [
     {file = "pyheif-0.4-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:292729f84f2e78366902596c169ad14ee22bc69c77fe7978b3fe4d675837bc4a"},
     {file = "pyheif-0.4-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:1fc992662a35c77d5cca2c2034fdb6a09d21eb0174959513fa34f3e6286284b9"},
     {file = "pyheif-0.4.tar.gz", hash = "sha256:c522affce3a496060c2889b9a9ede7edac53a682b1139086d9b7f9e0e49a7cdd"},
+]
+pyjwt = [
+    {file = "PyJWT-1.7.1-py2.py3-none-any.whl", hash = "sha256:5c6eca3c2940464d106b99ba83b00c6add741c9becaec087fb7ccdefea71350e"},
+    {file = "PyJWT-1.7.1.tar.gz", hash = "sha256:8d59a976fb773f3e6a39c85636357c4f0e242707394cadadd9814f5cbaa20e96"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
