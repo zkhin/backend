@@ -215,19 +215,25 @@ def test_is_crowdsourced_forced_removal_criteria_met(message):
     assert message.is_crowdsourced_forced_removal_criteria_met() is True
 
 
-def test_on_add(message, system_message):
+def test_on_add_or_edit(message, system_message):
     # set up mocks, verify starting statdeletee
     message._chat = mock.Mock(message.chat)
     system_message._chat = mock.Mock(system_message.chat)
     assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 0
 
     # react to the add of the normal message, verify
-    message.on_add()
+    message.on_add_or_edit({})
     assert message.chat.mock_calls == [mock.call.on_message_add(message)]
     assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
 
+    # react to the edit of the normal message, verify
+    message._chat.reset_mock()
+    message.on_add_or_edit({'k': 'v'})
+    assert message.chat.mock_calls == []
+    assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
+
     # react to the add of the system message, verify
-    system_message.on_add()
+    system_message.on_add_or_edit({})
     assert system_message.chat.mock_calls == [mock.call.on_message_add(system_message)]
 
 

@@ -2,46 +2,29 @@ import logging
 
 import pendulum
 
-from app.models.card.specs import CommentCardSpec
-
 logger = logging.getLogger()
 
 
 class PostPostProcessor:  # unfortunate namenaming
     def __init__(
-        self,
-        dynamo=None,
-        view_dynamo=None,
-        manager=None,
-        card_manager=None,
-        comment_manager=None,
-        user_manager=None,
+        self, dynamo=None, view_dynamo=None, manager=None, comment_manager=None, user_manager=None,
     ):
         self.dynamo = dynamo
         self.view_dynamo = view_dynamo
         self.manager = manager
-        self.card_manager = card_manager
         self.comment_manager = comment_manager
         self.user_manager = user_manager
 
     def run(self, pk, sk, old_item, new_item):
-        post_id = pk.split('/')[1]
-
         if sk == '-':
-            # keep card in sync with unviewed comment count
-            posted_by_user_id = (new_item or old_item)['postedByUserId']
-            old_count = old_item.get('commentsUnviewedCount', 0)
-            new_count = new_item.get('commentsUnviewedCount', 0)
-            if old_count != new_count:
-                if new_count > 0:
-                    self.card_manager.add_or_update_card_by_spec(
-                        CommentCardSpec(posted_by_user_id, post_id, unviewed_comments_count=new_count)
-                    )
-                else:
-                    self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(posted_by_user_id, post_id))
+            if new_item:
+                self.manager.init_post(new_item).on_add_or_edit(old_item)
+            else:
+                self.manager.init_post(old_item).on_delete()
 
         # could try to consolidate this in a FlagPostProcessor
         if sk.startswith('flag/'):
+            post_id = pk.split('/')[1]
             user_id = sk.split('/')[1]
             if not old_item and new_item:
                 self.post_flag_added(post_id, user_id)

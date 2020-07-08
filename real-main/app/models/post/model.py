@@ -766,3 +766,18 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             return False
 
         return super().trending_increment_score(now=now, **kwargs)
+
+    def on_add_or_edit(self, old_item):
+        if self.item.get('commentsUnviewedCount', 0) != old_item.get('commentsUnviewedCount', 0):
+            self.refresh_comments_card()
+
+    def on_delete(self):
+        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
+
+    def refresh_comments_card(self):
+        cnt = self.item.get('commentsUnviewedCount', 0)
+        card_spec = CommentCardSpec(self.user_id, self.id, unviewed_comments_count=cnt)
+        if cnt > 0:
+            self.card_manager.add_or_update_card_by_spec(card_spec)
+        else:
+            self.card_manager.remove_card_by_spec_if_exists(card_spec)

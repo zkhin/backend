@@ -36,15 +36,16 @@ def system_message(chat_message_manager, chat):
     yield chat_message_manager.add_system_message(chat.id, 'lore ipsum')
 
 
-def test_run_chat_message_added(chat_message_postprocessor, message):
+def test_run_chat_message_added_or_edited(chat_message_postprocessor, message):
     pk, sk = message.item['partitionKey'], message.item['sortKey']
+    old_item = {'key': 'value'}
 
     # postprocess the user message, verify calls correct
     chat_message_postprocessor.manager = Mock(chat_message_postprocessor.manager)
-    chat_message_postprocessor.run(pk, sk, {}, message.item)
+    chat_message_postprocessor.run(pk, sk, old_item, message.item)
     assert chat_message_postprocessor.manager.mock_calls == [
         call.init_chat_message(message.item),
-        call.init_chat_message().on_add(),
+        call.init_chat_message().on_add_or_edit(old_item),
     ]
 
 

@@ -144,10 +144,11 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
         user_count = self.chat.item.get('userCount', 0)
         return flag_count > user_count / 10
 
-    def on_add(self):
-        self.chat.on_message_add(self)
-        if self.author:
-            self.author.dynamo.increment_chat_messages_creation_count(self.author.id)
+    def on_add_or_edit(self, old_item):
+        if not old_item:
+            self.chat.on_message_add(self)
+            if self.author:
+                self.author.dynamo.increment_chat_messages_creation_count(self.author.id)
 
     def on_delete(self):
         self.chat.on_message_delete(self)

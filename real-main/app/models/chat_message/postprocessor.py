@@ -13,9 +13,9 @@ class ChatMessagePostProcessor:
         message_id = pk.split('/')[1]
 
         if sk == '-':
-            if not old_item and new_item:
-                self.manager.init_chat_message(new_item).on_add()
-            if old_item and not new_item:
+            if new_item:
+                self.manager.init_chat_message(new_item).on_add_or_edit(old_item)
+            else:
                 self.manager.init_chat_message(old_item).on_delete()
 
         # message view added

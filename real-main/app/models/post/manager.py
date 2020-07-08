@@ -52,7 +52,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 dynamo=getattr(self, 'dynamo', None),
                 view_dynamo=getattr(self, 'view_dynamo', None),
                 manager=self,
-                card_manager=self.card_manager,
                 comment_manager=self.comment_manager,
                 user_manager=self.user_manager,
             )

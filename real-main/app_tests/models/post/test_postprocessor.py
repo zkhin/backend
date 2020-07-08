@@ -1,11 +1,10 @@
 import logging
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
 import pendulum
 import pytest
 
-from app.models.card.specs import CommentCardSpec
 from app.models.post.enums import PostStatus, PostType
 
 
@@ -29,39 +28,24 @@ def post(post_manager, user):
     yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
 
 
-def test_run_keep_card_insync(post_postprocessor, post, card_manager):
+def test_run_post(post_postprocessor, post):
     pk, sk = post.item['partitionKey'], post.item['sortKey']
+    old_item, new_item = post.item.copy(), post.item.copy()
 
-    # verify starting state
-    card_spec = CommentCardSpec(post.user_id, post.id)
-    assert card_manager.get_card(card_spec.card_id) is None
+    # test an edit
+    with patch.object(post_postprocessor, 'manager') as manager_mock:
+        post_postprocessor.run(pk, sk, old_item, new_item)
+    assert manager_mock.mock_calls == [call.init_post(new_item), call.init_post().on_add_or_edit(old_item)]
 
-    # no change to our field
-    old_item = post.item
-    new_item = {**old_item, 'unrelated': 42}
-    post_postprocessor.run(pk, sk, old_item, new_item)
-    assert card_manager.get_card(card_spec.card_id) is None
+    # test an add
+    with patch.object(post_postprocessor, 'manager') as manager_mock:
+        post_postprocessor.run(pk, sk, {}, new_item)
+    assert manager_mock.mock_calls == [call.init_post(new_item), call.init_post().on_add_or_edit({})]
 
-    # add card
-    old_item = new_item
-    new_item = {**old_item, 'commentsUnviewedCount': 1}
-    post_postprocessor.run(pk, sk, old_item, new_item)
-    card = card_manager.get_card(card_spec.card_id)
-    assert card.id == card_spec.card_id
-
-    # change card title
-    old_item = new_item
-    new_item = {**old_item, 'commentsUnviewedCount': 2}
-    post_postprocessor.run(pk, sk, old_item, new_item)
-    new_card = card_manager.get_card(card_spec.card_id)
-    assert new_card.id == card_spec.card_id
-    assert new_card.item['title'] != card.item['title']
-
-    # delete card
-    old_item = new_item
-    new_item = {**old_item, 'commentsUnviewedCount': 0}
-    post_postprocessor.run(pk, sk, old_item, new_item)
-    assert card_manager.get_card(card_spec.card_id) is None
+    # test a delete
+    with patch.object(post_postprocessor, 'manager') as manager_mock:
+        post_postprocessor.run(pk, sk, old_item, {})
+    assert manager_mock.mock_calls == [call.init_post(old_item), call.init_post().on_delete()]
 
 
 def test_run_post_flag(post_postprocessor, post, user2):

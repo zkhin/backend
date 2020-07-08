@@ -34,12 +34,12 @@ def test_run(user_postprocessor):
 
     # test an add
     with patch.object(user_postprocessor, 'manager') as manager_mock:
-        user_postprocessor.run(pk, sk, None, new_item)
-    assert manager_mock.mock_calls == [call.init_user(new_item), call.init_user().on_add_or_edit(None)]
+        user_postprocessor.run(pk, sk, {}, new_item)
+    assert manager_mock.mock_calls == [call.init_user(new_item), call.init_user().on_add_or_edit({})]
 
     # test a delete
     with patch.object(user_postprocessor, 'manager') as manager_mock:
-        user_postprocessor.run(pk, sk, old_item, None)
+        user_postprocessor.run(pk, sk, old_item, {})
     assert manager_mock.mock_calls == [call.init_user(old_item), call.init_user().on_delete()]
 
 
