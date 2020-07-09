@@ -64,9 +64,9 @@ def custom_message(event, context):
         logger.info('Handling Cognito CustomMessage event', extra={'event': event})
 
     if event['triggerSource'] == 'CustomMessage_SignUp':
-        username = event['userName']
+        user_id = event['userName']
         code = event['request']['codeParameter']
-        deepurl = f'real.app://email/confirm/{username}/{code}'
+        deepurl = f'https://real.app/confirm/email/{user_id}/{code}'
         event['response']['smsMessage'] = f'Welcome to REAL. Your confirmation code is {code}'
         event['response']['emailSubject'] = 'Welcome to REAL'
         event['response'][
