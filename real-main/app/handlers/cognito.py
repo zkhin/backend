@@ -63,15 +63,39 @@ def custom_message(event, context):
     with LogLevelContext(logger, logging.INFO):
         logger.info('Handling Cognito CustomMessage event', extra={'event': event})
 
-    if event['triggerSource'] == 'CustomMessage_SignUp':
+    if event['triggerSource'] in ('CustomMessage_SignUp', 'CustomMessage_ResendCode'):
         user_id = event['userName']
         code = event['request']['codeParameter']
         deepurl = f'https://real.app/confirm/email/{user_id}/{code}'
         event['response']['smsMessage'] = f'Welcome to REAL. Your confirmation code is {code}'
         event['response']['emailSubject'] = 'Welcome to REAL'
-        event['response'][
-            'emailMessage'
-        ] = f'Welcome to REAL. Your confirmation code is {code}. <a href="{deepurl}">{deepurl}</a>'
+        event['response']['emailMessage'] = (
+            f'Welcome to REAL. Tap <a href="{deepurl}">here</a> to confirm your account. '
+            f'Should you need it, your confirmation code is {code}.'
+        )
+
+    if event['triggerSource'] == 'CustomMessage_ForgotPassword':
+        user_id = event['userName']
+        code = event['request']['codeParameter']
+        deepurl = f'https://real.app/confirm/forgot/{user_id}/{code}'
+        event['response']['smsMessage'] = f'Your REAL password reset code is {code}'
+        event['response']['emailSubject'] = 'Your REAL password reset link'
+        event['response']['emailMessage'] = (
+            f'Tap <a href="{deepurl}">here</a> to choose a new REAL password. '
+            f'Should you need it, your password reset code is {code}.'
+        )
+
+    if event['triggerSource'] in ('CustomMessage_UpdateUserAttribute', 'CustomMessage_VerifyUserAttribute'):
+        user_id = event['userName']
+        code = event['request']['codeParameter']
+        deepurl = f'https://real.app/confirm/email/{user_id}/{code}'
+        event['response']['smsMessage'] = f'Your REAL confirmation code is {code}'
+        event['response']['emailSubject'] = 'Your REAL confirmation link'
+        event['response']['emailMessage'] = (
+            f'Tap <a href="{deepurl}">here</a> to confirm your email address with REAL. '
+            f'Should you need it, your confirmation code is {code}.'
+        )
+
     return event
 
 
