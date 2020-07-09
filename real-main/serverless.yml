@@ -513,7 +513,7 @@ functions:
 
   dynamoStream:
     name: ${self:provider.stackName}-dynamoStream
-    handler: app.handlers.dynamo.postprocess_records
+    handler: app.handlers.dynamo.handlers.process_records
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:

@@ -2,15 +2,17 @@ import logging
 import os
 import random
 import re
+from functools import partialmethod
 
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
+from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 
 from .dynamo import UserDynamo
+from .enums import UserStatus
 from .exceptions import UserAlreadyExists, UserValidationException
 from .model import User
-from .postprocessor import UserPostProcessor
 from .validate import UserValidate
 
 logger = logging.getLogger()
@@ -56,12 +58,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo = UserDynamo(clients['dynamo'])
         self.validate = UserValidate()
         self.placeholder_photos_directory = placeholder_photos_directory
-
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = UserPostProcessor(dynamo=getattr(self, 'dynamo', None), manager=self)
-        return self._postprocessor
 
     @property
     def real_user_id(self):
@@ -209,3 +205,67 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             if user_item:
                 text_tags.append({'tag': tag, 'userId': user_item['userId']})
         return text_tags
+
+    def on_comment_add(self, comment_id, new_item):
+        self.dynamo.increment_comment_count(new_item['userId'])
+
+    def on_comment_delete(self, comment_id, old_item):
+        user_id = old_item['userId']
+        self.dynamo.decrement_comment_count(user_id, fail_soft=True)
+        self.dynamo.increment_comment_deleted_count(user_id)
+
+    def on_user_delete(self, user_id, old_item):
+        self.elasticsearch_client.delete_user(user_id)
+        self.pinpoint_client.delete_user_endpoints(user_id)
+
+    def sync_user_status_due_to(self, check_method_name, forced_by, user_id, old_item, new_item):
+        user = self.init_user(new_item)
+        if getattr(user, check_method_name)():
+            user.disable(forced_by=forced_by)
+
+    sync_user_status_due_to_chat_messages = partialmethod(
+        sync_user_status_due_to, 'is_forced_disabling_criteria_met_by_chat_messages', 'chatMessages'
+    )
+    sync_user_status_due_to_comments = partialmethod(
+        sync_user_status_due_to, 'is_forced_disabling_criteria_met_by_comments', 'comments'
+    )
+    sync_user_status_due_to_posts = partialmethod(
+        sync_user_status_due_to, 'is_forced_disabling_criteria_met_by_posts', 'posts'
+    )
+
+    def sync_card_with_count(self, dynamo_attr, card_spec_class, user_id, old_item, new_item):
+        cnt = new_item.get(dynamo_attr, 0)
+        card_spec = card_spec_class(user_id, cnt)
+        if cnt > 0:
+            self.card_manager.add_or_update_card_by_spec(card_spec)
+        else:
+            self.card_manager.remove_card_by_spec_if_exists(card_spec)
+
+    sync_requested_followers_card = partialmethod(
+        sync_card_with_count, 'followersRequestedCount', RequestedFollowersCardSpec
+    )
+    sync_chats_with_new_messages_card = partialmethod(
+        sync_card_with_count, 'chatsWithUnviewedMessagesCount', ChatCardSpec
+    )
+
+    def sync_elasticsearch(self, user_id, old_item, new_item):
+        self.elasticsearch_client.put_user(user_id, new_item['username'], new_item.get('fullName'))
+
+    def sync_pinpoint_attribute(self, dynamo_name, pinpoint_name, user_id, old_item, new_item):
+        value = new_item.get(dynamo_name)
+        if value is not None:
+            self.pinpoint_client.update_user_endpoint(user_id, pinpoint_name, value)
+        else:
+            self.pinpoint_client.delete_user_endpoint(user_id, pinpoint_name)
+
+    sync_pinpoint_email = partialmethod(sync_pinpoint_attribute, 'email', 'EMAIL')
+    sync_pinpoint_phone = partialmethod(sync_pinpoint_attribute, 'phoneNumber', 'SMS')
+
+    def sync_pinpoint_user_status(self, user_id, old_item, new_item):
+        status = new_item.get('userStatus', UserStatus.ACTIVE)
+        if status == UserStatus.ACTIVE:
+            self.pinpoint_client.enable_user_endpoints(user_id)
+        if status == UserStatus.DISABLED:
+            self.pinpoint_client.disable_user_endpoints(user_id)
+        if status == UserStatus.DELETING:
+            self.pinpoint_client.delete_user_endpoints(user_id)

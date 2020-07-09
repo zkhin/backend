@@ -10,6 +10,7 @@ from .dynamo import CardDynamo
 from .exceptions import CardAlreadyExists
 from .model import Card
 from .postprocessor import CardPostProcessor
+from .specs import ChatCardSpec, RequestedFollowersCardSpec
 
 logger = logging.getLogger()
 
@@ -118,3 +119,7 @@ class CardManager:
                 # give up on the first failure for now
                 card.clear_notify_user_at()
         return total_count, success_count
+
+    def on_user_delete(self, user_id, old_item):
+        self.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
+        self.remove_card_by_spec_if_exists(RequestedFollowersCardSpec(user_id))

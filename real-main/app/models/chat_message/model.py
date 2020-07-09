@@ -145,8 +145,13 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
         return flag_count > user_count / 10
 
     def on_add_or_edit(self, old_item):
-        if not old_item:
-            self.chat.on_message_add(self)
+        if old_item:
+            return
+        # we have to do this strongly_consistent because we create the first chat messages
+        # in the same request-response cycle as the chat itself
+        chat = self.chat_manager.get_chat(self.chat_id, strongly_consistent=True)
+        if chat:
+            chat.on_message_add(self)
             if self.author:
                 self.author.dynamo.increment_chat_messages_creation_count(self.author.id)
 

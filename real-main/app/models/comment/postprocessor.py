@@ -22,10 +22,8 @@ class CommentPostProcessor:
             created_at = pendulum.parse((new_item or old_item)['commentedAt'])
             if not old_item and new_item:  # comment added?
                 self.post_manager.postprocessor.comment_added(post_id, user_id, created_at)
-                self.user_manager.postprocessor.comment_added(user_id)
             if old_item and not new_item:  # comment deleted?
                 self.post_manager.postprocessor.comment_deleted(post_id, comment_id, user_id, created_at)
-                self.user_manager.postprocessor.comment_deleted(user_id)
 
         # comment view added
         if sk.startswith('view/') and not old_item and new_item:

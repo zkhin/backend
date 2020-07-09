@@ -326,6 +326,7 @@ test('Comments of private user on public post are visible to all', async () => {
   expect(resp.data.addComment.commentedBy.userId).toBe(theirUserId)
 
   // check we can see their comment on the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.commentCount).toBe(1)

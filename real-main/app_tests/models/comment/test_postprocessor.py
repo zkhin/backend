@@ -40,44 +40,36 @@ def test_run(comment_postprocessor, comment, post, user2, user):
     old_item = {}
     new_item = comment.refresh_item().item
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
     comment_postprocessor.run(pk, sk, old_item, new_item)
     assert comment_postprocessor.post_manager.mock_calls == [
         call.postprocessor.comment_added(post.id, user2.id, commented_at)
     ]
-    assert comment_postprocessor.user_manager.mock_calls == [call.postprocessor.comment_added(user2.id)]
 
     # simulate a editing a comment, verify no calls
     old_item = new_item
     new_item = comment.refresh_item().item
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
     comment_postprocessor.run(pk, sk, old_item, new_item)
     assert comment_postprocessor.post_manager.mock_calls == []
-    assert comment_postprocessor.user_manager.mock_calls == []
 
     # simulate a deleteing a comment, verify calls
     old_item = new_item
     new_item = {}
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
     comment_postprocessor.run(pk, sk, old_item, new_item)
     assert comment_postprocessor.post_manager.mock_calls == [
         call.postprocessor.comment_deleted(post.id, comment.id, user2.id, commented_at)
     ]
-    assert comment_postprocessor.user_manager.mock_calls == [call.postprocessor.comment_deleted(user2.id)]
 
     # simulate a comment view, verify calls
     comment.record_view_count(user.id, 1)
     view_item = comment.view_dynamo.get_view(comment.id, user.id)
     pk, sk = view_item['partitionKey'], view_item['sortKey']
     comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.user_manager = Mock(comment_postprocessor.user_manager)
     comment_postprocessor.run(pk, sk, {}, view_item)
     assert comment_postprocessor.post_manager.mock_calls == [
         call.postprocessor.comment_view_added(post.id, user.id)
     ]
-    assert comment_postprocessor.user_manager.mock_calls == []
 
 
 def test_run_comment_flag(comment_postprocessor, comment, user2):
