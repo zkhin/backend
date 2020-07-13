@@ -13,12 +13,6 @@ class PostPostProcessor:  # unfortunate namenaming
         self.comment_manager = comment_manager
 
     def run(self, pk, sk, old_item, new_item):
-        if sk == '-':
-            if new_item:
-                self.manager.init_post(new_item).on_add_or_edit(old_item)
-            else:
-                self.manager.init_post(old_item).on_delete()
-
         # could try to consolidate this in a FlagPostProcessor
         if sk.startswith('flag/'):
             post_id = pk.split('/')[1]

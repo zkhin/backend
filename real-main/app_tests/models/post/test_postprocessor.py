@@ -35,17 +35,17 @@ def test_run_post(post_postprocessor, post):
     # test an edit
     with patch.object(post_postprocessor, 'manager') as manager_mock:
         post_postprocessor.run(pk, sk, old_item, new_item)
-    assert manager_mock.mock_calls == [call.init_post(new_item), call.init_post().on_add_or_edit(old_item)]
+    assert manager_mock.mock_calls == []
 
     # test an add
     with patch.object(post_postprocessor, 'manager') as manager_mock:
         post_postprocessor.run(pk, sk, {}, new_item)
-    assert manager_mock.mock_calls == [call.init_post(new_item), call.init_post().on_add_or_edit({})]
+    assert manager_mock.mock_calls == []
 
     # test a delete
     with patch.object(post_postprocessor, 'manager') as manager_mock:
         post_postprocessor.run(pk, sk, old_item, {})
-    assert manager_mock.mock_calls == [call.init_post(old_item), call.init_post().on_delete()]
+    assert manager_mock.mock_calls == []
 
 
 def test_run_post_flag(post_postprocessor, post, user2):
@@ -191,6 +191,7 @@ def test_comment_deleted_with_post_views(
 
     # post owner views all the comments
     post_manager.record_views([post.id], user.id)
+    post_manager.on_view_add(post.id, {'sortKey': f'view/{user.id}'})
 
     # other user adds another comment
     comment3 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')

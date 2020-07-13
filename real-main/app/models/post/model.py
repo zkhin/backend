@@ -9,7 +9,6 @@ import PIL.Image
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
-from app.models.card.specs import CommentCardSpec, PostViewsCardSpec
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus
 from app.models.user.exceptions import UserException
@@ -57,41 +56,41 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     ):
         super().__init__(**kwargs)
 
-        if post_appsync:
+        if post_appsync is not None:
             self.appsync = post_appsync
-        if post_dynamo:
+        if post_dynamo is not None:
             self.dynamo = post_dynamo
-        if post_image_dynamo:
+        if post_image_dynamo is not None:
             self.image_dynamo = post_image_dynamo
-        if post_original_metadata_dynamo:
+        if post_original_metadata_dynamo is not None:
             self.original_metadata_dynamo = post_original_metadata_dynamo
 
-        if cloudfront_client:
+        if cloudfront_client is not None:
             self.cloudfront_client = cloudfront_client
-        if mediaconvert_client:
+        if mediaconvert_client is not None:
             self.mediaconvert_client = mediaconvert_client
-        if post_verification_client:
+        if post_verification_client is not None:
             self.post_verification_client = post_verification_client
-        if s3_uploads_client:
+        if s3_uploads_client is not None:
             self.s3_uploads_client = s3_uploads_client
 
-        if album_manager:
+        if album_manager is not None:
             self.album_manager = album_manager
-        if block_manager:
+        if block_manager is not None:
             self.block_manager = block_manager
-        if card_manager:
+        if card_manager is not None:
             self.card_manager = card_manager
-        if comment_manager:
+        if comment_manager is not None:
             self.comment_manager = comment_manager
-        if feed_manager:
+        if feed_manager is not None:
             self.feed_manager = feed_manager
-        if follower_manager:
+        if follower_manager is not None:
             self.follower_manager = follower_manager
-        if like_manager:
+        if like_manager is not None:
             self.like_manager = like_manager
-        if post_manager:
+        if post_manager is not None:
             self.post_manager = post_manager
-        if user_manager:
+        if user_manager is not None:
             self.user_manager = user_manager
 
         self.item = item
@@ -724,9 +723,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
 
         if self.user_id == user_id:
-            self.dynamo.clear_comments_unviewed_count(self.id)
-            self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(user_id, self.id))
-            self.dynamo.set_last_unviewed_comment_at(self.item, None)
             return False  # post owner's views don't count for trending, etc.
 
         recorded = self.trending_increment_score(now=viewed_at)
@@ -766,25 +762,3 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             return False
 
         return super().trending_increment_score(now=now, **kwargs)
-
-    def on_add_or_edit(self, old_item):
-        if self.item.get('commentsUnviewedCount', 0) != old_item.get('commentsUnviewedCount', 0):
-            self.refresh_comments_card()
-
-        # -- PostViews Card is disabled until frontend is ready to handle it --
-        # card should only be created once per post, when it goes over 5 views
-        # if self.item.get('viewedByCount', 0) > 5 and old_item.get('viewedByCount', 0) <= 5:
-        #     self.card_manager.add_or_update_card_by_spec(PostViewsCardSpec(self.user_id, self.id))
-        # -- PostViews Card is disabled until frontend is ready to handle it --
-
-    def on_delete(self):
-        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
-        self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(self.user_id, self.id))
-
-    def refresh_comments_card(self):
-        cnt = self.item.get('commentsUnviewedCount', 0)
-        card_spec = CommentCardSpec(self.user_id, self.id, unviewed_comments_count=cnt)
-        if cnt > 0:
-            self.card_manager.add_or_update_card_by_spec(card_spec)
-        else:
-            self.card_manager.remove_card_by_spec_if_exists(card_spec)

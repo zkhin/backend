@@ -8,7 +8,6 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models.card.specs import CommentCardSpec
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.post.model import Post
@@ -991,46 +990,3 @@ def test_trending_increment_score_skip_posts_over_24_hours_old(post):
     recorded = post.trending_increment_score()
     assert recorded is False
     assert post.trending_item['gsiK3SortKey'] == org_score
-
-
-@pytest.mark.parametrize(
-    'method_name, card_spec_class, dynamo_attribute',
-    [['refresh_comments_card', CommentCardSpec, 'commentsUnviewedCount']],
-)
-def test_refresh_requested_card(post, method_name, card_spec_class, dynamo_attribute):
-    card_id = card_spec_class(post.user_id, post.id).card_id
-    post.card_manager = mock.Mock(post.card_manager)
-    assert post.item.get(dynamo_attribute) is None
-
-    # refresh with None
-    with mock.patch.object(post, 'card_manager') as mocked_card_manager:
-        getattr(post, method_name)()
-    card_spec = mocked_card_manager.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert mocked_card_manager.mock_calls == [mock.call.remove_card_by_spec_if_exists(card_spec)]
-
-    # refresh with zero
-    post.item[dynamo_attribute] = 0
-    with mock.patch.object(post, 'card_manager') as mocked_card_manager:
-        getattr(post, method_name)()
-    card_spec = mocked_card_manager.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert mocked_card_manager.mock_calls == [mock.call.remove_card_by_spec_if_exists(card_spec)]
-
-    # refresh with one
-    post.item[dynamo_attribute] = 1
-    with mock.patch.object(post, 'card_manager') as mocked_card_manager:
-        getattr(post, method_name)()
-    card_spec = mocked_card_manager.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert ' 1 ' in card_spec.title
-    assert mocked_card_manager.mock_calls == [mock.call.add_or_update_card_by_spec(card_spec)]
-
-    # refresh with two
-    post.item[dynamo_attribute] = 2
-    with mock.patch.object(post, 'card_manager') as mocked_card_manager:
-        getattr(post, method_name)()
-    card_spec = mocked_card_manager.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert ' 2 ' in card_spec.title
-    assert mocked_card_manager.mock_calls == [mock.call.add_or_update_card_by_spec(card_spec)]

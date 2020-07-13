@@ -1,8 +1,11 @@
 import logging
+from unittest.mock import call, patch
 from uuid import uuid4
 
+import pendulum
 import pytest
 
+from app.models.card.specs import CommentCardSpec, PostViewsCardSpec
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostStatus, PostType
 
@@ -168,3 +171,58 @@ def test_on_like_delete(post_manager, post, like_onymous, like_anonymous, caplog
     post.refresh_item()
     assert post.item.get('onymousLikeCount', 0) == 0
     assert post.item.get('anonymousLikeCount', 0) == 0
+
+
+def test_on_view_add_view_by_post_owner_clears_unviewed_comments(post_manager, post):
+    # add some state to clear, verify
+    post_manager.dynamo.set_last_unviewed_comment_at(post.item, pendulum.now('utc'))
+    post_manager.dynamo.increment_comment_count(post.id, viewed=False)
+    post.refresh_item()
+    assert 'gsiA3PartitionKey' in post.item
+    assert post.item.get('commentsUnviewedCount', 0) == 1
+
+    # react to a view by a non-post owner, verify doesn't change state
+    post_manager.on_view_add(post.id, {'sortKey': f'view/{uuid4()}'})
+    post.refresh_item()
+    assert 'gsiA3PartitionKey' in post.item
+    assert post.item.get('commentsUnviewedCount', 0) == 1
+
+    # react to a view by post owner, verify state reset
+    post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
+    post.refresh_item()
+    assert 'gsiA3PartitionKey' not in post.item
+    assert post.item.get('commentsUnviewedCount', 0) == 0
+
+
+def test_on_view_add_view_by_post_owner_clears_cards(post_manager, post):
+    # react to a view by a non-post owner, verify no calls
+    with patch.object(post_manager, 'card_manager') as card_manager_mock:
+        post_manager.on_view_add(post.id, {'sortKey': f'view/{uuid4()}'})
+    assert len(card_manager_mock.mock_calls) == 0
+
+    # react to a view by post owner, verify calls
+    with patch.object(post_manager, 'card_manager') as card_manager_mock:
+        post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
+    assert len(card_manager_mock.mock_calls) == 2
+    card_spec0 = card_manager_mock.mock_calls[0].args[0]
+    card_spec1 = card_manager_mock.mock_calls[1].args[0]
+    assert card_spec0.card_id == CommentCardSpec(post.user_id, post.id).card_id
+    assert card_spec1.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
+    assert card_manager_mock.mock_calls == [
+        call.remove_card_by_spec_if_exists(card_spec0),
+        call.remove_card_by_spec_if_exists(card_spec1),
+    ]
+
+
+def test_on_delete_removes_cards(post_manager, post):
+    with patch.object(post_manager, 'card_manager') as card_manager_mock:
+        post_manager.on_delete(post.id, post.item)
+    assert len(card_manager_mock.mock_calls) == 2
+    card_spec0 = card_manager_mock.mock_calls[0].args[0]
+    card_spec1 = card_manager_mock.mock_calls[1].args[0]
+    assert card_spec0.card_id == CommentCardSpec(post.user_id, post.id).card_id
+    assert card_spec1.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
+    assert card_manager_mock.mock_calls == [
+        call.remove_card_by_spec_if_exists(card_spec0),
+        call.remove_card_by_spec_if_exists(card_spec1),
+    ]

@@ -34,6 +34,12 @@ deserialize = TypeDeserializer().deserialize
 
 on_attribute_change_dispatch = AttributeDispatch(
     {
+        'post': {
+            '-': {
+                post_manager.sync_comments_card: attrs(commentsUnviewedCount=0),
+                post_manager.sync_post_views_card: attrs(viewedByCount=0),
+            }
+        },
         'user': {
             'profile': {
                 user_manager.sync_user_status_due_to_chat_messages: attrs(chatMessagesForcedDeletionCount=0),
@@ -48,7 +54,7 @@ on_attribute_change_dispatch = AttributeDispatch(
                     username=None, fullName=None, lastManuallyReindexedAt=None
                 ),
             }
-        }
+        },
     }
 )
 
@@ -56,14 +62,14 @@ on_item_add_dispatch = ItemDispatch(
     {
         'comment': {'-': (user_manager.on_comment_add,)},
         'like': {'-': (post_manager.on_like_add,)},  # old, deprecated like pk format
-        'post': {'like': (post_manager.on_like_add,)},
+        'post': {'like': (post_manager.on_like_add,), 'view': (post_manager.on_view_add,)},
     }
 )
 on_item_delete_dispatch = ItemDispatch(
     {
         'like': {'-': (post_manager.on_like_delete,)},  # old, deprecated like pk format
         'comment': {'-': (user_manager.on_comment_delete,)},
-        'post': {'like': (post_manager.on_like_delete,)},
+        'post': {'-': (post_manager.on_delete,), 'like': (post_manager.on_like_delete,)},
         'user': {'profile': (card_manager.on_user_delete, user_manager.on_user_delete)},
     }
 )

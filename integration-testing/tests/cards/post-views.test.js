@@ -23,7 +23,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test.skip('PostViews card generation and format', async () => {
+test('PostViews card generation and format', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [u1Client] = await loginCache.getCleanLogin()
   const [u2Client] = await loginCache.getCleanLogin()
