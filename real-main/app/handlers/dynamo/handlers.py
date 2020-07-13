@@ -37,6 +37,7 @@ on_attribute_change_dispatch = AttributeDispatch(
         'post': {
             '-': {
                 post_manager.sync_comments_card: attrs(commentsUnviewedCount=0),
+                post_manager.sync_post_likes_card: attrs(anonymousLikeCount=0, onymousLikeCount=0),
                 post_manager.sync_post_views_card: attrs(viewedByCount=0),
             }
         },

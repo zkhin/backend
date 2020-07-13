@@ -9,7 +9,7 @@ from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
-from app.models.card.specs import CommentCardSpec, PostViewsCardSpec
+from app.models.card.specs import CommentCardSpec, PostLikesCardSpec, PostViewsCardSpec
 from app.models.like.enums import LikeStatus
 
 from .appsync import PostAppSync
@@ -286,17 +286,26 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         else:
             self.card_manager.remove_card_by_spec_if_exists(card_spec)
 
+    def sync_post_likes_card(self, post_id, old_item, new_item):
+        new_cnt = new_item.get('onymousLikeCount', 0) + new_item.get('anonymousLikeCount', 0)
+        # post likes card should be created on any new like up to but not including the 10th like
+        if 0 < new_cnt < 10:
+            user_id = (new_item or old_item)['postedByUserId']
+            card_spec = PostLikesCardSpec(user_id, post_id)
+            self.card_manager.add_or_update_card_by_spec(card_spec)  # TODO: disable for now
+
     def sync_post_views_card(self, post_id, old_item, new_item):
         old_cnt, new_cnt = (item.get('viewedByCount', 0) for item in (old_item, new_item))
-        user_id = (new_item or old_item)['postedByUserId']
-        card_spec = PostViewsCardSpec(user_id, post_id)
         # post views card should only be created once per post, when it goes over 5 views
         if new_cnt > 5 and old_cnt <= 5:
+            user_id = (new_item or old_item)['postedByUserId']
+            card_spec = PostViewsCardSpec(user_id, post_id)
             self.card_manager.add_or_update_card_by_spec(card_spec)  # TODO: disable for now
 
     def on_delete(self, post_id, old_item):
         user_id = old_item['postedByUserId']
         self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(user_id, post_id))
+        self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(user_id, post_id))
         self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(user_id, post_id))
 
     def on_like_add(self, item_id, new_item):
@@ -331,4 +340,5 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.dynamo.clear_comments_unviewed_count(post.id)
             self.dynamo.set_last_unviewed_comment_at(post.item, None)
             self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
+            self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(post.user_id, post.id))
             self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(post.user_id, post.id))

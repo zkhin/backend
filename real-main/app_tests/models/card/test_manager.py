@@ -37,6 +37,12 @@ def comment_card_spec(user, post_manager):
 
 
 @pytest.fixture
+def post_likes_card_spec(user, post_manager):
+    post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+    yield specs.PostLikesCardSpec(user.id, post.id)
+
+
+@pytest.fixture
 def post_views_card_spec(user, post_manager):
     post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
     yield specs.PostViewsCardSpec(user.id, post.id)
@@ -103,7 +109,13 @@ def test_add_card_maximal(card_manager, user):
 @pytest.mark.parametrize(
     'spec',
     pytest.lazy_fixture(
-        ['chat_card_spec', 'comment_card_spec', 'requested_followers_card_spec', 'post_views_card_spec']
+        [
+            'chat_card_spec',
+            'comment_card_spec',
+            'requested_followers_card_spec',
+            'post_likes_card_spec',
+            'post_views_card_spec',
+        ]
     ),
 )
 def test_add_and_remove_card_by_spec(user, spec, card_manager):

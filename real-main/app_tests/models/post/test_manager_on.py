@@ -5,7 +5,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card.specs import CommentCardSpec, PostViewsCardSpec
+from app.models.card.specs import CommentCardSpec, PostLikesCardSpec, PostViewsCardSpec
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostStatus, PostType
 
@@ -203,26 +203,32 @@ def test_on_view_add_view_by_post_owner_clears_cards(post_manager, post):
     # react to a view by post owner, verify calls
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
         post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
-    assert len(card_manager_mock.mock_calls) == 2
+    assert len(card_manager_mock.mock_calls) == 3
     card_spec0 = card_manager_mock.mock_calls[0].args[0]
     card_spec1 = card_manager_mock.mock_calls[1].args[0]
+    card_spec2 = card_manager_mock.mock_calls[2].args[0]
     assert card_spec0.card_id == CommentCardSpec(post.user_id, post.id).card_id
-    assert card_spec1.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
+    assert card_spec1.card_id == PostLikesCardSpec(post.user_id, post.id).card_id
+    assert card_spec2.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
     assert card_manager_mock.mock_calls == [
         call.remove_card_by_spec_if_exists(card_spec0),
         call.remove_card_by_spec_if_exists(card_spec1),
+        call.remove_card_by_spec_if_exists(card_spec2),
     ]
 
 
 def test_on_delete_removes_cards(post_manager, post):
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
         post_manager.on_delete(post.id, post.item)
-    assert len(card_manager_mock.mock_calls) == 2
+    assert len(card_manager_mock.mock_calls) == 3
     card_spec0 = card_manager_mock.mock_calls[0].args[0]
     card_spec1 = card_manager_mock.mock_calls[1].args[0]
+    card_spec2 = card_manager_mock.mock_calls[2].args[0]
     assert card_spec0.card_id == CommentCardSpec(post.user_id, post.id).card_id
-    assert card_spec1.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
+    assert card_spec1.card_id == PostLikesCardSpec(post.user_id, post.id).card_id
+    assert card_spec2.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
     assert card_manager_mock.mock_calls == [
         call.remove_card_by_spec_if_exists(card_spec0),
         call.remove_card_by_spec_if_exists(card_spec1),
+        call.remove_card_by_spec_if_exists(card_spec2),
     ]
