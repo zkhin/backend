@@ -16,7 +16,8 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test('PostViews card generation and format', async () => {
+// DISABLED until frontend implements or at least ignores the PostLikes card
+test.skip('PostViews card generation and format', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
 

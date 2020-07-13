@@ -292,7 +292,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if 0 < new_cnt < 10:
             user_id = (new_item or old_item)['postedByUserId']
             card_spec = PostLikesCardSpec(user_id, post_id)
-            self.card_manager.add_or_update_card_by_spec(card_spec)  # TODO: disable for now
+            self.card_manager.add_or_update_card_by_spec(card_spec)
 
     def sync_post_views_card(self, post_id, old_item, new_item):
         old_cnt, new_cnt = (item.get('viewedByCount', 0) for item in (old_item, new_item))
@@ -300,7 +300,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if new_cnt > 5 and old_cnt <= 5:
             user_id = (new_item or old_item)['postedByUserId']
             card_spec = PostViewsCardSpec(user_id, post_id)
-            self.card_manager.add_or_update_card_by_spec(card_spec)  # TODO: disable for now
+            self.card_manager.add_or_update_card_by_spec(card_spec)
 
     def on_delete(self, post_id, old_item):
         user_id = old_item['postedByUserId']
