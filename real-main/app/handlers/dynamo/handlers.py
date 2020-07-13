@@ -52,11 +52,14 @@ on_attribute_change_dispatch = AttributeDispatch(
     }
 )
 
-on_item_add_dispatch = ItemDispatch({'comment': {'-': (user_manager.on_comment_add,)}})
+on_item_add_dispatch = ItemDispatch(
+    {'comment': {'-': (user_manager.on_comment_add,)}, 'like': {'-': (post_manager.on_like_add,)}}
+)
 on_item_delete_dispatch = ItemDispatch(
     {
-        'user': {'profile': (card_manager.on_user_delete, user_manager.on_user_delete)},
+        'like': {'-': (post_manager.on_like_delete,)},
         'comment': {'-': (user_manager.on_comment_delete,)},
+        'user': {'profile': (card_manager.on_user_delete, user_manager.on_user_delete)},
     }
 )
 

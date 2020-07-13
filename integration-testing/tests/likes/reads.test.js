@@ -64,6 +64,7 @@ test('Order of users that have onymously liked a post', async () => {
   resp = await other1Client.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
 
   // check details on the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   let post = resp.data.post
   expect(post.likeStatus).toBe('ONYMOUSLY_LIKED')
@@ -103,6 +104,7 @@ test('Order of users that have onymously liked a post', async () => {
   expect(post.onymouslyLikedBy).toBeNull()
 
   // double check the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   post = resp.data.post
   expect(post.likeStatus).toBe('NOT_LIKED')
@@ -233,6 +235,7 @@ test('Like lists and counts are private to the owner of the post', async () => {
   expect(resp.data.onymouslyLikePost.likeStatus).toBe('ONYMOUSLY_LIKED')
 
   // verify we can see that like reflected in the totals
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.anonymousLikeCount).toBe(0)

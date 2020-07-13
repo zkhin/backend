@@ -33,29 +33,20 @@ def user2_posts(post_manager, user2):
 
 
 def test_like_post(like_manager, user1, user2, user2_posts):
+    # verify initial state
     post, _ = user2_posts
-    assert post.item.get('anonymousLikeCount', 0) == 0
-    assert post.item.get('onymousLikeCount', 0) == 0
+    assert like_manager.get_like(user1.id, post.id) is None
+    assert like_manager.get_like(user2.id, post.id) is None
 
     # like post, verify like exists
     like_manager.like_post(user1, post, LikeStatus.ANONYMOUSLY_LIKED)
     like = like_manager.get_like(user1.id, post.id)
     assert like.item['likeStatus'] == LikeStatus.ANONYMOUSLY_LIKED
 
-    # verify the post like counter is as expected
-    assert post.item['anonymousLikeCount'] == 1
-    post.refresh_item()
-    assert post.item['anonymousLikeCount'] == 1
-
     # like post the other way, verify like exists
     like_manager.like_post(user2, post, LikeStatus.ONYMOUSLY_LIKED)
     like = like_manager.get_like(user2.id, post.id)
     assert like.item['likeStatus'] == LikeStatus.ONYMOUSLY_LIKED
-
-    # verify the post like counter is as expected
-    assert post.item['onymousLikeCount'] == 1
-    post.refresh_item()
-    assert post.item['onymousLikeCount'] == 1
 
 
 def test_cant_like_post_blocked(like_manager, block_manager, user1, user2, user1_posts, user2_posts):

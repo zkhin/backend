@@ -9,6 +9,7 @@ from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
+from app.models.like.enums import LikeStatus
 
 from .appsync import PostAppSync
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
@@ -274,3 +275,27 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if user.username in post.flag_admin_usernames or post.is_crowdsourced_forced_removal_criteria_met():
             logger.warning(f'Force archiving post `{post_id}` from flagging')
             post.archive(forced=True)
+
+    def on_like_add(self, item_id, new_item):
+        # supporting old pk format
+        _, _, post_id = new_item['partitionKey'].split('/')
+        like_status = new_item['likeStatus']
+        if like_status == LikeStatus.ONYMOUSLY_LIKED:
+            incrementor = self.dynamo.increment_onymous_like_count
+        elif like_status == LikeStatus.ANONYMOUSLY_LIKED:
+            incrementor = self.dynamo.increment_anonymous_like_count
+        else:
+            raise Exception(f'Unrecognized like status `{like_status}`')
+        incrementor(post_id)
+
+    def on_like_delete(self, item_id, old_item):
+        # supporting old pk format
+        _, _, post_id = old_item['partitionKey'].split('/')
+        like_status = old_item['likeStatus']
+        if like_status == LikeStatus.ONYMOUSLY_LIKED:
+            decrementor = self.dynamo.decrement_onymous_like_count
+        elif like_status == LikeStatus.ANONYMOUSLY_LIKED:
+            decrementor = self.dynamo.decrement_anonymous_like_count
+        else:
+            raise Exception(f'Unrecognized like status `{like_status}`')
+        decrementor(post_id, fail_soft=True)

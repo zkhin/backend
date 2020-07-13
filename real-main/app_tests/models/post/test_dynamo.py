@@ -1071,8 +1071,10 @@ def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo,
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
     [
+        ['increment_anonymous_like_count', 'decrement_anonymous_like_count', 'anonymousLikeCount'],
         ['increment_comment_count', 'decrement_comment_count', 'commentCount'],
         ['increment_flag_count', 'decrement_flag_count', 'flagCount'],
+        ['increment_onymous_like_count', 'decrement_onymous_like_count', 'onymousLikeCount'],
         ['increment_viewed_by_count', None, 'viewedByCount'],
     ],
 )

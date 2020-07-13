@@ -806,7 +806,8 @@ def dislike_post(caller_user, arguments, source, context):
 
     resp = post_manager.init_post(post).serialize(caller_user.id)
     post_like_count = 'onymousLikeCount' if prev_status == LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
-    resp[post_like_count] -= 1
+    if resp.get(post_like_count, 0) > 0:
+        resp[post_like_count] -= 1
     resp['likeStatus'] = LikeStatus.NOT_LIKED
     return resp
 

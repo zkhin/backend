@@ -3,6 +3,7 @@ import pytest
 
 from app.models.like.dynamo import LikeDynamo
 from app.models.like.enums import LikeStatus
+from app.models.like.exceptions import AlreadyLiked, NotLikedWithStatus
 
 
 @pytest.fixture
@@ -20,7 +21,7 @@ def test_parse_pk(like_dynamo):
     assert post_id == 'pid'
 
 
-def test_transact_add_like(like_dynamo):
+def test_add_like(like_dynamo):
     liked_by_user_id = 'luid'
     like_status = LikeStatus.ONYMOUSLY_LIKED
     post_id = 'pid'
@@ -34,8 +35,7 @@ def test_transact_add_like(like_dynamo):
 
     # add the like to the DB
     now = pendulum.now('utc')
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, like_status, now=now)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, like_status, now=now)
 
     # verify it exists and has the correct format
     like_item = like_dynamo.get_like(liked_by_user_id, post_id)
@@ -57,7 +57,7 @@ def test_transact_add_like(like_dynamo):
     }
 
 
-def test_transact_add_like_cant_relike_post(like_dynamo):
+def test_add_like_cant_relike_post(like_dynamo):
     liked_by_user_id = 'luid'
     first_like_status = LikeStatus.ANONYMOUSLY_LIKED
     second_like_status = LikeStatus.ONYMOUSLY_LIKED
@@ -67,26 +67,21 @@ def test_transact_add_like_cant_relike_post(like_dynamo):
         'postedByUserId': 'pbuid',
     }
 
-    # add the like to the DB
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, first_like_status)
-    like_dynamo.client.transact_write_items([transact])
-
-    # verify it's there with the right status
+    # add the like to the DB, verify
+    like_dynamo.add_like(liked_by_user_id, post_item, first_like_status)
     like_item = like_dynamo.get_like(liked_by_user_id, post_id)
     assert like_item['likeStatus'] == first_like_status
 
     # verify we can't add another like with the same status
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, first_like_status)
-    with pytest.raises(like_dynamo.client.exceptions.TransactionCanceledException):
-        like_dynamo.client.transact_write_items([transact])
+    with pytest.raises(AlreadyLiked):
+        like_dynamo.add_like(liked_by_user_id, post_item, first_like_status)
 
     # verify we can't add another like with different status
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, second_like_status)
-    with pytest.raises(like_dynamo.client.exceptions.TransactionCanceledException):
-        like_dynamo.client.transact_write_items([transact])
+    with pytest.raises(AlreadyLiked):
+        like_dynamo.add_like(liked_by_user_id, post_item, second_like_status)
 
 
-def test_transact_delete_like(like_dynamo):
+def test_delete_like(like_dynamo):
     liked_by_user_id = 'luid'
     like_status = LikeStatus.ONYMOUSLY_LIKED
     post_id = 'pid'
@@ -95,18 +90,22 @@ def test_transact_delete_like(like_dynamo):
         'postedByUserId': 'pbuid',
     }
 
-    # add the like to the DB
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, like_status)
-    like_dynamo.client.transact_write_items([transact])
-
-    # verify it exists
+    # add the like to the DB, verify
+    like_dynamo.add_like(liked_by_user_id, post_item, like_status)
     assert like_dynamo.get_like(liked_by_user_id, post_id) is not None
 
-    # delete it
-    transact = like_dynamo.transact_delete_like(liked_by_user_id, post_id, like_status)
-    like_dynamo.client.transact_write_items([transact])
+    # try deleteing with wrong status, verify
+    with pytest.raises(NotLikedWithStatus):
+        like_dynamo.delete_like(liked_by_user_id, post_id, 'wrongstatus')
+    assert like_dynamo.get_like(liked_by_user_id, post_id) is not None
 
-    # verify it no longer exists
+    # delete it, verify
+    like_dynamo.delete_like(liked_by_user_id, post_id, like_status)
+    assert like_dynamo.get_like(liked_by_user_id, post_id) is None
+
+    # try deleteing doesnt exist, verify
+    with pytest.raises(NotLikedWithStatus):
+        like_dynamo.delete_like(liked_by_user_id, post_id, like_status)
     assert like_dynamo.get_like(liked_by_user_id, post_id) is None
 
 
@@ -122,8 +121,7 @@ def test_generate_of_post(like_dynamo):
         'postId': post_id,
         'postedByUserId': 'pbuid',
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_items = like_dynamo.generate_of_post(post_id)
@@ -135,8 +133,7 @@ def test_generate_of_post(like_dynamo):
         'postId': 'otherpid',
         'postedByUserId': 'pbuid',
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_items = like_dynamo.generate_of_post(post_id)
@@ -148,8 +145,7 @@ def test_generate_of_post(like_dynamo):
         'postId': post_id,
         'postedByUserId': 'pbuid',
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_items = like_dynamo.generate_of_post(post_id)
@@ -168,16 +164,14 @@ def test_generate_by_liked_by(like_dynamo):
         'postId': 'pid1',
         'postedByUserId': 'pbuid',
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_items = like_dynamo.generate_by_liked_by(liked_by_user_id)
     assert [(li['likedByUserId'], li['postId']) for li in like_items] == [('luid', 'pid1')]
 
     # add another like on that post by a different user
-    transact = like_dynamo.transact_add_like('luidother', post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like('luidother', post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_items = like_dynamo.generate_by_liked_by(liked_by_user_id)
@@ -188,8 +182,7 @@ def test_generate_by_liked_by(like_dynamo):
         'postId': 'pid2',
         'postedByUserId': 'pbuid2',
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_items = like_dynamo.generate_by_liked_by(liked_by_user_id)
@@ -209,16 +202,14 @@ def test_generate_pks_by_liked_by_for_posted_by(like_dynamo):
         'postId': 'pid1',
         'postedByUserId': posted_by_user_id,
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_pks = like_dynamo.generate_pks_by_liked_by_for_posted_by(liked_by_user_id, posted_by_user_id)
     assert [like_dynamo.parse_pk(lpk) for lpk in like_pks] == [('luid', 'pid1')]
 
     # add one like by different user by for same post owner
-    transact = like_dynamo.transact_add_like('luidother', post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like('luidother', post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_pks = like_dynamo.generate_pks_by_liked_by_for_posted_by(liked_by_user_id, posted_by_user_id)
@@ -229,8 +220,7 @@ def test_generate_pks_by_liked_by_for_posted_by(like_dynamo):
         'postId': 'pid2',
         'postedByUserId': 'pbuid1',
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_pks = like_dynamo.generate_pks_by_liked_by_for_posted_by(liked_by_user_id, posted_by_user_id)
@@ -241,8 +231,7 @@ def test_generate_pks_by_liked_by_for_posted_by(like_dynamo):
         'postId': 'pid4',
         'postedByUserId': posted_by_user_id,
     }
-    transact = like_dynamo.transact_add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
-    like_dynamo.client.transact_write_items([transact])
+    like_dynamo.add_like(liked_by_user_id, post_item, LikeStatus.ONYMOUSLY_LIKED)
 
     # generate & check
     like_pks = like_dynamo.generate_pks_by_liked_by_for_posted_by(liked_by_user_id, posted_by_user_id)

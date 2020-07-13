@@ -1,9 +1,5 @@
 import logging
 
-from app.models.post.exceptions import UnableToDecrementPostLikeCounter
-
-from .exceptions import NotLikedWithStatus
-
 logger = logging.getLogger()
 
 
@@ -18,12 +14,4 @@ class Like:
 
     def dislike(self):
         like_status = self.item['likeStatus']
-        transacts = [
-            self.dynamo.transact_delete_like(self.liked_by_user_id, self.post_id, like_status),
-            self.post_manager.dynamo.transact_decrement_like_count(self.post_id, like_status),
-        ]
-        transact_exceptions = [
-            NotLikedWithStatus(self.liked_by_user_id, self.post_id, like_status),
-            UnableToDecrementPostLikeCounter(self.post_id),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        self.dynamo.delete_like(self.liked_by_user_id, self.post_id, like_status)

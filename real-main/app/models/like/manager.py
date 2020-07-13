@@ -3,12 +3,11 @@ import logging
 from app import models
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
-from app.models.post.exceptions import PostDoesNotExist
 from app.models.user.enums import UserPrivacyStatus
 
 from .dynamo import LikeDynamo
 from .enums import LikeStatus
-from .exceptions import AlreadyLiked, LikeException
+from .exceptions import LikeException
 from .model import Like
 
 logger = logging.getLogger()
@@ -63,16 +62,7 @@ class LikeManager:
         if user.item.get('likesDisabled'):
             raise LikeException(f'Caller `{user.id}` has disabled likes')
 
-        transacts = [
-            self.dynamo.transact_add_like(user.id, post.item, like_status),
-            self.post_manager.dynamo.transact_increment_like_count(post.id, like_status),
-        ]
-        transact_exceptions = [
-            AlreadyLiked(user.id, post.id),
-            PostDoesNotExist(post.id),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-
+        self.dynamo.add_like(user.id, post.item, like_status)
         # increment the correct like counter on the in-memory copy of the post
         attr = 'onymousLikeCount' if like_status == LikeStatus.ONYMOUSLY_LIKED else 'anonymousLikeCount'
         post.item[attr] = post.item.get(attr, 0) + 1

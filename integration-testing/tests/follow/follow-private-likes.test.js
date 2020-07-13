@@ -52,6 +52,7 @@ test('When we stop following a private user, any likes of ours on their posts di
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.data.post.onymousLikeCount).toBe(1)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
@@ -73,6 +74,7 @@ test('When we stop following a private user, any likes of ours on their posts di
   await ourClient.resetStore()
 
   // check those likes disappeared from the lists
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.data.post.onymousLikeCount).toBe(0)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
@@ -120,6 +122,7 @@ test('When a private user decides to deny our following, any likes of ours on th
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.data.post.onymousLikeCount).toBe(1)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
@@ -139,6 +142,7 @@ test('When a private user decides to deny our following, any likes of ours on th
   await ourClient.resetStore()
 
   // check we can no longer see lists of likes
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.data.post.onymousLikeCount).toBe(0)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)

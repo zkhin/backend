@@ -5,10 +5,9 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Attr, Key
 
-from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostStatus
 
-from .. import enums, exceptions
+from .. import enums
 
 logger = logging.getLogger()
 
@@ -355,42 +354,17 @@ class PostDynamo:
         }
         return self.client.update_item(update_query_kwargs)
 
-    def transact_increment_like_count(self, post_id, like_status):
-        if like_status == LikeStatus.ONYMOUSLY_LIKED:
-            like_count_attribute = 'onymousLikeCount'
-        elif like_status == LikeStatus.ANONYMOUSLY_LIKED:
-            like_count_attribute = 'anonymousLikeCount'
-        else:
-            raise exceptions.PostException(f'Unrecognized like status `{like_status}`')
+    def increment_onymous_like_count(self, post_id):
+        return self.client.increment_count(self.pk(post_id), 'onymousLikeCount')
 
-        return {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'UpdateExpression': 'ADD #count_name :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'}},
-                'ExpressionAttributeNames': {'#count_name': like_count_attribute},
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            },
-        }
+    def decrement_onymous_like_count(self, post_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(post_id), 'onymousLikeCount', fail_soft=fail_soft)
 
-    def transact_decrement_like_count(self, post_id, like_status):
-        if like_status == LikeStatus.ONYMOUSLY_LIKED:
-            like_count_attribute = 'onymousLikeCount'
-        elif like_status == LikeStatus.ANONYMOUSLY_LIKED:
-            like_count_attribute = 'anonymousLikeCount'
-        else:
-            raise exceptions.PostException(f'Unrecognized like status `{like_status}`')
+    def increment_anonymous_like_count(self, post_id):
+        return self.client.increment_count(self.pk(post_id), 'anonymousLikeCount')
 
-        return {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'UpdateExpression': 'ADD #count_name :negative_one',
-                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
-                'ExpressionAttributeNames': {'#count_name': like_count_attribute},
-                # only updates and no going below zero
-                'ConditionExpression': 'attribute_exists(partitionKey) and #count_name > :zero',
-            },
-        }
+    def decrement_anonymous_like_count(self, post_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(post_id), 'anonymousLikeCount', fail_soft=fail_soft)
 
     def increment_comment_count(self, post_id, viewed=False):
         query_kwargs = {

@@ -4,6 +4,8 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
+from .exceptions import AlreadyLiked, NotLikedWithStatus
+
 logger = logging.getLogger()
 
 
@@ -11,49 +13,56 @@ class LikeDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
+    def pk(self, liked_by_user_id, post_id, old_pk_format=False):
+        return (
+            {'partitionKey': f'like/{liked_by_user_id}/{post_id}', 'sortKey': '-'}
+            if old_pk_format
+            else {'partitionKey': f'post/{post_id}', 'sortKey': f'like/{liked_by_user_id}'}
+        )
+
     def parse_pk(self, pk):
         _, liked_by_user_id, post_id = pk['partitionKey'].split('/')
         return liked_by_user_id, post_id
 
     def get_like(self, liked_by_user_id, post_id):
-        return self.client.get_item({'partitionKey': f'like/{liked_by_user_id}/{post_id}', 'sortKey': '-'})
+        return self.client.get_item(self.pk(liked_by_user_id, post_id))
 
-    def transact_add_like(self, liked_by_user_id, post_item, like_status, now=None):
+    def add_like(self, liked_by_user_id, post_item, like_status, now=None):
         now = now or pendulum.now('utc')
         liked_at_str = now.to_iso8601_string()
         post_id = post_item['postId']
         posted_by_user_id = post_item['postedByUserId']
 
-        add_like_item = {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '1'},
-                    'partitionKey': {'S': f'like/{liked_by_user_id}/{post_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'like/{liked_by_user_id}'},
-                    'gsiA1SortKey': {'S': f'{like_status}/{liked_at_str}'},
-                    'gsiA2PartitionKey': {'S': f'like/{post_id}'},
-                    'gsiA2SortKey': {'S': f'{like_status}/{liked_at_str}'},
-                    'gsiK2PartitionKey': {'S': f'like/{posted_by_user_id}'},
-                    'gsiK2SortKey': {'S': liked_by_user_id},
-                    'likedByUserId': {'S': liked_by_user_id},
-                    'likeStatus': {'S': like_status},
-                    'likedAt': {'S': liked_at_str},
-                    'postId': {'S': post_id},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # only creates
+        query_kwargs = {
+            'Item': {
+                **self.pk(liked_by_user_id, post_id),
+                'schemaVersion': 1,
+                'gsiA1PartitionKey': f'like/{liked_by_user_id}',
+                'gsiA1SortKey': f'{like_status}/{liked_at_str}',
+                'gsiA2PartitionKey': f'like/{post_id}',
+                'gsiA2SortKey': f'{like_status}/{liked_at_str}',
+                'gsiK2PartitionKey': f'like/{posted_by_user_id}',
+                'gsiK2SortKey': liked_by_user_id,
+                'likedByUserId': liked_by_user_id,
+                'likeStatus': like_status,
+                'likedAt': liked_at_str,
+                'postId': post_id,
             },
         }
-        return add_like_item
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise AlreadyLiked(liked_by_user_id, post_id)
 
-    def transact_delete_like(self, liked_by_user_id, post_id, like_status):
-        return {
-            'Delete': {
-                'Key': {'partitionKey': {'S': f'like/{liked_by_user_id}/{post_id}'}, 'sortKey': {'S': '-'}},
-                'ConditionExpression': 'likeStatus = :like_status',
-                'ExpressionAttributeValues': {':like_status': {'S': like_status}},
-            },
+    def delete_like(self, liked_by_user_id, post_id, like_status):
+        kwargs = {
+            'ConditionExpression': 'likeStatus = :like_status',
+            'ExpressionAttributeValues': {':like_status': like_status},
         }
+        try:
+            self.client.delete_item(self.pk(liked_by_user_id, post_id), **kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise NotLikedWithStatus(liked_by_user_id, post_id, like_status)
 
     def generate_of_post(self, post_id):
         query_kwargs = {

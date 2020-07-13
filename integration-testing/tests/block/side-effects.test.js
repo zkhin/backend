@@ -35,6 +35,7 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   resp = await theirClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
 
   // verify we can see the like
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.onymousLikeCount).toBe(1)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
