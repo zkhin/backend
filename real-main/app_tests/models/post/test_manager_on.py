@@ -23,14 +23,26 @@ def post(post_manager, user):
 
 
 @pytest.fixture
-def like_onymous(post, user, like_manager):
+def like_onymous_new(post, user, like_manager):
     like_manager.like_post(user, post, LikeStatus.ONYMOUSLY_LIKED)
     yield like_manager.get_like(user.id, post.id)
 
 
 @pytest.fixture
-def like_anonymous(post, user2, like_manager):
+def like_anonymous_new(post, user2, like_manager):
     like_manager.like_post(user2, post, LikeStatus.ANONYMOUSLY_LIKED)
+    yield like_manager.get_like(user2.id, post.id)
+
+
+@pytest.fixture
+def like_onymous_old(post, user, like_manager):
+    like_manager.dynamo.add_like(user.id, post.item, LikeStatus.ONYMOUSLY_LIKED, old_pk_format=True)
+    yield like_manager.get_like(user.id, post.id)
+
+
+@pytest.fixture
+def like_anonymous_old(post, user2, like_manager):
+    like_manager.dynamo.add_like(user2.id, post.item, LikeStatus.ANONYMOUSLY_LIKED, old_pk_format=True)
     yield like_manager.get_like(user2.id, post.id)
 
 
@@ -73,6 +85,13 @@ def test_on_flag_added_force_archive_by_crowdsourced_criteria(post_manager, post
     assert post.status == PostStatus.ARCHIVED
 
 
+@pytest.mark.parametrize(
+    'like_onymous, like_anonymous',
+    [
+        pytest.lazy_fixture(['like_onymous_new', 'like_anonymous_new']),
+        pytest.lazy_fixture(['like_onymous_old', 'like_anonymous_old']),
+    ],
+)
 def test_on_like_add(post_manager, post, like_onymous, like_anonymous):
     # check starting state
     post.refresh_item()
@@ -105,6 +124,13 @@ def test_on_like_add(post_manager, post, like_onymous, like_anonymous):
     assert post.item.get('anonymousLikeCount', 0) == 2
 
 
+@pytest.mark.parametrize(
+    'like_onymous, like_anonymous',
+    [
+        pytest.lazy_fixture(['like_onymous_new', 'like_anonymous_new']),
+        pytest.lazy_fixture(['like_onymous_old', 'like_anonymous_old']),
+    ],
+)
 def test_on_like_delete(post_manager, post, like_onymous, like_anonymous, caplog):
     # configure and check starting state
     post_manager.dynamo.increment_onymous_like_count(post.id)

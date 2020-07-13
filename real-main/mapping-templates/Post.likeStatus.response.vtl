@@ -2,4 +2,10 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-$util.toJson($util.defaultIfNull($ctx.result.likeStatus, 'NOT_LIKED'))
+#if (! $util.isNull($ctx.result.data.${dynamoTable}[0]))
+  #set ($result = $ctx.result.data.${dynamoTable}[0])
+#elseif (! $util.isNull($ctx.result.data.${dynamoTable}[1]))
+  #set ($result = $ctx.result.data.${dynamoTable}[1])
+#end
+
+$util.toJson($util.defaultIfNull($result.likeStatus, 'NOT_LIKED'))

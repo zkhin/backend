@@ -277,8 +277,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             post.archive(forced=True)
 
     def on_like_add(self, item_id, new_item):
-        # supporting old pk format
-        _, _, post_id = new_item['partitionKey'].split('/')
+        _, post_id = self.like_manager.dynamo.parse_pk(new_item)
         like_status = new_item['likeStatus']
         if like_status == LikeStatus.ONYMOUSLY_LIKED:
             incrementor = self.dynamo.increment_onymous_like_count
@@ -289,8 +288,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         incrementor(post_id)
 
     def on_like_delete(self, item_id, old_item):
-        # supporting old pk format
-        _, _, post_id = old_item['partitionKey'].split('/')
+        _, post_id = self.like_manager.dynamo.parse_pk(old_item)
         like_status = old_item['likeStatus']
         if like_status == LikeStatus.ONYMOUSLY_LIKED:
             decrementor = self.dynamo.decrement_onymous_like_count

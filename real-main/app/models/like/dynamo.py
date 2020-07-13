@@ -14,20 +14,25 @@ class LikeDynamo:
         self.client = dynamo_client
 
     def pk(self, liked_by_user_id, post_id, old_pk_format=False):
-        return (
-            {'partitionKey': f'like/{liked_by_user_id}/{post_id}', 'sortKey': '-'}
-            if old_pk_format
-            else {'partitionKey': f'post/{post_id}', 'sortKey': f'like/{liked_by_user_id}'}
-        )
+        if old_pk_format:
+            return {'partitionKey': f'like/{liked_by_user_id}/{post_id}', 'sortKey': '-'}
+        else:
+            return {'partitionKey': f'post/{post_id}', 'sortKey': f'like/{liked_by_user_id}'}
 
     def parse_pk(self, pk):
-        _, liked_by_user_id, post_id = pk['partitionKey'].split('/')
+        if pk['sortKey'] == '-':
+            _, liked_by_user_id, post_id = pk['partitionKey'].split('/')
+        else:
+            _, post_id = pk['partitionKey'].split('/')
+            _, liked_by_user_id = pk['sortKey'].split('/')
         return liked_by_user_id, post_id
 
     def get_like(self, liked_by_user_id, post_id):
-        return self.client.get_item(self.pk(liked_by_user_id, post_id))
+        return self.client.get_item(self.pk(liked_by_user_id, post_id)) or self.client.get_item(
+            self.pk(liked_by_user_id, post_id, old_pk_format=True)
+        )
 
-    def add_like(self, liked_by_user_id, post_item, like_status, now=None):
+    def add_like(self, liked_by_user_id, post_item, like_status, now=None, old_pk_format=False):
         now = now or pendulum.now('utc')
         liked_at_str = now.to_iso8601_string()
         post_id = post_item['postId']
@@ -35,7 +40,7 @@ class LikeDynamo:
 
         query_kwargs = {
             'Item': {
-                **self.pk(liked_by_user_id, post_id),
+                **self.pk(liked_by_user_id, post_id, old_pk_format=old_pk_format),
                 'schemaVersion': 1,
                 'gsiA1PartitionKey': f'like/{liked_by_user_id}',
                 'gsiA1SortKey': f'{like_status}/{liked_at_str}',
@@ -62,7 +67,10 @@ class LikeDynamo:
         try:
             self.client.delete_item(self.pk(liked_by_user_id, post_id), **kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise NotLikedWithStatus(liked_by_user_id, post_id, like_status)
+            try:
+                self.client.delete_item(self.pk(liked_by_user_id, post_id, old_pk_format=True), **kwargs)
+            except self.client.exceptions.ConditionalCheckFailedException:
+                raise NotLikedWithStatus(liked_by_user_id, post_id, like_status)
 
     def generate_of_post(self, post_id):
         query_kwargs = {
