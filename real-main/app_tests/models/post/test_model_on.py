@@ -58,6 +58,7 @@ def test_on_add_or_edit_calls_simple_count_change(post, attribute_name, method_n
         assert getattr(post, method_name).mock_calls == []
 
 
+@pytest.mark.skip(reason='PostViews Card is disabled until frontend is ready to handle it')
 def test_on_add_or_edit_create_post_views_card(post):
     # check starting state
     assert 'viewedByCount' not in post.item

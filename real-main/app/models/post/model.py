@@ -771,9 +771,11 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.item.get('commentsUnviewedCount', 0) != old_item.get('commentsUnviewedCount', 0):
             self.refresh_comments_card()
 
+        # -- PostViews Card is disabled until frontend is ready to handle it --
         # card should only be created once per post, when it goes over 5 views
-        if self.item.get('viewedByCount', 0) > 5 and old_item.get('viewedByCount', 0) <= 5:
-            self.card_manager.add_or_update_card_by_spec(PostViewsCardSpec(self.user_id, self.id))
+        # if self.item.get('viewedByCount', 0) > 5 and old_item.get('viewedByCount', 0) <= 5:
+        #     self.card_manager.add_or_update_card_by_spec(PostViewsCardSpec(self.user_id, self.id))
+        # -- PostViews Card is disabled until frontend is ready to handle it --
 
     def on_delete(self):
         self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(self.user_id, self.id))
