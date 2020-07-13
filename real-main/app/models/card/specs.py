@@ -89,7 +89,7 @@ class RequestedFollowersCardSpec(CardSpec):
 
     action = 'https://real.app/chat/'
     post_id = None
-    notify_user_after = None
+    notify_user_after = pendulum.duration(hours=24)
 
     def __init__(self, user_id, requested_followers_count=None):
         self.user_id = user_id
