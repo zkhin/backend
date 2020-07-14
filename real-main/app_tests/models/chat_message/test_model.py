@@ -5,7 +5,6 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.mixins.view.enums import ViewedStatus
 from app.models.block.enums import BlockStatus
 from app.models.chat_message.exceptions import ChatMessageException
 from app.models.post.enums import PostType
@@ -80,18 +79,13 @@ def test_chat_message_edit(message, user1, user2, card_manager):
 
 
 def test_chat_message_delete(message, user1, user2, card_manager):
-    # add some views of the message
-    assert message.record_view_count(user2.id, 2)
-
     # check starting state
     assert message.refresh_item().item
-    assert message.get_viewed_status(user2.id) == ViewedStatus.VIEWED
 
     # do the delete, check final state
     message.delete()
     assert message.item  # keep in-memory copy of item around so we can serialize the gql response
     assert message.refresh_item().item is None
-    assert message.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
 
 
 def test_get_author_encoded(chat_message_manager, user1, user2, user3, chat, block_manager):
@@ -157,19 +151,6 @@ def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, 
     appsync_client.reset_mock()
     message = chat_message_manager.add_system_message_group_name_edited(group_chat.id, user3, 'cname')
     assert len(appsync_client.send.mock_calls) == 3  # one for each member of the group chat
-
-
-def test_record_view_count(message, user1, user2):
-    assert message.get_viewed_status(user1.id) == ViewedStatus.VIEWED  # author
-    assert message.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
-
-    # author can't record views
-    assert message.record_view_count(user1.id, 2) is False
-    assert message.get_viewed_status(user1.id) == ViewedStatus.VIEWED
-
-    # rando can record views
-    assert message.record_view_count(user2.id, 2) is True
-    assert message.get_viewed_status(user2.id) == ViewedStatus.VIEWED
 
 
 def test_cant_flag_chat_message_of_chat_we_are_not_in(chat, message, user1, user2, user3):

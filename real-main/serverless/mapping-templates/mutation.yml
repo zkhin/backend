@@ -305,12 +305,6 @@
   response: Lambda.response.vtl
 
 - type: Mutation
-  field: reportChatMessageViews
-  dataSource: LambdaDataSource
-  request: Lambda.request.vtl
-  response: Lambda.response.vtl
-
-- type: Mutation
   field: lambdaClientError
   dataSource: LambdaDataSource
   request: Lambda.request.vtl

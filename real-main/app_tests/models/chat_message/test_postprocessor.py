@@ -1,7 +1,6 @@
 from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
-import pendulum
 import pytest
 
 
@@ -57,20 +56,6 @@ def test_run_chat_message_deleted(chat_message_postprocessor, message):
     assert chat_message_postprocessor.manager.mock_calls == [
         call.init_chat_message(message.item),
         call.init_chat_message().on_delete(),
-    ]
-
-
-def test_run_chat_message_view_added(chat_message_postprocessor, message, user2):
-    # create a view by user2
-    message.view_dynamo.add_view(message.id, user2.id, 1, pendulum.now('utc'))
-    view_item = message.view_dynamo.get_view(message.id, user2.id)
-    pk, sk = view_item['partitionKey'], view_item['sortKey']
-
-    # postprocess adding that message view, verify calls correct
-    chat_message_postprocessor.chat_manager = Mock(chat_message_postprocessor.chat_manager)
-    chat_message_postprocessor.run(pk, sk, {}, view_item)
-    assert chat_message_postprocessor.chat_manager.mock_calls == [
-        call.postprocessor.chat_message_view_added(message.chat_id, user2.id),
     ]
 
 

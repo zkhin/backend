@@ -29,13 +29,12 @@ def comment(post_manager, comment_manager, post, user):
 
 
 @pytest.fixture
-def chat_message(chat_manager, chat_message_manager, user, user2):
-    chat = chat_manager.add_direct_chat(str(uuid.uuid4()), user.id, user2.id)
-    yield chat_message_manager.add_chat_message(str(uuid.uuid4()), 'heyya', chat.id, user.id)
+def chat(chat_manager, user, user2):
+    yield chat_manager.add_direct_chat(str(uuid.uuid4()), user.id, user2.id)
 
 
 @pytest.mark.parametrize(
-    'model', pytest.lazy_fixture(['post', 'comment', 'chat_message']),
+    'model', pytest.lazy_fixture(['post', 'comment', 'chat']),
 )
 def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     # check owner has always viewed it
@@ -45,7 +44,7 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
 
 
 @pytest.mark.parametrize(
-    'model', pytest.lazy_fixture(['post', 'comment', 'chat_message']),
+    'model', pytest.lazy_fixture(['post', 'comment', 'chat']),
 )
 def test_record_get_and_delete_views(model, user2, user3):
     # check users have not viewed it

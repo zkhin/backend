@@ -25,6 +25,3 @@ class ChatPostProcessor:
             # only adds or edits of view items
             if new_item:
                 self.member_dynamo.clear_messages_unviewed_count(chat_id, user_id)
-
-    def chat_message_view_added(self, chat_id, user_id):
-        self.member_dynamo.decrement_messages_unviewed_count(chat_id, user_id, fail_soft=True)

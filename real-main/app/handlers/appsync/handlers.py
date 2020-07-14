@@ -1173,19 +1173,6 @@ def flag_chat_message(caller_user, arguments, source, context):
     return resp
 
 
-@routes.register('Mutation.reportChatMessageViews')
-@validate_caller
-def report_chat_message_views(caller_user, arguments, source, context):
-    message_ids = arguments['messageIds']
-    if len(message_ids) == 0:
-        raise ClientException('A minimum of 1 message id must be reported')
-    if len(message_ids) > 100:
-        raise ClientException('A max of 100 message ids may be reported at a time')
-
-    chat_message_manager.record_views(message_ids, caller_user.id)
-    return True
-
-
 @routes.register('Mutation.lambdaClientError')
 def lambda_client_error(caller_user_id, arguments, source, context):
     request_id = getattr(context, 'aws_request_id', None)

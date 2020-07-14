@@ -238,7 +238,6 @@ type Mutation {
   editChatMessage(messageId: ID!, text: String!): ChatMessage
   deleteChatMessage(messageId: ID!): ChatMessage
   flagChatMessage(messageId: ID!): ChatMessage
-  reportChatMessageViews(messageIds: [ID!]!): Boolean  # DEPRECATED: use reportChatViews
 
   # Used internally to fire subscription events. Calling externally is an error.
   triggerCardNotification(input: CardNotificationInput!): CardNotification!

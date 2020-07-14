@@ -746,12 +746,6 @@ module.exports.flagChatMessage = gql`
   }
 `
 
-module.exports.reportChatMessageViews = gql`
-  mutation ReportChatMessageViews($messageIds: [ID!]!) {
-    reportChatMessageViews(messageIds: $messageIds)
-  }
-`
-
 module.exports.triggerCardNotification = gql`
   mutation TriggerCardNotification($input: CardNotificationInput!) {
     triggerCardNotification(input: $input) {

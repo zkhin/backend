@@ -18,12 +18,6 @@ class ChatMessagePostProcessor:
             else:
                 self.manager.init_chat_message(old_item).on_delete()
 
-        # message view added
-        if sk.startswith('view/') and not old_item and new_item:
-            user_id = sk.split('/')[1]
-            message_item = self.dynamo.get_chat_message(message_id)
-            self.chat_manager.postprocessor.chat_message_view_added(message_item['chatId'], user_id)
-
         # could try to consolidate this in a FlagPostProcessor
         if sk.startswith('flag/'):
             user_id = sk.split('/')[1]

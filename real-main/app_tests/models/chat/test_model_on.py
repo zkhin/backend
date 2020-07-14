@@ -148,43 +148,6 @@ def test_on_message_deleted(chat, user1, user2, caplog, user1_message):
     assert chat.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 0
 
 
-def test_on_message_delete_handles_message_views_correctly(
-    chat, user1, user2, chat_message_manager, chat_manager
-):
-    message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    assert message2.created_at > message1.created_at
-
-    # postprocess adding two messages by user1, user2 views one of them
-    chat.on_message_add(message1)
-    chat.on_message_add(message2)
-    message2.view_dynamo.add_view(message2.id, user2.id, 1, pendulum.now('utc'))
-    chat_manager.postprocessor.chat_message_view_added(chat.id, user2.id)
-
-    # verify starting state
-    chat.refresh_item()
-    assert chat.item['messagesCount'] == 2
-    assert pendulum.parse(chat.item['lastMessageActivityAt']) == message2.created_at
-    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
-
-    # postprocess deleting the message user2 viewed, verify state
-    chat.on_message_delete(message2)
-    chat.refresh_item()
-    assert chat.item['messagesCount'] == 1
-    assert pendulum.parse(chat.item['lastMessageActivityAt']) == message2.created_at
-    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
-
-    # postprocess deleting the message user2 did not view, verify state
-    chat.on_message_delete(message1)
-    chat.refresh_item()
-    assert chat.item['messagesCount'] == 0
-    assert pendulum.parse(chat.item['lastMessageActivityAt']) == message2.created_at
-    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
-
-
 def test_on_message_delete_handles_chat_views_correctly(chat, user1, user2, chat_message_manager, chat_manager):
     # each user posts two messages, one of which is 'viewed' by both and the other is not
     message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)

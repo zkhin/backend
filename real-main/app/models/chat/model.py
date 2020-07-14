@@ -185,11 +185,7 @@ class Chat(ViewModelMixin):
         #   - determine if the message had status 'unviewed', and if so, then decrement the unviewed message counter
         for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
             if user_id != message.user_id:
-                message_view_deleted = self.chat_message_manager.view_dynamo.delete_view(message.id, user_id)
                 chat_view_item = self.view_dynamo.get_view(self.id, user_id)
                 chat_last_viewed_at = pendulum.parse(chat_view_item['lastViewedAt']) if chat_view_item else None
-                is_viewed = message_view_deleted or (
-                    chat_last_viewed_at and chat_last_viewed_at > message.created_at
-                )
-                if not is_viewed:
+                if not (chat_last_viewed_at and chat_last_viewed_at > message.created_at):
                     self.member_dynamo.decrement_messages_unviewed_count(self.id, user_id, fail_soft=True)

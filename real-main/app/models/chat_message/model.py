@@ -5,7 +5,6 @@ import logging
 import pendulum
 
 from app.mixins.flag.model import FlagModelMixin
-from app.mixins.view.model import ViewModelMixin
 from app.models.block.enums import BlockStatus
 
 from .exceptions import ChatMessageException
@@ -22,7 +21,7 @@ class DecimalJsonEncoder(json.JSONEncoder):
         return super(DecimalJsonEncoder, self).default(obj)
 
 
-class ChatMessage(FlagModelMixin, ViewModelMixin):
+class ChatMessage(FlagModelMixin):
 
     item_type = 'chatMessage'
 
@@ -81,7 +80,6 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
         self.item = self.dynamo.delete_chat_message(self.id)
         if forced:
             self.user_manager.dynamo.increment_chat_messages_forced_deletion_count(self.user_id)
-        self.delete_views()
         self.flag_dynamo.delete_all_for_item(self.id)
         return self
 
@@ -129,14 +127,6 @@ class ChatMessage(FlagModelMixin, ViewModelMixin):
         if serialized['blockedStatus'] == BlockStatus.BLOCKING:
             return None
         return json.dumps(serialized, cls=DecimalJsonEncoder)
-
-    def record_view_count(self, user_id, view_count, viewed_at=None):
-        # don't count views of user's own chat messages
-        if self.user_id == user_id:
-            return False
-
-        super().record_view_count(user_id, view_count, viewed_at=viewed_at)
-        return True
 
     def is_crowdsourced_forced_removal_criteria_met(self):
         # force-delete the chat message if at least 10% of the members of the chat have flagged it

@@ -2,7 +2,6 @@ from operator import itemgetter
 from unittest.mock import Mock, call
 from uuid import uuid4
 
-import pendulum
 import pytest
 
 
@@ -179,21 +178,3 @@ def test_run_view_added_edited_deleted(chat_postprocessor, chat, user1):
     # postprocess the delete, verify state did not change
     chat_postprocessor.run(pk, sk, old_item, new_item)
     assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 1
-
-
-def test_chat_message_view_added(chat_postprocessor, chat, user1, user2, chat_message_manager):
-    # postprocess adding one message by user1, verify state
-    message = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    chat.on_message_add(message)
-    chat.refresh_item()
-    assert chat.item['messagesCount'] == 1
-    assert pendulum.parse(chat.item['lastMessageActivityAt']) == message.created_at
-    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 1
-
-    # postprocess adding a view, verify state
-    chat_postprocessor.chat_message_view_added(chat.id, user2.id)
-    chat.refresh_item()
-    assert chat.item['messagesCount'] == 1
-    assert 'messagesUnviewedCount' not in chat.member_dynamo.get(chat.id, user1.id)
-    assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
