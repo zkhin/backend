@@ -195,8 +195,7 @@ def test_delete_success(trending_dynamo):
 
 
 def test_generate_keys(trending_dynamo, trending_dynamo_itype2):
-    item_only_attrs = ('schemaVersion', 'lastDeflatedAt', 'createdAt')
-
+    key_attributes = ['partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey']
     # add a distraction
     trending_dynamo_itype2.add(str(uuid.uuid4()), Decimal(42))
 
@@ -206,27 +205,15 @@ def test_generate_keys(trending_dynamo, trending_dynamo_itype2):
 
     # test generate one
     item1 = trending_dynamo.add(str(uuid.uuid4()), Decimal(42))
-    item1_expected_keys = {k: v for k, v in item1.items() if k not in item_only_attrs}
-    keys = list(trending_dynamo.generate_keys())
-    assert len(keys) == 1
-    # TODO: simplify when https://github.com/spulec/moto/issues/3055 addressed
-    assert {k: v for k, v in keys[0].items() if k not in item_only_attrs} == item1_expected_keys
+    key1 = {k: item1[k] for k in key_attributes}
+    assert list(trending_dynamo.generate_keys()) == [key1]
 
     # test generate two, in correct order
     item2 = trending_dynamo.add(str(uuid.uuid4()), Decimal(54))
-    item2_expected_keys = {k: v for k, v in item2.items() if k not in item_only_attrs}
-    keys = list(trending_dynamo.generate_keys())
-    assert len(keys) == 2
-    # TODO: simplify when https://github.com/spulec/moto/issues/3055 addressed
-    assert {k: v for k, v in keys[0].items() if k not in item_only_attrs} == item1_expected_keys
-    assert {k: v for k, v in keys[1].items() if k not in item_only_attrs} == item2_expected_keys
+    key2 = {k: item2[k] for k in key_attributes}
+    assert list(trending_dynamo.generate_keys()) == [key1, key2]
 
     # test generate three, in correct order
     item3 = trending_dynamo.add(str(uuid.uuid4()), Decimal(40))
-    item3_expected_keys = {k: v for k, v in item3.items() if k not in item_only_attrs}
-    keys = list(trending_dynamo.generate_keys())
-    assert len(keys) == 3
-    # TODO: simplify when https://github.com/spulec/moto/issues/3055 addressed
-    assert {k: v for k, v in keys[0].items() if k not in item_only_attrs} == item3_expected_keys
-    assert {k: v for k, v in keys[1].items() if k not in item_only_attrs} == item1_expected_keys
-    assert {k: v for k, v in keys[2].items() if k not in item_only_attrs} == item2_expected_keys
+    key3 = {k: item3[k] for k in key_attributes}
+    assert list(trending_dynamo.generate_keys()) == [key3, key1, key2]

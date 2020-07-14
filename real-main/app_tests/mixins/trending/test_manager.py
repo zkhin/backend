@@ -9,6 +9,7 @@ import pytest
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate(manager):
+    key_attributes = ['partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey']
 
     # test with none
     manager.trending_deflate_item = Mock()
@@ -19,7 +20,7 @@ def test_trending_deflate(manager):
     # test with one
     manager.trending_deflate_item = Mock(return_value=True)
     item1 = manager.trending_dynamo.add(str(uuid4()), Decimal(2))
-    keys1 = item1  # FIXME https://github.com/spulec/moto/issues/3055
+    keys1 = {k: item1[k] for k in key_attributes}
     now = pendulum.now('utc')
     resp = manager.trending_deflate(now=now)
     assert resp == (1, 1)
@@ -28,7 +29,7 @@ def test_trending_deflate(manager):
     # test with two, order
     manager.trending_deflate_item = Mock(return_value=False)
     item2 = manager.trending_dynamo.add(str(uuid4()), Decimal(3))
-    keys2 = item2  # FIXME https://github.com/spulec/moto/issues/3055
+    keys2 = {k: item2[k] for k in key_attributes}
     now = pendulum.now('utc')
     resp = manager.trending_deflate(now=now)
     assert resp == (2, 0)
@@ -37,7 +38,7 @@ def test_trending_deflate(manager):
     # test with three, order
     manager.trending_deflate_item = Mock(return_value=True)
     item3 = manager.trending_dynamo.add(str(uuid4()), Decimal(2.5))
-    keys3 = item3  # FIXME https://github.com/spulec/moto/issues/3055
+    keys3 = {k: item3[k] for k in key_attributes}
     now = pendulum.now('utc')
     resp = manager.trending_deflate(now=now)
     assert resp == (3, 3)
