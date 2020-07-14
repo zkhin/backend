@@ -1,7 +1,6 @@
 from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
-import pendulum
 import pytest
 
 from app.models.post.enums import PostType
@@ -32,34 +31,8 @@ def comment(comment_manager, post, user2):
     yield comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
 
 
-def test_run(comment_postprocessor, comment, post, user2, user):
+def test_run_view(comment_postprocessor, comment, post, user2, user):
     pk, sk = comment.item['partitionKey'], comment.item['sortKey']
-    commented_at = pendulum.parse(comment.item['commentedAt'])
-
-    # simulate a new comment, verify calls
-    old_item = {}
-    new_item = comment.refresh_item().item
-    comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.run(pk, sk, old_item, new_item)
-    assert comment_postprocessor.post_manager.mock_calls == [
-        call.postprocessor.comment_added(post.id, user2.id, commented_at)
-    ]
-
-    # simulate a editing a comment, verify no calls
-    old_item = new_item
-    new_item = comment.refresh_item().item
-    comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.run(pk, sk, old_item, new_item)
-    assert comment_postprocessor.post_manager.mock_calls == []
-
-    # simulate a deleteing a comment, verify calls
-    old_item = new_item
-    new_item = {}
-    comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.run(pk, sk, old_item, new_item)
-    assert comment_postprocessor.post_manager.mock_calls == [
-        call.postprocessor.comment_deleted(post.id, comment.id, user2.id, commented_at)
-    ]
 
     # simulate a comment view, verify calls
     comment.record_view_count(user.id, 1)

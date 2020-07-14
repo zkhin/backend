@@ -1,7 +1,5 @@
 import logging
 
-import pendulum
-
 logger = logging.getLogger()
 
 
@@ -14,16 +12,6 @@ class CommentPostProcessor:
 
     def run(self, pk, sk, old_item, new_item):
         comment_id = pk.split('/')[1]
-
-        # comment added, edited or deleted
-        if sk == '-':
-            post_id = (new_item or old_item)['postId']
-            user_id = (new_item or old_item)['userId']
-            created_at = pendulum.parse((new_item or old_item)['commentedAt'])
-            if not old_item and new_item:  # comment added?
-                self.post_manager.postprocessor.comment_added(post_id, user_id, created_at)
-            if old_item and not new_item:  # comment deleted?
-                self.post_manager.postprocessor.comment_deleted(post_id, comment_id, user_id, created_at)
 
         # comment view added
         if sk.startswith('view/') and not old_item and new_item:

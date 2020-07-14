@@ -232,3 +232,168 @@ def test_on_delete_removes_cards(post_manager, post):
         call.remove_card_by_spec_if_exists(card_spec1),
         call.remove_card_by_spec_if_exists(card_spec2),
     ]
+
+
+def test_on_comment_add(post_manager, post, user, user2, comment_manager):
+    # verify starting state
+    post.refresh_item()
+    assert 'commentCount' not in post.item
+    assert 'commentsUnviewedCount' not in post.item
+    assert 'gsiA3PartitionKey' not in post.item
+    assert 'gsiA3SortKey' not in post.item
+
+    # postprocess a comment by the owner, which is already viewed
+    comment = comment_manager.add_comment(str(uuid4()), post.id, user.id, 'lore')
+    post_manager.on_comment_add(comment.id, comment.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 1
+    assert 'commentsUnviewedCount' not in post.item
+    assert 'gsiA3PartitionKey' not in post.item
+    assert 'gsiA3SortKey' not in post.item
+
+    # postprocess a comment by other, which has not yet been viewed
+    now = pendulum.now('utc')
+    comment = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore', now=now)
+    post_manager.on_comment_add(comment.id, comment.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 2
+    assert post.item['commentsUnviewedCount'] == 1
+    assert post.item['gsiA3PartitionKey'].split('/') == ['post', user.id]
+    assert pendulum.parse(post.item['gsiA3SortKey']) == now
+
+    # postprocess another comment by other, which has not yet been viewed
+    now = pendulum.now('utc')
+    comment = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore', now=now)
+    post_manager.on_comment_add(comment.id, comment.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 3
+    assert post.item['commentsUnviewedCount'] == 2
+    assert post.item['gsiA3PartitionKey'].split('/') == ['post', user.id]
+    assert pendulum.parse(post.item['gsiA3SortKey']) == now
+
+
+def test_on_comment_delete(post_manager, post, user2, caplog, comment_manager):
+    # configure starting state, verify
+    post_manager.dynamo.increment_comment_count(post.id, viewed=False)
+    post_manager.dynamo.increment_comment_count(post.id, viewed=False)
+    post.refresh_item()
+    assert post.item['commentCount'] == 2
+    assert post.item['commentsUnviewedCount'] == 2
+
+    # postprocess a deleted comment, verify counts drop as expected
+    comment = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore')
+    post_manager.on_comment_delete(comment.id, comment.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 1
+    assert post.item['commentsUnviewedCount'] == 1
+
+    # postprocess a deleted comment, verify counts drop as expected
+    post_manager.on_comment_delete(comment.id, comment.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 0
+    assert post.item['commentsUnviewedCount'] == 0
+
+    # postprocess a deleted comment, verify fails softly and final state
+    with caplog.at_level(logging.WARNING):
+        post_manager.on_comment_delete(comment.id, comment.item)
+    assert len(caplog.records) == 2
+    assert 'Failed to decrement commentCount' in caplog.records[0].msg
+    assert 'Failed to decrement commentsUnviewedCount' in caplog.records[1].msg
+    assert post.id in caplog.records[0].msg
+    assert post.id in caplog.records[1].msg
+    post.refresh_item()
+    assert post.item['commentCount'] == 0
+    assert post.item['commentsUnviewedCount'] == 0
+
+
+def test_comment_deleted_with_comment_views(post_manager, post, user, user2, caplog, comment_manager):
+    # post owner adds a comment, other user adds two comments
+    comment1 = comment_manager.add_comment(str(uuid4()), post.id, user.id, 'lore ipsum')
+    comment2 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
+    comment3 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
+    post_manager.on_comment_add(comment1.id, comment1.item)
+    post_manager.on_comment_add(comment2.id, comment2.item)
+    post_manager.on_comment_add(comment3.id, comment3.item)
+
+    # post owner views one of their two comments
+    comment2.record_view_count(user.id, 1)
+    post_manager.postprocessor.comment_view_added(post.id, user.id)
+
+    # check starting state
+    post.refresh_item()
+    assert post.item['commentCount'] == 3
+    assert post.item['commentsUnviewedCount'] == 1
+
+    # other user deletes their viewed comment, check state
+    post_manager.on_comment_delete(comment2.id, comment2.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 2
+    assert post.item['commentsUnviewedCount'] == 1
+
+    # post owner deletes their own comment, check state
+    post_manager.on_comment_delete(comment1.id, comment1.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 1
+    assert post.item['commentsUnviewedCount'] == 1
+
+    # other user deletes their unviewed comment, check state
+    post_manager.on_comment_delete(comment3.id, comment3.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 0
+    assert post.item['commentsUnviewedCount'] == 0
+
+
+def test_comment_deleted_with_post_views(post_manager, post, user, user2, caplog, comment_manager):
+    # post owner adds a acomment
+    comment1 = comment_manager.add_comment(str(uuid4()), post.id, user.id, 'lore ipsum')
+    post_manager.on_comment_add(comment1.id, comment1.item)
+
+    # other user adds a comment
+    comment2 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
+    post_manager.on_comment_add(comment2.id, comment2.item)
+
+    # post owner views all the comments
+    post_manager.record_views([post.id], user.id)
+    post_manager.on_view_add(post.id, {'sortKey': f'view/{user.id}'})
+
+    # other user adds another comment
+    comment3 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
+    post_manager.on_comment_add(comment3.id, comment3.item)
+
+    # other user adds another comment
+    comment4 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
+    post_manager.on_comment_add(comment4.id, comment4.item)
+
+    # verify starting state
+    post.refresh_item()
+    assert post.item['commentCount'] == 4
+    assert post.item['commentsUnviewedCount'] == 2
+    assert pendulum.parse(post.item['gsiA3SortKey']) == comment4.created_at
+
+    # postprocess deleteing comment4, verify state
+    post_manager.on_comment_delete(comment4.id, comment4.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 3
+    assert post.item['commentsUnviewedCount'] == 1
+    assert pendulum.parse(post.item['gsiA3SortKey']) == comment4.created_at
+
+    # postprocess deleteing comment2, verify state
+    post_manager.on_comment_delete(comment2.id, comment2.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 2
+    assert post.item['commentsUnviewedCount'] == 1
+    assert pendulum.parse(post.item['gsiA3SortKey']) == comment4.created_at
+
+    # postprocess deleteing comment4, verify state
+    post_manager.on_comment_delete(comment4.id, comment4.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 1
+    assert post.item['commentsUnviewedCount'] == 0
+    assert 'gsiA3SortKey' not in post.item
+
+    # postprocess deleteing comment1, verify state
+    post_manager.on_comment_delete(comment1.id, comment1.item)
+    post.refresh_item()
+    assert post.item['commentCount'] == 0
+    assert post.item['commentsUnviewedCount'] == 0
+    assert 'gsiA3SortKey' not in post.item

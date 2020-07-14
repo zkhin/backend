@@ -6,6 +6,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
+const misc = require('../../utils/misc')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -178,6 +179,7 @@ test('resetUser deletes any likes we have placed', async () => {
   expect(resp.data.onymouslyLikePost.postId).toBe(postId)
 
   // check the post for that like
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.onymousLikeCount).toBe(1)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
@@ -191,6 +193,7 @@ test('resetUser deletes any likes we have placed', async () => {
   await theirClient.resetStore()
 
   // check the post no longer has that like
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.onymousLikeCount).toBe(0)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
@@ -295,6 +298,7 @@ test('resetUser deletes any comments we have added to posts', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check they can see our comment on the post
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
@@ -305,6 +309,7 @@ test('resetUser deletes any comments we have added to posts', async () => {
   await ourClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ourUsername}})
 
   // check the comment has disappeared
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.commentCount).toBe(0)
   expect(resp.data.post.commentsCount).toBe(0)
