@@ -7,17 +7,15 @@ def test_item_dispatch_empty():
 
 
 def test_item_dispatch_general():
+    f1, f2, f3, f4 = abs, all, any, ascii
     dispatch = ItemDispatch(
-        {
-            'pk_prefix1': {'sk_prefix11': ['f1', 'f2'], 'sk_prefix12': ['f3']},
-            'pk_prefix2': {'sk_prefix21': ['f4']},
-        }
+        {'pk_prefix1': {'sk_prefix11': [f1, f2], 'sk_prefix12': f3}, 'pk_prefix2': {'sk_prefix21': [f4]}}
     )
     assert dispatch.search('nope', 'sk_prefix11') == []
     assert dispatch.search('pk_prefix1', 'sk_prefix21') == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix12') == ['f3']
-    assert dispatch.search('pk_prefix1', 'sk_prefix11') == ['f1', 'f2']
-    assert dispatch.search('pk_prefix2', 'sk_prefix21') == ['f4']
+    assert dispatch.search('pk_prefix1', 'sk_prefix12') == [f3]
+    assert dispatch.search('pk_prefix1', 'sk_prefix11') == [f1, f2]
+    assert dispatch.search('pk_prefix2', 'sk_prefix21') == [f4]
 
 
 def test_attrs_empty():

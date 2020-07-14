@@ -62,17 +62,17 @@ on_attribute_change_dispatch = AttributeDispatch(
 
 on_item_add_dispatch = ItemDispatch(
     {
-        'comment': {'-': (user_manager.on_comment_add,)},
-        'like': {'-': (post_manager.on_like_add,)},  # old, deprecated like pk format
-        'post': {'like': (post_manager.on_like_add,), 'view': (post_manager.on_view_add,)},
+        'comment': {'-': user_manager.on_comment_add},
+        'like': {'-': post_manager.on_like_add},  # old, deprecated like pk format
+        'post': {'like': post_manager.on_like_add, 'view': post_manager.on_view_add},
     }
 )
 on_item_delete_dispatch = ItemDispatch(
     {
-        'like': {'-': (post_manager.on_like_delete,)},  # old, deprecated like pk format
-        'comment': {'-': (user_manager.on_comment_delete,)},
-        'post': {'-': (post_manager.on_delete,), 'like': (post_manager.on_like_delete,)},
-        'user': {'profile': (card_manager.on_user_delete, user_manager.on_user_delete)},
+        'like': {'-': post_manager.on_like_delete},  # old, deprecated like pk format
+        'comment': {'-': user_manager.on_comment_delete},
+        'post': {'-': post_manager.on_delete, 'like': post_manager.on_like_delete},
+        'user': {'profile': [card_manager.on_user_delete, user_manager.on_user_delete]},
     }
 )
 

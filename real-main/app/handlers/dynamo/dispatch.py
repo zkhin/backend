@@ -14,7 +14,8 @@ class ItemDispatch:
 
     def search(self, pk_prefix, sk_prefix):
         "Returns a list of matching listener functions"
-        return self.listeners.get(pk_prefix, {}).get(sk_prefix, [])
+        resp = self.listeners.get(pk_prefix, {}).get(sk_prefix, [])
+        return [resp] if callable(resp) else resp
 
 
 class AttributeDispatch:
