@@ -2,13 +2,7 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($commentView = $ctx.result.data.${dynamoTable}[0])
-#set ($postView = $ctx.result.data.${dynamoTable}[1])
-
-#if (!$util.isNull($commentView))
-  #return ('VIEWED')
-#end
-
+#set ($postView = $ctx.result)
 #if (!$util.isNull($postView))
   #set ($postLastViewedAt = $postView.lastViewedAt)
   #set ($commentCreatedAt = $ctx.source.commentedAt)

@@ -3,7 +3,6 @@
 #end
 
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
-#set ($commentId = $ctx.source.commentId)
 #set ($authorId = $ctx.source.userId)
 #set ($postId = $ctx.source.postId)
 
@@ -12,23 +11,11 @@
   #return ('VIEWED')
 #end
 
-#set ($keys = [
-  {
-    'partitionKey': { 'S': "comment/$commentId" },
-    'sortKey': { 'S': "view/$callerUserId" }
-  }, {
-    'partitionKey': {'S': "post/$postId"},
-    'sortKey': { 'S': "view/$callerUserId" }
-  }
-])
-
-
 {
   "version": "2018-05-29",
-  "operation": "BatchGetItem",
-  "tables": {
-    "${dynamoTable}": {
-      "keys": $util.toJson($keys)
-    }
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": {"S": "post/$postId"},
+    "sortKey": {"S": "view/$callerUserId"}
   }
 }

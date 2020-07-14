@@ -3,7 +3,6 @@
 #end
 
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
-#set ($messageId = $ctx.source.messageId)
 #set ($authorId = $ctx.source.userId)
 #set ($chatId = $ctx.source.chatId)
 
@@ -12,23 +11,11 @@
   #return ('VIEWED')
 #end
 
-#set ($keys = [
-  {
-    'partitionKey': { 'S': "chatMessage/$messageId" },
-    'sortKey': { 'S': "view/$callerUserId" }
-  }, {
-    'partitionKey': {'S': "chat/$chatId"},
-    'sortKey': { 'S': "view/$callerUserId" }
-  }
-])
-
-
 {
   "version": "2018-05-29",
-  "operation": "BatchGetItem",
-  "tables": {
-    "${dynamoTable}": {
-      "keys": $util.toJson($keys)
-    }
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": {"S": "chat/$chatId"},
+    "sortKey": {"S": "view/$callerUserId"}
   }
 }

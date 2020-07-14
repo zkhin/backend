@@ -2,13 +2,7 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#set ($messageView = $ctx.result.data.${dynamoTable}[0])
-#set ($chatView = $ctx.result.data.${dynamoTable}[1])
-
-#if (!$util.isNull($messageView))
-  #return ('VIEWED')
-#end
-
+#set ($chatView = $ctx.result)
 #if (!$util.isNull($chatView))
   #set ($chatLastViewedAt = $chatView.lastViewedAt)
   #set ($messageCreatedAt = $ctx.source.createdAt)
