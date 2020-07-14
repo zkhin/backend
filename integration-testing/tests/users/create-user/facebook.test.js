@@ -5,7 +5,7 @@ const rp = require('request-promise-native')
 const cognito = require('../../../utils/cognito.js')
 const {mutations} = require('../../../schema')
 
-/* Run me as a one-off, as you'll have to get a valid google id token
+/* Run me as a one-off, as you'll have to get a valid facebook access token
  * for our app. Can be generated from https://developers.facebook.com/tools/explorer/
  *
  * The email the oauth token is generated for must be one which this amazon account

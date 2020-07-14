@@ -17,7 +17,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-/* Run me manually! I don't play well with the other tests.
+/* Waring: I don't play well with the other tests.
  *
  * We don't want a user with username 'real' to be present in the DB while the other
  * tests run, because all new & reset'd users will auto-follow them, throwing off the
@@ -32,7 +32,7 @@ afterAll(async () => await loginCache.reset())
  * lambda handlers thus clearing the in-memory caches.
  */
 
-test.skip('If the `real` or `ian` users flag a post, it should be immediately archived', async () => {
+test('If the `real` or `ian` users flag a post, it should be immediately archived', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const [randoClient] = await loginCache.getCleanLogin()
 
@@ -62,13 +62,13 @@ test.skip('If the `real` or `ian` users flag a post, it should be immediately ar
   // the real user flags the first post
   resp = await realClient.mutate({mutation: mutations.flagPost, variables: {postId: postId1}})
   expect(resp.data.flagPost.postId).toBe(postId1)
-  expect(resp.data.flagPost.postStatus).toBe('ARCHIVED')
+  expect(resp.data.flagPost.postStatus).toBe('COMPLETED') // archiving happens asyncronously
   expect(resp.data.flagPost.flagStatus).toBe('FLAGGED')
 
   // the ian user flags the second post
   resp = await ianClient.mutate({mutation: mutations.flagPost, variables: {postId: postId2}})
   expect(resp.data.flagPost.postId).toBe(postId2)
-  expect(resp.data.flagPost.postStatus).toBe('ARCHIVED')
+  expect(resp.data.flagPost.postStatus).toBe('COMPLETED') // archiving happens asyncronously
   expect(resp.data.flagPost.flagStatus).toBe('FLAGGED')
 
   // a rando user flags the third post
