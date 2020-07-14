@@ -210,9 +210,6 @@ type Mutation {
   #   - trying to flag a comment we do not have access to is an error
   flagComment(commentId: ID!): Comment
 
-  # Report comment views
-  reportCommentViews(commentIds: [ID!]!): Boolean  # DEPRECATED use reportPostViews()
-
   addAlbum(albumId: ID!, name: String!, description: String): Album
   # Edit an Album
   #   - attributes to be left unchanged should be left undefined or set to null

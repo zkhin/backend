@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import call, patch
 from uuid import uuid4
 
 import pytest
@@ -29,20 +29,6 @@ def post(post_manager, user):
 @pytest.fixture
 def comment(comment_manager, post, user2):
     yield comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
-
-
-def test_run_view(comment_postprocessor, comment, post, user2, user):
-    pk, sk = comment.item['partitionKey'], comment.item['sortKey']
-
-    # simulate a comment view, verify calls
-    comment.record_view_count(user.id, 1)
-    view_item = comment.view_dynamo.get_view(comment.id, user.id)
-    pk, sk = view_item['partitionKey'], view_item['sortKey']
-    comment_postprocessor.post_manager = Mock(comment_postprocessor.post_manager)
-    comment_postprocessor.run(pk, sk, {}, view_item)
-    assert comment_postprocessor.post_manager.mock_calls == [
-        call.postprocessor.comment_view_added(post.id, user.id)
-    ]
 
 
 def test_run_comment_flag(comment_postprocessor, comment, user2):

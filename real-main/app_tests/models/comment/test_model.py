@@ -2,7 +2,6 @@ import uuid
 
 import pytest
 
-from app.mixins.view.enums import ViewedStatus
 from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType
 
@@ -90,30 +89,3 @@ def test_only_post_owner_and_comment_owner_can_delete_a_comment(
     # verify comment owner can delete their own comment, does register as new activity
     comment2.delete(deleter_user_id=user2.id)
     assert comment2.refresh_item().item is None
-
-
-def test_record_view_count(comment, user, user2, user3):
-    assert comment.get_viewed_status(user.id) == ViewedStatus.VIEWED  # author
-    assert comment.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
-    assert comment.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED
-    assert comment.refresh_item().item.get('viewedByCount', 0) == 0
-
-    # author can't record views
-    assert comment.record_view_count(user.id, 2) is False
-    assert comment.get_viewed_status(user.id) == ViewedStatus.VIEWED
-    assert comment.refresh_item().item.get('viewedByCount', 0) == 0
-
-    # rando can record views
-    assert comment.record_view_count(user2.id, 2) is True
-    assert comment.get_viewed_status(user2.id) == ViewedStatus.VIEWED
-    assert comment.refresh_item().item.get('viewedByCount', 0) == 1
-
-    # a diff rando records views
-    assert comment.record_view_count(user3.id, 1) is True
-    assert comment.get_viewed_status(user3.id) == ViewedStatus.VIEWED
-    assert comment.refresh_item().item.get('viewedByCount', 0) == 2
-
-    # same rando records views again, should not change status or viewedByCount
-    assert comment.record_view_count(user2.id, 2) is True
-    assert comment.get_viewed_status(user2.id) == ViewedStatus.VIEWED
-    assert comment.refresh_item().item.get('viewedByCount', 0) == 2

@@ -122,10 +122,7 @@ def test_generate_by_user(comment_dynamo):
 
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
-    [
-        ['increment_flag_count', 'decrement_flag_count', 'flagCount'],
-        ['increment_viewed_by_count', None, 'viewedByCount'],
-    ],
+    [['increment_flag_count', 'decrement_flag_count', 'flagCount']],
 )
 def test_increment_decrement_count(comment_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
     incrementor = getattr(comment_dynamo, incrementor_name)

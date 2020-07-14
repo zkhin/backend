@@ -205,8 +205,8 @@ test('deprecated postsByNewcCommentActivity', async () => {
   expect(resp.data.self.postsByNewCommentActivity.items).toHaveLength(1)
   expect(resp.data.self.postsByNewCommentActivity.items[0].postId).toBe(postId)
 
-  // we report to have read that comment
-  resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId]}})
+  // we report to have viewed that post
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   await misc.sleep(2000) // dynamo
 
   // check that post has no comment activity

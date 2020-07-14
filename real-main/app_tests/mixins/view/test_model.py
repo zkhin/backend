@@ -23,19 +23,11 @@ def post(post_manager, user):
 
 
 @pytest.fixture
-def comment(post_manager, comment_manager, post, user):
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
-    yield comment_manager.add_comment(str(uuid.uuid4()), post.id, user.id, 'witty comment')
-
-
-@pytest.fixture
 def chat(chat_manager, user, user2):
     yield chat_manager.add_direct_chat(str(uuid.uuid4()), user.id, user2.id)
 
 
-@pytest.mark.parametrize(
-    'model', pytest.lazy_fixture(['post', 'comment', 'chat']),
-)
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat']))
 def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     # check owner has always viewed it
     assert model.get_viewed_status(model.user_id) == ViewedStatus.VIEWED
@@ -43,9 +35,7 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     assert model.get_viewed_status(model.user_id) == ViewedStatus.VIEWED
 
 
-@pytest.mark.parametrize(
-    'model', pytest.lazy_fixture(['post', 'comment', 'chat']),
-)
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat']))
 def test_record_get_and_delete_views(model, user2, user3):
     # check users have not viewed it
     assert model.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED

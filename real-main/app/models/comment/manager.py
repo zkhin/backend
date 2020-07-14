@@ -1,4 +1,3 @@
-import collections
 import logging
 
 import pendulum
@@ -6,8 +5,6 @@ import pendulum
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
-from app.mixins.view.manager import ViewManagerMixin
-from app.models.card.specs import CommentCardSpec
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus
 
@@ -19,7 +16,7 @@ from .postprocessor import CommentPostProcessor
 logger = logging.getLogger()
 
 
-class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
+class CommentManager(FlagManagerMixin, ManagerBase):
 
     item_type = 'comment'
 
@@ -57,7 +54,6 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         kwargs = {
             'dynamo': getattr(self, 'dynamo', None),
             'flag_dynamo': getattr(self, 'flag_dynamo', None),
-            'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
             'follower_manager': self.follower_manager,
             'post_manager': self.post_manager,
@@ -94,28 +90,6 @@ class CommentManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         text_tags = self.user_manager.get_text_tags(text)
         comment_item = self.dynamo.add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now)
         return self.init_comment(comment_item)
-
-    def record_views(self, comment_ids, user_id, viewed_at=None):
-        grouped_comment_ids = dict(collections.Counter(comment_ids))
-        if not grouped_comment_ids:
-            return
-
-        post_ids = set()
-        for comment_id, view_count in grouped_comment_ids.items():
-            comment = self.get_comment(comment_id)
-            if not comment:
-                logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE comment `{comment_id}`')
-                continue
-            was_recorded = comment.record_view_count(user_id, view_count, viewed_at=viewed_at)
-            if was_recorded:
-                post_ids.add(comment.post_id)
-
-        for post_id in post_ids:
-            post = self.post_manager.get_post(post_id)
-            if user_id == post.user_id:
-                # maintaining legacy behavior. A view on any comment means that all comments have been viewed, kinda.
-                post.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
-                post.dynamo.set_last_unviewed_comment_at(post.item, None)
 
     def delete_all_by_user(self, user_id):
         for comment_item in self.dynamo.generate_by_user(user_id):

@@ -149,12 +149,6 @@
   response: Lambda.response.vtl
 
 - type: Mutation
-  field: reportCommentViews
-  dataSource: LambdaDataSource
-  request: Lambda.request.vtl
-  response: Lambda.response.vtl
-
-- type: Mutation
   field: flagComment
   dataSource: LambdaDataSource
   request: Lambda.request.vtl

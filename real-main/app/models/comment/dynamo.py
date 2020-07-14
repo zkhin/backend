@@ -60,9 +60,6 @@ class CommentDynamo:
     def decrement_flag_count(self, comment_id, fail_soft=False):
         return self.client.decrement_count(self.pk(comment_id), 'flagCount', fail_soft=fail_soft)
 
-    def increment_viewed_by_count(self, comment_id):
-        return self.client.increment_count(self.pk(comment_id), 'viewedByCount')
-
     def generate_by_post(self, post_id):
         query_kwargs = {
             'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'comment/{post_id}'),

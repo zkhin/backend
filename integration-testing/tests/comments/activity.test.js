@@ -78,8 +78,8 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(true)
 
-  // we report to have viewed one comment, the first one
-  resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId1]}})
+  // we report to have the post
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check there is now *no* new comment activity on the post & user
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -95,8 +95,8 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
 
-  // we report to have viewed comment that was no deleted, again
-  resp = await ourClient.mutate({mutation: mutations.reportCommentViews, variables: {commentIds: [commentId1]}})
+  // we report to have the post
+  resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check there is now *no* new comment activity on the post
   resp = await ourClient.query({query: queries.post, variables: {postId}})

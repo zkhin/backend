@@ -319,19 +319,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         comment = self.comment_manager.init_comment(old_item)
         self.dynamo.decrement_comment_count(comment.post_id, fail_soft=True)
 
-        # for each view of the comment delete the view record & keep track of whether it was the post owner's view
-        comment_view_deleted = False
-        for view_item in self.comment_manager.view_dynamo.generate_views(comment_id):
-            user_id = view_item['sortKey'].split('/')[1]
-            self.comment_manager.view_dynamo.delete_view(comment_id, user_id)
-            comment_view_deleted = comment_view_deleted or (comment.post and user_id == comment.post.user_id)
-
         if comment.post and comment.user_id != comment.post.user_id:
             # has the post owner 'viewed' that comment via reporting a view on the post?
             post_view_item = self.view_dynamo.get_view(comment.post_id, comment.post.user_id)
             post_last_viewed_at = pendulum.parse(post_view_item['lastViewedAt']) if post_view_item else None
-            is_viewed = comment_view_deleted or (post_last_viewed_at and post_last_viewed_at > comment.created_at)
-            if not is_viewed:
+            if not (post_last_viewed_at and post_last_viewed_at > comment.created_at):
                 post_item = self.dynamo.decrement_comments_unviewed_count(comment.post_id, fail_soft=True)
                 # if the comment unviewed count hit zero, then remove post from 'posts with unviewed comments' index
                 if post_item and post_item.get('commentsUnviewedCount', 0) == 0:

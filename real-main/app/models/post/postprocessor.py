@@ -19,9 +19,3 @@ class PostPostProcessor:  # unfortunate namenaming
                 self.manager.on_flag_added(post_id, user_id)
             if old_item and not new_item:
                 self.manager.on_flag_deleted(post_id)
-
-    def comment_view_added(self, post_id, user_id):
-        post_item = self.dynamo.get_post(post_id)
-        posted_by_user_id = post_item['postedByUserId']
-        if user_id == posted_by_user_id:
-            self.dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True)

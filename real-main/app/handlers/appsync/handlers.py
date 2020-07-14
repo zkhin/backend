@@ -857,19 +857,6 @@ def delete_comment(caller_user, arguments, source, context):
     return comment.serialize(caller_user.id)
 
 
-@routes.register('Mutation.reportCommentViews')
-@validate_caller
-def report_comment_views(caller_user, arguments, source, context):
-    comment_ids = arguments['commentIds']
-    if len(comment_ids) == 0:
-        raise ClientException('A minimum of 1 comment id must be reported')
-    if len(comment_ids) > 100:
-        raise ClientException('A max of 100 comment ids may be reported at a time')
-
-    comment_manager.record_views(comment_ids, caller_user.id)
-    return True
-
-
 @routes.register('Mutation.flagComment')
 @validate_caller
 def flag_comment(caller_user, arguments, source, context):

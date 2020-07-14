@@ -559,12 +559,6 @@ module.exports.deleteComment = gql`
   ${fragments.comment}
 `
 
-module.exports.reportCommentViews = gql`
-  mutation ReportCommentViews($commentIds: [ID!]!) {
-    reportCommentViews(commentIds: $commentIds)
-  }
-`
-
 module.exports.flagComment = gql`
   mutation FlagComment($commentId: ID!) {
     flagComment(commentId: $commentId) {

@@ -1,10 +1,8 @@
-import logging
 import uuid
 
 import pendulum
 import pytest
 
-from app.models.card.specs import CommentCardSpec
 from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
@@ -175,48 +173,3 @@ def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, us
 
     # verify the unrelated comment was untouched
     assert comment_manager.get_comment(comment_other.id)
-
-
-def test_record_views(comment_manager, user, user2, user3, post, caplog, card_manager):
-    card_spec = CommentCardSpec(user.id, post.id, unviewed_comments_count=42)
-    comment1 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
-    comment2 = comment_manager.add_comment(str(uuid.uuid4()), post.id, user2.id, 't')
-
-    # cant record view to comment that dne
-    with caplog.at_level(logging.WARNING):
-        comment_manager.record_views(['cid-dne'], user2.id)
-    assert len(caplog.records) == 1
-    assert 'cid-dne' in caplog.records[0].msg
-    assert user2.id in caplog.records[0].msg
-
-    # recording views to our own is a no-op
-    assert comment_manager.view_dynamo.get_view(comment1.id, user2.id) is None
-    assert comment_manager.view_dynamo.get_view(comment2.id, user2.id) is None
-    comment_manager.record_views([comment1.id, comment2.id], user2.id)
-    assert comment_manager.view_dynamo.get_view(comment1.id, user2.id) is None
-    assert comment_manager.view_dynamo.get_view(comment2.id, user2.id) is None
-
-    # another user can record views of our comments, which does not clear the 'coment activity' indicators
-    post.card_manager.add_or_update_card_by_spec(card_spec)
-    post.dynamo.set_last_unviewed_comment_at(post.item, pendulum.now('utc'))
-    assert post.refresh_item().item['gsiA3SortKey']
-    assert card_manager.get_card(card_spec.card_id)
-    assert comment_manager.view_dynamo.get_view(comment1.id, user3.id) is None
-    assert comment_manager.view_dynamo.get_view(comment2.id, user3.id) is None
-    comment_manager.record_views([comment1.id, comment2.id, comment1.id], user3.id)
-    assert comment_manager.view_dynamo.get_view(comment1.id, user3.id)['viewCount'] == 2
-    assert comment_manager.view_dynamo.get_view(comment2.id, user3.id)['viewCount'] == 1
-    assert post.refresh_item().item['gsiA3SortKey']
-    assert card_manager.get_card(card_spec.card_id)
-
-    # post owner records views of comment, clears 'comment activity' indicators
-    assert post.refresh_item().item['gsiA3SortKey']
-    assert card_manager.get_card(card_spec.card_id)
-    assert comment_manager.view_dynamo.get_view(comment1.id, user.id) is None
-    assert comment_manager.view_dynamo.get_view(comment2.id, user.id) is None
-    comment_manager.record_views([comment1.id, comment2.id, comment1.id], user.id)
-    assert comment_manager.view_dynamo.get_view(comment1.id, user.id)['viewCount'] == 2
-    assert comment_manager.view_dynamo.get_view(comment2.id, user.id)['viewCount'] == 1
-    assert post.refresh_item().item.get('hasNewCommentActivity', False) is False
-    assert 'gsiA3SortKey' not in post.refresh_item().item
-    assert card_manager.get_card(card_spec.card_id) is None

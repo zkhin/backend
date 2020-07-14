@@ -306,43 +306,6 @@ def test_on_comment_delete(post_manager, post, user2, caplog, comment_manager):
     assert post.item['commentsUnviewedCount'] == 0
 
 
-def test_comment_deleted_with_comment_views(post_manager, post, user, user2, caplog, comment_manager):
-    # post owner adds a comment, other user adds two comments
-    comment1 = comment_manager.add_comment(str(uuid4()), post.id, user.id, 'lore ipsum')
-    comment2 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
-    comment3 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
-    post_manager.on_comment_add(comment1.id, comment1.item)
-    post_manager.on_comment_add(comment2.id, comment2.item)
-    post_manager.on_comment_add(comment3.id, comment3.item)
-
-    # post owner views one of their two comments
-    comment2.record_view_count(user.id, 1)
-    post_manager.postprocessor.comment_view_added(post.id, user.id)
-
-    # check starting state
-    post.refresh_item()
-    assert post.item['commentCount'] == 3
-    assert post.item['commentsUnviewedCount'] == 1
-
-    # other user deletes their viewed comment, check state
-    post_manager.on_comment_delete(comment2.id, comment2.item)
-    post.refresh_item()
-    assert post.item['commentCount'] == 2
-    assert post.item['commentsUnviewedCount'] == 1
-
-    # post owner deletes their own comment, check state
-    post_manager.on_comment_delete(comment1.id, comment1.item)
-    post.refresh_item()
-    assert post.item['commentCount'] == 1
-    assert post.item['commentsUnviewedCount'] == 1
-
-    # other user deletes their unviewed comment, check state
-    post_manager.on_comment_delete(comment3.id, comment3.item)
-    post.refresh_item()
-    assert post.item['commentCount'] == 0
-    assert post.item['commentsUnviewedCount'] == 0
-
-
 def test_comment_deleted_with_post_views(post_manager, post, user, user2, caplog, comment_manager):
     # post owner adds a acomment
     comment1 = comment_manager.add_comment(str(uuid4()), post.id, user.id, 'lore ipsum')

@@ -1,7 +1,6 @@
 from unittest.mock import call, patch
 from uuid import uuid4
 
-import pendulum
 import pytest
 
 from app.models.post.enums import PostType
@@ -70,22 +69,3 @@ def test_run_post_flag(post_postprocessor, post, user2):
         post_postprocessor.run(pk, sk, flag_item, {})
     assert manager_mock.on_flag_added.mock_calls == []
     assert manager_mock.on_flag_deleted.mock_calls == [call(post.id)]
-
-
-def test_comment_view_added(post_postprocessor, post, user, user2):
-    # get some comment counts in there, check starting state
-    post.dynamo.increment_comment_count(post.id, viewed=False)
-    post.dynamo.increment_comment_count(post.id, viewed=False)
-    assert post.refresh_item().item['commentsUnviewedCount'] == 2
-
-    # postprocess a view not by the post owner, verify state
-    post_postprocessor.comment_view_added(post.id, user2.id)
-    assert post.refresh_item().item['commentsUnviewedCount'] == 2
-
-    # postprocess a view by the post owner, verify state
-    post_postprocessor.comment_view_added(post.id, user.id)
-    assert post.refresh_item().item['commentsUnviewedCount'] == 1
-
-    # another view by post owner
-    post_postprocessor.comment_view_added(post.id, user.id)
-    assert post.refresh_item().item['commentsUnviewedCount'] == 0

@@ -3,7 +3,6 @@ import logging
 import pendulum
 
 from app.mixins.flag.model import FlagModelMixin
-from app.mixins.view.model import ViewModelMixin
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus
 
@@ -12,7 +11,7 @@ from .exceptions import CommentException
 logger = logging.getLogger()
 
 
-class Comment(FlagModelMixin, ViewModelMixin):
+class Comment(FlagModelMixin):
 
     item_type = 'comment'
 
@@ -91,15 +90,3 @@ class Comment(FlagModelMixin, ViewModelMixin):
             if not follow or follow.status != FollowStatus.FOLLOWING:
                 raise CommentException(f'User does not have access to comment `{self.id}`')
         return super().flag(user)
-
-    def record_view_count(self, user_id, view_count, viewed_at=None):
-        # don't count views of user's own comments
-        if self.user_id == user_id:
-            return False
-
-        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
-
-        if is_new_view:
-            self.dynamo.increment_viewed_by_count(self.id)
-
-        return True
