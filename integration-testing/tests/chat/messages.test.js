@@ -5,7 +5,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
-const {mutations, queries} = require('../../schema')
+const {mutations, queries, subscriptions} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -668,4 +668,76 @@ test('User.chatsWithUnviewedMessages', async () => {
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
+})
+
+test('USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED subscription notifications', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+
+  // we subscribe to notifications
+  let notificationsCount = 0
+  const notificationHandlers = []
+  const notifications = [
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+  ]
+  const sub = await ourClient
+    .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
+    .subscribe({
+      next: ({data}) => {
+        if (data.onNotification.type === 'USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED') {
+          notificationsCount += 1
+          notificationHandlers.shift().resolve(data.onNotification)
+        }
+      },
+      error: (resp) => notificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
+    })
+  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000) // let the subscription initialize
+
+  // they open up a chat with us
+  const chatId1 = uuidv4()
+  await theirClient
+    .mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: ourUserId, chatId: chatId1, messageId: uuidv4(), messageText: 'lore ipsum'},
+    })
+    .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId1))
+
+  // check we received notification of increment
+  await notifications.shift().then((notif) => expect(notif.userChatsWithUnviewedMessagesCount).toBe(1))
+  expect((notificationsCount -= 1)).toBe(0)
+
+  // we open up a group chat with them
+  const chatId2 = uuidv4()
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId: chatId2, userIds: [theirUserId], messageId: uuidv4(), messageText: 'm1'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId2))
+
+  // check we received notification of increment
+  await notifications.shift().then((notif) => expect(notif.userChatsWithUnviewedMessagesCount).toBe(2))
+  expect((notificationsCount -= 1)).toBe(0)
+
+  // we view the messages in the group chat
+  await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId1]}})
+
+  // check we recieved notification of decrement
+  await notifications.shift().then((notif) => expect(notif.userChatsWithUnviewedMessagesCount).toBe(1))
+  expect((notificationsCount -= 1)).toBe(0)
+
+  // we view the messages in the first chat
+  await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId2]}})
+
+  // check we recieved notification
+  await notifications.shift().then((notif) => expect(notif.userChatsWithUnviewedMessagesCount).toBe(0))
+  expect((notificationsCount -= 1)).toBe(0)
+
+  // shut down the subscription
+  sub.unsubscribe()
+  await subInitTimeout
 })

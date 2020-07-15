@@ -740,6 +740,14 @@ module.exports.flagChatMessage = gql`
   }
 `
 
+module.exports.triggerNotification = gql`
+  mutation TriggerNotification($input: NotificationInput!) {
+    triggerNotification(input: $input) {
+      userId
+    }
+  }
+`
+
 module.exports.triggerCardNotification = gql`
   mutation TriggerCardNotification($input: CardNotificationInput!) {
     triggerCardNotification(input: $input) {

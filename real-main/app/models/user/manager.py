@@ -8,6 +8,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
+from app.utils import GqlNotificationType
 
 from .dynamo import UserDynamo
 from .enums import UserStatus
@@ -24,6 +25,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     client_names = [
         'apple',
+        'appsync',
         'cloudfront',
         'cognito',
         'elasticsearch',
@@ -277,3 +279,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.pinpoint_client.disable_user_endpoints(user_id)
         if status == UserStatus.DELETING:
             self.pinpoint_client.delete_user_endpoints(user_id)
+
+    def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, old_item, new_item):
+        self.appsync_client.fire_notification(
+            user_id,
+            GqlNotificationType.USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED,
+            userChatsWithUnviewedMessagesCount=int(new_item.get('chatsWithUnviewedMessagesCount', 0)),
+        )

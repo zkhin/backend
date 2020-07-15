@@ -21,6 +21,25 @@ class AppSyncClient:
     def __init__(self, appsync_graphql_url=APPSYNC_GRAPHQL_URL):
         self.appsync_graphql_url = appsync_graphql_url
 
+    def fire_notification(self, user_id, notification_type, **extra):
+        mutation = gql.gql(
+            f'''
+            mutation TriggerNotification ($input: NotificationInput!) {{
+                triggerNotification (input: $input) {{
+                    userId
+                    type
+                    {' '.join(extra.keys())}
+                }}
+            }}
+        '''
+        )
+        input_obj = {
+            'userId': user_id,
+            'type': notification_type,
+            **extra,
+        }
+        self.send(mutation, {'input': input_obj})
+
     def send(self, query, variables):
         aws_session = boto3.session.Session()
         creds = aws_session.get_credentials().get_frozen_credentials()

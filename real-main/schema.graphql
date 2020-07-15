@@ -237,6 +237,7 @@ type Mutation {
   flagChatMessage(messageId: ID!): ChatMessage
 
   # Used internally to fire subscription events. Calling externally is an error.
+  triggerNotification(input: NotificationInput!): Notification!
   triggerCardNotification(input: CardNotificationInput!): CardNotification!
   triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
   triggerPostNotification(input: PostNotificationInput!): PostNotification!
@@ -248,6 +249,9 @@ type Mutation {
 }
 
 type Subscription {
+  # One subscription to rule them all. New NotificaitonTypes should be added to this subscription
+  onNotification(userId: ID!): Notification @aws_subscribe(mutations: ["triggerNotification"])
+
   # Fires for changes (see CardNotificationType) to callers's cards
   #   - userId must be caller's own userId
   onCardNotification(userId: ID!): CardNotification @aws_subscribe(mutations: ["triggerCardNotification"])
@@ -260,6 +264,28 @@ type Subscription {
   # Fires for some changes (see PostNotificationType) to callers's own posts
   #   - userId must be caller's own userId
   onPostNotification(userId: ID!): PostNotification @aws_subscribe(mutations: ["triggerPostNotification"])
+}
+
+type Notification {
+  userId: ID!  # user this notification is intended for
+  type: NotificationType!
+
+  # Each of the following fields will be non-null only for some NotificationTypes,
+  # exactly which is listed in the comments for the NotificationType
+  userChatsWithUnviewedMessagesCount: Int
+}
+
+enum NotificationType {
+  # Fires when User.chatsWithUnviewedMessagesCount changes
+  #   - Notification.userChatsWithUnviewedMessagesCount: the new value
+  USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
+}
+
+input NotificationInput {
+  # Used internally to get AppSync to send notifications over GQL subscriptiosn
+  userId: ID!  # user this notification is intended for
+  type: NotificationType!
+  userChatsWithUnviewedMessagesCount: Int
 }
 
 type User {

@@ -1,11 +1,13 @@
 import logging
 import re
 import uuid
+from decimal import Decimal
 from unittest import mock
 
 import pytest
 
 from app.models.user.exceptions import UserAlreadyExists, UserValidationException
+from app.utils import GqlNotificationType
 
 
 @pytest.fixture
@@ -469,3 +471,21 @@ def test_username_tag_regex(user_manager):
 
     # uglies
     assert re.findall(reg, 'hi @._._ @4_. @A_A\n@B.4\r@333!?') == ['@._._', '@4_.', '@A_A', '@B.4', '@333']
+
+
+def test_fire_gql_subscription_chats_with_unviewed_messages_count(user_manager):
+    user_id = str(uuid.uuid4())
+    user_item = {'chatsWithUnviewedMessagesCount': Decimal(34), 'otherField': 'anything'}
+    with mock.patch.object(user_manager, 'appsync_client') as appsync_client_mock:
+        user_manager.fire_gql_subscription_chats_with_unviewed_messages_count(user_id, 'unused', user_item)
+    assert appsync_client_mock.mock_calls == [
+        mock.call.fire_notification(
+            user_id,
+            GqlNotificationType.USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED,
+            userChatsWithUnviewedMessagesCount=34,
+        )
+    ]
+    # Decimals cause problems when serializing to JSON so make sure we've converted to int
+    assert isinstance(
+        appsync_client_mock.fire_notification.call_args.kwargs['userChatsWithUnviewedMessagesCount'], int
+    )

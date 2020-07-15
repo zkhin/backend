@@ -2,6 +2,16 @@ const gql = require('graphql-tag')
 
 const fragments = require('./fragments.js')
 
+module.exports.onNotification = gql`
+  subscription OnNotification($userId: ID!) {
+    onNotification(userId: $userId) {
+      userId
+      type
+      userChatsWithUnviewedMessagesCount
+    }
+  }
+`
+
 module.exports.onCardNotification = gql`
   subscription OnCardNotification($userId: ID!) {
     onCardNotification(userId: $userId) {

@@ -49,6 +49,9 @@ on_attribute_change_dispatch = AttributeDispatch(
                 user_manager.sync_user_status_due_to_posts: attrs(postForcedArchivingCount=0),
                 user_manager.sync_requested_followers_card: attrs(followersRequestedCount=0),
                 user_manager.sync_chats_with_new_messages_card: attrs(chatsWithUnviewedMessagesCount=0),
+                user_manager.fire_gql_subscription_chats_with_unviewed_messages_count: attrs(
+                    chatsWithUnviewedMessagesCount=0
+                ),
                 user_manager.sync_pinpoint_email: attrs(email=None),
                 user_manager.sync_pinpoint_phone: attrs(phoneNumber=None),
                 user_manager.sync_pinpoint_user_status: attrs(userStatus=UserStatus.ACTIVE),
