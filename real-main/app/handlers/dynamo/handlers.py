@@ -62,6 +62,7 @@ on_attribute_change_dispatch = AttributeDispatch(
 
 on_item_add_dispatch = ItemDispatch(
     {
+        'card': {'-': user_manager.on_card_add},
         'comment': {'-': [post_manager.on_comment_add, user_manager.on_comment_add]},
         'like': {'-': post_manager.on_like_add},  # old, deprecated like pk format
         'post': {'like': post_manager.on_like_add, 'view': post_manager.on_view_add},
@@ -69,8 +70,9 @@ on_item_add_dispatch = ItemDispatch(
 )
 on_item_delete_dispatch = ItemDispatch(
     {
-        'like': {'-': post_manager.on_like_delete},  # old, deprecated like pk format
+        'card': {'-': user_manager.on_card_delete},
         'comment': {'-': [post_manager.on_comment_delete, user_manager.on_comment_delete]},
+        'like': {'-': post_manager.on_like_delete},  # old, deprecated like pk format
         'post': {'-': post_manager.on_delete, 'like': post_manager.on_like_delete},
         'user': {'profile': [card_manager.on_user_delete, user_manager.on_user_delete]},
     }

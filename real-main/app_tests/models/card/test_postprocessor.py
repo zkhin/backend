@@ -1,4 +1,3 @@
-import logging
 from unittest.mock import Mock, call
 from uuid import uuid4
 
@@ -25,45 +24,17 @@ def card(user, card_manager):
 
 
 def test_run(card_postprocessor, card, user):
-    card_postprocessor.adjust_user_card_count = Mock(card_postprocessor.adjust_user_card_count)
     card_postprocessor.send_gql_notifications = Mock(card_postprocessor.send_gql_notifications)
     pk, sk = card.item['partitionKey'], card.item['sortKey']
     old_item, new_item = {}, {}
 
     # call with an item that's not the base item, check mocks
     card_postprocessor.run(pk, 'something-else', old_item, new_item)
-    assert card_postprocessor.adjust_user_card_count.call_count == 0
     assert card_postprocessor.send_gql_notifications.call_count == 0
 
     # call with the base item, check mocks
     card_postprocessor.run(pk, sk, old_item, new_item)
-    assert card_postprocessor.adjust_user_card_count.mock_calls == [call(old_item, new_item)]
     assert card_postprocessor.send_gql_notifications.mock_calls == [call(old_item, new_item)]
-
-
-def test_adjust_user_card_count(card_postprocessor, card, user, caplog):
-    assert 'cardCount' not in user.refresh_item().item
-
-    # simulate adding
-    card_postprocessor.adjust_user_card_count({}, card.item)
-    assert user.refresh_item().item['cardCount'] == 1
-
-    # simulate editing
-    card_postprocessor.adjust_user_card_count(card.item, card.item)
-    assert user.refresh_item().item['cardCount'] == 1
-
-    # simulate deleting
-    card_postprocessor.adjust_user_card_count(card.item, {})
-    assert user.refresh_item().item['cardCount'] == 0
-
-    # simulate deleting again, verify fails softly
-    with caplog.at_level(logging.WARNING):
-        card_postprocessor.adjust_user_card_count(card.item, {})
-    assert len(caplog.records) == 1
-    assert 'Failed to decrement' in caplog.records[0].msg
-    assert 'cardCount' in caplog.records[0].msg
-    assert user.id in caplog.records[0].msg
-    assert user.refresh_item().item['cardCount'] == 0
 
 
 def test_send_gql_notifications(card_postprocessor, card, user, caplog, appsync_client):

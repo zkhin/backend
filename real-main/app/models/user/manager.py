@@ -214,6 +214,14 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.dynamo.decrement_comment_count(user_id, fail_soft=True)
         self.dynamo.increment_comment_deleted_count(user_id)
 
+    def on_card_add(self, card_id, item):
+        card = self.card_manager.init_card(item)
+        self.dynamo.increment_card_count(card.user_id)
+
+    def on_card_delete(self, card_id, item):
+        card = self.card_manager.init_card(item)
+        self.dynamo.decrement_card_count(card.user_id, fail_soft=True)
+
     def on_user_delete(self, user_id, old_item):
         self.elasticsearch_client.delete_user(user_id)
         self.pinpoint_client.delete_user_endpoints(user_id)

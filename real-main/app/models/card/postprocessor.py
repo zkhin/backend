@@ -12,15 +12,7 @@ class CardPostProcessor:
 
     def run(self, pk, sk, old_item, new_item):
         if sk == '-':
-            self.adjust_user_card_count(old_item, new_item)
             self.send_gql_notifications(old_item, new_item)
-
-    def adjust_user_card_count(self, old_item, new_item):
-        user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]
-        if new_item and not old_item:
-            self.user_manager.dynamo.increment_card_count(user_id)
-        if not new_item and old_item:
-            self.user_manager.dynamo.decrement_card_count(user_id, fail_soft=True)
 
     def send_gql_notifications(self, old_item, new_item):
         user_id = (new_item or old_item)['gsiA1PartitionKey'].split('/')[1]

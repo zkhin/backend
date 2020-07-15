@@ -20,6 +20,11 @@ def comment(user, post_manager, comment_manager):
     yield comment_manager.add_comment(str(uuid4()), post.id, user.id, 'run far')
 
 
+@pytest.fixture
+def card(user, card_manager):
+    yield card_manager.add_card(user.id, 'card title', 'https://action')
+
+
 def test_on_comment_add_adjusts_counts(user_manager, user, comment):
     # check & save starting state
     org_item = user.refresh_item().item
@@ -78,3 +83,33 @@ def test_on_user_delete_calls_pinpoint(user_manager, user):
     with patch.object(user_manager, 'pinpoint_client') as pinpoint_client_mock:
         user_manager.on_user_delete(user.id, user.item)
     assert pinpoint_client_mock.mock_calls == [call.delete_user_endpoints(user.id)]
+
+
+def test_on_card_add_increments_card_count(user_manager, user, card):
+    assert user.refresh_item().item.get('cardCount', 0) == 0
+
+    # handle add, verify state
+    user_manager.on_card_add(card.id, card.item)
+    assert user.refresh_item().item.get('cardCount', 0) == 1
+
+    # handle add, verify state
+    user_manager.on_card_add(card.id, card.item)
+    assert user.refresh_item().item.get('cardCount', 0) == 2
+
+
+def test_on_card_delete_decrements_card_count(user_manager, user, card, caplog):
+    user_manager.dynamo.increment_card_count(user.id)
+    assert user.refresh_item().item.get('cardCount', 0) == 1
+
+    # handle delete, verify state
+    user_manager.on_card_delete(card.id, card.item)
+    assert user.refresh_item().item.get('cardCount', 0) == 0
+
+    # handle delete, verify fails softly and state unchanged
+    with caplog.at_level(logging.WARNING):
+        user_manager.on_card_delete(card.id, card.item)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert 'cardCount' in caplog.records[0].msg
+    assert user.id in caplog.records[0].msg
+    assert user.refresh_item().item.get('cardCount', 0) == 0
