@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
 import pendulum
@@ -92,3 +92,18 @@ def test_get_image_url(card, post, comment_card):
     comment_card._post = Mock(**{'get_image_readonly_url.return_value': mocked_url})
     assert comment_card.get_image_url('whatevs') == mocked_url
     assert comment_card.post.mock_calls == [call.get_image_readonly_url('whatevs')]
+
+
+def test_trigger_notification(card, user):
+    with patch.object(card, 'appsync') as appsync_mock:
+        card.trigger_notification('notitype')
+    assert appsync_mock.mock_calls == [
+        call.trigger_notification(
+            'notitype',
+            user.id,
+            card.id,
+            card.item['title'],
+            card.item['action'],
+            sub_title=card.item.get('subTitle'),
+        )
+    ]

@@ -62,15 +62,16 @@ on_attribute_change_dispatch = AttributeDispatch(
 
 on_item_add_dispatch = ItemDispatch(
     {
-        'card': {'-': user_manager.on_card_add},
+        'card': {'-': [card_manager.on_card_add, user_manager.on_card_add]},
         'comment': {'-': [post_manager.on_comment_add, user_manager.on_comment_add]},
         'like': {'-': post_manager.on_like_add},  # old, deprecated like pk format
         'post': {'like': post_manager.on_like_add, 'view': post_manager.on_view_add},
     }
 )
+on_item_edit_dispatch = ItemDispatch({'card': {'-': card_manager.on_card_edit}})
 on_item_delete_dispatch = ItemDispatch(
     {
-        'card': {'-': user_manager.on_card_delete},
+        'card': {'-': [card_manager.on_card_delete, user_manager.on_card_delete]},
         'comment': {'-': [post_manager.on_comment_delete, user_manager.on_comment_delete]},
         'like': {'-': post_manager.on_like_delete},  # old, deprecated like pk format
         'post': {'-': post_manager.on_delete, 'like': post_manager.on_like_delete},
@@ -94,9 +95,6 @@ def process_records(event, context):
 
         # legacy postprocessors
         postprocessor = None
-
-        if pk.startswith('card/'):
-            postprocessor = card_manager.postprocessor
 
         if pk.startswith('chat/'):
             postprocessor = chat_manager.postprocessor
@@ -132,6 +130,16 @@ def process_records(event, context):
                     logger.info(f'{name}: `{pk}` / `{sk}` running item add: {func}')
                 try:
                     func(item_id, new_item)
+                except Exception as err:
+                    logger.exception(str(err))
+
+        # fire item edit listeners
+        if name == 'MODIFY':
+            for func in on_item_edit_dispatch.search(pk_prefix, sk_prefix):
+                with LogLevelContext(logger, logging.INFO):
+                    logger.info(f'{name}: `{pk}` / `{sk}` running item edit: {func}')
+                try:
+                    func(item_id, old_item, new_item)
                 except Exception as err:
                     logger.exception(str(err))
 

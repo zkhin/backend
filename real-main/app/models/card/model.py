@@ -8,8 +8,11 @@ logger = logging.getLogger()
 
 
 class Card:
-    def __init__(self, item, card_dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None):
-        self.dynamo = card_dynamo
+    def __init__(
+        self, item, appsync=None, dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None,
+    ):
+        self.appsync = appsync
+        self.dynamo = dynamo
         self.pinpoint_client = pinpoint_client
         self.post_manager = post_manager
         self.user_manager = user_manager
@@ -20,6 +23,7 @@ class Card:
         self.user_id = item['gsiA1PartitionKey'][len('user/') :]
         self.created_at = pendulum.parse(item['gsiA1SortKey'][len('card/') :])
         self.spec = CardSpec.from_card_id(self.id)
+        self.action = item['action']
 
     @property
     def user(self):
@@ -33,6 +37,14 @@ class Card:
             post_id = self.spec.post_id if self.spec else None
             self._post = self.post_manager.get_post(post_id) if post_id else None
         return self._post
+
+    @property
+    def title(self):
+        return self.item['title']
+
+    @property
+    def sub_title(self):
+        return self.item.get('subTitle')
 
     @property
     def has_thumbnail(self):
@@ -54,12 +66,15 @@ class Card:
     def get_image_url(self, size):
         return self.post.get_image_readonly_url(size) if self.post else None
 
+    def trigger_notification(self, notification_type):
+        self.appsync.trigger_notification(
+            notification_type, self.user_id, self.id, self.title, self.action, sub_title=self.sub_title,
+        )
+
     def notify_user(self):
         "Returns bool indicating if notification was successfully sent to user"
         # just APNS for now
-        return self.pinpoint_client.send_user_apns(
-            self.user_id, self.item['action'], self.item['title'], body=self.item.get('subTitle')
-        )
+        return self.pinpoint_client.send_user_apns(self.user_id, self.action, self.title, body=self.sub_title)
 
     def clear_notify_user_at(self):
         self.item = self.dynamo.clear_notify_user_at(self.id)

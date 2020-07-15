@@ -117,6 +117,7 @@ test('Delete card, generate new card after deleting', async () => {
   await ourClient
     .mutate({mutation: mutations.deleteCard, variables: {cardId: card.cardId}})
     .then(({data}) => expect(data.deleteCard).toEqual(card))
+  await misc.sleep(2000) // dynamo
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)

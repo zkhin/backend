@@ -7,9 +7,9 @@ from app import models
 
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
+from .enums import CardNotificationType
 from .exceptions import CardAlreadyExists
 from .model import Card
-from .postprocessor import CardPostProcessor
 from .specs import ChatCardSpec, RequestedFollowersCardSpec
 
 logger = logging.getLogger()
@@ -29,21 +29,14 @@ class CardManager:
         if 'pinpoint' in clients:
             self.pinpoint_client = clients['pinpoint']
 
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = CardPostProcessor(
-                appsync=getattr(self, 'appsync', None), user_manager=self.user_manager,
-            )
-        return self._postprocessor
-
     def get_card(self, card_id, strongly_consistent=False):
         item = self.dynamo.get_card(card_id, strongly_consistent=strongly_consistent)
         return self.init_card(item) if item else None
 
     def init_card(self, item):
         kwargs = {
-            'card_dynamo': getattr(self, 'dynamo', None),
+            'appsync': getattr(self, 'appsync', None),
+            'dynamo': getattr(self, 'dynamo', None),
             'pinpoint_client': getattr(self, 'pinpoint_client', None),
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
@@ -119,6 +112,15 @@ class CardManager:
                 # give up on the first failure for now
                 card.clear_notify_user_at()
         return total_count, success_count
+
+    def on_card_add(self, card_id, card_item):
+        self.init_card(card_item).trigger_notification(CardNotificationType.ADDED)
+
+    def on_card_edit(self, card_id, old_card_item, new_card_item):
+        self.init_card(new_card_item).trigger_notification(CardNotificationType.EDITED)
+
+    def on_card_delete(self, card_id, card_item):
+        self.init_card(card_item).trigger_notification(CardNotificationType.DELETED)
 
     def on_user_delete(self, user_id, old_item):
         self.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
