@@ -34,6 +34,7 @@ deserialize = TypeDeserializer().deserialize
 
 on_attribute_change_dispatch = AttributeDispatch(
     {
+        'chat': {'view': {chat_manager.sync_member_messages_unviewed_count: attrs(viewCount=0)}},
         'post': {
             '-': {
                 post_manager.sync_comments_card: attrs(commentsUnviewedCount=0),
