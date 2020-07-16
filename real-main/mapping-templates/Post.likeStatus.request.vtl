@@ -5,20 +5,11 @@
 #set ($callerUserId = $ctx.identity.cognitoIdentityId)
 #set ($targetPostId = $ctx.source.postId)
 
-#set ($keys = [{
-  'partitionKey': { 'S': "post/$ctx.source.postId" },
-  'sortKey': { 'S': "like/$callerUserId" }
-}, {
-  'partitionKey': { 'S': "like/$callerUserId/$targetPostId" },
-  'sortKey': { 'S': '-' }
-}])
-
 {
   "version": "2018-05-29",
-  "operation": "BatchGetItem",
-  "tables": {
-    "${dynamoTable}": {
-      "keys": $util.toJson($keys)
-    }
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": { "S": "post/$targetPostId" },
+    "sortKey": { "S": "like/$callerUserId" }
   }
 }

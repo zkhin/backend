@@ -320,9 +320,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 if post_item and post_item.get('commentsUnviewedCount', 0) == 0:
                     self.dynamo.set_last_unviewed_comment_at(post_item, None)
 
-    def on_like_add(self, item_id, new_item):
-        # supporting old primary key format for likes
-        _, post_id = self.like_manager.dynamo.parse_pk(new_item)
+    def on_like_add(self, post_id, new_item):
         like_status = new_item['likeStatus']
         if like_status == LikeStatus.ONYMOUSLY_LIKED:
             incrementor = self.dynamo.increment_onymous_like_count
@@ -332,9 +330,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             raise Exception(f'Unrecognized like status `{like_status}`')
         incrementor(post_id)
 
-    def on_like_delete(self, item_id, old_item):
-        # supporting old primary key format for likes
-        _, post_id = self.like_manager.dynamo.parse_pk(old_item)
+    def on_like_delete(self, post_id, old_item):
         like_status = old_item['likeStatus']
         if like_status == LikeStatus.ONYMOUSLY_LIKED:
             decrementor = self.dynamo.decrement_onymous_like_count

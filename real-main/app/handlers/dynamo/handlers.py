@@ -55,8 +55,6 @@ register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)
 register('comment', '-', ['REMOVE'], user_manager.on_comment_delete)
 register('comment', 'flag', ['INSERT'], comment_manager.on_flag_add)
 register('comment', 'flag', ['REMOVE'], comment_manager.on_flag_delete)
-register('like', '-', ['INSERT'], post_manager.on_like_add)  # old, deprecated like pk format
-register('like', '-', ['REMOVE'], post_manager.on_like_delete)  # old, deprecated like pk format
 register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_comments_card, {'commentsUnviewedCount': 0})
 register('post', '-', ['REMOVE'], post_manager.on_delete)
 register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
