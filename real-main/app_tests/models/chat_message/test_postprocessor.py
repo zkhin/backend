@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, call
 from uuid import uuid4
 
 import pytest
@@ -57,28 +57,3 @@ def test_run_chat_message_deleted(chat_message_postprocessor, message):
         call.init_chat_message(message.item),
         call.init_chat_message().on_delete(),
     ]
-
-
-def test_run_chat_message_flag(chat_message_postprocessor, message, user2):
-    # create a flag by user2
-    message.flag_dynamo.add(message.id, user2.id)
-    flag_item = message.flag_dynamo.get(message.id, user2.id)
-    pk, sk = flag_item['partitionKey'], flag_item['sortKey']
-
-    # postprocess adding that message flag, verify calls correct
-    with patch.object(chat_message_postprocessor, 'manager') as manager_mock:
-        chat_message_postprocessor.run(pk, sk, {}, flag_item)
-    assert manager_mock.on_flag_added.mock_calls == [call(message.id, user2.id)]
-    assert manager_mock.on_flag_deleted.mock_calls == []
-
-    # postprocess editing that message flag, verify calls correct
-    with patch.object(chat_message_postprocessor, 'manager') as manager_mock:
-        chat_message_postprocessor.run(pk, sk, flag_item, flag_item)
-    assert manager_mock.on_flag_added.mock_calls == []
-    assert manager_mock.on_flag_deleted.mock_calls == []
-
-    # postprocess deleting that message flag, verify calls correct
-    with patch.object(chat_message_postprocessor, 'manager') as manager_mock:
-        chat_message_postprocessor.run(pk, sk, flag_item, {})
-    assert manager_mock.on_flag_added.mock_calls == []
-    assert manager_mock.on_flag_deleted.mock_calls == [call(message.id)]

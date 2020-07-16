@@ -26,6 +26,12 @@ def post(post_manager, user):
 
 
 @pytest.fixture
+def flag_item(post, user2):
+    post.flag(user2)
+    yield post.flag_dynamo.get(post.id, user2.id)
+
+
+@pytest.fixture
 def like_onymous_new(post, user, like_manager):
     like_manager.like_post(user, post, LikeStatus.ONYMOUSLY_LIKED)
     yield like_manager.get_like(user.id, post.id)
@@ -49,31 +55,31 @@ def like_anonymous_old(post, user2, like_manager):
     yield like_manager.get_like(user2.id, post.id)
 
 
-def test_on_flag_added(post_manager, post, user2):
+def test_on_flag_add(post_manager, post, user2, flag_item):
     # check starting state
     assert post.refresh_item().item.get('flagCount', 0) == 0
 
     # postprocess, verify flagCount is incremented & not force achived
-    post_manager.on_flag_added(post.id, user2.id)
+    post_manager.on_flag_add(post.id, new_item=flag_item)
     assert post.refresh_item().item.get('flagCount', 0) == 1
     assert post.status != PostStatus.ARCHIVED
 
 
-def test_on_flag_added_force_archive_by_admin(post_manager, post, user2, caplog):
-    # configure and check starting state
+def test_on_flag_add_force_archive_by_admin(post_manager, post, user2, caplog, flag_item):
+    # check starting state
     assert post.refresh_item().item.get('flagCount', 0) == 0
-    user2.update_username(post.flag_admin_usernames[0])
 
     # postprocess, verify flagCount is incremented and force archived
-    with caplog.at_level(logging.WARNING):
-        post_manager.on_flag_added(post.id, user2.id)
+    with patch.object(post_manager, 'flag_admin_usernames', ('real', user2.username)):
+        with caplog.at_level(logging.WARNING):
+            post_manager.on_flag_add(post.id, new_item=flag_item)
     assert len(caplog.records) == 1
     assert 'Force archiving post' in caplog.records[0].msg
     assert post.refresh_item().item.get('flagCount', 0) == 1
     assert post.status == PostStatus.ARCHIVED
 
 
-def test_on_flag_added_force_archive_by_crowdsourced_criteria(post_manager, post, user2, caplog):
+def test_on_flag_add_force_archive_by_crowdsourced_criteria(post_manager, post, user2, caplog, flag_item):
     # configure and check starting state
     assert post.refresh_item().item.get('flagCount', 0) == 0
     for _ in range(6):
@@ -81,7 +87,7 @@ def test_on_flag_added_force_archive_by_crowdsourced_criteria(post_manager, post
 
     # postprocess, verify flagCount is incremented and force archived
     with caplog.at_level(logging.WARNING):
-        post_manager.on_flag_added(post.id, user2.id)
+        post_manager.on_flag_add(post.id, new_item=flag_item)
     assert len(caplog.records) == 1
     assert 'Force archiving post' in caplog.records[0].msg
     assert post.refresh_item().item.get('flagCount', 0) == 1

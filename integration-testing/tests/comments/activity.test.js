@@ -4,6 +4,7 @@ const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
+const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -74,6 +75,7 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId2)
 
   // check there is new comment activity on the post, user
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(true)
@@ -82,6 +84,7 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check there is now *no* new comment activity on the post & user
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
@@ -91,6 +94,7 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.data.deleteComment.commentId).toBe(commentId2)
 
   // check there is *no* new comment activity on the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
@@ -99,6 +103,7 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   resp = await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check there is now *no* new comment activity on the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)
@@ -108,6 +113,7 @@ test('Post newCommentActivity - set, reset, privacy', async () => {
   expect(resp.data.deleteComment.commentId).toBe(commentId1)
 
   // check there is no new comment activity on the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.hasNewCommentActivity).toBe(false)

@@ -108,7 +108,7 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         message.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=user_ids)
         return message
 
-    def on_flag_added(self, message_id, user_id):
+    def on_flag_add(self, message_id, new_item):
         chat_message_item = self.dynamo.increment_flag_count(message_id)
         chat_message = self.init_chat_message(chat_message_item)
 

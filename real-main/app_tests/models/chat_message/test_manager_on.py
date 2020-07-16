@@ -24,7 +24,7 @@ def message(chat_message_manager, chat, user1):
     yield chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
 
 
-def test_on_flag_added(chat_message_manager, message, user2):
+def test_on_flag_add(chat_message_manager, message, user2):
     # check & configure starting state
     assert message.refresh_item().item.get('flagCount', 0) == 0
     transact = message.chat.dynamo.transact_increment_user_count(message.chat_id)
@@ -33,11 +33,11 @@ def test_on_flag_added(chat_message_manager, message, user2):
     assert message.chat.refresh_item().item['userCount'] == 10  # just above cutoff for one flag
 
     # messageprocess, verify flagCount is incremented & not force achived
-    chat_message_manager.on_flag_added(message.id, user2.id)
+    chat_message_manager.on_flag_add(message.id, new_item={})
     assert message.refresh_item().item.get('flagCount', 0) == 1
 
 
-def test_on_flag_added_force_delete_by_crowdsourced_criteria(chat_message_manager, message, user2, caplog):
+def test_on_flag_add_force_delete_by_crowdsourced_criteria(chat_message_manager, message, user2, caplog):
     # configure and check starting state
     assert message.refresh_item().item.get('flagCount', 0) == 0
     transact = message.chat.dynamo.transact_increment_user_count(message.chat_id)
@@ -47,7 +47,7 @@ def test_on_flag_added_force_delete_by_crowdsourced_criteria(chat_message_manage
 
     # postprocess, verify flagCount is incremented and force archived
     with caplog.at_level(logging.WARNING):
-        chat_message_manager.on_flag_added(message.id, user2.id)
+        chat_message_manager.on_flag_add(message.id, new_item={})
     assert len(caplog.records) == 1
     assert 'Force deleting chat message' in caplog.records[0].msg
     assert message.refresh_item().item is None

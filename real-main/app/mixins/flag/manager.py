@@ -6,6 +6,9 @@ logger = logging.getLogger()
 
 
 class FlagManagerMixin:
+    # users that have flagging superpowers
+    flag_admin_usernames = ('real', 'ian')
+
     def __init__(self, clients, managers=None):
         super().__init__(clients, managers=managers)
         if 'dynamo' in clients:
@@ -16,8 +19,8 @@ class FlagManagerMixin:
             # this could be performance and edge-case optimized
             self.get_model(item_id).unflag(user_id)
 
-    def on_flag_added(self, item_id, user_id):
+    def on_flag_add(self, item_id, new_item):
         raise NotImplementedError('Subclasses must implement')
 
-    def on_flag_deleted(self, item_id):
+    def on_flag_delete(self, item_id, old_item):
         self.dynamo.decrement_flag_count(item_id, fail_soft=True)

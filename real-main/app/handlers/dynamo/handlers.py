@@ -47,14 +47,20 @@ register(
     {'messagesUnviewedCount': 0},
 )
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
+register('chatMessage', 'flag', ['INSERT'], chat_message_manager.on_flag_add)
+register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
 register('comment', '-', ['INSERT'], user_manager.on_comment_add)
 register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)
 register('comment', '-', ['REMOVE'], user_manager.on_comment_delete)
+register('comment', 'flag', ['INSERT'], comment_manager.on_flag_add)
+register('comment', 'flag', ['REMOVE'], comment_manager.on_flag_delete)
 register('like', '-', ['INSERT'], post_manager.on_like_add)  # old, deprecated like pk format
 register('like', '-', ['REMOVE'], post_manager.on_like_delete)  # old, deprecated like pk format
 register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_comments_card, {'commentsUnviewedCount': 0})
 register('post', '-', ['REMOVE'], post_manager.on_delete)
+register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
+register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
 register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
 register('post', 'view', ['INSERT'], post_manager.on_view_add)
@@ -147,12 +153,6 @@ def process_records(event, context):
 
         if pk.startswith('chatMessage/'):
             postprocessor = chat_message_manager.postprocessor
-
-        if pk.startswith('comment/'):
-            postprocessor = comment_manager.postprocessor
-
-        if pk.startswith('post/'):
-            postprocessor = post_manager.postprocessor
 
         if pk.startswith('user/') and sk.startswith('follower/'):
             postprocessor = follower_manager.postprocessor

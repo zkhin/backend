@@ -73,18 +73,18 @@ def test_unflag_all_by_user(manager, model1, model2, user2):
         pytest.lazy_fixture(['chat_message_manager', 'message']),
     ],
 )
-def test_on_flag_deleted(manager, model, caplog):
+def test_on_flag_delete(manager, model, caplog):
     # configure and check starting state
     manager.dynamo.increment_flag_count(model.id)
     assert model.refresh_item().item.get('flagCount', 0) == 1
 
     # postprocess, verify flagCount is decremented
-    manager.on_flag_deleted(model.id)
+    manager.on_flag_delete(model.id, model.item)
     assert model.refresh_item().item.get('flagCount', 0) == 0
 
     # postprocess again, verify fails softly
     with caplog.at_level(logging.WARNING):
-        manager.on_flag_deleted(model.id)
+        manager.on_flag_delete(model.id, model.item)
     assert len(caplog.records) == 1
     assert 'Failed to decrement flagCount' in caplog.records[0].msg
     assert model.refresh_item().item.get('flagCount', 0) == 0

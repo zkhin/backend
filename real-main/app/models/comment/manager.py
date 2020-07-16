@@ -11,7 +11,6 @@ from app.models.user.enums import UserPrivacyStatus
 from .dynamo import CommentDynamo
 from .exceptions import CommentException
 from .model import Comment
-from .postprocessor import CommentPostProcessor
 
 logger = logging.getLogger()
 
@@ -31,17 +30,6 @@ class CommentManager(FlagManagerMixin, ManagerBase):
 
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
-
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = CommentPostProcessor(
-                dynamo=getattr(self, 'dynamo', None),
-                manager=self,
-                post_manager=self.post_manager,
-                user_manager=self.user_manager,
-            )
-        return self._postprocessor
 
     def get_model(self, item_id):
         return self.get_comment(item_id)
@@ -99,15 +87,17 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         for comment_item in self.dynamo.generate_by_post(post_id):
             self.init_comment(comment_item).delete()
 
-    def on_flag_added(self, comment_id, user_id):
+    def on_flag_add(self, comment_id, new_item):
         comment_item = self.dynamo.increment_flag_count(comment_id)
         comment = self.init_comment(comment_item)
 
+        user_id = new_item['sortKey'].split('/')[1]
+        flagger = self.user_manager.get_user(user_id)
+
         # force delete the comment?
-        user = self.user_manager.get_user(user_id)
         if (
-            user_id == comment.post.user_id
-            or user.username in comment.flag_admin_usernames
+            flagger.id == comment.post.user_id
+            or flagger.username in self.flag_admin_usernames
             or comment.is_crowdsourced_forced_removal_criteria_met()
         ):
             logger.warning(f'Force deleting comment `{comment_id}` from flagging')

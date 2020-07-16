@@ -17,7 +17,6 @@ from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
 from .enums import PostType
 from .exceptions import PostException
 from .model import Post
-from .postprocessor import PostPostProcessor
 
 logger = logging.getLogger()
 
@@ -46,17 +45,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.dynamo = PostDynamo(clients['dynamo'])
             self.image_dynamo = PostImageDynamo(clients['dynamo'])
             self.original_metadata_dynamo = PostOriginalMetadataDynamo(clients['dynamo'])
-
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = PostPostProcessor(
-                dynamo=getattr(self, 'dynamo', None),
-                view_dynamo=getattr(self, 'view_dynamo', None),
-                manager=self,
-                comment_manager=self.comment_manager,
-            )
-        return self._postprocessor
 
     def get_model(self, item_id, strongly_consistent=False):
         return self.get_post(item_id, strongly_consistent=strongly_consistent)
@@ -267,13 +255,15 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()
 
-    def on_flag_added(self, post_id, user_id):
+    def on_flag_add(self, post_id, new_item):
         post_item = self.dynamo.increment_flag_count(post_id)
         post = self.init_post(post_item)
 
+        user_id = new_item['sortKey'].split('/')[1]
+        flagger = self.user_manager.get_user(user_id)
+
         # force archive the post?
-        user = self.user_manager.get_user(user_id)
-        if user.username in post.flag_admin_usernames or post.is_crowdsourced_forced_removal_criteria_met():
+        if flagger.username in self.flag_admin_usernames or post.is_crowdsourced_forced_removal_criteria_met():
             logger.warning(f'Force archiving post `{post_id}` from flagging')
             post.archive(forced=True)
 
