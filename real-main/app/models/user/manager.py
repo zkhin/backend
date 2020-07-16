@@ -280,6 +280,17 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         if status == UserStatus.DELETING:
             self.pinpoint_client.delete_user_endpoints(user_id)
 
+    def sync_chats_with_unviewed_messages_count(self, chat_id, new_item=None, old_item=None):
+        "Sync User.chatsWithUnviewedMessagesCount to changes to chat member items"
+        # digging kinda deep into the chat member object from here... should probably make a ChatMember class
+        user_id = (new_item or old_item)['sortKey'].split('/')[1]
+        new_count = (new_item or {}).get('messagesUnviewedCount', 0)
+        old_count = (old_item or {}).get('messagesUnviewedCount', 0)
+        if old_count == 0 and new_count > 0:
+            self.dynamo.increment_chats_with_unviewed_messages_count(user_id)
+        if old_count > 0 and new_count == 0:
+            self.dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
+
     def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, new_item, old_item=None):
         self.appsync_client.fire_notification(
             user_id,

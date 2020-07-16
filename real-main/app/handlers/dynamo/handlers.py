@@ -39,6 +39,13 @@ register('card', '-', ['INSERT'], user_manager.on_card_add)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)
 register('card', '-', ['REMOVE'], card_manager.on_card_delete)
 register('card', '-', ['REMOVE'], user_manager.on_card_delete)
+register(
+    'chat',
+    'member',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    user_manager.sync_chats_with_unviewed_messages_count,
+    {'messagesUnviewedCount': 0},
+)
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
 register('comment', '-', ['INSERT'], user_manager.on_comment_add)
@@ -137,9 +144,6 @@ def process_records(event, context):
 
         # legacy postprocessors
         postprocessor = None
-
-        if pk.startswith('chat/'):
-            postprocessor = chat_manager.postprocessor
 
         if pk.startswith('chatMessage/'):
             postprocessor = chat_message_manager.postprocessor

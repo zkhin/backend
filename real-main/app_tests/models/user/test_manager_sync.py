@@ -15,6 +15,14 @@ def user(user_manager, cognito_client):
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
+user2 = user
+
+
+@pytest.fixture
+def chat(chat_manager, user, user2):
+    yield chat_manager.add_direct_chat(str(uuid4()), user.id, user2.id)
+
+
 @pytest.mark.parametrize(
     'method_name, check_method_name, log_pattern',
     [
@@ -137,3 +145,65 @@ def test_sync_pinpoint_user_status(user_manager, user):
     with patch.object(user_manager, 'pinpoint_client') as pinpoint_client_mock:
         user_manager.sync_pinpoint_user_status(user.id, user.item, user.item)
     assert pinpoint_client_mock.mock_calls == [call.delete_user_endpoints(user.id)]
+
+
+def test_sync_chats_with_unviewed_messages_count_chat_member_added(user_manager, chat, user):
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 0
+
+    # sync add of member with no unviewed message count, verify
+    new_item = chat.member_dynamo.get(chat.id, user.id)
+    assert 'messagesUnviewedCount' not in new_item
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item=new_item, old_item={})
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 0
+
+    # synd add of member with some unviewed message count, verify
+    new_item = chat.member_dynamo.increment_messages_unviewed_count(chat.id, user.id)
+    assert new_item['messagesUnviewedCount'] == 1
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item=new_item, old_item={})
+
+
+def test_sync_chats_with_unviewed_messages_count_chat_member_edited(user_manager, chat, user):
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 0
+
+    # sync edit of member from no unviewed message count to some, verify
+    item1 = chat.member_dynamo.get(chat.id, user.id)
+    assert 'messagesUnviewedCount' not in item1
+    item2 = chat.member_dynamo.increment_messages_unviewed_count(chat.id, user.id)
+    assert item2['messagesUnviewedCount'] == 1
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item=item2, old_item=item1)
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 1
+
+    # sync edit of member from some unviewed message count some more, verify
+    item3 = chat.member_dynamo.increment_messages_unviewed_count(chat.id, user.id)
+    assert item3['messagesUnviewedCount'] == 2
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item=item3, old_item=item2)
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 1
+
+    # sync edit of member from some unviewed message count to none, verify
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item=item1, old_item=item3)
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 0
+
+
+def test_sync_chats_with_unviewed_messages_count_chat_member_deleted(user_manager, chat, user, caplog):
+    user.dynamo.increment_chats_with_unviewed_messages_count(user.id)
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 1
+
+    # sync delete of member with no unviewed message count, verify
+    old_item = chat.member_dynamo.get(chat.id, user.id)
+    assert 'messagesUnviewedCount' not in old_item
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item={}, old_item=old_item)
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 1
+
+    # sync delete of member with some unviewed message count, verify
+    old_item = chat.member_dynamo.increment_messages_unviewed_count(chat.id, user.id)
+    assert old_item['messagesUnviewedCount'] == 1
+    user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item={}, old_item=old_item)
+    assert user.refresh_item().item.get('chatsWithUnviewedMessagesCount', 0) == 0
+
+    # sync delete of member with some unviewed message count, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        user_manager.sync_chats_with_unviewed_messages_count(chat.id, new_item={}, old_item=old_item)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert 'chatsWithUnviewedMessagesCount' in caplog.records[0].msg
+    assert user.id in caplog.records[0].msg

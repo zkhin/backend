@@ -11,7 +11,6 @@ from .dynamo import ChatDynamo, ChatMemberDynamo
 from .enums import ChatType
 from .exceptions import ChatException
 from .model import Chat
-from .postprocessor import ChatPostProcessor
 
 logger = logging.getLogger()
 
@@ -35,16 +34,6 @@ class ChatManager(ViewManagerMixin, ManagerBase):
         if 'dynamo' in clients:
             self.dynamo = ChatDynamo(clients['dynamo'])
             self.member_dynamo = ChatMemberDynamo(clients['dynamo'])
-
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = ChatPostProcessor(
-                dynamo=getattr(self, 'dynamo', None),
-                member_dynamo=getattr(self, 'member_dynamo', None),
-                user_manager=self.user_manager,
-            )
-        return self._postprocessor
 
     def get_chat(self, chat_id, strongly_consistent=False):
         item = self.dynamo.get(chat_id, strongly_consistent=strongly_consistent)
