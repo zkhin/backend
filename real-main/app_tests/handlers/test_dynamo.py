@@ -1,70 +1,96 @@
-from app.handlers.dynamo.dispatch import AttributeDispatch, ItemDispatch, attrs
+from unittest.mock import Mock
+
+from app.handlers.dynamo.dispatch import DynamoDispatch
 
 
-def test_item_dispatch_empty():
-    dispatch = ItemDispatch({})
-    assert dispatch.search('any', 'thing') == []
+def test_dynamo_dispatch_pk_sk_prefixes():
+    dispatch = DynamoDispatch()
+
+    f1 = Mock()
+    dispatch.register('pkpre1', 'skpre1', ['INSERT'], f1)
+    assert dispatch.search('pkpre2', 'skpre1', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre1', 'skpre2', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre1', 'skpre1', 'INSERT', {}, {}) == [f1]
+
+    f2 = Mock()
+    dispatch.register('pkpre1', 'skpre2', ['INSERT'], f2)
+    assert dispatch.search('pkpre2', 'skpre1', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre1', 'skpre2', 'INSERT', {}, {}) == [f2]
+    assert dispatch.search('pkpre1', 'skpre1', 'INSERT', {}, {}) == [f1]
+
+    f3 = Mock()
+    dispatch.register('pkpre1', 'skpre2', ['INSERT'], f3)
+    assert dispatch.search('pkpre2', 'skpre1', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre1', 'skpre2', 'INSERT', {}, {}) == [f2, f3]
+    assert dispatch.search('pkpre1', 'skpre1', 'INSERT', {}, {}) == [f1]
+
+    f4 = Mock()
+    dispatch.register('pkpre4', 'skpre2', ['INSERT'], f4)
+    assert dispatch.search('pkpre2', 'skpre1', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre1', 'skpre2', 'INSERT', {}, {}) == [f2, f3]
+    assert dispatch.search('pkpre1', 'skpre1', 'INSERT', {}, {}) == [f1]
 
 
-def test_item_dispatch_general():
-    f1, f2, f3, f4 = abs, all, any, ascii
-    dispatch = ItemDispatch(
-        {'pk_prefix1': {'sk_prefix11': [f1, f2], 'sk_prefix12': f3}, 'pk_prefix2': {'sk_prefix21': [f4]}}
-    )
-    assert dispatch.search('nope', 'sk_prefix11') == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix21') == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix12') == [f3]
-    assert dispatch.search('pk_prefix1', 'sk_prefix11') == [f1, f2]
-    assert dispatch.search('pk_prefix2', 'sk_prefix21') == [f4]
+def test_dynamo_dispatch_event_names():
+    dispatch = DynamoDispatch()
+
+    f1 = Mock()
+    dispatch.register('pkpre', 'skpre', ['INSERT'], f1)
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == [f1]
+    assert dispatch.search('pkpre', 'skpre', 'MODIFY', {}, {}) == []
+    assert dispatch.search('pkpre', 'skpre', 'REMOVE', {}, {}) == []
+
+    f2 = Mock()
+    dispatch.register('pkpre', 'skpre', ['INSERT', 'MODIFY'], f2)
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == [f1, f2]
+    assert dispatch.search('pkpre', 'skpre', 'MODIFY', {}, {}) == [f2]
+    assert dispatch.search('pkpre', 'skpre', 'REMOVE', {}, {}) == []
+
+    f3 = Mock()
+    dispatch.register('pkpre', 'skpre', ['INSERT', 'MODIFY', 'REMOVE'], f3)
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == [f1, f2, f3]
+    assert dispatch.search('pkpre', 'skpre', 'MODIFY', {}, {}) == [f2, f3]
+    assert dispatch.search('pkpre', 'skpre', 'REMOVE', {}, {}) == [f3]
+
+    f4 = Mock()
+    dispatch.register('pkpre', 'skpre', ['MODIFY', 'REMOVE'], f4)
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == [f1, f2, f3]
+    assert dispatch.search('pkpre', 'skpre', 'MODIFY', {}, {}) == [f2, f3, f4]
+    assert dispatch.search('pkpre', 'skpre', 'REMOVE', {}, {}) == [f3, f4]
+
+    f5 = Mock()
+    dispatch.register('pkpre', 'skpre', ['REMOVE'], f5)
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == [f1, f2, f3]
+    assert dispatch.search('pkpre', 'skpre', 'MODIFY', {}, {}) == [f2, f3, f4]
+    assert dispatch.search('pkpre', 'skpre', 'REMOVE', {}, {}) == [f3, f4, f5]
 
 
-def test_attrs_empty():
-    filterer = attrs()
-    assert filterer({'any': 'thing', 'at': 'all'}) == {}
-    assert filterer({}) == {}
+def test_dynamo_dispatch_attributes():
+    dispatch = DynamoDispatch()
 
+    f1 = Mock()
+    dispatch.register('pkpre', 'skpre', ['INSERT'], f1, {'k1': 0})
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {'k1': 0}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 0}, {}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 0}, {'k1': 0}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 0}, {'k1': 2}) == [f1]
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 4}, {}) == [f1]
 
-def test_attrs_general():
-    filterer = attrs(k1='d1', k2=None)
-    assert filterer({}) == {'k1': 'd1', 'k2': None}
-    assert filterer({'this': 'thing', 'at': 'all'}) == {'k1': 'd1', 'k2': None}
-    assert filterer({'this': 'thing', 'k1': 'all'}) == {'k1': 'all', 'k2': None}
-    assert filterer({'k2': 'thing', 'k1': 'all'}) == {'k1': 'all', 'k2': 'thing'}
-    assert filterer({'k2': 'thing'}) == {'k1': 'd1', 'k2': 'thing'}
+    f2 = Mock()
+    dispatch.register('pkpre', 'skpre', ['INSERT'], f2, {'k1': 0, 'k2': None})
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {'k2': None}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k2': 'yup'}, {}) == [f2]
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 0}, {'k1': 0}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 0}, {'k1': 2}) == [f1, f2]
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 4}, {}) == [f1, f2]
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 4}, {'k2': 'arg'}) == [f1, f2]
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k1': 4}, {'k2': 0}) == [f1, f2]
 
-
-def test_attribute_dispatch_empty():
-    dispatch = AttributeDispatch({})
-    assert dispatch.search('any', 'thing', {}, {}) == []
-    assert dispatch.search('any', 'thing', {'k1': 'v1'}, {'k1': 'v2'}) == []
-
-
-def test_attribute_dispatch_general():
-    dispatch = AttributeDispatch(
-        {
-            'pk_prefix1': {
-                'sk_prefix11': {'f1': attrs(k1=None), 'f2': attrs(k2='yes')},
-                'sk_prefix12': {'f3': attrs(k3=0)},
-            },
-            'pk_prefix2': {'sk_prefix21': {'f4': attrs(k4=None, k5=0, k6=True)}},
-        }
-    )
-    # check conditions all going to defaults
-    assert dispatch.search('nope', 'sk_prefix11', {}, {}) == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix21', {}, {}) == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix11', {}, {}) == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix12', {}, {}) == []
-    assert dispatch.search('pk_prefix2', 'sk_prefix21', {}, {}) == []
-
-    # check some conditions set to defaults, some matching
-    item = {'k1': None, 'k2': 'yes', 'k3': 0, 'k4': None}
-    assert dispatch.search('pk_prefix1', 'sk_prefix11', item, {}) == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix12', item, item) == []
-    assert dispatch.search('pk_prefix2', 'sk_prefix21', {}, item) == []
-    assert dispatch.search('pk_prefix2', 'sk_prefix21', {'k6': True}, {'k5': 0}) == []
-    assert dispatch.search('pk_prefix1', 'sk_prefix12', {'other': 42}, {'other': 42, 'k3': 0}) == []
-
-    # check some conditions set to non-defaults
-    assert dispatch.search('pk_prefix1', 'sk_prefix11', {'k1': 'foo'}, {'k2': 'bar'}) == ['f1', 'f2']
-    assert dispatch.search('pk_prefix1', 'sk_prefix12', {'k3': 42}, {}) == ['f3']
-    assert dispatch.search('pk_prefix2', 'sk_prefix21', {'k6': False}, {'k5': 0}) == ['f4']
+    f3 = Mock()
+    dispatch.register('pkpre', 'skpre', ['INSERT'], f3, {'k3': 'd'})
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {}, {'k3': 'd'}) == []
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k3': ''}, {}) == [f3]
+    assert dispatch.search('pkpre', 'skpre', 'INSERT', {'k3': 42}, {}) == [f3]

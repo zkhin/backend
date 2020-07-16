@@ -1,39 +1,42 @@
 import logging
+from collections import defaultdict
 
 logger = logging.getLogger()
 
 
-class ItemDispatch:
-    """
-    A dispatcher that holds and allows searching over a catalogue of listener functions.
-    """
-
-    def __init__(self, listeners):
-        "See usage examples for required format of `listeners`"
-        self.listeners = listeners
-
-    def search(self, pk_prefix, sk_prefix):
-        "Returns a list of matching listener functions"
-        resp = self.listeners.get(pk_prefix, {}).get(sk_prefix, [])
-        return [resp] if callable(resp) else resp
-
-
-class AttributeDispatch:
+class DynamoDispatch:
     """
     A dispatcher that holds and allows searching over a catalogue of listener functions
     according to matching conditions which should trigger a call.
     """
 
-    def __init__(self, listeners):
-        "See usage examples for required format of `listeners`"
-        self.listeners = listeners
+    def __init__(self):
+        self.listeners = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
-    def search(self, pk_prefix, sk_prefix, old_item, new_item):
-        "Returns a list of matching listener functions"
-        funcs_to_conditions = self.listeners.get(pk_prefix, {}).get(sk_prefix, {})
-        return [func for func, cond in funcs_to_conditions.items() if cond(old_item) != cond(new_item)]
+    def register(self, pk_prefix, sk_prefix, event_names, handler, attributes=None):
+        """
+        Register a handler.
 
+        The `attributes` parameter, if provided, should be a dictionary of {name: default_value}.
+        If `attributes` is present handler will only be called if at least one of the
+        values of `attributes` have changed when applied to the old & new items.
+        """
+        for event_name in event_names:
+            self.listeners[pk_prefix][sk_prefix][event_name].append(
+                {'handler': handler, 'attributes': attributes}
+            )
 
-def attrs(**attrs_to_defaults):
-    "Returns a callable that will filter down an item to the given keys, using the values as defaults"
-    return lambda item: {attr: item.get(attr, default) for attr, default in attrs_to_defaults.items()}
+    def search(self, pk_prefix, sk_prefix, event_name, old_item, new_item):
+        "Returns a set of matching listener functions"
+        matches = []
+        for listener in self.listeners[pk_prefix][sk_prefix][event_name]:
+            if not listener['attributes']:
+                matches.append(listener['handler'])
+                continue
+            for attr_name, attr_default in listener['attributes'].items():
+                old_value = old_item.get(attr_name, attr_default)
+                new_value = new_item.get(attr_name, attr_default)
+                if old_value != new_value:
+                    matches.append(listener['handler'])
+                    break
+        return matches

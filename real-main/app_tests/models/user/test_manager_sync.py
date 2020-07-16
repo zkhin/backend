@@ -96,11 +96,11 @@ def test_sync_card_with_count(user_manager, user, method_name, card_spec_class, 
 
 def test_sync_elasticsearch(user_manager, user):
     with patch.object(user_manager, 'elasticsearch_client') as elasticsearch_client_mock:
-        user_manager.sync_elasticsearch(user.id, 'garbage', {'username': 'spock'})
+        user_manager.sync_elasticsearch(user.id, {'username': 'spock'}, 'garbage')
     assert elasticsearch_client_mock.mock_calls == [call.put_user(user.id, 'spock', None)]
 
     with patch.object(user_manager, 'elasticsearch_client') as elasticsearch_client_mock:
-        user_manager.sync_elasticsearch(user.id, 'garbage', {'username': 'sp', 'fullName': 'fn'})
+        user_manager.sync_elasticsearch(user.id, {'username': 'sp', 'fullName': 'fn'}, 'garbage')
     assert elasticsearch_client_mock.mock_calls == [call.put_user(user.id, 'sp', 'fn')]
 
 

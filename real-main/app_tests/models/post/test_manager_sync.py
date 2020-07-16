@@ -27,7 +27,7 @@ def test_sync_comments_card(post_manager, post):
     old_item = post.item.copy()
     post.item['commentsUnviewedCount'] = 1
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_comments_card(post.id, old_item, post.item)
+        post_manager.sync_comments_card(post.id, post.item, old_item)
     assert len(card_manager_mock.mock_calls) == 1
     card_spec1 = card_manager_mock.mock_calls[0].args[0]
     assert card_spec1.card_id == CommentCardSpec(post.user_id, post.id).card_id
@@ -37,7 +37,7 @@ def test_sync_comments_card(post_manager, post):
     old_item = post.item.copy()
     post.item['commentsUnviewedCount'] = 2
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_comments_card(post.id, old_item, post.item)
+        post_manager.sync_comments_card(post.id, post.item, old_item)
     assert len(card_manager_mock.mock_calls) == 1
     card_spec1 = card_manager_mock.mock_calls[0].args[0]
     assert card_spec1.card_id == CommentCardSpec(post.user_id, post.id).card_id
@@ -47,7 +47,7 @@ def test_sync_comments_card(post_manager, post):
     old_item = post.item.copy()
     post.item['commentsUnviewedCount'] = 0
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_comments_card(post.id, old_item, post.item)
+        post_manager.sync_comments_card(post.id, post.item, old_item)
     assert len(card_manager_mock.mock_calls) == 1
     card_spec1 = card_manager_mock.mock_calls[0].args[0]
     assert card_spec1.card_id == CommentCardSpec(post.user_id, post.id).card_id
@@ -63,7 +63,7 @@ def test_sync_post_likes_card(post_manager, post):
     old_item = post.item.copy()
     post.item['anonymousLikeCount'] = 1
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_post_likes_card(post.id, old_item, post.item)
+        post_manager.sync_post_likes_card(post.id, post.item, old_item)
     assert len(card_manager_mock.mock_calls) == 1
     card_spec1 = card_manager_mock.mock_calls[0].args[0]
     assert card_spec1.card_id == PostLikesCardSpec(post.user_id, post.id).card_id
@@ -73,7 +73,7 @@ def test_sync_post_likes_card(post_manager, post):
     old_item = post.item.copy()
     post.item['onymousLikeCount'] = 8
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_post_likes_card(post.id, old_item, post.item)
+        post_manager.sync_post_likes_card(post.id, post.item, old_item)
     assert len(card_manager_mock.mock_calls) == 1
     card_spec1 = card_manager_mock.mock_calls[0].args[0]
     assert card_spec1.card_id == PostLikesCardSpec(post.user_id, post.id).card_id
@@ -83,7 +83,7 @@ def test_sync_post_likes_card(post_manager, post):
     old_item = post.item.copy()
     post.item['anonymousLikeCount'] = 2
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_post_likes_card(post.id, old_item, post.item)
+        post_manager.sync_post_likes_card(post.id, post.item, old_item)
     assert card_manager_mock.mock_calls == []
 
 
@@ -95,14 +95,14 @@ def test_sync_post_views_card(post_manager, post):
     old_item = post.item.copy()
     post.item['viewedByCount'] = 5
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_post_views_card(post.id, old_item, post.item)
+        post_manager.sync_post_views_card(post.id, post.item, old_item)
     assert card_manager_mock.mock_calls == []
 
     # go to six views, process, check call happens
     old_item = post.item.copy()
     post.item['viewedByCount'] = 6
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_post_views_card(post.id, old_item, post.item)
+        post_manager.sync_post_views_card(post.id, post.item, old_item)
     assert len(card_manager_mock.mock_calls) == 1
     card_spec1 = card_manager_mock.mock_calls[0].args[0]
     assert card_spec1.card_id == PostViewsCardSpec(post.user_id, post.id).card_id
@@ -112,5 +112,5 @@ def test_sync_post_views_card(post_manager, post):
     old_item = post.item.copy()
     post.item['viewedByCount'] = 7
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.sync_post_views_card(post.id, old_item, post.item)
+        post_manager.sync_post_views_card(post.id, post.item, old_item)
     assert card_manager_mock.mock_calls == []

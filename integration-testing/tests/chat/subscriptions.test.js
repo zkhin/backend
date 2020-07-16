@@ -171,7 +171,7 @@ test('Messages in multiple chats fire', async () => {
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId2)
 
   // give final notifications a moment to show up
-  await misc.sleep(2000)
+  await misc.sleep(5000)
 
   // we should see all messages from chats we were in (except our own messages)
   expect(ourMsgNotifications).toHaveLength(3)

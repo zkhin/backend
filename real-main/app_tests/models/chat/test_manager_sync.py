@@ -30,7 +30,7 @@ def test_sync_member_messages_unviewed_count(chat_manager, chat, user1, user2):
 
     # check adding a view clears the count
     view_item = chat_manager.view_dynamo.add_view(chat.id, user1.id, 1, pendulum.now('utc'))
-    chat_manager.sync_member_messages_unviewed_count(chat.id, {}, view_item)
+    chat_manager.sync_member_messages_unviewed_count(chat.id, view_item, {})
     assert chat_manager.member_dynamo.get(chat.id, user1.id).get('messagesUnviewedCount', 0) == 0
 
     # check an unchanged view count makes no changes
@@ -40,5 +40,5 @@ def test_sync_member_messages_unviewed_count(chat_manager, chat, user1, user2):
 
     # check an incremented view count clears the count
     new_view_item = chat_manager.view_dynamo.increment_view_count(chat.id, user2.id, 3, pendulum.now('utc'))
-    chat_manager.sync_member_messages_unviewed_count(chat.id, view_item, new_view_item)
+    chat_manager.sync_member_messages_unviewed_count(chat.id, new_view_item, view_item)
     assert chat_manager.member_dynamo.get(chat.id, user2.id).get('messagesUnviewedCount', 0) == 0

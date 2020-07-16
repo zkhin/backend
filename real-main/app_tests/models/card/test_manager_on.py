@@ -62,7 +62,7 @@ def test_on_card_add_sends_gql_notification(card_manager, card, user):
 
 def test_on_card_edit_sends_gql_notification(card_manager, card, user):
     with patch.object(card_manager, 'appsync') as appsync_mock:
-        card_manager.on_card_edit(card.id, {'unused': True}, card.item)
+        card_manager.on_card_edit(card.id, old_item={'unused': True}, new_item=card.item)
     assert appsync_mock.mock_calls == [
         call.trigger_notification(
             CardNotificationType.EDITED,

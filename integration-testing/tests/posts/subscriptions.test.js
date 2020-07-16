@@ -120,7 +120,7 @@ test('Format for COMPLETED message notifications', async () => {
   await misc.sleepUntilPostCompleted(ourClient, postId2)
 
   // wait a bit more for messages to show up
-  await misc.sleep(2000)
+  await misc.sleep(5000)
 
   // check we have received the notifications we expect, in order
   expect(ourNotifications).toHaveLength(2)

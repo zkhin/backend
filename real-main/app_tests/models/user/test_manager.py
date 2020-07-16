@@ -477,7 +477,7 @@ def test_fire_gql_subscription_chats_with_unviewed_messages_count(user_manager):
     user_id = str(uuid.uuid4())
     user_item = {'chatsWithUnviewedMessagesCount': Decimal(34), 'otherField': 'anything'}
     with mock.patch.object(user_manager, 'appsync_client') as appsync_client_mock:
-        user_manager.fire_gql_subscription_chats_with_unviewed_messages_count(user_id, 'unused', user_item)
+        user_manager.fire_gql_subscription_chats_with_unviewed_messages_count(user_id, user_item, 'unused')
     assert appsync_client_mock.mock_calls == [
         mock.call.fire_notification(
             user_id,

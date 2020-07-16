@@ -216,19 +216,19 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.dynamo.decrement_comment_count(user_id, fail_soft=True)
         self.dynamo.increment_comment_deleted_count(user_id)
 
-    def on_card_add(self, card_id, item):
-        card = self.card_manager.init_card(item)
+    def on_card_add(self, card_id, new_item):
+        card = self.card_manager.init_card(new_item)
         self.dynamo.increment_card_count(card.user_id)
 
-    def on_card_delete(self, card_id, item):
-        card = self.card_manager.init_card(item)
+    def on_card_delete(self, card_id, old_item):
+        card = self.card_manager.init_card(old_item)
         self.dynamo.decrement_card_count(card.user_id, fail_soft=True)
 
     def on_user_delete(self, user_id, old_item):
         self.elasticsearch_client.delete_user(user_id)
         self.pinpoint_client.delete_user_endpoints(user_id)
 
-    def sync_user_status_due_to(self, check_method_name, forced_by, user_id, old_item, new_item):
+    def sync_user_status_due_to(self, check_method_name, forced_by, user_id, new_item, old_item=None):
         user = self.init_user(new_item)
         if getattr(user, check_method_name)():
             user.disable(forced_by=forced_by)
@@ -243,7 +243,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         sync_user_status_due_to, 'is_forced_disabling_criteria_met_by_posts', 'posts'
     )
 
-    def sync_card_with_count(self, dynamo_attr, card_spec_class, user_id, old_item, new_item):
+    def sync_card_with_count(self, dynamo_attr, card_spec_class, user_id, new_item, old_item=None):
         cnt = new_item.get(dynamo_attr, 0)
         card_spec = card_spec_class(user_id, cnt)
         if cnt > 0:
@@ -258,10 +258,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         sync_card_with_count, 'chatsWithUnviewedMessagesCount', ChatCardSpec
     )
 
-    def sync_elasticsearch(self, user_id, old_item, new_item):
+    def sync_elasticsearch(self, user_id, new_item, old_item=None):
         self.elasticsearch_client.put_user(user_id, new_item['username'], new_item.get('fullName'))
 
-    def sync_pinpoint_attribute(self, dynamo_name, pinpoint_name, user_id, old_item, new_item):
+    def sync_pinpoint_attribute(self, dynamo_name, pinpoint_name, user_id, new_item, old_item=None):
         value = new_item.get(dynamo_name)
         if value is not None:
             self.pinpoint_client.update_user_endpoint(user_id, pinpoint_name, value)
@@ -271,7 +271,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     sync_pinpoint_email = partialmethod(sync_pinpoint_attribute, 'email', 'EMAIL')
     sync_pinpoint_phone = partialmethod(sync_pinpoint_attribute, 'phoneNumber', 'SMS')
 
-    def sync_pinpoint_user_status(self, user_id, old_item, new_item):
+    def sync_pinpoint_user_status(self, user_id, new_item, old_item=None):
         status = new_item.get('userStatus', UserStatus.ACTIVE)
         if status == UserStatus.ACTIVE:
             self.pinpoint_client.enable_user_endpoints(user_id)
@@ -280,7 +280,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         if status == UserStatus.DELETING:
             self.pinpoint_client.delete_user_endpoints(user_id)
 
-    def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, old_item, new_item):
+    def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, new_item, old_item=None):
         self.appsync_client.fire_notification(
             user_id,
             GqlNotificationType.USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED,

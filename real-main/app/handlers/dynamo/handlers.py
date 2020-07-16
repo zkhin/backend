@@ -7,7 +7,7 @@ from app.handlers import xray
 from app.logging import LogLevelContext, handler_logging
 from app.models.user.enums import UserStatus
 
-from .dispatch import AttributeDispatch, ItemDispatch, attrs
+from .dispatch import DynamoDispatch
 
 logger = logging.getLogger()
 xray.patch_all()
@@ -31,57 +31,95 @@ user_manager = managers.get('user') or models.UserManager(clients, managers=mana
 # https://stackoverflow.com/a/46738251
 deserialize = TypeDeserializer().deserialize
 
+dispatch = DynamoDispatch()
+register = dispatch.register
 
-on_attribute_change_dispatch = AttributeDispatch(
-    {
-        'chat': {'view': {chat_manager.sync_member_messages_unviewed_count: attrs(viewCount=0)}},
-        'post': {
-            '-': {
-                post_manager.sync_comments_card: attrs(commentsUnviewedCount=0),
-                # DISABLED until frontend implements or at least ignores
-                # post_manager.sync_post_likes_card: attrs(anonymousLikeCount=0, onymousLikeCount=0),
-                # post_manager.sync_post_views_card: attrs(viewedByCount=0),
-            }
-        },
-        'user': {
-            'profile': {
-                user_manager.sync_user_status_due_to_chat_messages: attrs(chatMessagesForcedDeletionCount=0),
-                user_manager.sync_user_status_due_to_comments: attrs(commentForcedDeletionCount=0),
-                user_manager.sync_user_status_due_to_posts: attrs(postForcedArchivingCount=0),
-                user_manager.sync_requested_followers_card: attrs(followersRequestedCount=0),
-                user_manager.sync_chats_with_new_messages_card: attrs(chatsWithUnviewedMessagesCount=0),
-                user_manager.fire_gql_subscription_chats_with_unviewed_messages_count: attrs(
-                    chatsWithUnviewedMessagesCount=0
-                ),
-                user_manager.sync_pinpoint_email: attrs(email=None),
-                user_manager.sync_pinpoint_phone: attrs(phoneNumber=None),
-                user_manager.sync_pinpoint_user_status: attrs(userStatus=UserStatus.ACTIVE),
-                user_manager.sync_elasticsearch: attrs(
-                    username=None, fullName=None, lastManuallyReindexedAt=None
-                ),
-            }
-        },
-    }
+register('card', '-', ['INSERT'], card_manager.on_card_add)
+register('card', '-', ['INSERT'], user_manager.on_card_add)
+register('card', '-', ['MODIFY'], card_manager.on_card_edit)
+register('card', '-', ['REMOVE'], card_manager.on_card_delete)
+register('card', '-', ['REMOVE'], user_manager.on_card_delete)
+register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
+register('comment', '-', ['INSERT'], post_manager.on_comment_add)
+register('comment', '-', ['INSERT'], user_manager.on_comment_add)
+register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)
+register('comment', '-', ['REMOVE'], user_manager.on_comment_delete)
+register('like', '-', ['INSERT'], post_manager.on_like_add)  # old, deprecated like pk format
+register('like', '-', ['REMOVE'], post_manager.on_like_delete)  # old, deprecated like pk format
+register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_comments_card, {'commentsUnviewedCount': 0})
+register('post', '-', ['REMOVE'], post_manager.on_delete)
+register('post', 'like', ['INSERT'], post_manager.on_like_add)
+register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
+register('post', 'view', ['INSERT'], post_manager.on_view_add)
+# DISABLED until frontend implements or at least ignores
+# register(
+#     'post',
+#     '-',
+#     ['INSERT', 'MODIFY'],
+#     post_manager.sync_post_likes_card,
+#     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
+# )
+# register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_user_status_due_to_chat_messages,
+    {'chatMessagesForcedDeletionCount': 0},
 )
-
-on_item_add_dispatch = ItemDispatch(
-    {
-        'card': {'-': [card_manager.on_card_add, user_manager.on_card_add]},
-        'comment': {'-': [post_manager.on_comment_add, user_manager.on_comment_add]},
-        'like': {'-': post_manager.on_like_add},  # old, deprecated like pk format
-        'post': {'like': post_manager.on_like_add, 'view': post_manager.on_view_add},
-    }
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_user_status_due_to_comments,
+    {'commentForcedDeletionCount': 0},
 )
-on_item_edit_dispatch = ItemDispatch({'card': {'-': card_manager.on_card_edit}})
-on_item_delete_dispatch = ItemDispatch(
-    {
-        'card': {'-': [card_manager.on_card_delete, user_manager.on_card_delete]},
-        'comment': {'-': [post_manager.on_comment_delete, user_manager.on_comment_delete]},
-        'like': {'-': post_manager.on_like_delete},  # old, deprecated like pk format
-        'post': {'-': post_manager.on_delete, 'like': post_manager.on_like_delete},
-        'user': {'profile': [card_manager.on_user_delete, user_manager.on_user_delete]},
-    }
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_user_status_due_to_posts,
+    {'postForcedArchivingCount': 0},
 )
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_requested_followers_card,
+    {'followersRequestedCount': 0},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_chats_with_new_messages_card,
+    {'chatsWithUnviewedMessagesCount': 0},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.fire_gql_subscription_chats_with_unviewed_messages_count,
+    {'chatsWithUnviewedMessagesCount': 0},
+)
+register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.sync_pinpoint_email, {'email': None})
+register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.sync_pinpoint_phone, {'phoneNumber': None})
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_pinpoint_user_status,
+    {'userStatus': UserStatus.ACTIVE},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.sync_elasticsearch,
+    {'username': None, 'fullName': None, 'lastManuallyReindexedAt': None},
+)
+register('user', 'profile', ['REMOVE'], card_manager.on_user_delete)
+register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 
 
 @handler_logging
@@ -127,42 +165,11 @@ def process_records(event, context):
         pk_prefix, item_id = pk.split('/')[:2]
         sk_prefix = sk.split('/')[0]
 
-        # fire item add listeners
-        if name == 'INSERT':
-            for func in on_item_add_dispatch.search(pk_prefix, sk_prefix):
-                with LogLevelContext(logger, logging.INFO):
-                    logger.info(f'{name}: `{pk}` / `{sk}` running item add: {func}')
-                try:
-                    func(item_id, new_item)
-                except Exception as err:
-                    logger.exception(str(err))
-
-        # fire item edit listeners
-        if name == 'MODIFY':
-            for func in on_item_edit_dispatch.search(pk_prefix, sk_prefix):
-                with LogLevelContext(logger, logging.INFO):
-                    logger.info(f'{name}: `{pk}` / `{sk}` running item edit: {func}')
-                try:
-                    func(item_id, old_item, new_item)
-                except Exception as err:
-                    logger.exception(str(err))
-
-        # fire attribute change listeners
-        if name == 'INSERT' or name == 'MODIFY':
-            for func in on_attribute_change_dispatch.search(pk_prefix, sk_prefix, old_item, new_item):
-                with LogLevelContext(logger, logging.INFO):
-                    logger.info(f'{name}: `{pk}` / `{sk}` running attribute change: {func}')
-                try:
-                    func(item_id, old_item, new_item)
-                except Exception as err:
-                    logger.exception(str(err))
-
-        # fire item delete listeners
-        if name == 'REMOVE':
-            for func in on_item_delete_dispatch.search(pk_prefix, sk_prefix):
-                with LogLevelContext(logger, logging.INFO):
-                    logger.info(f'{name}: `{pk}` / `{sk}` running item delete: {func}')
-                try:
-                    func(item_id, old_item)
-                except Exception as err:
-                    logger.exception(str(err))
+        item_kwargs = {k: v for k, v in {'new_item': new_item, 'old_item': old_item}.items() if v}
+        for func in dispatch.search(pk_prefix, sk_prefix, name, old_item, new_item):
+            with LogLevelContext(logger, logging.INFO):
+                logger.info(f'{name}: `{pk}` / `{sk}` running: {func}')
+            try:
+                func(item_id, **item_kwargs)
+            except Exception as err:
+                logger.exception(str(err))

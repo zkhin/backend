@@ -146,7 +146,7 @@ class ChatManager(ViewManagerMixin, ManagerBase):
             else:
                 chat.record_view_count(user_id, view_count, viewed_at=viewed_at)
 
-    def sync_member_messages_unviewed_count(self, chat_id, old_item, new_item):
+    def sync_member_messages_unviewed_count(self, chat_id, new_item, old_item=None):
         if new_item.get('viewCount', 0) > (old_item or {}).get('viewCount', 0):
             user_id = new_item['sortKey'].split('/')[1]
             self.member_dynamo.clear_messages_unviewed_count(chat_id, user_id)

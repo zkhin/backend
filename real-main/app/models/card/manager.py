@@ -113,14 +113,14 @@ class CardManager:
                 card.clear_notify_user_at()
         return total_count, success_count
 
-    def on_card_add(self, card_id, card_item):
-        self.init_card(card_item).trigger_notification(CardNotificationType.ADDED)
+    def on_card_add(self, card_id, new_item):
+        self.init_card(new_item).trigger_notification(CardNotificationType.ADDED)
 
-    def on_card_edit(self, card_id, old_card_item, new_card_item):
-        self.init_card(new_card_item).trigger_notification(CardNotificationType.EDITED)
+    def on_card_edit(self, card_id, new_item, old_item):
+        self.init_card(new_item).trigger_notification(CardNotificationType.EDITED)
 
-    def on_card_delete(self, card_id, card_item):
-        self.init_card(card_item).trigger_notification(CardNotificationType.DELETED)
+    def on_card_delete(self, card_id, old_item):
+        self.init_card(old_item).trigger_notification(CardNotificationType.DELETED)
 
     def on_user_delete(self, user_id, old_item):
         self.remove_card_by_spec_if_exists(ChatCardSpec(user_id))

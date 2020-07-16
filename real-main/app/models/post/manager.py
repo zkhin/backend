@@ -277,28 +277,29 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             logger.warning(f'Force archiving post `{post_id}` from flagging')
             post.archive(forced=True)
 
-    def sync_comments_card(self, post_id, old_item, new_item):
+    def sync_comments_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('commentsUnviewedCount', 0)
-        user_id = (new_item or old_item)['postedByUserId']
+        user_id = new_item['postedByUserId']
         card_spec = CommentCardSpec(user_id, post_id, unviewed_comments_count=new_cnt)
         if new_cnt > 0:
             self.card_manager.add_or_update_card_by_spec(card_spec)
         else:
             self.card_manager.remove_card_by_spec_if_exists(card_spec)
 
-    def sync_post_likes_card(self, post_id, old_item, new_item):
+    def sync_post_likes_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('onymousLikeCount', 0) + new_item.get('anonymousLikeCount', 0)
         # post likes card should be created on any new like up to but not including the 10th like
         if 0 < new_cnt < 10:
-            user_id = (new_item or old_item)['postedByUserId']
+            user_id = new_item['postedByUserId']
             card_spec = PostLikesCardSpec(user_id, post_id)
             self.card_manager.add_or_update_card_by_spec(card_spec)
 
-    def sync_post_views_card(self, post_id, old_item, new_item):
-        old_cnt, new_cnt = (item.get('viewedByCount', 0) for item in (old_item, new_item))
+    def sync_post_views_card(self, post_id, new_item, old_item=None):
+        new_cnt = new_item.get('viewedByCount', 0)
+        old_cnt = (old_item or {}).get('viewedByCount', 0)
         # post views card should only be created once per post, when it goes over 5 views
         if new_cnt > 5 and old_cnt <= 5:
-            user_id = (new_item or old_item)['postedByUserId']
+            user_id = new_item['postedByUserId']
             card_spec = PostViewsCardSpec(user_id, post_id)
             self.card_manager.add_or_update_card_by_spec(card_spec)
 
