@@ -7,11 +7,11 @@ from .exceptions import MalformedCardId
 
 class CardSpec:
 
-    chat_card_id_re = r'^([\w:-]+):CHAT_ACTIVITY$'
-    comment_card_id_re = r'^([\w:-]+):COMMENT_ACTIVITY:([\w-]+)$'
-    post_likes_card_id_re = r'^([\w:-]+):POST_LIKES:([\w-]+)$'
-    post_views_card_id_re = r'^([\w:-]+):POST_VIEWS:([\w-]+)$'
-    requested_followers_card_id_re = r'^([\w:-]+):REQUESTED_FOLLOWERS$'
+    chat_card_id_re = r'^(?P<user_id>[\w:-]+):CHAT_ACTIVITY$'
+    comment_card_id_re = r'^(?P<user_id>[\w:-]+):COMMENT_ACTIVITY:(?P<post_id>[\w-]+)$'
+    post_likes_card_id_re = r'^(?P<user_id>[\w:-]+):POST_LIKES:(?P<post_id>[\w-]+)$'
+    post_views_card_id_re = r'^(?P<user_id>[\w:-]+):POST_VIEWS:(?P<post_id>[\w-]+)$'
+    requested_followers_card_id_re = r'^(?P<user_id>[\w:-]+):REQUESTED_FOLLOWERS$'
 
     @classmethod
     def from_card_id(cls, card_id):
@@ -22,36 +22,31 @@ class CardSpec:
             m = re.search(cls.chat_card_id_re, card_id)
             if not m:
                 raise MalformedCardId(card_id)
-            user_id = m.group(1)
-            return ChatCardSpec(user_id)
+            return ChatCardSpec(m.group('user_id'))
 
         if 'COMMENT_ACTIVITY' in card_id:
             m = re.search(cls.comment_card_id_re, card_id)
             if not m:
                 raise MalformedCardId(card_id)
-            user_id, post_id = m.group(1), m.group(2)
-            return CommentCardSpec(user_id, post_id)
+            return CommentCardSpec(m.group('user_id'), m.group('post_id'))
 
         if 'POST_LIKES' in card_id:
             m = re.search(cls.post_likes_card_id_re, card_id)
             if not m:
                 raise MalformedCardId(card_id)
-            user_id, post_id = m.group(1), m.group(2)
-            return PostLikesCardSpec(user_id, post_id)
+            return PostLikesCardSpec(m.group('user_id'), m.group('post_id'))
 
         if 'POST_VIEWS' in card_id:
             m = re.search(cls.post_views_card_id_re, card_id)
             if not m:
                 raise MalformedCardId(card_id)
-            user_id, post_id = m.group(1), m.group(2)
-            return PostViewsCardSpec(user_id, post_id)
+            return PostViewsCardSpec(m.group('user_id'), m.group('post_id'))
 
         if 'REQUESTED_FOLLOWERS' in card_id:
             m = re.search(cls.requested_followers_card_id_re, card_id)
             if not m:
                 raise MalformedCardId(card_id)
-            user_id = m.group(1)
-            return RequestedFollowersCardSpec(user_id)
+            return RequestedFollowersCardSpec(m.group('user_id'))
 
         return None
 
