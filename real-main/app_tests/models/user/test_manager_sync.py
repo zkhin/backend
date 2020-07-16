@@ -5,7 +5,8 @@ from uuid import uuid4
 import pytest
 
 from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
-from app.models.user.enums import UserStatus
+from app.models.follower.enums import FollowStatus
+from app.models.user.enums import UserPrivacyStatus, UserStatus
 
 
 @pytest.fixture
@@ -207,3 +208,134 @@ def test_sync_chats_with_unviewed_messages_count_chat_member_deleted(user_manage
     assert 'Failed to decrement' in caplog.records[0].msg
     assert 'chatsWithUnviewedMessagesCount' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg
+
+
+def test_sync_follow_counts_due_to_follow_status_public_user_lifecycle(
+    user_manager, follower_manager, user, user2
+):
+    # configure change to following
+    follower, followed = user, user2
+    follow = follower_manager.request_to_follow(follower, followed)
+    assert follow.status == FollowStatus.FOLLOWING
+
+    # check starting state
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync, check state
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, new_item=follow.item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 1
+    assert followed.refresh_item().item.get('followerCount', 0) == 1
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync unfollowing, check state
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, old_item=follow.item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+
+def test_sync_follow_counts_due_to_follow_status_private_user_lifecycle(
+    user_manager, follower_manager, user, user2
+):
+    # configure change to requested
+    follower, followed = user, user2
+    followed.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    follow = follower_manager.request_to_follow(follower, followed)
+    assert follow.status == FollowStatus.REQUESTED
+
+    # check starting state
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync requested, check state
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, new_item=follow.item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 1
+
+    # sync following, check state
+    old_item = follow.item.copy()
+    follow.accept()
+    assert follow.status == FollowStatus.FOLLOWING
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, new_item=follow.item, old_item=old_item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 1
+    assert followed.refresh_item().item.get('followerCount', 0) == 1
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync denied, check state
+    old_item = follow.item.copy()
+    follow.deny()
+    assert follow.status == FollowStatus.DENIED
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, new_item=follow.item, old_item=old_item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync back to following, check state
+    old_item = follow.item.copy()
+    follow.accept()
+    assert follow.status == FollowStatus.FOLLOWING
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, new_item=follow.item, old_item=old_item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 1
+    assert followed.refresh_item().item.get('followerCount', 0) == 1
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync back to not following, check state
+    old_item = follow.item.copy()
+    assert follow.status == FollowStatus.FOLLOWING
+    user_manager.sync_follow_counts_due_to_follow_status(followed.id, old_item=old_item)
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+
+def test_sync_follow_counts_due_to_follow_status_fails_softly(
+    user_manager, follower_manager, user, user2, caplog
+):
+    # configure change from requested -> not following
+    follower, followed = user, user2
+    followed.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    follow = follower_manager.request_to_follow(follower, followed)
+    assert follow.status == FollowStatus.REQUESTED
+
+    # check starting state
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync a change that fails to decrement, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        user_manager.sync_follow_counts_due_to_follow_status(followed.id, old_item=follow.item)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert 'followersRequestedCount' in caplog.records[0].msg
+    assert followed.id in caplog.records[0].msg
+
+    # configure change from following -> not following
+    follow.accept()
+    assert follow.status == FollowStatus.FOLLOWING
+
+    # check starting state
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+    # sync a change that fails to decrement, verify fails softly
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        user_manager.sync_follow_counts_due_to_follow_status(followed.id, old_item=follow.item)
+    assert len(caplog.records) == 2
+    follower_records = [rec for rec in caplog.records if 'followerCount' in rec.msg]
+    followed_records = [rec for rec in caplog.records if 'followedCount' in rec.msg]
+    assert len(follower_records) == 1
+    assert len(followed_records) == 1
+    assert all(x in followed_records[0].msg for x in ('Failed to decrement', follower.id))
+    assert all(x in follower_records[0].msg for x in ('Failed to decrement', followed.id))
+
+    # check final state
+    assert follower.refresh_item().item.get('followedCount', 0) == 0
+    assert followed.refresh_item().item.get('followerCount', 0) == 0
+    assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0

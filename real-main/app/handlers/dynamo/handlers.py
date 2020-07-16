@@ -5,6 +5,7 @@ from boto3.dynamodb.types import TypeDeserializer
 from app import clients, models
 from app.handlers import xray
 from app.logging import LogLevelContext, handler_logging
+from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserStatus
 
 from .dispatch import DynamoDispatch
@@ -71,6 +72,13 @@ register('post', 'view', ['INSERT'], post_manager.on_view_add)
 #     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
 # )
 # register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    user_manager.sync_follow_counts_due_to_follow_status,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
+)
 register(
     'user',
     'profile',
@@ -151,9 +159,6 @@ def process_records(event, context):
 
         if pk.startswith('chatMessage/'):
             postprocessor = chat_message_manager.postprocessor
-
-        if pk.startswith('user/') and sk.startswith('follower/'):
-            postprocessor = follower_manager.postprocessor
 
         if postprocessor:
             with LogLevelContext(logger, logging.INFO):

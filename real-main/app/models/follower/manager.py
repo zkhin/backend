@@ -8,7 +8,6 @@ from .dynamo.first_story import FirstStoryDynamo
 from .enums import FollowStatus
 from .exceptions import FollowerAlreadyExists, FollowerException
 from .model import Follower
-from .postprocessor import FollowerPostProcessor
 
 logger = logging.getLogger()
 
@@ -27,12 +26,6 @@ class FollowerManager:
         if 'dynamo' in clients:
             self.dynamo = FollowerDynamo(clients['dynamo'])
             self.first_story_dynamo = FirstStoryDynamo(clients['dynamo'])
-
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = FollowerPostProcessor(user_manager=self.user_manager)
-        return self._postprocessor
 
     def get_follow(self, follower_user_id, followed_user_id, strongly_consistent=False):
         item = self.dynamo.get_following(

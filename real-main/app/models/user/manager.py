@@ -8,6 +8,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
+from app.models.follower.enums import FollowStatus
 from app.utils import GqlNotificationType
 
 from .dynamo import UserDynamo
@@ -290,6 +291,25 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.increment_chats_with_unviewed_messages_count(user_id)
         if old_count > 0 and new_count == 0:
             self.dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
+
+    def sync_follow_counts_due_to_follow_status(self, followed_user_id, new_item=None, old_item=None):
+        follower_user_id = (new_item or old_item)['sortKey'].split('/')[1]
+        old_status = (old_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
+        new_status = (new_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
+
+        # incr/decr followedCount and followerCount if follow status changed to/from FOLLOWING
+        if old_status != FollowStatus.FOLLOWING and new_status == FollowStatus.FOLLOWING:
+            self.dynamo.increment_followed_count(follower_user_id)
+            self.dynamo.increment_follower_count(followed_user_id)
+        if old_status == FollowStatus.FOLLOWING and new_status != FollowStatus.FOLLOWING:
+            self.dynamo.decrement_followed_count(follower_user_id, fail_soft=True)
+            self.dynamo.decrement_follower_count(followed_user_id, fail_soft=True)
+
+        # incr/decr followersRequestedCount if follow status changed to/from REQUESTED
+        if old_status != FollowStatus.REQUESTED and new_status == FollowStatus.REQUESTED:
+            self.dynamo.increment_followers_requested_count(followed_user_id)
+        if old_status == FollowStatus.REQUESTED and new_status != FollowStatus.REQUESTED:
+            self.dynamo.decrement_followers_requested_count(followed_user_id, fail_soft=True)
 
     def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, new_item, old_item=None):
         self.appsync_client.fire_notification(
