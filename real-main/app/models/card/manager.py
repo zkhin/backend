@@ -58,6 +58,12 @@ class CardManager:
 
     def add_or_update_card_by_spec(self, spec, now=None):
         now = now or pendulum.now('utc')
+
+        if getattr(spec, 'only_usernames', None):
+            user = self.user_manager.get_user(spec.user_id)
+            if user.username not in spec.only_usernames:
+                return None
+
         notify_user_at = now + spec.notify_user_after if spec.notify_user_after else None
         try:
             return self.add_card(

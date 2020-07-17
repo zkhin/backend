@@ -32,6 +32,7 @@ def test_comment_card_spec(user, post):
     assert post.id in spec.card_id
     assert spec.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
     assert post.id in spec.action
+    assert not hasattr(spec, 'only_usernames')
 
 
 def test_post_views_card_spec(user, post):
@@ -43,6 +44,19 @@ def test_post_views_card_spec(user, post):
     assert spec.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
     assert post.id in spec.action
     assert spec.title == 'You have new views'
+    assert spec.only_usernames == ('azim', 'ian', 'mike')
+
+
+def test_post_likes_card_spec(user, post):
+    spec = specs.PostLikesCardSpec(user.id, post.id)
+    assert spec.user_id == user.id
+    assert spec.post_id == post.id
+    assert user.id in spec.card_id
+    assert post.id in spec.card_id
+    assert spec.action == f'https://real.app/user/{user.id}/post/{post.id}/likes'
+    assert post.id in spec.action
+    assert spec.title == 'You have new likes'
+    assert spec.only_usernames == ('azim', 'ian', 'mike')
 
 
 def test_comment_card_spec_titles(user, post):
@@ -67,6 +81,7 @@ def test_chat_card_spec(user):
     assert spec.user_id == user.id
     assert user.id in spec.card_id
     assert spec.action == 'https://real.app/chat/'
+    assert not hasattr(spec, 'only_usernames')
 
 
 def test_chat_card_spec_titles(user):
@@ -86,6 +101,7 @@ def test_requested_followers_card_spec(user):
     assert spec.user_id == user.id
     assert user.id in spec.card_id
     assert spec.action == 'https://real.app/chat/'
+    assert not hasattr(spec, 'only_usernames')
 
 
 def test_requested_followers_card_spec_titles(user):

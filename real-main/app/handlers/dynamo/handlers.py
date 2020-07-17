@@ -63,15 +63,14 @@ register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
 register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
 register('post', 'view', ['INSERT'], post_manager.on_view_add)
-# DISABLED until frontend implements or at least ignores
-# register(
-#     'post',
-#     '-',
-#     ['INSERT', 'MODIFY'],
-#     post_manager.sync_post_likes_card,
-#     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
-# )
-# register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
+register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY'],
+    post_manager.sync_post_likes_card,
+    {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
+)
+register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
 register(
     'user',
     'follower',

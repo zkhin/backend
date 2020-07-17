@@ -82,6 +82,7 @@ class CommentCardSpec(CardSpec):
 class PostLikesCardSpec(CardSpec):
 
     notify_user_after = pendulum.duration(hours=24)
+    only_usernames = ('azim', 'ian', 'mike')
 
     def __init__(self, user_id, post_id):
         self.post_id = post_id
@@ -94,6 +95,7 @@ class PostLikesCardSpec(CardSpec):
 class PostViewsCardSpec(CardSpec):
 
     notify_user_after = pendulum.duration(hours=24)
+    only_usernames = ('azim', 'ian', 'mike')
 
     def __init__(self, user_id, post_id):
         self.post_id = post_id

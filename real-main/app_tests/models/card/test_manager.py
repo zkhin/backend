@@ -1,4 +1,4 @@
-from unittest.mock import call
+from unittest.mock import call, patch
 from uuid import uuid4
 
 import pendulum
@@ -107,16 +107,7 @@ def test_add_card_maximal(card_manager, user):
 
 
 @pytest.mark.parametrize(
-    'spec',
-    pytest.lazy_fixture(
-        [
-            'chat_card_spec',
-            'comment_card_spec',
-            'requested_followers_card_spec',
-            'post_likes_card_spec',
-            'post_views_card_spec',
-        ]
-    ),
+    'spec', pytest.lazy_fixture(['chat_card_spec', 'comment_card_spec', 'requested_followers_card_spec']),
 )
 def test_add_and_remove_card_by_spec(user, spec, card_manager):
     # verify starting state
@@ -143,6 +134,57 @@ def test_add_and_remove_card_by_spec(user, spec, card_manager):
     assert new_card.item['title'] == spec.title
     assert new_card.item['action'] == spec.action
     assert new_card.created_at == card.created_at
+
+    # remove the card, verify it's gone
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
+
+    # remove the card again, verify no-op
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
+
+
+@pytest.mark.parametrize('spec', pytest.lazy_fixture(['post_likes_card_spec', 'post_views_card_spec']))
+def test_add_and_remove_card_by_spec_with_only_usernames(user, spec, card_manager):
+    # verify starting state
+    assert card_manager.get_card(spec.card_id) is None
+
+    # verify the only_usernames prevents us from ading the card
+    assert card_manager.add_or_update_card_by_spec(spec) is None
+    assert card_manager.get_card(spec.card_id) is None
+
+    # add the card, verify state
+    before = pendulum.now('utc')
+    with patch.object(spec, 'only_usernames', (user.username,)):
+        assert card_manager.add_or_update_card_by_spec(spec)
+    after = pendulum.now('utc')
+    card = card_manager.get_card(spec.card_id)
+    assert card.id == spec.card_id
+    assert card.item['title'] == spec.title
+    assert card.item['action'] == spec.action
+    assert before < card.created_at < after
+    if spec.notify_user_after:
+        assert card.notify_user_at == card.created_at + spec.notify_user_after
+    else:
+        assert card.notify_user_at is None
+
+    # add the card again, verify no-op
+    with patch.object(spec, 'only_usernames', (user.username,)):
+        assert card_manager.add_or_update_card_by_spec(spec)
+    new_card = card_manager.get_card(spec.card_id)
+    assert new_card.id == spec.card_id
+    assert new_card.item['title'] == spec.title
+    assert new_card.item['action'] == spec.action
+    assert new_card.created_at == card.created_at
+
+    # remove the card, verify it's gone
+    card_manager.remove_card_by_spec_if_exists(spec)
+    assert card_manager.get_card(spec.card_id) is None
+
+    # add the card again, this time with None for only_usernames
+    with patch.object(spec, 'only_usernames', None):
+        assert card_manager.add_or_update_card_by_spec(spec)
+    assert card_manager.get_card(spec.card_id)
 
     # remove the card, verify it's gone
     card_manager.remove_card_by_spec_if_exists(spec)
