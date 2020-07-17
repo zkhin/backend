@@ -209,6 +209,13 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 text_tags.append({'tag': tag, 'userId': user_item['userId']})
         return text_tags
 
+    def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, new_item, old_item=None):
+        self.appsync_client.fire_notification(
+            user_id,
+            GqlNotificationType.USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED,
+            userChatsWithUnviewedMessagesCount=int(new_item.get('chatsWithUnviewedMessagesCount', 0)),
+        )
+
     def on_comment_add(self, comment_id, new_item):
         self.dynamo.increment_comment_count(new_item['userId'])
 
@@ -311,9 +318,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         if old_status == FollowStatus.REQUESTED and new_status != FollowStatus.REQUESTED:
             self.dynamo.decrement_followers_requested_count(followed_user_id, fail_soft=True)
 
-    def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, new_item, old_item=None):
-        self.appsync_client.fire_notification(
-            user_id,
-            GqlNotificationType.USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED,
-            userChatsWithUnviewedMessagesCount=int(new_item.get('chatsWithUnviewedMessagesCount', 0)),
-        )
+    def sync_chat_message_creation_count(self, message_id, new_item):
+        if user_id := new_item.get('userId'):
+            self.dynamo.increment_chat_messages_creation_count(user_id)
+
+    def sync_chat_message_deletion_count(self, message_id, old_item):
+        if user_id := old_item.get('userId'):
+            self.dynamo.increment_chat_messages_deletion_count(user_id)

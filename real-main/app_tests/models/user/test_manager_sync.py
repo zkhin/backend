@@ -24,6 +24,16 @@ def chat(chat_manager, user, user2):
     yield chat_manager.add_direct_chat(str(uuid4()), user.id, user2.id)
 
 
+@pytest.fixture
+def message(chat_message_manager, chat, user2):
+    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+
+
+@pytest.fixture
+def system_message(chat_message_manager, chat):
+    yield chat_message_manager.add_system_message(chat.id, 'system lore')
+
+
 @pytest.mark.parametrize(
     'method_name, check_method_name, log_pattern',
     [
@@ -339,3 +349,29 @@ def test_sync_follow_counts_due_to_follow_status_fails_softly(
     assert follower.refresh_item().item.get('followedCount', 0) == 0
     assert followed.refresh_item().item.get('followerCount', 0) == 0
     assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
+
+
+def test_sync_chat_message_creation_count(user_manager, user2, message, system_message):
+    # check starting state
+    assert user2.refresh_item().item.get('chatMessagesCreationCount', 0) == 0
+
+    # sync a message creation by user2, verify increments
+    user_manager.sync_chat_message_creation_count(message.id, new_item=message.item)
+    assert user2.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
+
+    # sync a system message creation, verify no error and no increment
+    user_manager.sync_chat_message_creation_count(system_message.id, new_item=system_message.item)
+    assert user2.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
+
+
+def test_sync_chat_message_deletion_count(user_manager, user2, message, system_message):
+    # check starting state
+    assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 0
+
+    # sync a message deletion by user2, verify increments
+    user_manager.sync_chat_message_deletion_count(message.id, old_item=message.item)
+    assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1
+
+    # sync a system message deletion, verify no error and no increment
+    user_manager.sync_chat_message_deletion_count(system_message.id, old_item=system_message.item)
+    assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1

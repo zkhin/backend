@@ -112,98 +112,101 @@ test('Messages in multiple chats fire', async () => {
   const ourMsgNotifications = []
   const ourSub = await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: ourUserId}})
-    .subscribe({
-      next: (resp) => {
-        ourMsgNotifications.push(resp)
-      },
-    })
+    .subscribe({next: ({data}) => ourMsgNotifications.push(data.onChatMessageNotification)})
   const ourSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
 
   // they subscribe to chat messages
   const theirMsgNotifications = []
   const theirSub = await theirClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
-    .subscribe({
-      next: (resp) => {
-        theirMsgNotifications.push(resp)
-      },
-    })
+    .subscribe({next: ({data}) => theirMsgNotifications.push(data.onChatMessageNotification)})
   const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
 
   // other subscribes to chat messages
   const otherMsgNotifications = []
   const otherSub = await otherClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: otherUserId}})
-    .subscribe({
-      next: (resp) => {
-        otherMsgNotifications.push(resp)
-      },
-    })
+    .subscribe({next: ({data}) => otherMsgNotifications.push(data.onChatMessageNotification)})
   const otherSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
 
   // we open a direct chat with them
+  await misc.sleep(2000) // let the subscriptions initialize
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  let variables = {userId: theirUserId, chatId, messageId: messageId1, messageText: 'msg 1'}
-  let resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
-  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
-  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
+  await ourClient
+    .mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: theirUserId, chatId, messageId: messageId1, messageText: 'msg 1'},
+    })
+    .then(({data}) => {
+      expect(data.createDirectChat.chatId).toBe(chatId)
+      expect(data.createDirectChat.messages.items).toHaveLength(1)
+      expect(data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
+    })
 
   // they post a message to the chat
+  await misc.sleep(1000) // notification ordering
   const messageId2 = uuidv4()
-  variables = {chatId, messageId: messageId2, text: 'msg 2'}
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
-  expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
+  await theirClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'msg 2'}})
+    .then(({data}) => {
+      expect(data.addChatMessage.chat.chatId).toBe(chatId)
+      expect(data.addChatMessage.messageId).toBe(messageId2)
+    })
 
   // other opens a group chat with all three of us
+  await misc.sleep(1000) // notification ordering
   const [chatId2, messageId3] = [uuidv4(), uuidv4()]
-  variables = {chatId: chatId2, userIds: [ourUserId, theirUserId], messageId: messageId3, messageText: 'msg 3'}
-  resp = await otherClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId2)
+  await otherClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId: chatId2, userIds: [ourUserId, theirUserId], messageId: messageId3, messageText: 'm3'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId2))
 
   // we post a message to the group chat
+  await misc.sleep(1000) // notification ordering
   const messageId4 = uuidv4()
-  variables = {chatId: chatId2, messageId: messageId4, text: 'msg 4'}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId4)
-  expect(resp.data.addChatMessage.chat.chatId).toBe(chatId2)
+  await ourClient
+    .mutate({
+      mutation: mutations.addChatMessage,
+      variables: {chatId: chatId2, messageId: messageId4, text: 'msg 4'},
+    })
+    .then(({data}) => {
+      expect(data.addChatMessage.chat.chatId).toBe(chatId2)
+      expect(data.addChatMessage.messageId).toBe(messageId4)
+    })
 
-  // give final notifications a moment to show up
+  // give all notifications a moment to show up
   await misc.sleep(5000)
 
   // we should see all messages from chats we were in (except our own messages)
+  expect(ourMsgNotifications[0].message.authorUserId).toBe(theirUserId)
+  expect(ourMsgNotifications[0].message.messageId).toBe(messageId2)
+  expect(ourMsgNotifications[1].message.authorUserId).toBeNull()
+  expect(ourMsgNotifications[1].message.text).toContain('added')
+  expect(ourMsgNotifications[2].message.authorUserId).toBe(otherUserId)
+  expect(ourMsgNotifications[2].message.messageId).toBe(messageId3)
   expect(ourMsgNotifications).toHaveLength(3)
-  expect(ourMsgNotifications[0].data.onChatMessageNotification.message.authorUserId).toBe(theirUserId)
-  expect(ourMsgNotifications[1].data.onChatMessageNotification.message.authorUserId).toBeNull()
-  expect(ourMsgNotifications[2].data.onChatMessageNotification.message.authorUserId).toBe(otherUserId)
-
-  expect(ourMsgNotifications[0].data.onChatMessageNotification.message.messageId).toBe(messageId2)
-  expect(ourMsgNotifications[1].data.onChatMessageNotification.message.text).toContain('added')
-  expect(ourMsgNotifications[2].data.onChatMessageNotification.message.messageId).toBe(messageId3)
 
   // they should see all messages from chats they were in (except their own messages)
+  expect(theirMsgNotifications[0].message.authorUserId).toBe(ourUserId)
+  expect(theirMsgNotifications[0].message.messageId).toBe(messageId1)
+  expect(theirMsgNotifications[1].message.authorUserId).toBeNull()
+  expect(theirMsgNotifications[1].message.text).toContain('added')
+  expect(theirMsgNotifications[2].message.authorUserId).toBe(otherUserId)
+  expect(theirMsgNotifications[2].message.messageId).toBe(messageId3)
+  expect(theirMsgNotifications[3].message.authorUserId).toBe(ourUserId)
+  expect(theirMsgNotifications[3].message.messageId).toBe(messageId4)
   expect(theirMsgNotifications).toHaveLength(4)
-  expect(theirMsgNotifications[0].data.onChatMessageNotification.message.authorUserId).toBe(ourUserId)
-  expect(theirMsgNotifications[1].data.onChatMessageNotification.message.authorUserId).toBeNull()
-  expect(theirMsgNotifications[2].data.onChatMessageNotification.message.authorUserId).toBe(otherUserId)
-  expect(theirMsgNotifications[3].data.onChatMessageNotification.message.authorUserId).toBe(ourUserId)
-
-  expect(theirMsgNotifications[0].data.onChatMessageNotification.message.messageId).toBe(messageId1)
-  expect(theirMsgNotifications[1].data.onChatMessageNotification.message.text).toContain('added')
-  expect(theirMsgNotifications[2].data.onChatMessageNotification.message.messageId).toBe(messageId3)
-  expect(theirMsgNotifications[3].data.onChatMessageNotification.message.messageId).toBe(messageId4)
 
   // other should see all msg from their chats (except their own)
+  expect(otherMsgNotifications[0].message.authorUserId).toBeNull()
+  expect(otherMsgNotifications[0].message.text).toContain('created')
+  expect(otherMsgNotifications[1].message.authorUserId).toBeNull()
+  expect(otherMsgNotifications[1].message.text).toContain('added')
+  expect(otherMsgNotifications[2].message.authorUserId).toBe(ourUserId)
+  expect(otherMsgNotifications[2].message.messageId).toBe(messageId4)
   expect(otherMsgNotifications).toHaveLength(3)
-  expect(otherMsgNotifications[0].data.onChatMessageNotification.message.authorUserId).toBeNull()
-  expect(otherMsgNotifications[1].data.onChatMessageNotification.message.authorUserId).toBeNull()
-  expect(otherMsgNotifications[2].data.onChatMessageNotification.message.authorUserId).toBe(ourUserId)
-
-  expect(otherMsgNotifications[0].data.onChatMessageNotification.message.text).toContain('created')
-  expect(otherMsgNotifications[1].data.onChatMessageNotification.message.text).toContain('added')
-  expect(otherMsgNotifications[2].data.onChatMessageNotification.message.messageId).toBe(messageId4)
 
   // shut down the subscriptions
   ourSub.unsubscribe()

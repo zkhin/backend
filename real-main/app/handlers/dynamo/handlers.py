@@ -48,6 +48,10 @@ register(
     {'messagesUnviewedCount': 0},
 )
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
+register('chatMessage', '-', ['INSERT'], chat_manager.on_chat_message_add)
+register('chatMessage', '-', ['INSERT'], user_manager.sync_chat_message_creation_count)
+register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)
+register('chatMessage', '-', ['REMOVE'], user_manager.sync_chat_message_deletion_count)
 register('chatMessage', 'flag', ['INSERT'], chat_message_manager.on_flag_add)
 register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
@@ -152,20 +156,6 @@ def process_records(event, context):
 
         with LogLevelContext(logger, logging.INFO):
             logger.info(f'{name}: `{pk}` / `{sk}` starting processing')
-
-        # legacy postprocessors
-        postprocessor = None
-
-        if pk.startswith('chatMessage/'):
-            postprocessor = chat_message_manager.postprocessor
-
-        if postprocessor:
-            with LogLevelContext(logger, logging.INFO):
-                logger.info(f'{name}: `{pk}` / `{sk}` running postprocessor: {postprocessor.run}')
-            try:
-                postprocessor.run(pk, sk, old_item, new_item)
-            except Exception as err:
-                logger.exception(str(err))
 
         # we still have some pks in an old (& deprecated) format with more than one item_id in the pk
         pk_prefix, item_id = pk.split('/')[:2]

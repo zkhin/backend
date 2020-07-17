@@ -11,7 +11,6 @@ from .appsync import ChatMessageAppSync
 from .dynamo import ChatMessageDynamo
 from .enums import ChatMessageNotificationType
 from .model import ChatMessage
-from .postprocessor import ChatMessagePostProcessor
 
 logger = logging.getLogger()
 
@@ -34,14 +33,6 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
             self.appsync = ChatMessageAppSync(clients['appsync'])
         if 'dynamo' in clients:
             self.dynamo = ChatMessageDynamo(clients['dynamo'])
-
-    @property
-    def postprocessor(self):
-        if not hasattr(self, '_postprocessor'):
-            self._postprocessor = ChatMessagePostProcessor(
-                dynamo=getattr(self, 'dynamo', None), manager=self, chat_manager=self.chat_manager,
-            )
-        return self._postprocessor
 
     def get_model(self, item_id, strongly_consistent=False):
         return self.get_chat_message(item_id, strongly_consistent=strongly_consistent)

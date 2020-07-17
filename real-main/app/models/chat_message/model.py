@@ -142,11 +142,3 @@ class ChatMessage(FlagModelMixin):
         chat = self.chat_manager.get_chat(self.chat_id, strongly_consistent=True)
         if chat:
             chat.on_message_add(self)
-            if self.author:
-                self.author.dynamo.increment_chat_messages_creation_count(self.author.id)
-
-    def on_delete(self):
-        if self.chat:
-            self.chat.on_message_delete(self)
-        if self.author:
-            self.author.dynamo.increment_chat_messages_deletion_count(self.author.id)

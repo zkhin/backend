@@ -197,14 +197,10 @@ def test_is_crowdsourced_forced_removal_criteria_met(message):
 
 
 def test_on_add_or_edit(message, system_message):
-    # set up mocks, verify starting statdeletee
-    assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 0
-
     # react to the edit of the normal message, verify
     with mock.patch.object(message.chat_manager, 'get_chat') as get_chat_mock:
         message.on_add_or_edit({'k': 'v'})
     assert get_chat_mock.mock_calls == []
-    assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 0
 
     # react to the add of the normal message, verify
     with mock.patch.object(message.chat_manager, 'get_chat') as get_chat_mock:
@@ -214,7 +210,6 @@ def test_on_add_or_edit(message, system_message):
         mock.call().__bool__(),
         mock.call().on_message_add(message),
     ]
-    assert message.author.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
 
     # react to the add of the system message, verify
     with mock.patch.object(system_message.chat_manager, 'get_chat') as get_chat_mock:
@@ -224,19 +219,3 @@ def test_on_add_or_edit(message, system_message):
         mock.call().__bool__(),
         mock.call().on_message_add(system_message),
     ]
-
-
-def test_on_delete(message, system_message):
-    # set up mocks, verify starting state
-    message._chat = mock.Mock(message.chat)
-    system_message._chat = mock.Mock(system_message.chat)
-    assert message.author.refresh_item().item.get('chatMessagesDeletionCount', 0) == 0
-
-    # react to the delete of the normal message, verify
-    message.on_delete()
-    assert message.chat.mock_calls == [mock.call.on_message_delete(message)]
-    assert message.author.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1
-
-    # react to the delete of the system message, verify
-    system_message.on_delete()
-    assert system_message.chat.mock_calls == [mock.call.on_message_delete(system_message)]
