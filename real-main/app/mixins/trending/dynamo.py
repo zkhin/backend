@@ -1,5 +1,5 @@
-import decimal
 import logging
+from decimal import Decimal
 
 import pendulum
 
@@ -9,6 +9,9 @@ logger = logging.getLogger()
 
 
 class TrendingDynamo:
+
+    PERCISION = Decimal(10) ** -9
+
     def __init__(self, item_type, dynamo_client):
         self.item_type = item_type
         self.client = dynamo_client
@@ -23,8 +26,8 @@ class TrendingDynamo:
         return self.client.get_item(self.pk(item_id), ConsistentRead=strongly_consistent)
 
     def add(self, item_id, initial_score, now=None):
-        assert isinstance(initial_score, decimal.Decimal), 'Boto uses decimals for numbers'
-        assert initial_score > 0, 'Score must be greater than 0'
+        assert isinstance(initial_score, Decimal), 'Boto uses decimals for numbers'
+        assert initial_score >= 0, 'Score cannot be negative'
         now = now or pendulum.now('utc')
         now_str = now.to_iso8601_string()
         pk = self.pk(item_id)
@@ -34,7 +37,7 @@ class TrendingDynamo:
                 'sortKey': pk['sortKey'],
                 'schemaVersion': 0,
                 'gsiK3PartitionKey': f'{self.item_type}/trending',
-                'gsiK3SortKey': initial_score.normalize(),
+                'gsiK3SortKey': initial_score.quantize(self.PERCISION).normalize(),
                 'lastDeflatedAt': now_str,
                 'createdAt': now_str,
             },
@@ -45,14 +48,14 @@ class TrendingDynamo:
             raise exceptions.TrendingAlreadyExists(self.item_type, item_id)
 
     def add_score(self, item_id, score_to_add, expected_last_deflated_at):
-        assert isinstance(score_to_add, decimal.Decimal), 'Boto uses decimals for numbers'
-        assert score_to_add > 0, 'Score to add must be greater than 0'
+        assert isinstance(score_to_add, Decimal), 'Boto uses decimals for numbers'
+        assert score_to_add >= 0, 'Score cannot be negative'
         query_kwargs = {
             'Key': self.pk(item_id),
             'UpdateExpression': 'ADD gsiK3SortKey :sta',
             'ConditionExpression': 'lastDeflatedAt = :elda',
             'ExpressionAttributeValues': {
-                ':sta': score_to_add.normalize(),
+                ':sta': score_to_add.quantize(self.PERCISION).normalize(),
                 ':elda': expected_last_deflated_at.to_iso8601_string(),
             },
         }
@@ -62,9 +65,9 @@ class TrendingDynamo:
             raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
 
     def deflate_score(self, item_id, expected_score, new_score, expected_last_deflation_date, now):
-        assert isinstance(expected_score, decimal.Decimal), 'Boto uses decimals for numbers'
-        assert isinstance(new_score, decimal.Decimal), 'Boto uses decimals for numbers'
-        assert new_score > 0, 'Score must be greater than 0'
+        assert isinstance(expected_score, Decimal), 'Boto uses decimals for numbers'
+        assert isinstance(new_score, Decimal), 'Boto uses decimals for numbers'
+        assert new_score >= 0, 'Score cannot be negative'
         assert expected_score > new_score, 'New score must be less than existing score'
         query_kwargs = {
             'Key': self.pk(item_id),
@@ -72,7 +75,7 @@ class TrendingDynamo:
             'ConditionExpression': 'gsiK3SortKey = :es AND begins_with(lastDeflatedAt, :eldd)',
             'ExpressionAttributeValues': {
                 ':es': expected_score,  # no normalization because must match exactly
-                ':ns': new_score.normalize(),
+                ':ns': new_score.quantize(self.PERCISION).normalize(),
                 ':lda': now.to_iso8601_string(),
                 ':eldd': str(expected_last_deflation_date),
             },
@@ -84,10 +87,12 @@ class TrendingDynamo:
 
     def delete(self, item_id, expected_score=None):
         if expected_score is not None:
-            assert isinstance(expected_score, decimal.Decimal), 'Boto uses decimals for numbers'
+            assert isinstance(expected_score, Decimal), 'Boto uses decimals for numbers'
             kwargs = {
                 'ConditionExpression': 'gsiK3SortKey = :es',
-                'ExpressionAttributeValues': {':es': expected_score.normalize()},
+                'ExpressionAttributeValues': {
+                    ':es': expected_score,  # no normalization because must match exactly
+                },
             }
         else:
             kwargs = {}

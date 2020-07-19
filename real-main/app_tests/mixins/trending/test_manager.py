@@ -78,6 +78,23 @@ def test_trending_deflate_item_already_deflated_today(manager, caplog):
 
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
+def test_trending_deflate_item_already_has_score_of_zero(manager, caplog):
+    # add a trending item
+    item_id, item_score = str(uuid4()), Decimal(0)
+    item = manager.trending_dynamo.add(item_id, item_score)
+    manager.trending_dynamo.deflate_score = Mock()
+
+    with caplog.at_level(logging.WARNING):
+        deflated = manager.trending_deflate_item(item)
+    assert deflated is False
+    assert len(caplog.records) == 1
+    assert manager.item_type in caplog.records[0].msg
+    assert item_id in caplog.records[0].msg
+    assert 'already has score of zero' in caplog.records[0].msg
+    assert manager.trending_dynamo.deflate_score.mock_calls == []
+
+
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_no_recursion_without_last_deflated_at_assumption(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')

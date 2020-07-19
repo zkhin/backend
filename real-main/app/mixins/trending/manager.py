@@ -49,6 +49,11 @@ class TrendingManagerMixin:
                 f'trending_deflate_item() failed for item `{self.item_type}:{item_id}` after {retry_count} tries'
             )
 
+        current_score = trending_item['gsiK3SortKey']
+        if current_score == 0:
+            logging.warning(f'Trending for item `{self.item_type}:{item_id}` already has score of zero')
+            return False
+
         now = now or pendulum.now('utc')
         last_deflation_at = (
             pendulum.parse(trending_item['lastDeflatedAt'])
@@ -60,7 +65,6 @@ class TrendingManagerMixin:
             logging.warning(f'Trending for item `{self.item_type}:{item_id}` has already been deflated today')
             return False
 
-        current_score = trending_item['gsiK3SortKey']
         new_score = current_score / (self.score_inflation_per_day ** days_since_last_deflation)
 
         try:
