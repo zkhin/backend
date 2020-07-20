@@ -228,6 +228,7 @@ type Mutation {
   addToGroupChat(chatId: ID!, userIds: [ID!]!): Chat
   leaveGroupChat(chatId: ID!): Chat
   reportChatViews(chatIds: [ID!]!): Boolean
+  flagChat(chatId: ID!): Chat
 
   # Chat messages
   #   - may only be edited or deleted by message author
@@ -460,6 +461,7 @@ type Chat {
   name: String
   createdAt: AWSDateTime!
   lastMessageActivityAt: AWSDateTime
+  flagStatus: FlagStatus!  # has the caller flagged this chat?
   # Users: ordered by joinedAt, earliest first
   #   - excludeUserId will filter out any user with that userId from the results
   users(limit: Int, nextToken: String, excludeUserId: ID): PaginatedUsers!

@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import patch
 from uuid import uuid4
 
 import pendulum
@@ -198,3 +199,17 @@ def test_on_message_delete_handles_chat_views_correctly(chat, user1, user2, chat
     assert chat.refresh_item().item['messagesCount'] == 0
     assert chat.member_dynamo.get(chat.id, user1.id)['messagesUnviewedCount'] == 0
     assert chat.member_dynamo.get(chat.id, user2.id)['messagesUnviewedCount'] == 0
+
+
+def test_on_flag_add_deletes_chat_if_crowdsourced_criteria_met(chat_manager, chat, user2):
+    # react to a flagging without meeting the criteria, verify doesn't delete
+    with patch.object(chat, 'is_crowdsourced_forced_removal_criteria_met', return_value=False):
+        with patch.object(chat_manager, 'init_chat', return_value=chat):
+            chat_manager.on_flag_add(chat.id, new_item={})
+    assert chat.refresh_item().item
+
+    # react to a flagging with meeting the criteria, verify deletes
+    with patch.object(chat, 'is_crowdsourced_forced_removal_criteria_met', return_value=True):
+        with patch.object(chat_manager, 'init_chat', return_value=chat):
+            chat_manager.on_flag_add(chat.id, new_item={})
+    assert chat.refresh_item().item is None

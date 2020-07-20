@@ -117,7 +117,7 @@ test('Flag message success', async () => {
     expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
   })
 
-  // 50% of participants in chat have flagged message, so check it was auto-deleted
+  // over 10% of participants in chat have flagged message, so check it was auto-deleted
   await misc.sleep(2000)
   await theirClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
     expect(data.chat.messages.items).toHaveLength(0)

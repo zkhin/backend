@@ -5,6 +5,7 @@ import pendulum
 
 from app import models
 from app.mixins.base import ManagerBase
+from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
 
 from .dynamo import ChatDynamo, ChatMemberDynamo
@@ -15,7 +16,7 @@ from .model import Chat
 logger = logging.getLogger()
 
 
-class ChatManager(ViewManagerMixin, ManagerBase):
+class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
     item_type = 'chat'
 
@@ -35,6 +36,9 @@ class ChatManager(ViewManagerMixin, ManagerBase):
             self.dynamo = ChatDynamo(clients['dynamo'])
             self.member_dynamo = ChatMemberDynamo(clients['dynamo'])
 
+    def get_model(self, item_id, strongly_consistent=False):
+        return self.get_chat(item_id, strongly_consistent=strongly_consistent)
+
     def get_chat(self, chat_id, strongly_consistent=False):
         item = self.dynamo.get(chat_id, strongly_consistent=strongly_consistent)
         return self.init_chat(item) if item else None
@@ -46,6 +50,7 @@ class ChatManager(ViewManagerMixin, ManagerBase):
     def init_chat(self, chat_item):
         kwargs = {
             'dynamo': getattr(self, 'dynamo', None),
+            'flag_dynamo': getattr(self, 'flag_dynamo', None),
             'member_dynamo': getattr(self, 'member_dynamo', None),
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
@@ -173,3 +178,12 @@ class ChatManager(ViewManagerMixin, ManagerBase):
         if new_item.get('viewCount', 0) > (old_item or {}).get('viewCount', 0):
             user_id = new_item['sortKey'].split('/')[1]
             self.member_dynamo.clear_messages_unviewed_count(chat_id, user_id)
+
+    def on_flag_add(self, chat_id, new_item):
+        chat_item = self.dynamo.increment_flag_count(chat_id)
+        chat = self.init_chat(chat_item)
+
+        # force delete the chat_message?
+        if chat.is_crowdsourced_forced_removal_criteria_met():
+            logger.warning(f'Force deleting chat `{chat_id}` from flagging')
+            chat.delete()

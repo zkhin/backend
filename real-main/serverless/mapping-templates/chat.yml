@@ -25,3 +25,7 @@
 - type: Chat
   field: messagesCount
   dataSource: DynamodbDataSource
+
+- type: Chat
+  field: flagStatus
+  dataSource: DynamodbDataSource

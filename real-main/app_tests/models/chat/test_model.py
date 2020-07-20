@@ -186,6 +186,18 @@ def test_cant_leave_non_group_chat(direct_chat):
         direct_chat.leave(['new-uid'])
 
 
+def test_delete(group_chat, direct_chat):
+    # test deleting the group chat
+    assert group_chat.refresh_item().item
+    group_chat.delete()
+    assert group_chat.refresh_item().item is None
+
+    # test deleting the direct chat
+    assert direct_chat.refresh_item().item
+    direct_chat.delete()
+    assert direct_chat.refresh_item().item is None
+
+
 def test_delete_group_chat(group_chat, user1, chat_message_manager):
     # user1 adds message to the chat
     group_chat.refresh_item()
@@ -253,3 +265,46 @@ def test_delete_direct_chat(direct_chat, user1, user2):
 def test_cant_delete_direct_chat_non_direct_chat(group_chat):
     with pytest.raises(AssertionError, match='non-DIRECT chats'):
         group_chat.delete_direct_chat()
+
+
+def test_cant_flag_chat_we_are_not_in(direct_chat, user1, user2, user3):
+    # user3 is not part of the chat, check they can't flag it
+    with pytest.raises(ChatException, match='User is not part of chat'):
+        direct_chat.flag(user3)
+
+    # verify user2, who is part of the chat, can flag without exception
+    assert direct_chat.flag(user2)
+
+
+def test_is_crowdsourced_forced_removal_criteria_met_direct_chat(direct_chat):
+    # check starting state
+    assert direct_chat.item.get('flagCount', 0) == 0
+    assert direct_chat.item.get('userCount', 0) == 2
+    assert direct_chat.is_crowdsourced_forced_removal_criteria_met() is False
+
+    # simulate a flag in a direct chat
+    direct_chat.item['flagCount'] = 1
+    assert direct_chat.is_crowdsourced_forced_removal_criteria_met() is True
+
+
+def test_is_crowdsourced_forced_removal_criteria_met_group_chat(group_chat):
+    # check starting state
+    assert group_chat.item.get('flagCount', 0) == 0
+    assert group_chat.item.get('userCount', 0) == 1
+    assert group_chat.is_crowdsourced_forced_removal_criteria_met() is False
+
+    # simulate nine-person chat
+    group_chat.item['userCount'] = 9
+    group_chat.item['flagCount'] = 0
+    assert group_chat.is_crowdsourced_forced_removal_criteria_met() is False
+    group_chat.item['flagCount'] = 1
+    assert group_chat.is_crowdsourced_forced_removal_criteria_met() is True
+
+    # simulate ten-person chat
+    group_chat.item['userCount'] = 10
+    group_chat.item['flagCount'] = 0
+    assert group_chat.is_crowdsourced_forced_removal_criteria_met() is False
+    group_chat.item['flagCount'] = 1
+    assert group_chat.is_crowdsourced_forced_removal_criteria_met() is False
+    group_chat.item['flagCount'] = 2
+    assert group_chat.is_crowdsourced_forced_removal_criteria_met() is True

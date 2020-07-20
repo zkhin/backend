@@ -48,6 +48,8 @@ register(
     {'messagesUnviewedCount': 0},
 )
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
+register('chat', 'flag', ['INSERT'], chat_manager.on_flag_add)
+register('chat', 'flag', ['REMOVE'], chat_manager.on_flag_delete)
 register('chatMessage', '-', ['INSERT'], chat_manager.on_chat_message_add)
 register('chatMessage', '-', ['INSERT'], user_manager.sync_chat_message_creation_count)
 register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)

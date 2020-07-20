@@ -98,6 +98,12 @@ class ChatDynamo:
                 return
             raise
 
+    def increment_flag_count(self, chat_id):
+        return self.client.increment_count(self.pk(chat_id), 'flagCount')
+
+    def decrement_flag_count(self, chat_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(chat_id), 'flagCount', fail_soft=fail_soft)
+
     def increment_messages_count(self, chat_id):
         return self.client.increment_count(self.pk(chat_id), 'messagesCount')
 

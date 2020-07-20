@@ -1087,6 +1087,25 @@ def report_chat_views(caller_user, arguments, source, context):
     return True
 
 
+@routes.register('Mutation.flagChat')
+@validate_caller
+def flag_chat(caller_user, arguments, source, context):
+    chat_id = arguments['chatId']
+
+    chat = chat_manager.get_chat(chat_id)
+    if not chat:
+        raise ClientException(f'Chat `{chat_id}` does not exist')
+
+    try:
+        chat.flag(caller_user)
+    except (ChatException, FlagException) as err:
+        raise ClientException(str(err))
+
+    resp = chat.item.copy()
+    resp['flagStatus'] = FlagStatus.FLAGGED
+    return resp
+
+
 @routes.register('Mutation.addChatMessage')
 @validate_caller
 def add_chat_message(caller_user, arguments, source, context):

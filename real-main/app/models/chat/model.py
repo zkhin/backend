@@ -2,6 +2,7 @@ import logging
 
 import pendulum
 
+from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
 
 from .enums import ChatType
@@ -10,7 +11,7 @@ from .exceptions import ChatException
 logger = logging.getLogger()
 
 
-class Chat(ViewModelMixin):
+class Chat(ViewModelMixin, FlagModelMixin):
 
     item_type = 'chat'
 
@@ -134,12 +135,41 @@ class Chat(ViewModelMixin):
 
         return self
 
+    def flag(self, user):
+        if not self.is_member(user.id):
+            raise ChatException(f'User is not part of chat `{self.id}`')
+
+        # write to the db
+        self.flag_dynamo.add(self.id, user.id)
+        self.item['flagCount'] = self.item.get('flagCount', 0) + 1
+
+        # we don't call super() because that depends on the model having a 'user_id' property
+        return self
+
+    def is_crowdsourced_forced_removal_criteria_met(self):
+        # force-delete the chat if at least 10% of the members of the chat have flagged it
+        flag_count = self.item.get('flagCount', 0)
+        user_count = self.item.get('userCount', 0)
+        return flag_count > user_count / 10
+
+    def delete(self):
+        if self.type == ChatType.GROUP:
+            # everybody leaves, which triggers a delete
+            for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
+                user = self.user_manager.get_user(user_id)
+                self.leave(user)
+        elif self.type == ChatType.DIRECT:
+            self.delete_direct_chat()
+        else:
+            raise Exception(f'Unrecognized chat type: `{self.type}`')
+
     def delete_group_chat(self):
         assert self.type == ChatType.GROUP, 'may not be called for non-GROUP chats'
 
         transacts = [self.dynamo.transact_delete(self.id, expected_user_count=0)]
         self.dynamo.client.transact_write_items(transacts)
         self.chat_message_manager.truncate_chat_messages(self.id)
+        self.flag_dynamo.delete_all_for_item(self.id)
 
     def delete_direct_chat(self):
         assert self.type == ChatType.DIRECT, 'may not be called for non-DIRECT chats'
@@ -155,5 +185,6 @@ class Chat(ViewModelMixin):
         ]
         self.dynamo.client.transact_write_items(transacts)
 
-        # second iterate through the messages and delete them
+        # iterate through secondary items and delete them
         self.chat_message_manager.truncate_chat_messages(self.id)
+        self.flag_dynamo.delete_all_for_item(self.id)

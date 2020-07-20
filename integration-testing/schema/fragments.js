@@ -9,6 +9,7 @@ module.exports.chat = gql`
     name
     createdAt
     lastMessageActivityAt
+    flagStatus
     messageCount
     messagesCount
     messagesViewedCount: messagesCount(viewedStatus: VIEWED)

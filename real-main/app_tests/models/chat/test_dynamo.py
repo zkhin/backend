@@ -240,7 +240,10 @@ def test_update_last_message_activity_at(chat_dynamo, caplog):
 
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
-    [['increment_messages_count', 'decrement_messages_count', 'messagesCount']],
+    [
+        ['increment_flag_count', 'decrement_flag_count', 'flagCount'],
+        ['increment_messages_count', 'decrement_messages_count', 'messagesCount'],
+    ],
 )
 def test_increment_decrement_count(chat_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
     incrementor = getattr(chat_dynamo, incrementor_name)

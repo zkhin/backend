@@ -158,7 +158,7 @@ def test_cant_flag_chat_message_of_chat_we_are_not_in(chat, message, user1, user
     with pytest.raises(ChatMessageException, match='User is not part of chat of message'):
         message.flag(user3)
 
-    # user3 is not part of the chat, check they can't flag it
+    # can't flag system message
     org_user_id = message.user_id
     message.user_id = None
     with pytest.raises(ChatMessageException, match='Cannot flag system chat message'):

@@ -698,6 +698,15 @@ module.exports.reportChatViews = gql`
   }
 `
 
+module.exports.flagChat = gql`
+  mutation FlagChat($chatId: ID!) {
+    flagChat(chatId: $chatId) {
+      chatId
+      flagStatus
+    }
+  }
+`
+
 module.exports.addChatMessage = gql`
   mutation AddChatMessage($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage(chatId: $chatId, messageId: $messageId, text: $text) {
