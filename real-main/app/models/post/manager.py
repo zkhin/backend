@@ -345,8 +345,14 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         post = self.get_post(post_id)
         # viewed by post owner?
         if post and post.user_id == viewed_by_user_id:
-            self.dynamo.clear_comments_unviewed_count(post.id)
-            self.dynamo.set_last_unviewed_comment_at(post.item, None)
+            try:
+                self.dynamo.clear_comments_unviewed_count(post.id)
+                self.dynamo.set_last_unviewed_comment_at(post.item, None)
+            except self.dynamo.client.exceptions.ConditionalCheckFailedException:
+                # Race condition: the post was deleted.
+                # Make sure that's the case before # swallowing the exception.
+                if post.refresh_item().item:
+                    raise
             self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
             self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(post.user_id, post.id))
             self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(post.user_id, post.id))

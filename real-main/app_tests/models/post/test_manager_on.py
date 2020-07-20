@@ -197,6 +197,20 @@ def test_on_view_add_view_by_post_owner_clears_cards(post_manager, post):
     ]
 
 
+def test_on_view_add_view_by_post_owner_race_condition(post_manager, post):
+    # delete the post from the DB, verify it's gone
+    post.delete()
+    assert post_manager.get_post(post.id) is None
+
+    # react to a view by post owner, with the manager mocked so the handler
+    # thinks the post exists in the DB up until when the writes fail
+    with patch.object(post_manager, 'get_post', return_value=post):
+        with patch.object(post_manager, 'card_manager') as card_manager_mock:
+            post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
+    # verify control flowed through to the card_manager calls
+    assert len(card_manager_mock.mock_calls) == 3
+
+
 def test_on_delete_removes_cards(post_manager, post):
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
         post_manager.on_delete(post.id, post.item)
