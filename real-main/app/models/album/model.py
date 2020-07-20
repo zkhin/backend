@@ -69,16 +69,7 @@ class Album:
         if (art_hash := self.item.get('artHash')) :
             self.delete_art_images(art_hash)
 
-        # order matters to moto (in test suite), but not on dynamo
-        transacts = [
-            self.user_manager.dynamo.transact_decrement_album_count(self.user_id),
-            self.dynamo.transact_delete_album(self.id),
-        ]
-        transact_exceptions = [
-            AlbumException(f'Unable to decrement album count for user `{self.user_id}`'),
-            AlbumException(f'Album `{self.id}` does not exist'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
+        self.dynamo.delete_album(self.id)
         return self
 
     def get_next_first_rank(self):

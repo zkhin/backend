@@ -2,6 +2,7 @@ import pendulum
 import pytest
 
 from app.models.album.dynamo import AlbumDynamo
+from app.models.album.exceptions import AlbumAlreadyExists, AlbumDoesNotExist
 
 
 @pytest.fixture
@@ -11,25 +12,21 @@ def album_dynamo(dynamo_client):
 
 @pytest.fixture
 def album_item(album_dynamo):
-    album_id = 'aid'
-    transact = album_dynamo.transact_add_album(album_id, 'uid', 'album name')
-    album_dynamo.client.transact_write_items([transact])
-    yield album_dynamo.get_album(album_id)
+    yield album_dynamo.add_album('aid', 'uid', 'album name')
 
 
-def test_transact_add_album_minimal(album_dynamo):
+def test_add_album_minimal(album_dynamo):
     album_id = 'aid'
     user_id = 'uid'
     name = 'aname'
 
     # add the album to the DB
     before_str = pendulum.now('utc').to_iso8601_string()
-    transact = album_dynamo.transact_add_album(album_id, user_id, name)
+    album_item = album_dynamo.add_album(album_id, user_id, name)
     after_str = pendulum.now('utc').to_iso8601_string()
-    album_dynamo.client.transact_write_items([transact])
 
     # retrieve the album and verify the format is as we expect
-    album_item = album_dynamo.get_album(album_id)
+    assert album_dynamo.get_album(album_id) == album_item
     created_at_str = album_item['createdAt']
     assert before_str <= created_at_str
     assert after_str >= created_at_str
@@ -46,7 +43,7 @@ def test_transact_add_album_minimal(album_dynamo):
     }
 
 
-def test_transact_add_album_maximal(album_dynamo):
+def test_add_album_maximal(album_dynamo):
     album_id = 'aid'
     user_id = 'uid'
     name = 'aname'
@@ -54,12 +51,10 @@ def test_transact_add_album_maximal(album_dynamo):
 
     # add the album to the DB
     created_at = pendulum.now('utc')
-    album_dynamo.client.transact_write_items(
-        [album_dynamo.transact_add_album(album_id, user_id, name, description=description, created_at=created_at)]
-    )
+    album_item = album_dynamo.add_album(album_id, user_id, name, description=description, created_at=created_at)
 
     # retrieve the album and verify the format is as we expect
-    album_item = album_dynamo.get_album(album_id)
+    assert album_dynamo.get_album(album_id) == album_item
     created_at_str = created_at.to_iso8601_string()
     assert album_item == {
         'partitionKey': 'album/aid',
@@ -75,13 +70,12 @@ def test_transact_add_album_maximal(album_dynamo):
     }
 
 
-def test_cant_transact_add_album_same_album_id(album_dynamo, album_item):
+def test_cant_add_album_same_album_id(album_dynamo, album_item):
     album_id = album_item['albumId']
 
     # verify we can't add another album with the same id
-    transact = album_dynamo.transact_add_album(album_id, 'uid2', 'n2')
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
+    with pytest.raises(AlbumAlreadyExists):
+        album_dynamo.add_album(album_id, 'uid2', 'n2')
 
 
 def test_set(album_dynamo, album_item):
@@ -123,25 +117,21 @@ def test_set_errors(album_dynamo, album_item):
         album_dynamo.set(album_id, name='')
 
 
-def test_cant_transact_delete_album_doesnt_exist(album_dynamo):
+def test_cant_delete_album_doesnt_exist(album_dynamo):
     album_id = 'dne-cid'
-    transact = album_dynamo.transact_delete_album(album_id)
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
+    with pytest.raises(AlbumDoesNotExist):
+        album_dynamo.delete_album(album_id)
 
 
-def test_transact_delete_album(album_dynamo, album_item):
+def test_delete_album(album_dynamo, album_item):
     album_id = album_item['albumId']
 
     # verify we can see the album in the DB
     album_item = album_dynamo.get_album(album_id)
     assert album_item['albumId'] == album_id
 
-    # delete the album
-    transact = album_dynamo.transact_delete_album(album_id)
-    album_dynamo.client.transact_write_items([transact])
-
-    # verify the album is no longer in the db
+    # delete the album, verify
+    album_dynamo.delete_album(album_id)
     assert album_dynamo.get_album(album_id) is None
 
 
@@ -245,8 +235,7 @@ def test_generate_by_user(album_dynamo, album_item):
 
     # add another album for that user
     album_id_2 = 'aid-2'
-    transact = album_dynamo.transact_add_album(album_id_2, user_id, 'album name')
-    album_dynamo.client.transact_write_items([transact])
+    album_dynamo.add_album(album_id_2, user_id, 'album name')
 
     # test generate for user with two albums
     album_items = list(album_dynamo.generate_by_user(user_id))

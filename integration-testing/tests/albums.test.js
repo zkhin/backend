@@ -166,10 +166,10 @@ test('Cant create two albums with same id', async () => {
   // verify neither us nor them can add another album with same id
   let variables = {albumId, name: 'r'}
   await expect(ourClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow(
-    /ClientError: Unable to add album /,
+    /ClientError: Album .* already exists/,
   )
   await expect(theirClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow(
-    /ClientError: Unable to add album /,
+    /ClientError: Album .* already exists/,
   )
 })
 
@@ -234,6 +234,7 @@ test('User.albums and Query.album block privacy', async () => {
   expect(resp.data.addAlbum.albumId).toBe(albumId)
 
   // check they can see our albums
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp.data.user.albumCount).toBe(1)
   expect(resp.data.user.albums.items).toHaveLength(1)
@@ -357,6 +358,7 @@ test('User.albums matches direct access, ordering', async () => {
   const album2 = resp.data.addAlbum
 
   // check they appear correctly in User.albums
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.albumCount).toBe(2)
   expect(resp.data.self.albums.items).toHaveLength(2)

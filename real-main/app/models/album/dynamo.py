@@ -4,6 +4,8 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
+from .exceptions import AlbumAlreadyExists, AlbumDoesNotExist
+
 logger = logging.getLogger()
 
 
@@ -26,28 +28,27 @@ class AlbumDynamo:
     def get_album(self, album_id, strongly_consistent=False):
         return self.client.get_item(self.pk(album_id), ConsistentRead=strongly_consistent)
 
-    def transact_add_album(self, album_id, user_id, name, description=None, created_at=None):
+    def add_album(self, album_id, user_id, name, description=None, created_at=None):
         created_at = created_at or pendulum.now('utc')
         created_at_str = created_at.to_iso8601_string()
         query_kwargs = {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '0'},
-                    'partitionKey': {'S': f'album/{album_id}'},
-                    'sortKey': {'S': '-'},
-                    'gsiA1PartitionKey': {'S': f'album/{user_id}'},
-                    'gsiA1SortKey': {'S': created_at_str},
-                    'albumId': {'S': album_id},
-                    'ownedByUserId': {'S': user_id},
-                    'createdAt': {'S': created_at_str},
-                    'name': {'S': name},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            }
+            'Item': {
+                **self.pk(album_id),
+                'schemaVersion': 0,
+                'gsiA1PartitionKey': f'album/{user_id}',
+                'gsiA1SortKey': created_at_str,
+                'albumId': album_id,
+                'ownedByUserId': user_id,
+                'createdAt': created_at_str,
+                'name': name,
+            },
         }
         if description is not None:
-            query_kwargs['Put']['Item']['description'] = {'S': description}
-        return query_kwargs
+            query_kwargs['Item']['description'] = description
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            raise AlbumAlreadyExists(album_id)
 
     def set(self, album_id, name=None, description=None):
         assert name is not None or description is not None, 'Action-less post edit requested'
@@ -93,10 +94,10 @@ class AlbumDynamo:
 
         return self.client.update_item(update_query_kwargs)
 
-    def transact_delete_album(self, album_id):
-        return {
-            'Delete': {'Key': self.typed_pk(album_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
-        }
+    def delete_album(self, album_id):
+        if item_deleted := self.client.delete_item(self.pk(album_id)):
+            return item_deleted
+        raise AlbumDoesNotExist(album_id)
 
     def transact_add_post(self, album_id, old_rank_count=None, now=None):
         "Transaction to change album properties to reflect adding a post to the album"

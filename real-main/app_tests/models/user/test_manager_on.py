@@ -30,6 +30,11 @@ def chat(user, chat_manager):
     yield chat_manager.add_group_chat(str(uuid4()), user)
 
 
+@pytest.fixture
+def album(album_manager, user):
+    yield album_manager.add_album(user.id, str(uuid4()), 'album name')
+
+
 def test_on_comment_add_adjusts_counts(user_manager, user, comment):
     # check & save starting state
     org_item = user.refresh_item().item
@@ -154,3 +159,35 @@ def test_on_chat_member_delete_update_chat_count(user_manager, chat, user, caplo
     assert 'chatCount' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg
     assert user.refresh_item().item.get('chatCount', 0) == 0
+
+
+def test_on_album_add_update_album_count(user_manager, album, user):
+    # check starting state
+    assert user.refresh_item().item.get('albumCount', 0) == 0
+
+    # react to an add, check state
+    user_manager.on_album_add_update_album_count(album.id, new_item=album.item)
+    assert user.refresh_item().item.get('albumCount', 0) == 1
+
+    # react to another add, check state
+    user_manager.on_album_add_update_album_count(album.id, new_item=album.item)
+    assert user.refresh_item().item.get('albumCount', 0) == 2
+
+
+def test_on_album_delete_update_album_count(user_manager, album, user, caplog):
+    # configure and check starting state
+    user_manager.dynamo.increment_album_count(user.id)
+    assert user.refresh_item().item.get('albumCount', 0) == 1
+
+    # react to an delete, check state
+    user_manager.on_album_delete_update_album_count(album.id, old_item=album.item)
+    assert user.refresh_item().item.get('albumCount', 0) == 0
+
+    # react to another delete, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        user_manager.on_album_delete_update_album_count(album.id, old_item=album.item)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert 'albumCount' in caplog.records[0].msg
+    assert user.id in caplog.records[0].msg
+    assert user.refresh_item().item.get('albumCount', 0) == 0

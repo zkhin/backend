@@ -333,3 +333,11 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     def on_chat_member_delete_update_chat_count(self, chat_id, old_item):
         user_id = old_item['sortKey'].split('/')[1]
         self.dynamo.decrement_chat_count(user_id, fail_soft=True)
+
+    def on_album_add_update_album_count(self, album_id, new_item):
+        user_id = new_item['ownedByUserId']
+        self.dynamo.increment_album_count(user_id)
+
+    def on_album_delete_update_album_count(self, album_id, old_item):
+        user_id = old_item['ownedByUserId']
+        self.dynamo.decrement_album_count(user_id, fail_soft=True)

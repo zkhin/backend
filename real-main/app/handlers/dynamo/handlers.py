@@ -35,11 +35,16 @@ deserialize = TypeDeserializer().deserialize
 dispatch = DynamoDispatch()
 register = dispatch.register
 
+register('album', '-', ['INSERT'], user_manager.on_album_add_update_album_count)
+register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
 register('card', '-', ['INSERT'], user_manager.on_card_add)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)
 register('card', '-', ['REMOVE'], card_manager.on_card_delete)
 register('card', '-', ['REMOVE'], user_manager.on_card_delete)
+register('chat', 'flag', ['INSERT'], chat_manager.on_flag_add)
+register('chat', 'flag', ['REMOVE'], chat_manager.on_flag_delete)
+register('chat', 'member', ['INSERT'], user_manager.on_chat_member_add_update_chat_count)
 register(
     'chat',
     'member',
@@ -47,11 +52,8 @@ register(
     user_manager.sync_chats_with_unviewed_messages_count,
     {'messagesUnviewedCount': 0},
 )
-register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
-register('chat', 'flag', ['INSERT'], chat_manager.on_flag_add)
-register('chat', 'flag', ['REMOVE'], chat_manager.on_flag_delete)
-register('chat', 'member', ['INSERT'], user_manager.on_chat_member_add_update_chat_count)
 register('chat', 'member', ['REMOVE'], user_manager.on_chat_member_delete_update_chat_count)
+register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
 register('chatMessage', '-', ['INSERT'], chat_manager.on_chat_message_add)
 register('chatMessage', '-', ['INSERT'], user_manager.sync_chat_message_creation_count)
 register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)
@@ -65,12 +67,6 @@ register('comment', '-', ['REMOVE'], user_manager.on_comment_delete)
 register('comment', 'flag', ['INSERT'], comment_manager.on_flag_add)
 register('comment', 'flag', ['REMOVE'], comment_manager.on_flag_delete)
 register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_comments_card, {'commentsUnviewedCount': 0})
-register('post', '-', ['REMOVE'], post_manager.on_delete)
-register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
-register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
-register('post', 'like', ['INSERT'], post_manager.on_like_add)
-register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
-register('post', 'view', ['INSERT'], post_manager.on_view_add)
 register(
     'post',
     '-',
@@ -79,13 +75,12 @@ register(
     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
 )
 register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
-register(
-    'user',
-    'follower',
-    ['INSERT', 'MODIFY', 'REMOVE'],
-    user_manager.sync_follow_counts_due_to_follow_status,
-    {'followStatus': FollowStatus.NOT_FOLLOWING},
-)
+register('post', '-', ['REMOVE'], post_manager.on_delete)
+register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
+register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
+register('post', 'like', ['INSERT'], post_manager.on_like_add)
+register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
+register('post', 'view', ['INSERT'], post_manager.on_view_add)
 register(
     'user',
     'profile',
@@ -143,6 +138,13 @@ register(
     ['INSERT', 'MODIFY'],
     user_manager.sync_elasticsearch,
     {'username': None, 'fullName': None, 'lastManuallyReindexedAt': None},
+)
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    user_manager.sync_follow_counts_due_to_follow_status,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
 register('user', 'profile', ['REMOVE'], card_manager.on_user_delete)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)

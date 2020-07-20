@@ -193,37 +193,6 @@ class UserDynamo:
             query_kwargs['ExpressionAttributeValues'] = {':aev': version}
         return self.client.update_item(query_kwargs)
 
-    def _transact_increment_count(self, user_id, count_name):
-        transact = {
-            'Update': {
-                'Key': self.typed_pk(user_id),
-                'UpdateExpression': 'ADD #count_name :one',
-                'ExpressionAttributeValues': {':one': {'N': '1'}},
-                'ExpressionAttributeNames': {'#count_name': count_name},
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            },
-        }
-        return transact
-
-    def _transact_decrement_count(self, user_id, count_name):
-        transact = {
-            'Update': {
-                'Key': self.typed_pk(user_id),
-                'UpdateExpression': 'ADD #count_name :negative_one',
-                # only updates, no creates and make sure it doesn't go negative
-                'ConditionExpression': 'attribute_exists(#count_name) and #count_name > :zero',
-                'ExpressionAttributeNames': {'#count_name': count_name},
-                'ExpressionAttributeValues': {':negative_one': {'N': '-1'}, ':zero': {'N': '0'}},
-            },
-        }
-        return transact
-
-    def transact_increment_album_count(self, user_id):
-        return self._transact_increment_count(user_id, 'albumCount')
-
-    def transact_decrement_album_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'albumCount')
-
     def transact_post_completed(self, user_id):
         kwargs = {
             'Key': self.typed_pk(user_id),
@@ -279,6 +248,12 @@ class UserDynamo:
             kwargs['ExpressionAttributeValues'][':zero'] = {'N': '0'}
             kwargs['ConditionExpression'] += ' and #ctd > :zero'
         return {'Update': kwargs}
+
+    def increment_album_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'albumCount')
+
+    def decrement_album_count(self, user_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(user_id), 'albumCount', fail_soft=fail_soft)
 
     def increment_card_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'cardCount')

@@ -62,19 +62,12 @@ def test_update(album):
 
 
 def test_delete_no_posts(user, album):
-    # verify the album really exists, and the user's albumCount
-    user.refresh_item()
-    assert user.item.get('albumCount', 0) == 1
-    album.refresh_item()
-    assert album.item
+    # verify the album really exists
+    assert album.refresh_item().item
 
+    # delete, verify
     album.delete()
-
-    # verify the album has been deleted
-    user.refresh_item()
-    assert user.item.get('albumCount', 0) == 0
-    album.refresh_item()
-    assert album.item is None
+    assert album.refresh_item().item is None
 
 
 def test_delete(user, album, post_manager, image_data_b64):
@@ -86,12 +79,11 @@ def test_delete(user, album, post_manager, image_data_b64):
         user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
     )
 
-    # verify starting state: can see album, posts are in it, user's albumCount, album art exists
+    # verify starting state: can see album, posts are in it, album art exists
     assert post1.item['albumId'] == album.id
     assert post2.item['albumId'] == album.id
     user.refresh_item()
     assert user.item.get('postCount', 0) == 2
-    assert user.item.get('albumCount', 0) == 1
     album.refresh_item()
     for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
@@ -100,33 +92,16 @@ def test_delete(user, album, post_manager, image_data_b64):
     # delete the album
     album.delete()
 
-    # verify new state: cannot see album, posts are *not* in it, user's albumCount, album art exists
+    # verify new state: cannot see album, posts are *not* in it, album art exists
     post1.refresh_item()
     assert 'albumId' not in post1.item
     post2.refresh_item()
     assert 'albumId' not in post2.item
     user.refresh_item()
     assert user.item.get('postCount', 0) == 2
-    assert user.item.get('albumCount', 0) == 0
     for size in image_size.JPEGS:
         path = album.get_art_image_path(size)
         assert not album.s3_uploads_client.exists(path)
-
-
-def test_delete_cant_decrement_album_count_below_zero(user, album):
-    # sneak behind the model and decrement the user's albumCount, verify
-    transact = user.dynamo.transact_decrement_album_count(user.id)
-    user.dynamo.client.transact_write_items([transact])
-    user.refresh_item()
-    assert user.item.get('albumCount', 0) == 0
-
-    # verify deletion fails
-    with pytest.raises(AlbumException):
-        album.delete()
-
-    # verify album still exists
-    album.refresh_item()
-    assert album.item
 
 
 def test_get_art_image_path(album):
