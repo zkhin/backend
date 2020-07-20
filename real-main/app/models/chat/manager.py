@@ -84,15 +84,11 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             ),
             self.member_dynamo.transact_add(chat_id, created_by_user_id, now=now),
             self.member_dynamo.transact_add(chat_id, with_user_id, now=now),
-            self.user_manager.dynamo.transact_increment_chat_count(created_by_user_id),
-            self.user_manager.dynamo.transact_increment_chat_count(with_user_id),
         ]
         transact_exceptions = [
             ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
             ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
             ChatException(f'Unable to add user `{with_user_id}` to chat `{chat_id}`'),
-            ChatException(f'Unable to increment User.chatCount for user `{created_by_user_id}`'),
-            ChatException(f'Unable to increment User.chatCount for user `{with_user_id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 
@@ -105,12 +101,10 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         transacts = [
             self.dynamo.transact_add(chat_id, ChatType.GROUP, created_by_user.id, name=name, now=now),
             self.member_dynamo.transact_add(chat_id, created_by_user.id, now=now),
-            self.user_manager.dynamo.transact_increment_chat_count(created_by_user.id),
         ]
         transact_exceptions = [
             ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
             ChatException(f'Unable to add user `{created_by_user.id}` to chat `{chat_id}`'),
-            ChatException(f'Unable to increment User.chatCount for user `{created_by_user.id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
 

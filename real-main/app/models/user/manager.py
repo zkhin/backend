@@ -325,3 +325,11 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     def sync_chat_message_deletion_count(self, message_id, old_item):
         if user_id := old_item.get('userId'):
             self.dynamo.increment_chat_messages_deletion_count(user_id)
+
+    def on_chat_member_add_update_chat_count(self, chat_id, new_item):
+        user_id = new_item['sortKey'].split('/')[1]
+        self.dynamo.increment_chat_count(user_id)
+
+    def on_chat_member_delete_update_chat_count(self, chat_id, old_item):
+        user_id = old_item['sortKey'].split('/')[1]
+        self.dynamo.decrement_chat_count(user_id, fail_soft=True)

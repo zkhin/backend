@@ -236,12 +236,6 @@ def test_cant_delete_group_chat_non_group_chat(direct_chat):
 
 
 def test_delete_direct_chat(direct_chat, user1, user2):
-    # verify user totals are as expected
-    user1.refresh_item()
-    user2.refresh_item()
-    assert user1.item['chatCount'] == 1
-    assert user2.item['chatCount'] == 1
-
     # verify we see the chat and chat_memberships in the DB
     assert direct_chat.dynamo.get(direct_chat.id)
     assert direct_chat.member_dynamo.get(direct_chat.id, user1.id)
@@ -249,12 +243,6 @@ def test_delete_direct_chat(direct_chat, user1, user2):
 
     # delete the chat
     direct_chat.delete_direct_chat()
-
-    # verify user totals are as expected
-    user1.refresh_item()
-    user2.refresh_item()
-    assert user1.item['chatCount'] == 0
-    assert user2.item['chatCount'] == 0
 
     # verify we see the chat and chat_memberships have disapeared from DB
     assert direct_chat.dynamo.get(direct_chat.id) is None

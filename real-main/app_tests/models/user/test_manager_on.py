@@ -25,6 +25,11 @@ def card(user, card_manager):
     yield card_manager.add_card(user.id, 'card title', 'https://action')
 
 
+@pytest.fixture
+def chat(user, chat_manager):
+    yield chat_manager.add_group_chat(str(uuid4()), user)
+
+
 def test_on_comment_add_adjusts_counts(user_manager, user, comment):
     # check & save starting state
     org_item = user.refresh_item().item
@@ -113,3 +118,39 @@ def test_on_card_delete_decrements_card_count(user_manager, user, card, caplog):
     assert 'cardCount' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg
     assert user.refresh_item().item.get('cardCount', 0) == 0
+
+
+def test_on_chat_member_add_update_chat_count(user_manager, chat, user):
+    # check starting state
+    member_item = chat.member_dynamo.get(chat.id, user.id)
+    assert member_item
+    assert user.refresh_item().item.get('chatCount', 0) == 0
+
+    # react to an add, check state
+    user_manager.on_chat_member_add_update_chat_count(chat.id, new_item=member_item)
+    assert user.refresh_item().item.get('chatCount', 0) == 1
+
+    # react to another add, check state
+    user_manager.on_chat_member_add_update_chat_count(chat.id, new_item=member_item)
+    assert user.refresh_item().item.get('chatCount', 0) == 2
+
+
+def test_on_chat_member_delete_update_chat_count(user_manager, chat, user, caplog):
+    # configure and check starting state
+    member_item = chat.member_dynamo.get(chat.id, user.id)
+    assert member_item
+    user_manager.dynamo.increment_chat_count(user.id)
+    assert user.refresh_item().item.get('chatCount', 0) == 1
+
+    # react to an delete, check state
+    user_manager.on_chat_member_delete_update_chat_count(chat.id, old_item=member_item)
+    assert user.refresh_item().item.get('chatCount', 0) == 0
+
+    # react to another delete, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        user_manager.on_chat_member_delete_update_chat_count(chat.id, old_item=member_item)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert 'chatCount' in caplog.records[0].msg
+    assert user.id in caplog.records[0].msg
+    assert user.refresh_item().item.get('chatCount', 0) == 0

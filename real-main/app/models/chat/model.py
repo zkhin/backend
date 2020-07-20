@@ -88,12 +88,10 @@ class Chat(ViewModelMixin, FlagModelMixin):
             transacts = [
                 self.member_dynamo.transact_add(self.id, user_id, now=now),
                 self.dynamo.transact_increment_user_count(self.id),
-                self.user_manager.dynamo.transact_increment_chat_count(user_id),
             ]
             transact_exceptions = [
                 ChatException(f'Unable to add chat membership of user `{user_id} in chat `{self.id}`'),
                 Exception(f'Unable to increment Chat.userCount for chat `{self.id}`'),
-                Exception(f'Unable to increment User.chatCount for chat `{user_id}`'),
             ]
             try:
                 self.dynamo.client.transact_write_items(transacts, transact_exceptions)
@@ -116,12 +114,10 @@ class Chat(ViewModelMixin, FlagModelMixin):
         transacts = [
             self.member_dynamo.transact_delete(self.id, user.id),
             self.dynamo.transact_decrement_user_count(self.id),
-            self.user_manager.dynamo.transact_decrement_chat_count(user.id),
         ]
         transact_exceptions = [
             ChatException(f'Unable to delete chat membership of user `{user.id}` in chat `{self.id}`'),
             Exception(f'Unable to decrement Chat.userCount for chat `{self.id}`'),
-            Exception(f'Unable to decrement User.chatCount for chat `{user.id}`'),
         ]
         self.dynamo.client.transact_write_items(transacts, transact_exceptions)
         self.item['userCount'] -= 1
@@ -180,8 +176,6 @@ class Chat(ViewModelMixin, FlagModelMixin):
             self.dynamo.transact_delete(self.id, expected_user_count=2),
             self.member_dynamo.transact_delete(self.id, user_id_1),
             self.member_dynamo.transact_delete(self.id, user_id_2),
-            self.user_manager.dynamo.transact_decrement_chat_count(user_id_1),
-            self.user_manager.dynamo.transact_decrement_chat_count(user_id_2),
         ]
         self.dynamo.client.transact_write_items(transacts)
 

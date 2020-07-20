@@ -224,12 +224,6 @@ class UserDynamo:
     def transact_decrement_album_count(self, user_id):
         return self._transact_decrement_count(user_id, 'albumCount')
 
-    def transact_increment_chat_count(self, user_id):
-        return self._transact_increment_count(user_id, 'chatCount')
-
-    def transact_decrement_chat_count(self, user_id):
-        return self._transact_decrement_count(user_id, 'chatCount')
-
     def transact_post_completed(self, user_id):
         kwargs = {
             'Key': self.typed_pk(user_id),
@@ -291,6 +285,12 @@ class UserDynamo:
 
     def decrement_card_count(self, user_id, fail_soft=False):
         return self.client.decrement_count(self.pk(user_id), 'cardCount', fail_soft=fail_soft)
+
+    def increment_chat_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'chatCount')
+
+    def decrement_chat_count(self, user_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(user_id), 'chatCount', fail_soft=fail_soft)
 
     def increment_chat_messages_creation_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatMessagesCreationCount')

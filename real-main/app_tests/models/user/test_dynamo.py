@@ -55,9 +55,6 @@ def test_add_user_maximal(user_dynamo):
     after = pendulum.now('utc')
 
     now = pendulum.parse(item['signedUpAt'])
-    print(item['signedUpAt'])
-    print(now)
-    print(now.to_iso8601_string())
     assert before < now
     assert after > now
 
@@ -471,33 +468,6 @@ def test_increment_decrement_album_count(user_dynamo):
     assert user_item['albumCount'] == 0
 
 
-def test_increment_decrement_chat_count(user_dynamo):
-    user_id = 'my-user-id'
-    username = 'my-username'
-
-    # create the user, verify user starts with no chat count
-    user_item = user_dynamo.add_user(user_id, username)
-    assert user_item['userId'] == user_id
-    assert 'chatCount' not in user_item
-
-    # verify can't go below zero
-    transacts = [user_dynamo.transact_decrement_chat_count(user_id)]
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items(transacts)
-
-    # increment
-    transacts = [user_dynamo.transact_increment_chat_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['chatCount'] == 1
-
-    # decrement
-    transacts = [user_dynamo.transact_decrement_chat_count(user_id)]
-    user_dynamo.client.transact_write_items(transacts)
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['chatCount'] == 0
-
-
 def test_transact_post_completed(user_dynamo):
     # set up & verify starting state
     user_id = 'user-id'
@@ -640,6 +610,7 @@ def test_transact_post_deleted(user_dynamo):
     'incrementor_name, decrementor_name, attribute_name',
     [
         ['increment_card_count', 'decrement_card_count', 'cardCount'],
+        ['increment_chat_count', 'decrement_chat_count', 'chatCount'],
         ['increment_chat_messages_creation_count', None, 'chatMessagesCreationCount'],
         ['increment_chat_messages_deletion_count', None, 'chatMessagesDeletionCount'],
         ['increment_chat_messages_forced_deletion_count', None, 'chatMessagesForcedDeletionCount'],

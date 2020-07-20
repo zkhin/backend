@@ -39,14 +39,6 @@ def test_cant_add_direct_chat_with_self(chat_manager, user1):
         chat_manager.add_direct_chat(chat_id, user1.id, user1.id)
 
 
-def test_cant_add_direct_chat_users_dont_exist(chat_manager, user1, user2):
-    with pytest.raises(ChatException, match='Unable to increment'):
-        chat_manager.add_direct_chat('cid1', 'uid-dne', user2.id)
-
-    # verify no error
-    chat_manager.add_direct_chat('cid3', user1.id, user2.id)
-
-
 def test_cant_add_direct_chat_already_exists(chat_manager, user1, user2):
     # add the chat
     chat_manager.add_direct_chat('cid3', user1.id, user2.id)
@@ -61,10 +53,6 @@ def test_cant_add_direct_chat_already_exists(chat_manager, user1, user2):
 def test_add_direct_chat(chat_manager, user1, user2):
     now = pendulum.now('utc')
 
-    # verify user's chat counts start at zero
-    assert user1.item.get('chatCount', 0) == 0
-    assert user2.item.get('chatCount', 0) == 0
-
     # add the chat, verify it looks ok
     chat_id = 'cid'
     chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id, now=now)
@@ -75,12 +63,6 @@ def test_add_direct_chat(chat_manager, user1, user2):
     assert chat.item.get('messagesCount', 0) == 0
     assert chat.item.get('name') is None
 
-    # verify user's chat counts have incremented
-    user1.refresh_item()
-    assert user1.item.get('chatCount', 0) == 1
-    user2.refresh_item()
-    assert user2.item.get('chatCount', 0) == 1
-
     # verify chat memberships for both users were created
     user_ids = chat_manager.member_dynamo.generate_user_ids_by_chat(chat_id)
     assert sorted(user_ids) == sorted([user1.id, user2.id])
@@ -88,7 +70,6 @@ def test_add_direct_chat(chat_manager, user1, user2):
 
 def test_add_minimal_group_chat(chat_manager, user1):
     # verify and set up starting state
-    assert user1.item.get('chatCount', 0) == 0
     chat_manager.chat_message_manager = mock.Mock()
 
     # add the chat, verify it looks ok
@@ -105,10 +86,6 @@ def test_add_minimal_group_chat(chat_manager, user1):
     assert before <= created_at
     assert after >= created_at
 
-    # verify user's chat counts have incremented
-    user1.refresh_item()
-    assert user1.item.get('chatCount', 0) == 1
-
     # verify chat membership was created
     user_ids = list(chat_manager.member_dynamo.generate_user_ids_by_chat(chat_id))
     assert user_ids == [user1.id]
@@ -121,7 +98,6 @@ def test_add_minimal_group_chat(chat_manager, user1):
 
 def test_add_maximal_group_chat(chat_manager, user1):
     # verify and set up starting state
-    assert user1.item.get('chatCount', 0) == 0
     chat_manager.chat_message_manager = mock.Mock()
 
     # add the chat, verify it looks ok
@@ -135,10 +111,6 @@ def test_add_maximal_group_chat(chat_manager, user1):
     assert chat.item['name'] == name
     assert chat.item['createdByUserId'] == user1.id
     assert pendulum.parse(chat.item['createdAt']) == now
-
-    # verify user's chat counts have incremented
-    user1.refresh_item()
-    assert user1.item.get('chatCount', 0) == 1
 
     # verify chat membership was created
     user_ids = list(chat_manager.member_dynamo.generate_user_ids_by_chat(chat_id))
@@ -163,14 +135,6 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     chat_manager.add_group_chat(chat_id_3, user1)
     chat_manager.add_group_chat(chat_id_4, user1).add(user1, [user2.id])
 
-    # verify that's reflected in the user totals
-    user1.refresh_item()
-    user2.refresh_item()
-    user3.refresh_item()
-    assert user1.item['chatCount'] == 4
-    assert user2.item['chatCount'] == 2
-    assert user3.item['chatCount'] == 1
-
     # verify we see the chat and chat_memberships in the DB
     assert chat_manager.dynamo.get(chat_id_1)['userCount'] == 2
     assert chat_manager.dynamo.get(chat_id_2)['userCount'] == 2
@@ -186,14 +150,6 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
 
     # user1 leaves all their chats, which should trigger deletes of both direct chats
     chat_manager.leave_all_chats(user1.id)
-
-    # verify that's reflected in the user totals
-    user1.refresh_item()
-    user2.refresh_item()
-    user3.refresh_item()
-    assert user1.item['chatCount'] == 0
-    assert user2.item['chatCount'] == 1
-    assert user3.item['chatCount'] == 0
 
     # verify we see the chat and chat_memberships in the DB
     assert chat_manager.dynamo.get(chat_id_1) is None
