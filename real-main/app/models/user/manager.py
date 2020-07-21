@@ -174,12 +174,18 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             }
             self.cognito_client.link_identity_pool_entries(user_id, **tokens)
         except (
-            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+            # Note: Cognito raises UsernameExistsException for more than just usernames.
             self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
-        ):
-            raise UserValidationException(
-                f'Entry already exists cognito user pool with that cognito username `{user_id}` or email `{email}`'
-            )
+            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+        ) as err:
+            # Not ideal: relying on cognito not to change these exact error messages.
+            if 'Already found an entry for the provided username' in str(err):
+                raise UserValidationException(f'Username `{username}` already taken')
+            if 'An account with the email already exists' in str(err):
+                raise UserValidationException(f'Email `{email}` already taken')
+            if 'User account already exists' in str(err):
+                raise UserValidationException(f'An account for userId `{user_id}` already exists')
+            raise UserValidationException(str(err))
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()

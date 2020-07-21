@@ -108,6 +108,11 @@ def elasticsearch_client():
 
 
 @pytest.fixture
+def apple_client():
+    yield mock.Mock(clients.AppleClient())
+
+
+@pytest.fixture
 def facebook_client():
     yield mock.Mock(clients.FacebookClient())
 
@@ -215,6 +220,7 @@ def user_manager(
     s3_uploads_client,
     s3_placeholder_photos_client,
     cognito_client,
+    apple_client,
     facebook_client,
     google_client,
     pinpoint_client,
@@ -228,6 +234,7 @@ def user_manager(
             's3_uploads': s3_uploads_client,
             's3_placeholder_photos': s3_placeholder_photos_client,
             'cognito': cognito_client,
+            'apple': apple_client,
             'facebook': facebook_client,
             'google': google_client,
             'pinpoint': pinpoint_client,
