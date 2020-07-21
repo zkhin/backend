@@ -81,7 +81,13 @@ register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
 register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
-register('post', 'view', ['INSERT'], post_manager.on_view_add)
+register(
+    'post',
+    'view',
+    ['INSERT', 'MODIFY'],
+    post_manager.on_view_count_change_sync_counts_and_cards,
+    {'viewCount': 0},
+)
 register(
     'user',
     'profile',

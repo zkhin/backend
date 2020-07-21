@@ -340,19 +340,23 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             raise Exception(f'Unrecognized like status `{like_status}`')
         decrementor(post_id, fail_soft=True)
 
-    def on_view_add(self, post_id, new_item):
+    def on_view_count_change_sync_counts_and_cards(self, post_id, new_item, old_item=None):
+        if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):
+            return  # view count did not increase
+
         _, viewed_by_user_id = new_item['sortKey'].split('/')
         post = self.get_post(post_id)
-        # viewed by post owner?
-        if post and post.user_id == viewed_by_user_id:
-            try:
-                self.dynamo.clear_comments_unviewed_count(post.id)
-                self.dynamo.set_last_unviewed_comment_at(post.item, None)
-            except self.dynamo.client.exceptions.ConditionalCheckFailedException:
-                # Race condition: the post was deleted.
-                # Make sure that's the case before # swallowing the exception.
-                if post.refresh_item().item:
-                    raise
-            self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
-            self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(post.user_id, post.id))
-            self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(post.user_id, post.id))
+        if not post or post.user_id != viewed_by_user_id:
+            return  # not viewed by post owner
+
+        try:
+            self.dynamo.clear_comments_unviewed_count(post.id)
+            self.dynamo.set_last_unviewed_comment_at(post.item, None)
+        except self.dynamo.client.exceptions.ConditionalCheckFailedException:
+            # Race condition: the post was deleted.
+            # Make sure that's the case before # swallowing the exception.
+            if post.refresh_item().item:
+                raise
+        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
+        self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(post.user_id, post.id))
+        self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(post.user_id, post.id))

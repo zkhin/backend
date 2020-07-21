@@ -106,19 +106,15 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   const postId = uuidv4()
   await ourClient
     .mutate({mutation: mutations.addPost, variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}})
-    .then((resp) => {
-      expect(resp.data.addPost.postId).toBe(postId)
-    })
+    .then((resp) => expect(resp.data.addPost.postId).toBe(postId))
 
   // they comment on the post
   await theirClient
     .mutate({mutation: mutations.addComment, variables: {commentId: uuidv4(), postId, text: 'lore? ipsum!'}})
-    .then((resp) => {
-      expect(resp.data.addComment.commentId).toBeTruthy()
-    })
+    .then((resp) => expect(resp.data.addComment.commentId).toBeTruthy())
 
   // check viewed/unviewed counts
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.commentsCount).toBe(1)
@@ -130,7 +126,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check viewed/unviewed counts - no change
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.commentsCount).toBe(1)
@@ -142,7 +138,7 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check viewed/unviewed counts - unviewed have become viewed
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.commentsCount).toBe(1)
@@ -153,16 +149,26 @@ test('Viewing posts: Post owners views clear the unviewed comment counter, other
   // they comment on the post again
   await theirClient
     .mutate({mutation: mutations.addComment, variables: {commentId: uuidv4(), postId, text: 'lore? ipsum!'}})
-    .then((resp) => {
-      expect(resp.data.addComment.commentId).toBeTruthy()
-    })
+    .then((resp) => expect(resp.data.addComment.commentId).toBeTruthy())
 
   // check viewed/unviewed counts - should have a new unviewed
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.commentsCount).toBe(2)
     expect(resp.data.post.commentsViewedCount).toBe(1)
     expect(resp.data.post.commentsUnviewedCount).toBe(1)
+  })
+
+  // we report a post view
+  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+
+  // check viewed/unviewed counts - unviewed have become viewed again
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
+    expect(resp.data.post.postId).toBe(postId)
+    expect(resp.data.post.commentsCount).toBe(2)
+    expect(resp.data.post.commentsViewedCount).toBe(2)
+    expect(resp.data.post.commentsUnviewedCount).toBe(0)
   })
 })

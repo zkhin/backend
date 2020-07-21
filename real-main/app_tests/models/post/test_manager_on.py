@@ -153,7 +153,9 @@ def test_on_like_delete(post_manager, post, like_onymous, like_anonymous, caplog
     assert post.item.get('anonymousLikeCount', 0) == 0
 
 
-def test_on_view_add_view_by_post_owner_clears_unviewed_comments(post_manager, post):
+def test_on_view_count_change_sync_counts_and_cards_view_by_post_owner_clears_unviewed_comments_and_cards(
+    post_manager, post
+):
     # add some state to clear, verify
     post_manager.dynamo.set_last_unviewed_comment_at(post.item, pendulum.now('utc'))
     post_manager.dynamo.increment_comment_count(post.id, viewed=False)
@@ -162,28 +164,29 @@ def test_on_view_add_view_by_post_owner_clears_unviewed_comments(post_manager, p
     assert post.item.get('commentsUnviewedCount', 0) == 1
 
     # react to a view by a non-post owner, verify doesn't change state
-    post_manager.on_view_add(post.id, {'sortKey': f'view/{uuid4()}'})
+    new_item = old_item = {'sortKey': f'view/{uuid4()}'}
+    with patch.object(post_manager, 'card_manager') as card_manager_mock:
+        post_manager.on_view_count_change_sync_counts_and_cards(post.id, new_item=new_item, old_item=old_item)
+    assert len(card_manager_mock.mock_calls) == 0
+    post.refresh_item()
+    assert 'gsiA3PartitionKey' in post.item
+    assert post.item.get('commentsUnviewedCount', 0) == 1
+
+    # react to the viewCount going down by post owner, verify doesn't change state
+    new_item = {'sortKey': f'view/{post.user_id}', 'viewCount': 2}
+    old_item = {'sortKey': f'view/{post.user_id}', 'viewCount': 3}
+    with patch.object(post_manager, 'card_manager') as card_manager_mock:
+        post_manager.on_view_count_change_sync_counts_and_cards(post.id, new_item=new_item, old_item=old_item)
+    assert len(card_manager_mock.mock_calls) == 0
     post.refresh_item()
     assert 'gsiA3PartitionKey' in post.item
     assert post.item.get('commentsUnviewedCount', 0) == 1
 
     # react to a view by post owner, verify state reset
-    post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
-    post.refresh_item()
-    assert 'gsiA3PartitionKey' not in post.item
-    assert post.item.get('commentsUnviewedCount', 0) == 0
-
-
-def test_on_view_add_view_by_post_owner_clears_cards(post_manager, post):
-    # react to a view by a non-post owner, verify no calls
+    new_item = {'sortKey': f'view/{post.user_id}', 'viewCount': 3}
+    old_item = {'sortKey': f'view/{post.user_id}', 'viewCount': 2}
     with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.on_view_add(post.id, {'sortKey': f'view/{uuid4()}'})
-    assert len(card_manager_mock.mock_calls) == 0
-
-    # react to a view by post owner, verify calls
-    with patch.object(post_manager, 'card_manager') as card_manager_mock:
-        post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
-    assert len(card_manager_mock.mock_calls) == 3
+        post_manager.on_view_count_change_sync_counts_and_cards(post.id, new_item=new_item, old_item=old_item)
     card_spec0 = card_manager_mock.mock_calls[0].args[0]
     card_spec1 = card_manager_mock.mock_calls[1].args[0]
     card_spec2 = card_manager_mock.mock_calls[2].args[0]
@@ -195,18 +198,22 @@ def test_on_view_add_view_by_post_owner_clears_cards(post_manager, post):
         call.remove_card_by_spec_if_exists(card_spec1),
         call.remove_card_by_spec_if_exists(card_spec2),
     ]
+    post.refresh_item()
+    assert 'gsiA3PartitionKey' not in post.item
+    assert post.item.get('commentsUnviewedCount', 0) == 0
 
 
-def test_on_view_add_view_by_post_owner_race_condition(post_manager, post):
+def test_on_view_count_change_sync_counts_and_cards_view_by_post_owner_race_condition(post_manager, post):
     # delete the post from the DB, verify it's gone
     post.delete()
     assert post_manager.get_post(post.id) is None
 
     # react to a view by post owner, with the manager mocked so the handler
     # thinks the post exists in the DB up until when the writes fail
+    new_item = {'sortKey': f'view/{post.user_id}', 'viewCount': 1}
     with patch.object(post_manager, 'get_post', return_value=post):
         with patch.object(post_manager, 'card_manager') as card_manager_mock:
-            post_manager.on_view_add(post.id, {'sortKey': f'view/{post.user_id}'})
+            post_manager.on_view_count_change_sync_counts_and_cards(post.id, new_item=new_item)
     # verify control flowed through to the card_manager calls
     assert len(card_manager_mock.mock_calls) == 3
 
@@ -311,7 +318,9 @@ def test_comment_deleted_with_post_views(post_manager, post, user, user2, caplog
 
     # post owner views all the comments
     post_manager.record_views([post.id], user.id)
-    post_manager.on_view_add(post.id, {'sortKey': f'view/{user.id}'})
+    post_manager.on_view_count_change_sync_counts_and_cards(
+        post.id, {'sortKey': f'view/{user.id}', 'viewCount': 1}
+    )
 
     # other user adds another comment
     comment3 = comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
