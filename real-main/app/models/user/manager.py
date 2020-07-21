@@ -9,6 +9,7 @@ from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 from app.models.follower.enums import FollowStatus
+from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
 
 from .dynamo import UserDynamo
@@ -341,3 +342,20 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     def on_album_delete_update_album_count(self, album_id, old_item):
         user_id = old_item['ownedByUserId']
         self.dynamo.decrement_album_count(user_id, fail_soft=True)
+
+    def on_post_status_change_sync_counts(self, post_id, new_item, old_item):
+        user_id = new_item['postedByUserId']
+
+        new_status = new_item['postStatus']
+        if new_status == PostStatus.ARCHIVED:
+            self.dynamo.increment_post_archived_count(user_id)
+        if new_status == PostStatus.COMPLETED:
+            self.dynamo.increment_post_count(user_id)
+        if new_status == PostStatus.DELETING:
+            self.dynamo.increment_post_deleted_count(user_id)
+
+        old_status = old_item['postStatus']
+        if old_status == PostStatus.ARCHIVED:
+            self.dynamo.decrement_post_archived_count(user_id, fail_soft=True)
+        if old_status == PostStatus.COMPLETED:
+            self.dynamo.decrement_post_count(user_id, fail_soft=True)

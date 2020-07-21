@@ -88,14 +88,12 @@ def test_complete_error_for_status(post_manager, post):
 def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     post = post_with_media
     posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
-    assert posted_by_user.item.get('postCount', 0) == 0
     assert post.item['postStatus'] == PostStatus.PENDING
     assert appsync_client.mock_calls == []
 
@@ -103,8 +101,6 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     post.complete()
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert 'originalPostId' not in post.item
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == []
@@ -121,21 +117,17 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
 def test_complete_with_expiration(post_manager, post_with_media_with_expiration, user_manager):
     post = post_with_media_with_expiration
     posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
     post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
-    assert posted_by_user.item.get('postCount', 0) == 0
     assert post.item['postStatus'] == PostStatus.PENDING
 
     # complete the post, check state
     post.complete()
     assert post.item['postStatus'] == PostStatus.COMPLETED
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == [mock.call.refresh_first_story(story_now=post.item)]
@@ -174,8 +166,6 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     album.refresh_item()
     assert album.item.get('postCount', 0) == 1
     assert album.item.get('rankCount', 0) == 1
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == []

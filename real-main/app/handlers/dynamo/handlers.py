@@ -75,6 +75,7 @@ register(
     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
 )
 register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
+register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts, {'postStatus': None})
 register('post', '-', ['REMOVE'], post_manager.on_delete)
 register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)

@@ -68,8 +68,6 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
 
     # check our starting post count
     posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
-    assert posted_by_user.item.get('postArchivedCount', 0) == 0
     assert posted_by_user.item.get('postForcedArchivingCount', 0) == 0
 
     # mock out some calls to far-flung other managers
@@ -83,8 +81,6 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
 
     # check the post count decremented
     posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-    assert posted_by_user.item.get('postArchivedCount', 0) == 1
     assert posted_by_user.item.get('postForcedArchivingCount', 0) == 0
 
     # check calls to mocked out managers
@@ -143,8 +139,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
 def test_forced_archive(post, caplog):
     # check starting state
     assert post.status == PostStatus.COMPLETED
-    assert post.user.item.get('postCount', 0) == 1
-    assert post.user.item.get('postArchivedCount', 0) == 0
     assert post.user.item.get('postForcedArchivingCount', 0) == 0
 
     # archive
@@ -153,8 +147,6 @@ def test_forced_archive(post, caplog):
 
     # check final state
     assert post.status == PostStatus.ARCHIVED
-    assert post.user.item.get('postCount', 0) == 0
-    assert post.user.item.get('postArchivedCount', 0) == 1
     assert post.user.item.get('postForcedArchivingCount', 0) == 1
 
 

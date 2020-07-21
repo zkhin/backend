@@ -48,12 +48,6 @@ def post_with_media(post_manager, user):
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
     post = post_with_expiration
     posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
-    assert posted_by_user.item.get('postDeletedCount', 0) == 0
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
@@ -69,11 +63,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # check the post is no longer in the DB
     post.refresh_item()
     assert post.item is None
-
-    # check our post count - should have decremented
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-    assert posted_by_user.item.get('postDeletedCount', 0) == 1
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
@@ -92,15 +81,9 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
 
 def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post = post_with_media
-    posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
     assert post.image_item
     assert post_manager.dynamo.get_post(post_with_media.id)
     assert post_manager.original_metadata_dynamo.get(post_with_media.id)
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
@@ -120,10 +103,6 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     assert post.image_item is None
     assert post_manager.original_metadata_dynamo.get(post_with_media.id) is None
 
-    # check our post count - should not have changed
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
         mock.call.delete_all_on_post(post.id),
@@ -138,11 +117,6 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
 def test_delete_completed_media_post(post_manager, completed_post_with_media, user_manager):
     post = completed_post_with_media
     posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
@@ -166,10 +140,6 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     assert post.item is None
     assert post.image_item is None
 
-    # check our post count - should have decremented
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
         mock.call.delete_all_on_post(post.id),
@@ -187,7 +157,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     post = post_with_album
     posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
-    posted_by_user = user_manager.get_user(posted_by_user_id)
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == 0
 
@@ -197,8 +166,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert album.item.get('postCount', 0) == 1
     assert album.item.get('rankCount', 0) == 1
     assert album.item['artHash']
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
@@ -221,8 +188,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     assert album.item.get('postCount', 0) == 0
     assert album.item.get('rankCount', 0) == 1
     assert 'artHash' not in album.item
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
@@ -266,23 +231,11 @@ def test_delete_views(album_manager, post_manager, completed_post_with_media, us
 def test_delete_archived_post(completed_post_with_media):
     post = completed_post_with_media
     post.archive()
-    post.user.refresh_item()
-
-    # check starting state
     assert post.status == PostStatus.ARCHIVED
-    assert post.user.item.get('postCount', 0) == 0
-    assert post.user.item.get('postArchivedCount', 0) == 1
-    assert post.user.item.get('postDeletedCount', 0) == 0
 
     # delete the post
     post.delete()
-    post.user.refresh_item()
-
-    # check final state
     assert post.status == PostStatus.DELETING
-    assert post.user.item.get('postCount', 0) == 0
-    assert post.user.item.get('postArchivedCount', 0) == 0
-    assert post.user.item.get('postDeletedCount', 0) == 1
 
 
 def test_delete_post_deletes_trending(completed_post_with_media):

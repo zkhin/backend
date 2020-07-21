@@ -4,8 +4,6 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
-from app.models.post.enums import PostStatus
-
 from .enums import UserPrivacyStatus, UserStatus
 from .exceptions import UserAlreadyExists
 
@@ -193,62 +191,6 @@ class UserDynamo:
             query_kwargs['ExpressionAttributeValues'] = {':aev': version}
         return self.client.update_item(query_kwargs)
 
-    def transact_post_completed(self, user_id):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD postCount :positive_one',
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
-        }
-        return {'Update': kwargs}
-
-    def transact_post_archived(self, user_id, forced=False):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD postCount :negative_one, postArchivedCount :positive_one',
-            'ConditionExpression': 'attribute_exists(partitionKey) and postCount > :zero',
-            'ExpressionAttributeValues': {
-                ':negative_one': {'N': '-1'},
-                ':positive_one': {'N': '1'},
-                ':zero': {'N': '0'},
-            },
-        }
-        if forced:
-            kwargs['UpdateExpression'] += ', postForcedArchivingCount :positive_one'
-            kwargs['ExpressionAttributeValues'][':positive_one'] = {'N': '1'}
-        return {'Update': kwargs}
-
-    def transact_post_restored(self, user_id):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD postCount :positive_one, postArchivedCount :negative_one',
-            'ConditionExpression': 'attribute_exists(partitionKey) and postArchivedCount > :zero',
-            'ExpressionAttributeValues': {
-                ':negative_one': {'N': '-1'},
-                ':positive_one': {'N': '1'},
-                ':zero': {'N': '0'},
-            },
-        }
-        return {'Update': kwargs}
-
-    def transact_post_deleted(self, user_id, prev_status):
-        kwargs = {
-            'Key': self.typed_pk(user_id),
-            'UpdateExpression': 'ADD postDeletedCount :positive_one',
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-            'ExpressionAttributeValues': {':positive_one': {'N': '1'}},
-        }
-        count_to_decrement = {PostStatus.COMPLETED: 'postCount', PostStatus.ARCHIVED: 'postArchivedCount'}.get(
-            prev_status
-        )
-        if count_to_decrement:
-            kwargs['UpdateExpression'] += ', #ctd :negative_one'
-            kwargs['ExpressionAttributeNames'] = {'#ctd': count_to_decrement}
-            kwargs['ExpressionAttributeValues'][':negative_one'] = {'N': '-1'}
-            kwargs['ExpressionAttributeValues'][':zero'] = {'N': '0'}
-            kwargs['ConditionExpression'] += ' and #ctd > :zero'
-        return {'Update': kwargs}
-
     def increment_album_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'albumCount')
 
@@ -313,6 +255,24 @@ class UserDynamo:
 
     def decrement_followers_requested_count(self, user_id, fail_soft=False):
         return self.client.decrement_count(self.pk(user_id), 'followersRequestedCount', fail_soft=fail_soft)
+
+    def increment_post_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'postCount')
+
+    def decrement_post_count(self, user_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(user_id), 'postCount', fail_soft=fail_soft)
+
+    def increment_post_archived_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'postArchivedCount')
+
+    def decrement_post_archived_count(self, user_id, fail_soft=False):
+        return self.client.decrement_count(self.pk(user_id), 'postArchivedCount', fail_soft=fail_soft)
+
+    def increment_post_deleted_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'postDeletedCount')
+
+    def increment_post_forced_archiving_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'postForcedArchivingCount')
 
     def increment_post_viewed_by_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'postViewedByCount')

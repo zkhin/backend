@@ -4,7 +4,6 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.post.enums import PostStatus
 from app.models.user.dynamo import UserDynamo
 from app.models.user.enums import UserPrivacyStatus, UserStatus
 from app.models.user.exceptions import UserAlreadyExists
@@ -441,144 +440,6 @@ def test_set_user_privacy_status(user_dynamo):
     assert user_item['privacyStatus'] == UserPrivacyStatus.PUBLIC
 
 
-def test_transact_post_completed(user_dynamo):
-    # set up & verify starting state
-    user_id = 'user-id'
-    user_item = user_dynamo.add_user(user_id, 'username')
-    assert user_item['userId'] == user_id
-    assert user_item.get('postCount', 0) == 0
-
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 1
-
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 2
-
-
-def test_transact_post_archived(user_dynamo):
-    # set up & verify starting state
-    user_id = 'user-id'
-    user_dynamo.add_user(user_id, 'username')
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item.get('postCount', 0) == 3
-    assert user_item.get('postArchivedCount', 0) == 0
-    assert user_item.get('postForcedArchivingCount', 0) == 0
-
-    # force archive
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id, forced=True)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 2
-    assert user_item.get('postArchivedCount', 0) == 1
-    assert user_item.get('postForcedArchivingCount', 0) == 1
-
-    # non-force archive
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 1
-    assert user_item.get('postArchivedCount', 0) == 2
-    assert user_item.get('postForcedArchivingCount', 0) == 1
-
-    # force archive
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id, forced=True)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 0
-    assert user_item.get('postArchivedCount', 0) == 3
-    assert user_item.get('postForcedArchivingCount', 0) == 2
-
-    # verify can't go negative
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id)])
-
-
-def test_transact_post_restored(user_dynamo):
-    # set up & verify starting state
-    user_id = 'user-id'
-    user_dynamo.add_user(user_id, 'username')
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item.get('postCount', 0) == 0
-    assert user_item.get('postArchivedCount', 0) == 2
-
-    # restore
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_restored(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 1
-    assert user_item.get('postArchivedCount', 0) == 1
-
-    # restore another
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_restored(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 2
-    assert user_item.get('postArchivedCount', 0) == 0
-
-    # verify can't go negative
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items([user_dynamo.transact_post_restored(user_id)])
-
-
-def test_transact_post_deleted(user_dynamo):
-    # set up & verify starting state
-    user_id = 'user-id'
-    user_dynamo.add_user(user_id, 'username')
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_completed(user_id)])
-    user_dynamo.client.transact_write_items([user_dynamo.transact_post_archived(user_id)])
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item['userId'] == user_id
-    assert user_item.get('postCount', 0) == 1
-    assert user_item.get('postArchivedCount', 0) == 1
-    assert user_item.get('postDeletedCount', 0) == 0
-
-    # delete the archived post
-    user_dynamo.client.transact_write_items(
-        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED)]
-    )
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 1
-    assert user_item.get('postArchivedCount', 0) == 0
-    assert user_item.get('postDeletedCount', 0) == 1
-
-    # delete the completed post
-    user_dynamo.client.transact_write_items(
-        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED)]
-    )
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 0
-    assert user_item.get('postArchivedCount', 0) == 0
-    assert user_item.get('postDeletedCount', 0) == 2
-
-    # delete a pending post
-    user_dynamo.client.transact_write_items(
-        [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.PENDING)]
-    )
-    user_item = user_dynamo.get_user(user_id)
-    assert user_item.get('postCount', 0) == 0
-    assert user_item.get('postArchivedCount', 0) == 0
-    assert user_item.get('postDeletedCount', 0) == 3
-
-    # verify can't go negative for completed posts
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items(
-            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.COMPLETED)]
-        )
-
-    # verify can't go negative for archived posts
-    with pytest.raises(user_dynamo.client.exceptions.TransactionCanceledException):
-        user_dynamo.client.transact_write_items(
-            [user_dynamo.transact_post_deleted(user_id, prev_status=PostStatus.ARCHIVED)]
-        )
-
-
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
     [
@@ -599,6 +460,10 @@ def test_transact_post_deleted(user_dynamo):
         ['increment_followed_count', 'decrement_followed_count', 'followedCount'],
         ['increment_follower_count', 'decrement_follower_count', 'followerCount'],
         ['increment_followers_requested_count', 'decrement_followers_requested_count', 'followersRequestedCount'],
+        ['increment_post_count', 'decrement_post_count', 'postCount'],
+        ['increment_post_archived_count', 'decrement_post_archived_count', 'postArchivedCount'],
+        ['increment_post_forced_archiving_count', None, 'postForcedArchivingCount'],
+        ['increment_post_deleted_count', None, 'postDeletedCount'],
         ['increment_post_viewed_by_count', None, 'postViewedByCount'],
     ],
 )

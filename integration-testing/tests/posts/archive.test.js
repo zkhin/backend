@@ -28,36 +28,45 @@ test('Archiving an image post', async () => {
 
   // we upload an image post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.image).toBeTruthy()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.image).toBeTruthy()
+    })
 
   // check we see that post in the feed and in the posts
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
-  expect(resp.data.self.feed.items[0].image.url).toBeTruthy()
-  expect(resp.data.self.feed.items[0].imageUploadUrl).toBeNull()
-
-  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.data.user.posts.items).toHaveLength(1)
-  expect(resp.data.user.posts.items[0].postId).toBe(postId)
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(1)
+    expect(user.feed.items[0].postId).toBe(postId)
+    expect(user.feed.items[0].image.url).toBeTruthy()
+    expect(user.feed.items[0].imageUploadUrl).toBeNull()
+  })
+  await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.posts.items).toHaveLength(1)
+    expect(user.posts.items[0].postId).toBe(postId)
+  })
 
   // archive the post
-  resp = await ourClient.mutate({mutation: mutations.archivePost, variables: {postId}})
-  expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
+  await ourClient
+    .mutate({mutation: mutations.archivePost, variables: {postId}})
+    .then(({data: {archivePost: post}}) => expect(post.postStatus).toBe('ARCHIVED'))
 
   // post should be gone from the normal queries - feed, posts
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
-
-  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.data.user.posts.items).toHaveLength(0)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
+  await ourClient
+    .query({query: queries.userPosts, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.posts.items).toHaveLength(0))
 
   // post should be visible when specifically requesting archived posts
-  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
-  expect(resp.data.user.posts.items).toHaveLength(1)
-  expect(resp.data.user.posts.items[0].postId).toBe(postId)
+  await ourClient
+    .query({query: queries.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
+    .then(({data: {user}}) => {
+      expect(user.posts.items).toHaveLength(1)
+      expect(user.posts.items[0].postId).toBe(postId)
+    })
 })
 
 test('Cant archive a post in PENDING status', async () => {
@@ -65,9 +74,10 @@ test('Cant archive a post in PENDING status', async () => {
 
   // we create a post, leave it with pending status
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('PENDING')
+  await ourClient.mutate({mutation: mutations.addPost, variables: {postId}}).then(({data: {addPost: post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.postStatus).toBe('PENDING')
+  })
 
   // verify we can't archive that post
   await expect(ourClient.mutate({mutation: mutations.archivePost, variables: {postId}})).rejects.toThrow(
@@ -221,40 +231,50 @@ test('Post count reacts to user archiving posts', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // verify count starts at zero
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.postCount).toBe(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(0))
 
-  // add image post with direct image data upload, verify post count goes up immediately
-  let postId = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postedBy.postCount).toBe(1)
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.postCount).toBe(1)
+  // add image post with direct image data upload, verify post count goes up
+  const postId1 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, imageData}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('COMPLETED')
+    })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
 
-  // add a image post, verify count doesn't go up until the image is uploaded
-  postId = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('PENDING')
-  expect(resp.data.addPost.postedBy.postCount).toBe(1) // count has not incremented
-  const uploadUrl = resp.data.addPost.imageUploadUrl
+  // add a image post, verify count does not go up immediately
+  const postId2 = uuidv4()
+  const uploadUrl = await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId2)
+      expect(post.postStatus).toBe('PENDING')
+      return post.imageUploadUrl
+    })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
+
+  // upload the image for the post, verify post completes and count now goes up
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
-
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postStatus).toBe('COMPLETED')
-  expect(resp.data.post.postedBy.postCount).toBe(2) // count has incremented
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.postCount).toBe(2)
+  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.post, variables: {postId: postId2}}).then(({data: {post}}) => {
+    expect(post.postStatus).toBe('COMPLETED')
+    expect(post.postedBy.postCount).toBe(2) // count has incremented
+  })
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(2))
 
   // archive that post, verify count goes down
-  resp = await ourClient.mutate({mutation: mutations.archivePost, variables: {postId}})
-  expect(resp.data.archivePost.postId).toBe(postId)
-  expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
-  expect(resp.data.archivePost.postedBy.postCount).toBe(1)
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.postCount).toBe(1)
+  await ourClient
+    .mutate({mutation: mutations.archivePost, variables: {postId: postId2}})
+    .then(({data: {archivePost: post}}) => {
+      expect(post.postId).toBe(postId2)
+      expect(post.postStatus).toBe('ARCHIVED')
+    })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
 
   // cant test an expiring post is removed from the count yet,
   // because that is done in a cron-like job

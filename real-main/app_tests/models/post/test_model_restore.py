@@ -36,16 +36,10 @@ def post_with_media_completed(post_manager, user, image_data_b64):
 def test_restore_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
     post = post_with_expiration
     posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # archive the post
     post.archive()
     assert post.item['postStatus'] == PostStatus.ARCHIVED
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
-    assert posted_by_user.item.get('postArchivedCount', 0) == 1
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
@@ -59,11 +53,6 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.COMPLETED
 
-    # check our post count - should have incremented
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
-    assert posted_by_user.item.get('postArchivedCount', 0) == 0
-
     # check calls to mocked out managers
     assert post.follower_manager.mock_calls == [
         mock.call.refresh_first_story(story_now=post.item),
@@ -76,15 +65,10 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
 def test_restore_completed_media_post(post_manager, post_with_media_completed, user_manager):
     post = post_with_media_completed
     posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
 
     # archive the post
     post.archive()
     assert post.item['postStatus'] == PostStatus.ARCHIVED
-
-    # check our starting post count
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 0
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
@@ -97,10 +81,6 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
     # check the DB again
     post.refresh_item()
     assert post.item['postStatus'] == PostStatus.COMPLETED
-
-    # check our post count - should have incremented
-    posted_by_user.refresh_item()
-    assert posted_by_user.item.get('postCount', 0) == 1
 
     # check calls to mocked out managers
     assert post.follower_manager.mock_calls == []

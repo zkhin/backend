@@ -483,7 +483,6 @@ def add_post(caller_user, arguments, source, context):
     else:
         lifetime_duration = None
 
-    org_post_count = caller_user.item.get('postCount', 0)
     try:
         post = post_manager.add_post(
             caller_user,
@@ -502,13 +501,7 @@ def add_post(caller_user, arguments, source, context):
     except PostException as err:
         raise ClientException(str(err))
 
-    resp = post.serialize(caller_user.id)
-
-    # if the posts was completed right away (ie a text-only post), then the user's postCount was incremented
-    if post.status == PostStatus.COMPLETED:
-        resp['postedBy']['postCount'] = org_post_count + 1
-
-    return resp
+    return post.serialize(caller_user.id)
 
 
 @routes.register('Post.image')

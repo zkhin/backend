@@ -390,7 +390,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.dynamo.transact_set_post_status(
                 self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
             ),
-            self.user_manager.dynamo.transact_post_completed(self.user_id),
         ]
         if album:
             old_rank_count = album.item.get('rankCount')
@@ -436,12 +435,14 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # set the post as archived
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
-            self.user_manager.dynamo.transact_post_archived(self.user_id, forced=forced),
         ]
         if album:
             transacts.append(album.dynamo.transact_remove_post(album.id))
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
+
+        if forced:
+            self.user_manager.dynamo.increment_post_forced_archiving_count(self.user_id)
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
@@ -474,7 +475,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # restore the post
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
-            self.user_manager.dynamo.transact_post_restored(self.user_id),
         ]
         if album:
             old_rank_count = album.item.get('rankCount')
@@ -508,7 +508,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         prev_post_status = self.status
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING),
-            self.user_manager.dynamo.transact_post_deleted(self.user_id, prev_status=self.status),
         ]
         if self.status == PostStatus.COMPLETED and album:
             transacts.append(album.dynamo.transact_remove_post(album.id))

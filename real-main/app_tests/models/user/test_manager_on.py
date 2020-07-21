@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.post.enums import PostType
+from app.models.post.enums import PostStatus, PostType
 
 
 @pytest.fixture
@@ -191,3 +191,75 @@ def test_on_album_delete_update_album_count(user_manager, album, user, caplog):
     assert 'albumCount' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg
     assert user.refresh_item().item.get('albumCount', 0) == 0
+
+
+@pytest.mark.parametrize(
+    'new_status, count_col_incremented',
+    [
+        [PostStatus.COMPLETED, 'postCount'],
+        [PostStatus.ARCHIVED, 'postArchivedCount'],
+        [PostStatus.DELETING, 'postDeletedCount'],
+    ],
+)
+def test_on_post_status_change_sync_counts_new_status(
+    user_manager, user, new_status, count_col_incremented,
+):
+    post_id = str(uuid4())
+    new_item = {'postId': post_id, 'postedByUserId': user.id, 'postStatus': new_status}
+    old_item = {'postId': post_id, 'postedByUserId': user.id, 'postStatus': 'whateves'}
+    count_cols = ['postCount', 'postArchivedCount', 'postDeletedCount']
+
+    # check starting state
+    user.refresh_item()
+    for col in count_cols:
+        assert user.item.get(col, 0) == 0
+
+    # react to the change, check counts
+    user_manager.on_post_status_change_sync_counts(post_id, new_item=new_item, old_item=old_item)
+    user.refresh_item()
+    for col in count_cols:
+        assert user.item.get(col, 0) == (1 if col == count_col_incremented else 0)
+
+    # react to the change again, check counts
+    user_manager.on_post_status_change_sync_counts(post_id, new_item=new_item, old_item=old_item)
+    user.refresh_item()
+    for col in count_cols:
+        assert user.item.get(col, 0) == (2 if col == count_col_incremented else 0)
+
+
+@pytest.mark.parametrize(
+    'old_status, count_col_decremented',
+    [[PostStatus.COMPLETED, 'postCount'], [PostStatus.ARCHIVED, 'postArchivedCount']],
+)
+def test_on_post_status_change_sync_counts_old_status(
+    user_manager, user, old_status, count_col_decremented, caplog,
+):
+    post_id = str(uuid4())
+    new_item = {'postId': post_id, 'postedByUserId': user.id, 'postStatus': 'whateves'}
+    old_item = {'postId': post_id, 'postedByUserId': user.id, 'postStatus': old_status}
+    count_cols = ['postCount', 'postArchivedCount', 'postDeletedCount']
+
+    # configure and check starting state
+    user.dynamo.increment_post_count(user.id)
+    user.dynamo.increment_post_archived_count(user.id)
+    user.dynamo.increment_post_deleted_count(user.id)
+    user.refresh_item()
+    for col in count_cols:
+        assert user.item.get(col, 0) == 1
+
+    # react to the change, check counts
+    user_manager.on_post_status_change_sync_counts(post_id, new_item=new_item, old_item=old_item)
+    user.refresh_item()
+    for col in count_cols:
+        assert user.item.get(col, 0) == (0 if col == count_col_decremented else 1)
+
+    # react to the change again, verify fails softly
+    with caplog.at_level(logging.WARNING):
+        user_manager.on_post_status_change_sync_counts(post_id, new_item=new_item, old_item=old_item)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert count_col_decremented in caplog.records[0].msg
+    assert user.id in caplog.records[0].msg
+    user.refresh_item()
+    for col in count_cols:
+        assert user.item.get(col, 0) == (0 if col == count_col_decremented else 1)
