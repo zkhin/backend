@@ -26,36 +26,42 @@ test('Add, read, and delete an album', async () => {
 
   // we add an album with minimal options
   const albumId = uuidv4()
-  const name = 'album name'
-  const before = moment().toISOString()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name}})
-  const after = moment().toISOString()
-  const album = resp.data.addAlbum
-  expect(album.albumId).toBe(albumId)
-  expect(album.name).toBe(name)
-  expect(album.description).toBeNull()
-  expect(album.art.url).toBeTruthy()
-  expect(album.art.url4k).toBeTruthy()
-  expect(album.art.url1080p).toBeTruthy()
-  expect(album.art.url480p).toBeTruthy()
-  expect(album.art.url64p).toBeTruthy()
-  expect(album.postCount).toBe(0)
-  expect(album.postsLastUpdatedAt).toBeNull()
-  expect(album.posts.items).toHaveLength(0)
-  expect(before <= album.createdAt).toBe(true)
-  expect(after >= album.createdAt).toBe(true)
+  const orgAlbum = await (async () => {
+    const before = moment().toISOString()
+    const resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'album name'}})
+    const after = moment().toISOString()
+    return {before, album: resp.data.addAlbum, after}
+  })().then(({before, album, after}) => {
+    expect(album.albumId).toBe(albumId)
+    expect(album.name).toBe('album name')
+    expect(album.description).toBeNull()
+    expect(album.art.url).toBeTruthy()
+    expect(album.art.url4k).toBeTruthy()
+    expect(album.art.url1080p).toBeTruthy()
+    expect(album.art.url480p).toBeTruthy()
+    expect(album.art.url64p).toBeTruthy()
+    expect(album.postCount).toBe(0)
+    expect(album.postsLastUpdatedAt).toBeNull()
+    expect(album.posts.items).toHaveLength(0)
+    expect(before <= album.createdAt).toBe(true)
+    expect(after >= album.createdAt).toBe(true)
+    return album
+  })
 
   // read that album via direct access
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toEqual(album)
+  await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toEqual(orgAlbum))
 
   // delete the album
-  resp = await ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})
-  expect(resp.data.deleteAlbum).toEqual(album)
+  await ourClient
+    .mutate({mutation: mutations.deleteAlbum, variables: {albumId}})
+    .then(({data: {deleteAlbum: album}}) => expect(album).toEqual(orgAlbum))
 
   // check its really gone
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toBeNull()
+  await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toBeNull())
 })
 
 test('Cannot add, edit or delete an album if we are disabled', async () => {
@@ -63,13 +69,15 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
 
   // we add an album with minimal options
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toEqual(albumId)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => expect(album.albumId).toEqual(albumId))
 
   // we disable ourselves
-  resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.data.disableUser.userId).toBe(ourUserId)
-  expect(resp.data.disableUser.userStatus).toBe('DISABLED')
+  await ourClient.mutate({mutation: mutations.disableUser}).then(({data: {disableUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DISABLED')
+  })
 
   // verify we can't add another album
   await expect(
@@ -88,12 +96,12 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
 test('Add album with empty string description, treated as null', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({
-    mutation: mutations.addAlbum,
-    variables: {albumId, name: 'r', description: ''},
-  })
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
-  expect(resp.data.addAlbum.description).toBeNull()
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'r', description: ''}})
+    .then(({data: {addAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.description).toBeNull()
+    })
 })
 
 test('Edit an album', async () => {
@@ -101,55 +109,55 @@ test('Edit an album', async () => {
 
   // we add an album with maximal options
   const albumId = uuidv4()
-  const orgName = 'org album name'
-  const orgDescription = 'org album desc'
-  let resp = await ourClient.mutate({
-    mutation: mutations.addAlbum,
-    variables: {albumId, name: orgName, description: orgDescription},
-  })
-  const orgAlbum = resp.data.addAlbum
-  expect(orgAlbum.albumId).toBe(albumId)
-  expect(orgAlbum.name).toBe(orgName)
-  expect(orgAlbum.description).toBe(orgDescription)
+  const orgAlbum = await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'org name', description: 'org desc'}})
+    .then(({data: {addAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.name).toBe('org name')
+      expect(album.description).toBe('org desc')
+      return album
+    })
 
   // edit the options on that album
-  const newName = 'new album name'
-  const newDescription = 'new album desc'
-  resp = await ourClient.mutate({
-    mutation: mutations.editAlbum,
-    variables: {albumId, name: newName, description: newDescription},
-  })
-  const editedAlbum = resp.data.editAlbum
-  expect(editedAlbum.albumId).toBe(albumId)
-  expect(editedAlbum.name).toBe(newName)
-  expect(editedAlbum.description).toBe(newDescription)
-  expect({
-    ...editedAlbum,
-    ...{name: orgAlbum.name, description: orgAlbum.description},
-  }).toEqual(orgAlbum)
+  const editedAlbum = await ourClient
+    .mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'new name', description: 'new desc'}})
+    .then(({data: {editAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.name).toBe('new name')
+      expect(album.description).toBe('new desc')
+      expect({
+        ...album,
+        ...{name: orgAlbum.name, description: orgAlbum.description},
+      }).toEqual(orgAlbum)
+      return album
+    })
 
   // verify those stuck in the DB
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toEqual(editedAlbum)
+  await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toEqual(editedAlbum))
 
   // delete the options which we can on that album, using empty string
-  resp = await ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, description: ''}})
-  const clearedAlbum = resp.data.editAlbum
-  expect(clearedAlbum.albumId).toBe(albumId)
-  expect(clearedAlbum.name).toBe(newName)
-  expect(clearedAlbum.description).toBeNull()
-  expect({
-    ...clearedAlbum,
-    ...{description: editedAlbum.description},
-  }).toEqual(editedAlbum)
+  const clearedAlbum = await ourClient
+    .mutate({mutation: mutations.editAlbum, variables: {albumId, description: ''}})
+    .then(({data: {editAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.name).toBe('new name')
+      expect(album.description).toBeNull()
+      expect({
+        ...album,
+        ...{description: editedAlbum.description},
+      }).toEqual(editedAlbum)
+      return album
+    })
 
   // verify those stuck in the DB
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toEqual(clearedAlbum)
+  await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toEqual(clearedAlbum))
 
   // verify we can't null out the album name
-  let variables = {albumId, name: ''}
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow(
+  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: ''}})).rejects.toThrow(
     /ClientError: All albums must have names/,
   )
 })
@@ -160,17 +168,14 @@ test('Cant create two albums with same id', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => expect(album.albumId).toBe(albumId))
 
   // verify neither us nor them can add another album with same id
-  let variables = {albumId, name: 'r'}
-  await expect(ourClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow(
-    /ClientError: Album .* already exists/,
-  )
-  await expect(theirClient.mutate({mutation: mutations.addAlbum, variables})).rejects.toThrow(
-    /ClientError: Album .* already exists/,
-  )
+  const operation = {mutation: mutations.addAlbum, variables: {albumId, name: 'r'}}
+  await expect(ourClient.mutate(operation)).rejects.toThrow(/ClientError: Album .* already exists/)
+  await expect(theirClient.mutate(operation)).rejects.toThrow(/ClientError: Album .* already exists/)
 })
 
 test('Cant edit or delete somebody elses album', async () => {
@@ -179,21 +184,22 @@ test('Cant edit or delete somebody elses album', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => expect(album.albumId).toBe(albumId))
 
   // verify they can't edit it nor delete it
-  let variables = {albumId, name: 'name'}
-  await expect(theirClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow(
-    /ClientError: Caller .* does not own Album /,
-  )
-  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow(
+  await expect(
+    theirClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'name'}}),
+  ).rejects.toThrow(/ClientError: Caller .* does not own Album /)
+  await expect(theirClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})).rejects.toThrow(
     /ClientError: Caller .* does not own Album /,
   )
 
   // verify it's still there
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album.albumId).toBe(albumId)
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album.albumId).toBe(albumId))
 })
 
 test('Empty album edit raises error', async () => {
@@ -201,8 +207,9 @@ test('Empty album edit raises error', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => expect(album.albumId).toBe(albumId))
 
   // verify calling edit without specifying anything to edit is an error
   await expect(ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId}})).rejects.toThrow(
@@ -215,11 +222,10 @@ test('Cant edit, delete an album that doesnt exist', async () => {
   const albumId = uuidv4() // doesnt exist
 
   // cant edit or delete the non-existing album
-  let variables = {albumId, name: 'name'}
-  await expect(ourClient.mutate({mutation: mutations.editAlbum, variables})).rejects.toThrow(
-    /ClientError: Album .* does not exist/,
-  )
-  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables})).rejects.toThrow(
+  await expect(
+    ourClient.mutate({mutation: mutations.editAlbum, variables: {albumId, name: 'name'}}),
+  ).rejects.toThrow(/ClientError: Album .* does not exist/)
+  await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})).rejects.toThrow(
     /ClientError: Album .* does not exist/,
   )
 })
@@ -230,44 +236,59 @@ test('User.albums and Query.album block privacy', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => expect(album.albumId).toBe(albumId))
 
   // check they can see our albums
   await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBe(1)
-  expect(resp.data.user.albums.items).toHaveLength(1)
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBe(1)
+    expect(user.albums.items).toHaveLength(1)
+  })
 
   // check they can see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album.albumId).toBe(albumId)
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album.albumId).toBe(albumId))
 
   // we block them
-  resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
-  expect(resp.data.blockUser.userId).toBe(theirUserId)
+  await ourClient
+    .mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
+    .then(({data: {blockUser: user}}) => {
+      expect(user.userId).toBe(theirUserId)
+      expect(user.blockedStatus).toBe('BLOCKING')
+    })
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBeNull()
-  expect(resp.data.user.albums).toBeNull()
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBeNull()
+    expect(user.albums).toBeNull()
+  })
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toBeNull()
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toBeNull())
 
   // we unblock them
-  resp = await ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
-  expect(resp.data.unblockUser.userId).toBe(theirUserId)
+  await ourClient
+    .mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}})
+    .then(({data: {unblockUser: user}}) => {
+      expect(user.userId).toBe(theirUserId)
+      expect(user.blockedStatus).toBe('NOT_BLOCKING')
+    })
 
   // check they can see our albums
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBe(1)
-  expect(resp.data.user.albums.items).toHaveLength(1)
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBe(1)
+    expect(user.albums.items).toHaveLength(1)
+  })
 
   // check they can see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album.albumId).toBe(albumId)
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album.albumId).toBe(albumId))
 })
 
 test('User.albums and Query.album private user privacy', async () => {
@@ -275,95 +296,120 @@ test('User.albums and Query.album private user privacy', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // check they *can* see our albums
-  let resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBe(0)
-  expect(resp.data.user.albums.items).toHaveLength(0)
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBe(0)
+    expect(user.albums.items).toHaveLength(0)
+  })
 
   // we go private
-  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
-  expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
+  await ourClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data: {setUserDetails: user}}) => expect(user.privacyStatus).toBe('PRIVATE'))
 
   // we add an album
   const albumId = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => expect(album.albumId).toBe(albumId))
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBeNull()
-  expect(resp.data.user.albums).toBeNull()
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBeNull()
+    expect(user.albums).toBeNull()
+  })
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toBeNull()
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toBeNull())
 
   // they request to follow us
-  resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
+  await theirClient
+    .mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('REQUESTED'))
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBeNull()
-  expect(resp.data.user.albums).toBeNull()
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBeNull()
+    expect(user.albums).toBeNull()
+  })
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toBeNull()
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toBeNull())
 
   // we accept their follow request
-  resp = await ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
-  expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
+  await ourClient
+    .mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}})
+    .then(({data: {acceptFollowerUser: user}}) => expect(user.followerStatus).toBe('FOLLOWING'))
 
   // check they *can* see our albums
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBe(1)
-  expect(resp.data.user.albums.items).toHaveLength(1)
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBe(1)
+    expect(user.albums.items).toHaveLength(1)
+  })
 
   // check they *can* see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album.albumId).toBe(albumId)
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album.albumId).toBe(albumId))
 
   // now we deny their follow request
-  resp = await ourClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: theirUserId}})
-  expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
+  await ourClient
+    .mutate({mutation: mutations.denyFollowerUser, variables: {userId: theirUserId}})
+    .then(({data: {denyFollowerUser: user}}) => expect(user.followerStatus).toBe('DENIED'))
 
   // check they cannot see our albums
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.albumCount).toBeNull()
-  expect(resp.data.user.albums).toBeNull()
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.albumCount).toBeNull()
+    expect(user.albums).toBeNull()
+  })
 
   // check they cannot see the album directly
-  resp = await theirClient.query({query: queries.album, variables: {albumId}})
-  expect(resp.data.album).toBeNull()
+  await theirClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => expect(album).toBeNull())
 })
 
 test('User.albums matches direct access, ordering', async () => {
   const [ourClient] = await loginCache.getCleanLogin()
 
   // check we have no albums
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.albumCount).toBe(0)
-  expect(resp.data.self.albums.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.albumCount).toBe(0)
+    expect(user.albums.items).toHaveLength(0)
+  })
 
   // we add two albums - one minimal one maximal
   const [albumId1, albumId2] = [uuidv4(), uuidv4()]
-  resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId: albumId1, name: 'n1'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId1)
-  const album1 = resp.data.addAlbum
-  resp = await ourClient.mutate({
-    mutation: mutations.addAlbum,
-    variables: {albumId: albumId2, name: 'n2', description: 'd'},
-  })
-  expect(resp.data.addAlbum.albumId).toBe(albumId2)
-  const album2 = resp.data.addAlbum
+  const album1 = await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId: albumId1, name: 'n1'}})
+    .then(({data: {addAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId1)
+      return album
+    })
+  const album2 = await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId: albumId2, name: 'n2', description: 'd'}})
+    .then(({data: {addAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId2)
+      return album
+    })
 
   // check they appear correctly in User.albums
   await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.albumCount).toBe(2)
-  expect(resp.data.self.albums.items).toHaveLength(2)
-  expect(resp.data.self.albums.items[0]).toEqual(album1)
-  expect(resp.data.self.albums.items[1]).toEqual(album2)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.albumCount).toBe(2)
+    expect(user.albums.items).toHaveLength(2)
+    expect(user.albums.items[0]).toEqual(album1)
+    expect(user.albums.items[1]).toEqual(album2)
+  })
+  await ourClient.query({query: queries.self, variables: {albumsReverse: true}}).then(({data: {self: user}}) => {
+    expect(user.albumCount).toBe(2)
+    expect(user.albums.items).toHaveLength(2)
+    expect(user.albums.items[0]).toEqual(album2)
+    expect(user.albums.items[1]).toEqual(album1)
+  })
 })
 
 test('Album art generated for 0, 1 and 4 posts in album', async () => {
@@ -371,126 +417,125 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
 
   // we an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n1'}})
-  const album = resp.data.addAlbum
-  expect(album.albumId).toBe(albumId)
-  expect(album.art.url).toBeTruthy()
-  expect(album.art.url4k).toBeTruthy()
-  expect(album.art.url1080p).toBeTruthy()
-  expect(album.art.url480p).toBeTruthy()
-  expect(album.art.url64p).toBeTruthy()
-
-  // check we can access the art urls. these will throw an error if response code is not 2XX
-  await rp.head({uri: album.art.url, simple: true})
-  await rp.head({uri: album.art.url4k, simple: true})
-  await rp.head({uri: album.art.url1080p, simple: true})
-  await rp.head({uri: album.art.url480p, simple: true})
-  await rp.head({uri: album.art.url64p, simple: true})
+  const albumNoPosts = await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n1'}})
+    .then(async ({data: {addAlbum: album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.art.url).toBeTruthy()
+      expect(album.art.url4k).toBeTruthy()
+      expect(album.art.url1080p).toBeTruthy()
+      expect(album.art.url480p).toBeTruthy()
+      expect(album.art.url64p).toBeTruthy()
+      // check we can access the art urls. these will throw an error if response code is not 2XX
+      await rp.head({uri: album.art.url, simple: true})
+      await rp.head({uri: album.art.url4k, simple: true})
+      await rp.head({uri: album.art.url1080p, simple: true})
+      await rp.head({uri: album.art.url480p, simple: true})
+      await rp.head({uri: album.art.url64p, simple: true})
+      return album
+    })
 
   // add a post to that album
-  const postId1 = uuidv4()
-  let variables = {postId: postId1, albumId, imageData}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId1)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-  await misc.sleep(1000) // dynamo
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), albumId, imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls and they have changed root
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  const albumOnePost = resp.data.album
-  expect(albumOnePost.albumId).toBe(albumId)
-  expect(albumOnePost.art.url).toBeTruthy()
-  expect(albumOnePost.art.url4k).toBeTruthy()
-  expect(albumOnePost.art.url1080p).toBeTruthy()
-  expect(albumOnePost.art.url480p).toBeTruthy()
-  expect(albumOnePost.art.url64p).toBeTruthy()
-
-  expect(albumOnePost.art.url.split('?')[0]).not.toBe(album.art.url.split('?')[0])
-  expect(albumOnePost.art.url4k.split('?')[0]).not.toBe(album.art.url4k.split('?')[0])
-  expect(albumOnePost.art.url1080p.split('?')[0]).not.toBe(album.art.url1080p.split('?')[0])
-  expect(albumOnePost.art.url480p.split('?')[0]).not.toBe(album.art.url480p.split('?')[0])
-  expect(albumOnePost.art.url64p.split('?')[0]).not.toBe(album.art.url64p.split('?')[0])
-
-  // check we can access those urls
-  await rp.head({uri: albumOnePost.art.url, simple: true})
-  await rp.head({uri: albumOnePost.art.url4k, simple: true})
-  await rp.head({uri: albumOnePost.art.url1080p, simple: true})
-  await rp.head({uri: albumOnePost.art.url480p, simple: true})
-  await rp.head({uri: albumOnePost.art.url64p, simple: true})
+  await misc.sleep(2000)
+  const albumOnePost = await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(async ({data: {album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.art.url).toBeTruthy()
+      expect(album.art.url4k).toBeTruthy()
+      expect(album.art.url1080p).toBeTruthy()
+      expect(album.art.url480p).toBeTruthy()
+      expect(album.art.url64p).toBeTruthy()
+      expect(album.art.url.split('?')[0]).not.toBe(albumNoPosts.art.url.split('?')[0])
+      expect(album.art.url4k.split('?')[0]).not.toBe(albumNoPosts.art.url4k.split('?')[0])
+      expect(album.art.url1080p.split('?')[0]).not.toBe(albumNoPosts.art.url1080p.split('?')[0])
+      expect(album.art.url480p.split('?')[0]).not.toBe(albumNoPosts.art.url480p.split('?')[0])
+      expect(album.art.url64p.split('?')[0]).not.toBe(albumNoPosts.art.url64p.split('?')[0])
+      // check we can access those urls
+      await rp.head({uri: album.art.url, simple: true})
+      await rp.head({uri: album.art.url4k, simple: true})
+      await rp.head({uri: album.art.url1080p, simple: true})
+      await rp.head({uri: album.art.url480p, simple: true})
+      await rp.head({uri: album.art.url64p, simple: true})
+      return album
+    })
 
   // add a second post to that album
-  const postId2 = uuidv4()
-  variables = {postId: postId2, albumId, imageData}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId2)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), albumId, imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have not changed root
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  const albumTwoPosts = resp.data.album
-  expect(albumTwoPosts.albumId).toBe(albumId)
-  expect(albumTwoPosts.art.url).toBeTruthy()
-  expect(albumTwoPosts.art.url4k).toBeTruthy()
-  expect(albumTwoPosts.art.url1080p).toBeTruthy()
-  expect(albumTwoPosts.art.url480p).toBeTruthy()
-  expect(albumTwoPosts.art.url64p).toBeTruthy()
-
-  expect(albumTwoPosts.art.url.split('?')[0]).toBe(albumOnePost.art.url.split('?')[0])
-  expect(albumTwoPosts.art.url4k.split('?')[0]).toBe(albumOnePost.art.url4k.split('?')[0])
-  expect(albumTwoPosts.art.url1080p.split('?')[0]).toBe(albumOnePost.art.url1080p.split('?')[0])
-  expect(albumTwoPosts.art.url480p.split('?')[0]).toBe(albumOnePost.art.url480p.split('?')[0])
-  expect(albumTwoPosts.art.url64p.split('?')[0]).toBe(albumOnePost.art.url64p.split('?')[0])
+  await misc.sleep(2000)
+  const albumTwoPosts = await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.art.url).toBeTruthy()
+      expect(album.art.url4k).toBeTruthy()
+      expect(album.art.url1080p).toBeTruthy()
+      expect(album.art.url480p).toBeTruthy()
+      expect(album.art.url64p).toBeTruthy()
+      expect(album.art.url.split('?')[0]).toBe(albumOnePost.art.url.split('?')[0])
+      expect(album.art.url4k.split('?')[0]).toBe(albumOnePost.art.url4k.split('?')[0])
+      expect(album.art.url1080p.split('?')[0]).toBe(albumOnePost.art.url1080p.split('?')[0])
+      expect(album.art.url480p.split('?')[0]).toBe(albumOnePost.art.url480p.split('?')[0])
+      expect(album.art.url64p.split('?')[0]).toBe(albumOnePost.art.url64p.split('?')[0])
+      return album
+    })
 
   // add a third post to that album
-  const postId3 = uuidv4()
-  variables = {postId: postId3, albumId, imageData}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId3)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), albumId, imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have not changed root
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  const albumThreePosts = resp.data.album
-  expect(albumThreePosts.albumId).toBe(albumId)
-  expect(albumThreePosts.art.url).toBeTruthy()
-  expect(albumThreePosts.art.url4k).toBeTruthy()
-  expect(albumThreePosts.art.url1080p).toBeTruthy()
-  expect(albumThreePosts.art.url480p).toBeTruthy()
-  expect(albumThreePosts.art.url64p).toBeTruthy()
-
-  expect(albumThreePosts.art.url.split('?')[0]).toBe(albumTwoPosts.art.url.split('?')[0])
-  expect(albumThreePosts.art.url4k.split('?')[0]).toBe(albumTwoPosts.art.url4k.split('?')[0])
-  expect(albumThreePosts.art.url1080p.split('?')[0]).toBe(albumTwoPosts.art.url1080p.split('?')[0])
-  expect(albumThreePosts.art.url480p.split('?')[0]).toBe(albumTwoPosts.art.url480p.split('?')[0])
-  expect(albumThreePosts.art.url64p.split('?')[0]).toBe(albumTwoPosts.art.url64p.split('?')[0])
+  await misc.sleep(2000)
+  const albumThreePosts = await ourClient
+    .query({query: queries.album, variables: {albumId}})
+    .then(({data: {album}}) => {
+      expect(album.albumId).toBe(albumId)
+      expect(album.art.url).toBeTruthy()
+      expect(album.art.url4k).toBeTruthy()
+      expect(album.art.url1080p).toBeTruthy()
+      expect(album.art.url480p).toBeTruthy()
+      expect(album.art.url64p).toBeTruthy()
+      expect(album.art.url.split('?')[0]).toBe(albumTwoPosts.art.url.split('?')[0])
+      expect(album.art.url4k.split('?')[0]).toBe(albumTwoPosts.art.url4k.split('?')[0])
+      expect(album.art.url1080p.split('?')[0]).toBe(albumTwoPosts.art.url1080p.split('?')[0])
+      expect(album.art.url480p.split('?')[0]).toBe(albumTwoPosts.art.url480p.split('?')[0])
+      expect(album.art.url64p.split('?')[0]).toBe(albumTwoPosts.art.url64p.split('?')[0])
+      return album
+    })
 
   // add a fourth post to that album
-  const postId4 = uuidv4()
-  variables = {postId: postId4, albumId, imageData}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId4)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), albumId, imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have changed root
-  resp = await ourClient.query({query: queries.album, variables: {albumId}})
-  const albumFourPosts = resp.data.album
-  expect(albumFourPosts.albumId).toBe(albumId)
-  expect(albumFourPosts.art.url).toBeTruthy()
-  expect(albumFourPosts.art.url4k).toBeTruthy()
-  expect(albumFourPosts.art.url1080p).toBeTruthy()
-  expect(albumFourPosts.art.url480p).toBeTruthy()
-  expect(albumFourPosts.art.url64p).toBeTruthy()
-
-  expect(albumFourPosts.art.url.split('?')[0]).not.toBe(albumThreePosts.art.url.split('?')[0])
-  expect(albumFourPosts.art.url4k.split('?')[0]).not.toBe(albumThreePosts.art.url4k.split('?')[0])
-  expect(albumFourPosts.art.url1080p.split('?')[0]).not.toBe(albumThreePosts.art.url1080p.split('?')[0])
-  expect(albumFourPosts.art.url480p.split('?')[0]).not.toBe(albumThreePosts.art.url480p.split('?')[0])
-  expect(albumFourPosts.art.url64p.split('?')[0]).not.toBe(albumThreePosts.art.url64p.split('?')[0])
-
-  // check we can access those urls
-  await rp.head({uri: albumFourPosts.art.url, simple: true})
-  await rp.head({uri: albumFourPosts.art.url4k, simple: true})
-  await rp.head({uri: albumFourPosts.art.url1080p, simple: true})
-  await rp.head({uri: albumFourPosts.art.url480p, simple: true})
-  await rp.head({uri: albumFourPosts.art.url64p, simple: true})
+  await ourClient.query({query: queries.album, variables: {albumId}}).then(async ({data: {album}}) => {
+    expect(album.albumId).toBe(albumId)
+    expect(album.art.url).toBeTruthy()
+    expect(album.art.url4k).toBeTruthy()
+    expect(album.art.url1080p).toBeTruthy()
+    expect(album.art.url480p).toBeTruthy()
+    expect(album.art.url64p).toBeTruthy()
+    expect(album.art.url.split('?')[0]).not.toBe(albumThreePosts.art.url.split('?')[0])
+    expect(album.art.url4k.split('?')[0]).not.toBe(albumThreePosts.art.url4k.split('?')[0])
+    expect(album.art.url1080p.split('?')[0]).not.toBe(albumThreePosts.art.url1080p.split('?')[0])
+    expect(album.art.url480p.split('?')[0]).not.toBe(albumThreePosts.art.url480p.split('?')[0])
+    expect(album.art.url64p.split('?')[0]).not.toBe(albumThreePosts.art.url64p.split('?')[0])
+    // check we can access those urls
+    await rp.head({uri: album.art.url, simple: true})
+    await rp.head({uri: album.art.url4k, simple: true})
+    await rp.head({uri: album.art.url1080p, simple: true})
+    await rp.head({uri: album.art.url480p, simple: true})
+    await rp.head({uri: album.art.url64p, simple: true})
+  })
 })

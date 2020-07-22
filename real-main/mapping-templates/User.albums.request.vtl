@@ -29,8 +29,10 @@
     }
   },
   "index": "GSI-A1",
-  "scanIndexForward": true,
   "limit": $limit
+  #if ($ctx.args.reverse)
+    , "scanIndexForward": false
+  #end
   #if ($ctx.args.nextToken)
     , "nextToken": "$ctx.args.nextToken"
   #end

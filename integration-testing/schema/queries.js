@@ -3,7 +3,7 @@ const gql = require('graphql-tag')
 const fragments = require('./fragments.js')
 
 module.exports.self = gql`
-  query Self($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int) {
+  query Self($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int, $albumsReverse: Boolean) {
     self {
       userId
       ...SimpleUserFields
@@ -75,7 +75,7 @@ module.exports.self = gql`
         }
       }
       albumCount
-      albums {
+      albums(reverse: $albumsReverse) {
         items {
           ...AlbumFragment
         }

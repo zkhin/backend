@@ -398,7 +398,7 @@ type User {
   # User's albums
   #   - albums of a private user are private to only themselves and their followers
   #   - ordered with most recently created album first
-  albums(limit: Int, nextToken: String): PaginatedAlbums
+  albums(limit: Int, nextToken: String, reverse: Boolean): PaginatedAlbums
   albumCount: Int
 
   # Chats the user is in
