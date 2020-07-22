@@ -109,14 +109,9 @@ class CardManager:
         total_count, success_count = 0, 0
         for card_id in self.dynamo.generate_card_ids_by_notify_user_at(now, only_user_ids=only_user_ids):
             card = self.get_card(card_id)
-            success = card.notify_user()
+            success_count += card.notify_user()
             total_count += 1
-            if success:
-                success_count += 1
-                card.delete()
-            else:
-                # give up on the first failure for now
-                card.clear_notify_user_at()
+            card.clear_notify_user_at()
         return total_count, success_count
 
     def on_card_add(self, card_id, new_item):

@@ -263,6 +263,9 @@ def test_truncate_cards(card_manager, user):
 
 
 def test_notify_users(card_manager, pinpoint_client, user, user2):
+    # configure mock to claim all apns-sending attempts succeeded
+    pinpoint_client.configure_mock(**{'send_user_apns.return_value': True})
+
     # add a card with a notification in the far future
     notify_user_at1 = pendulum.now('utc') + pendulum.duration(hours=1)
     card1 = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at1)
@@ -299,7 +302,7 @@ def test_notify_users(card_manager, pinpoint_client, user, user2):
     ]
     assert card1.item == card1.refresh_item().item
     assert card2.item == card2.refresh_item().item
-    assert card3.refresh_item().item is None
+    assert card3.refresh_item().notify_user_at is None
 
     # two cards with a notification in past
     notify_user_at4 = pendulum.now('utc') - pendulum.duration(seconds=1)
@@ -319,8 +322,8 @@ def test_notify_users(card_manager, pinpoint_client, user, user2):
     ]
     assert card1.item == card1.refresh_item().item
     assert card2.item == card2.refresh_item().item
-    assert card4.refresh_item().item is None
-    assert card5.refresh_item().item is None
+    assert card4.refresh_item().notify_user_at is None
+    assert card5.refresh_item().notify_user_at is None
 
 
 def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
@@ -348,14 +351,17 @@ def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
 
 
 def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2, user3):
+    # configure mock to claim all apns-sending attempts succeeded
+    pinpoint_client.configure_mock(**{'send_user_apns.return_value': True})
+
     # add one notification for each user in immediate past, verify they're there
     now = pendulum.now('utc')
     card1 = card_manager.add_card(user.id, 't1', 'https://a1', notify_user_at=now - pendulum.duration(seconds=2))
     card2 = card_manager.add_card(user2.id, 't2', 'https://a2', notify_user_at=now - pendulum.duration(seconds=1))
     card3 = card_manager.add_card(user3.id, 't3', 'https://a3', notify_user_at=now)
-    assert card1.item == card1.refresh_item().item
-    assert card2.item == card2.refresh_item().item
-    assert card3.item == card3.refresh_item().item
+    assert card1.refresh_item().notify_user_at
+    assert card2.refresh_item().notify_user_at
+    assert card3.refresh_item().notify_user_at
 
     # run notificiations for just two of the users, verify just those two sent
     pinpoint_client.reset_mock()
@@ -365,15 +371,17 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
         call.send_user_apns(user.id, 'https://a1', 't1', body=None),
         call.send_user_apns(user3.id, 'https://a3', 't3', body=None),
     ]
-    assert card1.refresh_item().item is None
-    assert card2.item == card2.refresh_item().item
-    assert card3.refresh_item().item is None
+    assert card1.refresh_item().notify_user_at is None
+    assert card2.refresh_item().notify_user_at
+    assert card3.refresh_item().notify_user_at is None
 
     # re-add those cards for which we just sent notificaitons
+    card1.delete()
+    card3.delete()
     card1 = card_manager.add_card(user.id, 't1', 'https://a1', notify_user_at=now - pendulum.duration(seconds=2))
     card3 = card_manager.add_card(user3.id, 't3', 'https://a3', notify_user_at=now)
-    assert card1.item == card1.refresh_item().item
-    assert card3.item == card3.refresh_item().item
+    assert card1.refresh_item().notify_user_at
+    assert card3.refresh_item().notify_user_at
 
     # run notificiations for just one of the user, verify just that one sent
     pinpoint_client.reset_mock()
@@ -382,22 +390,23 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     assert pinpoint_client.mock_calls == [
         call.send_user_apns(user2.id, 'https://a2', 't2', body=None),
     ]
-    assert card1.item == card1.refresh_item().item
-    assert card2.refresh_item().item is None
-    assert card3.item == card3.refresh_item().item
+    assert card1.refresh_item().notify_user_at
+    assert card2.refresh_item().notify_user_at is None
+    assert card3.refresh_item().notify_user_at
 
     # re-add a cards for which we just sent notificaitons
+    card2.delete()
     card2 = card_manager.add_card(user2.id, 't2', 'https://a2', notify_user_at=now - pendulum.duration(seconds=1))
-    assert card2.item == card2.refresh_item().item
+    assert card2.refresh_item().notify_user_at
 
     # run notificiations for no users, verify none sent
     pinpoint_client.reset_mock()
     cnts = card_manager.notify_users(only_usernames=[])
     assert cnts == (0, 0)
     assert pinpoint_client.mock_calls == []
-    assert card1.item == card1.refresh_item().item
-    assert card2.item == card2.refresh_item().item
-    assert card3.item == card3.refresh_item().item
+    assert card1.refresh_item().notify_user_at
+    assert card2.refresh_item().notify_user_at
+    assert card3.refresh_item().notify_user_at
 
     # run notificiations for all users, verify all sent
     pinpoint_client.reset_mock()
@@ -408,6 +417,6 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
         call.send_user_apns(user2.id, 'https://a2', 't2', body=None),
         call.send_user_apns(user3.id, 'https://a3', 't3', body=None),
     ]
-    assert card1.refresh_item().item is None
-    assert card2.refresh_item().item is None
-    assert card3.refresh_item().item is None
+    assert card1.refresh_item().notify_user_at is None
+    assert card2.refresh_item().notify_user_at is None
+    assert card3.refresh_item().notify_user_at is None
