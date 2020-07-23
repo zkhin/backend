@@ -119,7 +119,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                 logger.warning(f'Unable to find chat `{chat_id}` that user `{user_id}` is member of, ignoring')
                 continue
             if chat.type == ChatType.DIRECT:
-                chat.delete_direct_chat()
+                chat.delete()
             else:
                 user = user or self.user_manager.get_user(user_id)
                 chat.leave(user)
@@ -181,3 +181,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         if chat.is_crowdsourced_forced_removal_criteria_met():
             logger.warning(f'Force deleting chat `{chat_id}` from flagging')
             chat.delete()
+
+    def on_chat_delete_delete_memberships(self, chat_id, old_item):
+        for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
+            self.member_dynamo.delete(chat_id, user_id)

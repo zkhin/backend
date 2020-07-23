@@ -51,6 +51,9 @@ class ChatMemberDynamo:
             }
         }
 
+    def delete(self, chat_id, user_id):
+        return self.client.delete_item(self.pk(chat_id, user_id))
+
     def update_last_message_activity_at(self, chat_id, user_id, now, fail_soft=False):
         now_str = now.to_iso8601_string()
         query_kwargs = {

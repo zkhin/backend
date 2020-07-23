@@ -53,7 +53,7 @@ test('Comment card format, subscription notifications', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify no card generated for our comment
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)
@@ -66,7 +66,7 @@ test('Comment card format, subscription notifications', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a card was generated for their comment, check format
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   const card1 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -113,7 +113,7 @@ test('Comment card format, subscription notifications', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify card has changed title and possibly thumbnail urls, but nothing else
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   const card2 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -147,7 +147,7 @@ test('Comment card format, subscription notifications', async () => {
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify the card has disappeared
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)
@@ -198,7 +198,7 @@ test('Comment cards are post-specific', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a card was generated for their comment
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   const cardId1 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -216,7 +216,7 @@ test('Comment cards are post-specific', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a second card was generated
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   const cardId2 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(2)
@@ -235,7 +235,7 @@ test('Comment cards are post-specific', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a second card was generated
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(2)
@@ -248,7 +248,7 @@ test('Comment cards are post-specific', async () => {
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
 
   // verify that card has disappeared, the other remains
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)

@@ -124,7 +124,7 @@ class Chat(ViewModelMixin, FlagModelMixin):
 
         # were we the last user in the chat? If so, clean up
         if self.item['userCount'] <= 0:
-            self.delete_group_chat()
+            self.delete()
         else:
             self.chat_message_manager.add_system_message_left_group(self.id, user)
             self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
@@ -149,36 +149,4 @@ class Chat(ViewModelMixin, FlagModelMixin):
         return flag_count > user_count / 10
 
     def delete(self):
-        if self.type == ChatType.GROUP:
-            # everybody leaves, which triggers a delete
-            for user_id in self.member_dynamo.generate_user_ids_by_chat(self.id):
-                user = self.user_manager.get_user(user_id)
-                self.leave(user)
-        elif self.type == ChatType.DIRECT:
-            self.delete_direct_chat()
-        else:
-            raise Exception(f'Unrecognized chat type: `{self.type}`')
-
-    def delete_group_chat(self):
-        assert self.type == ChatType.GROUP, 'may not be called for non-GROUP chats'
-
-        transacts = [self.dynamo.transact_delete(self.id, expected_user_count=0)]
-        self.dynamo.client.transact_write_items(transacts)
-        self.chat_message_manager.truncate_chat_messages(self.id)
-        self.flag_dynamo.delete_all_for_item(self.id)
-
-    def delete_direct_chat(self):
-        assert self.type == ChatType.DIRECT, 'may not be called for non-DIRECT chats'
-        user_id_1, user_id_2 = self.item['gsiA1PartitionKey'].split('/')[1:3]
-
-        # first delete the chat and the memberships (so the chat never appears with no messages)
-        transacts = [
-            self.dynamo.transact_delete(self.id, expected_user_count=2),
-            self.member_dynamo.transact_delete(self.id, user_id_1),
-            self.member_dynamo.transact_delete(self.id, user_id_2),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-
-        # iterate through secondary items and delete them
-        self.chat_message_manager.truncate_chat_messages(self.id)
-        self.flag_dynamo.delete_all_for_item(self.id)
+        self.dynamo.delete(self.id)

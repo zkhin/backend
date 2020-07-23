@@ -51,3 +51,17 @@ def test_on_flag_add_force_delete_by_crowdsourced_criteria(chat_message_manager,
     assert len(caplog.records) == 1
     assert 'Force deleting chat message' in caplog.records[0].msg
     assert message.refresh_item().item is None
+
+
+def test_on_chat_delete_delete_messages(chat_message_manager, user1, chat):
+    # add two messsages
+    message_id_1, message_id_2 = str(uuid4()), str(uuid4())
+    chat_message_manager.add_chat_message(message_id_1, 'lore', chat.id, user1.id)
+    chat_message_manager.add_chat_message(message_id_2, 'ipsum', chat.id, user1.id)
+    assert chat_message_manager.get_chat_message(message_id_1)
+    assert chat_message_manager.get_chat_message(message_id_2)
+
+    # trigger, verify messages are gone
+    chat_message_manager.on_chat_delete_delete_messages(chat.id, old_item=chat.item)
+    assert chat_message_manager.get_chat_message(message_id_1) is None
+    assert chat_message_manager.get_chat_message(message_id_2) is None

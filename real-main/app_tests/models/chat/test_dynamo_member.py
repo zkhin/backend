@@ -35,7 +35,7 @@ def test_transact_add(cm_dynamo):
     }
 
 
-def test_transact_delete(cm_dynamo):
+def test_delete(cm_dynamo):
     chat_id = 'cid'
     user_id = 'uid'
 
@@ -45,8 +45,7 @@ def test_transact_delete(cm_dynamo):
     assert cm_dynamo.get(chat_id, user_id)
 
     # delete it, verify it was removed from DB
-    transact = cm_dynamo.transact_delete(chat_id, user_id)
-    cm_dynamo.client.transact_write_items([transact])
+    assert cm_dynamo.delete(chat_id, user_id)
     assert cm_dynamo.get(chat_id, user_id) is None
 
 

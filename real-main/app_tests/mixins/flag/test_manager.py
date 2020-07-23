@@ -24,9 +24,9 @@ def comment(comment_manager, user, post):
 
 
 @pytest.fixture
-def chat(chat_manager, user, user2):
+def chat(chat_manager, user, user2, user3):
     group_chat = chat_manager.add_group_chat(str(uuid4()), user)
-    group_chat.add(user, [user2.id])
+    group_chat.add(user, [user2.id, user3.id])
     yield group_chat
 
 
@@ -36,6 +36,7 @@ def message(chat_message_manager, chat, user):
 
 
 user2 = user
+user3 = user
 post2 = post
 comment2 = comment
 message2 = message
@@ -93,3 +94,33 @@ def test_on_flag_delete(manager, model, caplog):
     assert len(caplog.records) == 1
     assert 'Failed to decrement flagCount' in caplog.records[0].msg
     assert model.refresh_item().item.get('flagCount', 0) == 0
+
+
+@pytest.mark.parametrize(
+    'manager, model1, model2',
+    [
+        pytest.lazy_fixture(['post_manager', 'post', 'post2']),
+        pytest.lazy_fixture(['comment_manager', 'comment', 'comment2']),
+        pytest.lazy_fixture(['chat_message_manager', 'message', 'message2']),
+        pytest.lazy_fixture(['chat_manager', 'chat', 'chat2']),
+    ],
+)
+def test_on_item_delete_delete_flags(manager, model1, model2, user2, user3):
+    # user2 flags both those models
+    model1.flag(user2)
+    model2.flag(user2)
+    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == [model1.id, model2.id]
+
+    # user3 flags one model
+    model1.flag(user3)
+    assert list(manager.flag_dynamo.generate_item_ids_by_user(user3.id)) == [model1.id]
+
+    # react to a delete of the first model, verify
+    manager.on_item_delete_delete_flags(model1.id, old_item=model1.item)
+    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == [model2.id]
+    assert list(manager.flag_dynamo.generate_item_ids_by_user(user3.id)) == []
+
+    # react to a delete of the second model, verify
+    manager.on_item_delete_delete_flags(model2.id, old_item=model2.item)
+    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
+    assert list(manager.flag_dynamo.generate_item_ids_by_user(user3.id)) == []

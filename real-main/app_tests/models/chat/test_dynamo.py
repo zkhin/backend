@@ -130,7 +130,7 @@ def test_update_name(chat_dynamo):
     assert 'name' not in chat_dynamo.get(chat_id)
 
 
-def test_transact_delete(chat_dynamo):
+def test_delete(chat_dynamo):
     chat_id = 'cid'
     chat_type = 'ctype'
     user_id = 'uid'
@@ -141,29 +141,7 @@ def test_transact_delete(chat_dynamo):
     assert chat_dynamo.get(chat_id)
 
     # delete it, verify it was removed from DB
-    transact = chat_dynamo.transact_delete(chat_id)
-    chat_dynamo.client.transact_write_items([transact])
-    assert chat_dynamo.get(chat_id) is None
-
-
-def test_transact_delete_expected_user_count(chat_dynamo):
-    chat_id = 'cid'
-    chat_type = 'ctype'
-    user_id = 'uid'
-
-    # add the chat to the DB, verify it is in DB
-    transact = chat_dynamo.transact_add(chat_id, chat_type, user_id)
-    chat_dynamo.client.transact_write_items([transact])
-    assert chat_dynamo.get(chat_id)['userCount'] == 1
-
-    # verify can't deleted with wrong userCount
-    transact = chat_dynamo.transact_delete(chat_id, expected_user_count=0)
-    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
-        chat_dynamo.client.transact_write_items([transact])
-
-    # delete it, verify it was removed from DB
-    transact = chat_dynamo.transact_delete(chat_id, expected_user_count=1)
-    chat_dynamo.client.transact_write_items([transact])
+    assert chat_dynamo.delete(chat_id)
     assert chat_dynamo.get(chat_id) is None
 
 

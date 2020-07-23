@@ -171,9 +171,6 @@ def test_leave(group_chat, user1, user2):
     assert group_chat.item is None
     member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
     assert member_user_ids == []
-    assert group_chat.chat_message_manager.mock_calls == [
-        mock.call.truncate_chat_messages(group_chat.id),
-    ]
 
 
 def test_cant_leave_group_chat_were_not_in(group_chat, user2):
@@ -196,63 +193,6 @@ def test_delete(group_chat, direct_chat):
     assert direct_chat.refresh_item().item
     direct_chat.delete()
     assert direct_chat.refresh_item().item is None
-
-
-def test_delete_group_chat(group_chat, user1, chat_message_manager):
-    # user1 adds message to the chat
-    group_chat.refresh_item()
-    message_id = 'mid'
-    chat_message_manager.add_chat_message(message_id, 'lore ipsum', group_chat.id, user1.id)
-
-    # user1 leaves the chat, but avoid the auto-deletion by faking another user in it
-    group_chat.item['userCount'] += 1
-    group_chat.leave(user1)
-    assert group_chat.item['userCount'] == 1
-    group_chat.item['userCount'] -= 1
-
-    # verify starting state
-    assert list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id)) == []
-    message_items = list(chat_message_manager.dynamo.generate_chat_messages_by_chat(group_chat.id))
-    assert len(message_items) == 3
-    assert message_items[1]['messageId'] == message_id
-
-    # delete the chat
-    group_chat.delete_group_chat()
-
-    # verify starting state
-    assert group_chat.dynamo.get(group_chat.id) is None
-    assert list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id)) == []
-    assert list(chat_message_manager.dynamo.generate_chat_messages_by_chat(group_chat.id)) == []
-
-
-def test_cant_delete_group_chat_with_members(group_chat):
-    with pytest.raises(group_chat.dynamo.client.exceptions.TransactionCanceledException):
-        group_chat.delete_group_chat()
-
-
-def test_cant_delete_group_chat_non_group_chat(direct_chat):
-    with pytest.raises(AssertionError, match='non-GROUP chats'):
-        direct_chat.delete_group_chat()
-
-
-def test_delete_direct_chat(direct_chat, user1, user2):
-    # verify we see the chat and chat_memberships in the DB
-    assert direct_chat.dynamo.get(direct_chat.id)
-    assert direct_chat.member_dynamo.get(direct_chat.id, user1.id)
-    assert direct_chat.member_dynamo.get(direct_chat.id, user2.id)
-
-    # delete the chat
-    direct_chat.delete_direct_chat()
-
-    # verify we see the chat and chat_memberships have disapeared from DB
-    assert direct_chat.dynamo.get(direct_chat.id) is None
-    assert direct_chat.member_dynamo.get(direct_chat.id, user1.id) is None
-    assert direct_chat.member_dynamo.get(direct_chat.id, user2.id) is None
-
-
-def test_cant_delete_direct_chat_non_direct_chat(group_chat):
-    with pytest.raises(AssertionError, match='non-DIRECT chats'):
-        group_chat.delete_direct_chat()
 
 
 def test_cant_flag_chat_we_are_not_in(direct_chat, user1, user2, user3):

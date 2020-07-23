@@ -110,14 +110,8 @@ class ChatDynamo:
     def decrement_messages_count(self, chat_id, fail_soft=False):
         return self.client.decrement_count(self.pk(chat_id), 'messagesCount', fail_soft=fail_soft)
 
-    def transact_delete(self, chat_id, expected_user_count=None):
-        query_kwargs = {
-            'Delete': {'Key': self.typed_pk(chat_id), 'ConditionExpression': 'attribute_exists(partitionKey)'}
-        }
-        if expected_user_count is not None:
-            query_kwargs['Delete']['ConditionExpression'] += ' AND userCount = :uc'
-            query_kwargs['Delete']['ExpressionAttributeValues'] = {':uc': {'N': str(expected_user_count)}}
-        return query_kwargs
+    def delete(self, chat_id):
+        return self.client.delete_item(self.pk(chat_id))
 
     def transact_increment_user_count(self, chat_id):
         return {

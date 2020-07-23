@@ -58,12 +58,6 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         item = self.dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
         return self.init_chat_message(item)
 
-    def truncate_chat_messages(self, chat_id):
-        # delete all chat messages for the chat
-        with self.dynamo.client.table.batch_writer() as batch:
-            for chat_message_pk in self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True):
-                batch.delete_item(Key=chat_message_pk)
-
     def add_system_message_group_created(self, chat_id, created_by_user, name=None, now=None):
         text = f'@{created_by_user.username} created the group'
         if name:
@@ -107,3 +101,8 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         if chat_message.is_crowdsourced_forced_removal_criteria_met():
             logger.warning(f'Force deleting chat message `{message_id}` from flagging')
             chat_message.delete(forced=True)
+
+    def on_chat_delete_delete_messages(self, chat_id, old_item):
+        with self.dynamo.client.table.batch_writer() as batch:
+            for chat_message_pk in self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True):
+                batch.delete_item(Key=chat_message_pk)

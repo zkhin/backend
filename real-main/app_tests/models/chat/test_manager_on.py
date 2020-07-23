@@ -213,3 +213,21 @@ def test_on_flag_add_deletes_chat_if_crowdsourced_criteria_met(chat_manager, cha
         with patch.object(chat_manager, 'init_chat', return_value=chat):
             chat_manager.on_flag_add(chat.id, new_item={})
     assert chat.refresh_item().item is None
+
+
+def test_on_chat_delete_delete_memberships(chat_manager, user1, user2, chat):
+    # set up a group chat as well, add both users, verify starting state
+    group_chat = chat_manager.add_group_chat(str(uuid4()), user1)
+    group_chat.add(user1, [user2.id])
+    assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user1.id)) == 2
+    assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user2.id)) == 2
+
+    # react to the delete of one of the chats, verify state
+    chat_manager.on_chat_delete_delete_memberships(chat.id, old_item=chat.item)
+    assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user1.id)) == 1
+    assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user2.id)) == 1
+
+    # react to the delete of the other chat, verify state
+    chat_manager.on_chat_delete_delete_memberships(group_chat.id, old_item=group_chat.item)
+    assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user1.id)) == 0
+    assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user2.id)) == 0

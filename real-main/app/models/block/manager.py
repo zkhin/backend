@@ -50,7 +50,7 @@ class BlockManager:
         # if a direct chat between the user exists, delete it
         chat = self.chat_manager.get_direct_chat(blocked_user.id, blocker_user.id)
         if chat:
-            chat.delete_direct_chat()
+            chat.delete()
 
         return block_item
 

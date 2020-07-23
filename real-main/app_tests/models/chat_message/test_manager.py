@@ -37,27 +37,6 @@ def test_add_chat_message(chat_message_manager, chat, user, user2, user3):
     assert message.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
 
 
-def test_truncate_chat_messages(chat_message_manager, user, chat):
-    # add two messsages
-    message_id_1, message_id_2 = 'mid1', 'mid2'
-
-    message_1 = chat_message_manager.add_chat_message(message_id_1, 'lore', chat.id, user.id)
-    assert message_1.id == message_id_1
-
-    message_2 = chat_message_manager.add_chat_message(message_id_2, 'ipsum', chat.id, user.id)
-    assert message_2.id == message_id_2
-
-    # truncate the messages
-    chat_message_manager.truncate_chat_messages(chat.id)
-
-    # check the chat itself was not deleted
-    chat.refresh_item()
-
-    # check the two messages have been deleted
-    assert chat_message_manager.get_chat_message(message_id_1) is None
-    assert chat_message_manager.get_chat_message(message_id_2) is None
-
-
 def test_add_system_message(chat_message_manager, chat, appsync_client, user2, user3):
     text = 'sample sample'
 

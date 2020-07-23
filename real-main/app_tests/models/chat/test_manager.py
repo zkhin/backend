@@ -156,10 +156,6 @@ def test_leave_all_chats(chat_manager, user1, user2, user3):
     assert chat_manager.dynamo.get(chat_id_2) is None
     assert chat_manager.dynamo.get(chat_id_3) is None
     assert chat_manager.dynamo.get(chat_id_4)['userCount'] == 1
-    assert chat_manager.member_dynamo.get(chat_id_1, user1.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_1, user2.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_2, user1.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_2, user3.id) is None
     assert chat_manager.member_dynamo.get(chat_id_3, user1.id) is None
     assert chat_manager.member_dynamo.get(chat_id_4, user1.id) is None
     assert chat_manager.member_dynamo.get(chat_id_4, user2.id)
