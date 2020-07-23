@@ -60,15 +60,6 @@ class Album:
         return self
 
     def delete(self):
-        # remove all the posts from this album
-        for post_id in self.post_manager.dynamo.generate_post_ids_in_album(self.id):
-            post = self.post_manager.get_post(post_id)
-            post.set_album(None)
-
-        # delete the album art
-        if (art_hash := self.item.get('artHash')) :
-            self.delete_art_images(art_hash)
-
         self.dynamo.delete_album(self.id)
         return self
 

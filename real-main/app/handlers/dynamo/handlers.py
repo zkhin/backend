@@ -1,4 +1,5 @@
 import logging
+import os
 
 from boto3.dynamodb.types import TypeDeserializer
 
@@ -10,6 +11,8 @@ from app.models.user.enums import UserStatus
 
 from .dispatch import DynamoDispatch
 
+S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
+
 logger = logging.getLogger()
 xray.patch_all()
 
@@ -18,9 +21,11 @@ clients = {
     'dynamo': clients.DynamoClient(),
     'elasticsearch': clients.ElasticSearchClient(),
     'pinpoint': clients.PinpointClient(),
+    's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
 }
 
 managers = {}
+album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
@@ -36,6 +41,8 @@ dispatch = DynamoDispatch()
 register = dispatch.register
 
 register('album', '-', ['INSERT'], user_manager.on_album_add_update_album_count)
+register('album', '-', ['REMOVE'], album_manager.on_album_delete_delete_album_art)
+register('album', '-', ['REMOVE'], post_manager.on_album_delete_remove_posts)
 register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
 register('card', '-', ['INSERT'], user_manager.on_card_add)

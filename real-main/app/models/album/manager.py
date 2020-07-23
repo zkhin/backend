@@ -44,3 +44,8 @@ class AlbumManager:
     def delete_all_by_user(self, user_id):
         for album_item in self.dynamo.generate_by_user(user_id):
             self.init_album(album_item).delete()
+
+    def on_album_delete_delete_album_art(self, album_id, old_item):
+        if art_hash := old_item.get('artHash'):
+            album = self.init_album(old_item)
+            album.delete_art_images(art_hash)

@@ -360,3 +360,8 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
         self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(post.user_id, post.id))
         self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(post.user_id, post.id))
+
+    def on_album_delete_remove_posts(self, album_id, old_item):
+        for post_id in self.dynamo.generate_post_ids_in_album(album_id):
+            if post := self.get_post(post_id):
+                post.set_album(None)

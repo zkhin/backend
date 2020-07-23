@@ -70,34 +70,10 @@ def test_delete_no_posts(user, album):
     assert album.refresh_item().item is None
 
 
-def test_delete(user, album, post_manager, image_data_b64):
-    # create two posts in the album
-    post1 = post_manager.add_post(
-        user, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
-    )
-    post2 = post_manager.add_post(
-        user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
-    )
-
-    # verify starting state: can see album, posts are in it, album art exists
-    assert post1.item['albumId'] == album.id
-    assert post2.item['albumId'] == album.id
-    album.refresh_item()
-    for size in image_size.JPEGS:
-        path = album.get_art_image_path(size)
-        assert album.s3_uploads_client.exists(path)
-
-    # delete the album
+def test_delete(user, album):
+    assert album.refresh_item().item
     album.delete()
-
-    # verify new state: cannot see album, posts are *not* in it, album art exists
-    post1.refresh_item()
-    assert 'albumId' not in post1.item
-    post2.refresh_item()
-    assert 'albumId' not in post2.item
-    for size in image_size.JPEGS:
-        path = album.get_art_image_path(size)
-        assert not album.s3_uploads_client.exists(path)
+    assert album.refresh_item().item is None
 
 
 def test_get_art_image_path(album):

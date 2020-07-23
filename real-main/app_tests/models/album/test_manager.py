@@ -1,16 +1,23 @@
-import uuid
+from uuid import uuid4
 
 import pendulum
 import pytest
 
 from app.models.album.exceptions import AlbumException
+from app.models.post.enums import PostType
+from app.utils import image_size
 
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def album(album_manager, user):
+    yield album_manager.add_album(user.id, str(uuid4()), 'album name')
 
 
 def test_add_album_minimal(album_manager, user):
@@ -86,3 +93,23 @@ def test_delete_all_by_user(album_manager, user):
     # delete them all, verify
     album_manager.delete_all_by_user(user.id)
     assert list(album_manager.dynamo.generate_by_user(user.id)) == []
+
+
+def test_on_album_delete_delete_album_art(album_manager, post_manager, user, album, image_data_b64):
+    # fire for a delete of an album with no art, verify no error
+    assert 'artHash' not in album.item
+    album_manager.on_album_delete_delete_album_art(album.id, old_item=album.item)
+
+    # add a post with an image to the album to get some art in S3, verify
+    post_manager.add_post(
+        user, str(uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id
+    )
+    assert 'artHash' in album.refresh_item().item
+    art_paths = [album.get_art_image_path(size) for size in image_size.JPEGS]
+    for path in art_paths:
+        assert album.s3_uploads_client.exists(path) is True
+
+    # fire for delete of that ablum with art, verify art is deleted from S3
+    album_manager.on_album_delete_delete_album_art(album.id, old_item=album.item)
+    for path in art_paths:
+        assert album.s3_uploads_client.exists(path) is False

@@ -363,3 +363,33 @@ def test_comment_deleted_with_post_views(post_manager, post, user, user2, caplog
     assert post.item['commentCount'] == 0
     assert post.item['commentsUnviewedCount'] == 0
     assert 'gsiA3SortKey' not in post.item
+
+
+def test_on_album_delete_remove_posts(post_manager, album_manager, user):
+    # create two albums, put a post in 2nd, verify
+    album1 = album_manager.add_album(user.id, str(uuid4()), 'a1')
+    album2 = album_manager.add_album(user.id, str(uuid4()), 'a1')
+    post21 = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='hey!', album_id=album2.id)
+    assert post21.refresh_item().item['albumId'] == album2.id
+
+    # trigger for 1st album, verify no change
+    post_manager.on_album_delete_remove_posts(album1.id, old_item=album1.item)
+    assert post21.refresh_item().item['albumId'] == album2.id
+
+    # add two posts to 1st album, verify
+    post11 = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='hey!', album_id=album1.id)
+    post12 = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='hey!', album_id=album1.id)
+    assert post11.refresh_item().item['albumId'] == album1.id
+    assert post12.refresh_item().item['albumId'] == album1.id
+
+    # trigger for 1st album, verify those two posts removed from album
+    post_manager.on_album_delete_remove_posts(album1.id, old_item=album1.item)
+    assert 'albumId' not in post11.refresh_item().item
+    assert 'albumId' not in post12.refresh_item().item
+    assert post21.refresh_item().item['albumId'] == album2.id
+
+    # trigger for the 2nd album, verify last post removed from album
+    post_manager.on_album_delete_remove_posts(album2.id, old_item=album2.item)
+    assert 'albumId' not in post11.refresh_item().item
+    assert 'albumId' not in post12.refresh_item().item
+    assert 'albumId' not in post21.refresh_item().item
