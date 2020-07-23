@@ -80,7 +80,6 @@ class ChatMessage(FlagModelMixin):
         self.item = self.dynamo.delete_chat_message(self.id)
         if forced:
             self.user_manager.dynamo.increment_chat_messages_forced_deletion_count(self.user_id)
-        self.flag_dynamo.delete_all_for_item(self.id)
         return self
 
     def flag(self, user):

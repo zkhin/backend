@@ -528,9 +528,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if prev_post_status == PostStatus.COMPLETED:
             self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
 
-        # delete any post views of it
-        self.delete_views()
-
         # delete the trending index, if it exists
         self.trending_delete()
 
@@ -542,7 +539,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
         if self.image_item:
             self.image_dynamo.delete(self.id)
-        self.flag_dynamo.delete_all_for_item(self.id)
         self.original_metadata_dynamo.delete(self.id)
         self.dynamo.delete_post(self.id)
 

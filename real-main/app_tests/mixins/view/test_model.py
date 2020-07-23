@@ -36,7 +36,7 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat']))
-def test_record_get_and_delete_views(model, user2, user3):
+def test_record_and_get_views(model, user2, user3):
     # check users have not viewed it
     assert model.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
     assert model.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED
@@ -63,10 +63,3 @@ def test_record_get_and_delete_views(model, user2, user3):
     model.record_view_count(user3.id, 3)
     assert model.get_viewed_status(user3.id) == ViewedStatus.VIEWED
     assert model.view_dynamo.get_view(model.id, user3.id)
-
-    # delete all the views on the item, check they are gone
-    model.delete_views()
-    assert model.view_dynamo.get_view(model.id, user2.id) is None
-    assert model.view_dynamo.get_view(model.id, user3.id) is None
-    assert model.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
-    assert model.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED

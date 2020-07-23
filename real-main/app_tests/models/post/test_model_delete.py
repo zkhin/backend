@@ -202,32 +202,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     ]
 
 
-def test_delete_flags(album_manager, post_manager, completed_post_with_media, user2, user3):
-    post = completed_post_with_media
-
-    # flag the post, verify those flags are in the db
-    post.flag(user2)
-    post.flag(user3)
-    assert len(list(post_manager.flag_dynamo.generate_by_item(post.id))) == 2
-
-    # delete the post, verify the flags are also deleted
-    post.delete()
-    assert len(list(post_manager.flag_dynamo.generate_by_item(post.id))) == 0
-
-
-def test_delete_views(album_manager, post_manager, completed_post_with_media, user2, user3):
-    post = completed_post_with_media
-
-    # view the post, verify those views are in the db
-    post.record_view_count(user2.id, 2)
-    post.record_view_count(user3.id, 3)
-    assert len(list(post_manager.view_dynamo.generate_views(post.id))) == 2
-
-    # delete the post, verify the flags are also deleted
-    post.delete()
-    assert len(list(post_manager.view_dynamo.generate_views(post.id))) == 0
-
-
 def test_delete_archived_post(completed_post_with_media):
     post = completed_post_with_media
     post.archive()

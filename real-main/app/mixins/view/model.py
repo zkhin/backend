@@ -32,10 +32,6 @@ class ViewModelMixin:
         else:
             return ViewedStatus.NOT_VIEWED
 
-    def delete_views(self):
-        view_item_generator = self.view_dynamo.generate_views(self.id, pks_only=True)
-        self.view_dynamo.delete_views(view_item_generator)
-
     def record_view_count(self, user_id, view_count, viewed_at=None):
         viewed_at = viewed_at or pendulum.now('utc')
         is_first_view_for_user = False

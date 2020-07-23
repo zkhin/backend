@@ -72,14 +72,9 @@ class Comment(FlagModelMixin):
         # users may only delete their own comments or comments on their posts
         if deleter_user_id and deleter_user_id not in (self.post.user_id, self.user_id):
             raise CommentException(f'User is not authorized to delete comment `{self.id}`')
-
-        # delete any flags of the comment
-        self.flag_dynamo.delete_all_for_item(self.id)
-
         self.dynamo.delete_comment(self.id)
         if forced:
             self.user_manager.dynamo.increment_comment_forced_deletion_count(self.user_id)
-
         return self
 
     def flag(self, user):
