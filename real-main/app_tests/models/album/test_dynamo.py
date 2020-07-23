@@ -1,3 +1,6 @@
+import logging
+from uuid import uuid4
+
 import pendulum
 import pytest
 
@@ -12,7 +15,7 @@ def album_dynamo(dynamo_client):
 
 @pytest.fixture
 def album_item(album_dynamo):
-    yield album_dynamo.add_album('aid', 'uid', 'album name')
+    yield album_dynamo.add_album(str(uuid4()), str(uuid4()), 'album name')
 
 
 def test_add_album_minimal(album_dynamo):
@@ -292,3 +295,83 @@ def test_increment_rank_count(album_dynamo, album_item):
     new_album_item = album_dynamo.get_album(album_id)
     assert new_album_item['rankCount'] == 3
     assert new_album_item['postsLastUpdatedAt'] > album_item['postsLastUpdatedAt']
+
+
+def test_set_and_clear_delete_at_fail_soft(album_dynamo, album_item, caplog):
+    album_id = album_item['albumId']
+    album_id_dne = str(uuid4())
+
+    # verify both methods fail soft for an album that doesn't exist
+    with caplog.at_level(logging.WARNING):
+        assert album_dynamo.set_delete_at_fail_soft(album_id_dne, pendulum.now('utc')) is None
+    assert len(caplog.records) == 1
+    assert 'Failed to set deleteAt GSI' in caplog.records[0].msg
+    assert album_id_dne in caplog.records[0].msg
+    caplog.clear()
+
+    with caplog.at_level(logging.WARNING):
+        assert album_dynamo.clear_delete_at_fail_soft(album_id_dne) is None
+    assert len(caplog.records) == 1
+    assert 'Failed to clear deleteAt GSI' in caplog.records[0].msg
+    assert album_id_dne in caplog.records[0].msg
+    caplog.clear()
+
+    # verify we can set it
+    delete_at = pendulum.now('utc')
+    new_item = album_dynamo.set_delete_at_fail_soft(album_id, delete_at)
+    assert album_dynamo.get_album(album_id) == new_item
+    assert new_item['gsiK1PartitionKey'] == 'album'
+    assert pendulum.parse(new_item['gsiK1SortKey']) == delete_at
+
+    # verify we can set it again
+    delete_at = pendulum.now('utc')
+    new_item = album_dynamo.set_delete_at_fail_soft(album_id, delete_at)
+    assert album_dynamo.get_album(album_id) == new_item
+    assert new_item['gsiK1PartitionKey'] == 'album'
+    assert pendulum.parse(new_item['gsiK1SortKey']) == delete_at
+
+    # verify we can clear it
+    new_item = album_dynamo.clear_delete_at_fail_soft(album_id)
+    assert album_dynamo.get_album(album_id) == new_item
+    assert 'gsiK1PartitionKey' not in new_item
+    assert 'gsiK1SortKey' not in new_item
+
+    # verify we can clear it again
+    new_item = album_dynamo.clear_delete_at_fail_soft(album_id)
+    assert album_dynamo.get_album(album_id) == new_item
+    assert 'gsiK1PartitionKey' not in new_item
+    assert 'gsiK1SortKey' not in new_item
+
+    # verify we cannot set if for an album that has a non-zero postCount
+    transact = album_dynamo.transact_add_post(album_id)
+    album_dynamo.client.transact_write_items([transact])
+    with caplog.at_level(logging.WARNING):
+        assert album_dynamo.set_delete_at_fail_soft(album_id, pendulum.now('utc')) is None
+    assert len(caplog.records) == 1
+    assert 'Failed to set deleteAt GSI' in caplog.records[0].msg
+    assert album_id in caplog.records[0].msg
+    caplog.clear()
+
+
+def test_generate_keys_to_delete(album_dynamo):
+    # test generate empty set
+    cutoff1 = pendulum.now('utc')
+    assert list(album_dynamo.generate_keys_to_delete(cutoff1)) == []
+
+    # add two albums to the index
+    album_item1 = album_dynamo.add_album(str(uuid4()), str(uuid4()), 'album name')
+    album_dynamo.set_delete_at_fail_soft(album_item1['albumId'], pendulum.now('utc'))
+    cutoff2 = pendulum.now('utc')
+    album_item2 = album_dynamo.add_album(str(uuid4()), str(uuid4()), 'album name')
+    album_dynamo.set_delete_at_fail_soft(album_item2['albumId'], pendulum.now('utc'))
+    cutoff3 = pendulum.now('utc')
+
+    # test generation at different cutoffs
+    assert list(album_dynamo.generate_keys_to_delete(cutoff1)) == []
+    assert list(album_dynamo.generate_keys_to_delete(cutoff2)) == [
+        {k: album_item1[k] for k in ('partitionKey', 'sortKey')},
+    ]
+    assert list(album_dynamo.generate_keys_to_delete(cutoff3)) == [
+        {k: album_item1[k] for k in ('partitionKey', 'sortKey')},
+        {k: album_item2[k] for k in ('partitionKey', 'sortKey')},
+    ]

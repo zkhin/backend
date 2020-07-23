@@ -41,6 +41,7 @@ dispatch = DynamoDispatch()
 register = dispatch.register
 
 register('album', '-', ['INSERT'], user_manager.on_album_add_update_album_count)
+register('album', '-', ['INSERT', 'MODIFY'], album_manager.on_album_add_edit_sync_delete_at)
 register('album', '-', ['REMOVE'], album_manager.on_album_delete_delete_album_art)
 register('album', '-', ['REMOVE'], post_manager.on_album_delete_remove_posts)
 register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)

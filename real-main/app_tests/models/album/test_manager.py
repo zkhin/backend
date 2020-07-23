@@ -4,8 +4,6 @@ import pendulum
 import pytest
 
 from app.models.album.exceptions import AlbumException
-from app.models.post.enums import PostType
-from app.utils import image_size
 
 
 @pytest.fixture
@@ -95,21 +93,40 @@ def test_delete_all_by_user(album_manager, user):
     assert list(album_manager.dynamo.generate_by_user(user.id)) == []
 
 
-def test_on_album_delete_delete_album_art(album_manager, post_manager, user, album, image_data_b64):
-    # fire for a delete of an album with no art, verify no error
-    assert 'artHash' not in album.item
-    album_manager.on_album_delete_delete_album_art(album.id, old_item=album.item)
+def test_garbage_collect(album_manager, user):
+    # add three albums: one not in the index, and three in with diff. deleteAt timestamps
+    album1 = album_manager.add_album(user.id, str(uuid4()), 'album name')
+    album2 = album_manager.add_album(user.id, str(uuid4()), 'album name')
+    album3 = album_manager.add_album(user.id, str(uuid4()), 'album name')
+    album4 = album_manager.add_album(user.id, str(uuid4()), 'album name')
+    album_manager.dynamo.set_delete_at_fail_soft(album2.id, pendulum.now('utc'))
+    album_manager.dynamo.set_delete_at_fail_soft(album3.id, pendulum.now('utc'))
+    cutoff1 = pendulum.now('utc')
+    album_manager.dynamo.set_delete_at_fail_soft(album4.id, pendulum.now('utc'))
 
-    # add a post with an image to the album to get some art in S3, verify
-    post_manager.add_post(
-        user, str(uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id
-    )
-    assert 'artHash' in album.refresh_item().item
-    art_paths = [album.get_art_image_path(size) for size in image_size.JPEGS]
-    for path in art_paths:
-        assert album.s3_uploads_client.exists(path) is True
+    # verify starting state
+    assert album1.refresh_item().item
+    assert album2.refresh_item().item
+    assert album3.refresh_item().item
+    assert album4.refresh_item().item
 
-    # fire for delete of that ablum with art, verify art is deleted from S3
-    album_manager.on_album_delete_delete_album_art(album.id, old_item=album.item)
-    for path in art_paths:
-        assert album.s3_uploads_client.exists(path) is False
+    # garbage collect for the first cutoff, verify
+    assert album_manager.garbage_collect(now=cutoff1) == 2
+    assert album1.refresh_item().item
+    assert album2.refresh_item().item is None
+    assert album3.refresh_item().item is None
+    assert album4.refresh_item().item
+
+    # garbage collect for the second cutoff, verify
+    assert album_manager.garbage_collect() == 1
+    assert album1.refresh_item().item
+    assert album2.refresh_item().item is None
+    assert album3.refresh_item().item is None
+    assert album4.refresh_item().item is None
+
+    # garbage collect with a no-op, verify
+    assert album_manager.garbage_collect() == 0
+    assert album1.refresh_item().item
+    assert album2.refresh_item().item is None
+    assert album3.refresh_item().item is None
+    assert album4.refresh_item().item is None

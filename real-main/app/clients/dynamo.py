@@ -60,15 +60,23 @@ class DynamoClient:
             kwargs['RequestItems'][self.table_name]['ProjectionExpression'] = projection_expression
         return self.boto3_client.batch_get_item(**kwargs)['Responses'][self.table_name]
 
-    def update_item(self, query_kwargs):
-        "Update an item and return the new item"
+    def update_item(self, query_kwargs, failure_warning=None):
+        """
+        Update an item and return the new item.
+        Set `failure_warning` fail softly with a logged warning rather than raise an exception.
+        """
         # ensure query fails if the item does not exist
         cond_exp = 'attribute_exists(partitionKey)'
         if 'ConditionExpression' in query_kwargs:
             cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
         query_kwargs['ConditionExpression'] = cond_exp
         query_kwargs['ReturnValues'] = 'ALL_NEW'
-        return self.table.update_item(**query_kwargs).get('Attributes')
+        try:
+            return self.table.update_item(**query_kwargs).get('Attributes')
+        except self.exceptions.ConditionalCheckFailedException:
+            if failure_warning is None:
+                raise
+            logger.warning(failure_warning)
 
     def increment_count(self, key, attribute_name):
         query_kwargs = {
@@ -100,6 +108,16 @@ class DynamoClient:
         return_values = kwargs.pop('ReturnValues', 'ALL_OLD')
         # return None if nothing was deleted, rather than an empty dict
         return self.table.delete_item(Key=pk, ReturnValues=return_values, **kwargs).get('Attributes') or None
+
+    def batch_delete_items(self, generator):
+        "Batch delete the items or keys yielded by `generator`. Returns count of how many deletes requested."
+        cnt = 0
+        with self.table.batch_writer() as batch:
+            for item in generator:
+                key = {k: item[k] for k in ('partitionKey', 'sortKey')}
+                batch.delete_item(Key=key)
+                cnt += 1
+        return cnt
 
     def encode_pagination_token(self, last_evaluated_key):
         "From a LastEvaluatedKey to a obfucated string"

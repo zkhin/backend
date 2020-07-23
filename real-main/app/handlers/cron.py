@@ -23,6 +23,7 @@ clients = {
 }
 
 managers = {}
+album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
@@ -46,6 +47,13 @@ def deflate_trending_posts(event, context):
     deleted_cnt = post_manager.trending_delete_tail(total_cnt)
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'Trending posts removed: {deleted_cnt} out of {total_cnt}')
+
+
+@handler_logging
+def garbage_collect_albums(event, context):
+    cnt = album_manager.garbage_collect()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Albums garbage collected: {cnt}')
 
 
 @handler_logging

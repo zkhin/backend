@@ -359,6 +359,18 @@ functions:
       - functionErrors
       - functionThrottles
 
+  cronGarbageCollectAlbums:
+    name: ${self:provider.stackName}-cronGarbageCollectAlbums
+    handler: app.handlers.cron.garbage_collect_albums
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 hour)'
+    alarms:
+      - functionErrors
+      - functionThrottles
+
   s3ImagePostUploaded:
     name: ${self:provider.stackName}-s3ImagePostUploaded
     handler: app.handlers.s3.image_post_uploaded

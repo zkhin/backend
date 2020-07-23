@@ -94,6 +94,26 @@ class AlbumDynamo:
 
         return self.client.update_item(update_query_kwargs)
 
+    def set_delete_at_fail_soft(self, album_id, delete_at):
+        query_kwargs = {
+            'Key': self.pk(album_id),
+            'UpdateExpression': 'SET gsiK1PartitionKey = :pk, gsiK1SortKey = :sk',
+            'ExpressionAttributeValues': {':pk': 'album', ':sk': delete_at.to_iso8601_string(), ':zero': 0},
+            'ConditionExpression': 'NOT postCount > :zero',
+        }
+        return self.client.update_item(
+            query_kwargs, failure_warning=f'Failed to set deleteAt GSI for album `{album_id}`'
+        )
+
+    def clear_delete_at_fail_soft(self, album_id):
+        query_kwargs = {
+            'Key': self.pk(album_id),
+            'UpdateExpression': 'REMOVE gsiK1PartitionKey, gsiK1SortKey',
+        }
+        return self.client.update_item(
+            query_kwargs, failure_warning=f'Failed to clear deleteAt GSI for album `{album_id}`'
+        )
+
     def delete_album(self, album_id):
         if item_deleted := self.client.delete_item(self.pk(album_id)):
             return item_deleted
@@ -157,5 +177,14 @@ class AlbumDynamo:
         query_kwargs = {
             'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'album/{user_id}'),
             'IndexName': 'GSI-A1',
+        }
+        return self.client.generate_all_query(query_kwargs)
+
+    def generate_keys_to_delete(self, cutoff_at):
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiK1PartitionKey = :pk AND gsiK1SortKey < :sk_max',
+            'IndexName': 'GSI-K1',
+            'ExpressionAttributeValues': {':pk': 'album', ':sk_max': cutoff_at.to_iso8601_string()},
+            'ProjectionExpression': 'partitionKey, sortKey',
         }
         return self.client.generate_all_query(query_kwargs)

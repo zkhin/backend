@@ -11,6 +11,9 @@ logger = logging.getLogger()
 
 
 class AlbumManager:
+
+    zero_post_lifetime = pendulum.duration(hours=24)
+
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['album'] = self
@@ -45,7 +48,19 @@ class AlbumManager:
         for album_item in self.dynamo.generate_by_user(user_id):
             self.init_album(album_item).delete()
 
+    def garbage_collect(self, now=None):
+        now = now or pendulum.now('utc')
+        generator = self.dynamo.generate_keys_to_delete(now)
+        return self.dynamo.client.batch_delete_items(generator)
+
     def on_album_delete_delete_album_art(self, album_id, old_item):
         if art_hash := old_item.get('artHash'):
             album = self.init_album(old_item)
             album.delete_art_images(art_hash)
+
+    def on_album_add_edit_sync_delete_at(self, album_id, new_item, old_item=None):
+        new_count = new_item.get('postCount', 0)
+        if new_count == 0 and 'gsiK1PartitionKey' not in new_item:
+            self.dynamo.set_delete_at_fail_soft(album_id, pendulum.now('utc') + self.zero_post_lifetime)
+        if new_count > 0 and 'gsiK1PartitionKey' in new_item:
+            self.dynamo.clear_delete_at_fail_soft(album_id)
