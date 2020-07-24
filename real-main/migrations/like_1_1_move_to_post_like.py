@@ -9,7 +9,7 @@ logger = logging.getLogger()
 
 
 class Migration:
-    "Move Media.isVerified to Post.isVerified"
+    "Move Like item to be a sub-item of a Post"
 
     def __init__(self, dynamo_client, dynamo_table):
         self.dynamo_client = dynamo_client
