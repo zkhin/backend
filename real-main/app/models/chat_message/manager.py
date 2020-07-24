@@ -103,6 +103,5 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
             chat_message.delete(forced=True)
 
     def on_chat_delete_delete_messages(self, chat_id, old_item):
-        with self.dynamo.client.table.batch_writer() as batch:
-            for chat_message_pk in self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True):
-                batch.delete_item(Key=chat_message_pk)
+        generator = self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True)
+        self.dynamo.client.batch_delete_items(generator)

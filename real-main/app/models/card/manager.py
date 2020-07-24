@@ -85,10 +85,9 @@ class CardManager:
         card.delete()
 
     def truncate_cards(self, user_id):
-        # delete all cards for the user
-        with self.dynamo.client.table.batch_writer() as batch:
-            for card_pk in self.dynamo.generate_cards_by_user(user_id, pks_only=True):
-                batch.delete_item(Key=card_pk)
+        "Delete all cards for the user"
+        generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
+        self.dynamo.client.batch_delete_items(generator)
 
     def notify_users(self, now=None, only_usernames=None):
         """

@@ -66,13 +66,15 @@ class BlockDynamo:
         return self.client.generate_all_query(query_kwargs)
 
     def delete_all_blocks_by_user(self, blocker_user_id):
-        with self.client.table.batch_writer() as batch:
-            for block_item in self.generate_blocks_by_blocker(blocker_user_id):
-                pk = self.pk(blocker_user_id, block_item['blockedUserId'])
-                batch.delete_item(Key=pk)
+        key_generator = (
+            self.pk(blocker_user_id, block_item['blockedUserId'])
+            for block_item in self.generate_blocks_by_blocker(blocker_user_id)
+        )
+        self.client.batch_delete_items(key_generator)
 
     def delete_all_blocks_of_user(self, blocked_user_id):
-        with self.client.table.batch_writer() as batch:
-            for block_item in self.generate_blocks_by_blocked(blocked_user_id):
-                pk = self.pk(block_item['blockerUserId'], blocked_user_id)
-                batch.delete_item(Key=pk)
+        key_generator = (
+            self.pk(block_item['blockerUserId'], blocked_user_id)
+            for block_item in self.generate_blocks_by_blocked(blocked_user_id)
+        )
+        self.client.batch_delete_items(key_generator)

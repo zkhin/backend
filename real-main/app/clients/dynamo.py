@@ -96,12 +96,17 @@ class DynamoClient:
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
             'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
         }
-        try:
-            return self.update_item(query_kwargs)
-        except self.exceptions.ConditionalCheckFailedException:
-            if not fail_soft:
-                raise
-            logger.warning(f'Failed to decrement {attribute_name} for key `{key}`')
+        failure_warning = f'Failed to decrement {attribute_name} for key `{key}`' if fail_soft else None
+        return self.update_item(query_kwargs, failure_warning=failure_warning)
+
+    def batch_put_items(self, generator):
+        "Batch put the items yielded by `generator`. Returns count of how many puts requested."
+        cnt = 0
+        with self.table.batch_writer() as batch:
+            for item in generator:
+                batch.put_item(Item=item)
+                cnt += 1
+        return cnt
 
     def delete_item(self, pk, **kwargs):
         "Delete an item and return what was deleted"

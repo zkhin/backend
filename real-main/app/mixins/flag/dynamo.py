@@ -43,9 +43,8 @@ class FlagDynamo:
             raise NotFlagged(self.item_type, item_id, user_id)
 
     def delete_all_for_item(self, item_id):
-        with self.client.table.batch_writer() as batch:
-            for pk in self.generate_by_item(item_id, pks_only=True):
-                batch.delete_item(Key=pk)
+        generator = self.generate_by_item(item_id, pks_only=True)
+        self.client.batch_delete_items(generator)
 
     def generate_by_item(self, item_id, pks_only=False):
         query_kwargs = {

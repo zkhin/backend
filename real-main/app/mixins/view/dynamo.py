@@ -44,9 +44,7 @@ class ViewDynamo:
         return self.client.delete_item(self.pk(item_id, user_id))
 
     def delete_views(self, view_pk_generator):
-        with self.client.table.batch_writer() as batch:
-            for pk in view_pk_generator:
-                batch.delete_item(Key=pk)
+        self.client.batch_delete_items(view_pk_generator)
 
     def add_view(self, item_id, user_id, view_count, viewed_at):
         pk = self.pk(item_id, user_id)
