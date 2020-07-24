@@ -4,7 +4,7 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import FeedManager, LikeManager
+from app.models import LikeManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 
@@ -73,7 +73,6 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
     # mock out some calls to far-flung other managers
     post.like_manager = mock.Mock(LikeManager({}))
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # archive the post
     post.archive()
@@ -90,14 +89,10 @@ def test_archive_expired_completed_post(post_manager, post_with_expiration, user
     assert post.follower_manager.mock_calls == [
         mock.call.refresh_first_story(story_prev=post.item),
     ]
-    assert post.feed_manager.mock_calls == [
-        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
-    ]
 
 
 def test_archive_completed_post_with_album(album_manager, post_manager, post_with_album, user_manager):
     post = post_with_album
-    posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == 0
@@ -111,7 +106,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     # mock out some calls to far-flung other managers
     post.like_manager = mock.Mock(LikeManager({}))
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # archive the post
     post.archive()
@@ -131,9 +125,6 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
         mock.call.dislike_all_of_post(post.id),
     ]
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
-    ]
 
 
 def test_forced_archive(post, caplog):

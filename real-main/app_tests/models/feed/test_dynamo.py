@@ -84,55 +84,35 @@ def test_add_posts_to_feed(feed_dynamo):
     assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3']
 
 
-def test_delete_posts_from_feed(feed_dynamo):
+def test_delete_by_post_owner(feed_dynamo):
     user_id = 'fuid'
-
-    # check nothing in feed
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
-    # delete post that doesn't exist, no error thrown
-    post_id_generator = iter(['p-dne'])
-    feed_dynamo.delete_posts_from_feed(user_id, post_id_generator)
-
-    # check nothing in feed
+    # check no-op doesn't error, verify state
+    feed_dynamo.delete_by_post_owner(user_id, 'pbuid')
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
-    # add three posts to the feed
+    # add three posts to the feed, verify
     posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter(
         [
             {'postId': 'pid1', 'postedByUserId': 'pbuid', 'postedAt': posted_at},
-            {'postId': 'pid2', 'postedByUserId': 'pbuid', 'postedAt': posted_at},
+            {'postId': 'pid2', 'postedByUserId': 'other-uid', 'postedAt': posted_at},
             {'postId': 'pid3', 'postedByUserId': 'pbuid', 'postedAt': posted_at},
+            {'postId': 'pid4', 'postedByUserId': 'pbuid', 'postedAt': posted_at},
         ]
     )
     feed_dynamo.add_posts_to_feed(user_id, posts_generator)
-
-    # check those three posts are in the feed
     feed = list(feed_dynamo.generate_feed(user_id))
-    assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3']
+    assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3', 'pid4']
 
-    # delete nothing
-    post_id_generator = iter([])
-    feed_dynamo.delete_posts_from_feed(user_id, post_id_generator)
-
-    # check those three posts are in the feed
-    feed = list(feed_dynamo.generate_feed(user_id))
-    assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3']
-
-    # delete two posts
-    post_id_generator = iter(['pid3', 'pid1'])
-    feed_dynamo.delete_posts_from_feed(user_id, post_id_generator)
-
-    # check one post left in feed
+    # delete three posts, verify
+    feed_dynamo.delete_by_post_owner(user_id, 'pbuid')
     feed = list(feed_dynamo.generate_feed(user_id))
     assert sorted([f['postId'] for f in feed]) == ['pid2']
 
-    # delete that post
-    post_id_generator = iter(['pid2'])
-    feed_dynamo.delete_posts_from_feed(user_id, post_id_generator)
-
-    # check nothing in feed
+    # delete last post, verify
+    feed_dynamo.delete_by_post_owner(user_id, 'other-uid')
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
 
@@ -173,14 +153,14 @@ def test_add_post_to_feeds(feed_dynamo):
     assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])]) == ['pid2', 'pid3']
 
 
-def test_delete_post_from_feeds(feed_dynamo):
+def test_delete_by_post(feed_dynamo):
     feed_uids = ['fuid1', 'fuid2']
 
     # delete post from no feeds - verify no error
-    feed_dynamo.delete_post_from_feeds(iter([]), 'pid')
+    feed_dynamo.delete_by_post('pid', iter([]))
 
     # delete post from feeds where it doesn't exist - verify no error
-    feed_dynamo.delete_post_from_feeds(iter(['fuid']), 'pid')
+    feed_dynamo.delete_by_post('pid', iter(['fuid']))
 
     # add a post to two feeds
     posted_at = pendulum.now('utc').to_iso8601_string()
@@ -204,14 +184,14 @@ def test_delete_post_from_feeds(feed_dynamo):
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['pid3']
 
     # delete a post from the feeds
-    feed_dynamo.delete_post_from_feeds(iter(feed_uids), 'pid3')
+    feed_dynamo.delete_by_post('pid3', iter(feed_uids))
 
     # verify the two feeds look as expected
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['pid2']
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
 
     # delete the other post from the feeds
-    feed_dynamo.delete_post_from_feeds(iter(feed_uids), 'pid2')
+    feed_dynamo.delete_by_post('pid2', iter(feed_uids))
 
     # verify the two feeds look as expected
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])] == []

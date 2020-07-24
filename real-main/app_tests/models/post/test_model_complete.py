@@ -5,7 +5,6 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import FeedManager
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.user.exceptions import UserException
@@ -87,11 +86,9 @@ def test_complete_error_for_status(post_manager, post):
 
 def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     post = post_with_media
-    posted_by_user_id = post.item['postedByUserId']
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
     assert post.item['postStatus'] == PostStatus.PENDING
@@ -104,9 +101,6 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
 
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
-    ]
 
     # check the subscription was triggered
     assert len(appsync_client.mock_calls) == 1
@@ -116,11 +110,9 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
 
 def test_complete_with_expiration(post_manager, post_with_media_with_expiration, user_manager):
     post = post_with_media_with_expiration
-    posted_by_user_id = post.item['postedByUserId']
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
     assert post.item['postStatus'] == PostStatus.PENDING
@@ -131,9 +123,6 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
 
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == [mock.call.refresh_first_story(story_now=post.item)]
-    assert post.feed_manager.mock_calls == [
-        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
-    ]
 
 
 def test_complete_with_album(album_manager, post_manager, post_with_media_with_album, user_manager, image_data):
@@ -150,7 +139,6 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # check starting state
     assert album.item.get('postCount', 0) == 0
@@ -169,9 +157,6 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
 
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
-    ]
 
 
 def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_expiration):
@@ -185,9 +170,7 @@ def test_complete_with_original_post(post_manager, post_with_media, post_with_me
 
     # mock out some calls to far-flung other managers
     post1.follower_manager = mock.Mock(post1.follower_manager)
-    post1.feed_manager = mock.Mock(FeedManager({}))
     post2.follower_manager = mock.Mock(post2.follower_manager)
-    post2.feed_manager = mock.Mock(FeedManager({}))
 
     # complete the post that has the earlier postedAt, should not get an originalPostId
     post1.set_checksum()

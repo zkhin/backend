@@ -30,6 +30,7 @@ card_manager = managers.get('card') or models.CardManager(clients, managers=mana
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
+feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
 follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
@@ -89,6 +90,13 @@ register(
     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
 )
 register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
+register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    feed_manager.on_post_status_change_sync_feed,
+    {'postStatus': None},
+)
 register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts, {'postStatus': None})
 register('post', '-', ['REMOVE'], post_manager.on_delete)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_flags)
@@ -161,6 +169,13 @@ register(
     ['INSERT', 'MODIFY'],
     user_manager.sync_elasticsearch,
     {'username': None, 'fullName': None, 'lastManuallyReindexedAt': None},
+)
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    feed_manager.on_user_follow_status_change_sync_feed,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
 register(
     'user',

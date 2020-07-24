@@ -4,7 +4,7 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import CommentManager, FeedManager, LikeManager
+from app.models import CommentManager, LikeManager
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
@@ -47,11 +47,9 @@ def post_with_media(post_manager, user):
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
     post = post_with_expiration
-    posted_by_user_id = post.item['postedByUserId']
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
-    post.feed_manager = mock.Mock(FeedManager({}))
     post.follower_manager = mock.Mock(post.follower_manager)
     post.like_manager = mock.Mock(LikeManager({}))
 
@@ -67,9 +65,6 @@ def test_delete_completed_text_only_post_with_expiration(post_manager, post_with
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [
         mock.call.delete_all_on_post(post.id),
-    ]
-    assert post.feed_manager.mock_calls == [
-        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
     ]
     assert post.follower_manager.mock_calls == [
         mock.call.refresh_first_story(story_prev=post_item),
@@ -89,7 +84,6 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post.comment_manager = mock.Mock(CommentManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # delete the post
     post.delete()
@@ -111,18 +105,15 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
         mock.call.dislike_all_of_post(post.id),
     ]
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == []
 
 
 def test_delete_completed_media_post(post_manager, completed_post_with_media, user_manager):
     post = completed_post_with_media
-    posted_by_user_id = post.item['postedByUserId']
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # delete the post
     post.delete()
@@ -148,14 +139,10 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
         mock.call.dislike_all_of_post(post.id),
     ]
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
-    ]
 
 
 def test_delete_completed_post_in_album(album_manager, post_manager, post_with_album, user_manager):
     post = post_with_album
-    posted_by_user_id = post.item['postedByUserId']
     album = album_manager.get_album(post.item['albumId'])
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == 0
@@ -171,7 +158,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     post.comment_manager = mock.Mock(CommentManager({}))
     post.like_manager = mock.Mock(LikeManager({}))
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # delete the post
     post.delete()
@@ -197,9 +183,6 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
         mock.call.dislike_all_of_post(post.id),
     ]
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.delete_post_from_followers_feeds(posted_by_user_id, post.id),
-    ]
 
 
 def test_delete_archived_post(completed_post_with_media):

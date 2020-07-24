@@ -66,19 +66,13 @@ def test_accept(users_private, requested_follow):
         follow.accept()
 
 
-def test_accept_follow_request_with_story(users_private, their_post, requested_follow, feed_manager):
-    our_user, _ = users_private
+def test_accept_follow_request_with_story(users_private, their_post, requested_follow):
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
     # accept the follow request, double check
     assert follow.accept().status == FollowStatus.FOLLOWING
     assert follow.refresh_item().status == FollowStatus.FOLLOWING
-
-    # check our feed
-    our_feed_by_them = list(feed_manager.dynamo.generate_feed(our_user.id))
-    assert len(our_feed_by_them) == 1
-    assert our_feed_by_them[0]['postId'] == their_post.id
 
     # check the firstStory
     follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']

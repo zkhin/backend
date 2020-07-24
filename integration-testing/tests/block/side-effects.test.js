@@ -46,6 +46,7 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify we can see the like has disappeared
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.onymousLikeCount).toBe(0)
   expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
@@ -254,6 +255,7 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
 
   // verify that post does not show up in our feed
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.data.self.feed.items).toHaveLength(0)
 

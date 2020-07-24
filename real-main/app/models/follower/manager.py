@@ -16,7 +16,6 @@ class FollowerManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['follower'] = self
-        self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
@@ -38,7 +37,6 @@ class FollowerManager:
             follow_item,
             self.dynamo,
             self.first_story_dynamo,
-            feed_manager=self.feed_manager,
             like_manager=self.like_manager,
             post_manager=self.post_manager,
             user_manager=self.user_manager,
@@ -85,8 +83,6 @@ class FollowerManager:
         follow_item = self.dynamo.add_following(follower_user.id, followed_user.id, follow_status)
 
         if follow_status == FollowStatus.FOLLOWING:
-            # async with dynamo stream handler?
-            self.feed_manager.add_users_posts_to_feed(follower_user.id, followed_user.id)
             post = self.post_manager.dynamo.get_next_completed_post_to_expire(followed_user.id)
             if post:
                 self.first_story_dynamo.set_all([follower_user.id], post)

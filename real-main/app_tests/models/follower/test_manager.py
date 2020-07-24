@@ -77,10 +77,6 @@ def test_request_to_follow_public_user(follower_manager, users):
     assert follower_manager.request_to_follow(our_user, their_user).status == FollowStatus.FOLLOWING
     assert follower_manager.get_follow(our_user.id, their_user.id).status == FollowStatus.FOLLOWING
 
-    # check our feed
-    our_feed_by_them = list(follower_manager.feed_manager.dynamo.generate_feed(our_user.id))
-    assert len(our_feed_by_them) == 0
-
     # check the firstStory
     follow = follower_manager.get_follow(our_user.id, their_user.id)
     follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
@@ -98,11 +94,6 @@ def test_request_to_follow_public_user_with_story(follower_manager, users, their
     # follow them, double check
     assert follower_manager.request_to_follow(our_user, their_user).status == FollowStatus.FOLLOWING
     assert follower_manager.get_follow(our_user.id, their_user.id).status == FollowStatus.FOLLOWING
-
-    # check our feed
-    our_feed_by_them = list(follower_manager.feed_manager.dynamo.generate_feed(our_user.id))
-    assert len(our_feed_by_them) == 1
-    assert our_feed_by_them[0]['postId'] == their_post.id
 
     # check the firstStory
     follow = follower_manager.get_follow(our_user.id, their_user.id)
@@ -133,10 +124,6 @@ def test_request_to_follow_private_user(follower_manager, users):
     their_user.refresh_item()
     assert their_user.item.get('followerCount', 0) == 0
     assert their_user.item.get('followedCount', 0) == 0
-
-    # check our feed
-    our_feed_by_them = list(follower_manager.feed_manager.dynamo.generate_feed(our_user.id))
-    assert len(our_feed_by_them) == 0
 
     # check the firstStory
     follow = follower_manager.get_follow(our_user.id, their_user.id)

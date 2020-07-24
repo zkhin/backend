@@ -5,7 +5,6 @@ from unittest import mock
 import pendulum
 import pytest
 
-from app.models import FeedManager
 from app.models.post.enums import PostStatus, PostType
 
 
@@ -35,7 +34,6 @@ def post_with_media_completed(post_manager, user, image_data_b64):
 
 def test_restore_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
     post = post_with_expiration
-    posted_by_user_id = post.item['postedByUserId']
 
     # archive the post
     post.archive()
@@ -43,7 +41,6 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # restore the post
     post.restore()
@@ -57,14 +54,10 @@ def test_restore_completed_text_only_post_with_expiration(post_manager, post_wit
     assert post.follower_manager.mock_calls == [
         mock.call.refresh_first_story(story_now=post.item),
     ]
-    assert post.feed_manager.mock_calls == [
-        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
-    ]
 
 
 def test_restore_completed_media_post(post_manager, post_with_media_completed, user_manager):
     post = post_with_media_completed
-    posted_by_user_id = post.item['postedByUserId']
 
     # archive the post
     post.archive()
@@ -72,7 +65,6 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # restore the post
     post.restore()
@@ -84,9 +76,6 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
 
     # check calls to mocked out managers
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.add_post_to_followers_feeds(posted_by_user_id, post.item),
-    ]
 
 
 def test_restore_completed_post_in_album(album_manager, post_manager, post_with_media_completed, user_manager):
@@ -107,7 +96,6 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
 
     # mock out some calls to far-flung other managers
     post.follower_manager = mock.Mock(post.follower_manager)
-    post.feed_manager = mock.Mock(FeedManager({}))
 
     # restore the post
     post.restore()
@@ -130,6 +118,3 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
 
     # check calls to mocked out managers
     assert post.follower_manager.mock_calls == []
-    assert post.feed_manager.mock_calls == [
-        mock.call.add_post_to_followers_feeds(post.user_id, post.item),
-    ]

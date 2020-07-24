@@ -33,7 +33,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
         self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
-        self.feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
         self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
@@ -70,7 +69,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             'block_manager': self.block_manager,
             'card_manager': self.card_manager,
             'comment_manager': self.comment_manager,
-            'feed_manager': self.feed_manager,
             'follower_manager': self.follower_manager,
             'like_manager': self.like_manager,
             'post_manager': self,

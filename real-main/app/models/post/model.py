@@ -47,7 +47,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         block_manager=None,
         card_manager=None,
         comment_manager=None,
-        feed_manager=None,
         follower_manager=None,
         like_manager=None,
         post_manager=None,
@@ -82,8 +81,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.card_manager = card_manager
         if comment_manager is not None:
             self.comment_manager = comment_manager
-        if feed_manager is not None:
-            self.feed_manager = feed_manager
         if follower_manager is not None:
             self.follower_manager = follower_manager
         if like_manager is not None:
@@ -409,9 +406,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.item.get('expiresAt'):
             self.follower_manager.refresh_first_story(story_now=self.item)
 
-        # add post to feeds
-        self.feed_manager.add_post_to_followers_feeds(self.user_id, self.item)
-
         # update album art if needed
         if album:
             album.update_art_if_needed()
@@ -454,9 +448,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # delete the trending index, if it exists
         self.trending_delete()
 
-        # update feeds
-        self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
-
         # update album art if needed
         if album:
             album.update_art_if_needed()
@@ -486,9 +477,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.item.get('expiresAt'):
             self.follower_manager.refresh_first_story(story_now=self.item)
 
-        # update feeds
-        self.feed_manager.add_post_to_followers_feeds(self.user_id, self.item)
-
         # update album art if needed
         if album:
             album.update_art_if_needed()
@@ -505,7 +493,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 album = self.album_manager.get_album(album_id)
 
         # mark the post and the media as in the deleting process
-        prev_post_status = self.status
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING),
         ]
@@ -523,10 +510,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # if it was the first followed story, refresh that
         if self.item.get('expiresAt'):
             self.follower_manager.refresh_first_story(story_prev=self.item)
-
-        # remove it from feeds, user post count
-        if prev_post_status == PostStatus.COMPLETED:
-            self.feed_manager.delete_post_from_followers_feeds(self.user_id, self.id)
 
         # delete the trending index, if it exists
         self.trending_delete()

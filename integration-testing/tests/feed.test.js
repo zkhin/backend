@@ -85,6 +85,7 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   // we follow them, and those two posts show up in our feed
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.selfFeed})
   items = resp.data.self.feed.items
   expect(items).toHaveLength(2)
@@ -136,6 +137,7 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   // they accept our follow request, and those two posts show up in our feed
   resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.selfFeed})
   const items = resp.data.self.feed.items
   expect(items).toHaveLength(2)
@@ -191,6 +193,7 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   expect(resp.data.setUserDetails.privacyStatus).toBe('PUBLIC')
 
   // our follow request should have gone though, so their two posts should now be in our feed
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.selfFeed})
   const items = resp.data.self.feed.items
   expect(items).toHaveLength(2)

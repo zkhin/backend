@@ -53,6 +53,7 @@ test('Archiving an image post', async () => {
     .then(({data: {archivePost: post}}) => expect(post.postStatus).toBe('ARCHIVED'))
 
   // post should be gone from the normal queries - feed, posts
+  await misc.sleep(2000)
   await ourClient
     .query({query: queries.selfFeed})
     .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))

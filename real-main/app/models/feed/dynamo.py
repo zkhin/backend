@@ -40,15 +40,18 @@ class FeedDynamo:
         item_generator = (self.build_item(feed_user_id, post_item) for post_item in post_item_generator)
         self.client.batch_put_items(item_generator)
 
-    def delete_posts_from_feed(self, feed_user_id, post_id_generator):
-        key_generator = (self.build_pk(feed_user_id, post_id) for post_id in post_id_generator)
-        self.client.batch_delete_items(key_generator)
-
     def add_post_to_feeds(self, feed_user_id_generator, post_item):
         item_generator = (self.build_item(feed_user_id, post_item) for feed_user_id in feed_user_id_generator)
         self.client.batch_put_items(item_generator)
 
-    def delete_post_from_feeds(self, feed_user_id_generator, post_id):
+    def delete_by_post_owner(self, feed_user_id, post_user_id):
+        "Delete all feed items by `posted_by_user_id` from the feed of `feed_user_id`"
+        pk_generator = self.generate_feed_pks_by_posted_by_user(feed_user_id, post_user_id)
+        self.client.batch_delete_items(pk_generator)
+
+    # adding an index on post id would allow feed_user_id_generator to be eliminated
+    def delete_by_post(self, post_id, feed_user_id_generator):
+        "Delete all feed items of `post_id` in the feeds of `feed_user_id_generator`"
         key_generator = (self.build_pk(feed_user_id, post_id) for feed_user_id in feed_user_id_generator)
         self.client.batch_delete_items(key_generator)
 
