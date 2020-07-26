@@ -10,7 +10,7 @@ logger = logging.getLogger()
 
 
 class Migration:
-    "Move .isVerified to Post.isVerified"
+    "Move Feed to be subitem of User"
 
     def __init__(self, dynamo_client, dynamo_table):
         self.dynamo_client = dynamo_client
