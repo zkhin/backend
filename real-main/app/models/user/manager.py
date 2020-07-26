@@ -81,6 +81,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def init_user(self, user_item):
         kwargs = {
+            'dynamo': getattr(self, 'dynamo', None),
             'trending_dynamo': getattr(self, 'trending_dynamo', None),
             'album_manager': getattr(self, 'album_manager', None),
             'block_manager': getattr(self, 'block_manager', None),

@@ -7,7 +7,6 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .dynamo import UserDynamo
 from .enums import UserPrivacyStatus, UserStatus
 from .exceptions import UserException, UserValidationException, UserVerificationException
 from .validate import UserValidate
@@ -33,6 +32,7 @@ class User(TrendingModelMixin):
         self,
         user_item,
         clients,
+        dynamo=None,
         album_manager=None,
         block_manager=None,
         card_manager=None,
@@ -50,8 +50,8 @@ class User(TrendingModelMixin):
         for client_name in self.client_names:
             if client_name in clients:
                 setattr(self, f'{client_name}_client', clients[client_name])
-        if 'dynamo' in clients:
-            self.dynamo = UserDynamo(clients['dynamo'])
+        if dynamo:
+            self.dynamo = dynamo
         if album_manager:
             self.album_manager = album_manager
         if block_manager:
