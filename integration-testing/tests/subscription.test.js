@@ -63,12 +63,12 @@ test('Cannot subscribe to other users notifications', async () => {
       mutation: mutations.createDirectChat,
       variables: {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore'},
     })
-    .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
+    .then(({data: {createDirectChat: chat}}) => expect(chat.chatId).toBe(chatId))
 
   // they send a messsage to the chat, which will increment our User.chatsWithUnviewedMessagesCount
   await theirClient
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'ipsum'}})
-    .then(({data}) => expect(data.addChatMessage.chat.chatId).toBe(chatId))
+    .then(({data: {addChatMessage: message}}) => expect(message.chat.chatId).toBe(chatId))
 
   // wait for notifications to show up, ensure we received one but they did not
   await misc.sleep(5000)

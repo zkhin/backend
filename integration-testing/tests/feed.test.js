@@ -24,42 +24,47 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we follow them
-  let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
 
   // our feed starts empty
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 
   // they add two posts, verify they shows up in our feed in order
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  const postText1 = 'Im sorry dave'
-  const postText2 = 'Im afraid I cant do that'
-  let variables = {postId: postId1, text: postText1, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId1)
-  variables = {postId: postId2, text: postText2, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId2)
-  resp = await ourClient.query({query: queries.selfFeed})
-  let items = resp.data.self.feed.items
-  expect(items).toHaveLength(2)
-  expect(items[0].postId).toBe(postId2)
-  expect(items[0].text).toBe(postText2)
-  expect(items[0].image).toBeTruthy()
-  expect(items[1].postId).toBe(postId1)
-  expect(items[1].text).toBe(postText1)
-  expect(items[1].image).toBeTruthy()
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, text: 'Im sorry dave', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, text: 'I cant do that', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId2))
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(2)
+    expect(user.feed.items[0].postId).toBe(postId2)
+    expect(user.feed.items[0].text).toBe('I cant do that')
+    expect(user.feed.items[0].image).toBeTruthy()
+    expect(user.feed.items[1].postId).toBe(postId1)
+    expect(user.feed.items[1].text).toBe('Im sorry dave')
+    expect(user.feed.items[1].image).toBeTruthy()
+  })
 
   // they archive a post, verify it disappears from our feed
-  resp = await theirClient.mutate({mutation: mutations.archivePost, variables: {postId: postId1}})
-  expect(resp.data.archivePost.postId).toBe(postId1)
-  expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
-  resp = await ourClient.query({query: queries.selfFeed})
-  items = resp.data.self.feed.items
-  expect(items).toHaveLength(1)
-  expect(items[0].postId).toBe(postId2)
-  expect(items[0].text).toBe(postText2)
+  await theirClient
+    .mutate({mutation: mutations.archivePost, variables: {postId: postId1}})
+    .then(({data: {archivePost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('ARCHIVED')
+    })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(1)
+    expect(user.feed.items[0].postId).toBe(postId2)
+    expect(user.feed.items[0].text).toBe('I cant do that')
+  })
 })
 
 test('When we follow/unfollow a user with posts, our feed reacts', async () => {
@@ -68,40 +73,41 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
 
   // they add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  const postText1 = 'Im sorry dave'
-  const postText2 = 'Im afraid I cant do that'
-  let variables = {postId: postId1, text: postText1, imageData}
-  let resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId1)
-  variables = {postId: postId2, text: postText2, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId2)
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, text: 'Im sorry dave', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, text: 'I cant do that', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId2))
 
   // our feed starts empty
-  resp = await ourClient.query({query: queries.selfFeed})
-  let items = resp.data.self.feed.items
-  expect(items).toHaveLength(0)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 
   // we follow them, and those two posts show up in our feed
-  resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
   await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.selfFeed})
-  items = resp.data.self.feed.items
-  expect(items).toHaveLength(2)
-  expect(items[0].postId).toBe(postId2)
-  expect(items[0].text).toBe(postText2)
-  expect(items[0].image).toBeTruthy()
-  expect(items[1].postId).toBe(postId1)
-  expect(items[1].text).toBe(postText1)
-  expect(items[1].image).toBeTruthy()
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(2)
+    expect(user.feed.items[0].postId).toBe(postId2)
+    expect(user.feed.items[0].text).toBe('I cant do that')
+    expect(user.feed.items[0].image).toBeTruthy()
+    expect(user.feed.items[1].postId).toBe(postId1)
+    expect(user.feed.items[1].text).toBe('Im sorry dave')
+    expect(user.feed.items[1].image).toBeTruthy()
+  })
 
   // we unfollow them, and those two posts disappear from our feed
-  resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
-  expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
-  resp = await ourClient.query({query: queries.selfFeed})
-  items = resp.data.self.feed.items
-  expect(items).toHaveLength(0)
+  await ourClient
+    .mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
+    .then(({data: {unfollowUser: user}}) => expect(user.followedStatus).toBe('NOT_FOLLOWING'))
+  await misc.sleep(2000)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 })
 
 test('When a private user accepts or denies our follow request, our feed reacts', async () => {
@@ -109,50 +115,52 @@ test('When a private user accepts or denies our follow request, our feed reacts'
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // set them to private
-  let variables = {privacyStatus: 'PRIVATE'}
-  let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
+  await theirClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data: {setUserDetails: user}}) => expect(user.privacyStatus).toBe('PRIVATE'))
 
   // they add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  const postText1 = 'Im sorry dave'
-  const postText2 = 'Im afraid I cant do that'
-  variables = {postId: postId1, text: postText1, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId1)
-  variables = {postId: postId2, text: postText2, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId2)
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, text: 'Im sorry dave', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, text: 'I cant do that', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId2))
 
   // our feed starts empty
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 
   // we request to follow them, our feed does not react
-  resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('REQUESTED'))
+  await misc.sleep(2000)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 
   // they accept our follow request, and those two posts show up in our feed
-  resp = await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
+  await theirClient
+    .mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
+    .then(({data: {acceptFollowerUser: user}}) => expect(user.followerStatus).toBe('FOLLOWING'))
   await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.selfFeed})
-  const items = resp.data.self.feed.items
-  expect(items).toHaveLength(2)
-  expect(items[0].postId).toBe(postId2)
-  expect(items[0].text).toBe(postText2)
-  expect(items[0].image).toBeTruthy()
-  expect(items[1].postId).toBe(postId1)
-  expect(items[1].text).toBe(postText1)
-  expect(items[1].image).toBeTruthy()
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(2)
+    expect(user.feed.items[0].postId).toBe(postId2)
+    expect(user.feed.items[1].postId).toBe(postId1)
+  })
 
   // they change their mind and deny the request, and those two posts disapear from our feed
-  resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
-  expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await theirClient
+    .mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
+    .then(({data: {denyFollowerUser: user}}) => expect(user.followerStatus).toBe('DENIED'))
+  await misc.sleep(2000)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 })
 
 test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow request, our feed reacts', async () => {
@@ -160,49 +168,45 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // set them to private
-  let variables = {privacyStatus: 'PRIVATE'}
-  let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
+  await theirClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data: {setUserDetails: user}}) => expect(user.privacyStatus).toBe('PRIVATE'))
 
   // they add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
-  const postText1 = 'Im sorry dave'
-  const postText2 = 'Im afraid I cant do that'
-  variables = {postId: postId1, text: postText1, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId1)
-  variables = {postId: postId2, text: postText2, imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId2)
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, text: 'Im sorry dave', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, text: 'I cant do that', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId2))
 
   // our feed starts empty
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 
   // we request to follow them, our feed does not react
-  resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('REQUESTED'))
+  await misc.sleep(2000)
+  await ourClient
+    .query({query: queries.selfFeed})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
 
   // they change from private to public
-  resp = await theirClient.mutate({
-    mutation: mutations.setUserPrivacyStatus,
-    variables: {privacyStatus: 'PUBLIC'},
-  })
-  expect(resp.data.setUserDetails.privacyStatus).toBe('PUBLIC')
+  await theirClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PUBLIC'}})
+    .then(({data: {setUserDetails: user}}) => expect(user.privacyStatus).toBe('PUBLIC'))
 
   // our follow request should have gone though, so their two posts should now be in our feed
   await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.selfFeed})
-  const items = resp.data.self.feed.items
-  expect(items).toHaveLength(2)
-  expect(items[0].postId).toBe(postId2)
-  expect(items[0].text).toBe(postText2)
-  expect(items[0].image).toBeTruthy()
-  expect(items[1].postId).toBe(postId1)
-  expect(items[1].text).toBe(postText1)
-  expect(items[1].image).toBeTruthy()
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(2)
+    expect(user.feed.items[0].postId).toBe(postId2)
+    expect(user.feed.items[1].postId).toBe(postId1)
+  })
 })
 
 // waiting on a way to externally trigger the 'archive expired posts' cron job
@@ -211,19 +215,21 @@ test.skip('Post that expires is removed from feed', async () => {
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we follow them
-  let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
 
   // they add a post that expires in a millisecond
   const postId = uuidv4()
-  let variables = {postId, lifetime: 'PT0.001S', imageData}
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId)
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId, lifetime: 'PT0.001S', imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
 
   // since cron job hasn't yet run, that post should be in our feed
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(1)
+    expect(user.feed.items[0].postId).toBe(postId)
+  })
 
   // TODO trigger the cron job
 
@@ -237,29 +243,33 @@ test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctl
   const [theirClient, theirUserId] = await loginCache.getCleanLogin()
 
   // we follow them
-  let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
 
   // they add a post
   const postId = uuidv4()
-  resp = await theirClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
-  expect(resp.data.addPost.postId).toBe(postId)
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
 
   // see how that looks in our feed
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
-  expect(resp.data.self.feed.items[0].postedBy.userId).toBe(theirUserId)
-  expect(resp.data.self.feed.items[0].postedBy.blockerStatus).toBe('NOT_BLOCKING')
-  expect(resp.data.self.feed.items[0].postedBy.followedStatus).toBe('FOLLOWING')
+  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(1)
+    expect(user.feed.items[0].postId).toBe(postId)
+    expect(user.feed.items[0].postedBy.userId).toBe(theirUserId)
+    expect(user.feed.items[0].postedBy.blockerStatus).toBe('NOT_BLOCKING')
+    expect(user.feed.items[0].postedBy.followedStatus).toBe('FOLLOWING')
+  })
 
   // see how that looks in their feed
-  resp = await theirClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
-  expect(resp.data.self.feed.items[0].postedBy.userId).toBe(theirUserId)
-  expect(resp.data.self.feed.items[0].postedBy.blockerStatus).toBe('SELF')
-  expect(resp.data.self.feed.items[0].postedBy.followedStatus).toBe('SELF')
+  await theirClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
+    expect(user.feed.items).toHaveLength(1)
+    expect(user.feed.items[0].postId).toBe(postId)
+    expect(user.feed.items[0].postedBy.userId).toBe(theirUserId)
+    expect(user.feed.items[0].postedBy.blockerStatus).toBe('SELF')
+    expect(user.feed.items[0].postedBy.followedStatus).toBe('SELF')
+  })
 })
 
 test('Feed privacy', async () => {
@@ -267,12 +277,15 @@ test('Feed privacy', async () => {
   const [theirClient] = await loginCache.getCleanLogin()
 
   // verify we can see our feed, via self and user queries
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.feed.items).toHaveLength(0)
-  resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.feed.items).toHaveLength(0)
+  await ourClient
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
+  await ourClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.feed.items).toHaveLength(0))
 
   // verify they can *not* see our feed
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.feed).toBeNull()
+  await theirClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.feed).toBeNull())
 })
