@@ -49,46 +49,7 @@ def test_build_item(feed_dynamo):
     }
 
 
-def test_build_pk_old_pk(feed_dynamo):
-    pk = feed_dynamo.build_pk('uid', 'pid', old_pk=True)
-    assert pk == {
-        'partitionKey': 'user/uid',
-        'sortKey': 'feed/pid',
-    }
-
-
-def test_parse_pk_old_pk(feed_dynamo):
-    user_id, post_id = feed_dynamo.parse_pk({'partitionKey': 'user/uid', 'sortKey': 'feed/pid'})
-    assert user_id == 'uid'
-    assert post_id == 'pid'
-
-
-def test_build_item_old_pk(feed_dynamo):
-    feed_user_id = 'fuid'
-    posted_at = pendulum.now('utc').to_iso8601_string()
-    post_item = {
-        'postId': 'pid',
-        'postedByUserId': 'pbuid',
-        'postedAt': posted_at,
-    }
-    feed_item = feed_dynamo.build_item(feed_user_id, post_item, old_pk=True)
-    assert feed_item == {
-        'schemaVersion': 2,
-        'partitionKey': 'user/fuid',
-        'sortKey': 'feed/pid',
-        'gsiA1PartitionKey': 'feed/fuid',
-        'gsiA1SortKey': posted_at,
-        'userId': 'fuid',
-        'postId': 'pid',
-        'postedAt': posted_at,
-        'postedByUserId': 'pbuid',
-        'gsiK2PartitionKey': 'feed/fuid/pbuid',
-        'gsiK2SortKey': posted_at,
-    }
-
-
-@pytest.mark.parametrize('old_pk', [True, False])
-def test_add_posts_to_feed(feed_dynamo, old_pk):
+def test_add_posts_to_feed(feed_dynamo):
     user_id = 'fuid'
 
     # check nothing in feed
@@ -96,7 +57,7 @@ def test_add_posts_to_feed(feed_dynamo, old_pk):
 
     # add nothing to feed
     posts_generator = iter([])
-    feed_dynamo.add_posts_to_feed(user_id, posts_generator, old_pk=old_pk)
+    feed_dynamo.add_posts_to_feed(user_id, posts_generator)
 
     # check nothing in feed
     assert list(feed_dynamo.generate_feed(user_id)) == []
@@ -109,7 +70,7 @@ def test_add_posts_to_feed(feed_dynamo, old_pk):
             {'postId': 'pid2', 'postedByUserId': 'pbuid', 'postedAt': posted_at},
         ]
     )
-    feed_dynamo.add_posts_to_feed(user_id, posts_generator, old_pk=old_pk)
+    feed_dynamo.add_posts_to_feed(user_id, posts_generator)
 
     # check those two posts are in the feed
     feed = list(feed_dynamo.generate_feed(user_id))
@@ -118,15 +79,14 @@ def test_add_posts_to_feed(feed_dynamo, old_pk):
     # add another post to the feed
     posted_at = pendulum.now('utc').to_iso8601_string()
     posts_generator = iter([{'postId': 'pid3', 'postedByUserId': 'pbuid', 'postedAt': posted_at}])
-    feed_dynamo.add_posts_to_feed(user_id, posts_generator, old_pk=old_pk)
+    feed_dynamo.add_posts_to_feed(user_id, posts_generator)
 
     # check all three posts are in the feed
     feed = list(feed_dynamo.generate_feed(user_id))
     assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3']
 
 
-@pytest.mark.parametrize('old_pk', [True, False])
-def test_delete_by_post_owner(feed_dynamo, old_pk):
+def test_delete_by_post_owner(feed_dynamo):
     user_id = 'fuid'
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
@@ -144,7 +104,7 @@ def test_delete_by_post_owner(feed_dynamo, old_pk):
             {'postId': 'pid4', 'postedByUserId': 'pbuid', 'postedAt': posted_at},
         ]
     )
-    feed_dynamo.add_posts_to_feed(user_id, posts_generator, old_pk=old_pk)
+    feed_dynamo.add_posts_to_feed(user_id, posts_generator)
     feed = list(feed_dynamo.generate_feed(user_id))
     assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3', 'pid4']
 
@@ -158,8 +118,7 @@ def test_delete_by_post_owner(feed_dynamo, old_pk):
     assert list(feed_dynamo.generate_feed(user_id)) == []
 
 
-@pytest.mark.parametrize('old_pk', [True, False])
-def test_add_post_to_feeds(feed_dynamo, old_pk):
+def test_add_post_to_feeds(feed_dynamo):
     feed_uids = ['fuid1', 'fuid2']
 
     # check nothing in feeds
@@ -173,10 +132,10 @@ def test_add_post_to_feeds(feed_dynamo, old_pk):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter([]), post_item, old_pk=old_pk)
+    feed_dynamo.add_post_to_feeds(iter([]), post_item)
 
     # add post to the feeds
-    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item, old_pk=old_pk)
+    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
 
     # check the feeds are as expected
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['pid3']
@@ -189,15 +148,14 @@ def test_add_post_to_feeds(feed_dynamo, old_pk):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item, old_pk=old_pk)
+    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
 
     # check the feeds are as expected
     assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == ['pid2', 'pid3']
     assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])]) == ['pid2', 'pid3']
 
 
-@pytest.mark.parametrize('old_pk', [True, False])
-def test_delete_by_post(feed_dynamo, old_pk):
+def test_delete_by_post(feed_dynamo):
     feed_uids = ['fuid1', 'fuid2']
 
     # delete post from no feeds - verify no error
@@ -213,7 +171,7 @@ def test_delete_by_post(feed_dynamo, old_pk):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item, old_pk=old_pk)
+    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
 
     # add another post to one of the feeds
     post_item = {
@@ -221,7 +179,7 @@ def test_delete_by_post(feed_dynamo, old_pk):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter([feed_uids[0]]), post_item, old_pk=old_pk)
+    feed_dynamo.add_post_to_feeds(iter([feed_uids[0]]), post_item)
 
     # verify the two feeds look as expected
     assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == ['pid2', 'pid3']
@@ -242,8 +200,7 @@ def test_delete_by_post(feed_dynamo, old_pk):
     assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
 
 
-@pytest.mark.parametrize('old_pk', [True, False])
-def test_generate_feed_pks_by_posted_by_user(feed_dynamo, old_pk):
+def test_generate_feed_pks_by_posted_by_user(feed_dynamo):
     feed_user_id = 'fuid'
     pb_user_id_1 = 'pbuid1'
     pb_user_id_2 = 'pbuid2'
@@ -255,7 +212,7 @@ def test_generate_feed_pks_by_posted_by_user(feed_dynamo, old_pk):
         {'postId': 'pid2', 'postedByUserId': pb_user_id_2, 'postedAt': posted_at},
         {'postId': 'pid3', 'postedByUserId': pb_user_id_1, 'postedAt': posted_at},
     ]
-    feed_dynamo.add_posts_to_feed(feed_user_id, iter(post_items), old_pk=old_pk)
+    feed_dynamo.add_posts_to_feed(feed_user_id, iter(post_items))
 
     # verify the feed looks as expected
     assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_user_id)]) == ['pid1', 'pid2', 'pid3']

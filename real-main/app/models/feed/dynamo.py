@@ -9,12 +9,8 @@ class FeedDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def build_pk(self, feed_user_id, post_id, old_pk=False):
-        return (
-            {'partitionKey': f'user/{feed_user_id}', 'sortKey': f'feed/{post_id}'}
-            if old_pk
-            else {'partitionKey': f'post/{post_id}', 'sortKey': f'feed/{feed_user_id}'}
-        )
+    def build_pk(self, feed_user_id, post_id):
+        return {'partitionKey': f'post/{post_id}', 'sortKey': f'feed/{feed_user_id}'}
 
     def parse_pk(self, pk):
         pk_parts = pk['partitionKey'].split('/')
@@ -25,12 +21,12 @@ class FeedDynamo:
             post_id, feed_user_id = pk_parts[1], sk_parts[1]
         return feed_user_id, post_id
 
-    def build_item(self, feed_user_id, post_item, old_pk=False):
+    def build_item(self, feed_user_id, post_item):
         "Build a feed item for given user's feed"
         posted_by_user_id = post_item['postedByUserId']
         post_id = post_item['postId']
         item = {
-            **self.build_pk(feed_user_id, post_id, old_pk=old_pk),
+            **self.build_pk(feed_user_id, post_id),
             'schemaVersion': 2,
             'gsiA1PartitionKey': f'feed/{feed_user_id}',
             'gsiA1SortKey': post_item['postedAt'],
@@ -43,21 +39,14 @@ class FeedDynamo:
             'gsiK2PartitionKey': f'feed/{feed_user_id}/{posted_by_user_id}',
             'gsiK2SortKey': post_item['postedAt'],
         }
-        if old_pk:
-            item.pop('gsiA2PartitionKey')
-            item.pop('gsiA2SortKey')
         return item
 
-    def add_posts_to_feed(self, feed_user_id, post_item_generator, old_pk=False):
-        item_generator = (
-            self.build_item(feed_user_id, post_item, old_pk=old_pk) for post_item in post_item_generator
-        )
+    def add_posts_to_feed(self, feed_user_id, post_item_generator):
+        item_generator = (self.build_item(feed_user_id, post_item) for post_item in post_item_generator)
         self.client.batch_put_items(item_generator)
 
-    def add_post_to_feeds(self, feed_user_id_generator, post_item, old_pk=False):
-        item_generator = (
-            self.build_item(feed_user_id, post_item, old_pk=old_pk) for feed_user_id in feed_user_id_generator
-        )
+    def add_post_to_feeds(self, feed_user_id_generator, post_item):
+        item_generator = (self.build_item(feed_user_id, post_item) for feed_user_id in feed_user_id_generator)
         self.client.batch_put_items(item_generator)
 
     def delete_by_post_owner(self, feed_user_id, post_user_id):
@@ -68,10 +57,7 @@ class FeedDynamo:
     # adding an index on post id would allow feed_user_id_generator to be eliminated
     def delete_by_post(self, post_id, feed_user_id_generator):
         "Delete all feed items of `post_id` in the feeds of `feed_user_id_generator`"
-        feed_user_ids = list(feed_user_id_generator)  # not ideal, but temporary only needed during migration
-        key_generator = (self.build_pk(feed_user_id, post_id) for feed_user_id in feed_user_ids)
-        self.client.batch_delete_items(key_generator)
-        key_generator = (self.build_pk(feed_user_id, post_id, old_pk=True) for feed_user_id in feed_user_ids)
+        key_generator = (self.build_pk(feed_user_id, post_id) for feed_user_id in feed_user_id_generator)
         self.client.batch_delete_items(key_generator)
 
     def generate_feed(self, feed_user_id):
