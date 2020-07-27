@@ -32,9 +32,37 @@ def feed_item(dynamo_table):
     yield item
 
 
-feed_item1 = feed_item
-feed_item2 = feed_item
-feed_item3 = feed_item
+a = feed_item
+b = feed_item
+c = feed_item
+d = feed_item
+e = feed_item
+f = feed_item
+g = feed_item
+h = feed_item
+i = feed_item
+j = feed_item
+k = feed_item
+l = feed_item  # noqa: E741
+m = feed_item
+n = feed_item
+o = feed_item
+p = feed_item
+q = feed_item
+r = feed_item
+s = feed_item
+t = feed_item
+u = feed_item
+v = feed_item
+w = feed_item
+x = feed_item
+y = feed_item
+z = feed_item
+
+
+@pytest.fixture
+def feed_items(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z):  # noqa: E741
+    yield [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z]
 
 
 def test_nothing_to_migrate(dynamo_client, dynamo_table, caplog):
@@ -78,12 +106,12 @@ def test_migrate_one(dynamo_client, dynamo_table, caplog, feed_item):
     assert new_item == {}
 
 
-def test_migrate_two_batches(dynamo_client, dynamo_table, caplog, feed_item1, feed_item2, feed_item3):
+def test_migrate_two_batches(dynamo_client, dynamo_table, caplog, feed_items):
     scan_kwargs = {
         'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND begins_with(sortKey, :sk_prefix)',
         'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sk_prefix': 'feed/'},
     }
-    assert len(dynamo_table.scan(**scan_kwargs)['Items']) == 3
+    assert len(dynamo_table.scan(**scan_kwargs)['Items']) == 26
     for item in dynamo_table.scan(**scan_kwargs)['Items']:
         assert len(item) == 13
 
@@ -91,13 +119,16 @@ def test_migrate_two_batches(dynamo_client, dynamo_table, caplog, feed_item1, fe
     migration = Migration(dynamo_client, dynamo_table)
     with caplog.at_level(logging.WARNING):
         migration.run()
-    assert len(caplog.records) == 3
-    for f in (feed_item1, feed_item2, feed_item3):
-        assert sum(1 for r in caplog.records if f['userId'] in str(r)) == 1
-        assert sum(1 for r in caplog.records if f['postId'] in str(r)) == 1
+    assert len(caplog.records) == 2
+    for f in feed_items[:25]:
+        assert f['userId'] in caplog.records[0].msg
+        assert f['postId'] in caplog.records[0].msg
+    for f in feed_items[25:]:
+        assert f['userId'] in caplog.records[1].msg
+        assert f['postId'] in caplog.records[1].msg
 
     # do the migration, check final state
-    assert len(dynamo_table.scan(**scan_kwargs)['Items']) == 3
+    assert len(dynamo_table.scan(**scan_kwargs)['Items']) == 26
     for item in dynamo_table.scan(**scan_kwargs)['Items']:
         assert len(item) == 7
         for field in (
