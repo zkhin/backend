@@ -33,19 +33,13 @@ def test_build_item(feed_dynamo):
     }
     feed_item = feed_dynamo.build_item(feed_user_id, post_item)
     assert feed_item == {
-        'schemaVersion': 2,
+        'schemaVersion': 3,
         'partitionKey': 'post/pid',
         'sortKey': 'feed/fuid',
         'gsiA1PartitionKey': 'feed/fuid',
         'gsiA1SortKey': posted_at,
         'gsiA2PartitionKey': 'feed/fuid',
         'gsiA2SortKey': 'pbuid',
-        'userId': 'fuid',
-        'postId': 'pid',
-        'postedAt': posted_at,
-        'postedByUserId': 'pbuid',
-        'gsiK2PartitionKey': 'feed/fuid/pbuid',
-        'gsiK2SortKey': posted_at,
     }
 
 
@@ -74,7 +68,7 @@ def test_add_posts_to_feed(feed_dynamo):
 
     # check those two posts are in the feed
     feed = list(feed_dynamo.generate_feed(user_id))
-    assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2']
+    assert sorted([f['partitionKey'] for f in feed]) == ['post/pid1', 'post/pid2']
 
     # add another post to the feed
     posted_at = pendulum.now('utc').to_iso8601_string()
@@ -83,7 +77,7 @@ def test_add_posts_to_feed(feed_dynamo):
 
     # check all three posts are in the feed
     feed = list(feed_dynamo.generate_feed(user_id))
-    assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3']
+    assert sorted([f['partitionKey'] for f in feed]) == ['post/pid1', 'post/pid2', 'post/pid3']
 
 
 def test_delete_by_post_owner(feed_dynamo):
@@ -106,12 +100,12 @@ def test_delete_by_post_owner(feed_dynamo):
     )
     feed_dynamo.add_posts_to_feed(user_id, posts_generator)
     feed = list(feed_dynamo.generate_feed(user_id))
-    assert sorted([f['postId'] for f in feed]) == ['pid1', 'pid2', 'pid3', 'pid4']
+    assert sorted([f['partitionKey'] for f in feed]) == ['post/pid1', 'post/pid2', 'post/pid3', 'post/pid4']
 
     # delete three posts, verify
     feed_dynamo.delete_by_post_owner(user_id, 'pbuid')
     feed = list(feed_dynamo.generate_feed(user_id))
-    assert sorted([f['postId'] for f in feed]) == ['pid2']
+    assert sorted([f['partitionKey'] for f in feed]) == ['post/pid2']
 
     # delete last post, verify
     feed_dynamo.delete_by_post_owner(user_id, 'other-uid')
@@ -138,8 +132,8 @@ def test_add_post_to_feeds(feed_dynamo):
     feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
 
     # check the feeds are as expected
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['pid3']
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['pid3']
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['post/pid3']
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['post/pid3']
 
     # add noather post to the feeds
     posted_at = pendulum.now('utc').to_iso8601_string()
@@ -151,18 +145,24 @@ def test_add_post_to_feeds(feed_dynamo):
     feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
 
     # check the feeds are as expected
-    assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == ['pid2', 'pid3']
-    assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])]) == ['pid2', 'pid3']
+    assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == [
+        'post/pid2',
+        'post/pid3',
+    ]
+    assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])]) == [
+        'post/pid2',
+        'post/pid3',
+    ]
 
 
 def test_delete_by_post(feed_dynamo):
     feed_uids = ['fuid1', 'fuid2']
 
     # delete post from no feeds - verify no error
-    feed_dynamo.delete_by_post('pid', iter([]))
+    feed_dynamo.delete_by_post('pid')
 
     # delete post from feeds where it doesn't exist - verify no error
-    feed_dynamo.delete_by_post('pid', iter(['fuid']))
+    feed_dynamo.delete_by_post('pid')
 
     # add a post to two feeds
     posted_at = pendulum.now('utc').to_iso8601_string()
@@ -182,22 +182,54 @@ def test_delete_by_post(feed_dynamo):
     feed_dynamo.add_post_to_feeds(iter([feed_uids[0]]), post_item)
 
     # verify the two feeds look as expected
-    assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == ['pid2', 'pid3']
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['pid3']
+    assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == [
+        'post/pid2',
+        'post/pid3',
+    ]
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['post/pid3']
 
     # delete a post from the feeds
-    feed_dynamo.delete_by_post('pid3', iter(feed_uids))
+    feed_dynamo.delete_by_post('pid3')
 
     # verify the two feeds look as expected
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['pid2']
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['post/pid2']
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
 
     # delete the other post from the feeds
-    feed_dynamo.delete_by_post('pid2', iter(feed_uids))
+    feed_dynamo.delete_by_post('pid2')
 
     # verify the two feeds look as expected
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[0])] == []
-    assert [f['postId'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])] == []
+    assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
+
+
+def test_generate_feed_pks_by_post(feed_dynamo):
+    feed_user_id_1 = 'fuid1'
+    feed_user_id_2 = 'fuid2'
+    posted_at = pendulum.now('utc').to_iso8601_string()
+    post_item_1 = {'postId': 'pid1', 'postedByUserId': 'pbuid1', 'postedAt': posted_at}
+    post_item_2 = {'postId': 'pid3', 'postedByUserId': 'pbuid2', 'postedAt': posted_at}
+
+    # add two posts to two different feeds
+    feed_dynamo.add_posts_to_feed(feed_user_id_1, iter([post_item_1, post_item_2]))
+    feed_dynamo.add_posts_to_feed(feed_user_id_2, iter([post_item_1]))
+
+    # verify the feed looks as expected
+    assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_user_id_1)]) == [
+        'post/pid1',
+        'post/pid3',
+    ]
+    assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_user_id_2)]) == ['post/pid1']
+
+    # verify we can generate items in the feed by post
+    assert set(tuple(item.items()) for item in feed_dynamo.generate_feed_pks_by_post('pid1')) == {
+        (('partitionKey', 'post/pid1'), ('sortKey', 'feed/fuid1')),
+        (('partitionKey', 'post/pid1'), ('sortKey', 'feed/fuid2')),
+    }
+    assert list(feed_dynamo.generate_feed_pks_by_post('pid2')) == []
+    assert list(feed_dynamo.generate_feed_pks_by_post('pid3')) == [
+        {'partitionKey': 'post/pid3', 'sortKey': 'feed/fuid1'},
+    ]
 
 
 def test_generate_feed_pks_by_posted_by_user(feed_dynamo):
@@ -215,7 +247,11 @@ def test_generate_feed_pks_by_posted_by_user(feed_dynamo):
     feed_dynamo.add_posts_to_feed(feed_user_id, iter(post_items))
 
     # verify the feed looks as expected
-    assert sorted([f['postId'] for f in feed_dynamo.generate_feed(feed_user_id)]) == ['pid1', 'pid2', 'pid3']
+    assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_user_id)]) == [
+        'post/pid1',
+        'post/pid2',
+        'post/pid3',
+    ]
 
     # verify we can generate items in the feed by who posted them
     feed_pk_gen = feed_dynamo.generate_feed_pks_by_posted_by_user(feed_user_id, pb_user_id_1)

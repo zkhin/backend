@@ -49,10 +49,10 @@ def test_on_user_follow_status_change_sync_feed_stops_following(feed_manager, fo
 def test_on_post_status_change_sync_feed_post_completed(feed_manager, post):
     assert post.item['postStatus'] == PostStatus.COMPLETED
     with patch.object(feed_manager, 'add_post_to_followers_feeds') as add_post_mock:
-        with patch.object(feed_manager, 'delete_post_from_followers_feeds') as remove_post_mock:
+        with patch.object(feed_manager, 'dynamo') as dynamo_mock:
             feed_manager.on_post_status_change_sync_feed(post.id, new_item=post.item)
     assert add_post_mock.mock_calls == [call(post.user_id, post.item)]
-    assert remove_post_mock.mock_calls == []
+    assert dynamo_mock.mock_calls == []
 
 
 @pytest.mark.parametrize(
@@ -63,7 +63,7 @@ def test_on_post_status_change_sync_feed_post_uncompleted(feed_manager, post, st
     old_item = {**post.item, 'postStatus': 'COMPLETED'}
     new_item = {**post.item, 'postStatus': status}
     with patch.object(feed_manager, 'add_post_to_followers_feeds') as add_post_mock:
-        with patch.object(feed_manager, 'delete_post_from_followers_feeds') as remove_post_mock:
+        with patch.object(feed_manager, 'dynamo') as dynamo_mock:
             feed_manager.on_post_status_change_sync_feed(post.id, new_item=new_item, old_item=old_item)
     assert add_post_mock.mock_calls == []
-    assert remove_post_mock.mock_calls == [call(post.user_id, post.id)]
+    assert dynamo_mock.mock_calls == [call.delete_by_post(post.id)]

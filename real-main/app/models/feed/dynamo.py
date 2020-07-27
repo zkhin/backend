@@ -1,7 +1,5 @@
 import logging
 
-from boto3.dynamodb.conditions import Key
-
 logger = logging.getLogger()
 
 
@@ -13,12 +11,8 @@ class FeedDynamo:
         return {'partitionKey': f'post/{post_id}', 'sortKey': f'feed/{feed_user_id}'}
 
     def parse_pk(self, pk):
-        pk_parts = pk['partitionKey'].split('/')
-        sk_parts = pk['sortKey'].split('/')
-        if pk_parts[0] == 'user':  # old_format
-            feed_user_id, post_id = pk_parts[1], sk_parts[1]
-        else:
-            post_id, feed_user_id = pk_parts[1], sk_parts[1]
+        post_id = pk['partitionKey'].split('/')[1]
+        feed_user_id = pk['sortKey'].split('/')[1]
         return feed_user_id, post_id
 
     def build_item(self, feed_user_id, post_item):
@@ -27,17 +21,11 @@ class FeedDynamo:
         post_id = post_item['postId']
         item = {
             **self.build_pk(feed_user_id, post_id),
-            'schemaVersion': 2,
+            'schemaVersion': 3,
             'gsiA1PartitionKey': f'feed/{feed_user_id}',
             'gsiA1SortKey': post_item['postedAt'],
             'gsiA2PartitionKey': f'feed/{feed_user_id}',
             'gsiA2SortKey': posted_by_user_id,
-            'userId': feed_user_id,
-            'postId': post_item['postId'],
-            'postedAt': post_item['postedAt'],
-            'postedByUserId': posted_by_user_id,
-            'gsiK2PartitionKey': f'feed/{feed_user_id}/{posted_by_user_id}',
-            'gsiK2SortKey': post_item['postedAt'],
         }
         return item
 
@@ -54,23 +42,32 @@ class FeedDynamo:
         pk_generator = self.generate_feed_pks_by_posted_by_user(feed_user_id, post_user_id)
         self.client.batch_delete_items(pk_generator)
 
-    # adding an index on post id would allow feed_user_id_generator to be eliminated
-    def delete_by_post(self, post_id, feed_user_id_generator):
+    def delete_by_post(self, post_id):
         "Delete all feed items of `post_id` in the feeds of `feed_user_id_generator`"
-        key_generator = (self.build_pk(feed_user_id, post_id) for feed_user_id in feed_user_id_generator)
-        self.client.batch_delete_items(key_generator)
+        pk_generator = self.generate_feed_pks_by_post(post_id)
+        self.client.batch_delete_items(pk_generator)
 
     def generate_feed(self, feed_user_id):
         query_kwargs = {
-            'KeyConditionExpression': Key('gsiA1PartitionKey').eq(f'feed/{feed_user_id}'),
+            'KeyConditionExpression': 'gsiA1PartitionKey = :pk',
+            'ExpressionAttributeValues': {':pk': f'feed/{feed_user_id}'},
             'IndexName': 'GSI-A1',
+        }
+        return self.client.generate_all_query(query_kwargs)
+
+    def generate_feed_pks_by_post(self, post_id):
+        query_kwargs = {
+            'KeyConditionExpression': 'partitionKey = :pk AND begins_with(sortKey, :sk_prefix)',
+            'ExpressionAttributeValues': {':pk': f'post/{post_id}', ':sk_prefix': 'feed/'},
+            'ProjectionExpression': 'partitionKey, sortKey',
         }
         return self.client.generate_all_query(query_kwargs)
 
     def generate_feed_pks_by_posted_by_user(self, feed_user_id, posted_by_user_id):
         query_kwargs = {
-            'KeyConditionExpression': (Key('gsiK2PartitionKey').eq(f'feed/{feed_user_id}/{posted_by_user_id}')),
-            'IndexName': 'GSI-K2',
+            'KeyConditionExpression': 'gsiA2PartitionKey = :pk AND gsiA2SortKey = :sk',
+            'ExpressionAttributeValues': {':pk': f'feed/{feed_user_id}', ':sk': posted_by_user_id},
+            'IndexName': 'GSI-A2',
             'ProjectionExpression': 'partitionKey, sortKey',
         }
         return self.client.generate_all_query(query_kwargs)

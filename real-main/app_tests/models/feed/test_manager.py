@@ -29,9 +29,9 @@ def test_add_users_posts_to_feed(feed_manager, post_manager, user, cognito_clien
     feed_manager.add_users_posts_to_feed(feed_user_id, user.id)
 
     # verify those posts made it to the feed
-    assert sorted([f['postId'] for f in feed_manager.dynamo.generate_feed(feed_user_id)]) == [
-        post_id_1,
-        post_id_2,
+    assert sorted([f['partitionKey'] for f in feed_manager.dynamo.generate_feed(feed_user_id)]) == [
+        'post/' + post_id_1,
+        'post/' + post_id_2,
     ]
 
 
@@ -55,7 +55,7 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
     feed_manager.add_post_to_followers_feeds(our_user.id, post_item)
 
     # check feeds
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(our_user.id)] == ['pid1']
+    assert [f['partitionKey'] for f in feed_manager.dynamo.generate_feed(our_user.id)] == ['post/pid1']
     assert list(feed_manager.dynamo.generate_feed(their_user.id)) == []
     assert list(feed_manager.dynamo.generate_feed(another_user.id)) == []
 
@@ -72,48 +72,9 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
     feed_manager.add_post_to_followers_feeds(our_user.id, post_item)
 
     # check feeds
-    assert sorted([f['postId'] for f in feed_manager.dynamo.generate_feed(our_user.id)]) == ['pid1', 'pid2']
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(their_user.id)] == ['pid2']
+    assert sorted([f['partitionKey'] for f in feed_manager.dynamo.generate_feed(our_user.id)]) == [
+        'post/pid1',
+        'post/pid2',
+    ]
+    assert [f['partitionKey'] for f in feed_manager.dynamo.generate_feed(their_user.id)] == ['post/pid2']
     assert list(feed_manager.dynamo.generate_feed(another_user.id)) == []
-
-
-def test_delete_post_from_followers_feeds(feed_manager, user_manager):
-    our_user = user_manager.init_user({'userId': 'ouid', 'privacyStatus': 'PUBLIC'})
-    their_user = user_manager.init_user({'userId': 'tuid', 'privacyStatus': 'PUBLIC'})
-    another_user = user_manager.init_user({'userId': 'auid', 'privacyStatus': 'PUBLIC'})
-
-    # they follow us
-    feed_manager.follower_manager.dynamo.add_following(their_user.id, our_user.id, 'FOLLOWING')
-
-    # add a post to all our followers and us
-    posted_at = pendulum.now('utc').to_iso8601_string()
-    post_item = {
-        'postId': 'pid2',
-        'postedByUserId': our_user.id,
-        'postedAt': posted_at,
-    }
-    feed_manager.add_post_to_followers_feeds(our_user.id, post_item)
-
-    # add the post to the feed of a user that doesn't follow us
-    feed_manager.dynamo.add_posts_to_feed(another_user.id, iter([post_item]))
-
-    # check feeds
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(our_user.id)] == ['pid2']
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(their_user.id)] == ['pid2']
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(another_user.id)] == ['pid2']
-
-    # delete a different post from our feed and our followers
-    feed_manager.delete_post_from_followers_feeds(our_user.id, 'pidother')
-
-    # check feeds
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(our_user.id)] == ['pid2']
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(their_user.id)] == ['pid2']
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(another_user.id)] == ['pid2']
-
-    # delete the post of interest from our feed and our followers
-    feed_manager.delete_post_from_followers_feeds(our_user.id, 'pid2')
-
-    # check feeds, only deleted from us and our followers
-    assert list(feed_manager.dynamo.generate_feed(our_user.id)) == []
-    assert list(feed_manager.dynamo.generate_feed(their_user.id)) == []
-    assert [f['postId'] for f in feed_manager.dynamo.generate_feed(another_user.id)] == ['pid2']

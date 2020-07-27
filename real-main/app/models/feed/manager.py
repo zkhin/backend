@@ -31,13 +31,6 @@ class FeedManager:
         )
         self.dynamo.add_post_to_feeds(user_id_gen, post_item)
 
-    def delete_post_from_followers_feeds(self, followed_user_id, post_id):
-        # TODO: add an index to the feed, delete this method entirely
-        user_id_gen = itertools.chain(
-            [followed_user_id], self.follower_manager.generate_follower_user_ids(followed_user_id)
-        )
-        self.dynamo.delete_by_post(post_id, user_id_gen)
-
     def on_user_follow_status_change_sync_feed(self, followed_user_id, new_item=None, old_item=None):
         follower_user_id = (new_item or old_item)['followerUserId']
         new_status = (new_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
@@ -49,9 +42,7 @@ class FeedManager:
     def on_post_status_change_sync_feed(self, post_id, new_item=None, old_item=None):
         posted_by_user_id = (new_item or old_item)['postedByUserId']
         new_status = (new_item or {}).get('postStatus')
-        old_status = (old_item or {}).get('postStatus')
         if new_status == PostStatus.COMPLETED:
             self.add_post_to_followers_feeds(posted_by_user_id, new_item)
-        elif old_status == PostStatus.COMPLETED:
-            # TODO: remove above check on old_status once index on post_id added to feed items
-            self.delete_post_from_followers_feeds(posted_by_user_id, post_id)
+        else:
+            self.dynamo.delete_by_post(post_id)
