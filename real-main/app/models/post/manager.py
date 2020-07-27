@@ -306,14 +306,14 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
     def on_comment_delete(self, comment_id, old_item):
         comment = self.comment_manager.init_comment(old_item)
-        self.dynamo.decrement_comment_count(comment.post_id, fail_soft=True)
+        self.dynamo.decrement_comment_count(comment.post_id)
 
         if comment.post and comment.user_id != comment.post.user_id:
             # has the post owner 'viewed' that comment via reporting a view on the post?
             post_view_item = self.view_dynamo.get_view(comment.post_id, comment.post.user_id)
             post_last_viewed_at = pendulum.parse(post_view_item['lastViewedAt']) if post_view_item else None
             if not (post_last_viewed_at and post_last_viewed_at > comment.created_at):
-                post_item = self.dynamo.decrement_comments_unviewed_count(comment.post_id, fail_soft=True)
+                post_item = self.dynamo.decrement_comments_unviewed_count(comment.post_id)
                 # if the comment unviewed count hit zero, then remove post from 'posts with unviewed comments' index
                 if post_item and post_item.get('commentsUnviewedCount', 0) == 0:
                     self.dynamo.set_last_unviewed_comment_at(post_item, None)
@@ -336,7 +336,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             decrementor = self.dynamo.decrement_anonymous_like_count
         else:
             raise Exception(f'Unrecognized like status `{like_status}`')
-        decrementor(post_id, fail_soft=True)
+        decrementor(post_id)
 
     def on_view_count_change_sync_counts_and_cards(self, post_id, new_item, old_item=None):
         if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):

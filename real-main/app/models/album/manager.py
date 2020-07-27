@@ -61,6 +61,6 @@ class AlbumManager:
     def on_album_add_edit_sync_delete_at(self, album_id, new_item, old_item=None):
         new_count = new_item.get('postCount', 0)
         if new_count == 0 and 'gsiK1PartitionKey' not in new_item:
-            self.dynamo.set_delete_at_fail_soft(album_id, pendulum.now('utc') + self.zero_post_lifetime)
+            self.dynamo.set_delete_at(album_id, pendulum.now('utc') + self.zero_post_lifetime)
         if new_count > 0 and 'gsiK1PartitionKey' in new_item:
-            self.dynamo.clear_delete_at_fail_soft(album_id)
+            self.dynamo.clear_delete_at(album_id)

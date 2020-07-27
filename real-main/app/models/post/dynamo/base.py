@@ -165,8 +165,8 @@ class PostDynamo:
     def increment_flag_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'flagCount')
 
-    def decrement_flag_count(self, post_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(post_id), 'flagCount', fail_soft=fail_soft)
+    def decrement_flag_count(self, post_id):
+        return self.client.decrement_count(self.pk(post_id), 'flagCount')
 
     def increment_viewed_by_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'viewedByCount')
@@ -357,14 +357,14 @@ class PostDynamo:
     def increment_onymous_like_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'onymousLikeCount')
 
-    def decrement_onymous_like_count(self, post_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(post_id), 'onymousLikeCount', fail_soft=fail_soft)
+    def decrement_onymous_like_count(self, post_id):
+        return self.client.decrement_count(self.pk(post_id), 'onymousLikeCount')
 
     def increment_anonymous_like_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'anonymousLikeCount')
 
-    def decrement_anonymous_like_count(self, post_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(post_id), 'anonymousLikeCount', fail_soft=fail_soft)
+    def decrement_anonymous_like_count(self, post_id):
+        return self.client.decrement_count(self.pk(post_id), 'anonymousLikeCount')
 
     def increment_comment_count(self, post_id, viewed=False):
         query_kwargs = {
@@ -373,15 +373,18 @@ class PostDynamo:
             'ExpressionAttributeValues': {':one': 1},
             'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
         }
+        attrs = ['commentCount']
         if not viewed:
             query_kwargs['UpdateExpression'] += ', commentsUnviewedCount :one'
-        return self.client.update_item(query_kwargs)
+            attrs.append('commentsUnviewedCount')
+        msg = f'Failed to increment {", ".join(attrs)} for post `{post_id}`'
+        return self.client.update_item(query_kwargs, failure_warning=msg)
 
-    def decrement_comment_count(self, post_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(post_id), 'commentCount', fail_soft=fail_soft)
+    def decrement_comment_count(self, post_id):
+        return self.client.decrement_count(self.pk(post_id), 'commentCount')
 
-    def decrement_comments_unviewed_count(self, post_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(post_id), 'commentsUnviewedCount', fail_soft=fail_soft)
+    def decrement_comments_unviewed_count(self, post_id):
+        return self.client.decrement_count(self.pk(post_id), 'commentsUnviewedCount')
 
     def clear_comments_unviewed_count(self, post_id):
         query_kwargs = {
@@ -389,7 +392,8 @@ class PostDynamo:
             'UpdateExpression': 'REMOVE commentsUnviewedCount',
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }
-        return self.client.update_item(query_kwargs)
+        msg = f'Failed to clear commentsUnviewedCount for post `{post_id}`'
+        return self.client.update_item(query_kwargs, failure_warning=msg)
 
     def transact_set_album_id(self, post_item, album_id, album_rank=None):
         post_id = post_item['postId']

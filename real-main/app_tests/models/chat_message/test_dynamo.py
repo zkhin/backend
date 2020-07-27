@@ -159,11 +159,21 @@ def test_increment_decrement_count(
     message_id = str(uuid4())
 
     # can't increment message that doesnt exist
-    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
-        incrementor(message_id)
+    with caplog.at_level(logging.WARNING):
+        assert incrementor(message_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to increment', attribute_name, message_id])
+    caplog.clear()
+
+    # can't decrement message that doesnt exist
     if decrementor:
-        with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(message_id)
+        with caplog.at_level(logging.WARNING):
+            assert decrementor(message_id) is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, message_id])
+        caplog.clear()
 
     # add the message to the DB, verify it is in DB
     chat_message_dynamo.add_chat_message(message_id, str(uuid4()), str(uuid4()), 'lore', [], pendulum.now('utc'))
@@ -183,14 +193,9 @@ def test_increment_decrement_count(
 
         # verify fail soft on trying to decrement below zero
         with caplog.at_level(logging.WARNING):
-            resp = decrementor(message_id, fail_soft=True)
+            resp = decrementor(message_id)
         assert resp is None
         assert len(caplog.records) == 1
         assert caplog.records[0].levelname == 'WARNING'
         assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, message_id])
-        assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 0
-
-        # verify fail hard on trying to decrement below zero
-        with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(message_id)
         assert chat_message_dynamo.get_chat_message(message_id)[attribute_name] == 0

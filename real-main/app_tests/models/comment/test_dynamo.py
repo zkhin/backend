@@ -130,11 +130,21 @@ def test_increment_decrement_count(comment_dynamo, caplog, incrementor_name, dec
     comment_id = str(uuid4())
 
     # can't increment comment that doesnt exist
-    with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
-        incrementor(comment_id)
+    with caplog.at_level(logging.WARNING):
+        assert incrementor(comment_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to increment', attribute_name, comment_id])
+    caplog.clear()
+
+    # can't decrement comment that doesnt exist
     if decrementor:
-        with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(comment_id)
+        with caplog.at_level(logging.WARNING):
+            assert decrementor(comment_id) is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, comment_id])
+        caplog.clear()
 
     # add the comment to the DB, verify it is in DB
     comment_dynamo.add_comment(comment_id, str(uuid4()), str(uuid4()), 'lore', [])
@@ -154,14 +164,9 @@ def test_increment_decrement_count(comment_dynamo, caplog, incrementor_name, dec
 
         # verify fail soft on trying to decrement below zero
         with caplog.at_level(logging.WARNING):
-            resp = decrementor(comment_id, fail_soft=True)
+            resp = decrementor(comment_id)
         assert resp is None
         assert len(caplog.records) == 1
         assert caplog.records[0].levelname == 'WARNING'
         assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, comment_id])
-        assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0
-
-        # verify fail hard on trying to decrement below zero
-        with pytest.raises(comment_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(comment_id)
         assert comment_dynamo.get_comment(comment_id)[attribute_name] == 0

@@ -99,10 +99,10 @@ def test_garbage_collect(album_manager, user):
     album2 = album_manager.add_album(user.id, str(uuid4()), 'album name')
     album3 = album_manager.add_album(user.id, str(uuid4()), 'album name')
     album4 = album_manager.add_album(user.id, str(uuid4()), 'album name')
-    album_manager.dynamo.set_delete_at_fail_soft(album2.id, pendulum.now('utc'))
-    album_manager.dynamo.set_delete_at_fail_soft(album3.id, pendulum.now('utc'))
+    album_manager.dynamo.set_delete_at(album2.id, pendulum.now('utc'))
+    album_manager.dynamo.set_delete_at(album3.id, pendulum.now('utc'))
     cutoff1 = pendulum.now('utc')
-    album_manager.dynamo.set_delete_at_fail_soft(album4.id, pendulum.now('utc'))
+    album_manager.dynamo.set_delete_at(album4.id, pendulum.now('utc'))
 
     # verify starting state
     assert album1.refresh_item().item

@@ -57,8 +57,8 @@ class CommentDynamo:
     def increment_flag_count(self, comment_id):
         return self.client.increment_count(self.pk(comment_id), 'flagCount')
 
-    def decrement_flag_count(self, comment_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(comment_id), 'flagCount', fail_soft=fail_soft)
+    def decrement_flag_count(self, comment_id):
+        return self.client.decrement_count(self.pk(comment_id), 'flagCount')
 
     def generate_by_post(self, post_id):
         query_kwargs = {

@@ -79,6 +79,7 @@ class DynamoClient:
             logger.warning(failure_warning)
 
     def increment_count(self, key, attribute_name):
+        "Best-effort attempt to increment a counter. Logs a WARNING upon failure."
         query_kwargs = {
             'Key': key,
             'UpdateExpression': 'ADD #attrName :one',
@@ -86,9 +87,11 @@ class DynamoClient:
             'ExpressionAttributeValues': {':one': 1},
             'ConditionExpression': 'attribute_exists(partitionKey)',
         }
-        return self.update_item(query_kwargs)
+        failure_warning = f'Failed to increment {attribute_name} for key `{key}`'
+        return self.update_item(query_kwargs, failure_warning=failure_warning)
 
-    def decrement_count(self, key, attribute_name, fail_soft=False):
+    def decrement_count(self, key, attribute_name):
+        "Best-effort attempt to decrement a counter. Logs a WARNING upon failure."
         query_kwargs = {
             'Key': key,
             'UpdateExpression': 'ADD #attrName :neg_one',
@@ -96,7 +99,7 @@ class DynamoClient:
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
             'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
         }
-        failure_warning = f'Failed to decrement {attribute_name} for key `{key}`' if fail_soft else None
+        failure_warning = f'Failed to decrement {attribute_name} for key `{key}`'
         return self.update_item(query_kwargs, failure_warning=failure_warning)
 
     def batch_put_items(self, generator):

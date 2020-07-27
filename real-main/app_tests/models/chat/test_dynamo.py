@@ -197,10 +197,10 @@ def test_update_last_message_activity_at(chat_dynamo, caplog):
     )
     assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now
 
-    # verify we can fail soft
+    # verify we fail soft
     before = now.subtract(seconds=10)
     with caplog.at_level(logging.WARNING):
-        resp = chat_dynamo.update_last_message_activity_at(chat_id, before, fail_soft=True)
+        resp = chat_dynamo.update_last_message_activity_at(chat_id, before)
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert all(
@@ -208,11 +208,6 @@ def test_update_last_message_activity_at(chat_dynamo, caplog):
         for x in ['Failed', 'last message activity', chat_id, before.to_iso8601_string()]
     )
     assert resp is None
-    assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now
-
-    # verify we can fail hard
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
-        chat_dynamo.update_last_message_activity_at(chat_id, before)
     assert pendulum.parse(chat_dynamo.get(chat_id)['lastMessageActivityAt']) == now
 
 
@@ -228,12 +223,22 @@ def test_increment_decrement_count(chat_dynamo, caplog, incrementor_name, decrem
     decrementor = getattr(chat_dynamo, decrementor_name) if decrementor_name else None
     chat_id = str(uuid4())
 
-    # can't increment comment that doesnt exist
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
-        incrementor(chat_id)
+    # can't increment message that doesnt exist
+    with caplog.at_level(logging.WARNING):
+        assert incrementor(chat_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to increment', attribute_name, chat_id])
+    caplog.clear()
+
+    # can't decrement message that doesnt exist
     if decrementor:
-        with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(chat_id)
+        with caplog.at_level(logging.WARNING):
+            assert decrementor(chat_id) is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, chat_id])
+        caplog.clear()
 
     # add the user to the DB, verify it is in DB
     transact = chat_dynamo.transact_add(chat_id, 'chat-type', str(uuid4()))
@@ -258,14 +263,9 @@ def test_increment_decrement_count(chat_dynamo, caplog, incrementor_name, decrem
 
     # verify fail soft on trying to decrement below zero
     with caplog.at_level(logging.WARNING):
-        resp = decrementor(chat_id, fail_soft=True)
+        resp = decrementor(chat_id)
     assert resp is None
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, chat_id])
-    assert chat_dynamo.get(chat_id)[attribute_name] == 0
-
-    # verify fail hard on trying to decrement below zero
-    with pytest.raises(chat_dynamo.client.exceptions.ConditionalCheckFailedException):
-        decrementor(chat_id)
     assert chat_dynamo.get(chat_id)[attribute_name] == 0

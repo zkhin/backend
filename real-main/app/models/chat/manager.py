@@ -136,16 +136,14 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
     def on_chat_message_add(self, message_id, new_item):
         message = self.chat_message_manager.init_chat_message(new_item)
-        self.dynamo.update_last_message_activity_at(message.chat_id, message.created_at, fail_soft=True)
+        self.dynamo.update_last_message_activity_at(message.chat_id, message.created_at)
         self.dynamo.increment_messages_count(message.chat_id)
 
         # for each memeber of the chat
         #   - update the last message activity timestamp (controls chat ordering)
         #   - for everyone except the author, increment their 'messagesUnviewedCount'
         for user_id in self.member_dynamo.generate_user_ids_by_chat(message.chat_id):
-            self.member_dynamo.update_last_message_activity_at(
-                message.chat_id, user_id, message.created_at, fail_soft=True
-            )
+            self.member_dynamo.update_last_message_activity_at(message.chat_id, user_id, message.created_at)
             if user_id != message.user_id:
                 # Note that dynamo has no support for batch updates.
                 self.member_dynamo.increment_messages_unviewed_count(message.chat_id, user_id)
@@ -155,7 +153,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
     def on_chat_message_delete(self, message_id, old_item):
         message = self.chat_message_manager.init_chat_message(old_item)
-        self.dynamo.decrement_messages_count(message.chat_id, fail_soft=True)
+        self.dynamo.decrement_messages_count(message.chat_id)
 
         # for each memeber of the chat other than the author
         #   - delete any view record that exists directly on the message
@@ -166,7 +164,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                 chat_last_viewed_at = pendulum.parse(chat_view_item['lastViewedAt']) if chat_view_item else None
                 if not (chat_last_viewed_at and chat_last_viewed_at > message.created_at):
                     # Note that dynamo has no support for batch updates.
-                    self.member_dynamo.decrement_messages_unviewed_count(message.chat_id, user_id, fail_soft=True)
+                    self.member_dynamo.decrement_messages_unviewed_count(message.chat_id, user_id)
 
     def sync_member_messages_unviewed_count(self, chat_id, new_item, old_item=None):
         if new_item.get('viewCount', 0) > (old_item or {}).get('viewCount', 0):

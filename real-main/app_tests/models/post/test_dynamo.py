@@ -1023,6 +1023,30 @@ def test_transact_set_album_rank(post_dynamo):
 def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo, caplog):
     post_id = str(uuid4())
 
+    # check fail soft increment on DNE
+    with caplog.at_level(logging.WARNING):
+        assert post_dynamo.increment_comment_count(post_id, viewed=False) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to increment', 'commentsUnviewedCount', post_id])
+    caplog.clear()
+
+    # check fail soft clear on DNE
+    with caplog.at_level(logging.WARNING):
+        assert post_dynamo.clear_comments_unviewed_count(post_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to clear', 'commentsUnviewedCount', post_id])
+    caplog.clear()
+
+    # check fail soft decrement on DNE
+    with caplog.at_level(logging.WARNING):
+        assert post_dynamo.decrement_comments_unviewed_count(post_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to decrement', 'commentsUnviewedCount', post_id])
+    caplog.clear()
+
     # add a post, check starting state
     transacts = [post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype', text='lore ipsum')]
     post_dynamo.client.transact_write_items(transacts)
@@ -1056,13 +1080,9 @@ def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo,
     assert 'commentsUnviewedCount' not in post_dynamo.clear_comments_unviewed_count(post_id)
     assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
 
-    # check decrement fail hard
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
-        post_dynamo.decrement_comments_unviewed_count(post_id)
-
     # check decrement fail soft
     with caplog.at_level(logging.WARNING):
-        assert post_dynamo.decrement_comments_unviewed_count(post_id, fail_soft=True) is None
+        assert post_dynamo.decrement_comments_unviewed_count(post_id) is None
     assert len(caplog.records) == 1
     assert 'Failed to decrement commentsUnviewedCount' in caplog.records[0].msg
     assert post_id in caplog.records[0].msg
@@ -1083,12 +1103,22 @@ def test_increment_decrement_count(post_dynamo, caplog, incrementor_name, decrem
     decrementor = getattr(post_dynamo, decrementor_name) if decrementor_name else None
     post_id = str(uuid4())
 
-    # can't increment post that doesnt exist
-    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
-        incrementor(post_id)
+    # can't increment comment that doesnt exist
+    with caplog.at_level(logging.WARNING):
+        assert incrementor(post_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to increment', attribute_name, post_id])
+    caplog.clear()
+
+    # can't decrement comment that doesnt exist
     if decrementor:
-        with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(post_id)
+        with caplog.at_level(logging.WARNING):
+            assert decrementor(post_id) is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, post_id])
+        caplog.clear()
 
     # add the post to the DB, verify it is in DB
     transact = post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype')
@@ -1109,14 +1139,9 @@ def test_increment_decrement_count(post_dynamo, caplog, incrementor_name, decrem
 
         # verify fail soft on trying to decrement below zero
         with caplog.at_level(logging.WARNING):
-            resp = decrementor(post_id, fail_soft=True)
+            resp = decrementor(post_id)
         assert resp is None
         assert len(caplog.records) == 1
         assert caplog.records[0].levelname == 'WARNING'
         assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, post_id])
-        assert post_dynamo.get_post(post_id)[attribute_name] == 0
-
-        # verify fail hard on trying to decrement below zero
-        with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(post_id)
         assert post_dynamo.get_post(post_id)[attribute_name] == 0

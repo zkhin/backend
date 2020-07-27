@@ -229,7 +229,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def on_comment_delete(self, comment_id, old_item):
         user_id = old_item['userId']
-        self.dynamo.decrement_comment_count(user_id, fail_soft=True)
+        self.dynamo.decrement_comment_count(user_id)
         self.dynamo.increment_comment_deleted_count(user_id)
 
     def on_card_add(self, card_id, new_item):
@@ -238,7 +238,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def on_card_delete(self, card_id, old_item):
         card = self.card_manager.init_card(old_item)
-        self.dynamo.decrement_card_count(card.user_id, fail_soft=True)
+        self.dynamo.decrement_card_count(card.user_id)
 
     def on_user_delete(self, user_id, old_item):
         self.elasticsearch_client.delete_user(user_id)
@@ -305,7 +305,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         if old_count == 0 and new_count > 0:
             self.dynamo.increment_chats_with_unviewed_messages_count(user_id)
         if old_count > 0 and new_count == 0:
-            self.dynamo.decrement_chats_with_unviewed_messages_count(user_id, fail_soft=True)
+            self.dynamo.decrement_chats_with_unviewed_messages_count(user_id)
 
     def sync_follow_counts_due_to_follow_status(self, followed_user_id, new_item=None, old_item=None):
         follower_user_id = (new_item or old_item)['sortKey'].split('/')[1]
@@ -317,14 +317,14 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.increment_followed_count(follower_user_id)
             self.dynamo.increment_follower_count(followed_user_id)
         if old_status == FollowStatus.FOLLOWING and new_status != FollowStatus.FOLLOWING:
-            self.dynamo.decrement_followed_count(follower_user_id, fail_soft=True)
-            self.dynamo.decrement_follower_count(followed_user_id, fail_soft=True)
+            self.dynamo.decrement_followed_count(follower_user_id)
+            self.dynamo.decrement_follower_count(followed_user_id)
 
         # incr/decr followersRequestedCount if follow status changed to/from REQUESTED
         if old_status != FollowStatus.REQUESTED and new_status == FollowStatus.REQUESTED:
             self.dynamo.increment_followers_requested_count(followed_user_id)
         if old_status == FollowStatus.REQUESTED and new_status != FollowStatus.REQUESTED:
-            self.dynamo.decrement_followers_requested_count(followed_user_id, fail_soft=True)
+            self.dynamo.decrement_followers_requested_count(followed_user_id)
 
     def sync_chat_message_creation_count(self, message_id, new_item):
         if user_id := new_item.get('userId'):
@@ -340,7 +340,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def on_chat_member_delete_update_chat_count(self, chat_id, old_item):
         user_id = old_item['sortKey'].split('/')[1]
-        self.dynamo.decrement_chat_count(user_id, fail_soft=True)
+        self.dynamo.decrement_chat_count(user_id)
 
     def on_album_add_update_album_count(self, album_id, new_item):
         user_id = new_item['ownedByUserId']
@@ -348,7 +348,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def on_album_delete_update_album_count(self, album_id, old_item):
         user_id = old_item['ownedByUserId']
-        self.dynamo.decrement_album_count(user_id, fail_soft=True)
+        self.dynamo.decrement_album_count(user_id)
 
     def on_post_status_change_sync_counts(self, post_id, new_item, old_item):
         user_id = new_item['postedByUserId']
@@ -363,6 +363,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
         old_status = old_item['postStatus']
         if old_status == PostStatus.ARCHIVED:
-            self.dynamo.decrement_post_archived_count(user_id, fail_soft=True)
+            self.dynamo.decrement_post_archived_count(user_id)
         if old_status == PostStatus.COMPLETED:
-            self.dynamo.decrement_post_count(user_id, fail_soft=True)
+            self.dynamo.decrement_post_count(user_id)

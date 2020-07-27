@@ -194,20 +194,20 @@ class UserDynamo:
     def increment_album_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'albumCount')
 
-    def decrement_album_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'albumCount', fail_soft=fail_soft)
+    def decrement_album_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'albumCount')
 
     def increment_card_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'cardCount')
 
-    def decrement_card_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'cardCount', fail_soft=fail_soft)
+    def decrement_card_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'cardCount')
 
     def increment_chat_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatCount')
 
-    def decrement_chat_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'chatCount', fail_soft=fail_soft)
+    def decrement_chat_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'chatCount')
 
     def increment_chat_messages_creation_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatMessagesCreationCount')
@@ -221,16 +221,14 @@ class UserDynamo:
     def increment_chats_with_unviewed_messages_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatsWithUnviewedMessagesCount')
 
-    def decrement_chats_with_unviewed_messages_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(
-            self.pk(user_id), 'chatsWithUnviewedMessagesCount', fail_soft=fail_soft
-        )
+    def decrement_chats_with_unviewed_messages_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'chatsWithUnviewedMessagesCount')
 
     def increment_comment_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'commentCount')
 
-    def decrement_comment_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'commentCount', fail_soft=fail_soft)
+    def decrement_comment_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'commentCount')
 
     def increment_comment_deleted_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'commentDeletedCount')
@@ -241,32 +239,32 @@ class UserDynamo:
     def increment_followed_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'followedCount')
 
-    def decrement_followed_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'followedCount', fail_soft=fail_soft)
+    def decrement_followed_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'followedCount')
 
     def increment_follower_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'followerCount')
 
-    def decrement_follower_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'followerCount', fail_soft=fail_soft)
+    def decrement_follower_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'followerCount')
 
     def increment_followers_requested_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'followersRequestedCount')
 
-    def decrement_followers_requested_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'followersRequestedCount', fail_soft=fail_soft)
+    def decrement_followers_requested_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'followersRequestedCount')
 
     def increment_post_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'postCount')
 
-    def decrement_post_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'postCount', fail_soft=fail_soft)
+    def decrement_post_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'postCount')
 
     def increment_post_archived_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'postArchivedCount')
 
-    def decrement_post_archived_count(self, user_id, fail_soft=False):
-        return self.client.decrement_count(self.pk(user_id), 'postArchivedCount', fail_soft=fail_soft)
+    def decrement_post_archived_count(self, user_id):
+        return self.client.decrement_count(self.pk(user_id), 'postArchivedCount')
 
     def increment_post_deleted_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'postDeletedCount')

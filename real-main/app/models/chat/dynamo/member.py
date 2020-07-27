@@ -54,7 +54,8 @@ class ChatMemberDynamo:
     def delete(self, chat_id, user_id):
         return self.client.delete_item(self.pk(chat_id, user_id))
 
-    def update_last_message_activity_at(self, chat_id, user_id, now, fail_soft=False):
+    def update_last_message_activity_at(self, chat_id, user_id, now):
+        "Best effort to update last message activity at. Logs WARNING on failure."
         now_str = now.to_iso8601_string()
         query_kwargs = {
             'Key': self.pk(chat_id, user_id),
@@ -62,23 +63,14 @@ class ChatMemberDynamo:
             'ExpressionAttributeValues': {':gsik2sk': 'chat/' + now_str},
             'ConditionExpression': 'attribute_exists(partitionKey) AND NOT :gsik2sk < gsiK2SortKey',
         }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            if fail_soft:
-                logger.warning(
-                    f'Failed to update last message activity for chat `{chat_id}` and member `{user_id}` to `{now_str}`'
-                )
-                return
-            raise
+        msg = f'Failed to update last message activity for chat `{chat_id}` and member `{user_id}` to `{now_str}`'
+        return self.client.update_item(query_kwargs, failure_warning=msg)
 
     def increment_messages_unviewed_count(self, chat_id, user_id):
         return self.client.increment_count(self.pk(chat_id, user_id), 'messagesUnviewedCount')
 
-    def decrement_messages_unviewed_count(self, chat_id, user_id, fail_soft=False):
-        return self.client.decrement_count(
-            self.pk(chat_id, user_id), 'messagesUnviewedCount', fail_soft=fail_soft
-        )
+    def decrement_messages_unviewed_count(self, chat_id, user_id):
+        return self.client.decrement_count(self.pk(chat_id, user_id), 'messagesUnviewedCount')
 
     def clear_messages_unviewed_count(self, chat_id, user_id):
         query_kwargs = {

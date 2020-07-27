@@ -94,7 +94,8 @@ class AlbumDynamo:
 
         return self.client.update_item(update_query_kwargs)
 
-    def set_delete_at_fail_soft(self, album_id, delete_at):
+    def set_delete_at(self, album_id, delete_at):
+        "Best effort, logs WARNING on failure"
         query_kwargs = {
             'Key': self.pk(album_id),
             'UpdateExpression': 'SET gsiK1PartitionKey = :pk, gsiK1SortKey = :sk',
@@ -105,7 +106,8 @@ class AlbumDynamo:
             query_kwargs, failure_warning=f'Failed to set deleteAt GSI for album `{album_id}`'
         )
 
-    def clear_delete_at_fail_soft(self, album_id):
+    def clear_delete_at(self, album_id):
+        "Best effort, logs WARNING on failure"
         query_kwargs = {
             'Key': self.pk(album_id),
             'UpdateExpression': 'REMOVE gsiK1PartitionKey, gsiK1SortKey',

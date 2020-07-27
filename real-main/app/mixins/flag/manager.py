@@ -23,7 +23,7 @@ class FlagManagerMixin:
         raise NotImplementedError('Subclasses must implement')
 
     def on_flag_delete(self, item_id, old_item):
-        self.dynamo.decrement_flag_count(item_id, fail_soft=True)
+        self.dynamo.decrement_flag_count(item_id)
 
     def on_item_delete_delete_flags(self, item_id, old_item):
         self.flag_dynamo.delete_all_for_item(item_id)

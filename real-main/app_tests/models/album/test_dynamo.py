@@ -297,20 +297,20 @@ def test_increment_rank_count(album_dynamo, album_item):
     assert new_album_item['postsLastUpdatedAt'] > album_item['postsLastUpdatedAt']
 
 
-def test_set_and_clear_delete_at_fail_soft(album_dynamo, album_item, caplog):
+def test_set_and_clear_delete_at(album_dynamo, album_item, caplog):
     album_id = album_item['albumId']
     album_id_dne = str(uuid4())
 
     # verify both methods fail soft for an album that doesn't exist
     with caplog.at_level(logging.WARNING):
-        assert album_dynamo.set_delete_at_fail_soft(album_id_dne, pendulum.now('utc')) is None
+        assert album_dynamo.set_delete_at(album_id_dne, pendulum.now('utc')) is None
     assert len(caplog.records) == 1
     assert 'Failed to set deleteAt GSI' in caplog.records[0].msg
     assert album_id_dne in caplog.records[0].msg
     caplog.clear()
 
     with caplog.at_level(logging.WARNING):
-        assert album_dynamo.clear_delete_at_fail_soft(album_id_dne) is None
+        assert album_dynamo.clear_delete_at(album_id_dne) is None
     assert len(caplog.records) == 1
     assert 'Failed to clear deleteAt GSI' in caplog.records[0].msg
     assert album_id_dne in caplog.records[0].msg
@@ -318,26 +318,26 @@ def test_set_and_clear_delete_at_fail_soft(album_dynamo, album_item, caplog):
 
     # verify we can set it
     delete_at = pendulum.now('utc')
-    new_item = album_dynamo.set_delete_at_fail_soft(album_id, delete_at)
+    new_item = album_dynamo.set_delete_at(album_id, delete_at)
     assert album_dynamo.get_album(album_id) == new_item
     assert new_item['gsiK1PartitionKey'] == 'album'
     assert pendulum.parse(new_item['gsiK1SortKey']) == delete_at
 
     # verify we can set it again
     delete_at = pendulum.now('utc')
-    new_item = album_dynamo.set_delete_at_fail_soft(album_id, delete_at)
+    new_item = album_dynamo.set_delete_at(album_id, delete_at)
     assert album_dynamo.get_album(album_id) == new_item
     assert new_item['gsiK1PartitionKey'] == 'album'
     assert pendulum.parse(new_item['gsiK1SortKey']) == delete_at
 
     # verify we can clear it
-    new_item = album_dynamo.clear_delete_at_fail_soft(album_id)
+    new_item = album_dynamo.clear_delete_at(album_id)
     assert album_dynamo.get_album(album_id) == new_item
     assert 'gsiK1PartitionKey' not in new_item
     assert 'gsiK1SortKey' not in new_item
 
     # verify we can clear it again
-    new_item = album_dynamo.clear_delete_at_fail_soft(album_id)
+    new_item = album_dynamo.clear_delete_at(album_id)
     assert album_dynamo.get_album(album_id) == new_item
     assert 'gsiK1PartitionKey' not in new_item
     assert 'gsiK1SortKey' not in new_item
@@ -346,7 +346,7 @@ def test_set_and_clear_delete_at_fail_soft(album_dynamo, album_item, caplog):
     transact = album_dynamo.transact_add_post(album_id)
     album_dynamo.client.transact_write_items([transact])
     with caplog.at_level(logging.WARNING):
-        assert album_dynamo.set_delete_at_fail_soft(album_id, pendulum.now('utc')) is None
+        assert album_dynamo.set_delete_at(album_id, pendulum.now('utc')) is None
     assert len(caplog.records) == 1
     assert 'Failed to set deleteAt GSI' in caplog.records[0].msg
     assert album_id in caplog.records[0].msg
@@ -360,10 +360,10 @@ def test_generate_keys_to_delete(album_dynamo):
 
     # add two albums to the index
     album_item1 = album_dynamo.add_album(str(uuid4()), str(uuid4()), 'album name')
-    album_dynamo.set_delete_at_fail_soft(album_item1['albumId'], pendulum.now('utc'))
+    album_dynamo.set_delete_at(album_item1['albumId'], pendulum.now('utc'))
     cutoff2 = pendulum.now('utc')
     album_item2 = album_dynamo.add_album(str(uuid4()), str(uuid4()), 'album name')
-    album_dynamo.set_delete_at_fail_soft(album_item2['albumId'], pendulum.now('utc'))
+    album_dynamo.set_delete_at(album_item2['albumId'], pendulum.now('utc'))
     cutoff3 = pendulum.now('utc')
 
     # test generation at different cutoffs

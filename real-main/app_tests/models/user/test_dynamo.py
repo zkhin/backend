@@ -473,11 +473,21 @@ def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrem
     user_id = str(uuid4())
 
     # can't increment comment that doesnt exist
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
-        incrementor(user_id)
+    with caplog.at_level(logging.WARNING):
+        assert incrementor(user_id) is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to increment', attribute_name, user_id])
+    caplog.clear()
+
+    # can't decrement comment that doesnt exist
     if decrementor:
-        with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
-            decrementor(user_id)
+        with caplog.at_level(logging.WARNING):
+            assert decrementor(user_id) is None
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
+        assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, user_id])
+        caplog.clear()
 
     # add the user to the DB, verify it is in DB
     user_dynamo.add_user(user_id, str(uuid4())[:8])
@@ -501,14 +511,8 @@ def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrem
 
     # verify fail soft on trying to decrement below zero
     with caplog.at_level(logging.WARNING):
-        resp = decrementor(user_id, fail_soft=True)
-    assert resp is None
+        assert decrementor(user_id) is None
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, user_id])
-    assert user_dynamo.get_user(user_id)[attribute_name] == 0
-
-    # verify fail hard on trying to decrement below zero
-    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
-        decrementor(user_id)
     assert user_dynamo.get_user(user_id)[attribute_name] == 0
