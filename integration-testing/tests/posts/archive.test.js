@@ -23,7 +23,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test('Archiving an image post', async () => {
+test('Archive an image post', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 
   // we upload an image post
@@ -36,6 +36,7 @@ test('Archiving an image post', async () => {
     })
 
   // check we see that post in the feed and in the posts
+  await misc.sleep(2000)
   await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
     expect(user.feed.items).toHaveLength(1)
     expect(user.feed.items[0].postId).toBe(postId)
@@ -170,6 +171,7 @@ test('Restoring an archived image post', async () => {
   expect(resp.data.restoreArchivedPost.image).toBeTruthy()
 
   // check we see that post in the feed and in the posts
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.selfFeed})
   expect(resp.data.self.feed.items).toHaveLength(1)
   expect(resp.data.self.feed.items[0].postId).toBe(postId)

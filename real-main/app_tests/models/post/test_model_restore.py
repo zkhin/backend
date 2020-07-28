@@ -32,6 +32,11 @@ def post_with_media_completed(post_manager, user, image_data_b64):
     yield post_manager.add_post(user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, text='t')
 
 
+@pytest.fixture
+def album(album_manager, user):
+    yield album_manager.add_album(user.id, str(uuid.uuid4()), 'album name')
+
+
 def test_restore_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
     post = post_with_expiration
 
@@ -78,9 +83,8 @@ def test_restore_completed_media_post(post_manager, post_with_media_completed, u
     assert post.follower_manager.mock_calls == []
 
 
-def test_restore_completed_post_in_album(album_manager, post_manager, post_with_media_completed, user_manager):
+def test_restore_completed_post_in_album(post_manager, post_with_media_completed, user_manager, album):
     post = post_with_media_completed
-    album = album_manager.add_album(post.user_id, 'aid', 'album name')
     post.set_album(album.id)
 
     # archive the post
@@ -118,3 +122,23 @@ def test_restore_completed_post_in_album(album_manager, post_manager, post_with_
 
     # check calls to mocked out managers
     assert post.follower_manager.mock_calls == []
+
+
+def test_restore_completed_album_has_disappeared(album_manager, post_manager, post_with_media_completed, album):
+    # configure starting state
+    post = post_with_media_completed
+    post.set_album(album.id)
+    album_id = post.item['albumId']
+    post.archive()
+
+    # sneak into dynamo and delete the album, check starting state
+    album_manager.dynamo.delete_album(album_id)
+    assert album_manager.dynamo.get_album(album_id) is None
+    assert post.item['albumId'] == album_id
+    assert post.item['postStatus'] == PostStatus.ARCHIVED
+
+    # complete the post, check state
+    post.restore()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert 'albumId' not in post.item
+    assert album_manager.dynamo.get_album(album_id) is None

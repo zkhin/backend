@@ -159,6 +159,22 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.follower_manager.mock_calls == []
 
 
+def test_complete_with_album_has_disappeared(album_manager, post_manager, post_with_media_with_album):
+    post = post_with_media_with_album
+    album_id = post.item['albumId']
+
+    # sneak into dynamo and delete the album, check starting state
+    album_manager.dynamo.delete_album(album_id)
+    assert album_manager.dynamo.get_album(album_id) is None
+    assert post.item['postStatus'] == PostStatus.PENDING
+
+    # complete the post, check state
+    post.complete()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert 'albumId' not in post.item
+    assert album_manager.dynamo.get_album(album_id) is None
+
+
 def test_complete_with_original_post(post_manager, post_with_media, post_with_media_with_expiration):
     post1, post2 = post_with_media, post_with_media_with_expiration
 

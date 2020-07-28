@@ -699,6 +699,12 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
     assert post2.item['albumId'] == album1.id
     assert post2.item['gsiK3SortKey'] == decimal.Decimal(0.5)
 
+    # verify if album no longer exists in DB, can't change order
+    album1.dynamo.delete_album(album1.id)
+    with pytest.raises(Exception, match='Album `.*` that post `.*` was in does not exist'):
+        post2.set_album_order(post3.id)
+    assert 'albumId' not in post2.refresh_item().item
+
 
 def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64):
     # album with three posts in it

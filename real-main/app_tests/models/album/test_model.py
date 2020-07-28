@@ -1,7 +1,8 @@
 import io
+import logging
 import uuid
 from os import path
-from unittest import mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -172,38 +173,65 @@ def test_save_art_images(album):
     assert album.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
+def test_increment_rank_count(album, caplog):
+    assert 'rankCount' not in album.refresh_item().item
+    album_id = album.id
+    org_album_item = album.item.copy()
+
+    # verify increment from nothing
+    assert album.increment_rank_count().id == album.id
+    assert {**org_album_item, 'rankCount': 1} == album.item
+
+    # verify increment again
+    assert album.increment_rank_count().id == album_id
+    assert {**org_album_item, 'rankCount': 2} == album.item
+
+    # verify for album that has disappeared from dynamo
+    album.dynamo.delete_album(album_id)
+    with caplog.at_level(logging.WARNING):
+        assert album.increment_rank_count() is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ('Failed to increment', 'rankCount', album_id))
+    assert album.item is None
+
+
 def test_rank_count(album):
-    assert 'rank' not in album.item
-    assert album.get_next_first_rank() == 0
-    assert album.get_next_last_rank() == 0
+    with patch.object(album, 'item', None):
+        assert album.get_first_rank() is None
+        assert album.get_last_rank() is None
 
-    album.item['rankCount'] = 0
-    assert album.get_next_first_rank() == 0
-    assert album.get_next_last_rank() == 0
+    with patch.dict(album.item, {'rankCount': 0}):
+        assert album.get_first_rank() is None
+        assert album.get_last_rank() is None
 
-    album.item['rankCount'] = 1
-    assert album.get_next_first_rank() == pytest.approx(-1 / 3)
-    assert album.get_next_last_rank() == pytest.approx(1 / 3)
+    with patch.dict(album.item, {'rankCount': 1}):
+        assert album.get_first_rank() == 0
+        assert album.get_last_rank() == 0
 
-    album.item['rankCount'] = 2
-    assert album.get_next_first_rank() == pytest.approx(-2 / 4)
-    assert album.get_next_last_rank() == pytest.approx(2 / 4)
+    with patch.dict(album.item, {'rankCount': 2}):
+        assert album.get_first_rank() == pytest.approx(-1 / 3)
+        assert album.get_last_rank() == pytest.approx(1 / 3)
 
-    album.item['rankCount'] = 3
-    assert album.get_next_first_rank() == pytest.approx(-3 / 5)
-    assert album.get_next_last_rank() == pytest.approx(3 / 5)
+    with patch.dict(album.item, {'rankCount': 3}):
+        assert album.get_first_rank() == pytest.approx(-2 / 4)
+        assert album.get_last_rank() == pytest.approx(2 / 4)
 
-    album.item['rankCount'] = 4
-    assert album.get_next_first_rank() == pytest.approx(-4 / 6)
-    assert album.get_next_last_rank() == pytest.approx(4 / 6)
+    with patch.dict(album.item, {'rankCount': 4}):
+        assert album.get_first_rank() == pytest.approx(-3 / 5)
+        assert album.get_last_rank() == pytest.approx(3 / 5)
 
-    album.item['rankCount'] = 5
-    assert album.get_next_first_rank() == pytest.approx(-5 / 7)
-    assert album.get_next_last_rank() == pytest.approx(5 / 7)
+    with patch.dict(album.item, {'rankCount': 5}):
+        assert album.get_first_rank() == pytest.approx(-4 / 6)
+        assert album.get_last_rank() == pytest.approx(4 / 6)
+
+    with patch.dict(album.item, {'rankCount': 6}):
+        assert album.get_first_rank() == pytest.approx(-5 / 7)
+        assert album.get_last_rank() == pytest.approx(5 / 7)
 
 
 def test_get_post_ids_for_art(album):
-    album.post_manager.dynamo.generate_post_ids_in_album = mock.Mock()
+    album.post_manager.dynamo.generate_post_ids_in_album = Mock()
 
     # no post ids
     album.post_manager.dynamo.generate_post_ids_in_album.return_value = []

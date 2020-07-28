@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import call, patch
 from uuid import uuid4
 
 import pendulum
@@ -144,60 +145,30 @@ def test_transact_add_post(album_dynamo, album_item):
     assert 'rankCount' not in album_item
     assert 'postsLastUpdatedAt' not in album_item
 
+    # verify cant add to album that DNE
+    transact = album_dynamo.transact_add_post(str(uuid4()))
+    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
+        album_dynamo.client.transact_write_items([transact])
+
     # add a post, check the new state
     now = pendulum.now('utc')
     transact = album_dynamo.transact_add_post(album_id, now=now)
     album_dynamo.client.transact_write_items([transact])
     new_album_item = album_dynamo.get_album(album_id)
     assert new_album_item['postCount'] == 1
-    assert new_album_item['rankCount'] == 1
     assert new_album_item['postsLastUpdatedAt'] == now.to_iso8601_string()
 
     # add another post, check the new state
-    transact = album_dynamo.transact_add_post(album_id, old_rank_count=1)
+    transact = album_dynamo.transact_add_post(album_id)
     album_dynamo.client.transact_write_items([transact])
     new_album_item = album_dynamo.get_album(album_id)
     assert new_album_item['postCount'] == 2
-    assert new_album_item['rankCount'] == 2
     assert new_album_item['postsLastUpdatedAt'] > now.to_iso8601_string()
 
     # check nothing else got changed
     del new_album_item['postCount']
-    del new_album_item['rankCount']
     del new_album_item['postsLastUpdatedAt']
     assert new_album_item == album_item
-
-
-def test_transact_add_post_failes_wrong_rank_count(album_dynamo, album_item):
-    album_id = album_item['albumId']
-    assert 'rankCount' not in album_item
-
-    # can't specify a rank count when none exists
-    transact = album_dynamo.transact_add_post(album_id, old_rank_count=1)
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
-
-    # add a post, sets rank count
-    transact = album_dynamo.transact_add_post(album_id)
-    album_dynamo.client.transact_write_items([transact])
-    album_item = album_dynamo.get_album(album_id)
-    assert album_item['rankCount'] == 1
-
-    # can't not specify a rank count when one exists
-    transact = album_dynamo.transact_add_post(album_id)
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
-
-    # can't specify wrong value for rank count
-    transact = album_dynamo.transact_add_post(album_id, old_rank_count=2)
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
-
-    # can specify correct rank count
-    transact = album_dynamo.transact_add_post(album_id, old_rank_count=1)
-    album_dynamo.client.transact_write_items([transact])
-    album_item = album_dynamo.get_album(album_id)
-    assert album_item['rankCount'] == 2
 
 
 def test_transact_remove_post(album_dynamo, album_item):
@@ -263,38 +234,35 @@ def test_set_album_hash(album_dynamo, album_item):
     assert album_dynamo.get_album(album_id) == album_item
 
 
-def test_increment_rank_count(album_dynamo, album_item):
+def test_reorder_post(album_dynamo, album_item):
     album_id = album_item['albumId']
     assert 'rankCount' not in album_id
     assert 'postsLastUpdatedAt' not in album_id
 
-    # verify can't increment rank count from starting point of none
-    # (first a post has to be added to the album to initialize it)
-    transact = album_dynamo.transact_increment_rank_count(album_id, None)
+    # verify can't operate on album that DNE
+    transact = album_dynamo.transact_reorder_post(str(uuid4()))
     with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
         album_dynamo.client.transact_write_items([transact])
 
-    # add a post to album (init's the rankCount)
-    transact = album_dynamo.transact_add_post(album_id)
-    album_dynamo.client.transact_write_items([transact])
-    album_item = album_dynamo.get_album(album_id)
-    assert album_item['rankCount'] == 1
-    assert album_item['postsLastUpdatedAt']
-
-    # increment the rank count
-    transact = album_dynamo.transact_increment_rank_count(album_id, album_item['rankCount'])
+    # without specifying timestamp
+    before = pendulum.now('utc')
+    transact = album_dynamo.transact_reorder_post(album_id)
+    after = pendulum.now('utc')
     album_dynamo.client.transact_write_items([transact])
     new_album_item = album_dynamo.get_album(album_id)
-    assert new_album_item['rankCount'] == 2
-    assert new_album_item['postsLastUpdatedAt'] > album_item['postsLastUpdatedAt']
-    album_item = new_album_item
+    assert pendulum.parse(new_album_item['postsLastUpdatedAt']) > before
+    assert pendulum.parse(new_album_item['postsLastUpdatedAt']) < after
+    album_item['postsLastUpdatedAt'] = new_album_item['postsLastUpdatedAt']
+    assert album_item == new_album_item
 
-    # increment the rank count
-    transact = album_dynamo.transact_increment_rank_count(album_id, album_item['rankCount'])
+    # with specifying timestamp
+    now = pendulum.now('utc')
+    transact = album_dynamo.transact_reorder_post(album_id, now=now)
     album_dynamo.client.transact_write_items([transact])
     new_album_item = album_dynamo.get_album(album_id)
-    assert new_album_item['rankCount'] == 3
-    assert new_album_item['postsLastUpdatedAt'] > album_item['postsLastUpdatedAt']
+    assert pendulum.parse(new_album_item['postsLastUpdatedAt']) == now
+    album_item['postsLastUpdatedAt'] = new_album_item['postsLastUpdatedAt']
+    assert album_item == new_album_item
 
 
 def test_set_and_clear_delete_at(album_dynamo, album_item, caplog):
@@ -375,3 +343,10 @@ def test_generate_keys_to_delete(album_dynamo):
         {k: album_item1[k] for k in ('partitionKey', 'sortKey')},
         {k: album_item2[k] for k in ('partitionKey', 'sortKey')},
     ]
+
+
+def test_increment_rank_count(album_dynamo):
+    album_id = str(uuid4())
+    with patch.object(album_dynamo, 'client') as dynamo_client_mock:
+        album_dynamo.increment_rank_count(album_id)
+    assert dynamo_client_mock.mock_calls == [call.increment_count(album_dynamo.pk(album_id), 'rankCount')]

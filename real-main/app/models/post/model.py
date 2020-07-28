@@ -376,11 +376,17 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             post_id = self.dynamo.get_first_with_checksum(checksum)
             if post_id and post_id != self.id:
                 original_post_id = post_id
-
         set_as_user_photo = self.item.get('setAsUserPhoto')
+
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
-        album_rank = album.get_next_last_rank() if album else None
+        album = album.increment_rank_count() if album else None
+        if album_id and not album:
+            # album has disappeared, so remove the post from the album
+            transact = self.dynamo.transact_set_album_id(self.item, None)
+            self.dynamo.client.transact_write_items([transact])
+            self.refresh_item()
+        album_rank = album.get_last_rank() if album else None
 
         # complete the post
         transacts = [
@@ -389,8 +395,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             ),
         ]
         if album:
-            old_rank_count = album.item.get('rankCount')
-            transacts.append(album.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count, now=now))
+            transacts.append(album.dynamo.transact_add_post(album.id, now=now))
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
@@ -461,15 +466,20 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         album_id = self.item.get('albumId')
         album = self.album_manager.get_album(album_id) if album_id else None
-        album_rank = album.get_next_last_rank() if album else None
+        album = album.increment_rank_count() if album else None
+        if album_id and not album:
+            # album has disappeared, so remove the post from the album
+            transact = self.dynamo.transact_set_album_id(self.item, None)
+            self.dynamo.client.transact_write_items([transact])
+            self.refresh_item()
+        album_rank = album.get_last_rank() if album else None
 
         # restore the post
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
         ]
         if album:
-            old_rank_count = album.item.get('rankCount')
-            transacts.append(self.album_manager.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
+            transacts.append(self.album_manager.dynamo.transact_add_post(album.id))
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
@@ -606,22 +616,23 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             return self
 
         # if an album is specified, verify it exists and is ours
+        album_rank = None
         album = self.album_manager.get_album(album_id) if album_id else None
-        album_rank = album.get_next_last_rank() if album and self.status == PostStatus.COMPLETED else None
-        if album_id:
-            if not album:
-                raise PostException(f'Album `{album_id}` does not exist')
+        if album:
             if album.user_id != self.user_id:
-                msg = f'Album `{album_id}` and post `{self.id}` belong to different users'
-                raise PostException(msg)
+                raise PostException(f'Album `{album_id}` and post `{self.id}` belong to different users')
+            if self.status == PostStatus.COMPLETED:
+                album = album.increment_rank_count()
+                album_rank = album.get_last_rank() if album else None
+        if album_id and not album:
+            raise PostException(f'Album `{album_id}` does not exist')
 
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
         if self.status == PostStatus.COMPLETED:
             if prev_album_id:
                 transacts.append(self.album_manager.dynamo.transact_remove_post(prev_album_id))
-            if album:
-                old_rank_count = album.item.get('rankCount')
-                transacts.append(album.dynamo.transact_add_post(album.id, old_rank_count=old_rank_count))
+            if album_id:
+                transacts.append(album.dynamo.transact_add_post(album_id))
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
@@ -631,7 +642,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             prev_album = self.album_manager.get_album(prev_album_id)
             if prev_album:
                 prev_album.update_art_if_needed()
-        if album:
+        if album_id:
             album.update_art_if_needed()
 
         return self
@@ -644,18 +655,23 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         preceding_post = None
         if preceding_post_id:
             preceding_post = self.post_manager.get_post(preceding_post_id)
-
             if not preceding_post:
                 raise PostException(f'Preceding post `{preceding_post_id}` does not exist')
-
             if preceding_post.user_id != self.user_id:
                 raise PostException(f'Preceding post `{preceding_post_id}` does not belong to caller')
-
             if preceding_post.item.get('albumId') != album_id:
                 raise PostException(f'Preceding post `{preceding_post_id}` is not in album post is in')
 
-        # determine the post's new rank
         album = self.album_manager.get_album(album_id)
+        album = album.increment_rank_count() if album else None
+        if not album:
+            # album has disappeared, so remove the post from the album
+            transact = self.dynamo.transact_set_album_id(self.item, None)
+            self.dynamo.client.transact_write_items([transact])
+            # fail with server error - api client did nothing wrong
+            raise Exception(f'Album `{album_id}` that post `{self.id}` was in does not exist')
+
+        # determine the post's new rank
         if preceding_post:
             before_rank = preceding_post.item['gsiK3SortKey']
             after_post_id = next(self.dynamo.generate_post_ids_in_album(album_id, after_rank=before_rank), None)
@@ -666,14 +682,14 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 album_rank = (before_rank + after_rank) / 2
             else:
                 # putting the post at the back
-                album_rank = album.get_next_last_rank()
+                album_rank = album.get_last_rank()
         else:
             # putting the post at the front
-            album_rank = album.get_next_first_rank()
+            album_rank = album.get_first_rank()
 
         transacts = [
             self.dynamo.transact_set_album_rank(self.id, album_rank),
-            album.dynamo.transact_increment_rank_count(album.id, album.item['rankCount']),
+            album.dynamo.transact_reorder_post(album.id),
         ]
         self.dynamo.client.transact_write_items(transacts)
         self.item['gsiK3SortKey'] = album_rank

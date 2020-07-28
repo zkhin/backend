@@ -63,14 +63,18 @@ class Album:
         self.dynamo.delete_album(self.id)
         return self
 
-    def get_next_first_rank(self):
-        "Return the next rank to be used for a post to appear as first in the album"
-        rank_spaces = self.item.get('rankCount', 0) + 2
+    def get_first_rank(self):
+        "Return the rank to be used for a post to appear as first in the album"
+        if self.item is None or self.item.get('rankCount', 0) == 0:
+            return None
+        rank_spaces = self.item['rankCount'] + 1
         return 2 / rank_spaces - 1
 
-    def get_next_last_rank(self):
-        "Return the next rank to be used for a post to appear as last in the album"
-        rank_spaces = self.item.get('rankCount', 0) + 2
+    def get_last_rank(self):
+        "Return the rank to be used for a post to appear as last in the album"
+        if self.item is None or self.item.get('rankCount', 0) == 0:
+            return None
+        rank_spaces = self.item['rankCount'] + 1
         return 1 - 2 / rank_spaces
 
     def get_art_image_url(self, size):
@@ -96,6 +100,11 @@ class Album:
         if len(post_ids) < 4:
             post_ids = post_ids[:1]
         return post_ids
+
+    def increment_rank_count(self):
+        "Upon failure, log a WARNING and return None"
+        self.item = self.dynamo.increment_rank_count(self.id)
+        return self if self.item else None
 
     def update_art_if_needed(self):
         post_ids = self.get_post_ids_for_art()
