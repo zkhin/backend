@@ -88,20 +88,10 @@ def test_on_user_delete_delete_cards(card_manager, user, spec):
     assert card_manager.get_card(spec.card_id) is None
 
 
-@pytest.mark.parametrize(
-    'spec', pytest.lazy_fixture(['comment_card_spec', 'post_likes_card_spec', 'post_views_card_spec']),
-)
-def test_on_post_delete_delete_cards(card_manager, post, spec):
-    # verify starting state
-    assert card_manager.get_card(spec.card_id)
-
-    # trigger, verify deletes card
-    card_manager.on_post_delete_delete_cards(post.id, old_item=post.item)
-    assert card_manager.get_card(spec.card_id) is None
-
-    # trigger, verify no error if there are no cards to delete
-    card_manager.on_post_delete_delete_cards(post.id, post.item)
-    assert card_manager.get_card(spec.card_id) is None
+def test_on_post_delete_delete_cards(card_manager, post):
+    with patch.object(card_manager, 'delete_post_cards') as delete_post_cards_mock:
+        card_manager.on_post_delete_delete_cards(post.id, old_item=post.item)
+    assert delete_post_cards_mock.mock_calls == [call(post.user_id, post.id)]
 
 
 @pytest.mark.parametrize(
@@ -194,30 +184,26 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_sp
     assert user.item.get(dynamo_attribute) is None
 
     # refresh with None
-    with patch.object(card_manager, 'remove_card_by_spec_if_exists') as remove_mock:
+    with patch.object(card_manager, 'dynamo') as dynamo_mock:
         with patch.object(card_manager, 'add_or_update_card_by_spec') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
+    assert dynamo_mock.mock_calls == [call.delete_card(card_id)]
     assert add_update_mock.call_count == 0
-    card_spec = remove_mock.call_args.args[0]
-    assert card_spec.card_id == card_id
-    assert remove_mock.call_args_list == [call(card_spec)]
 
     # refresh with zero
     user.item[dynamo_attribute] = 0
-    with patch.object(card_manager, 'remove_card_by_spec_if_exists') as remove_mock:
+    with patch.object(card_manager, 'dynamo') as dynamo_mock:
         with patch.object(card_manager, 'add_or_update_card_by_spec') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
+    assert dynamo_mock.mock_calls == [call.delete_card(card_id)]
     assert add_update_mock.call_count == 0
-    card_spec = remove_mock.call_args.args[0]
-    assert card_spec.card_id == card_id
-    assert remove_mock.call_args_list == [call(card_spec)]
 
     # refresh with one
     user.item[dynamo_attribute] = 1
-    with patch.object(card_manager, 'remove_card_by_spec_if_exists') as remove_mock:
+    with patch.object(card_manager, 'dynamo') as dynamo_mock:
         with patch.object(card_manager, 'add_or_update_card_by_spec') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
-    assert remove_mock.call_count == 0
+    assert dynamo_mock.mock_calls == []
     card_spec = add_update_mock.call_args.args[0]
     assert card_spec.card_id == card_id
     assert ' 1 ' in card_spec.title
@@ -225,10 +211,10 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_sp
 
     # refresh with two
     user.item[dynamo_attribute] = 2
-    with patch.object(card_manager, 'remove_card_by_spec_if_exists') as remove_mock:
+    with patch.object(card_manager, 'dynamo') as dynamo_mock:
         with patch.object(card_manager, 'add_or_update_card_by_spec') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
-    assert remove_mock.call_count == 0
+    assert dynamo_mock.mock_calls == []
     card_spec = add_update_mock.call_args.args[0]
     assert card_spec.card_id == card_id
     assert ' 2 ' in card_spec.title
@@ -282,7 +268,7 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     assert card_manager.get_card(spec.card_id)
 
     # delete the card
-    card_manager.remove_card_by_spec_if_exists(spec)
+    card_manager.dynamo.delete_card(spec.card_id)
     assert card_manager.get_card(spec.card_id) is None
 
     # record nine likes, verify card is created
@@ -292,7 +278,7 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     assert card_manager.get_card(spec.card_id)
 
     # delete the card
-    card_manager.remove_card_by_spec_if_exists(spec)
+    card_manager.dynamo.delete_card(spec.card_id)
     assert card_manager.get_card(spec.card_id) is None
 
     # record a 10th like, verify card is **not** created
@@ -323,7 +309,7 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     assert card_manager.get_card(spec.card_id)
 
     # delete the card
-    card_manager.remove_card_by_spec_if_exists(spec)
+    card_manager.dynamo.delete_card(spec.card_id)
     assert card_manager.get_card(spec.card_id) is None
 
     # jump up to seven views, process, check no card created

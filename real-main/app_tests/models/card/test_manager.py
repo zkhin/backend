@@ -1,3 +1,4 @@
+import random
 from unittest.mock import call, patch
 from uuid import uuid4
 
@@ -31,25 +32,27 @@ def requested_followers_card_spec(user):
 
 
 @pytest.fixture
-def comment_card_spec(user, post_manager):
-    post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+def post(user, post_manager):
+    yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+
+
+@pytest.fixture
+def comment_card_spec(user, post):
     yield specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=4)
 
 
 @pytest.fixture
-def post_likes_card_spec(user, post_manager):
-    post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+def post_likes_card_spec(user, post):
     yield specs.PostLikesCardSpec(user.id, post.id)
 
 
 @pytest.fixture
-def post_views_card_spec(user, post_manager):
-    post = post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+def post_views_card_spec(user, post):
     yield specs.PostViewsCardSpec(user.id, post.id)
 
 
-comment_card_spec1 = comment_card_spec
-comment_card_spec2 = comment_card_spec
+post1 = post
+post2 = post
 
 
 def test_add_card_minimal(card_manager, user):
@@ -109,7 +112,7 @@ def test_add_card_maximal(card_manager, user):
 @pytest.mark.parametrize(
     'spec', pytest.lazy_fixture(['chat_card_spec', 'comment_card_spec', 'requested_followers_card_spec']),
 )
-def test_add_and_remove_card_by_spec(user, spec, card_manager):
+def test_add_or_update_card_by_spec(user, spec, card_manager):
     # verify starting state
     assert card_manager.get_card(spec.card_id) is None
 
@@ -135,17 +138,9 @@ def test_add_and_remove_card_by_spec(user, spec, card_manager):
     assert new_card.item['action'] == spec.action
     assert new_card.created_at == card.created_at
 
-    # remove the card, verify it's gone
-    card_manager.remove_card_by_spec_if_exists(spec)
-    assert card_manager.get_card(spec.card_id) is None
-
-    # remove the card again, verify no-op
-    card_manager.remove_card_by_spec_if_exists(spec)
-    assert card_manager.get_card(spec.card_id) is None
-
 
 @pytest.mark.parametrize('spec', pytest.lazy_fixture(['post_likes_card_spec', 'post_views_card_spec']))
-def test_add_and_remove_card_by_spec_with_only_usernames(user, spec, card_manager):
+def test_add_or_update_card_by_spec_with_only_usernames(user, spec, card_manager):
     # verify starting state
     assert card_manager.get_card(spec.card_id) is None
 
@@ -177,8 +172,8 @@ def test_add_and_remove_card_by_spec_with_only_usernames(user, spec, card_manage
     assert new_card.item['action'] == spec.action
     assert new_card.created_at == card.created_at
 
-    # remove the card, verify it's gone
-    card_manager.remove_card_by_spec_if_exists(spec)
+    # delete the card, verify it's gone
+    card_manager.dynamo.delete_card(spec.card_id)
     assert card_manager.get_card(spec.card_id) is None
 
     # add the card again, this time with None for only_usernames
@@ -186,40 +181,10 @@ def test_add_and_remove_card_by_spec_with_only_usernames(user, spec, card_manage
         assert card_manager.add_or_update_card_by_spec(spec)
     assert card_manager.get_card(spec.card_id)
 
-    # remove the card, verify it's gone
-    card_manager.remove_card_by_spec_if_exists(spec)
-    assert card_manager.get_card(spec.card_id) is None
 
-    # remove the card again, verify no-op
-    card_manager.remove_card_by_spec_if_exists(spec)
-    assert card_manager.get_card(spec.card_id) is None
-
-
-def test_add_or_update_card_by_spec(card_manager, user):
-    org_spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=3)
-    new_spec = specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=1)
-    assert ' 3 chats ' in org_spec.title
-    assert ' 1 chat ' in new_spec.title
-    assert org_spec.card_id == new_spec.card_id
-    card_id = org_spec.card_id
-
-    # add the card, verify
-    card = card_manager.add_or_update_card_by_spec(org_spec)
-    assert card_manager.get_card(card_id).item == card.item
-    assert card.item['title'] == org_spec.title
-    org_card = card
-
-    # update the card, verify
-    card = card_manager.add_or_update_card_by_spec(new_spec)
-    assert card_manager.get_card(card_id).item == card.item
-    assert card.item['title'] == new_spec.title
-    org_card.item['title'] = card.item['title']
-    assert org_card.item == card.item
-
-
-def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comment_card_spec2):
-    spec1 = comment_card_spec1
-    spec2 = comment_card_spec2
+def test_comment_cards_are_per_post(user, card_manager, post1, post2):
+    spec1 = specs.CommentCardSpec(user.id, post1.id, unviewed_comments_count=4)
+    spec2 = specs.CommentCardSpec(user.id, post2.id, unviewed_comments_count=3)
 
     # verify starting state
     assert card_manager.get_card(spec1.card_id) is None
@@ -234,6 +199,33 @@ def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comm
     card_manager.add_or_update_card_by_spec(spec2)
     assert card_manager.get_card(spec1.card_id)
     assert card_manager.get_card(spec2.card_id)
+
+
+def test_delete_post_cards(card_manager, comment_card_spec, post_likes_card_spec, post_views_card_spec, post):
+    # set the user up with one of the only_usernames if needed
+    card_specs = (comment_card_spec, post_likes_card_spec, post_views_card_spec)
+    only_usernames = set.intersection(
+        *[set(spec.only_usernames) for spec in card_specs if getattr(spec, 'only_usernames', [])]
+    )
+    if only_usernames:
+        post.user.dynamo.update_user_username(
+            post.user.id, random.choice(tuple(only_usernames)), post.user.username
+        )
+
+    # add them all to the DB, verify starting state
+    for spec in card_specs:
+        card_manager.add_or_update_card_by_spec(spec)
+        assert card_manager.get_card(spec.card_id)
+
+    # delete them all, verify new state
+    card_manager.delete_post_cards(post.user_id, post.id)
+    for spec in card_specs:
+        assert card_manager.get_card(spec.card_id) is None
+
+    # delete all again, verify idempotent
+    card_manager.delete_post_cards(post.user_id, post.id)
+    for spec in card_specs:
+        assert card_manager.get_card(spec.card_id) is None
 
 
 def test_notify_users(card_manager, pinpoint_client, user, user2):
@@ -350,8 +342,8 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     assert card3.refresh_item().notify_user_at is None
 
     # re-add those cards for which we just sent notificaitons
-    card1.delete()
-    card3.delete()
+    card_manager.dynamo.delete_card(card1.id)
+    card_manager.dynamo.delete_card(card3.id)
     card1 = card_manager.add_card(user.id, 't1', 'https://a1', notify_user_at=now - pendulum.duration(seconds=2))
     card3 = card_manager.add_card(user3.id, 't3', 'https://a3', notify_user_at=now)
     assert card1.refresh_item().notify_user_at
@@ -369,7 +361,7 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     assert card3.refresh_item().notify_user_at
 
     # re-add a cards for which we just sent notificaitons
-    card2.delete()
+    card_manager.dynamo.delete_card(card2.id)
     card2 = card_manager.add_card(user2.id, 't2', 'https://a2', notify_user_at=now - pendulum.duration(seconds=1))
     assert card2.refresh_item().notify_user_at
 

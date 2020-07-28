@@ -79,11 +79,15 @@ class CardManager:
             card_item = self.dynamo.update_title(spec.card_id, spec.title)
             return self.init_card(card_item)
 
-    def remove_card_by_spec_if_exists(self, spec, now=None):
-        card = self.get_card(spec.card_id)
-        if not card:
-            return
-        card.delete()
+    def delete_post_cards(self, user_id, post_id):
+        "Delete all cards associated with a given post for a given user"
+        card_specs = (
+            specs.CommentCardSpec(user_id, post_id),
+            specs.PostLikesCardSpec(user_id, post_id),
+            specs.PostViewsCardSpec(user_id, post_id),
+        )
+        key_generator = (self.dynamo.pk(spec.card_id) for spec in card_specs)
+        self.dynamo.client.batch_delete_items(key_generator)
 
     def notify_users(self, now=None, only_usernames=None):
         """
@@ -120,9 +124,7 @@ class CardManager:
 
     def on_post_delete_delete_cards(self, post_id, old_item):
         user_id = old_item['postedByUserId']
-        self.remove_card_by_spec_if_exists(specs.CommentCardSpec(user_id, post_id))
-        self.remove_card_by_spec_if_exists(specs.PostLikesCardSpec(user_id, post_id))
-        self.remove_card_by_spec_if_exists(specs.PostViewsCardSpec(user_id, post_id))
+        self.delete_post_cards(user_id, post_id)
 
     def on_user_delete_delete_cards(self, user_id, old_item):
         generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
@@ -134,7 +136,7 @@ class CardManager:
         if cnt > 0:
             self.add_or_update_card_by_spec(card_spec)
         else:
-            self.remove_card_by_spec_if_exists(card_spec)
+            self.dynamo.delete_card(card_spec.card_id)
 
     on_user_followers_requested_count_change_sync_card = partialmethod(
         on_user_count_change_sync_card, 'followersRequestedCount', specs.RequestedFollowersCardSpec,
@@ -152,9 +154,7 @@ class CardManager:
         if not post or post.user_id != viewed_by_user_id:
             return  # not viewed by post owner
 
-        self.remove_card_by_spec_if_exists(specs.CommentCardSpec(post.user_id, post.id))
-        self.remove_card_by_spec_if_exists(specs.PostLikesCardSpec(post.user_id, post.id))
-        self.remove_card_by_spec_if_exists(specs.PostViewsCardSpec(post.user_id, post.id))
+        self.delete_post_cards(post.user_id, post_id)
 
     def on_post_comments_unviewed_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('commentsUnviewedCount', 0)
@@ -163,7 +163,7 @@ class CardManager:
         if new_cnt > 0:
             self.add_or_update_card_by_spec(card_spec)
         else:
-            self.remove_card_by_spec_if_exists(card_spec)
+            self.dynamo.delete_card(card_spec.card_id)
 
     def on_post_likes_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('onymousLikeCount', 0) + new_item.get('anonymousLikeCount', 0)
