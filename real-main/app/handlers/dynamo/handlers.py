@@ -47,10 +47,10 @@ register('album', '-', ['REMOVE'], album_manager.on_album_delete_delete_album_ar
 register('album', '-', ['REMOVE'], post_manager.on_album_delete_remove_posts)
 register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
-register('card', '-', ['INSERT'], user_manager.on_card_add)
+register('card', '-', ['INSERT'], user_manager.on_card_add_increment_count)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)
 register('card', '-', ['REMOVE'], card_manager.on_card_delete)
-register('card', '-', ['REMOVE'], user_manager.on_card_delete)
+register('card', '-', ['REMOVE'], user_manager.on_card_delete_decrement_count)
 register('chat', '-', ['REMOVE'], chat_manager.on_chat_delete_delete_memberships)
 register('chat', '-', ['REMOVE'], chat_manager.on_item_delete_delete_flags)
 register('chat', '-', ['REMOVE'], chat_manager.on_item_delete_delete_views)
@@ -81,15 +81,27 @@ register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)
 register('comment', '-', ['REMOVE'], user_manager.on_comment_delete)
 register('comment', 'flag', ['INSERT'], comment_manager.on_flag_add)
 register('comment', 'flag', ['REMOVE'], comment_manager.on_flag_delete)
-register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_comments_card, {'commentsUnviewedCount': 0})
 register(
     'post',
     '-',
     ['INSERT', 'MODIFY'],
-    post_manager.sync_post_likes_card,
+    card_manager.on_post_comments_unviewed_count_change_update_card,
+    {'commentsUnviewedCount': 0},
+)
+register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_post_likes_count_change_update_card,
     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
 )
-register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_post_views_card, {'viewedByCount': 0})
+register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_post_viewed_by_count_change_update_card,
+    {'viewedByCount': 0},
+)
 register(
     'post',
     '-',
@@ -98,7 +110,7 @@ register(
     {'postStatus': None},
 )
 register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts, {'postStatus': None})
-register('post', '-', ['REMOVE'], post_manager.on_delete)
+register('post', '-', ['REMOVE'], card_manager.on_post_delete_delete_cards)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_flags)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_views)
 register('post', 'feed', ['INSERT'], feed_manager.fire_gql_subscription_user_feed_post_added)
@@ -107,11 +119,24 @@ register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
 register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
 register(
-    'post',
-    'view',
+    'post', 'view', ['INSERT', 'MODIFY'], card_manager.on_post_view_count_change_update_cards, {'viewCount': 0},
+)
+register(
+    'post', 'view', ['INSERT', 'MODIFY'], post_manager.on_post_view_count_change_update_counts, {'viewCount': 0},
+)
+register(
+    'user',
+    'profile',
     ['INSERT', 'MODIFY'],
-    post_manager.on_view_count_change_sync_counts_and_cards,
-    {'viewCount': 0},
+    card_manager.on_user_chats_with_unviewed_messages_count_change_sync_card,
+    {'chatsWithUnviewedMessagesCount': 0},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_user_followers_requested_count_change_sync_card,
+    {'followersRequestedCount': 0},
 )
 register(
     'user',
@@ -133,20 +158,6 @@ register(
     ['INSERT', 'MODIFY'],
     user_manager.sync_user_status_due_to_posts,
     {'postForcedArchivingCount': 0},
-)
-register(
-    'user',
-    'profile',
-    ['INSERT', 'MODIFY'],
-    user_manager.sync_requested_followers_card,
-    {'followersRequestedCount': 0},
-)
-register(
-    'user',
-    'profile',
-    ['INSERT', 'MODIFY'],
-    user_manager.sync_chats_with_new_messages_card,
-    {'chatsWithUnviewedMessagesCount': 0},
 )
 register(
     'user',
@@ -185,7 +196,7 @@ register(
     user_manager.sync_follow_counts_due_to_follow_status,
     {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
-register('user', 'profile', ['REMOVE'], card_manager.on_user_delete)
+register('user', 'profile', ['REMOVE'], card_manager.on_user_delete_delete_cards)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 
 

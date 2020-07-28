@@ -45,7 +45,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         s3_uploads_client=None,
         album_manager=None,
         block_manager=None,
-        card_manager=None,
         comment_manager=None,
         follower_manager=None,
         like_manager=None,
@@ -77,8 +76,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.album_manager = album_manager
         if block_manager is not None:
             self.block_manager = block_manager
-        if card_manager is not None:
-            self.card_manager = card_manager
         if comment_manager is not None:
             self.comment_manager = comment_manager
         if follower_manager is not None:

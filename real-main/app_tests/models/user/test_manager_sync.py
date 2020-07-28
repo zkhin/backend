@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus, UserStatus
 
@@ -66,51 +65,6 @@ def test_sync_user_status_due_to(user_manager, user, method_name, check_method_n
     assert user.username in caplog.records[0].msg
     assert log_pattern in caplog.records[0].msg
     assert user.refresh_item().status == UserStatus.DISABLED
-
-
-@pytest.mark.parametrize(
-    'method_name, card_spec_class, dynamo_attribute',
-    [
-        ['sync_requested_followers_card', RequestedFollowersCardSpec, 'followersRequestedCount'],
-        ['sync_chats_with_new_messages_card', ChatCardSpec, 'chatsWithUnviewedMessagesCount'],
-    ],
-)
-def test_sync_card_with_count(user_manager, user, method_name, card_spec_class, dynamo_attribute):
-    card_id = card_spec_class(user.id).card_id
-    assert user.item.get(dynamo_attribute) is None
-
-    # refresh with None
-    with patch.object(user_manager, 'card_manager') as card_manager_mock:
-        getattr(user_manager, method_name)(user.id, user.item, user.item)
-    card_spec = card_manager_mock.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert card_manager_mock.mock_calls == [call.remove_card_by_spec_if_exists(card_spec)]
-
-    # refresh with zero
-    user.item[dynamo_attribute] = 0
-    with patch.object(user_manager, 'card_manager') as card_manager_mock:
-        getattr(user_manager, method_name)(user.id, user.item, user.item)
-    card_spec = card_manager_mock.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert card_manager_mock.mock_calls == [call.remove_card_by_spec_if_exists(card_spec)]
-
-    # refresh with one
-    user.item[dynamo_attribute] = 1
-    with patch.object(user_manager, 'card_manager') as card_manager_mock:
-        getattr(user_manager, method_name)(user.id, user.item, user.item)
-    card_spec = card_manager_mock.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert ' 1 ' in card_spec.title
-    assert card_manager_mock.mock_calls == [call.add_or_update_card_by_spec(card_spec)]
-
-    # refresh with two
-    user.item[dynamo_attribute] = 2
-    with patch.object(user_manager, 'card_manager') as card_manager_mock:
-        getattr(user_manager, method_name)(user.id, user.item, user.item)
-    card_spec = card_manager_mock.mock_calls[0].args[0]
-    assert card_spec.card_id == card_id
-    assert ' 2 ' in card_spec.title
-    assert card_manager_mock.mock_calls == [call.add_or_update_card_by_spec(card_spec)]
 
 
 def test_sync_elasticsearch(user_manager, user):

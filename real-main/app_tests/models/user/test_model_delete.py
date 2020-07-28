@@ -18,7 +18,6 @@ def user(user_manager, cognito_client):
     user.comment_manager = mock.Mock(user.comment_manager)
     user.like_manager = mock.Mock(user.like_manager)
     user.album_manager = mock.Mock(user.album_manager)
-    user.card_manager = mock.Mock(user.card_manager)
     user.block_manager = mock.Mock(user.block_manager)
     user.chat_manager = mock.Mock(user.chat_manager)
     yield user
@@ -114,7 +113,6 @@ def test_delete_user_managers_all_called(user):
     assert user.comment_manager.mock_calls == []
     assert user.like_manager.mock_calls == []
     assert user.album_manager.mock_calls == []
-    assert user.card_manager.mock_calls == []
     assert user.block_manager.mock_calls == []
     assert user.chat_manager.mock_calls == []
 
@@ -137,9 +135,6 @@ def test_delete_user_managers_all_called(user):
     ]
     assert user.album_manager.mock_calls == [
         mock.call.delete_all_by_user(user.id),
-    ]
-    assert user.card_manager.mock_calls == [
-        mock.call.truncate_cards(user.id),
     ]
     assert user.block_manager.mock_calls == [
         mock.call.unblock_all_blocks(user.id),

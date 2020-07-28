@@ -35,7 +35,6 @@ class User(TrendingModelMixin):
         dynamo=None,
         album_manager=None,
         block_manager=None,
-        card_manager=None,
         chat_manager=None,
         comment_manager=None,
         follower_manager=None,
@@ -56,8 +55,6 @@ class User(TrendingModelMixin):
             self.album_manager = album_manager
         if block_manager:
             self.block_manager = block_manager
-        if card_manager:
-            self.card_manager = card_manager
         if chat_manager:
             self.chat_manager = chat_manager
         if comment_manager:
@@ -179,9 +176,6 @@ class User(TrendingModelMixin):
         self.comment_manager.delete_all_by_user(self.id)
         self.album_manager.delete_all_by_user(self.id)
         self.post_manager.delete_all_by_user(self.id)
-
-        # delete any cards we have
-        self.card_manager.truncate_cards(self.id)
 
         # remove all blocks of and by us
         self.block_manager.unblock_all_blocks(self.id)

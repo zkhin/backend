@@ -95,29 +95,29 @@ def test_on_user_delete_calls_pinpoint(user_manager, user):
     assert pinpoint_client_mock.mock_calls == [call.delete_user_endpoints(user.id)]
 
 
-def test_on_card_add_increments_card_count(user_manager, user, card):
+def test_on_card_add_increment_count(user_manager, user, card):
     assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # handle add, verify state
-    user_manager.on_card_add(card.id, card.item)
+    user_manager.on_card_add_increment_count(card.id, card.item)
     assert user.refresh_item().item.get('cardCount', 0) == 1
 
     # handle add, verify state
-    user_manager.on_card_add(card.id, card.item)
+    user_manager.on_card_add_increment_count(card.id, card.item)
     assert user.refresh_item().item.get('cardCount', 0) == 2
 
 
-def test_on_card_delete_decrements_card_count(user_manager, user, card, caplog):
+def test_on_card_delete_decrement_count(user_manager, user, card, caplog):
     user_manager.dynamo.increment_card_count(user.id)
     assert user.refresh_item().item.get('cardCount', 0) == 1
 
     # handle delete, verify state
-    user_manager.on_card_delete(card.id, card.item)
+    user_manager.on_card_delete_decrement_count(card.id, card.item)
     assert user.refresh_item().item.get('cardCount', 0) == 0
 
     # handle delete, verify fails softly and state unchanged
     with caplog.at_level(logging.WARNING):
-        user_manager.on_card_delete(card.id, card.item)
+        user_manager.on_card_delete_decrement_count(card.id, card.item)
     assert len(caplog.records) == 1
     assert 'Failed to decrement' in caplog.records[0].msg
     assert 'cardCount' in caplog.records[0].msg

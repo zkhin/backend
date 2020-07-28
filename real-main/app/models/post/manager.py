@@ -9,7 +9,6 @@ from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
-from app.models.card.specs import CommentCardSpec, PostLikesCardSpec, PostViewsCardSpec
 from app.models.like.enums import LikeStatus
 
 from .appsync import PostAppSync
@@ -31,7 +30,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         managers['post'] = self
         self.album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
-        self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
         self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
@@ -67,7 +65,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             's3_uploads_client': self.clients.get('s3_uploads'),
             'album_manager': self.album_manager,
             'block_manager': self.block_manager,
-            'card_manager': self.card_manager,
             'comment_manager': self.comment_manager,
             'follower_manager': self.follower_manager,
             'like_manager': self.like_manager,
@@ -265,38 +262,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             logger.warning(f'Force archiving post `{post_id}` from flagging')
             post.archive(forced=True)
 
-    def sync_comments_card(self, post_id, new_item, old_item=None):
-        new_cnt = new_item.get('commentsUnviewedCount', 0)
-        user_id = new_item['postedByUserId']
-        card_spec = CommentCardSpec(user_id, post_id, unviewed_comments_count=new_cnt)
-        if new_cnt > 0:
-            self.card_manager.add_or_update_card_by_spec(card_spec)
-        else:
-            self.card_manager.remove_card_by_spec_if_exists(card_spec)
-
-    def sync_post_likes_card(self, post_id, new_item, old_item=None):
-        new_cnt = new_item.get('onymousLikeCount', 0) + new_item.get('anonymousLikeCount', 0)
-        # post likes card should be created on any new like up to but not including the 10th like
-        if 0 < new_cnt < 10:
-            user_id = new_item['postedByUserId']
-            card_spec = PostLikesCardSpec(user_id, post_id)
-            self.card_manager.add_or_update_card_by_spec(card_spec)
-
-    def sync_post_views_card(self, post_id, new_item, old_item=None):
-        new_cnt = new_item.get('viewedByCount', 0)
-        old_cnt = (old_item or {}).get('viewedByCount', 0)
-        # post views card should only be created once per post, when it goes over 5 views
-        if new_cnt > 5 and old_cnt <= 5:
-            user_id = new_item['postedByUserId']
-            card_spec = PostViewsCardSpec(user_id, post_id)
-            self.card_manager.add_or_update_card_by_spec(card_spec)
-
-    def on_delete(self, post_id, old_item):
-        user_id = old_item['postedByUserId']
-        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(user_id, post_id))
-        self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(user_id, post_id))
-        self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(user_id, post_id))
-
     def on_comment_add(self, comment_id, new_item):
         comment = self.comment_manager.init_comment(new_item)
         by_post_owner = comment.user_id == comment.post.user_id
@@ -338,7 +303,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             raise Exception(f'Unrecognized like status `{like_status}`')
         decrementor(post_id)
 
-    def on_view_count_change_sync_counts_and_cards(self, post_id, new_item, old_item=None):
+    def on_post_view_count_change_update_counts(self, post_id, new_item, old_item=None):
         if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):
             return  # view count did not increase
 
@@ -352,12 +317,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.dynamo.set_last_unviewed_comment_at(post.item, None)
         except self.dynamo.client.exceptions.ConditionalCheckFailedException:
             # Race condition: the post was deleted.
-            # Make sure that's the case before # swallowing the exception.
+            # Make sure that's the case before swallowing the exception.
             if post.refresh_item().item:
                 raise
-        self.card_manager.remove_card_by_spec_if_exists(CommentCardSpec(post.user_id, post.id))
-        self.card_manager.remove_card_by_spec_if_exists(PostLikesCardSpec(post.user_id, post.id))
-        self.card_manager.remove_card_by_spec_if_exists(PostViewsCardSpec(post.user_id, post.id))
 
     def on_album_delete_remove_posts(self, album_id, old_item):
         for post_id in self.dynamo.generate_post_ids_in_album(album_id):

@@ -1,16 +1,17 @@
 import logging
 import uuid
+from functools import partialmethod
 
 import pendulum
 
 from app import models
 
+from . import specs
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
 from .enums import CardNotificationType
 from .exceptions import CardAlreadyExists
 from .model import Card
-from .specs import ChatCardSpec, RequestedFollowersCardSpec
 
 logger = logging.getLogger()
 
@@ -84,11 +85,6 @@ class CardManager:
             return
         card.delete()
 
-    def truncate_cards(self, user_id):
-        "Delete all cards for the user"
-        generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
-        self.dynamo.client.batch_delete_items(generator)
-
     def notify_users(self, now=None, only_usernames=None):
         """
         Send out push notifications to all users for cards as needed.
@@ -122,6 +118,66 @@ class CardManager:
     def on_card_delete(self, card_id, old_item):
         self.init_card(old_item).trigger_notification(CardNotificationType.DELETED)
 
-    def on_user_delete(self, user_id, old_item):
-        self.remove_card_by_spec_if_exists(ChatCardSpec(user_id))
-        self.remove_card_by_spec_if_exists(RequestedFollowersCardSpec(user_id))
+    def on_post_delete_delete_cards(self, post_id, old_item):
+        user_id = old_item['postedByUserId']
+        self.remove_card_by_spec_if_exists(specs.CommentCardSpec(user_id, post_id))
+        self.remove_card_by_spec_if_exists(specs.PostLikesCardSpec(user_id, post_id))
+        self.remove_card_by_spec_if_exists(specs.PostViewsCardSpec(user_id, post_id))
+
+    def on_user_delete_delete_cards(self, user_id, old_item):
+        generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
+        self.dynamo.client.batch_delete_items(generator)
+
+    def on_user_count_change_sync_card(self, dynamo_attr, card_spec_class, user_id, new_item, old_item=None):
+        cnt = new_item.get(dynamo_attr, 0)
+        card_spec = card_spec_class(user_id, cnt)
+        if cnt > 0:
+            self.add_or_update_card_by_spec(card_spec)
+        else:
+            self.remove_card_by_spec_if_exists(card_spec)
+
+    on_user_followers_requested_count_change_sync_card = partialmethod(
+        on_user_count_change_sync_card, 'followersRequestedCount', specs.RequestedFollowersCardSpec,
+    )
+    on_user_chats_with_unviewed_messages_count_change_sync_card = partialmethod(
+        on_user_count_change_sync_card, 'chatsWithUnviewedMessagesCount', specs.ChatCardSpec,
+    )
+
+    def on_post_view_count_change_update_cards(self, post_id, new_item, old_item=None):
+        if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):
+            return  # view count did not increase
+
+        _, viewed_by_user_id = new_item['sortKey'].split('/')
+        post = self.post_manager.get_post(post_id)
+        if not post or post.user_id != viewed_by_user_id:
+            return  # not viewed by post owner
+
+        self.remove_card_by_spec_if_exists(specs.CommentCardSpec(post.user_id, post.id))
+        self.remove_card_by_spec_if_exists(specs.PostLikesCardSpec(post.user_id, post.id))
+        self.remove_card_by_spec_if_exists(specs.PostViewsCardSpec(post.user_id, post.id))
+
+    def on_post_comments_unviewed_count_change_update_card(self, post_id, new_item, old_item=None):
+        new_cnt = new_item.get('commentsUnviewedCount', 0)
+        user_id = new_item['postedByUserId']
+        card_spec = specs.CommentCardSpec(user_id, post_id, unviewed_comments_count=new_cnt)
+        if new_cnt > 0:
+            self.add_or_update_card_by_spec(card_spec)
+        else:
+            self.remove_card_by_spec_if_exists(card_spec)
+
+    def on_post_likes_count_change_update_card(self, post_id, new_item, old_item=None):
+        new_cnt = new_item.get('onymousLikeCount', 0) + new_item.get('anonymousLikeCount', 0)
+        # post likes card should be created on any new like up to but not including the 10th like
+        if 0 < new_cnt < 10:
+            user_id = new_item['postedByUserId']
+            card_spec = specs.PostLikesCardSpec(user_id, post_id)
+            self.add_or_update_card_by_spec(card_spec)
+
+    def on_post_viewed_by_count_change_update_card(self, post_id, new_item, old_item=None):
+        new_cnt = new_item.get('viewedByCount', 0)
+        old_cnt = (old_item or {}).get('viewedByCount', 0)
+        # post views card should only be created once per post, when it goes over 5 views
+        if new_cnt > 5 and old_cnt <= 5:
+            user_id = new_item['postedByUserId']
+            card_spec = specs.PostViewsCardSpec(user_id, post_id)
+            self.add_or_update_card_by_spec(card_spec)

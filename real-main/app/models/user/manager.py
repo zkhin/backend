@@ -7,7 +7,6 @@ from functools import partialmethod
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
-from app.models.card.specs import ChatCardSpec, RequestedFollowersCardSpec
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
@@ -85,7 +84,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'trending_dynamo': getattr(self, 'trending_dynamo', None),
             'album_manager': getattr(self, 'album_manager', None),
             'block_manager': getattr(self, 'block_manager', None),
-            'card_manager': getattr(self, 'card_manager', None),
             'chat_manager': getattr(self, 'chat_manager', None),
             'comment_manager': getattr(self, 'comment_manager', None),
             'follower_manager': getattr(self, 'follower_manager', None),
@@ -232,11 +230,11 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.dynamo.decrement_comment_count(user_id)
         self.dynamo.increment_comment_deleted_count(user_id)
 
-    def on_card_add(self, card_id, new_item):
+    def on_card_add_increment_count(self, card_id, new_item):
         card = self.card_manager.init_card(new_item)
         self.dynamo.increment_card_count(card.user_id)
 
-    def on_card_delete(self, card_id, old_item):
+    def on_card_delete_decrement_count(self, card_id, old_item):
         card = self.card_manager.init_card(old_item)
         self.dynamo.decrement_card_count(card.user_id)
 
@@ -257,21 +255,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     )
     sync_user_status_due_to_posts = partialmethod(
         sync_user_status_due_to, 'is_forced_disabling_criteria_met_by_posts', 'posts'
-    )
-
-    def sync_card_with_count(self, dynamo_attr, card_spec_class, user_id, new_item, old_item=None):
-        cnt = new_item.get(dynamo_attr, 0)
-        card_spec = card_spec_class(user_id, cnt)
-        if cnt > 0:
-            self.card_manager.add_or_update_card_by_spec(card_spec)
-        else:
-            self.card_manager.remove_card_by_spec_if_exists(card_spec)
-
-    sync_requested_followers_card = partialmethod(
-        sync_card_with_count, 'followersRequestedCount', RequestedFollowersCardSpec
-    )
-    sync_chats_with_new_messages_card = partialmethod(
-        sync_card_with_count, 'chatsWithUnviewedMessagesCount', ChatCardSpec
     )
 
     def sync_elasticsearch(self, user_id, new_item, old_item=None):

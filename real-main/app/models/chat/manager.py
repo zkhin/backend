@@ -25,7 +25,6 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         managers = managers or {}
         managers['chat'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
-        self.card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
         self.chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(
             clients, managers=managers
         )

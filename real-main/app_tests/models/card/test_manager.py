@@ -236,32 +236,6 @@ def test_comment_cards_are_per_post(user, card_manager, comment_card_spec1, comm
     assert card_manager.get_card(spec2.card_id)
 
 
-def test_truncate_cards(card_manager, user):
-    # verify starting state
-    assert list(card_manager.dynamo.generate_cards_by_user(user.id)) == []
-
-    # test truncate with no cards
-    card_manager.truncate_cards(user.id)
-    assert list(card_manager.dynamo.generate_cards_by_user(user.id)) == []
-
-    # add two cards
-    card_id_1, card_id_2 = 'cid1', 'cid2'
-    card_manager.add_card(user.id, 't1', 'https://a1', card_id=card_id_1)
-    card_manager.add_card(user.id, 't2', 'https://a1', card_id=card_id_2)
-
-    # verify we see those cards
-    cards = list(card_manager.dynamo.generate_cards_by_user(user.id))
-    assert len(cards) == 2
-    assert cards[0]['partitionKey'] == 'card/cid1'
-    assert cards[1]['partitionKey'] == 'card/cid2'
-
-    # test truncate the cards, verify they have disappeared but user count is unchanged
-    card_manager.truncate_cards(user.id)
-    assert list(card_manager.dynamo.generate_cards_by_user(user.id)) == []
-    assert card_manager.get_card(card_id_1) is None
-    assert card_manager.get_card(card_id_2) is None
-
-
 def test_notify_users(card_manager, pinpoint_client, user, user2):
     # configure mock to claim all apns-sending attempts succeeded
     pinpoint_client.configure_mock(**{'send_user_apns.return_value': True})
