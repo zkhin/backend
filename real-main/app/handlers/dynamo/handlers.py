@@ -101,6 +101,7 @@ register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts
 register('post', '-', ['REMOVE'], post_manager.on_delete)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_flags)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_views)
+register('post', 'feed', ['INSERT'], feed_manager.fire_gql_subscription_user_feed_post_added)
 register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)

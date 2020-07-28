@@ -18,9 +18,9 @@ def test_build_pk(feed_dynamo):
 
 
 def test_parse_pk(feed_dynamo):
-    user_id, post_id = feed_dynamo.parse_pk({'partitionKey': 'post/pid', 'sortKey': 'feed/uid'})
-    assert user_id == 'uid'
+    post_id, user_id = feed_dynamo.parse_pk({'partitionKey': 'post/pid', 'sortKey': 'feed/uid'})
     assert post_id == 'pid'
+    assert user_id == 'uid'
 
 
 def test_build_item(feed_dynamo):
@@ -255,10 +255,10 @@ def test_generate_feed_pks_by_posted_by_user(feed_dynamo):
 
     # verify we can generate items in the feed by who posted them
     feed_pk_gen = feed_dynamo.generate_feed_pks_by_posted_by_user(feed_user_id, pb_user_id_1)
-    assert sorted([feed_dynamo.parse_pk(fpk)[1] for fpk in feed_pk_gen]) == ['pid1', 'pid3']
+    assert sorted([feed_dynamo.parse_pk(fpk)[0] for fpk in feed_pk_gen]) == ['pid1', 'pid3']
 
     feed_pk_gen = feed_dynamo.generate_feed_pks_by_posted_by_user(feed_user_id, pb_user_id_2)
-    assert [feed_dynamo.parse_pk(fpk)[1] for fpk in feed_pk_gen] == ['pid2']
+    assert [feed_dynamo.parse_pk(fpk)[0] for fpk in feed_pk_gen] == ['pid2']
 
     # check we correctly handle a user that has posted no posts to the feed
     assert list(feed_dynamo.generate_feed_pks_by_posted_by_user(feed_user_id, 'other-uid')) == []

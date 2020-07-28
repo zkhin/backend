@@ -186,7 +186,7 @@ def comment_manager(dynamo_client, user_manager, appsync_client):
 
 @pytest.fixture
 def feed_manager(dynamo_client):
-    yield models.FeedManager({'dynamo': dynamo_client})
+    yield models.FeedManager({'appsync': appsync_client, 'dynamo': dynamo_client})
 
 
 @pytest.fixture

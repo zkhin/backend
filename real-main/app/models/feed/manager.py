@@ -4,6 +4,7 @@ import logging
 from app import models
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
+from app.utils import GqlNotificationType
 
 from .dynamo import FeedDynamo
 
@@ -18,6 +19,8 @@ class FeedManager:
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
         self.clients = clients
+        if 'appsync' in clients:
+            self.appsync_client = clients['appsync']
         if 'dynamo' in clients:
             self.dynamo = FeedDynamo(clients['dynamo'])
 
@@ -46,3 +49,9 @@ class FeedManager:
             self.add_post_to_followers_feeds(posted_by_user_id, new_item)
         else:
             self.dynamo.delete_by_post(post_id)
+
+    def fire_gql_subscription_user_feed_post_added(self, user_id, new_item):
+        post_id, user_id = self.dynamo.parse_pk(new_item)
+        self.appsync_client.fire_notification(
+            user_id, GqlNotificationType.USER_FEED_POST_ADDED, postId=post_id, postedAt=new_item['gsiA1SortKey'],
+        )

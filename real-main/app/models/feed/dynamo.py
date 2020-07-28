@@ -13,7 +13,7 @@ class FeedDynamo:
     def parse_pk(self, pk):
         post_id = pk['partitionKey'].split('/')[1]
         feed_user_id = pk['sortKey'].split('/')[1]
-        return feed_user_id, post_id
+        return post_id, feed_user_id
 
     def build_item(self, feed_user_id, post_item):
         "Build a feed item for given user's feed"

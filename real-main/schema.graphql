@@ -273,19 +273,30 @@ type Notification {
 
   # Each of the following fields will be non-null only for some NotificationTypes,
   # exactly which is listed in the comments for the NotificationType
+  postedAt: AWSDateTime
+  postId: ID
   userChatsWithUnviewedMessagesCount: Int
 }
 
+# USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
+#   - fires when User.chatsWithUnviewedMessagesCount changes
+#   - Notification.userChatsWithUnviewedMessagesCount: the new value
+#
+# USER_FEED_POST_ADDED
+#   - fires when a post is added to User.feed
+#   - Notification.postId: the id of the post that was added
+#   - Notification.postedAt: the postedAt timestamp of the post that was added
 enum NotificationType {
-  # Fires when User.chatsWithUnviewedMessagesCount changes
-  #   - Notification.userChatsWithUnviewedMessagesCount: the new value
   USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
+  USER_FEED_POST_ADDED
 }
 
 input NotificationInput {
   # Used internally to get AppSync to send notifications over GQL subscriptiosn
   userId: ID!  # user this notification is intended for
   type: NotificationType!
+  postedAt: AWSDateTime
+  postId: ID
   userChatsWithUnviewedMessagesCount: Int
 }
 

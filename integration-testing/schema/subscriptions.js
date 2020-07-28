@@ -7,6 +7,8 @@ module.exports.onNotification = gql`
     onNotification(userId: $userId) {
       userId
       type
+      postedAt
+      postId
       userChatsWithUnviewedMessagesCount
     }
   }
