@@ -1,54 +1,8 @@
-import re
-
 import pendulum
-
-from .exceptions import MalformedCardId
 
 
 class CardSpec:
-
-    chat_card_id_re = r'^(?P<user_id>[\w:-]+):CHAT_ACTIVITY$'
-    comment_card_id_re = r'^(?P<user_id>[\w:-]+):COMMENT_ACTIVITY:(?P<post_id>[\w-]+)$'
-    post_likes_card_id_re = r'^(?P<user_id>[\w:-]+):POST_LIKES:(?P<post_id>[\w-]+)$'
-    post_views_card_id_re = r'^(?P<user_id>[\w:-]+):POST_VIEWS:(?P<post_id>[\w-]+)$'
-    requested_followers_card_id_re = r'^(?P<user_id>[\w:-]+):REQUESTED_FOLLOWERS$'
-
-    @classmethod
-    def from_card_id(cls, card_id):
-        if not card_id:
-            return None
-
-        if 'CHAT_ACTIVITY' in card_id:
-            m = re.search(cls.chat_card_id_re, card_id)
-            if not m:
-                raise MalformedCardId(card_id)
-            return ChatCardSpec(m.group('user_id'))
-
-        if 'COMMENT_ACTIVITY' in card_id:
-            m = re.search(cls.comment_card_id_re, card_id)
-            if not m:
-                raise MalformedCardId(card_id)
-            return CommentCardSpec(m.group('user_id'), m.group('post_id'))
-
-        if 'POST_LIKES' in card_id:
-            m = re.search(cls.post_likes_card_id_re, card_id)
-            if not m:
-                raise MalformedCardId(card_id)
-            return PostLikesCardSpec(m.group('user_id'), m.group('post_id'))
-
-        if 'POST_VIEWS' in card_id:
-            m = re.search(cls.post_views_card_id_re, card_id)
-            if not m:
-                raise MalformedCardId(card_id)
-            return PostViewsCardSpec(m.group('user_id'), m.group('post_id'))
-
-        if 'REQUESTED_FOLLOWERS' in card_id:
-            m = re.search(cls.requested_followers_card_id_re, card_id)
-            if not m:
-                raise MalformedCardId(card_id)
-            return RequestedFollowersCardSpec(m.group('user_id'))
-
-        return None
+    pass
 
 
 class ChatCardSpec(CardSpec):

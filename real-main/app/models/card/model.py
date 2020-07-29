@@ -1,13 +1,15 @@
 import logging
+import re
 
 import pendulum
 
-from .specs import CardSpec
+from . import specs
+from .exceptions import MalformedCardId
 
 logger = logging.getLogger()
 
 
-class Card:
+class BaseCard:
     def __init__(
         self, item, appsync=None, dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None,
     ):
@@ -22,7 +24,6 @@ class Card:
         self.id = item['partitionKey'][len('card/') :]
         self.user_id = item['gsiA1PartitionKey'][len('user/') :]
         self.created_at = pendulum.parse(item['gsiA1SortKey'][len('card/') :])
-        self.spec = CardSpec.from_card_id(self.id)
         self.action = item['action']
 
     @property
@@ -34,7 +35,7 @@ class Card:
     @property
     def post(self):
         if not hasattr(self, '_post'):
-            post_id = self.spec.post_id if self.spec else None
+            post_id = getattr(self, 'post_id', None)
             self._post = self.post_manager.get_post(post_id) if post_id else None
         return self._post
 
@@ -48,7 +49,7 @@ class Card:
 
     @property
     def has_thumbnail(self):
-        return bool(self.spec and self.spec.post_id)
+        return hasattr(self, 'post_id')
 
     @property
     def notify_user_at(self):
@@ -83,3 +84,61 @@ class Card:
     def delete(self):
         self.dynamo.delete_card(self.id)
         return self
+
+
+class ChatCard(BaseCard):
+    card_id_re = r'^(?P<user_id>[\w:-]+):CHAT_ACTIVITY$'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        m = re.search(self.card_id_re, self.id)
+        if not m or m.group('user_id') != self.user_id:
+            raise MalformedCardId(self.id)
+        self.spec = specs.ChatCardSpec(self.user_id)
+
+
+class CommentCard(BaseCard):
+    card_id_re = r'^(?P<user_id>[\w:-]+):COMMENT_ACTIVITY:(?P<post_id>[\w-]+)$'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        m = re.search(self.card_id_re, self.id)
+        if not m or m.group('user_id') != self.user_id:
+            raise MalformedCardId(self.id)
+        self.post_id = m.group('post_id')
+        self.spec = specs.CommentCardSpec(self.user_id, self.post_id)
+
+
+class PostLikesCard(BaseCard):
+    card_id_re = r'^(?P<user_id>[\w:-]+):POST_LIKES:(?P<post_id>[\w-]+)$'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        m = re.search(self.card_id_re, self.id)
+        if not m or m.group('user_id') != self.user_id:
+            raise MalformedCardId(self.id)
+        self.post_id = m.group('post_id')
+        self.spec = specs.PostLikesCardSpec(self.user_id, self.post_id)
+
+
+class PostViewsCard(BaseCard):
+    card_id_re = r'^(?P<user_id>[\w:-]+):POST_VIEWS:(?P<post_id>[\w-]+)$'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        m = re.search(self.card_id_re, self.id)
+        if not m or m.group('user_id') != self.user_id:
+            raise MalformedCardId(self.id)
+        self.post_id = m.group('post_id')
+        self.spec = specs.PostViewsCardSpec(self.user_id, self.post_id)
+
+
+class RequestedFollowersCard(BaseCard):
+    card_id_re = r'^(?P<user_id>[\w:-]+):REQUESTED_FOLLOWERS$'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        m = re.search(self.card_id_re, self.id)
+        if not m or m.group('user_id') != self.user_id:
+            raise MalformedCardId(self.id)
+        self.spec = specs.RequestedFollowersCardSpec(self.user_id)

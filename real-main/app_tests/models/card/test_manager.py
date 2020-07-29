@@ -5,8 +5,8 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card import specs
-from app.models.card.exceptions import CardAlreadyExists
+from app.models.card import model, specs
+from app.models.card.exceptions import CardAlreadyExists, MalformedCardId
 from app.models.post.enums import PostType
 
 
@@ -53,6 +53,68 @@ def post_views_card_spec(user, post):
 
 post1 = post
 post2 = post
+
+
+@pytest.mark.parametrize(
+    'card_id, klass',
+    (
+        ('...:CHAT_ACTIVITY', model.ChatCard),
+        ('...:COMMENT_ACTIVITY:...', model.CommentCard),
+        ('...:POST_LIKES:...', model.PostLikesCard),
+        ('...:POST_VIEWS:...', model.PostViewsCard),
+        ('...:REQUESTED_FOLLOWERS', model.RequestedFollowersCard),
+        ('...', model.BaseCard),
+    ),
+)
+def test_get_card_class(card_manager, card_id, klass):
+    assert card_manager.get_card_class(card_id) is klass
+
+
+@pytest.mark.parametrize(
+    'card_id, klass, user_id, post_id',
+    (
+        ('uid:CHAT_ACTIVITY', model.ChatCard, 'uid', None),
+        ('uid:COMMENT_ACTIVITY:pid', model.CommentCard, 'uid', 'pid'),
+        ('uid:POST_LIKES:pid', model.PostLikesCard, 'uid', 'pid'),
+        ('uid:POST_VIEWS:pid', model.PostViewsCard, 'uid', 'pid'),
+        ('uid:REQUESTED_FOLLOWERS', model.RequestedFollowersCard, 'uid', None),
+        ('blah', model.BaseCard, 'uid', None),
+    ),
+)
+def test_init_card(card_manager, card_id, klass, user_id, post_id):
+    item = {
+        **card_manager.dynamo.pk(card_id),
+        'gsiA1PartitionKey': f'user/{user_id}',
+        'gsiA1SortKey': 'card/2020-01-01',
+        'action': 'https://action',
+    }
+    card = card_manager.init_card(item)
+    assert type(card) == klass
+    if user_id:
+        assert card.user_id == user_id
+    if post_id:
+        assert card.post_id == post_id
+
+
+@pytest.mark.parametrize(
+    'card_id, klass, user_id',
+    (
+        ('uidddd:CHAT_ACTIVITY', model.ChatCard, 'uid'),
+        ('COMMENT_ACTIVITY:pid', model.CommentCard, 'uid'),
+        ('uid:POST_LIKESpid', model.PostLikesCard, 'uid'),
+        ('uidPOST_VIEWSpid', model.PostViewsCard, 'uid'),
+        ('uxxid:REQUESTED_FOLLOWERS', model.RequestedFollowersCard, 'uid'),
+    ),
+)
+def test_init_card_malformed_card_id(card_manager, card_id, klass, user_id):
+    item = {
+        **card_manager.dynamo.pk(card_id),
+        'gsiA1PartitionKey': f'user/{user_id}',
+        'gsiA1SortKey': 'card/2020-01-01',
+        'action': 'https://action',
+    }
+    with pytest.raises(MalformedCardId):
+        card_manager.init_card(item)
 
 
 def test_add_card_minimal(card_manager, user):

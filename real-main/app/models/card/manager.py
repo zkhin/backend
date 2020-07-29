@@ -6,12 +6,11 @@ import pendulum
 
 from app import models
 
-from . import specs
+from . import model, specs
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
 from .enums import CardNotificationType
 from .exceptions import CardAlreadyExists
-from .model import Card
 
 logger = logging.getLogger()
 
@@ -34,7 +33,22 @@ class CardManager:
         item = self.dynamo.get_card(card_id, strongly_consistent=strongly_consistent)
         return self.init_card(item) if item else None
 
+    def get_card_class(self, card_id):
+        if 'CHAT_ACTIVITY' in card_id:
+            return model.ChatCard
+        if 'COMMENT_ACTIVITY' in card_id:
+            return model.CommentCard
+        if 'POST_LIKES' in card_id:
+            return model.PostLikesCard
+        if 'POST_VIEWS' in card_id:
+            return model.PostViewsCard
+        if 'REQUESTED_FOLLOWERS' in card_id:
+            return model.RequestedFollowersCard
+        return model.BaseCard
+
     def init_card(self, item):
+        card_id = item['partitionKey'].split('/')[1]
+        klass = self.get_card_class(card_id)
         kwargs = {
             'appsync': getattr(self, 'appsync', None),
             'dynamo': getattr(self, 'dynamo', None),
@@ -42,7 +56,7 @@ class CardManager:
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
         }
-        return Card(item, **kwargs)
+        return klass(item, **kwargs)
 
     def add_card(
         self, user_id, title, action, card_id=None, sub_title=None, created_at=None, notify_user_at=None
