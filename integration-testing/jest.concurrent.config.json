@@ -1,5 +1,5 @@
 {
-  "maxWorkers": 7,
+  "maxWorkers": 10,
   "testRegex": "/tests/.*\\.test\\.js$",
   "testPathIgnorePatterns": ["\\.sequential\\.test\\.js$"],
   "testTimeout": 60000
