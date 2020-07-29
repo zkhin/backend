@@ -19,20 +19,20 @@ def user(user_manager, cognito_client):
 @pytest.fixture
 def chat_card_template(card_manager, user):
     template = templates.ChatCardTemplate(user.id, chats_with_unviewed_messages_count=2)
-    card_manager.add_or_update_card_by_template(template)
+    card_manager.add_or_update_card(template)
     yield template
 
 
 @pytest.fixture
 def requested_followers_card_template(card_manager, user):
     template = templates.RequestedFollowersCardTemplate(user.id, requested_followers_count=3)
-    card_manager.add_or_update_card_by_template(template)
+    card_manager.add_or_update_card(template)
     yield template
 
 
 @pytest.fixture
-def card(user, card_manager):
-    yield card_manager.add_card(user.id, 'card title', 'https://action')
+def card(user, card_manager, TestCardTemplate):
+    yield card_manager.add_or_update_card(TestCardTemplate(user.id, title='card title', action='https://action'))
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def post(post_manager, user):
 @pytest.fixture
 def comment_card_template(card_manager, post):
     template = templates.CommentCardTemplate(post.user_id, post.id, unviewed_comments_count=42)
-    card_manager.add_or_update_card_by_template(template)
+    card_manager.add_or_update_card(template)
     yield template
 
 
@@ -51,7 +51,7 @@ def comment_card_template(card_manager, post):
 def post_likes_card_template(card_manager, post):
     template = templates.PostLikesCardTemplate(post.user_id, post.id)
     with patch.object(template, 'only_usernames', []):
-        card_manager.add_or_update_card_by_template(template)
+        card_manager.add_or_update_card(template)
     yield template
 
 
@@ -59,7 +59,7 @@ def post_likes_card_template(card_manager, post):
 def post_views_card_template(card_manager, post):
     template = templates.PostViewsCardTemplate(post.user_id, post.id)
     with patch.object(template, 'only_usernames', []):
-        card_manager.add_or_update_card_by_template(template)
+        card_manager.add_or_update_card(template)
     yield template
 
 
@@ -186,7 +186,7 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_te
 
     # refresh with None
     with patch.object(card_manager, 'dynamo') as dynamo_mock:
-        with patch.object(card_manager, 'add_or_update_card_by_template') as add_update_mock:
+        with patch.object(card_manager, 'add_or_update_card') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
     assert dynamo_mock.mock_calls == [call.delete_card(card_id)]
     assert add_update_mock.call_count == 0
@@ -194,7 +194,7 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_te
     # refresh with zero
     user.item[dynamo_attribute] = 0
     with patch.object(card_manager, 'dynamo') as dynamo_mock:
-        with patch.object(card_manager, 'add_or_update_card_by_template') as add_update_mock:
+        with patch.object(card_manager, 'add_or_update_card') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
     assert dynamo_mock.mock_calls == [call.delete_card(card_id)]
     assert add_update_mock.call_count == 0
@@ -202,7 +202,7 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_te
     # refresh with one
     user.item[dynamo_attribute] = 1
     with patch.object(card_manager, 'dynamo') as dynamo_mock:
-        with patch.object(card_manager, 'add_or_update_card_by_template') as add_update_mock:
+        with patch.object(card_manager, 'add_or_update_card') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
     assert dynamo_mock.mock_calls == []
     card_template = add_update_mock.call_args.args[0]
@@ -213,7 +213,7 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_te
     # refresh with two
     user.item[dynamo_attribute] = 2
     with patch.object(card_manager, 'dynamo') as dynamo_mock:
-        with patch.object(card_manager, 'add_or_update_card_by_template') as add_update_mock:
+        with patch.object(card_manager, 'add_or_update_card') as add_update_mock:
             getattr(card_manager, method_name)(user.id, user.item, user.item)
     assert dynamo_mock.mock_calls == []
     card_template = add_update_mock.call_args.args[0]

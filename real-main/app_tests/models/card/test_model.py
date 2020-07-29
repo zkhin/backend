@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import call, patch
 from uuid import uuid4
 
 import pendulum
@@ -6,7 +6,6 @@ import pytest
 
 from app.models.card.templates import CommentCardTemplate
 from app.models.post.enums import PostType
-from app.utils import image_size
 
 
 @pytest.fixture
@@ -17,8 +16,8 @@ def user(user_manager, cognito_client):
 
 
 @pytest.fixture
-def card(user, card_manager):
-    yield card_manager.add_card(user.id, 'card title', 'https://action')
+def card(user, card_manager, TestCardTemplate):
+    yield card_manager.add_or_update_card(TestCardTemplate(user.id, title='card title', action='https://action'))
 
 
 @pytest.fixture
@@ -28,9 +27,14 @@ def post(user, post_manager):
 
 @pytest.fixture
 def comment_card(user, card_manager, post):
-    yield card_manager.add_or_update_card_by_template(
-        CommentCardTemplate(user.id, post.id, unviewed_comments_count=42)
-    )
+    yield card_manager.add_or_update_card(CommentCardTemplate(user.id, post.id, unviewed_comments_count=42))
+
+
+def test_post_id(card, comment_card, post):
+    assert comment_card.post_id == post.id
+    assert card.post_id is None
+    with patch.object(card, 'id', f'{post.user_id}:BLAH_BLAH:{post.id}'):
+        assert card.post_id == post.id
 
 
 def test_serialize(user, card):
@@ -50,9 +54,11 @@ def test_serialize(user, card):
     assert resp['subTitle'] == card.item['subTitle']
 
 
-def test_clear_notify_user_at(user, card_manager):
+def test_clear_notify_user_at(user, card_manager, TestCardTemplate):
     # create a card with a notify_user_at, verify
-    card = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=pendulum.now('utc'))
+    card = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t', action='a', notify_user_after=pendulum.duration())
+    )
     assert card.notify_user_at
 
     # clear it, verify
@@ -79,21 +85,6 @@ def test_delete(card, user):
     assert card.dynamo.get_card(card.id)
     card.delete()
     assert card.dynamo.get_card(card.id) is None
-
-
-def test_get_image_url(card, post, comment_card):
-    assert card.post is None
-    assert card.has_thumbnail is False
-    assert card.get_image_url(image_size.NATIVE) is None
-
-    assert comment_card.post
-    assert comment_card.post.id == post.id
-    assert comment_card.has_thumbnail is True
-
-    mocked_url = 'https://' + str(uuid4())
-    comment_card._post = Mock(**{'get_image_readonly_url.return_value': mocked_url})
-    assert comment_card.get_image_url('whatevs') == mocked_url
-    assert comment_card.post.mock_calls == [call.get_image_readonly_url('whatevs')]
 
 
 def test_trigger_notification(card, user):

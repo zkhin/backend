@@ -1,15 +1,11 @@
 import logging
-import re
 
 import pendulum
-
-from . import templates
-from .exceptions import MalformedCardId
 
 logger = logging.getLogger()
 
 
-class BaseCard:
+class Card:
     def __init__(
         self, item, appsync=None, dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None,
     ):
@@ -27,16 +23,25 @@ class BaseCard:
         self.action = item['action']
 
     @property
+    def post_id(self):
+        if 'postId' in self.item:
+            return self.item['postId']
+        # Backward compatibility for old cards that had did not have an explicit postId attribute.
+        # They only had the postId embedded in the cardId.
+        # Once all those old cards have disappeared from DB, this can be removed.
+        parts = self.id.split(':')
+        return parts[2] if len(parts) > 2 else None
+
+    @property
     def user(self):
         if not hasattr(self, '_user'):
-            self._user = self.user_manager.get_user(self.user_id) if self.user_id else None
+            self._user = self.user_manager.get_user(self.user_id)
         return self._user
 
     @property
     def post(self):
         if not hasattr(self, '_post'):
-            post_id = getattr(self, 'post_id', None)
-            self._post = self.post_manager.get_post(post_id) if post_id else None
+            self._post = self.post_manager.get_post(self.post_id) if self.post_id else None
         return self._post
 
     @property
@@ -46,10 +51,6 @@ class BaseCard:
     @property
     def sub_title(self):
         return self.item.get('subTitle')
-
-    @property
-    def has_thumbnail(self):
-        return hasattr(self, 'post_id')
 
     @property
     def notify_user_at(self):
@@ -63,9 +64,6 @@ class BaseCard:
         resp = self.item.copy()
         resp['cardId'] = self.id
         return resp
-
-    def get_image_url(self, size):
-        return self.post.get_image_readonly_url(size) if self.post else None
 
     def trigger_notification(self, notification_type):
         self.appsync.trigger_notification(
@@ -84,61 +82,3 @@ class BaseCard:
     def delete(self):
         self.dynamo.delete_card(self.id)
         return self
-
-
-class ChatCard(BaseCard):
-    card_id_re = r'^(?P<user_id>[\w:-]+):CHAT_ACTIVITY$'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        m = re.search(self.card_id_re, self.id)
-        if not m or m.group('user_id') != self.user_id:
-            raise MalformedCardId(self.id)
-        self.template = templates.ChatCardTemplate(self.user_id)
-
-
-class CommentCard(BaseCard):
-    card_id_re = r'^(?P<user_id>[\w:-]+):COMMENT_ACTIVITY:(?P<post_id>[\w-]+)$'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        m = re.search(self.card_id_re, self.id)
-        if not m or m.group('user_id') != self.user_id:
-            raise MalformedCardId(self.id)
-        self.post_id = m.group('post_id')
-        self.template = templates.CommentCardTemplate(self.user_id, self.post_id)
-
-
-class PostLikesCard(BaseCard):
-    card_id_re = r'^(?P<user_id>[\w:-]+):POST_LIKES:(?P<post_id>[\w-]+)$'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        m = re.search(self.card_id_re, self.id)
-        if not m or m.group('user_id') != self.user_id:
-            raise MalformedCardId(self.id)
-        self.post_id = m.group('post_id')
-        self.template = templates.PostLikesCardTemplate(self.user_id, self.post_id)
-
-
-class PostViewsCard(BaseCard):
-    card_id_re = r'^(?P<user_id>[\w:-]+):POST_VIEWS:(?P<post_id>[\w-]+)$'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        m = re.search(self.card_id_re, self.id)
-        if not m or m.group('user_id') != self.user_id:
-            raise MalformedCardId(self.id)
-        self.post_id = m.group('post_id')
-        self.template = templates.PostViewsCardTemplate(self.user_id, self.post_id)
-
-
-class RequestedFollowersCard(BaseCard):
-    card_id_re = r'^(?P<user_id>[\w:-]+):REQUESTED_FOLLOWERS$'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        m = re.search(self.card_id_re, self.id)
-        if not m or m.group('user_id') != self.user_id:
-            raise MalformedCardId(self.id)
-        self.template = templates.RequestedFollowersCardTemplate(self.user_id)

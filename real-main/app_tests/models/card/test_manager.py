@@ -5,8 +5,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card import model, templates
-from app.models.card.exceptions import CardAlreadyExists, MalformedCardId
+from app.models.card import templates
 from app.models.post.enums import PostType
 
 
@@ -56,132 +55,16 @@ post2 = post
 
 
 @pytest.mark.parametrize(
-    'card_id, klass',
-    (
-        ('...:CHAT_ACTIVITY', model.ChatCard),
-        ('...:COMMENT_ACTIVITY:...', model.CommentCard),
-        ('...:POST_LIKES:...', model.PostLikesCard),
-        ('...:POST_VIEWS:...', model.PostViewsCard),
-        ('...:REQUESTED_FOLLOWERS', model.RequestedFollowersCard),
-        ('...', model.BaseCard),
-    ),
-)
-def test_get_card_class(card_manager, card_id, klass):
-    assert card_manager.get_card_class(card_id) is klass
-
-
-@pytest.mark.parametrize(
-    'card_id, klass, user_id, post_id',
-    (
-        ('uid:CHAT_ACTIVITY', model.ChatCard, 'uid', None),
-        ('uid:COMMENT_ACTIVITY:pid', model.CommentCard, 'uid', 'pid'),
-        ('uid:POST_LIKES:pid', model.PostLikesCard, 'uid', 'pid'),
-        ('uid:POST_VIEWS:pid', model.PostViewsCard, 'uid', 'pid'),
-        ('uid:REQUESTED_FOLLOWERS', model.RequestedFollowersCard, 'uid', None),
-        ('blah', model.BaseCard, 'uid', None),
-    ),
-)
-def test_init_card(card_manager, card_id, klass, user_id, post_id):
-    item = {
-        **card_manager.dynamo.pk(card_id),
-        'gsiA1PartitionKey': f'user/{user_id}',
-        'gsiA1SortKey': 'card/2020-01-01',
-        'action': 'https://action',
-    }
-    card = card_manager.init_card(item)
-    assert type(card) == klass
-    if user_id:
-        assert card.user_id == user_id
-    if post_id:
-        assert card.post_id == post_id
-
-
-@pytest.mark.parametrize(
-    'card_id, klass, user_id',
-    (
-        ('uidddd:CHAT_ACTIVITY', model.ChatCard, 'uid'),
-        ('COMMENT_ACTIVITY:pid', model.CommentCard, 'uid'),
-        ('uid:POST_LIKESpid', model.PostLikesCard, 'uid'),
-        ('uidPOST_VIEWSpid', model.PostViewsCard, 'uid'),
-        ('uxxid:REQUESTED_FOLLOWERS', model.RequestedFollowersCard, 'uid'),
-    ),
-)
-def test_init_card_malformed_card_id(card_manager, card_id, klass, user_id):
-    item = {
-        **card_manager.dynamo.pk(card_id),
-        'gsiA1PartitionKey': f'user/{user_id}',
-        'gsiA1SortKey': 'card/2020-01-01',
-        'action': 'https://action',
-    }
-    with pytest.raises(MalformedCardId):
-        card_manager.init_card(item)
-
-
-def test_add_card_minimal(card_manager, user):
-    # add card
-    before = pendulum.now('utc')
-    title, action = 'card title', 'https://action'
-    card = card_manager.add_card(user.id, title, action)
-    after = pendulum.now('utc')
-
-    # check final state
-    assert card_manager.get_card(card.id)
-    assert before < card.created_at < after
-    assert card.user_id == user.id
-    assert card.item['title'] == title
-    assert card.item['action'] == action
-    assert 'subTitle' not in card.item
-
-    # verify can add another card with same title and action
-    assert card_manager.add_card(user.id, title, action)
-
-    # verify can't another card with same cardId
-    with pytest.raises(CardAlreadyExists):
-        card_manager.add_card(user.id, title, action, card.id)
-
-
-def test_add_card_maximal(card_manager, user):
-    card_id = 'cid'
-    title, sub_title, action = 'card title', 'sub', 'https://action'
-    created_at = pendulum.now('utc')
-    notify_user_at = pendulum.now('utc')
-
-    # check starting state
-    assert card_manager.get_card(card_id) is None
-
-    # add card, check format
-    card = card_manager.add_card(
-        user.id,
-        title,
-        action,
-        card_id=card_id,
-        sub_title=sub_title,
-        created_at=created_at,
-        notify_user_at=notify_user_at,
-    )
-    assert card.id == card_id
-    assert card.user_id == user.id
-    assert card.created_at == created_at
-    assert card.notify_user_at == notify_user_at
-    assert card.item['title'] == title
-    assert card.item['action'] == action
-    assert card.item['subTitle'] == sub_title
-
-    # check final state
-    assert card_manager.get_card(card.id)
-
-
-@pytest.mark.parametrize(
     'template',
     pytest.lazy_fixture(['chat_card_template', 'comment_card_template', 'requested_followers_card_template']),
 )
-def test_add_or_update_card_by_template(user, template, card_manager):
+def test_add_or_update_card(user, template, card_manager):
     # verify starting state
     assert card_manager.get_card(template.card_id) is None
 
     # add the card, verify state
     before = pendulum.now('utc')
-    card_manager.add_or_update_card_by_template(template)
+    card_manager.add_or_update_card(template)
     after = pendulum.now('utc')
     card = card_manager.get_card(template.card_id)
     assert card.id == template.card_id
@@ -193,30 +76,37 @@ def test_add_or_update_card_by_template(user, template, card_manager):
     else:
         assert card.notify_user_at is None
 
-    # add the card again, verify no-op
-    card_manager.add_or_update_card_by_template(template)
+    # try to add the card again with same title, verify no-op
+    card_manager.add_or_update_card(template)
     new_card = card_manager.get_card(template.card_id)
     assert new_card.id == template.card_id
-    assert new_card.item['title'] == template.title
-    assert new_card.item['action'] == template.action
-    assert new_card.created_at == card.created_at
+    assert new_card.item == card.item
+
+    # update the card with a new title
+    with patch.object(template, 'title', 'My new title'):
+        card_manager.add_or_update_card(template)
+    new_card = card_manager.get_card(template.card_id)
+    assert new_card.id == template.card_id
+    assert new_card.item.pop('title') == 'My new title'
+    new_card.item['title'] = card.item['title']
+    assert new_card.item == card.item
 
 
 @pytest.mark.parametrize(
     'template', pytest.lazy_fixture(['post_likes_card_template', 'post_views_card_template'])
 )
-def test_add_or_update_card_by_template_with_only_usernames(user, template, card_manager):
+def test_add_or_update_card_with_only_usernames(user, template, card_manager):
     # verify starting state
     assert card_manager.get_card(template.card_id) is None
 
     # verify the only_usernames prevents us from ading the card
-    assert card_manager.add_or_update_card_by_template(template) is None
+    assert card_manager.add_or_update_card(template) is None
     assert card_manager.get_card(template.card_id) is None
 
     # add the card, verify state
     before = pendulum.now('utc')
     with patch.object(template, 'only_usernames', (user.username,)):
-        assert card_manager.add_or_update_card_by_template(template)
+        assert card_manager.add_or_update_card(template)
     after = pendulum.now('utc')
     card = card_manager.get_card(template.card_id)
     assert card.id == template.card_id
@@ -230,7 +120,7 @@ def test_add_or_update_card_by_template_with_only_usernames(user, template, card
 
     # add the card again, verify no-op
     with patch.object(template, 'only_usernames', (user.username,)):
-        assert card_manager.add_or_update_card_by_template(template)
+        assert card_manager.add_or_update_card(template)
     new_card = card_manager.get_card(template.card_id)
     assert new_card.id == template.card_id
     assert new_card.item['title'] == template.title
@@ -243,7 +133,7 @@ def test_add_or_update_card_by_template_with_only_usernames(user, template, card
 
     # add the card again, this time with None for only_usernames
     with patch.object(template, 'only_usernames', None):
-        assert card_manager.add_or_update_card_by_template(template)
+        assert card_manager.add_or_update_card(template)
     assert card_manager.get_card(template.card_id)
 
 
@@ -256,12 +146,12 @@ def test_comment_cards_are_per_post(user, card_manager, post1, post2):
     assert card_manager.get_card(template2.card_id) is None
 
     # add the card, verify state
-    card_manager.add_or_update_card_by_template(template1)
+    card_manager.add_or_update_card(template1)
     assert card_manager.get_card(template1.card_id)
     assert card_manager.get_card(template2.card_id) is None
 
     # add the other card, verify state and no conflict
-    card_manager.add_or_update_card_by_template(template2)
+    card_manager.add_or_update_card(template2)
     assert card_manager.get_card(template1.card_id)
     assert card_manager.get_card(template2.card_id)
 
@@ -281,7 +171,7 @@ def test_delete_post_cards(
 
     # add them all to the DB, verify starting state
     for template in card_templates:
-        card_manager.add_or_update_card_by_template(template)
+        card_manager.add_or_update_card(template)
         assert card_manager.get_card(template.card_id)
 
     # delete them all, verify new state
@@ -295,14 +185,16 @@ def test_delete_post_cards(
         assert card_manager.get_card(template.card_id) is None
 
 
-def test_notify_users(card_manager, pinpoint_client, user, user2):
+def test_notify_users(card_manager, pinpoint_client, user, user2, TestCardTemplate):
     # configure mock to claim all apns-sending attempts succeeded
     pinpoint_client.configure_mock(**{'send_user_apns.return_value': True})
+    now = pendulum.now('utc')
 
     # add a card with a notification in the far future
-    notify_user_at1 = pendulum.now('utc') + pendulum.duration(hours=1)
-    card1 = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at1)
-    assert card1.notify_user_at == notify_user_at1
+    card1 = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t1', action='a1', notify_user_after=pendulum.duration(hours=1)), now=now,
+    )
+    assert card1.notify_user_at == now + pendulum.duration(hours=1)
 
     # run notificiations, verify none sent and no db changes
     cnts = card_manager.notify_users()
@@ -311,9 +203,11 @@ def test_notify_users(card_manager, pinpoint_client, user, user2):
     assert card1.item == card1.refresh_item().item
 
     # add another card with a notification in the immediate future
-    notify_user_at2 = pendulum.now('utc') + pendulum.duration(seconds=1)
-    card2 = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at2)
-    assert card2.notify_user_at == notify_user_at2
+    card2 = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t2', action='a2', notify_user_after=pendulum.duration(seconds=2)),
+        now=now,
+    )
+    assert card2.notify_user_at == now + pendulum.duration(seconds=2)
 
     # run notificiations, verify none sent and no db changes
     cnts = card_manager.notify_users()
@@ -323,35 +217,42 @@ def test_notify_users(card_manager, pinpoint_client, user, user2):
     assert card2.item == card2.refresh_item().item
 
     # add another card with a notification in the immediate past
-    notify_user_at3 = pendulum.now('utc')
-    card3 = card_manager.add_card(user.id, 'title3', 'https://action3', notify_user_at=notify_user_at3)
-    assert card3.notify_user_at == notify_user_at3
+    card3 = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t3', action='a3', notify_user_after=pendulum.duration()), now=now
+    )
+    assert card3.notify_user_at == now
 
     # run notificiations, verify one sent
     cnts = card_manager.notify_users()
     assert cnts == (1, 1)
     assert pinpoint_client.mock_calls == [
-        call.send_user_apns(user.id, 'https://action3', 'title3', body=None),
+        call.send_user_apns(user.id, 'a3', 't3', body=None),
     ]
     assert card1.item == card1.refresh_item().item
     assert card2.item == card2.refresh_item().item
     assert card3.refresh_item().notify_user_at is None
 
     # two cards with a notification in past
-    notify_user_at4 = pendulum.now('utc') - pendulum.duration(seconds=1)
-    notify_user_at5 = pendulum.now('utc') - pendulum.duration(hours=1)
-    card4 = card_manager.add_card(user.id, 'title4', 'https://a4', sub_title='s', notify_user_at=notify_user_at4)
-    card5 = card_manager.add_card(user2.id, 'title5', 'https://a5', notify_user_at=notify_user_at5)
-    assert card4.notify_user_at == notify_user_at4
-    assert card5.notify_user_at == notify_user_at5
+    card4 = card_manager.add_or_update_card(
+        TestCardTemplate(user2.id, title='t4', action='a4', notify_user_after=pendulum.duration(seconds=-1)),
+        now=now,
+    )
+    card5 = card_manager.add_or_update_card(
+        TestCardTemplate(
+            user.id, title='t5', action='a5', notify_user_after=pendulum.duration(hours=-1), sub_title='s'
+        ),
+        now=now,
+    )
+    assert card4.notify_user_at == now + pendulum.duration(seconds=-1)
+    assert card5.notify_user_at == now + pendulum.duration(hours=-1)
 
     # run notificiations, verify both sent
     pinpoint_client.reset_mock()
     cnts = card_manager.notify_users()
     assert cnts == (2, 2)
     assert pinpoint_client.mock_calls == [
-        call.send_user_apns(user2.id, 'https://a5', 'title5', body=None),
-        call.send_user_apns(user.id, 'https://a4', 'title4', body='s'),
+        call.send_user_apns(user.id, 'a5', 't5', body='s'),
+        call.send_user_apns(user2.id, 'a4', 't4', body=None),
     ]
     assert card1.item == card1.refresh_item().item
     assert card2.item == card2.refresh_item().item
@@ -359,11 +260,13 @@ def test_notify_users(card_manager, pinpoint_client, user, user2):
     assert card5.refresh_item().notify_user_at is None
 
 
-def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
+def test_notify_users_failed_notification(card_manager, pinpoint_client, user, TestCardTemplate):
     # add card with a notification in the immediate past
-    notify_user_at = pendulum.now('utc')
-    card = card_manager.add_card(user.id, 'title', 'https://action', notify_user_at=notify_user_at)
-    assert card.notify_user_at == notify_user_at
+    now = pendulum.now('utc')
+    card = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t', action='a', notify_user_after=pendulum.duration()), now=now,
+    )
+    assert card.notify_user_at == now
 
     # configure our mock to report a failed message send
     pinpoint_client.configure_mock(**{'send_user_apns.return_value': False})
@@ -371,9 +274,7 @@ def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
     # run notificiations, verify attempted send and correct DB changes upon failure
     cnts = card_manager.notify_users()
     assert cnts == (1, 0)
-    assert pinpoint_client.mock_calls == [
-        call.send_user_apns(user.id, 'https://action', 'title', body=None),
-    ]
+    assert pinpoint_client.mock_calls == [call.send_user_apns(user.id, 'a', 't', body=None)]
     org_item = card.item
     card.refresh_item()
     assert 'gsiK1PartitionKey' not in card.item
@@ -383,15 +284,20 @@ def test_notify_users_failed_notification(card_manager, pinpoint_client, user):
     assert card.item == org_item
 
 
-def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2, user3):
+def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2, user3, TestCardTemplate):
     # configure mock to claim all apns-sending attempts succeeded
     pinpoint_client.configure_mock(**{'send_user_apns.return_value': True})
 
     # add one notification for each user in immediate past, verify they're there
-    now = pendulum.now('utc')
-    card1 = card_manager.add_card(user.id, 't1', 'https://a1', notify_user_at=now - pendulum.duration(seconds=2))
-    card2 = card_manager.add_card(user2.id, 't2', 'https://a2', notify_user_at=now - pendulum.duration(seconds=1))
-    card3 = card_manager.add_card(user3.id, 't3', 'https://a3', notify_user_at=now)
+    card1 = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t1', action='a1', notify_user_after=pendulum.duration(seconds=-2)),
+    )
+    card2 = card_manager.add_or_update_card(
+        TestCardTemplate(user2.id, title='t2', action='a2', notify_user_after=pendulum.duration(seconds=-1)),
+    )
+    card3 = card_manager.add_or_update_card(
+        TestCardTemplate(user3.id, title='t3', action='a3', notify_user_after=pendulum.duration()),
+    )
     assert card1.refresh_item().notify_user_at
     assert card2.refresh_item().notify_user_at
     assert card3.refresh_item().notify_user_at
@@ -401,8 +307,8 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     cnts = card_manager.notify_users(only_usernames=[user.username, user3.username])
     assert cnts == (2, 2)
     assert pinpoint_client.mock_calls == [
-        call.send_user_apns(user.id, 'https://a1', 't1', body=None),
-        call.send_user_apns(user3.id, 'https://a3', 't3', body=None),
+        call.send_user_apns(user.id, 'a1', 't1', body=None),
+        call.send_user_apns(user3.id, 'a3', 't3', body=None),
     ]
     assert card1.refresh_item().notify_user_at is None
     assert card2.refresh_item().notify_user_at
@@ -411,8 +317,12 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     # re-add those cards for which we just sent notificaitons
     card_manager.dynamo.delete_card(card1.id)
     card_manager.dynamo.delete_card(card3.id)
-    card1 = card_manager.add_card(user.id, 't1', 'https://a1', notify_user_at=now - pendulum.duration(seconds=2))
-    card3 = card_manager.add_card(user3.id, 't3', 'https://a3', notify_user_at=now)
+    card1 = card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='t1', action='a1', notify_user_after=pendulum.duration(seconds=-2))
+    )
+    card3 = card_manager.add_or_update_card(
+        TestCardTemplate(user3.id, title='t3', action='a3', notify_user_after=pendulum.duration())
+    )
     assert card1.refresh_item().notify_user_at
     assert card3.refresh_item().notify_user_at
 
@@ -421,7 +331,7 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     cnts = card_manager.notify_users(only_usernames=[user2.username])
     assert cnts == (1, 1)
     assert pinpoint_client.mock_calls == [
-        call.send_user_apns(user2.id, 'https://a2', 't2', body=None),
+        call.send_user_apns(user2.id, 'a2', 't2', body=None),
     ]
     assert card1.refresh_item().notify_user_at
     assert card2.refresh_item().notify_user_at is None
@@ -429,7 +339,9 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
 
     # re-add a cards for which we just sent notificaitons
     card_manager.dynamo.delete_card(card2.id)
-    card2 = card_manager.add_card(user2.id, 't2', 'https://a2', notify_user_at=now - pendulum.duration(seconds=1))
+    card2 = card_manager.add_or_update_card(
+        TestCardTemplate(user2.id, title='t2', action='a2', notify_user_after=pendulum.duration(seconds=-1))
+    )
     assert card2.refresh_item().notify_user_at
 
     # run notificiations for no users, verify none sent
@@ -446,9 +358,9 @@ def test_notify_users_only_usernames(card_manager, pinpoint_client, user, user2,
     cnts = card_manager.notify_users()
     assert cnts == (3, 3)
     assert pinpoint_client.mock_calls == [
-        call.send_user_apns(user.id, 'https://a1', 't1', body=None),
-        call.send_user_apns(user2.id, 'https://a2', 't2', body=None),
-        call.send_user_apns(user3.id, 'https://a3', 't3', body=None),
+        call.send_user_apns(user.id, 'a1', 't1', body=None),
+        call.send_user_apns(user2.id, 'a2', 't2', body=None),
+        call.send_user_apns(user3.id, 'a3', 't3', body=None),
     ]
     assert card1.refresh_item().notify_user_at is None
     assert card2.refresh_item().notify_user_at is None

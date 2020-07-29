@@ -24,14 +24,14 @@ post2 = post
 
 def test_comment_card_template(user, post):
     template = templates.CommentCardTemplate(user.id, post.id)
-    assert not hasattr(template, 'title')
+    assert template.title is None
     assert template.user_id == user.id
     assert template.post_id == post.id
     assert user.id in template.card_id
     assert post.id in template.card_id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
     assert post.id in template.action
-    assert not hasattr(template, 'only_usernames')
+    assert not template.only_usernames
 
 
 def test_post_views_card_template(user, post):
@@ -82,11 +82,11 @@ def test_comment_card_templates_are_per_post(user, post1, post2):
 
 def test_chat_card_template(user):
     template = templates.ChatCardTemplate(user.id)
-    assert not hasattr(template, 'title')
+    assert template.title is None
     assert template.user_id == user.id
     assert user.id in template.card_id
     assert template.action == 'https://real.app/chat/'
-    assert not hasattr(template, 'only_usernames')
+    assert not template.only_usernames
 
 
 def test_chat_card_template_titles(user):
@@ -102,11 +102,11 @@ def test_chat_card_template_titles(user):
 
 def test_requested_followers_card_template(user):
     template = templates.RequestedFollowersCardTemplate(user.id)
-    assert not hasattr(template, 'title')
+    assert template.title is None
     assert template.user_id == user.id
     assert user.id in template.card_id
     assert template.action == 'https://real.app/chat/'
-    assert not hasattr(template, 'only_usernames')
+    assert not template.only_usernames
 
 
 def test_requested_followers_card_template_titles(user):

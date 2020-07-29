@@ -21,8 +21,8 @@ def comment(user, post_manager, comment_manager):
 
 
 @pytest.fixture
-def card(user, card_manager):
-    yield card_manager.add_card(user.id, 'card title', 'https://action')
+def card(user, card_manager, TestCardTemplate):
+    yield card_manager.add_or_update_card(TestCardTemplate(user.id, title='card title', action='https://action/'))
 
 
 @pytest.fixture

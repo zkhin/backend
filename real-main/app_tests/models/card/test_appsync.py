@@ -1,4 +1,4 @@
-import uuid
+from uuid import uuid4
 
 import pytest
 
@@ -12,21 +12,23 @@ def card_appsync(appsync_client):
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
-def minimal_card(card_manager, user):
-    card_id = str(uuid.uuid4())
-    yield card_manager.add_card(user.id, card_id, 'min_title', 'https://real.app/min/')
+def minimal_card(card_manager, user, TestCardTemplate):
+    yield card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='min_title', action='https://real.app/min/')
+    )
 
 
 @pytest.fixture
-def maximal_card(card_manager, user):
-    card_id = str(uuid.uuid4())
-    yield card_manager.add_card(user.id, card_id, 'max_title', 'https://real.app/max/', sub_title='my max card')
+def maximal_card(card_manager, user, TestCardTemplate):
+    yield card_manager.add_or_update_card(
+        TestCardTemplate(user.id, title='max_title', action='https://real.app/max/', sub_title='max')
+    )
 
 
 @pytest.mark.parametrize('card', pytest.lazy_fixture(['minimal_card', 'maximal_card']))

@@ -26,7 +26,9 @@ class CardDynamo:
     def get_card(self, card_id, strongly_consistent=False):
         return self.client.get_item(self.pk(card_id), ConsistentRead=strongly_consistent)
 
-    def add_card(self, card_id, user_id, title, action, sub_title=None, created_at=None, notify_user_at=None):
+    def add_card(
+        self, card_id, user_id, title, action, post_id=None, sub_title=None, created_at=None, notify_user_at=None
+    ):
         created_at = created_at or pendulum.now('utc')
         query_kwargs = {
             'Item': {
@@ -38,6 +40,8 @@ class CardDynamo:
                 'action': action,
             },
         }
+        if post_id:
+            query_kwargs['Item']['postId'] = post_id
         if sub_title:
             query_kwargs['Item']['subTitle'] = sub_title
         if notify_user_at:

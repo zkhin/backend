@@ -1,16 +1,16 @@
 import logging
-import uuid
 from functools import partialmethod
 
 import pendulum
 
 from app import models
 
-from . import model, templates
+from . import templates
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
 from .enums import CardNotificationType
 from .exceptions import CardAlreadyExists
+from .model import Card
 
 logger = logging.getLogger()
 
@@ -33,22 +33,7 @@ class CardManager:
         item = self.dynamo.get_card(card_id, strongly_consistent=strongly_consistent)
         return self.init_card(item) if item else None
 
-    def get_card_class(self, card_id):
-        if 'CHAT_ACTIVITY' in card_id:
-            return model.ChatCard
-        if 'COMMENT_ACTIVITY' in card_id:
-            return model.CommentCard
-        if 'POST_LIKES' in card_id:
-            return model.PostLikesCard
-        if 'POST_VIEWS' in card_id:
-            return model.PostViewsCard
-        if 'REQUESTED_FOLLOWERS' in card_id:
-            return model.RequestedFollowersCard
-        return model.BaseCard
-
     def init_card(self, item):
-        card_id = item['partitionKey'].split('/')[1]
-        klass = self.get_card_class(card_id)
         kwargs = {
             'appsync': getattr(self, 'appsync', None),
             'dynamo': getattr(self, 'dynamo', None),
@@ -56,42 +41,33 @@ class CardManager:
             'post_manager': self.post_manager,
             'user_manager': self.user_manager,
         }
-        return klass(item, **kwargs)
+        return Card(item, **kwargs)
 
-    def add_card(
-        self, user_id, title, action, card_id=None, sub_title=None, created_at=None, notify_user_at=None
-    ):
-        created_at = created_at or pendulum.now('utc')
-        card_id = card_id or str(uuid.uuid4())
-        add_card_kwargs = {
-            'sub_title': sub_title,
-            'created_at': created_at,
-            'notify_user_at': notify_user_at,
-        }
-        card_item = self.dynamo.add_card(card_id, user_id, title, action, **add_card_kwargs)
-        return self.init_card(card_item)
-
-    def add_or_update_card_by_template(self, template, now=None):
-        now = now or pendulum.now('utc')
-
-        if getattr(template, 'only_usernames', None):
+    def add_or_update_card(self, template, now=None):
+        if template.only_usernames:
             user = self.user_manager.get_user(template.user_id)
-            if user.username not in template.only_usernames:
+            if not (user and user.username in template.only_usernames):
                 return None
 
-        notify_user_at = now + template.notify_user_after if template.notify_user_after else None
+        created_at = now or pendulum.now('utc')
+        notify_user_at = (
+            created_at + template.notify_user_after if template.notify_user_after is not None else None
+        )
+
         try:
-            return self.add_card(
+            card_item = self.dynamo.add_card(
+                template.card_id,
                 template.user_id,
                 template.title,
                 template.action,
-                template.card_id,
-                created_at=now,
+                created_at=created_at,
                 notify_user_at=notify_user_at,
+                post_id=template.post_id,
+                sub_title=template.sub_title,
             )
         except CardAlreadyExists:
             card_item = self.dynamo.update_title(template.card_id, template.title)
-            return self.init_card(card_item)
+        return self.init_card(card_item)
 
     def delete_post_cards(self, user_id, post_id):
         "Delete all cards associated with a given post for a given user"
@@ -148,7 +124,7 @@ class CardManager:
         cnt = new_item.get(dynamo_attr, 0)
         card_template = card_template_class(user_id, cnt)
         if cnt > 0:
-            self.add_or_update_card_by_template(card_template)
+            self.add_or_update_card(card_template)
         else:
             self.dynamo.delete_card(card_template.card_id)
 
@@ -175,7 +151,7 @@ class CardManager:
         user_id = new_item['postedByUserId']
         card_template = templates.CommentCardTemplate(user_id, post_id, unviewed_comments_count=new_cnt)
         if new_cnt > 0:
-            self.add_or_update_card_by_template(card_template)
+            self.add_or_update_card(card_template)
         else:
             self.dynamo.delete_card(card_template.card_id)
 
@@ -185,7 +161,7 @@ class CardManager:
         if 0 < new_cnt < 10:
             user_id = new_item['postedByUserId']
             card_template = templates.PostLikesCardTemplate(user_id, post_id)
-            self.add_or_update_card_by_template(card_template)
+            self.add_or_update_card(card_template)
 
     def on_post_viewed_by_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('viewedByCount', 0)
@@ -194,4 +170,4 @@ class CardManager:
         if new_cnt > 5 and old_cnt <= 5:
             user_id = new_item['postedByUserId']
             card_template = templates.PostViewsCardTemplate(user_id, post_id)
-            self.add_or_update_card_by_template(card_template)
+            self.add_or_update_card(card_template)

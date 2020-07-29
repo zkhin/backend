@@ -7,6 +7,7 @@ import moto
 import pytest
 
 from app import clients, models
+from app.models.card.templates import CardTemplate
 
 from .dynamodb.table_schema import table_schema
 
@@ -163,6 +164,18 @@ def block_manager(dynamo_client):
 @pytest.fixture
 def card_manager(dynamo_client, appsync_client, pinpoint_client):
     yield models.CardManager({'appsync': appsync_client, 'dynamo': dynamo_client, 'pinpoint': pinpoint_client})
+
+
+@pytest.fixture
+def TestCardTemplate():
+    class TestCardTemplate(CardTemplate):
+        def __init__(self, user_id, **kwargs):
+            super().__init__(user_id)
+            self.card_id = str(uuid.uuid4())
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    yield TestCardTemplate
 
 
 @pytest.fixture
