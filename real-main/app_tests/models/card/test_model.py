@@ -4,7 +4,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card.specs import CommentCardSpec
+from app.models.card.templates import CommentCardTemplate
 from app.models.post.enums import PostType
 from app.utils import image_size
 
@@ -28,7 +28,9 @@ def post(user, post_manager):
 
 @pytest.fixture
 def comment_card(user, card_manager, post):
-    yield card_manager.add_or_update_card_by_spec(CommentCardSpec(user.id, post.id, unviewed_comments_count=42))
+    yield card_manager.add_or_update_card_by_template(
+        CommentCardTemplate(user.id, post.id, unviewed_comments_count=42)
+    )
 
 
 def test_serialize(user, card):

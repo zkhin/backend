@@ -5,7 +5,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.card import model, specs
+from app.models.card import model, templates
 from app.models.card.exceptions import CardAlreadyExists, MalformedCardId
 from app.models.post.enums import PostType
 
@@ -22,13 +22,13 @@ user3 = user
 
 
 @pytest.fixture
-def chat_card_spec(user):
-    yield specs.ChatCardSpec(user.id, chats_with_unviewed_messages_count=2)
+def chat_card_template(user):
+    yield templates.ChatCardTemplate(user.id, chats_with_unviewed_messages_count=2)
 
 
 @pytest.fixture
-def requested_followers_card_spec(user):
-    yield specs.RequestedFollowersCardSpec(user.id, requested_followers_count=3)
+def requested_followers_card_template(user):
+    yield templates.RequestedFollowersCardTemplate(user.id, requested_followers_count=3)
 
 
 @pytest.fixture
@@ -37,18 +37,18 @@ def post(user, post_manager):
 
 
 @pytest.fixture
-def comment_card_spec(user, post):
-    yield specs.CommentCardSpec(user.id, post.id, unviewed_comments_count=4)
+def comment_card_template(user, post):
+    yield templates.CommentCardTemplate(user.id, post.id, unviewed_comments_count=4)
 
 
 @pytest.fixture
-def post_likes_card_spec(user, post):
-    yield specs.PostLikesCardSpec(user.id, post.id)
+def post_likes_card_template(user, post):
+    yield templates.PostLikesCardTemplate(user.id, post.id)
 
 
 @pytest.fixture
-def post_views_card_spec(user, post):
-    yield specs.PostViewsCardSpec(user.id, post.id)
+def post_views_card_template(user, post):
+    yield templates.PostViewsCardTemplate(user.id, post.id)
 
 
 post1 = post
@@ -172,102 +172,107 @@ def test_add_card_maximal(card_manager, user):
 
 
 @pytest.mark.parametrize(
-    'spec', pytest.lazy_fixture(['chat_card_spec', 'comment_card_spec', 'requested_followers_card_spec']),
+    'template',
+    pytest.lazy_fixture(['chat_card_template', 'comment_card_template', 'requested_followers_card_template']),
 )
-def test_add_or_update_card_by_spec(user, spec, card_manager):
+def test_add_or_update_card_by_template(user, template, card_manager):
     # verify starting state
-    assert card_manager.get_card(spec.card_id) is None
+    assert card_manager.get_card(template.card_id) is None
 
     # add the card, verify state
     before = pendulum.now('utc')
-    card_manager.add_or_update_card_by_spec(spec)
+    card_manager.add_or_update_card_by_template(template)
     after = pendulum.now('utc')
-    card = card_manager.get_card(spec.card_id)
-    assert card.id == spec.card_id
-    assert card.item['title'] == spec.title
-    assert card.item['action'] == spec.action
+    card = card_manager.get_card(template.card_id)
+    assert card.id == template.card_id
+    assert card.item['title'] == template.title
+    assert card.item['action'] == template.action
     assert before < card.created_at < after
-    if spec.notify_user_after:
-        assert card.notify_user_at == card.created_at + spec.notify_user_after
+    if template.notify_user_after:
+        assert card.notify_user_at == card.created_at + template.notify_user_after
     else:
         assert card.notify_user_at is None
 
     # add the card again, verify no-op
-    card_manager.add_or_update_card_by_spec(spec)
-    new_card = card_manager.get_card(spec.card_id)
-    assert new_card.id == spec.card_id
-    assert new_card.item['title'] == spec.title
-    assert new_card.item['action'] == spec.action
+    card_manager.add_or_update_card_by_template(template)
+    new_card = card_manager.get_card(template.card_id)
+    assert new_card.id == template.card_id
+    assert new_card.item['title'] == template.title
+    assert new_card.item['action'] == template.action
     assert new_card.created_at == card.created_at
 
 
-@pytest.mark.parametrize('spec', pytest.lazy_fixture(['post_likes_card_spec', 'post_views_card_spec']))
-def test_add_or_update_card_by_spec_with_only_usernames(user, spec, card_manager):
+@pytest.mark.parametrize(
+    'template', pytest.lazy_fixture(['post_likes_card_template', 'post_views_card_template'])
+)
+def test_add_or_update_card_by_template_with_only_usernames(user, template, card_manager):
     # verify starting state
-    assert card_manager.get_card(spec.card_id) is None
+    assert card_manager.get_card(template.card_id) is None
 
     # verify the only_usernames prevents us from ading the card
-    assert card_manager.add_or_update_card_by_spec(spec) is None
-    assert card_manager.get_card(spec.card_id) is None
+    assert card_manager.add_or_update_card_by_template(template) is None
+    assert card_manager.get_card(template.card_id) is None
 
     # add the card, verify state
     before = pendulum.now('utc')
-    with patch.object(spec, 'only_usernames', (user.username,)):
-        assert card_manager.add_or_update_card_by_spec(spec)
+    with patch.object(template, 'only_usernames', (user.username,)):
+        assert card_manager.add_or_update_card_by_template(template)
     after = pendulum.now('utc')
-    card = card_manager.get_card(spec.card_id)
-    assert card.id == spec.card_id
-    assert card.item['title'] == spec.title
-    assert card.item['action'] == spec.action
+    card = card_manager.get_card(template.card_id)
+    assert card.id == template.card_id
+    assert card.item['title'] == template.title
+    assert card.item['action'] == template.action
     assert before < card.created_at < after
-    if spec.notify_user_after:
-        assert card.notify_user_at == card.created_at + spec.notify_user_after
+    if template.notify_user_after:
+        assert card.notify_user_at == card.created_at + template.notify_user_after
     else:
         assert card.notify_user_at is None
 
     # add the card again, verify no-op
-    with patch.object(spec, 'only_usernames', (user.username,)):
-        assert card_manager.add_or_update_card_by_spec(spec)
-    new_card = card_manager.get_card(spec.card_id)
-    assert new_card.id == spec.card_id
-    assert new_card.item['title'] == spec.title
-    assert new_card.item['action'] == spec.action
+    with patch.object(template, 'only_usernames', (user.username,)):
+        assert card_manager.add_or_update_card_by_template(template)
+    new_card = card_manager.get_card(template.card_id)
+    assert new_card.id == template.card_id
+    assert new_card.item['title'] == template.title
+    assert new_card.item['action'] == template.action
     assert new_card.created_at == card.created_at
 
     # delete the card, verify it's gone
-    card_manager.dynamo.delete_card(spec.card_id)
-    assert card_manager.get_card(spec.card_id) is None
+    card_manager.dynamo.delete_card(template.card_id)
+    assert card_manager.get_card(template.card_id) is None
 
     # add the card again, this time with None for only_usernames
-    with patch.object(spec, 'only_usernames', None):
-        assert card_manager.add_or_update_card_by_spec(spec)
-    assert card_manager.get_card(spec.card_id)
+    with patch.object(template, 'only_usernames', None):
+        assert card_manager.add_or_update_card_by_template(template)
+    assert card_manager.get_card(template.card_id)
 
 
 def test_comment_cards_are_per_post(user, card_manager, post1, post2):
-    spec1 = specs.CommentCardSpec(user.id, post1.id, unviewed_comments_count=4)
-    spec2 = specs.CommentCardSpec(user.id, post2.id, unviewed_comments_count=3)
+    template1 = templates.CommentCardTemplate(user.id, post1.id, unviewed_comments_count=4)
+    template2 = templates.CommentCardTemplate(user.id, post2.id, unviewed_comments_count=3)
 
     # verify starting state
-    assert card_manager.get_card(spec1.card_id) is None
-    assert card_manager.get_card(spec2.card_id) is None
+    assert card_manager.get_card(template1.card_id) is None
+    assert card_manager.get_card(template2.card_id) is None
 
     # add the card, verify state
-    card_manager.add_or_update_card_by_spec(spec1)
-    assert card_manager.get_card(spec1.card_id)
-    assert card_manager.get_card(spec2.card_id) is None
+    card_manager.add_or_update_card_by_template(template1)
+    assert card_manager.get_card(template1.card_id)
+    assert card_manager.get_card(template2.card_id) is None
 
     # add the other card, verify state and no conflict
-    card_manager.add_or_update_card_by_spec(spec2)
-    assert card_manager.get_card(spec1.card_id)
-    assert card_manager.get_card(spec2.card_id)
+    card_manager.add_or_update_card_by_template(template2)
+    assert card_manager.get_card(template1.card_id)
+    assert card_manager.get_card(template2.card_id)
 
 
-def test_delete_post_cards(card_manager, comment_card_spec, post_likes_card_spec, post_views_card_spec, post):
+def test_delete_post_cards(
+    card_manager, comment_card_template, post_likes_card_template, post_views_card_template, post
+):
     # set the user up with one of the only_usernames if needed
-    card_specs = (comment_card_spec, post_likes_card_spec, post_views_card_spec)
+    card_templates = (comment_card_template, post_likes_card_template, post_views_card_template)
     only_usernames = set.intersection(
-        *[set(spec.only_usernames) for spec in card_specs if getattr(spec, 'only_usernames', [])]
+        *[set(template.only_usernames) for template in card_templates if getattr(template, 'only_usernames', [])]
     )
     if only_usernames:
         post.user.dynamo.update_user_username(
@@ -275,19 +280,19 @@ def test_delete_post_cards(card_manager, comment_card_spec, post_likes_card_spec
         )
 
     # add them all to the DB, verify starting state
-    for spec in card_specs:
-        card_manager.add_or_update_card_by_spec(spec)
-        assert card_manager.get_card(spec.card_id)
+    for template in card_templates:
+        card_manager.add_or_update_card_by_template(template)
+        assert card_manager.get_card(template.card_id)
 
     # delete them all, verify new state
     card_manager.delete_post_cards(post.user_id, post.id)
-    for spec in card_specs:
-        assert card_manager.get_card(spec.card_id) is None
+    for template in card_templates:
+        assert card_manager.get_card(template.card_id) is None
 
     # delete all again, verify idempotent
     card_manager.delete_post_cards(post.user_id, post.id)
-    for spec in card_specs:
-        assert card_manager.get_card(spec.card_id) is None
+    for template in card_templates:
+        assert card_manager.get_card(template.card_id) is None
 
 
 def test_notify_users(card_manager, pinpoint_client, user, user2):

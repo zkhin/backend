@@ -3,7 +3,7 @@ import re
 
 import pendulum
 
-from . import specs
+from . import templates
 from .exceptions import MalformedCardId
 
 logger = logging.getLogger()
@@ -94,7 +94,7 @@ class ChatCard(BaseCard):
         m = re.search(self.card_id_re, self.id)
         if not m or m.group('user_id') != self.user_id:
             raise MalformedCardId(self.id)
-        self.spec = specs.ChatCardSpec(self.user_id)
+        self.template = templates.ChatCardTemplate(self.user_id)
 
 
 class CommentCard(BaseCard):
@@ -106,7 +106,7 @@ class CommentCard(BaseCard):
         if not m or m.group('user_id') != self.user_id:
             raise MalformedCardId(self.id)
         self.post_id = m.group('post_id')
-        self.spec = specs.CommentCardSpec(self.user_id, self.post_id)
+        self.template = templates.CommentCardTemplate(self.user_id, self.post_id)
 
 
 class PostLikesCard(BaseCard):
@@ -118,7 +118,7 @@ class PostLikesCard(BaseCard):
         if not m or m.group('user_id') != self.user_id:
             raise MalformedCardId(self.id)
         self.post_id = m.group('post_id')
-        self.spec = specs.PostLikesCardSpec(self.user_id, self.post_id)
+        self.template = templates.PostLikesCardTemplate(self.user_id, self.post_id)
 
 
 class PostViewsCard(BaseCard):
@@ -130,7 +130,7 @@ class PostViewsCard(BaseCard):
         if not m or m.group('user_id') != self.user_id:
             raise MalformedCardId(self.id)
         self.post_id = m.group('post_id')
-        self.spec = specs.PostViewsCardSpec(self.user_id, self.post_id)
+        self.template = templates.PostViewsCardTemplate(self.user_id, self.post_id)
 
 
 class RequestedFollowersCard(BaseCard):
@@ -141,4 +141,4 @@ class RequestedFollowersCard(BaseCard):
         m = re.search(self.card_id_re, self.id)
         if not m or m.group('user_id') != self.user_id:
             raise MalformedCardId(self.id)
-        self.spec = specs.RequestedFollowersCardSpec(self.user_id)
+        self.template = templates.RequestedFollowersCardTemplate(self.user_id)

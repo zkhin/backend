@@ -1,11 +1,11 @@
 import pendulum
 
 
-class CardSpec:
+class CardTemplate:
     pass
 
 
-class ChatCardSpec(CardSpec):
+class ChatCardTemplate(CardTemplate):
 
     action = 'https://real.app/chat/'
     post_id = None
@@ -19,7 +19,7 @@ class ChatCardSpec(CardSpec):
             self.title = f'You have {cnt} chat{"s" if cnt > 1 else ""} with new messages'
 
 
-class CommentCardSpec(CardSpec):
+class CommentCardTemplate(CardTemplate):
 
     notify_user_after = pendulum.duration(hours=24)
 
@@ -33,7 +33,7 @@ class CommentCardSpec(CardSpec):
             self.title = f'You have {cnt} new comment{"s" if cnt > 1 else ""}'
 
 
-class PostLikesCardSpec(CardSpec):
+class PostLikesCardTemplate(CardTemplate):
 
     notify_user_after = pendulum.duration(hours=24)
     only_usernames = ('azim', 'ian', 'mike')
@@ -46,7 +46,7 @@ class PostLikesCardSpec(CardSpec):
         self.title = 'You have new likes'
 
 
-class PostViewsCardSpec(CardSpec):
+class PostViewsCardTemplate(CardTemplate):
 
     notify_user_after = pendulum.duration(hours=24)
     only_usernames = ('azim', 'ian', 'mike')
@@ -59,7 +59,7 @@ class PostViewsCardSpec(CardSpec):
         self.title = 'You have new views'
 
 
-class RequestedFollowersCardSpec(CardSpec):
+class RequestedFollowersCardTemplate(CardTemplate):
 
     action = 'https://real.app/chat/'
     post_id = None

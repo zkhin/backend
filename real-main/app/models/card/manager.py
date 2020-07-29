@@ -6,7 +6,7 @@ import pendulum
 
 from app import models
 
-from . import model, specs
+from . import model, templates
 from .appsync import CardAppSync
 from .dynamo import CardDynamo
 from .enums import CardNotificationType
@@ -71,36 +71,36 @@ class CardManager:
         card_item = self.dynamo.add_card(card_id, user_id, title, action, **add_card_kwargs)
         return self.init_card(card_item)
 
-    def add_or_update_card_by_spec(self, spec, now=None):
+    def add_or_update_card_by_template(self, template, now=None):
         now = now or pendulum.now('utc')
 
-        if getattr(spec, 'only_usernames', None):
-            user = self.user_manager.get_user(spec.user_id)
-            if user.username not in spec.only_usernames:
+        if getattr(template, 'only_usernames', None):
+            user = self.user_manager.get_user(template.user_id)
+            if user.username not in template.only_usernames:
                 return None
 
-        notify_user_at = now + spec.notify_user_after if spec.notify_user_after else None
+        notify_user_at = now + template.notify_user_after if template.notify_user_after else None
         try:
             return self.add_card(
-                spec.user_id,
-                spec.title,
-                spec.action,
-                spec.card_id,
+                template.user_id,
+                template.title,
+                template.action,
+                template.card_id,
                 created_at=now,
                 notify_user_at=notify_user_at,
             )
         except CardAlreadyExists:
-            card_item = self.dynamo.update_title(spec.card_id, spec.title)
+            card_item = self.dynamo.update_title(template.card_id, template.title)
             return self.init_card(card_item)
 
     def delete_post_cards(self, user_id, post_id):
         "Delete all cards associated with a given post for a given user"
-        card_specs = (
-            specs.CommentCardSpec(user_id, post_id),
-            specs.PostLikesCardSpec(user_id, post_id),
-            specs.PostViewsCardSpec(user_id, post_id),
+        card_templates = (
+            templates.CommentCardTemplate(user_id, post_id),
+            templates.PostLikesCardTemplate(user_id, post_id),
+            templates.PostViewsCardTemplate(user_id, post_id),
         )
-        key_generator = (self.dynamo.pk(spec.card_id) for spec in card_specs)
+        key_generator = (self.dynamo.pk(template.card_id) for template in card_templates)
         self.dynamo.client.batch_delete_items(key_generator)
 
     def notify_users(self, now=None, only_usernames=None):
@@ -144,19 +144,19 @@ class CardManager:
         generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
         self.dynamo.client.batch_delete_items(generator)
 
-    def on_user_count_change_sync_card(self, dynamo_attr, card_spec_class, user_id, new_item, old_item=None):
+    def on_user_count_change_sync_card(self, dynamo_attr, card_template_class, user_id, new_item, old_item=None):
         cnt = new_item.get(dynamo_attr, 0)
-        card_spec = card_spec_class(user_id, cnt)
+        card_template = card_template_class(user_id, cnt)
         if cnt > 0:
-            self.add_or_update_card_by_spec(card_spec)
+            self.add_or_update_card_by_template(card_template)
         else:
-            self.dynamo.delete_card(card_spec.card_id)
+            self.dynamo.delete_card(card_template.card_id)
 
     on_user_followers_requested_count_change_sync_card = partialmethod(
-        on_user_count_change_sync_card, 'followersRequestedCount', specs.RequestedFollowersCardSpec,
+        on_user_count_change_sync_card, 'followersRequestedCount', templates.RequestedFollowersCardTemplate,
     )
     on_user_chats_with_unviewed_messages_count_change_sync_card = partialmethod(
-        on_user_count_change_sync_card, 'chatsWithUnviewedMessagesCount', specs.ChatCardSpec,
+        on_user_count_change_sync_card, 'chatsWithUnviewedMessagesCount', templates.ChatCardTemplate,
     )
 
     def on_post_view_count_change_update_cards(self, post_id, new_item, old_item=None):
@@ -173,19 +173,19 @@ class CardManager:
     def on_post_comments_unviewed_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('commentsUnviewedCount', 0)
         user_id = new_item['postedByUserId']
-        card_spec = specs.CommentCardSpec(user_id, post_id, unviewed_comments_count=new_cnt)
+        card_template = templates.CommentCardTemplate(user_id, post_id, unviewed_comments_count=new_cnt)
         if new_cnt > 0:
-            self.add_or_update_card_by_spec(card_spec)
+            self.add_or_update_card_by_template(card_template)
         else:
-            self.dynamo.delete_card(card_spec.card_id)
+            self.dynamo.delete_card(card_template.card_id)
 
     def on_post_likes_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('onymousLikeCount', 0) + new_item.get('anonymousLikeCount', 0)
         # post likes card should be created on any new like up to but not including the 10th like
         if 0 < new_cnt < 10:
             user_id = new_item['postedByUserId']
-            card_spec = specs.PostLikesCardSpec(user_id, post_id)
-            self.add_or_update_card_by_spec(card_spec)
+            card_template = templates.PostLikesCardTemplate(user_id, post_id)
+            self.add_or_update_card_by_template(card_template)
 
     def on_post_viewed_by_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('viewedByCount', 0)
@@ -193,5 +193,5 @@ class CardManager:
         # post views card should only be created once per post, when it goes over 5 views
         if new_cnt > 5 and old_cnt <= 5:
             user_id = new_item['postedByUserId']
-            card_spec = specs.PostViewsCardSpec(user_id, post_id)
-            self.add_or_update_card_by_spec(card_spec)
+            card_template = templates.PostViewsCardTemplate(user_id, post_id)
+            self.add_or_update_card_by_template(card_template)
