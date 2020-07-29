@@ -30,7 +30,7 @@ class Card:
         # They only had the postId embedded in the cardId.
         # Once all those old cards have disappeared from DB, this can be removed.
         parts = self.id.split(':')
-        return parts[2] if len(parts) > 2 else None
+        return parts[3] if len(parts) > 3 else None
 
     @property
     def user(self):
