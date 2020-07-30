@@ -50,10 +50,21 @@ def test_add_card_maximal(card_dynamo):
     sub_title = 'more info for you'
     created_at = pendulum.now('utc')
     notify_user_at = pendulum.now('utc')
+    extra_fields = {
+        'fieldA': 'AA',
+        'fieldB': 'BB',
+    }
 
     # add the card to the DB
     card_item = card_dynamo.add_card(
-        card_id, user_id, title, action, sub_title=sub_title, created_at=created_at, notify_user_at=notify_user_at
+        card_id,
+        user_id,
+        title,
+        action,
+        sub_title=sub_title,
+        created_at=created_at,
+        notify_user_at=notify_user_at,
+        extra_fields=extra_fields,
     )
 
     # retrieve the card and verify the format is as we expect
@@ -67,6 +78,8 @@ def test_add_card_maximal(card_dynamo):
         'title': title,
         'action': action,
         'subTitle': sub_title,
+        'fieldA': 'AA',
+        'fieldB': 'BB',
         'gsiK1PartitionKey': 'card',
         'gsiK1SortKey': notify_user_at.to_iso8601_string() + '/uid',
     }

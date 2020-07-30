@@ -62,8 +62,8 @@ class CardManager:
                 template.action,
                 created_at=created_at,
                 notify_user_at=notify_user_at,
-                post_id=template.post_id,
                 sub_title=template.sub_title,
+                extra_fields=template.extra_fields,
             )
         except CardAlreadyExists:
             card_item = self.dynamo.update_title(template.card_id, template.title)

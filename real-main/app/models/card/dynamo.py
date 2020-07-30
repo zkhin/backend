@@ -27,7 +27,15 @@ class CardDynamo:
         return self.client.get_item(self.pk(card_id), ConsistentRead=strongly_consistent)
 
     def add_card(
-        self, card_id, user_id, title, action, post_id=None, sub_title=None, created_at=None, notify_user_at=None
+        self,
+        card_id,
+        user_id,
+        title,
+        action,
+        sub_title=None,
+        created_at=None,
+        notify_user_at=None,
+        extra_fields=None,
     ):
         created_at = created_at or pendulum.now('utc')
         query_kwargs = {
@@ -38,10 +46,9 @@ class CardDynamo:
                 'gsiA1SortKey': f'card/{created_at.to_iso8601_string()}',
                 'title': title,
                 'action': action,
+                **(extra_fields or {}),
             },
         }
-        if post_id:
-            query_kwargs['Item']['postId'] = post_id
         if sub_title:
             query_kwargs['Item']['subTitle'] = sub_title
         if notify_user_at:

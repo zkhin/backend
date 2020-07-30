@@ -26,36 +26,36 @@ def test_comment_card_template(user, post):
     template = templates.CommentCardTemplate(user.id, post.id)
     assert template.title is None
     assert template.user_id == user.id
-    assert template.post_id == post.id
     assert user.id in template.card_id
     assert post.id in template.card_id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
     assert post.id in template.action
     assert not template.only_usernames
+    assert template.extra_fields == {'postId': post.id}
 
 
 def test_post_views_card_template(user, post):
     template = templates.PostViewsCardTemplate(user.id, post.id)
     assert template.user_id == user.id
-    assert template.post_id == post.id
     assert user.id in template.card_id
     assert post.id in template.card_id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
     assert post.id in template.action
     assert template.title == 'You have new views'
     assert template.only_usernames == ('azim', 'ian', 'mike')
+    assert template.extra_fields == {'postId': post.id}
 
 
 def test_post_likes_card_template(user, post):
     template = templates.PostLikesCardTemplate(user.id, post.id)
     assert template.user_id == user.id
-    assert template.post_id == post.id
     assert user.id in template.card_id
     assert post.id in template.card_id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/likes'
     assert post.id in template.action
     assert template.title == 'You have new likes'
     assert template.only_usernames == ('azim', 'ian', 'mike')
+    assert template.extra_fields == {'postId': post.id}
 
 
 def test_comment_card_template_titles(user, post):
@@ -87,6 +87,7 @@ def test_chat_card_template(user):
     assert user.id in template.card_id
     assert template.action == 'https://real.app/chat/'
     assert not template.only_usernames
+    assert not template.extra_fields
 
 
 def test_chat_card_template_titles(user):
@@ -107,6 +108,7 @@ def test_requested_followers_card_template(user):
     assert user.id in template.card_id
     assert template.action == 'https://real.app/chat/'
     assert not template.only_usernames
+    assert not template.extra_fields
 
 
 def test_requested_followers_card_template_titles(user):

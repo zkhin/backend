@@ -3,9 +3,9 @@ import pendulum
 
 class CardTemplate:
 
-    post_id = None
     notify_user_after = None
     sub_title = None
+    extra_fields = {}
     only_usernames = ()
 
     def __init__(self, user_id):
@@ -35,12 +35,12 @@ class CommentCardTemplate(CardTemplate):
     def __init__(self, user_id, post_id, unviewed_comments_count=None):
         super().__init__(user_id)
         self.card_id = f'{user_id}:COMMENT_ACTIVITY:{post_id}'
-        self.post_id = post_id
         self.cnt = unviewed_comments_count
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/comments'
         self.title = (
             f'You have {self.cnt} new comment{"s" if self.cnt > 1 else ""}' if self.cnt is not None else None
         )
+        self.extra_fields = {'postId': post_id}
 
 
 class PostLikesCardTemplate(CardTemplate):
@@ -52,8 +52,8 @@ class PostLikesCardTemplate(CardTemplate):
     def __init__(self, user_id, post_id):
         super().__init__(user_id)
         self.card_id = f'{user_id}:POST_LIKES:{post_id}'
-        self.post_id = post_id
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/likes'
+        self.extra_fields = {'postId': post_id}
 
 
 class PostViewsCardTemplate(CardTemplate):
@@ -65,8 +65,8 @@ class PostViewsCardTemplate(CardTemplate):
     def __init__(self, user_id, post_id):
         super().__init__(user_id)
         self.card_id = f'{user_id}:POST_VIEWS:{post_id}'
-        self.post_id = post_id
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/views'
+        self.extra_fields = {'postId': post_id}
 
 
 class RequestedFollowersCardTemplate(CardTemplate):
