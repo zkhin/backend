@@ -46,7 +46,7 @@ We have no local secondary indexes.
 | `comment/{commentId}` | `-` | `1` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]`, `flagCount` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `comment` |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount`, `rankCount`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` | | | | | `album` | `{deleteAt}` |
-| `card/{cardId}` | `-` | `0` | `title`, `subTitle`, `action`, `postId` | `user/{userId}` | `card/{createdAt}` | | | | | `card` | `{notifyUserAt}/{userId}` |
+| `card/{cardId}` | `-` | `0` | `title`, `subTitle`, `action`, `postId` | `user/{userId}` | `card/{createdAt}` | `cardTarget/{itemId}` | `{userId}` | | | `card` | `{notifyUserAt}/{userId}` |
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdByUserId`, `createdAt`, `lastMessageActivityAt`, `flagCount`, `messagesCount`, `userCount` | `chat/{userId1}/{userId2}` | `-` |
 | `chat/{chatId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `chat` |
 | `chat/{chatId}` | `member/{userId}` | `1` | `messagesUnviewedCount` | | | | | | | `chat/{chatId}` | `member/{joinedAt}` | `member/{userId}` | `chat/{lastMessageActivityAt}` |
@@ -68,3 +68,4 @@ We have no local secondary indexes.
 - `Chat.gsiA1PartitionKey`:
   - is to be filled in if and only if `chatType == DIRECT`
   - `userId` and `userId2` in the field are the two users in the chat, their id's in alphanumeric sorted order
+- `Card.gsiA2PartitionKey`, `Card.gsiA2SortKey` will only be filled in for cards that have a target item

@@ -1,3 +1,4 @@
+import re
 from uuid import uuid4
 
 import pytest
@@ -22,101 +23,127 @@ post1 = post
 post2 = post
 
 
-def test_comment_card_template(user, post):
-    template = templates.CommentCardTemplate(user.id, post.id)
-    assert template.title is None
-    assert template.user_id == user.id
-    assert user.id in template.card_id
-    assert post.id in template.card_id
-    assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
-    assert post.id in template.action
-    assert not template.only_usernames
-    assert template.extra_fields == {'postId': post.id}
-
-
 def test_post_views_card_template(user, post):
+    card_id = templates.PostViewsCardTemplate.get_card_id(user.id, post.id)
+    assert card_id.split(':') == [user.id, 'POST_VIEWS', post.id]
+
     template = templates.PostViewsCardTemplate(user.id, post.id)
+    assert template.card_id == card_id
     assert template.user_id == user.id
-    assert user.id in template.card_id
-    assert post.id in template.card_id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
-    assert post.id in template.action
     assert template.title == 'You have new views'
     assert template.only_usernames == ('azim', 'ian', 'mike')
     assert template.extra_fields == {'postId': post.id}
+    assert template.target_item_id == post.id
+
+
+def test_post_mention_card_template(user, post):
+    card_id = templates.PostMentionCardTemplate.get_card_id(user.id, post.id)
+    assert card_id.split(':') == [user.id, 'POST_MENTION', post.id]
+
+    template = templates.PostMentionCardTemplate(user.id, post)
+    assert template.card_id == card_id
+    assert template.user_id == user.id
+    assert template.action == f'https://real.app/user/{post.user_id}/post/{post.id}'
+    assert re.match(r'@.* tagged you in a post', template.title)
+    assert post.user.username in template.title
+    assert template.only_usernames == ('azim', 'ian', 'mike')
+    assert template.extra_fields == {'postId': post.id}
+    assert template.target_item_id == post.id
 
 
 def test_post_likes_card_template(user, post):
+    card_id = templates.PostLikesCardTemplate.get_card_id(user.id, post.id)
+    assert card_id.split(':') == [user.id, 'POST_LIKES', post.id]
+
     template = templates.PostLikesCardTemplate(user.id, post.id)
+    assert template.card_id == card_id
     assert template.user_id == user.id
-    assert user.id in template.card_id
-    assert post.id in template.card_id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/likes'
-    assert post.id in template.action
     assert template.title == 'You have new likes'
     assert template.only_usernames == ('azim', 'ian', 'mike')
     assert template.extra_fields == {'postId': post.id}
+    assert template.target_item_id == post.id
+
+
+def test_comment_card_template(user, post):
+    card_id = templates.CommentCardTemplate.get_card_id(user.id, post.id)
+    assert card_id.split(':') == [user.id, 'COMMENT_ACTIVITY', post.id]
+
+    template = templates.CommentCardTemplate(user.id, post.id, 1)
+    assert template.card_id == card_id
+    assert template.user_id == user.id
+    assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
+    assert not template.only_usernames
+    assert template.extra_fields == {'postId': post.id}
+    assert template.target_item_id == post.id
 
 
 def test_comment_card_template_titles(user, post):
-    template = templates.CommentCardTemplate(user.id, post.id, unviewed_comments_count=1)
+    template = templates.CommentCardTemplate(user.id, post.id, 1)
     assert template.title == 'You have 1 new comment'
 
-    template = templates.CommentCardTemplate(user.id, post.id, unviewed_comments_count=2)
+    template = templates.CommentCardTemplate(user.id, post.id, 2)
     assert template.title == 'You have 2 new comments'
 
-    template = templates.CommentCardTemplate(user.id, post.id, unviewed_comments_count=42)
+    template = templates.CommentCardTemplate(user.id, post.id, 42)
     assert template.title == 'You have 42 new comments'
 
 
 def test_comment_card_templates_are_per_post(user, post1, post2):
     assert (
-        templates.CommentCardTemplate(user.id, post1.id).card_id
-        == templates.CommentCardTemplate(user.id, post1.id).card_id
+        templates.CommentCardTemplate(user.id, post1.id, 1).card_id
+        == templates.CommentCardTemplate(user.id, post1.id, 1).card_id
     )
     assert (
-        templates.CommentCardTemplate(user.id, post1.id).card_id
-        != templates.CommentCardTemplate(user.id, post2.id).card_id
+        templates.CommentCardTemplate(user.id, post1.id, 1).card_id
+        != templates.CommentCardTemplate(user.id, post2.id, 1).card_id
     )
 
 
 def test_chat_card_template(user):
-    template = templates.ChatCardTemplate(user.id)
-    assert template.title is None
+    card_id = templates.ChatCardTemplate.get_card_id(user.id)
+    assert card_id.split(':') == [user.id, 'CHAT_ACTIVITY']
+
+    template = templates.ChatCardTemplate(user.id, 1)
+    assert template.card_id == card_id
     assert template.user_id == user.id
-    assert user.id in template.card_id
     assert template.action == 'https://real.app/chat/'
     assert not template.only_usernames
     assert not template.extra_fields
+    assert not template.target_item_id
 
 
 def test_chat_card_template_titles(user):
-    template = templates.ChatCardTemplate(user.id, chats_with_unviewed_messages_count=1)
+    template = templates.ChatCardTemplate(user.id, 1)
     assert template.title == 'You have 1 chat with new messages'
 
-    template = templates.ChatCardTemplate(user.id, chats_with_unviewed_messages_count=2)
+    template = templates.ChatCardTemplate(user.id, 2)
     assert template.title == 'You have 2 chats with new messages'
 
-    template = templates.ChatCardTemplate(user.id, chats_with_unviewed_messages_count=42)
+    template = templates.ChatCardTemplate(user.id, 42)
     assert template.title == 'You have 42 chats with new messages'
 
 
 def test_requested_followers_card_template(user):
-    template = templates.RequestedFollowersCardTemplate(user.id)
-    assert template.title is None
+    card_id = templates.RequestedFollowersCardTemplate.get_card_id(user.id)
+    assert card_id.split(':') == [user.id, 'REQUESTED_FOLLOWERS']
+
+    template = templates.RequestedFollowersCardTemplate(user.id, 1)
+    assert template.card_id == card_id
     assert template.user_id == user.id
-    assert user.id in template.card_id
     assert template.action == 'https://real.app/chat/'
     assert not template.only_usernames
     assert not template.extra_fields
+    assert not template.target_item_id
 
 
 def test_requested_followers_card_template_titles(user):
-    template = templates.RequestedFollowersCardTemplate(user.id, requested_followers_count=1)
+    template = templates.RequestedFollowersCardTemplate(user.id, 1)
     assert template.title == 'You have 1 pending follow request'
 
-    template = templates.RequestedFollowersCardTemplate(user.id, requested_followers_count=2)
+    template = templates.RequestedFollowersCardTemplate(user.id, 2)
     assert template.title == 'You have 2 pending follow requests'
 
-    template = templates.RequestedFollowersCardTemplate(user.id, requested_followers_count=42)
+    template = templates.RequestedFollowersCardTemplate(user.id, 42)
     assert template.title == 'You have 42 pending follow requests'

@@ -30,7 +30,7 @@ def test_add_card_minimal(card_dynamo):
     assert card_item == {
         'partitionKey': 'card/cid',
         'sortKey': '-',
-        'schemaVersion': 0,
+        'schemaVersion': 1,
         'gsiA1PartitionKey': 'user/uid',
         'gsiA1SortKey': f'card/{created_at_str}',
         'title': title,
@@ -50,6 +50,7 @@ def test_add_card_maximal(card_dynamo):
     sub_title = 'more info for you'
     created_at = pendulum.now('utc')
     notify_user_at = pendulum.now('utc')
+    target_item_id = 'ctid'
     extra_fields = {
         'fieldA': 'AA',
         'fieldB': 'BB',
@@ -64,6 +65,7 @@ def test_add_card_maximal(card_dynamo):
         sub_title=sub_title,
         created_at=created_at,
         notify_user_at=notify_user_at,
+        target_item_id=target_item_id,
         extra_fields=extra_fields,
     )
 
@@ -72,7 +74,7 @@ def test_add_card_maximal(card_dynamo):
     assert card_item == {
         'partitionKey': 'card/cid',
         'sortKey': '-',
-        'schemaVersion': 0,
+        'schemaVersion': 1,
         'gsiA1PartitionKey': 'user/uid',
         'gsiA1SortKey': f'card/{created_at.to_iso8601_string()}',
         'title': title,
@@ -80,6 +82,8 @@ def test_add_card_maximal(card_dynamo):
         'subTitle': sub_title,
         'fieldA': 'AA',
         'fieldB': 'BB',
+        'gsiA2PartitionKey': 'cardTarget/ctid',
+        'gsiA2SortKey': 'uid',
         'gsiK1PartitionKey': 'card',
         'gsiK1SortKey': notify_user_at.to_iso8601_string() + '/uid',
     }
@@ -169,6 +173,42 @@ def test_generate_cards_by_user(card_dynamo):
     assert len(card_items) == 2
     assert card_items[0] == {'partitionKey': 'card/cid1', 'sortKey': '-'}
     assert card_items[1] == {'partitionKey': 'card/cid2', 'sortKey': '-'}
+
+
+def test_generate_cards_by_target(card_dynamo):
+    target_item_id_1 = str(uuid4())
+    target_item_id_2 = str(uuid4())
+    user_id_1 = str(uuid4())
+    user_id_2 = str(uuid4())
+
+    # add cards for both users for target 1, and only one user for target 2
+    card_id_11 = str(uuid4())
+    card_id_12 = str(uuid4())
+    card_id_21 = str(uuid4())
+    card_dynamo.add_card(card_id_11, user_id_1, 't', 'a', target_item_id=target_item_id_1)
+    card_dynamo.add_card(card_id_12, user_id_1, 't', 'a', target_item_id=target_item_id_2)
+    card_dynamo.add_card(card_id_21, user_id_2, 't', 'a', target_item_id=target_item_id_1)
+
+    # verify generating all the possiblities with user specified
+    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_1, user_id=user_id_1)) == [
+        {'partitionKey': f'card/{card_id_11}', 'sortKey': '-'}
+    ]
+    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_2, user_id=user_id_1)) == [
+        {'partitionKey': f'card/{card_id_12}', 'sortKey': '-'}
+    ]
+    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_1, user_id=user_id_2)) == [
+        {'partitionKey': f'card/{card_id_21}', 'sortKey': '-'}
+    ]
+    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_2, user_id=user_id_2)) == []
+
+    # verify generating all the possiblities without user specified
+    keys = list(card_dynamo.generate_card_keys_by_target(target_item_id_1))
+    assert len(keys) == 2
+    assert {'partitionKey': f'card/{card_id_21}', 'sortKey': '-'} in keys
+    assert {'partitionKey': f'card/{card_id_11}', 'sortKey': '-'} in keys
+    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_2)) == [
+        {'partitionKey': f'card/{card_id_12}', 'sortKey': '-'},
+    ]
 
 
 def test_generate_card_ids_by_notify_user_at(card_dynamo):

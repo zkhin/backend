@@ -1,4 +1,3 @@
-import random
 from unittest.mock import call, patch
 from uuid import uuid4
 
@@ -16,6 +15,7 @@ def user(user_manager, cognito_client):
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
+user1 = user
 user2 = user
 user3 = user
 
@@ -43,6 +43,11 @@ def comment_card_template(user, post):
 @pytest.fixture
 def post_likes_card_template(user, post):
     yield templates.PostLikesCardTemplate(user.id, post.id)
+
+
+@pytest.fixture
+def post_mention_card_template(user, post):
+    yield templates.PostMentionCardTemplate(user.id, post=post)
 
 
 @pytest.fixture
@@ -93,7 +98,8 @@ def test_add_or_update_card(user, template, card_manager):
 
 
 @pytest.mark.parametrize(
-    'template', pytest.lazy_fixture(['post_likes_card_template', 'post_views_card_template'])
+    'template',
+    pytest.lazy_fixture(['post_likes_card_template', 'post_mention_card_template', 'post_views_card_template']),
 )
 def test_add_or_update_card_with_only_usernames(user, template, card_manager):
     # verify starting state
@@ -156,33 +162,43 @@ def test_comment_cards_are_per_post(user, card_manager, post1, post2):
     assert card_manager.get_card(template2.card_id)
 
 
-def test_delete_post_cards(
-    card_manager, comment_card_template, post_likes_card_template, post_views_card_template, post
-):
-    # set the user up with one of the only_usernames if needed
-    card_templates = (comment_card_template, post_likes_card_template, post_views_card_template)
-    only_usernames = set.intersection(
-        *[set(template.only_usernames) for template in card_templates if getattr(template, 'only_usernames', [])]
-    )
-    if only_usernames:
-        post.user.dynamo.update_user_username(
-            post.user.id, random.choice(tuple(only_usernames)), post.user.username
-        )
+def test_delete_by_target(card_manager, user1, user2, post1, post2, TestCardTemplate):
+    # add a few cards, verify state
+    kwargs = {'title': 't', 'action': 'a'}
+    c10 = card_manager.add_or_update_card(TestCardTemplate(user1.id, **kwargs))
+    c11 = card_manager.add_or_update_card(TestCardTemplate(user1.id, target_item_id=post1.id, **kwargs))
+    c12 = card_manager.add_or_update_card(TestCardTemplate(user1.id, target_item_id=post2.id, **kwargs))
+    c21 = card_manager.add_or_update_card(TestCardTemplate(user2.id, target_item_id=post1.id, **kwargs))
+    c22 = card_manager.add_or_update_card(TestCardTemplate(user2.id, target_item_id=post2.id, **kwargs))
+    for card in (c10, c11, c12, c21, c22):
+        assert card_manager.get_card(card.id)
 
-    # add them all to the DB, verify starting state
-    for template in card_templates:
-        card_manager.add_or_update_card(template)
-        assert card_manager.get_card(template.card_id)
+    # delete none, verify state
+    card_manager.delete_by_target(str(uuid4()))
+    card_manager.delete_by_target(str(uuid4()), user_id=user1.id)
+    for card in (c10, c11, c12, c21, c22):
+        assert card_manager.get_card(card.id)
 
-    # delete them all, verify new state
-    card_manager.delete_post_cards(post.user_id, post.id)
-    for template in card_templates:
-        assert card_manager.get_card(template.card_id) is None
+    # delete all for one target, verify state
+    card_manager.delete_by_target(post1.id)
+    for card in (c10, c12, c22):
+        assert card_manager.get_card(card.id)
+    for card in (c11, c21):
+        assert not card_manager.get_card(card.id)
 
-    # delete all again, verify idempotent
-    card_manager.delete_post_cards(post.user_id, post.id)
-    for template in card_templates:
-        assert card_manager.get_card(template.card_id) is None
+    # delete target and user specific, verify state
+    card_manager.delete_by_target(post2.id, user_id=user1.id)
+    for card in (c10, c22):
+        assert card_manager.get_card(card.id)
+    for card in (c11, c12, c21):
+        assert not card_manager.get_card(card.id)
+
+    # delete for target, verify state
+    card_manager.delete_by_target(post2.id)
+    for card in (c10,):
+        assert card_manager.get_card(card.id)
+    for card in (c11, c12, c21, c22):
+        assert not card_manager.get_card(card.id)
 
 
 def test_notify_users(card_manager, pinpoint_client, user, user2, TestCardTemplate):

@@ -35,13 +35,14 @@ class CardDynamo:
         sub_title=None,
         created_at=None,
         notify_user_at=None,
+        target_item_id=None,
         extra_fields=None,
     ):
         created_at = created_at or pendulum.now('utc')
         query_kwargs = {
             'Item': {
                 **self.pk(card_id),
-                'schemaVersion': 0,
+                'schemaVersion': 1,
                 'gsiA1PartitionKey': f'user/{user_id}',
                 'gsiA1SortKey': f'card/{created_at.to_iso8601_string()}',
                 'title': title,
@@ -54,6 +55,9 @@ class CardDynamo:
         if notify_user_at:
             query_kwargs['Item']['gsiK1PartitionKey'] = 'card'
             query_kwargs['Item']['gsiK1SortKey'] = notify_user_at.to_iso8601_string() + '/' + user_id
+        if target_item_id:
+            query_kwargs['Item']['gsiA2PartitionKey'] = f'cardTarget/{target_item_id}'
+            query_kwargs['Item']['gsiA2SortKey'] = user_id
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
@@ -87,6 +91,18 @@ class CardDynamo:
         if pks_only:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
+
+    def generate_card_keys_by_target(self, target_item_id, user_id=None):
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiA2PartitionKey = :pk',
+            'ExpressionAttributeValues': {':pk': f'cardTarget/{target_item_id}'},
+            'ProjectionExpression': 'partitionKey, sortKey',
+            'IndexName': 'GSI-A2',
+        }
+        if user_id:
+            query_kwargs['KeyConditionExpression'] += ' AND gsiA2SortKey = :sk'
+            query_kwargs['ExpressionAttributeValues'][':sk'] = user_id
+        return self.client.generate_all_query(query_kwargs)
 
     def generate_card_ids_by_notify_user_at(self, cutoff_at, only_user_ids=None):
         query_kwargs = {

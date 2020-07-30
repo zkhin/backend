@@ -6,6 +6,8 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
@@ -21,7 +23,7 @@ test('PostLikes card generation and format', async () => {
   const [theirClient] = await loginCache.getCleanLogin()
 
   // change our username to one of the hardcoded privileged only_usernames
-  const username = 'azim'
+  const username = 'ian'
   await ourClient
     .mutate({mutation: mutations.setUsername, variables: {username}})
     .then(({data}) => expect(data.setUserDetails.username).toBe(username))
@@ -29,7 +31,7 @@ test('PostLikes card generation and format', async () => {
   // we add a post
   const postId = uuidv4()
   await ourClient
-    .mutate({mutation: mutations.addPost, variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}})
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: imageDataB64}})
     .then(({data}) => expect(data.addPost.postId).toBe(postId))
 
   // they onymously like the post

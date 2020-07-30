@@ -1,4 +1,3 @@
-import random
 from unittest.mock import call, patch
 from uuid import uuid4
 
@@ -14,6 +13,11 @@ def user(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
+
+
+user1 = user
+user2 = user
+user3 = user
 
 
 @pytest.fixture
@@ -89,9 +93,9 @@ def test_on_user_delete_delete_cards(card_manager, user, template):
 
 
 def test_on_post_delete_delete_cards(card_manager, post):
-    with patch.object(card_manager, 'delete_post_cards') as delete_post_cards_mock:
+    with patch.object(card_manager, 'delete_by_target') as delete_by_target_mock:
         card_manager.on_post_delete_delete_cards(post.id, old_item=post.item)
-    assert delete_post_cards_mock.mock_calls == [call(post.user_id, post.id)]
+    assert delete_by_target_mock.mock_calls == [call(post.id)]
 
 
 @pytest.mark.parametrize(
@@ -181,7 +185,7 @@ def test_on_card_delete_sends_gql_notification(card_manager, card, user):
     ],
 )
 def test_on_user_count_change_sync_card(card_manager, user, method_name, card_template_class, dynamo_attribute):
-    card_id = card_template_class(user.id).card_id
+    card_id = card_template_class.get_card_id(user.id)
     assert user.item.get(dynamo_attribute) is None
 
     # refresh with None
@@ -225,8 +229,8 @@ def test_on_user_count_change_sync_card(card_manager, user, method_name, card_te
 def test_on_post_comments_unviewed_count_change_update_card(card_manager, post):
     # check starting state
     assert 'commentsUnviewedCount' not in post.item
-    template = templates.CommentCardTemplate(post.user_id, post.id)
-    assert card_manager.get_card(template.card_id) is None
+    card_id = templates.CommentCardTemplate.get_card_id(post.user_id, post.id)
+    assert card_manager.get_card(card_id) is None
 
     # add an unviewed comment, check state
     old_item = post.item.copy()
@@ -234,7 +238,7 @@ def test_on_post_comments_unviewed_count_change_update_card(card_manager, post):
     card_manager.on_post_comments_unviewed_count_change_update_card(
         post.id, new_item=post.item, old_item=old_item
     )
-    assert ' 1 ' in card_manager.get_card(template.card_id).title
+    assert ' 1 ' in card_manager.get_card(card_id).title
 
     # add another unviewed comment, check state
     old_item = post.item.copy()
@@ -242,7 +246,7 @@ def test_on_post_comments_unviewed_count_change_update_card(card_manager, post):
     card_manager.on_post_comments_unviewed_count_change_update_card(
         post.id, new_item=post.item, old_item=old_item
     )
-    assert ' 2 ' in card_manager.get_card(template.card_id).title
+    assert ' 2 ' in card_manager.get_card(card_id).title
 
     # jump down to no unviewed comments, check calls
     old_item = post.item.copy()
@@ -250,7 +254,7 @@ def test_on_post_comments_unviewed_count_change_update_card(card_manager, post):
     card_manager.on_post_comments_unviewed_count_change_update_card(
         post.id, new_item=post.item, old_item=old_item
     )
-    assert card_manager.get_card(template.card_id) is None
+    assert card_manager.get_card(card_id) is None
 
 
 def test_on_post_likes_count_change_update_card(card_manager, post, user):
@@ -259,13 +263,12 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     assert 'anonymousLikeCount' not in post.item
     template = templates.PostLikesCardTemplate(post.user_id, post.id)
     assert card_manager.get_card(template.card_id) is None
-    if template.only_usernames:
-        user.dynamo.update_user_username(user.id, random.choice(template.only_usernames), user.username)
 
     # record a like, verify card is created
     old_item = post.item.copy()
     post.item['anonymousLikeCount'] = 2
-    card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    with patch('app.models.card.manager.templates.PostLikesCardTemplate.only_usernames', []):
+        card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # delete the card
@@ -275,7 +278,8 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     # record nine likes, verify card is created
     old_item = post.item.copy()
     post.item['onymousLikeCount'] = 7
-    card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    with patch('app.models.card.manager.templates.PostLikesCardTemplate.only_usernames', []):
+        card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # delete the card
@@ -285,8 +289,55 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     # record a 10th like, verify card is **not** created
     old_item = post.item.copy()
     post.item['anonymousLikeCount'] = 3
-    card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    with patch('app.models.card.manager.templates.PostLikesCardTemplate.only_usernames', []):
+        card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
+
+
+def test_on_post_text_tags_change_update_card(card_manager, post, user, user1, user2, user3):
+    # check starting state
+    card_id_1 = templates.PostMentionCardTemplate.get_card_id(user1.id, post.id)
+    card_id_2 = templates.PostMentionCardTemplate.get_card_id(user2.id, post.id)
+    card_id_3 = templates.PostMentionCardTemplate.get_card_id(user3.id, post.id)
+    assert post.item.get('textTags', []) == []
+    assert card_manager.get_card(card_id_1) is None
+    assert card_manager.get_card(card_id_2) is None
+    assert card_manager.get_card(card_id_3) is None
+
+    # add two text tags, verify two cards created
+    post.item['textTags'] = [
+        {'tag': f'@{user1.username}', 'userId': user1.id},
+        {'tag': f'@{user2.username}', 'userId': user2.id},
+    ]
+    with patch('app.models.card.manager.templates.PostMentionCardTemplate.only_usernames', []):
+        card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item)
+    card1 = card_manager.get_card(card_id_1)
+    card2 = card_manager.get_card(card_id_2)
+    assert card_manager.get_card(card_id_3) is None
+    assert card1.post.id == post.id
+    assert card2.post.id == post.id
+    assert user.username in card1.title
+    assert user.username in card2.title
+
+    # add a third text tag, verify card created
+    old_item = post.item.copy()
+    post.item['textTags'] = old_item['textTags'] + [{'tag': f'@{user3.username}', 'userId': user3.id}]
+    with patch('app.models.card.manager.templates.PostMentionCardTemplate.only_usernames', []):
+        card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    assert card_manager.get_card(card_id_1)
+    assert card_manager.get_card(card_id_2)
+    card3 = card_manager.get_card(card_id_3)
+    assert card3.post.id == post.id
+    assert user.username in card3.title
+
+    # loose two tags, verify no card created or deleted
+    old_item = post.item.copy()
+    post.item['textTags'] = old_item['textTags'][1:2]
+    with patch('app.models.card.manager.templates.PostMentionCardTemplate.only_usernames', []):
+        card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    assert card_manager.get_card(card_id_1)
+    assert card_manager.get_card(card_id_2)
+    assert card_manager.get_card(card_id_3)
 
 
 def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
@@ -294,19 +345,19 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     assert 'viewedByCount' not in post.item
     template = templates.PostViewsCardTemplate(post.user_id, post.id)
     assert card_manager.get_card(template.card_id) is None
-    if template.only_usernames:
-        user.dynamo.update_user_username(user.id, random.choice(template.only_usernames), user.username)
 
     # jump up to five views, process, check no card created
     old_item = post.item.copy()
     post.item['viewedByCount'] = 5
-    card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    with patch('app.models.card.manager.templates.PostViewsCardTemplate.only_usernames', []):
+        card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
 
     # go to six views, process, check card created
     old_item = post.item.copy()
     post.item['viewedByCount'] = 6
-    card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    with patch('app.models.card.manager.templates.PostViewsCardTemplate.only_usernames', []):
+        card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # delete the card
@@ -316,5 +367,6 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     # jump up to seven views, process, check no card created
     old_item = post.item.copy()
     post.item['viewedByCount'] = 7
-    card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    with patch('app.models.card.manager.templates.PostViewsCardTemplate.only_usernames', []):
+        card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None

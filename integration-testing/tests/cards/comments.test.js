@@ -6,6 +6,8 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries, subscriptions} = require('../../schema')
 
+const imageData = misc.generateRandomJpeg(8, 8)
+const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
@@ -44,7 +46,7 @@ test('Comment card format, subscription notifications', async () => {
   // we add a post
   const postId = uuidv4()
   await ourClient
-    .mutate({mutation: mutations.addPost, variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}})
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: imageDataB64}})
     .then(({data}) => expect(data.addPost.postId).toBe(postId))
 
   // we comment on our post
@@ -204,6 +206,7 @@ test('Comment cards are post-specific', async () => {
     expect(data.self.cardCount).toBe(1)
     expect(data.self.cards.items).toHaveLength(1)
     expect(data.self.cards.items[0].action).toContain(postId1)
+    expect(data.self.cards.items[0].thumbnail).toBeNull()
     return data.self.cards.items[0].cardId
   })
 
@@ -223,6 +226,7 @@ test('Comment cards are post-specific', async () => {
     expect(data.self.cards.items).toHaveLength(2)
     expect(data.self.cards.items[1].cardId).toBe(cardId1)
     expect(data.self.cards.items[0].action).toContain(postId2)
+    expect(data.self.cards.items[0].thumbnail).toBeNull()
     return data.self.cards.items[0].cardId
   })
 

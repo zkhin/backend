@@ -892,7 +892,7 @@ def delete_card(caller_user, arguments, source, context):
 @routes.register('Card.thumbnail')
 def card_thumbnail(caller_user_id, arguments, source, context):
     card = card_manager.get_card(source['cardId'])
-    if card and card.post:
+    if card and card.post and card.post.type != PostType.TEXT_ONLY:
         return {
             'url': card.post.get_image_readonly_url(image_size.NATIVE),
             'url64p': card.post.get_image_readonly_url(image_size.P64),

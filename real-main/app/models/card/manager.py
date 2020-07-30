@@ -63,20 +63,15 @@ class CardManager:
                 created_at=created_at,
                 notify_user_at=notify_user_at,
                 sub_title=template.sub_title,
+                target_item_id=template.target_item_id,
                 extra_fields=template.extra_fields,
             )
         except CardAlreadyExists:
             card_item = self.dynamo.update_title(template.card_id, template.title)
         return self.init_card(card_item)
 
-    def delete_post_cards(self, user_id, post_id):
-        "Delete all cards associated with a given post for a given user"
-        card_templates = (
-            templates.CommentCardTemplate(user_id, post_id),
-            templates.PostLikesCardTemplate(user_id, post_id),
-            templates.PostViewsCardTemplate(user_id, post_id),
-        )
-        key_generator = (self.dynamo.pk(template.card_id) for template in card_templates)
+    def delete_by_target(self, target_item_id, user_id=None):
+        key_generator = self.dynamo.generate_card_keys_by_target(target_item_id, user_id=user_id)
         self.dynamo.client.batch_delete_items(key_generator)
 
     def notify_users(self, now=None, only_usernames=None):
@@ -113,8 +108,7 @@ class CardManager:
         self.init_card(old_item).trigger_notification(CardNotificationType.DELETED)
 
     def on_post_delete_delete_cards(self, post_id, old_item):
-        user_id = old_item['postedByUserId']
-        self.delete_post_cards(user_id, post_id)
+        self.delete_by_target(post_id)
 
     def on_user_delete_delete_cards(self, user_id, old_item):
         generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
@@ -138,13 +132,8 @@ class CardManager:
     def on_post_view_count_change_update_cards(self, post_id, new_item, old_item=None):
         if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):
             return  # view count did not increase
-
         _, viewed_by_user_id = new_item['sortKey'].split('/')
-        post = self.post_manager.get_post(post_id)
-        if not post or post.user_id != viewed_by_user_id:
-            return  # not viewed by post owner
-
-        self.delete_post_cards(post.user_id, post_id)
+        self.delete_by_target(post_id, user_id=viewed_by_user_id)
 
     def on_post_comments_unviewed_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('commentsUnviewedCount', 0)
@@ -161,6 +150,15 @@ class CardManager:
         if 0 < new_cnt < 10:
             user_id = new_item['postedByUserId']
             card_template = templates.PostLikesCardTemplate(user_id, post_id)
+            self.add_or_update_card(card_template)
+
+    def on_post_text_tags_change_update_card(self, post_id, new_item, old_item=None):
+        new_tagged_user_ids = [t['userId'] for t in new_item.get('textTags', [])]
+        old_tagged_user_ids = [t['userId'] for t in (old_item or {}).get('textTags', [])]
+        newly_tagged_user_ids = set(new_tagged_user_ids) - set(old_tagged_user_ids)
+        post = self.post_manager.init_post(new_item)
+        for user_id in newly_tagged_user_ids:
+            card_template = templates.PostMentionCardTemplate(user_id, post)
             self.add_or_update_card(card_template)
 
     def on_post_viewed_by_count_change_update_card(self, post_id, new_item, old_item=None):
