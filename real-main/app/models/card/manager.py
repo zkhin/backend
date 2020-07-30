@@ -19,6 +19,7 @@ class CardManager:
     def __init__(self, clients, managers=None):
         managers = managers or {}
         managers['card'] = self
+        self.comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
@@ -63,15 +64,19 @@ class CardManager:
                 created_at=created_at,
                 notify_user_at=notify_user_at,
                 sub_title=template.sub_title,
-                target_item_id=template.target_item_id,
-                extra_fields=template.extra_fields,
+                post_id=template.post_id,
+                comment_id=template.comment_id,
             )
         except CardAlreadyExists:
             card_item = self.dynamo.update_title(template.card_id, template.title)
         return self.init_card(card_item)
 
-    def delete_by_target(self, target_item_id, user_id=None):
-        key_generator = self.dynamo.generate_card_keys_by_target(target_item_id, user_id=user_id)
+    def delete_by_post(self, post_id, user_id=None):
+        key_generator = self.dynamo.generate_card_keys_by_post(post_id, user_id=user_id)
+        self.dynamo.client.batch_delete_items(key_generator)
+
+    def delete_by_comment(self, comment_id):
+        key_generator = self.dynamo.generate_card_keys_by_comment(comment_id)
         self.dynamo.client.batch_delete_items(key_generator)
 
     def notify_users(self, now=None, only_usernames=None):
@@ -108,7 +113,10 @@ class CardManager:
         self.init_card(old_item).trigger_notification(CardNotificationType.DELETED)
 
     def on_post_delete_delete_cards(self, post_id, old_item):
-        self.delete_by_target(post_id)
+        self.delete_by_post(post_id)
+
+    def on_comment_delete_delete_cards(self, comment_id, old_item):
+        self.delete_by_comment(comment_id)
 
     def on_user_delete_delete_cards(self, user_id, old_item):
         generator = self.dynamo.generate_cards_by_user(user_id, pks_only=True)
@@ -133,7 +141,7 @@ class CardManager:
         if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):
             return  # view count did not increase
         _, viewed_by_user_id = new_item['sortKey'].split('/')
-        self.delete_by_target(post_id, user_id=viewed_by_user_id)
+        self.delete_by_post(post_id, user_id=viewed_by_user_id)
 
     def on_post_comments_unviewed_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('commentsUnviewedCount', 0)
@@ -152,14 +160,24 @@ class CardManager:
             card_template = templates.PostLikesCardTemplate(user_id, post_id)
             self.add_or_update_card(card_template)
 
-    def on_post_text_tags_change_update_card(self, post_id, new_item, old_item=None):
+    def on_text_tags_change_update_card(
+        self, manager_name, init_name, card_template_class, item_id, new_item, old_item=None
+    ):
         new_tagged_user_ids = [t['userId'] for t in new_item.get('textTags', [])]
         old_tagged_user_ids = [t['userId'] for t in (old_item or {}).get('textTags', [])]
         newly_tagged_user_ids = set(new_tagged_user_ids) - set(old_tagged_user_ids)
-        post = self.post_manager.init_post(new_item)
+        model = getattr(getattr(self, manager_name), init_name)(new_item)
         for user_id in newly_tagged_user_ids:
-            card_template = templates.PostMentionCardTemplate(user_id, post)
+            card_template = card_template_class(user_id, model)
             self.add_or_update_card(card_template)
+
+    on_comment_text_tags_change_update_card = partialmethod(
+        on_text_tags_change_update_card, 'comment_manager', 'init_comment', templates.CommentMentionCardTemplate,
+    )
+
+    on_post_text_tags_change_update_card = partialmethod(
+        on_text_tags_change_update_card, 'post_manager', 'init_post', templates.PostMentionCardTemplate,
+    )
 
     def on_post_viewed_by_count_change_update_card(self, post_id, new_item, old_item=None):
         new_cnt = new_item.get('viewedByCount', 0)

@@ -159,39 +159,72 @@ def test_comment_cards_are_per_post(user, card_manager, post1, post2):
     assert card_manager.get_card(template2.card_id)
 
 
-def test_delete_by_target(card_manager, user1, user2, post1, post2, TestCardTemplate):
+def test_delete_by_post(card_manager, user1, user2, post1, post2, TestCardTemplate):
     # add a few cards, verify state
     kwargs = {'title': 't', 'action': 'a'}
     c10 = card_manager.add_or_update_card(TestCardTemplate(user1.id, **kwargs))
-    c11 = card_manager.add_or_update_card(TestCardTemplate(user1.id, target_item_id=post1.id, **kwargs))
-    c12 = card_manager.add_or_update_card(TestCardTemplate(user1.id, target_item_id=post2.id, **kwargs))
-    c21 = card_manager.add_or_update_card(TestCardTemplate(user2.id, target_item_id=post1.id, **kwargs))
-    c22 = card_manager.add_or_update_card(TestCardTemplate(user2.id, target_item_id=post2.id, **kwargs))
+    c11 = card_manager.add_or_update_card(TestCardTemplate(user1.id, post_id=post1.id, **kwargs))
+    c12 = card_manager.add_or_update_card(TestCardTemplate(user1.id, post_id=post2.id, **kwargs))
+    c21 = card_manager.add_or_update_card(TestCardTemplate(user2.id, post_id=post1.id, **kwargs))
+    c22 = card_manager.add_or_update_card(TestCardTemplate(user2.id, post_id=post2.id, **kwargs))
     for card in (c10, c11, c12, c21, c22):
         assert card_manager.get_card(card.id)
 
     # delete none, verify state
-    card_manager.delete_by_target(str(uuid4()))
-    card_manager.delete_by_target(str(uuid4()), user_id=user1.id)
+    card_manager.delete_by_post(str(uuid4()))
+    card_manager.delete_by_post(str(uuid4()), user_id=user1.id)
     for card in (c10, c11, c12, c21, c22):
         assert card_manager.get_card(card.id)
 
-    # delete all for one target, verify state
-    card_manager.delete_by_target(post1.id)
+    # delete all for one post, verify state
+    card_manager.delete_by_post(post1.id)
     for card in (c10, c12, c22):
         assert card_manager.get_card(card.id)
     for card in (c11, c21):
         assert not card_manager.get_card(card.id)
 
-    # delete target and user specific, verify state
-    card_manager.delete_by_target(post2.id, user_id=user1.id)
+    # delete post and user specific, verify state
+    card_manager.delete_by_post(post2.id, user_id=user1.id)
     for card in (c10, c22):
         assert card_manager.get_card(card.id)
     for card in (c11, c12, c21):
         assert not card_manager.get_card(card.id)
 
-    # delete for target, verify state
-    card_manager.delete_by_target(post2.id)
+    # delete for post, verify state
+    card_manager.delete_by_post(post2.id)
+    for card in (c10,):
+        assert card_manager.get_card(card.id)
+    for card in (c11, c12, c21, c22):
+        assert not card_manager.get_card(card.id)
+
+
+def test_delete_by_comment(card_manager, user1, user2, TestCardTemplate):
+    # add a few cards, verify state
+    kwargs = {'title': 't', 'action': 'a'}
+    comment_id_1 = str(uuid4())
+    comment_id_2 = str(uuid4())
+    c10 = card_manager.add_or_update_card(TestCardTemplate(user1.id, **kwargs))
+    c11 = card_manager.add_or_update_card(TestCardTemplate(user1.id, comment_id=comment_id_1, **kwargs))
+    c12 = card_manager.add_or_update_card(TestCardTemplate(user1.id, comment_id=comment_id_2, **kwargs))
+    c21 = card_manager.add_or_update_card(TestCardTemplate(user2.id, comment_id=comment_id_1, **kwargs))
+    c22 = card_manager.add_or_update_card(TestCardTemplate(user2.id, comment_id=comment_id_2, **kwargs))
+    for card in (c10, c11, c12, c21, c22):
+        assert card_manager.get_card(card.id)
+
+    # delete none, verify state
+    card_manager.delete_by_comment(str(uuid4()))
+    for card in (c10, c11, c12, c21, c22):
+        assert card_manager.get_card(card.id)
+
+    # delete all for one comment, verify state
+    card_manager.delete_by_comment(comment_id_1)
+    for card in (c10, c12, c22):
+        assert card_manager.get_card(card.id)
+    for card in (c11, c21):
+        assert not card_manager.get_card(card.id)
+
+    # delete for post, verify state
+    card_manager.delete_by_comment(comment_id_2)
     for card in (c10,):
         assert card_manager.get_card(card.id)
     for card in (c11, c12, c21, c22):

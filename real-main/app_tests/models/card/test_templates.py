@@ -15,10 +15,16 @@ def user(user_manager, cognito_client):
 
 
 @pytest.fixture
-def post(user, post_manager):
+def post(post_manager, user):
     yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
 
 
+@pytest.fixture
+def comment(comment_manager, user2, post):
+    yield comment_manager.add_comment(str(uuid4()), post.id, user2.id, 'lore ipsum')
+
+
+user2 = user
 post1 = post
 post2 = post
 
@@ -33,8 +39,33 @@ def test_post_views_card_template(user, post):
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
     assert template.title == 'You have new views'
     assert not template.only_usernames
-    assert template.extra_fields == {'postId': post.id}
-    assert template.target_item_id == post.id
+    assert template.post_id == post.id
+    assert not template.comment_id
+
+
+def test_comment_mention_card_template(user, comment):
+    card_id = templates.CommentMentionCardTemplate.get_card_id(user.id, comment.id)
+    assert card_id.split(':') == [user.id, 'COMMENT_MENTION', comment.id]
+
+    template = templates.CommentMentionCardTemplate(user.id, comment)
+    assert template.card_id == card_id
+    assert template.user_id == user.id
+    assert template.action.split('/') == [
+        'https:',
+        '',
+        'real.app',
+        'user',
+        comment.post.user_id,
+        'post',
+        comment.post_id,
+        'comments',
+        comment.id,
+    ]
+    assert re.match(r'@.* mentioned you in a comment', template.title)
+    assert comment.user.username in template.title
+    assert not template.only_usernames
+    assert template.post_id == comment.post_id
+    assert template.comment_id == comment.id
 
 
 def test_post_mention_card_template(user, post):
@@ -48,8 +79,8 @@ def test_post_mention_card_template(user, post):
     assert re.match(r'@.* tagged you in a post', template.title)
     assert post.user.username in template.title
     assert not template.only_usernames
-    assert template.extra_fields == {'postId': post.id}
-    assert template.target_item_id == post.id
+    assert template.post_id == post.id
+    assert not template.comment_id
 
 
 def test_post_likes_card_template(user, post):
@@ -62,8 +93,8 @@ def test_post_likes_card_template(user, post):
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/likes'
     assert template.title == 'You have new likes'
     assert not template.only_usernames
-    assert template.extra_fields == {'postId': post.id}
-    assert template.target_item_id == post.id
+    assert template.post_id == post.id
+    assert not template.comment_id
 
 
 def test_comment_card_template(user, post):
@@ -75,8 +106,8 @@ def test_comment_card_template(user, post):
     assert template.user_id == user.id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
     assert not template.only_usernames
-    assert template.extra_fields == {'postId': post.id}
-    assert template.target_item_id == post.id
+    assert template.post_id == post.id
+    assert not template.comment_id
 
 
 def test_comment_card_template_titles(user, post):
@@ -110,8 +141,8 @@ def test_chat_card_template(user):
     assert template.user_id == user.id
     assert template.action == 'https://real.app/chat/'
     assert not template.only_usernames
-    assert not template.extra_fields
-    assert not template.target_item_id
+    assert not template.post_id
+    assert not template.comment_id
 
 
 def test_chat_card_template_titles(user):
@@ -134,8 +165,8 @@ def test_requested_followers_card_template(user):
     assert template.user_id == user.id
     assert template.action == 'https://real.app/chat/'
     assert not template.only_usernames
-    assert not template.extra_fields
-    assert not template.target_item_id
+    assert not template.post_id
+    assert not template.comment_id
 
 
 def test_requested_followers_card_template_titles(user):

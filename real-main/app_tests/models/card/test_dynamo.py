@@ -13,8 +13,8 @@ def card_dynamo(dynamo_client):
 
 
 def test_add_card_minimal(card_dynamo):
-    card_id = 'cid'
-    user_id = 'uid'
+    card_id = str(uuid4())
+    user_id = str(uuid4())
     title = 'you should know this'
     action = 'https://some-valid-url.com'
 
@@ -28,10 +28,10 @@ def test_add_card_minimal(card_dynamo):
     created_at_str = card_item['gsiA1SortKey'][len('card/') :]
     assert before < pendulum.parse(created_at_str) < after
     assert card_item == {
-        'partitionKey': 'card/cid',
+        'partitionKey': f'card/{card_id}',
         'sortKey': '-',
         'schemaVersion': 1,
-        'gsiA1PartitionKey': 'user/uid',
+        'gsiA1PartitionKey': f'user/{user_id}',
         'gsiA1SortKey': f'card/{created_at_str}',
         'title': title,
         'action': action,
@@ -43,18 +43,15 @@ def test_add_card_minimal(card_dynamo):
 
 
 def test_add_card_maximal(card_dynamo):
-    card_id = 'cid'
-    user_id = 'uid'
+    card_id = str(uuid4())
+    user_id = str(uuid4())
     title = 'you should know this'
     action = 'https://some-valid-url.com'
     sub_title = 'more info for you'
     created_at = pendulum.now('utc')
     notify_user_at = pendulum.now('utc')
-    target_item_id = 'ctid'
-    extra_fields = {
-        'fieldA': 'AA',
-        'fieldB': 'BB',
-    }
+    post_id = str(uuid4())
+    comment_id = str(uuid4())
 
     # add the card to the DB
     card_item = card_dynamo.add_card(
@@ -65,27 +62,29 @@ def test_add_card_maximal(card_dynamo):
         sub_title=sub_title,
         created_at=created_at,
         notify_user_at=notify_user_at,
-        target_item_id=target_item_id,
-        extra_fields=extra_fields,
+        post_id=post_id,
+        comment_id=comment_id,
     )
 
     # retrieve the card and verify the format is as we expect
     assert card_dynamo.get_card(card_id) == card_item
     assert card_item == {
-        'partitionKey': 'card/cid',
+        'partitionKey': f'card/{card_id}',
         'sortKey': '-',
         'schemaVersion': 1,
-        'gsiA1PartitionKey': 'user/uid',
+        'gsiA1PartitionKey': f'user/{user_id}',
         'gsiA1SortKey': f'card/{created_at.to_iso8601_string()}',
         'title': title,
         'action': action,
         'subTitle': sub_title,
-        'fieldA': 'AA',
-        'fieldB': 'BB',
-        'gsiA2PartitionKey': 'cardTarget/ctid',
-        'gsiA2SortKey': 'uid',
+        'postId': post_id,
+        'commentId': comment_id,
+        'gsiA2PartitionKey': f'card/{post_id}',
+        'gsiA2SortKey': user_id,
+        'gsiA3PartitionKey': f'card/{comment_id}',
+        'gsiA3SortKey': '-',
         'gsiK1PartitionKey': 'card',
-        'gsiK1SortKey': notify_user_at.to_iso8601_string() + '/uid',
+        'gsiK1SortKey': notify_user_at.to_iso8601_string() + '/' + user_id,
     }
 
 
@@ -175,38 +174,62 @@ def test_generate_cards_by_user(card_dynamo):
     assert card_items[1] == {'partitionKey': 'card/cid2', 'sortKey': '-'}
 
 
-def test_generate_cards_by_target(card_dynamo):
-    target_item_id_1 = str(uuid4())
-    target_item_id_2 = str(uuid4())
+def test_generate_cards_by_post(card_dynamo):
+    post_id_1 = str(uuid4())
+    post_id_2 = str(uuid4())
     user_id_1 = str(uuid4())
     user_id_2 = str(uuid4())
 
-    # add cards for both users for target 1, and only one user for target 2
+    # add cards for both users for post 1, and only one user for post 2
     card_id_11 = str(uuid4())
     card_id_12 = str(uuid4())
     card_id_21 = str(uuid4())
-    card_dynamo.add_card(card_id_11, user_id_1, 't', 'a', target_item_id=target_item_id_1)
-    card_dynamo.add_card(card_id_12, user_id_1, 't', 'a', target_item_id=target_item_id_2)
-    card_dynamo.add_card(card_id_21, user_id_2, 't', 'a', target_item_id=target_item_id_1)
+    card_dynamo.add_card(card_id_11, user_id_1, 't', 'a', post_id=post_id_1)
+    card_dynamo.add_card(card_id_12, user_id_1, 't', 'a', post_id=post_id_2)
+    card_dynamo.add_card(card_id_21, user_id_2, 't', 'a', post_id=post_id_1)
 
     # verify generating all the possiblities with user specified
-    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_1, user_id=user_id_1)) == [
+    assert list(card_dynamo.generate_card_keys_by_post(post_id_1, user_id=user_id_1)) == [
         {'partitionKey': f'card/{card_id_11}', 'sortKey': '-'}
     ]
-    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_2, user_id=user_id_1)) == [
+    assert list(card_dynamo.generate_card_keys_by_post(post_id_2, user_id=user_id_1)) == [
         {'partitionKey': f'card/{card_id_12}', 'sortKey': '-'}
     ]
-    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_1, user_id=user_id_2)) == [
+    assert list(card_dynamo.generate_card_keys_by_post(post_id_1, user_id=user_id_2)) == [
         {'partitionKey': f'card/{card_id_21}', 'sortKey': '-'}
     ]
-    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_2, user_id=user_id_2)) == []
+    assert list(card_dynamo.generate_card_keys_by_post(post_id_2, user_id=user_id_2)) == []
 
     # verify generating all the possiblities without user specified
-    keys = list(card_dynamo.generate_card_keys_by_target(target_item_id_1))
+    keys = list(card_dynamo.generate_card_keys_by_post(post_id_1))
     assert len(keys) == 2
     assert {'partitionKey': f'card/{card_id_21}', 'sortKey': '-'} in keys
     assert {'partitionKey': f'card/{card_id_11}', 'sortKey': '-'} in keys
-    assert list(card_dynamo.generate_card_keys_by_target(target_item_id_2)) == [
+    assert list(card_dynamo.generate_card_keys_by_post(post_id_2)) == [
+        {'partitionKey': f'card/{card_id_12}', 'sortKey': '-'},
+    ]
+
+
+def test_generate_cards_by_comment(card_dynamo):
+    comment_id_1 = str(uuid4())
+    comment_id_2 = str(uuid4())
+    user_id_1 = str(uuid4())
+    user_id_2 = str(uuid4())
+
+    # add cards for both users for post 1, and only one user for post 2
+    card_id_11 = str(uuid4())
+    card_id_12 = str(uuid4())
+    card_id_21 = str(uuid4())
+    card_dynamo.add_card(card_id_11, user_id_1, 't', 'a', comment_id=comment_id_1)
+    card_dynamo.add_card(card_id_12, user_id_1, 't', 'a', comment_id=comment_id_2)
+    card_dynamo.add_card(card_id_21, user_id_2, 't', 'a', comment_id=comment_id_1)
+
+    # verify generating all the possiblities
+    keys = list(card_dynamo.generate_card_keys_by_comment(comment_id_1))
+    assert len(keys) == 2
+    assert {'partitionKey': f'card/{card_id_21}', 'sortKey': '-'} in keys
+    assert {'partitionKey': f'card/{card_id_11}', 'sortKey': '-'} in keys
+    assert list(card_dynamo.generate_card_keys_by_comment(comment_id_2)) == [
         {'partitionKey': f'card/{card_id_12}', 'sortKey': '-'},
     ]
 

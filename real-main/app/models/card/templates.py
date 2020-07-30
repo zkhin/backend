@@ -8,7 +8,8 @@ class CardTemplate:
     notify_user_after = None
     sub_title = None
     target_item_id = None
-    extra_fields = {}
+    post_id = None
+    comment_id = None
     only_usernames = ()
 
     def __init__(self, user_id):
@@ -45,8 +46,24 @@ class CommentCardTemplate(CardTemplate):
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/comments'
         cnt = unviewed_comments_count
         self.title = f'You have {cnt} new comment{"s" if cnt > 1 else ""}'
-        self.extra_fields = {'postId': post_id}
-        self.target_item_id = post_id
+        self.post_id = post_id
+
+
+class CommentMentionCardTemplate(CardTemplate):
+
+    notify_user_after = pendulum.duration(hours=24)
+
+    @staticmethod
+    def get_card_id(user_id, comment_id):
+        return f'{user_id}:COMMENT_MENTION:{comment_id}'
+
+    def __init__(self, user_id, comment):
+        super().__init__(user_id)
+        self.card_id = self.get_card_id(user_id, comment.id)
+        self.action = f'https://real.app/user/{comment.post.user_id}/post/{comment.post_id}/comments/{comment.id}'
+        self.title = f'@{comment.user.username} mentioned you in a comment'
+        self.post_id = comment.post_id
+        self.comment_id = comment.id
 
 
 class PostLikesCardTemplate(CardTemplate):
@@ -62,8 +79,7 @@ class PostLikesCardTemplate(CardTemplate):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post_id)
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/likes'
-        self.extra_fields = {'postId': post_id}
-        self.target_item_id = post_id
+        self.post_id = post_id
 
 
 class PostMentionCardTemplate(CardTemplate):
@@ -79,8 +95,7 @@ class PostMentionCardTemplate(CardTemplate):
         self.card_id = self.get_card_id(user_id, post.id)
         self.action = f'https://real.app/user/{post.user_id}/post/{post.id}'
         self.title = f'@{post.user.username} tagged you in a post'
-        self.extra_fields = {'postId': post.id}
-        self.target_item_id = post.id
+        self.post_id = post.id
 
 
 class PostViewsCardTemplate(CardTemplate):
@@ -96,8 +111,7 @@ class PostViewsCardTemplate(CardTemplate):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post_id)
         self.action = f'https://real.app/user/{user_id}/post/{post_id}/views'
-        self.extra_fields = {'postId': post_id}
-        self.target_item_id = post_id
+        self.post_id = post_id
 
 
 class RequestedFollowersCardTemplate(CardTemplate):

@@ -35,8 +35,8 @@ class CardDynamo:
         sub_title=None,
         created_at=None,
         notify_user_at=None,
-        target_item_id=None,
-        extra_fields=None,
+        post_id=None,
+        comment_id=None,
     ):
         created_at = created_at or pendulum.now('utc')
         query_kwargs = {
@@ -47,7 +47,6 @@ class CardDynamo:
                 'gsiA1SortKey': f'card/{created_at.to_iso8601_string()}',
                 'title': title,
                 'action': action,
-                **(extra_fields or {}),
             },
         }
         if sub_title:
@@ -55,9 +54,14 @@ class CardDynamo:
         if notify_user_at:
             query_kwargs['Item']['gsiK1PartitionKey'] = 'card'
             query_kwargs['Item']['gsiK1SortKey'] = notify_user_at.to_iso8601_string() + '/' + user_id
-        if target_item_id:
-            query_kwargs['Item']['gsiA2PartitionKey'] = f'cardTarget/{target_item_id}'
+        if post_id:
+            query_kwargs['Item']['postId'] = post_id
+            query_kwargs['Item']['gsiA2PartitionKey'] = f'card/{post_id}'
             query_kwargs['Item']['gsiA2SortKey'] = user_id
+        if comment_id:
+            query_kwargs['Item']['commentId'] = comment_id
+            query_kwargs['Item']['gsiA3PartitionKey'] = f'card/{comment_id}'
+            query_kwargs['Item']['gsiA3SortKey'] = '-'
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
@@ -92,16 +96,25 @@ class CardDynamo:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
 
-    def generate_card_keys_by_target(self, target_item_id, user_id=None):
+    def generate_card_keys_by_post(self, post_id, user_id=None):
         query_kwargs = {
             'KeyConditionExpression': 'gsiA2PartitionKey = :pk',
-            'ExpressionAttributeValues': {':pk': f'cardTarget/{target_item_id}'},
+            'ExpressionAttributeValues': {':pk': f'card/{post_id}'},
             'ProjectionExpression': 'partitionKey, sortKey',
             'IndexName': 'GSI-A2',
         }
         if user_id:
             query_kwargs['KeyConditionExpression'] += ' AND gsiA2SortKey = :sk'
             query_kwargs['ExpressionAttributeValues'][':sk'] = user_id
+        return self.client.generate_all_query(query_kwargs)
+
+    def generate_card_keys_by_comment(self, comment_id):
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiA3PartitionKey = :pk',
+            'ExpressionAttributeValues': {':pk': f'card/{comment_id}'},
+            'ProjectionExpression': 'partitionKey, sortKey',
+            'IndexName': 'GSI-A3',
+        }
         return self.client.generate_all_query(query_kwargs)
 
     def generate_card_ids_by_notify_user_at(self, cutoff_at, only_user_ids=None):

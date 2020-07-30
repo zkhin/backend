@@ -156,7 +156,7 @@ def test_migrate_one_with_post(dynamo_client, dynamo_table, caplog, item):
     new_item = dynamo_table.get_item(Key=key)['Item']
     assert new_item.pop('schemaVersion') == 1
     assert new_item.pop('postId') == post_id
-    assert new_item.pop('gsiA2PartitionKey').split('/') == ['cardTarget', post_id]
+    assert new_item.pop('gsiA2PartitionKey').split('/') == ['card', post_id]
     assert new_item.pop('gsiA2SortKey') == user_id
     assert item.pop('schemaVersion') == 0
     assert new_item == item

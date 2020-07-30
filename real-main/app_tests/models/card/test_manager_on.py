@@ -45,6 +45,11 @@ def post(post_manager, user):
 
 
 @pytest.fixture
+def comment(comment_manager, user, post):
+    yield comment_manager.add_comment(str(uuid4()), post.id, user.id, 'lore ipsum')
+
+
+@pytest.fixture
 def comment_card_template(card_manager, post):
     template = templates.CommentCardTemplate(post.user_id, post.id, unviewed_comments_count=42)
     card_manager.add_or_update_card(template)
@@ -91,9 +96,15 @@ def test_on_user_delete_delete_cards(card_manager, user, template):
 
 
 def test_on_post_delete_delete_cards(card_manager, post):
-    with patch.object(card_manager, 'delete_by_target') as delete_by_target_mock:
+    with patch.object(card_manager, 'delete_by_post') as delete_by_post_mock:
         card_manager.on_post_delete_delete_cards(post.id, old_item=post.item)
-    assert delete_by_target_mock.mock_calls == [call(post.id)]
+    assert delete_by_post_mock.mock_calls == [call(post.id)]
+
+
+def test_on_comment_delete_delete_cards(card_manager, comment):
+    with patch.object(card_manager, 'delete_by_comment') as delete_by_comment_mock:
+        card_manager.on_comment_delete_delete_cards(comment.id, old_item=comment.item)
+    assert delete_by_comment_mock.mock_calls == [call(comment.id)]
 
 
 @pytest.mark.parametrize(
@@ -289,44 +300,63 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     assert card_manager.get_card(template.card_id) is None
 
 
-def test_on_post_text_tags_change_update_card(card_manager, post, user, user1, user2, user3):
+@pytest.mark.parametrize(
+    'method_name, card_template_class, model, attribute_name',
+    [
+        [
+            'on_post_text_tags_change_update_card',
+            templates.PostMentionCardTemplate,
+            pytest.lazy_fixture('post'),
+            'postId',
+        ],
+        [
+            'on_comment_text_tags_change_update_card',
+            templates.CommentMentionCardTemplate,
+            pytest.lazy_fixture('comment'),
+            'commentId',
+        ],
+    ],
+)
+def test_on_text_tags_change_update_card(
+    card_manager, method_name, card_template_class, model, attribute_name, user, user1, user2, user3
+):
     # check starting state
-    card_id_1 = templates.PostMentionCardTemplate.get_card_id(user1.id, post.id)
-    card_id_2 = templates.PostMentionCardTemplate.get_card_id(user2.id, post.id)
-    card_id_3 = templates.PostMentionCardTemplate.get_card_id(user3.id, post.id)
-    assert post.item.get('textTags', []) == []
+    card_id_1 = card_template_class.get_card_id(user1.id, model.id)
+    card_id_2 = card_template_class.get_card_id(user2.id, model.id)
+    card_id_3 = card_template_class.get_card_id(user3.id, model.id)
+    assert model.item.get('textTags', []) == []
     assert card_manager.get_card(card_id_1) is None
     assert card_manager.get_card(card_id_2) is None
     assert card_manager.get_card(card_id_3) is None
 
     # add two text tags, verify two cards created
-    post.item['textTags'] = [
+    model.item['textTags'] = [
         {'tag': f'@{user1.username}', 'userId': user1.id},
         {'tag': f'@{user2.username}', 'userId': user2.id},
     ]
-    card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item)
+    getattr(card_manager, method_name)(model.id, new_item=model.item)
     card1 = card_manager.get_card(card_id_1)
     card2 = card_manager.get_card(card_id_2)
     assert card_manager.get_card(card_id_3) is None
-    assert card1.post.id == post.id
-    assert card2.post.id == post.id
+    assert card1.item[attribute_name] == model.id
+    assert card2.item[attribute_name] == model.id
     assert user.username in card1.title
     assert user.username in card2.title
 
     # add a third text tag, verify card created
-    old_item = post.item.copy()
-    post.item['textTags'] = old_item['textTags'] + [{'tag': f'@{user3.username}', 'userId': user3.id}]
-    card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    old_item = model.item.copy()
+    model.item['textTags'] = old_item['textTags'] + [{'tag': f'@{user3.username}', 'userId': user3.id}]
+    getattr(card_manager, method_name)(model.id, new_item=model.item, old_item=old_item)
     assert card_manager.get_card(card_id_1)
     assert card_manager.get_card(card_id_2)
     card3 = card_manager.get_card(card_id_3)
-    assert card3.post.id == post.id
+    assert card3.item[attribute_name] == model.id
     assert user.username in card3.title
 
     # loose two tags, verify no card created or deleted
-    old_item = post.item.copy()
-    post.item['textTags'] = old_item['textTags'][1:2]
-    card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    old_item = model.item.copy()
+    model.item['textTags'] = old_item['textTags'][1:2]
+    getattr(card_manager, method_name)(model.id, new_item=model.item, old_item=old_item)
     assert card_manager.get_card(card_id_1)
     assert card_manager.get_card(card_id_2)
     assert card_manager.get_card(card_id_3)

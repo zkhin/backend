@@ -55,7 +55,7 @@ class Migration:
         if post_id:
             query_kwargs['UpdateExpression'] += ', postId = :pid, gsiA2PartitionKey = :pk, gsiA2SortKey = :sk'
             query_kwargs['ExpressionAttributeValues'][':pid'] = post_id
-            query_kwargs['ExpressionAttributeValues'][':pk'] = f'cardTarget/{post_id}'
+            query_kwargs['ExpressionAttributeValues'][':pk'] = f'card/{post_id}'
             query_kwargs['ExpressionAttributeValues'][':sk'] = user_id
 
         logger.warning(f'Migrating card `{card_id}`')

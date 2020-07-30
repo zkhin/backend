@@ -76,6 +76,10 @@ register('chatMessage', 'flag', ['INSERT'], chat_message_manager.on_flag_add)
 register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
 register('comment', '-', ['INSERT'], user_manager.on_comment_add)
+register(
+    'comment', '-', ['INSERT', 'MODIFY'], card_manager.on_comment_text_tags_change_update_card, {'textTags': []},
+)
+register('comment', '-', ['REMOVE'], card_manager.on_comment_delete_delete_cards)
 register('comment', '-', ['REMOVE'], comment_manager.on_item_delete_delete_flags)
 register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)
 register('comment', '-', ['REMOVE'], user_manager.on_comment_delete)
