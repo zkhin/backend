@@ -167,11 +167,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         # set the user up in cognito, claims the username at the same time
         try:
             self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
-            tokens = {
-                'cognito_token': self.cognito_client.get_user_pool_id_token(user_id),
-                provider + '_token': token,
-            }
-            self.cognito_client.link_identity_pool_entries(user_id, **tokens)
         except (
             # Note: Cognito raises UsernameExistsException for more than just usernames.
             self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
@@ -185,6 +180,17 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             if 'User account already exists' in str(err):
                 raise UserValidationException(f'An account for userId `{user_id}` already exists')
             raise UserValidationException(str(err))
+
+        tokens = {
+            'cognito_token': self.cognito_client.get_user_pool_id_token(user_id),
+            provider + '_token': token,
+        }
+        try:
+            self.cognito_client.link_identity_pool_entries(user_id, **tokens)
+        except Exception:
+            # try to clean up: remove the user from cognito
+            self.cognito_client.delete_user_pool_entry(user_id)
+            raise
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()

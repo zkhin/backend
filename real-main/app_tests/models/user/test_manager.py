@@ -361,6 +361,23 @@ def test_create_federated_user_invalid_token(user_manager, caplog, provider):
     assert 'wrong flavor' in caplog.records[0].msg
 
 
+@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+def test_create_federated_user_cognito_identity_pool_exception_cleansup(user_manager, real_user, provider):
+    user_id = 'my-user-id'
+
+    # set up our mocks to behave correctly
+    user_manager.clients[provider].configure_mock(**{'get_verified_email.return_value': 'me@email.com'})
+    user_manager.cognito_client.create_verified_user_pool_entry = mock.Mock()
+    user_manager.cognito_client.get_user_pool_id_token = mock.Mock(return_value='cog-token')
+    user_manager.cognito_client.link_identity_pool_entries = mock.Mock(side_effect=Exception('anything bad'))
+    user_manager.cognito_client.delete_user_pool_entry = mock.Mock()
+
+    # create the user, check we tried to clean up after the failure
+    with pytest.raises(Exception, match='anything bad'):
+        user_manager.create_federated_user(provider, user_id, 'username', 'provider-token')
+    assert user_manager.cognito_client.delete_user_pool_entry.mock_calls == [mock.call(user_id)]
+
+
 def test_get_available_placeholder_photo_codes(user_manager):
     s3_client = user_manager.s3_placeholder_photos_client
     user_manager.placeholder_photos_directory = 'placeholder-photos'
