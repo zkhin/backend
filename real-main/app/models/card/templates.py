@@ -53,7 +53,6 @@ class PostLikesCardTemplate(CardTemplate):
 
     title = 'You have new likes'
     notify_user_after = pendulum.duration(hours=24)
-    only_usernames = ('azim', 'ian', 'mike')
 
     @staticmethod
     def get_card_id(user_id, post_id):
@@ -70,7 +69,6 @@ class PostLikesCardTemplate(CardTemplate):
 class PostMentionCardTemplate(CardTemplate):
 
     notify_user_after = pendulum.duration(hours=24)
-    only_usernames = ('azim', 'ian', 'mike')
 
     @staticmethod
     def get_card_id(user_id, post_id):
@@ -89,7 +87,6 @@ class PostViewsCardTemplate(CardTemplate):
 
     title = 'You have new views'
     notify_user_after = pendulum.duration(hours=24)
-    only_usernames = ('azim', 'ian', 'mike')
 
     @staticmethod
     def get_card_id(user_id, post_id):

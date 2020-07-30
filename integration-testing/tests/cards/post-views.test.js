@@ -35,12 +35,6 @@ test('PostViews card generation and format', async () => {
   const [u6Client] = await loginCache.getCleanLogin()
   const [u7Client] = await loginCache.getCleanLogin()
 
-  // change our username to one of the hardcoded privileged only_usernames
-  const username = 'mike'
-  await ourClient
-    .mutate({mutation: mutations.setUsername, variables: {username}})
-    .then(({data}) => expect(data.setUserDetails.username).toBe(username))
-
   // we add a post
   const postId = uuidv4()
   await ourClient
@@ -101,38 +95,6 @@ test('PostViews card generation and format', async () => {
 
   // verify no card generated (card only generates once per post)
   await misc.sleep(1000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
-  })
-})
-
-test('PostViews card does not generate for users not part of only_usernames', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [u1Client] = await loginCache.getCleanLogin()
-  const [u2Client] = await loginCache.getCleanLogin()
-  const [u3Client] = await loginCache.getCleanLogin()
-  const [u4Client] = await loginCache.getCleanLogin()
-  const [u5Client] = await loginCache.getCleanLogin()
-  const [u6Client] = await loginCache.getCleanLogin()
-
-  // we add a post
-  const postId = uuidv4()
-  await ourClient
-    .mutate({mutation: mutations.addPost, variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}})
-    .then(({data}) => expect(data.addPost.postId).toBe(postId))
-
-  // six distinct users view the post
-  await u1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  await u2Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  await u3Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  await u4Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  await u5Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  await u6Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-
-  // verify no card generated
-  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)

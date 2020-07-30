@@ -22,12 +22,6 @@ test('PostLikes card generation and format', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
   const [theirClient] = await loginCache.getCleanLogin()
 
-  // change our username to one of the hardcoded privileged only_usernames
-  const username = 'ian'
-  await ourClient
-    .mutate({mutation: mutations.setUsername, variables: {username}})
-    .then(({data}) => expect(data.setUserDetails.username).toBe(username))
-
   // we add a post
   const postId = uuidv4()
   await ourClient
@@ -91,29 +85,5 @@ test('PostLikes card generation and format', async () => {
     expect(data.self.cards.items).toHaveLength(1)
     expect(data.self.cards.items[0].cardId).toBeTruthy()
     expect(data.self.cards.items[0].action).toMatch(RegExp('^https://real.app/user/.*/post/.*/likes'))
-  })
-})
-
-test('PostLikes card does not generate for users not part of only_usernames', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-
-  // we add a post
-  const postId = uuidv4()
-  await ourClient
-    .mutate({mutation: mutations.addPost, variables: {postId, postType: 'TEXT_ONLY', text: 'lore ipsum'}})
-    .then(({data}) => expect(data.addPost.postId).toBe(postId))
-
-  // they onymously like the post
-  await theirClient
-    .mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
-    .then(({data}) => expect(data.onymouslyLikePost.likeStatus).toBe('ONYMOUSLY_LIKED'))
-
-  // verify no card was generated
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
   })
 })

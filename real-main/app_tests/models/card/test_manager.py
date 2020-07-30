@@ -97,10 +97,7 @@ def test_add_or_update_card(user, template, card_manager):
     assert new_card.item == card.item
 
 
-@pytest.mark.parametrize(
-    'template',
-    pytest.lazy_fixture(['post_likes_card_template', 'post_mention_card_template', 'post_views_card_template']),
-)
+@pytest.mark.skip(reason="No cards with only_usernames set exist at the moment")
 def test_add_or_update_card_with_only_usernames(user, template, card_manager):
     # verify starting state
     assert card_manager.get_card(template.card_id) is None

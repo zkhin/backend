@@ -21,18 +21,8 @@ afterAll(async () => await loginCache.reset())
 
 test('PostMention card generation and format for image post, fullfilling and dismissing card', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
-
-  // change usernames to one of the hardcoded privileged only_usernames
-  const other1Username = 'azim'
-  const other2Username = 'mike'
-  await other1Client
-    .mutate({mutation: mutations.setUsername, variables: {username: other1Username}})
-    .then(({data}) => expect(data.setUserDetails.username).toBe(other1Username))
-  await other2Client
-    .mutate({mutation: mutations.setUsername, variables: {username: other2Username}})
-    .then(({data}) => expect(data.setUserDetails.username).toBe(other2Username))
+  const [other1Client, other1UserId, , , other1Username] = await loginCache.getCleanLogin()
+  const [other2Client, other2UserId, , , other2Username] = await loginCache.getCleanLogin()
 
   // we add an image post and tag both users
   const postId = uuidv4()
@@ -116,18 +106,8 @@ test('PostMention card generation and format for image post, fullfilling and dis
 
 test('PostMention card generation for editing text-only post, post deletion', async () => {
   const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
-
-  // change usernames to one of the hardcoded privileged only_usernames
-  const other1Username = 'azim'
-  const other2Username = 'mike'
-  await other1Client
-    .mutate({mutation: mutations.setUsername, variables: {username: other1Username}})
-    .then(({data}) => expect(data.setUserDetails.username).toBe(other1Username))
-  await other2Client
-    .mutate({mutation: mutations.setUsername, variables: {username: other2Username}})
-    .then(({data}) => expect(data.setUserDetails.username).toBe(other2Username))
+  const [other1Client, other1UserId, , , other1Username] = await loginCache.getCleanLogin()
+  const [other2Client, other2UserId, , , other2Username] = await loginCache.getCleanLogin()
 
   // we add a text-only post and tag one user
   const postId = uuidv4()
@@ -189,26 +169,4 @@ test('PostMention card generation for editing text-only post, post deletion', as
   await misc.sleep(2000)
   await other1Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
   await other2Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
-})
-
-test('PostLikes card does not generate for users not part of only_usernames', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
-
-  // we add a post, tag them
-  const postId = uuidv4()
-  await ourClient
-    .mutate({
-      mutation: mutations.addPost,
-      variables: {postId, postType: 'TEXT_ONLY', text: `hey @${theirUsername}`},
-    })
-    .then(({data}) => expect(data.addPost.postId).toBe(postId))
-
-  // verify no card was generated
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(theirUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
-  })
 })

@@ -32,7 +32,7 @@ def test_post_views_card_template(user, post):
     assert template.user_id == user.id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
     assert template.title == 'You have new views'
-    assert template.only_usernames == ('azim', 'ian', 'mike')
+    assert not template.only_usernames
     assert template.extra_fields == {'postId': post.id}
     assert template.target_item_id == post.id
 
@@ -47,7 +47,7 @@ def test_post_mention_card_template(user, post):
     assert template.action == f'https://real.app/user/{post.user_id}/post/{post.id}'
     assert re.match(r'@.* tagged you in a post', template.title)
     assert post.user.username in template.title
-    assert template.only_usernames == ('azim', 'ian', 'mike')
+    assert not template.only_usernames
     assert template.extra_fields == {'postId': post.id}
     assert template.target_item_id == post.id
 
@@ -61,7 +61,7 @@ def test_post_likes_card_template(user, post):
     assert template.user_id == user.id
     assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/likes'
     assert template.title == 'You have new likes'
-    assert template.only_usernames == ('azim', 'ian', 'mike')
+    assert not template.only_usernames
     assert template.extra_fields == {'postId': post.id}
     assert template.target_item_id == post.id
 

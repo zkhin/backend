@@ -54,16 +54,14 @@ def comment_card_template(card_manager, post):
 @pytest.fixture
 def post_likes_card_template(card_manager, post):
     template = templates.PostLikesCardTemplate(post.user_id, post.id)
-    with patch.object(template, 'only_usernames', []):
-        card_manager.add_or_update_card(template)
+    card_manager.add_or_update_card(template)
     yield template
 
 
 @pytest.fixture
 def post_views_card_template(card_manager, post):
     template = templates.PostViewsCardTemplate(post.user_id, post.id)
-    with patch.object(template, 'only_usernames', []):
-        card_manager.add_or_update_card(template)
+    card_manager.add_or_update_card(template)
     yield template
 
 
@@ -267,8 +265,7 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     # record a like, verify card is created
     old_item = post.item.copy()
     post.item['anonymousLikeCount'] = 2
-    with patch('app.models.card.manager.templates.PostLikesCardTemplate.only_usernames', []):
-        card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # delete the card
@@ -278,8 +275,7 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     # record nine likes, verify card is created
     old_item = post.item.copy()
     post.item['onymousLikeCount'] = 7
-    with patch('app.models.card.manager.templates.PostLikesCardTemplate.only_usernames', []):
-        card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # delete the card
@@ -289,8 +285,7 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     # record a 10th like, verify card is **not** created
     old_item = post.item.copy()
     post.item['anonymousLikeCount'] = 3
-    with patch('app.models.card.manager.templates.PostLikesCardTemplate.only_usernames', []):
-        card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
 
 
@@ -309,8 +304,7 @@ def test_on_post_text_tags_change_update_card(card_manager, post, user, user1, u
         {'tag': f'@{user1.username}', 'userId': user1.id},
         {'tag': f'@{user2.username}', 'userId': user2.id},
     ]
-    with patch('app.models.card.manager.templates.PostMentionCardTemplate.only_usernames', []):
-        card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item)
+    card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item)
     card1 = card_manager.get_card(card_id_1)
     card2 = card_manager.get_card(card_id_2)
     assert card_manager.get_card(card_id_3) is None
@@ -322,8 +316,7 @@ def test_on_post_text_tags_change_update_card(card_manager, post, user, user1, u
     # add a third text tag, verify card created
     old_item = post.item.copy()
     post.item['textTags'] = old_item['textTags'] + [{'tag': f'@{user3.username}', 'userId': user3.id}]
-    with patch('app.models.card.manager.templates.PostMentionCardTemplate.only_usernames', []):
-        card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(card_id_1)
     assert card_manager.get_card(card_id_2)
     card3 = card_manager.get_card(card_id_3)
@@ -333,8 +326,7 @@ def test_on_post_text_tags_change_update_card(card_manager, post, user, user1, u
     # loose two tags, verify no card created or deleted
     old_item = post.item.copy()
     post.item['textTags'] = old_item['textTags'][1:2]
-    with patch('app.models.card.manager.templates.PostMentionCardTemplate.only_usernames', []):
-        card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_text_tags_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(card_id_1)
     assert card_manager.get_card(card_id_2)
     assert card_manager.get_card(card_id_3)
@@ -349,15 +341,13 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     # jump up to five views, process, check no card created
     old_item = post.item.copy()
     post.item['viewedByCount'] = 5
-    with patch('app.models.card.manager.templates.PostViewsCardTemplate.only_usernames', []):
-        card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
 
     # go to six views, process, check card created
     old_item = post.item.copy()
     post.item['viewedByCount'] = 6
-    with patch('app.models.card.manager.templates.PostViewsCardTemplate.only_usernames', []):
-        card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # delete the card
@@ -367,6 +357,5 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     # jump up to seven views, process, check no card created
     old_item = post.item.copy()
     post.item['viewedByCount'] = 7
-    with patch('app.models.card.manager.templates.PostViewsCardTemplate.only_usernames', []):
-        card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
