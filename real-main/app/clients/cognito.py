@@ -1,5 +1,6 @@
 import logging
 import os
+from uuid import uuid4
 
 import boto3
 
@@ -26,7 +27,6 @@ class CognitoClient:
         self.appleLoginsKey = 'appleid.apple.com'
 
     def create_verified_user_pool_entry(self, user_id, username, email):
-        # set them up in the user pool
         self.user_pool_client.admin_create_user(
             UserPoolId=self.user_pool_id,
             Username=user_id,
@@ -36,6 +36,13 @@ class CognitoClient:
                 {'Name': 'email_verified', 'Value': 'true'},
                 {'Name': 'preferred_username', 'Value': username.lower()},
             ],
+        )
+        # If we don't set their password to something, cognito will put the account in
+        # a FORCE_CHANGE_PASSWORD which does not allow them to reset their password, which
+        # we use to allow users to add a password-based login to their account (assuming
+        # they started with a federate auth login).
+        self.user_pool_client.admin_set_user_password(
+            UserPoolId=self.user_pool_id, Username=user_id, Password=str(uuid4()), Permanent=True,
         )
 
     def get_user_pool_id_token(self, user_id):

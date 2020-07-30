@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import call
 
 import pytest
 
@@ -33,6 +34,10 @@ def test_create_verified_user_pool_entry(cognito_client):
     assert attrs['email'] == email
     assert attrs['email_verified'] == 'true'
     assert attrs['preferred_username'] == username
+    password = cognito_client.user_pool_client.admin_set_user_password.call_args.kwargs['Password']
+    assert cognito_client.user_pool_client.admin_set_user_password.mock_calls == [
+        call(UserPoolId=cognito_client.user_pool_id, Username=user_id, Password=password, Permanent=True)
+    ]
 
     # verify we can't create them again
     with pytest.raises(cognito_client.user_pool_client.exceptions.UsernameExistsException):

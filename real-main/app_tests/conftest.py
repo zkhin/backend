@@ -94,6 +94,7 @@ def cognito_client():
             ReadAttributes=['email', 'phone_number'],
         )['UserPoolClient']['ClientId']
         cognito_client.identity_pool_client = mock.Mock(cognito_client.identity_pool_client)
+        cognito_client.user_pool_client.admin_set_user_password = mock.Mock()
         yield cognito_client
 
 
