@@ -171,9 +171,8 @@ class DynamoClient:
         "Return a generator that iterates over all results of the scan"
         last_key = False
         while last_key is not None:
-            if last_key:
-                scan_kwargs['ExclusiveStartKey'] = last_key
-            resp = self.table.scan(**scan_kwargs)
+            start_kwargs = {'ExclusiveStartKey': last_key} if last_key else {}
+            resp = self.table.scan(**scan_kwargs, **start_kwargs)
             for item in resp['Items']:
                 yield item
             last_key = resp.get('LastEvaluatedKey')
