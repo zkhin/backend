@@ -18,19 +18,10 @@ class Card:
         self.item = item
         # immutables
         self.id = item['partitionKey'][len('card/') :]
+        self.post_id = item.get('postId')
         self.user_id = item['gsiA1PartitionKey'][len('user/') :]
         self.created_at = pendulum.parse(item['gsiA1SortKey'][len('card/') :])
         self.action = item['action']
-
-    @property
-    def post_id(self):
-        if 'postId' in self.item:
-            return self.item['postId']
-        # Backward compatibility for old cards that had did not have an explicit postId attribute.
-        # They only had the postId embedded in the cardId.
-        # Once all those old cards have disappeared from DB, this can be removed.
-        parts = self.id.split(':')
-        return parts[3] if len(parts) > 3 else None
 
     @property
     def user(self):

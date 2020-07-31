@@ -33,8 +33,6 @@ def comment_card(user, card_manager, post):
 def test_post_id(card, comment_card, post):
     assert comment_card.post_id == post.id
     assert card.post_id is None
-    with patch.object(card, 'id', f'us-east-1:{uuid4()}:BLAH_BLAH:{post.id}'):
-        assert card.post_id == post.id
 
 
 def test_serialize(user, card):
