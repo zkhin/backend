@@ -1,3 +1,5 @@
+import logging
+import re
 from unittest.mock import call, patch
 from uuid import uuid4
 
@@ -42,6 +44,16 @@ def card(user, card_manager, TestCardTemplate):
 @pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+
+
+@pytest.fixture
+def post1(post_manager, user1):
+    yield post_manager.add_post(user1, str(uuid4()), PostType.TEXT_ONLY, text='go go')
+
+
+@pytest.fixture
+def post2(post_manager, user2):
+    yield post_manager.add_post(user2, str(uuid4()), PostType.TEXT_ONLY, text='go go')
 
 
 @pytest.fixture
@@ -298,6 +310,48 @@ def test_on_post_likes_count_change_update_card(card_manager, post, user):
     post.item['anonymousLikeCount'] = 3
     card_manager.on_post_likes_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
+
+
+def test_on_post_original_post_id_change_update_card(
+    card_manager, user, post, user1, post1, user2, post2, caplog
+):
+    # configure and check starting state
+    assert 'originalPostId' not in post2.item
+    card_id_0 = templates.PostRepostCardTemplate.get_card_id(user.id, post2.id)
+    card_id_1 = templates.PostRepostCardTemplate.get_card_id(user1.id, post2.id)
+    assert card_manager.get_card(card_id_0) is None
+    assert card_manager.get_card(card_id_1) is None
+
+    # trigger for creating post with the original_post_id set, verify card created
+    post2.item['originalPostId'] = post.id
+    card_manager.on_post_original_post_id_change_update_card(post2.id, new_item=post2.item)
+    assert card_manager.get_card(card_id_0)
+    assert card_manager.get_card(card_id_1) is None
+
+    # trigger for changing the original_post_id set, verify old card deleted and new created
+    old_item = post2.item.copy()
+    post2.item['originalPostId'] = post1.id
+    card_manager.on_post_original_post_id_change_update_card(post2.id, new_item=post2.item, old_item=old_item)
+    assert card_manager.get_card(card_id_0) is None
+    assert card_manager.get_card(card_id_1)
+
+    # trigger for clearing the original_post_id, verify old card deleted
+    old_item = post2.item.copy()
+    del post2.item['originalPostId']
+    card_manager.on_post_original_post_id_change_update_card(post2.id, new_item=post2.item, old_item=old_item)
+    assert card_manager.get_card(card_id_0) is None
+    assert card_manager.get_card(card_id_1) is None
+
+    # verify no exception, just logged warnings if original posts aren't found in DB
+    old_original_post_id, new_original_post_id = str(uuid4()), str(uuid4())
+    old_item = {**post2.item, 'originalPostId': old_original_post_id}
+    new_item = {**post2.item, 'originalPostId': new_original_post_id}
+    with caplog.at_level(logging.WARNING):
+        card_manager.on_post_original_post_id_change_update_card(post2.id, new_item=new_item, old_item=old_item)
+    assert len(caplog.records) == 2
+    assert all(re.match(r'Original post `.*` not found', rec.msg) for rec in caplog.records)
+    assert sum(1 for rec in caplog.records if old_original_post_id in rec.msg) == 1
+    assert sum(1 for rec in caplog.records if new_original_post_id in rec.msg) == 1
 
 
 @pytest.mark.parametrize(

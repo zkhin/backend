@@ -100,6 +100,13 @@ register(
     {'anonymousLikeCount': 0, 'onymousLikeCount': 0},
 )
 register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_post_original_post_id_change_update_card,
+    {'originalPostId': None},
+)
+register(
     'post', '-', ['INSERT', 'MODIFY'], card_manager.on_post_text_tags_change_update_card, {'textTags': []},
 )
 register(

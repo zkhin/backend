@@ -98,6 +98,22 @@ class PostMentionCardTemplate(CardTemplate):
         self.post_id = post.id
 
 
+class PostRepostCardTemplate(CardTemplate):
+
+    notify_user_after = pendulum.duration(hours=24)
+
+    @staticmethod
+    def get_card_id(user_id, post_id):
+        return f'{user_id}:POST_REPOST:{post_id}'
+
+    def __init__(self, user_id, post):
+        super().__init__(user_id)
+        self.card_id = self.get_card_id(user_id, post.id)
+        self.action = f'https://real.app/user/{post.user_id}/post/{post.id}'
+        self.title = f'@{post.user.username} reposted one of your posts'
+        self.post_id = post.id
+
+
 class PostViewsCardTemplate(CardTemplate):
 
     title = 'You have new views'

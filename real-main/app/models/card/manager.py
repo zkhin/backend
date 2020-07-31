@@ -137,6 +137,22 @@ class CardManager:
         on_user_count_change_sync_card, 'chatsWithUnviewedMessagesCount', templates.ChatCardTemplate,
     )
 
+    def on_post_original_post_id_change_update_card(self, post_id, new_item, old_item=None):
+        if original_post_id := new_item.get('originalPostId'):
+            if original_post := self.post_manager.get_post(original_post_id):
+                post = self.post_manager.init_post(new_item)
+                card_template = templates.PostRepostCardTemplate(original_post.user_id, post)
+                self.add_or_update_card(card_template)
+            else:
+                logger.warning(f'Original post `{original_post_id}` not found')
+
+        if original_post_id := (old_item or {}).get('originalPostId'):
+            if original_post := self.post_manager.get_post(original_post_id):
+                card_id = templates.PostRepostCardTemplate.get_card_id(original_post.user_id, post_id)
+                self.dynamo.delete_card(card_id)
+            else:
+                logger.warning(f'Original post `{original_post_id}` not found')
+
     def on_post_view_count_change_update_cards(self, post_id, new_item, old_item=None):
         if new_item.get('viewCount', 0) <= (old_item or {}).get('viewCount', 0):
             return  # view count did not increase

@@ -83,6 +83,21 @@ def test_post_mention_card_template(user, post):
     assert not template.comment_id
 
 
+def test_post_repost_card_template(user, post, user2):
+    card_id = templates.PostRepostCardTemplate.get_card_id(user2.id, post.id)
+    assert card_id.split(':') == [user2.id, 'POST_REPOST', post.id]
+
+    template = templates.PostRepostCardTemplate(user2.id, post)
+    assert template.card_id == card_id
+    assert template.user_id == user2.id
+    assert template.action == f'https://real.app/user/{post.user_id}/post/{post.id}'
+    assert re.match(r'@.* reposted one of your posts', template.title)
+    assert post.user.username in template.title
+    assert not template.only_usernames
+    assert template.post_id == post.id
+    assert not template.comment_id
+
+
 def test_post_likes_card_template(user, post):
     card_id = templates.PostLikesCardTemplate.get_card_id(user.id, post.id)
     assert card_id.split(':') == [user.id, 'POST_LIKES', post.id]
