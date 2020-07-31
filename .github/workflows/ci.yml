@@ -85,8 +85,8 @@ jobs:
         isort --check --diff .
         flake8 .
 
-  # pylint requires isort<5 and we need isort>=5 due to https://github.com/timothycrosley/isort/issues/1117
-  # so can't install them in the same virtualenv
+  # pylint still requires isort<5, so can't be installed in same venv as other linting tools
+  # https://github.com/PyCQA/pylint/pull/3725
   python-lint-pylint:
     runs-on: ubuntu-latest
     steps:
