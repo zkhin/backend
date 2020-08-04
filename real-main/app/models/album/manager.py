@@ -54,9 +54,9 @@ class AlbumManager:
         return self.dynamo.client.batch_delete_items(generator)
 
     def on_album_delete_delete_album_art(self, album_id, old_item):
-        if art_hash := old_item.get('artHash'):
-            album = self.init_album(old_item)
-            album.delete_art_images(art_hash)
+        album = self.init_album(old_item)
+        prefix = album.get_art_image_path_prefix()
+        album.s3_uploads_client.delete_objects_with_prefix(prefix)
 
     def on_album_add_edit_sync_delete_at(self, album_id, new_item, old_item=None):
         new_count = new_item.get('postCount', 0)
@@ -64,3 +64,25 @@ class AlbumManager:
             self.dynamo.set_delete_at(album_id, pendulum.now('utc') + self.zero_post_lifetime)
         if new_count > 0 and 'gsiK1PartitionKey' in new_item:
             self.dynamo.clear_delete_at(album_id)
+
+    def on_post_album_change_update_art_if_needed(self, post_id, new_item=None, old_item=None):
+        "Trigger for changes to Post.albumId and Post.gsiK3SortKey (which is album rank)"
+        new_album_id = (new_item or {}).get('albumId')
+        old_album_id = (old_item or {}).get('albumId')
+        # all non-completed posts are given rank of -1
+        new_album_rank = (new_item or {}).get('gsiK3SortKey', -1)
+        old_album_rank = (old_item or {}).get('gsiK3SortKey', -1)
+
+        if new_album_id == old_album_id or (new_album_id and new_album_rank != -1):
+            album = self.get_album(new_album_id)
+            if album is not None:
+                album.update_art_if_needed()
+            else:
+                logger.warning(f'Album `{old_album_id}` no longer exists')
+
+        if new_album_id != old_album_id and old_album_id and old_album_rank != -1:
+            album = self.get_album(old_album_id)
+            if album is not None:
+                album.update_art_if_needed()
+            else:
+                logger.warning(f'Album `{old_album_id}` no longer exists')

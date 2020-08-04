@@ -87,15 +87,6 @@ def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
 
 
 @pytest.fixture
-def completed_video_post(processing_video_post):
-    # Note: lacks the actual video files
-    post = processing_video_post
-    post.build_image_thumbnails()
-    post.complete()
-    yield post
-
-
-@pytest.fixture
 def albums(album_manager, user2):
     album1 = album_manager.add_album(user2.id, 'aid-1', 'album name')
     album2 = album_manager.add_album(user2.id, 'aid-2', 'album name')
@@ -515,8 +506,8 @@ def test_set_album_completed_post(albums, post_with_media):
     assert album2.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 0
     assert album2.item.get('rankCount', 0) == 0
-    assert 'artHash' not in album1.item
-    assert 'artHash' not in album2.item
+    assert 'postsLastUpdatedAt' not in album1.item
+    assert 'postsLastUpdatedAt' not in album2.item
 
     # go from no album to an album
     post.set_album(album1.id)
@@ -525,11 +516,11 @@ def test_set_album_completed_post(albums, post_with_media):
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 1
     assert album1.item.get('rankCount', 0) == 1
-    assert album1.item['artHash']
+    assert (posts_last_updated_at_11 := album1.item['postsLastUpdatedAt'])
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 0
     assert album2.item.get('rankCount', 0) == 0
-    assert 'artHash' not in album2.item
+    assert 'postsLastUpdatedAt' not in album2.item
 
     # change the album
     post.set_album(album2.id)
@@ -538,11 +529,11 @@ def test_set_album_completed_post(albums, post_with_media):
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
-    assert 'artHash' not in album1.item
+    assert (posts_last_updated_at_12 := album1.item['postsLastUpdatedAt']) > posts_last_updated_at_11
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 1
     assert album2.item.get('rankCount', 0) == 1
-    assert album2.item['artHash']
+    assert (posts_last_updated_at_21 := album2.item['postsLastUpdatedAt'])
 
     # no-op
     post.set_album(album2.id)
@@ -551,11 +542,11 @@ def test_set_album_completed_post(albums, post_with_media):
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
-    assert 'artHash' not in album1.item
+    assert album1.item['postsLastUpdatedAt'] == posts_last_updated_at_12
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 1
     assert album2.item.get('rankCount', 0) == 1
-    assert album2.item['artHash']
+    assert album2.item['postsLastUpdatedAt'] == posts_last_updated_at_21
 
     # remove post from all albums
     post.set_album(None)
@@ -564,11 +555,11 @@ def test_set_album_completed_post(albums, post_with_media):
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
-    assert 'artHash' not in album1.item
+    assert album1.item['postsLastUpdatedAt'] == posts_last_updated_at_12
     album2.refresh_item()
     assert album2.item.get('postCount', 0) == 0
     assert album2.item.get('rankCount', 0) == 1
-    assert 'artHash' not in album2.item
+    assert (posts_last_updated_at_22 := album2.item['postsLastUpdatedAt']) > posts_last_updated_at_21
 
     # archive the post
     post.archive()
@@ -580,81 +571,7 @@ def test_set_album_completed_post(albums, post_with_media):
     album1.refresh_item()
     assert album1.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 1
-    assert 'artHash' not in album1.item
-
-
-def test_set_album_text_post(post_manager, albums, user2):
-    album1, album2 = albums
-    post = post_manager.add_post(user2, 'pid', PostType.TEXT_ONLY, text='lore ipsum')
-
-    # verify starting state
-    assert 'albumId' not in post.item
-    assert 'artHash' not in album1.item
-    assert 'artHash' not in album2.item
-
-    # go from no album to an album
-    post.set_album(album1.id)
-    assert post.item['albumId'] == album1.id
-    assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert album1.item['artHash']
-    album2.refresh_item()
-    assert 'artHash' not in album2.item
-
-    # change the album
-    post.set_album(album2.id)
-    assert post.item['albumId'] == album2.id
-    assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert 'artHash' not in album1.item
-    album2.refresh_item()
-    assert album2.item['artHash']
-
-    # remove post from all albums
-    post.set_album(None)
-    assert 'albumId' not in post.item
-    assert 'gsiK3SortKey' not in post.item
-    album1.refresh_item()
-    assert 'artHash' not in album1.item
-    album2.refresh_item()
-    assert 'artHash' not in album2.item
-
-
-def test_set_album_video_post(albums, user2, completed_video_post):
-    post = completed_video_post
-    album1, album2 = albums
-
-    # verify starting state
-    assert 'albumId' not in post.item
-    assert 'artHash' not in album1.item
-    assert 'artHash' not in album2.item
-
-    # go from no album to an album
-    post.set_album(album1.id)
-    assert post.item['albumId'] == album1.id
-    assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert album1.item['artHash']
-    album2.refresh_item()
-    assert 'artHash' not in album2.item
-
-    # change the album
-    post.set_album(album2.id)
-    assert post.item['albumId'] == album2.id
-    assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert 'artHash' not in album1.item
-    album2.refresh_item()
-    assert album2.item['artHash']
-
-    # remove post from all albums
-    post.set_album(None)
-    assert 'albumId' not in post.item
-    assert 'gsiK3SortKey' not in post.item
-    album1.refresh_item()
-    assert 'artHash' not in album1.item
-    album2.refresh_item()
-    assert 'artHash' not in album2.item
+    assert album2.item['postsLastUpdatedAt'] == posts_last_updated_at_22
 
 
 def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64):

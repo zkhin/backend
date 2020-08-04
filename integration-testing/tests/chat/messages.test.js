@@ -308,6 +308,7 @@ test('Tag users in a chat message', async () => {
   expect(resp.data.addChatMessage.textTaggedUsers).toHaveLength(0)
 
   // check the chat, make sure the tags all look as expected
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(3)

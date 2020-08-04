@@ -83,11 +83,14 @@ class Album:
             return self.cloudfront_client.generate_presigned_url(art_image_path, ['GET', 'HEAD'])
         return f'https://{self.frontend_resources_domain}/default-album-art/{size.filename}'
 
+    def get_art_image_path_prefix(self):
+        return '/'.join([self.user_id, 'album', self.id])
+
     def get_art_image_path(self, size, art_hash=None):
         art_hash = art_hash or self.item.get('artHash')
         if not art_hash:
             return None
-        return '/'.join([self.user_id, 'album', self.id, art_hash, size.filename])
+        return '/'.join([self.get_art_image_path_prefix(), art_hash, size.filename])
 
     def get_post_ids_for_art(self):
         # we only want a square number of post ids, max of 4x4

@@ -137,6 +137,7 @@ test(
     expect(resp.data.post.image.url).toBeTruthy()
 
     // check the album
+    await misc.sleep(2000)
     resp = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(1)
@@ -157,6 +158,7 @@ test(
     expect(resp.data.editPostAlbum.album).toBeNull()
 
     // check the album
+    await misc.sleep(2000)
     resp = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(0)
@@ -176,6 +178,7 @@ test(
     expect(resp.data.editPostAlbum.album.albumId).toBe(albumId)
 
     // check the album
+    await misc.sleep(2000)
     resp = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(1)

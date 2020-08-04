@@ -408,10 +408,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.item.get('expiresAt'):
             self.follower_manager.refresh_first_story(story_now=self.item)
 
-        # update album art if needed
-        if album:
-            album.update_art_if_needed()
-
         # give new posts a free bump into trending, but not their user
         self.trending_increment_score(now=now)
 
@@ -450,10 +446,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # delete the trending index, if it exists
         self.trending_delete()
 
-        # update album art if needed
-        if album:
-            album.update_art_if_needed()
-
         return self
 
     def restore(self):
@@ -483,10 +475,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # refresh the first story if needed
         if self.item.get('expiresAt'):
             self.follower_manager.refresh_first_story(story_now=self.item)
-
-        # update album art if needed
-        if album:
-            album.update_art_if_needed()
 
         return self
 
@@ -520,10 +508,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # delete the trending index, if it exists
         self.trending_delete()
-
-        # update album art, if needed
-        if album:
-            album.update_art_if_needed()
 
         # do the deletes for real
         self.s3_uploads_client.delete_objects_with_prefix(self.s3_prefix)
@@ -633,15 +617,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
-
-        # update album art, if needed
-        if prev_album_id:
-            prev_album = self.album_manager.get_album(prev_album_id)
-            if prev_album:
-                prev_album.update_art_if_needed()
-        if album_id:
-            album.update_art_if_needed()
-
         return self
 
     def set_album_order(self, preceding_post_id):
@@ -690,8 +665,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         ]
         self.dynamo.client.transact_write_items(transacts)
         self.item['gsiK3SortKey'] = album_rank
-
-        album.update_art_if_needed()
         return self
 
     def flag(self, user):

@@ -131,6 +131,13 @@ register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts
 register('post', '-', ['REMOVE'], card_manager.on_post_delete_delete_cards)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_flags)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_views)
+register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    album_manager.on_post_album_change_update_art_if_needed,
+    {'albumId': None, 'gsiK3SortKey': -1},  # all non-completed posts are given rank of -1
+)
 register('post', 'feed', ['INSERT'], feed_manager.fire_gql_subscription_user_feed_post_added)
 register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)

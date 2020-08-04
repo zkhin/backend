@@ -101,7 +101,7 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     album.refresh_item()
     assert album.item['postCount'] == 1
     assert album.item['rankCount'] == 1
-    assert album.item['artHash']
+    assert (old_posts_last_updated_at := album.item['postsLastUpdatedAt'])
 
     # mock out some calls to far-flung other managers
     post.like_manager = mock.Mock(LikeManager({}))
@@ -118,7 +118,7 @@ def test_archive_completed_post_with_album(album_manager, post_manager, post_wit
     album.refresh_item()
     assert album.item.get('postCount', 0) == 0
     assert album.item['rankCount'] == 1
-    assert 'artHash' not in album.item
+    assert album.item['postsLastUpdatedAt'] > old_posts_last_updated_at
 
     # check calls to mocked out managers
     assert post.like_manager.mock_calls == [

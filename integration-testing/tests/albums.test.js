@@ -465,29 +465,10 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
       return album
     })
 
-  // add a second post to that album
+  // add a second and third post to that album
   await ourClient
     .mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), albumId, imageData}})
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
-
-  // check album has art urls that have not changed root
-  await misc.sleep(2000)
-  const albumTwoPosts = await ourClient
-    .query({query: queries.album, variables: {albumId}})
-    .then(({data: {album}}) => {
-      expect(album.albumId).toBe(albumId)
-      expect(album.art.url).toBeTruthy()
-      expect(album.art.url4k).toBeTruthy()
-      expect(album.art.url1080p).toBeTruthy()
-      expect(album.art.url480p).toBeTruthy()
-      expect(album.art.url64p).toBeTruthy()
-      expect(album.art.url.split('?')[0]).toBe(albumOnePost.art.url.split('?')[0])
-      expect(album.art.url4k.split('?')[0]).toBe(albumOnePost.art.url4k.split('?')[0])
-      expect(album.art.url1080p.split('?')[0]).toBe(albumOnePost.art.url1080p.split('?')[0])
-      expect(album.art.url480p.split('?')[0]).toBe(albumOnePost.art.url480p.split('?')[0])
-      expect(album.art.url64p.split('?')[0]).toBe(albumOnePost.art.url64p.split('?')[0])
-      return album
-    })
 
   // add a third post to that album
   await ourClient
@@ -495,23 +476,20 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have not changed root
-  await misc.sleep(2000)
-  const albumThreePosts = await ourClient
-    .query({query: queries.album, variables: {albumId}})
-    .then(({data: {album}}) => {
-      expect(album.albumId).toBe(albumId)
-      expect(album.art.url).toBeTruthy()
-      expect(album.art.url4k).toBeTruthy()
-      expect(album.art.url1080p).toBeTruthy()
-      expect(album.art.url480p).toBeTruthy()
-      expect(album.art.url64p).toBeTruthy()
-      expect(album.art.url.split('?')[0]).toBe(albumTwoPosts.art.url.split('?')[0])
-      expect(album.art.url4k.split('?')[0]).toBe(albumTwoPosts.art.url4k.split('?')[0])
-      expect(album.art.url1080p.split('?')[0]).toBe(albumTwoPosts.art.url1080p.split('?')[0])
-      expect(album.art.url480p.split('?')[0]).toBe(albumTwoPosts.art.url480p.split('?')[0])
-      expect(album.art.url64p.split('?')[0]).toBe(albumTwoPosts.art.url64p.split('?')[0])
-      return album
-    })
+  await misc.sleep(4000)
+  await ourClient.query({query: queries.album, variables: {albumId}}).then(({data: {album}}) => {
+    expect(album.albumId).toBe(albumId)
+    expect(album.art.url).toBeTruthy()
+    expect(album.art.url4k).toBeTruthy()
+    expect(album.art.url1080p).toBeTruthy()
+    expect(album.art.url480p).toBeTruthy()
+    expect(album.art.url64p).toBeTruthy()
+    expect(album.art.url.split('?')[0]).toBe(albumOnePost.art.url.split('?')[0])
+    expect(album.art.url4k.split('?')[0]).toBe(albumOnePost.art.url4k.split('?')[0])
+    expect(album.art.url1080p.split('?')[0]).toBe(albumOnePost.art.url1080p.split('?')[0])
+    expect(album.art.url480p.split('?')[0]).toBe(albumOnePost.art.url480p.split('?')[0])
+    expect(album.art.url64p.split('?')[0]).toBe(albumOnePost.art.url64p.split('?')[0])
+  })
 
   // add a fourth post to that album
   await ourClient
@@ -519,6 +497,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have changed root
+  await misc.sleep(4000)
   await ourClient.query({query: queries.album, variables: {albumId}}).then(async ({data: {album}}) => {
     expect(album.albumId).toBe(albumId)
     expect(album.art.url).toBeTruthy()
@@ -526,11 +505,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     expect(album.art.url1080p).toBeTruthy()
     expect(album.art.url480p).toBeTruthy()
     expect(album.art.url64p).toBeTruthy()
-    expect(album.art.url.split('?')[0]).not.toBe(albumThreePosts.art.url.split('?')[0])
-    expect(album.art.url4k.split('?')[0]).not.toBe(albumThreePosts.art.url4k.split('?')[0])
-    expect(album.art.url1080p.split('?')[0]).not.toBe(albumThreePosts.art.url1080p.split('?')[0])
-    expect(album.art.url480p.split('?')[0]).not.toBe(albumThreePosts.art.url480p.split('?')[0])
-    expect(album.art.url64p.split('?')[0]).not.toBe(albumThreePosts.art.url64p.split('?')[0])
+    expect(album.art.url.split('?')[0]).not.toBe(albumOnePost.art.url.split('?')[0])
+    expect(album.art.url4k.split('?')[0]).not.toBe(albumOnePost.art.url4k.split('?')[0])
+    expect(album.art.url1080p.split('?')[0]).not.toBe(albumOnePost.art.url1080p.split('?')[0])
+    expect(album.art.url480p.split('?')[0]).not.toBe(albumOnePost.art.url480p.split('?')[0])
+    expect(album.art.url64p.split('?')[0]).not.toBe(albumOnePost.art.url64p.split('?')[0])
     // check we can access those urls
     await rp.head({uri: album.art.url, simple: true})
     await rp.head({uri: album.art.url4k, simple: true})

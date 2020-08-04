@@ -152,7 +152,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     album.refresh_item()
     assert album.item.get('postCount', 0) == 1
     assert album.item.get('rankCount', 0) == 1
-    assert album.item['artHash']
+    assert (old_posts_last_updated_at := album.item['postsLastUpdatedAt'])
 
     # mock out some calls to far-flung other managers
     post.comment_manager = mock.Mock(CommentManager({}))
@@ -173,7 +173,7 @@ def test_delete_completed_post_in_album(album_manager, post_manager, post_with_a
     album.refresh_item()
     assert album.item.get('postCount', 0) == 0
     assert album.item.get('rankCount', 0) == 1
-    assert 'artHash' not in album.item
+    assert album.item['postsLastUpdatedAt'] > old_posts_last_updated_at
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [

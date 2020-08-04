@@ -92,6 +92,7 @@ def test_get_art_image_path(album):
         assert album.id in path
         assert album.item['artHash'] in path
         assert size.name in path
+        assert path.startswith(album.get_art_image_path_prefix())
 
 
 def test_get_art_image_url(album):
