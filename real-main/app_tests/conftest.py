@@ -158,6 +158,11 @@ def album_manager(dynamo_client, s3_uploads_client, cloudfront_client):
 
 
 @pytest.fixture
+def appstore_manager(dynamo_client):
+    yield models.AppStoreManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
 def block_manager(dynamo_client):
     yield models.BlockManager({'dynamo': dynamo_client})
 

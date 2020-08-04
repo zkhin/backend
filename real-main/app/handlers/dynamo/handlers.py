@@ -17,6 +17,7 @@ logger = logging.getLogger()
 xray.patch_all()
 
 clients = {
+    'appstore': clients.AppStoreClient(),
     'appsync': clients.AppSyncClient(),
     'dynamo': clients.DynamoClient(),
     'elasticsearch': clients.ElasticSearchClient(),
@@ -26,6 +27,7 @@ clients = {
 
 managers = {}
 album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
+appstore_manager = managers.get('appstore_receipt') or models.AppStoreManager(clients, managers=managers)
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
@@ -46,6 +48,8 @@ register('album', '-', ['INSERT', 'MODIFY'], album_manager.on_album_add_edit_syn
 register('album', '-', ['REMOVE'], album_manager.on_album_delete_delete_album_art)
 register('album', '-', ['REMOVE'], post_manager.on_album_delete_remove_posts)
 register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)
+# TODO: enable once receipt to auto-verify receipts upon upload
+# register('appStoreReceipt', '-', ['INSERT'], appstore_manager.on_receipt_add_verify)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
 register('card', '-', ['INSERT'], user_manager.on_card_add_increment_count)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)
@@ -210,6 +214,7 @@ register(
     user_manager.sync_follow_counts_due_to_follow_status,
     {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
+register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_receipts)
 register('user', 'profile', ['REMOVE'], card_manager.on_user_delete_delete_cards)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 

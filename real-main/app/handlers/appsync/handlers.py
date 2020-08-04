@@ -7,6 +7,7 @@ from app import clients, models
 from app.mixins.flag.enums import FlagStatus
 from app.mixins.flag.exceptions import FlagException
 from app.models.album.exceptions import AlbumException
+from app.models.appstore.exceptions import AppStoreException
 from app.models.block.enums import BlockStatus
 from app.models.block.exceptions import AlreadyBlocked, NotBlocked
 from app.models.card.exceptions import CardException
@@ -37,6 +38,7 @@ xray.patch_all()
 secrets_manager_client = clients.SecretsManagerClient()
 clients = {
     'apple': clients.AppleClient(),
+    'appstore': clients.AppStoreClient(),
     'appsync': clients.AppSyncClient(),
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': clients.CognitoClient(),
@@ -49,8 +51,9 @@ clients = {
     's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
 }
 
-# shared hash of all managers, allows inter-manager communication
+# shared hash table of all managers, enables inter-manager communication
 managers = {}
+appstore_manager = managers.get('appstore') or models.AppStoreManager(clients, managers=managers)
 album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
 block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
@@ -310,6 +313,17 @@ def delete_user(caller_user_id, arguments, source, context):
 
     user.delete()
     return user.serialize(caller_user_id)
+
+
+@routes.register('Mutation.addAppStoreReceipt')
+@validate_caller
+def add_app_store_receipt(caller_user, arguments, source, context):
+    receipt_data = arguments['receiptData']
+    try:
+        appstore_manager.add_receipt(receipt_data, caller_user.id)
+    except AppStoreException as err:
+        raise ClientException(str(err))
+    return True
 
 
 @routes.register('User.photo')

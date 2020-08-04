@@ -1,5 +1,6 @@
 __all__ = [
     'AlbumManager',
+    'AppStoreManager',
     'BlockManager',
     'CardManager',
     'ChatManager',
@@ -13,6 +14,7 @@ __all__ = [
 ]
 
 from .album.manager import AlbumManager
+from .appstore.manager import AppStoreManager
 from .block.manager import BlockManager
 from .card.manager import CardManager
 from .chat.manager import ChatManager

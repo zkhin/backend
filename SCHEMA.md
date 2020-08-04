@@ -34,6 +34,8 @@ We have no local secondary indexes.
 | `user/{userId}` | `follower/{userId}` | `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `user/{userId}` | `follower/{userId}/firstStory` | `1` | `postId` | | | `follower/{followerUserId}/firstStory` | `{expiresAt}` |
 | `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | | | | | `user/trending` | `{score}` |
+| `appStoreReceipt/{receiptDataB64MD5}` | `-` | `0` | `userId`, `receiptDataB64`, `receiptDataB64MD5`, `verifyAttemptsFirstAt`, `verifyAttemptsLastAt`, `verifyAttemptsCount`, `verifyAttemptsStatusCodes:[Number]` | `appStoreReceipt/{userId}` | `-` | | | | | `appStoreReceipt` | `{verifyAttemptsNextAt}` |
+| `appStoreSub/{originalTransactionId}` | `-` | `0` | `userId`, `receiptDataB64`, `latestReceiptInfo` | `appStoreSub/{userId}` |`{originalPurchaseAt}` | | | | | `appStoreSub` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
 | `post/{postId}` | `-` | `3` | `postId`, `postedAt`, `postedByUserId`, `postType`, `postStatus`, `albumId`, `originalPostId`, `expiresAt`, `text`, `textTags:[{tag, userId}]`, `checksum`, `isVerified:Boolean`, `viewedByCount`, `onymousLikeCount`, `anonymousLikeCount`, `flagCount`, `commentCount`, `commentsUnviewedCount`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `setAsUserPhoto:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{postedByUserId}` | `{lastUnreadCommentAt}` | `post/{expiresAtDate}` | `{expiresAtTime}` | `postChecksum/{checksum}` | `{postedAt}` | `post/{albumId}` | `{albumRank:Number}` |
 | `post/{postId}` | `feed/{userId}` | `3` | | `feed/{userId}` | `{postedAt}` | `feed/{userId}` | `{postedByUserId}` |
@@ -69,3 +71,4 @@ We have no local secondary indexes.
   - is to be filled in if and only if `chatType == DIRECT`
   - `userId` and `userId2` in the field are the two users in the chat, their id's in alphanumeric sorted order
 - only `Card` items with `postId`, `commentId` attributes will have indexes `GSI-A2` and `GSI-A3`
+- For `AppStoreReceipt` and `AppStoreSub` items, fields `receiptData`, `originalTransactionId`, `latestReceiptInfo`, `expiresAt` etc all match the meaning described in the [apple documentation](https://developer.apple.com/documentation/appstorereceipts).

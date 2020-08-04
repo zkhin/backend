@@ -76,11 +76,12 @@ type Mutation {
   #     This is equivalent to calling Mutation.createCognitoOnlyUser(username: $newUsername) directly after this call.
   resetUser(newUsername: String): User
 
-  # Disable user account. Cannot be resevered via GQL api.
+  # Disable or delete the user account. Cannot be reversed via GQL api.
   disableUser: User
-
-  # Delete user account. Cannot be resevered via GQL api.
   deleteUser: User
+
+  # After user initiates a in-app subscription with the apple app store, the receipt should be uploaded here
+  addAppStoreReceipt(receiptData: String!): Boolean
 
   # Set optional user details.
   # Only the specified arguments will be set.

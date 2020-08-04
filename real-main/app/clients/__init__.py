@@ -1,5 +1,6 @@
 __all__ = [
     'AppleClient',
+    'AppStoreClient',
     'AppSyncClient',
     'CloudFrontClient',
     'CognitoClient',
@@ -14,6 +15,7 @@ __all__ = [
     'SecretsManagerClient',
 ]
 from .apple import AppleClient
+from .appstore import AppStoreClient
 from .appsync import AppSyncClient
 from .cloudfront import CloudFrontClient
 from .cognito import CognitoClient

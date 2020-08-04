@@ -16,6 +16,7 @@ logger = logging.getLogger()
 xray.patch_all()
 
 clients = {
+    'appstore': clients.AppStoreClient(),
     'dynamo': clients.DynamoClient(),
     'cognito': clients.CognitoClient(),
     'pinpoint': clients.PinpointClient(),
@@ -23,6 +24,7 @@ clients = {
 }
 
 managers = {}
+appstore_manager = managers.get('appstore') or models.AppStoreManager(clients, managers=managers)
 album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
@@ -81,3 +83,12 @@ def send_user_notifications(event, context):
     total_cnt, success_cnt = card_manager.notify_users(now=now, only_usernames=only_usernames)
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'User notifications sent successfully: {success_cnt} out of {total_cnt}')
+
+
+# TODO: enable to handle re-verification of apple receipts after temporary failures
+# @handler_logging
+# def verify_receipts(event, context):
+#     now = pendulum.now('utc')
+#     total_cnt, success_cnt = apple_receipt_manager.verify_receipts(now=now)
+#     with LogLevelContext(logger, logging.INFO):
+#         logger.info(f'Apple receipts verified: {success_cnt} out of {total_cnt}')

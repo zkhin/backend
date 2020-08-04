@@ -188,6 +188,12 @@ module.exports.deleteUser = gql`
   }
 `
 
+module.exports.addAppStoreReceipt = gql`
+  mutation AddAppStoreReceipt($receiptData: String!) {
+    addAppStoreReceipt(receiptData: $receiptData)
+  }
+`
+
 module.exports.resetUser = gql`
   mutation ResetUser($newUsername: String) {
     resetUser(newUsername: $newUsername) {
