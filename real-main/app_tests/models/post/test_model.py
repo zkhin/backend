@@ -502,64 +502,36 @@ def test_set_album_completed_post(albums, post_with_media):
 
     # verify starting state
     assert 'albumId' not in post.item
-    assert album1.item.get('postCount', 0) == 0
-    assert album2.item.get('postCount', 0) == 0
     assert album1.item.get('rankCount', 0) == 0
     assert album2.item.get('rankCount', 0) == 0
-    assert 'postsLastUpdatedAt' not in album1.item
-    assert 'postsLastUpdatedAt' not in album2.item
 
     # go from no album to an album
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
     assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert album1.item.get('postCount', 0) == 1
-    assert album1.item.get('rankCount', 0) == 1
-    assert (posts_last_updated_at_11 := album1.item['postsLastUpdatedAt'])
-    album2.refresh_item()
-    assert album2.item.get('postCount', 0) == 0
-    assert album2.item.get('rankCount', 0) == 0
-    assert 'postsLastUpdatedAt' not in album2.item
+    assert album1.refresh_item().item.get('rankCount', 0) == 1
+    assert album2.refresh_item().item.get('rankCount', 0) == 0
 
     # change the album
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
     assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert album1.item.get('postCount', 0) == 0
-    assert album1.item.get('rankCount', 0) == 1
-    assert (posts_last_updated_at_12 := album1.item['postsLastUpdatedAt']) > posts_last_updated_at_11
-    album2.refresh_item()
-    assert album2.item.get('postCount', 0) == 1
-    assert album2.item.get('rankCount', 0) == 1
-    assert (posts_last_updated_at_21 := album2.item['postsLastUpdatedAt'])
+    assert album1.refresh_item().item.get('rankCount', 0) == 1
+    assert album2.refresh_item().item.get('rankCount', 0) == 1
 
     # no-op
     post.set_album(album2.id)
     assert post.item['albumId'] == album2.id
     assert post.item['gsiK3SortKey'] == 0  # album rank
-    album1.refresh_item()
-    assert album1.item.get('postCount', 0) == 0
-    assert album1.item.get('rankCount', 0) == 1
-    assert album1.item['postsLastUpdatedAt'] == posts_last_updated_at_12
-    album2.refresh_item()
-    assert album2.item.get('postCount', 0) == 1
-    assert album2.item.get('rankCount', 0) == 1
-    assert album2.item['postsLastUpdatedAt'] == posts_last_updated_at_21
+    assert album1.refresh_item().item.get('rankCount', 0) == 1
+    assert album2.refresh_item().item.get('rankCount', 0) == 1
 
     # remove post from all albums
     post.set_album(None)
     assert 'albumId' not in post.item
     assert 'gsiK3SortKey' not in post.item
-    album1.refresh_item()
-    assert album1.item.get('postCount', 0) == 0
-    assert album1.item.get('rankCount', 0) == 1
-    assert album1.item['postsLastUpdatedAt'] == posts_last_updated_at_12
-    album2.refresh_item()
-    assert album2.item.get('postCount', 0) == 0
-    assert album2.item.get('rankCount', 0) == 1
-    assert (posts_last_updated_at_22 := album2.item['postsLastUpdatedAt']) > posts_last_updated_at_21
+    assert album1.refresh_item().item.get('rankCount', 0) == 1
+    assert album2.refresh_item().item.get('rankCount', 0) == 1
 
     # archive the post
     post.archive()
@@ -568,10 +540,7 @@ def test_set_album_completed_post(albums, post_with_media):
     post.set_album(album1.id)
     assert post.item['albumId'] == album1.id
     assert post.item['gsiK3SortKey'] == -1  # album rank
-    album1.refresh_item()
-    assert album1.item.get('postCount', 0) == 0
-    assert album1.item.get('rankCount', 0) == 1
-    assert album2.item['postsLastUpdatedAt'] == posts_last_updated_at_22
+    assert album1.refresh_item().item.get('rankCount', 0) == 1
 
 
 def test_set_album_order_failures(user, user2, albums, post_manager, image_data_b64):
@@ -619,8 +588,8 @@ def test_set_album_order_failures(user, user2, albums, post_manager, image_data_
     # verify if album no longer exists in DB, can't change order
     album1.dynamo.delete_album(album1.id)
     with pytest.raises(Exception, match='Album `.*` that post `.*` was in does not exist'):
-        post2.set_album_order(post3.id)
-    assert 'albumId' not in post2.refresh_item().item
+        post3.set_album_order(post2.id)
+    assert 'albumId' not in post3.refresh_item().item
 
 
 def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_data_b64):
@@ -723,6 +692,35 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     post1.set_album_order(post2.id)
     assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post2.id, post1.id]
     assert post1.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(4 / 6))
+
+
+def test_set_album_order_no_op(user2, albums, post_manager, image_data_b64):
+    # album with two posts in it
+    album, _ = albums
+    post1 = post_manager.add_post(
+        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+    )
+    post2 = post_manager.add_post(
+        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+    )
+
+    # check starting state
+    assert album.refresh_item().item
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post1.item['gsiK3SortKey'] == 0
+    assert post2.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
+
+    # set post1 to first position, which it already is in
+    post1.set_album_order(None)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post1.item == post1.refresh_item().item
+    assert album.item == album.refresh_item().item
+
+    # set post2 to the 2nd position, which it already is in
+    post2.set_album_order(post1.id)
+    assert list(post_manager.dynamo.generate_post_ids_in_album(album.id)) == [post1.id, post2.id]
+    assert post2.item == post2.refresh_item().item
+    assert album.item == album.refresh_item().item
 
 
 def test_build_image_thumbnails_video_post(user, processing_video_post, s3_uploads_client):

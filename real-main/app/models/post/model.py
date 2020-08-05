@@ -391,9 +391,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
             ),
         ]
-        if album:
-            transacts.append(album.dynamo.transact_add_post(album.id, now=now))
-
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
@@ -421,15 +418,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.status != PostStatus.COMPLETED:
             raise PostException(f'Cannot archive post with status `{self.status}`')
 
-        album_id = self.item.get('albumId')
-        album = self.album_manager.get_album(album_id) if album_id else None
-
         # set the post as archived
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
         ]
-        if album:
-            transacts.append(album.dynamo.transact_remove_post(album.id))
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
@@ -467,8 +459,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
         ]
-        if album:
-            transacts.append(self.album_manager.dynamo.transact_add_post(album.id))
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
@@ -480,19 +470,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     def delete(self):
         "Delete the post and all its media"
-
-        # we only have to the album if the previous status was COMPLETED
-        album = None
-        if self.status == PostStatus.COMPLETED:
-            if album_id := self.item.get('albumId'):
-                album = self.album_manager.get_album(album_id)
-
         # mark the post and the media as in the deleting process
         transacts = [
             self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING),
         ]
-        if self.status == PostStatus.COMPLETED and album:
-            transacts.append(album.dynamo.transact_remove_post(album.id))
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
 
@@ -609,12 +590,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             raise PostException(f'Album `{album_id}` does not exist')
 
         transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
-        if self.status == PostStatus.COMPLETED:
-            if prev_album_id:
-                transacts.append(self.album_manager.dynamo.transact_remove_post(prev_album_id))
-            if album_id:
-                transacts.append(album.dynamo.transact_add_post(album_id))
-
         self.dynamo.client.transact_write_items(transacts)
         self.refresh_item(strongly_consistent=True)
         return self
@@ -634,6 +609,12 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             if preceding_post.item.get('albumId') != album_id:
                 raise PostException(f'Preceding post `{preceding_post_id}` is not in album post is in')
 
+        before_rank = preceding_post.item['gsiK3SortKey'] if preceding_post else None
+        after_post_id = next(self.dynamo.generate_post_ids_in_album(album_id, after_rank=before_rank), None)
+        if after_post_id == self.id:
+            # we're already in that position. No-op
+            return
+
         album = self.album_manager.get_album(album_id)
         album = album.increment_rank_count() if album else None
         if not album:
@@ -644,9 +625,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             raise Exception(f'Album `{album_id}` that post `{self.id}` was in does not exist')
 
         # determine the post's new rank
-        if preceding_post:
-            before_rank = preceding_post.item['gsiK3SortKey']
-            after_post_id = next(self.dynamo.generate_post_ids_in_album(album_id, after_rank=before_rank), None)
+        if before_rank is not None:
             if after_post_id:
                 # putting the post in between two posts
                 after_post = self.post_manager.get_post(after_post_id)
@@ -661,7 +640,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         transacts = [
             self.dynamo.transact_set_album_rank(self.id, album_rank),
-            album.dynamo.transact_reorder_post(album.id),
         ]
         self.dynamo.client.transact_write_items(transacts)
         self.item['gsiK3SortKey'] = album_rank

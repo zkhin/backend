@@ -65,24 +65,30 @@ class AlbumManager:
         if new_count > 0 and 'gsiK1PartitionKey' in new_item:
             self.dynamo.clear_delete_at(album_id)
 
-    def on_post_album_change_update_art_if_needed(self, post_id, new_item=None, old_item=None):
-        "Trigger for changes to Post.albumId and Post.gsiK3SortKey (which is album rank)"
+    def on_album_posts_last_updated_at_change_update_art_if_needed(self, album_id, new_item, old_item=None):
+        album = self.init_album(new_item)
+        album.update_art_if_needed()
+
+    def on_post_album_change_update_counts_and_timestamps(self, post_id, new_item=None, old_item=None):
         new_album_id = (new_item or {}).get('albumId')
         old_album_id = (old_item or {}).get('albumId')
         # all non-completed posts are given rank of -1
         new_album_rank = (new_item or {}).get('gsiK3SortKey', -1)
         old_album_rank = (old_item or {}).get('gsiK3SortKey', -1)
 
-        if new_album_id == old_album_id or (new_album_id and new_album_rank != -1):
-            album = self.get_album(new_album_id)
-            if album is not None:
-                album.update_art_if_needed()
-            else:
-                logger.warning(f'Album `{old_album_id}` no longer exists')
+        # would be nice to match this to when the post was changed,
+        # rather than when this listener gets triggered
+        now = pendulum.now('utc')
 
-        if new_album_id != old_album_id and old_album_id and old_album_rank != -1:
-            album = self.get_album(old_album_id)
-            if album is not None:
-                album.update_art_if_needed()
+        if new_album_id == old_album_id:
+            if old_album_rank == -1:
+                self.dynamo.increment_post_count(new_album_id, now=now)
+            elif new_album_rank == -1:
+                self.dynamo.decrement_post_count(new_album_id, now=now)
             else:
-                logger.warning(f'Album `{old_album_id}` no longer exists')
+                self.dynamo.update_posts_last_updated_at(new_album_id, now=now)
+        else:
+            if new_album_rank != -1:
+                self.dynamo.increment_post_count(new_album_id, now=now)
+            if old_album_rank != -1:
+                self.dynamo.decrement_post_count(old_album_id, now=now)

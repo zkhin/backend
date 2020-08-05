@@ -93,9 +93,8 @@ def test_restore_completed_post_in_album(post_manager, post_with_media_completed
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == -1
 
-    # check our starting post count
+    # check our starting rank count
     album.refresh_item()
-    assert album.item.get('postCount', 0) == 0
     assert album.item.get('rankCount', 0) == 1
 
     # mock out some calls to far-flung other managers
@@ -115,9 +114,8 @@ def test_restore_completed_post_in_album(post_manager, post_with_media_completed
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == pytest.approx(decimal.Decimal(1 / 3))
 
-    # check our post count - should have incremented
+    # check our rank count - should have incremented
     album.refresh_item()
-    assert album.item.get('postCount', 0) == 1
     assert album.item.get('rankCount', 0) == 2
 
     # check calls to mocked out managers

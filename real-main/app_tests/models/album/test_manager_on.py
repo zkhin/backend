@@ -1,6 +1,7 @@
 from unittest.mock import call, patch
 from uuid import uuid4
 
+import pendulum
 import pytest
 
 from app.models.post.enums import PostType
@@ -24,6 +25,7 @@ def post(post_manager, user, image_data_b64):
     yield post_manager.add_post(user, str(uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64})
 
 
+album1 = album
 album2 = album
 
 
@@ -33,8 +35,8 @@ def test_on_album_delete_delete_album_art(album_manager, post, user, album, imag
     album_manager.on_album_delete_delete_album_art(album.id, old_item=album.item)
 
     # add a post with an image to the album to get some art in S3, verify
-    post = post.set_album(album.id)
-    album_manager.on_post_album_change_update_art_if_needed(post.id, new_item=post.item)
+    post.set_album(album.id)
+    album.update_art_if_needed()
     assert 'artHash' in album.refresh_item().item
     art_paths = [album.get_art_image_path(size) for size in image_size.JPEGS]
     for path in art_paths:
@@ -91,67 +93,97 @@ def test_on_album_add_edit_sync_delete_at(album_manager, user, album):
     assert 'gsiK1SortKey' in album.item
 
 
-def test_on_post_album_change_update_art_if_needed(album_manager, user, album, album2, post, post_manager):
-    # verify no calls for creating a pending post in album
-    pending_post = post_manager.add_post(user, str(uuid4()), PostType.IMAGE, album_id=album.id)
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(pending_post.id, new_item=pending_post.item)
-    assert get_album_mock.mock_calls == []
+def test_on_post_album_change_update_art_if_needed(album_manager, user, album):
+    # check for a new album
+    with patch.object(album_manager, 'init_album') as init_album_mock:
+        album_manager.on_album_posts_last_updated_at_change_update_art_if_needed(album.id, new_item=album.item)
+    assert init_album_mock.mock_calls == [call(album.item), call().update_art_if_needed()]
 
-    # verify no calls for changing what album that pending post is in
-    old_item = pending_post.item.copy()
-    pending_post.set_album(album2.id)
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(
-            pending_post.id, new_item=pending_post.item, old_item=old_item
+    # check for a changed album
+    with patch.object(album_manager, 'init_album') as init_album_mock:
+        album_manager.on_album_posts_last_updated_at_change_update_art_if_needed(
+            album.id, new_item=album.item, old_item={'un': 'used'}
         )
-    assert get_album_mock.mock_calls == []
+    assert init_album_mock.mock_calls == [call(album.item), call().update_art_if_needed()]
 
-    # verify no calls for deleting that pending post in album
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(pending_post.id, old_item=pending_post.item)
-    assert get_album_mock.mock_calls == []
 
-    # verify calls for adding a completed post to an album
-    old_item = post.item.copy()
-    post.set_album(album.id)
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(post.id, new_item=post.item, old_item=old_item)
-    assert get_album_mock.mock_calls == [call(album.id), call().update_art_if_needed()]
+def test_on_post_album_change_update_counts_and_timestamps(album_manager, user, album1, album2, post):
+    # check starting state
+    album1.refresh_item()
+    assert 'postCount' not in album1.item
+    assert 'postsLastUpdatedAt' not in album1.item
+    album2.refresh_item()
+    assert 'postCount' not in album2.item
+    assert 'postsLastUpdatedAt' not in album2.item
 
-    # verify calls for archiving post in an album
-    old_item = post.item.copy()
-    post.archive()
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(post.id, new_item=post.item, old_item=old_item)
-    assert get_album_mock.mock_calls == [call(album.id), call().update_art_if_needed()]
+    # trigger for adding a new post with album, but not assigning a rank (like a PENDING post)
+    new_item = {**post.item, 'albumId': album1.id, 'gsiK3SortKey': -1}
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item)
+    assert album1.item == album1.refresh_item().item
+    assert album2.item == album2.refresh_item().item
 
-    # verify calls for restoring post in an album
-    old_item = post.item.copy()
-    post.restore()
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(post.id, new_item=post.item, old_item=old_item)
-    assert get_album_mock.mock_calls == [call(album.id), call().update_art_if_needed()]
+    # trigger for changing which album that non-completed post is in
+    old_item = new_item
+    new_item = {**new_item, 'albumId': album2.id, 'gsiK3SortKey': -1}
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item, old_item=old_item)
+    assert album1.item == album1.refresh_item().item
+    assert album2.item == album2.refresh_item().item
 
-    # verify calls for changing which album post is in
-    old_item = post.item.copy()
-    post.set_album(album2.id)
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(post.id, new_item=post.item, old_item=old_item)
-    assert get_album_mock.mock_calls == [
-        call(album2.id),
-        call().update_art_if_needed(),
-        call(album.id),
-        call().update_art_if_needed(),
-    ]
+    # trigger for setting a rank in that album
+    old_item = new_item
+    new_item = {**new_item, 'albumId': album2.id, 'gsiK3SortKey': 0}
+    before = pendulum.now('utc')
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item, old_item=old_item)
+    after = pendulum.now('utc')
+    assert album1.item == album1.refresh_item().item
+    album2.refresh_item()
+    assert album2.item['postCount'] == 1
+    assert before < pendulum.parse(album2.item['postsLastUpdatedAt']) < after
 
-    # verify calls for changing postion of post in album
-    old_item = {**post.item, 'gsiK3SortKey': -0.57}  # gsiK3SortKey is albumRank
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(post.id, new_item=post.item, old_item=old_item)
-    assert get_album_mock.mock_calls == [call(album2.id), call().update_art_if_needed()]
+    # trigger for changing to a new album, new non negative one rank
+    old_item = new_item
+    new_item = {**new_item, 'albumId': album1.id, 'gsiK3SortKey': -0.5}
+    before = pendulum.now('utc')
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item, old_item=old_item)
+    after = pendulum.now('utc')
+    album1.refresh_item()
+    assert album1.item['postCount'] == 1
+    assert before < pendulum.parse(album1.item['postsLastUpdatedAt']) < after
+    album2.refresh_item()
+    assert album2.item['postCount'] == 0
+    assert before < pendulum.parse(album2.item['postsLastUpdatedAt']) < after
 
-    # verify calls for deleting post
-    with patch.object(album_manager, 'get_album') as get_album_mock:
-        album_manager.on_post_album_change_update_art_if_needed(post.id, old_item=post.item)
-    assert get_album_mock.mock_calls == [call(album2.id), call().update_art_if_needed()]
+    # trigger for setting to a rank of -1 in that album
+    old_item = new_item
+    new_item = {**new_item, 'albumId': album1.id, 'gsiK3SortKey': -1}
+    before = pendulum.now('utc')
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item, old_item=old_item)
+    after = pendulum.now('utc')
+    album1.refresh_item()
+    assert album1.item['postCount'] == 0
+    assert before < pendulum.parse(album1.item['postsLastUpdatedAt']) < after
+    assert album2.item == album2.refresh_item().item
+
+    # trigger for changing to a new album, with new non negative one rank
+    old_item = new_item
+    new_item = {**new_item, 'albumId': album2.id, 'gsiK3SortKey': 0.3}
+    before = pendulum.now('utc')
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item, old_item=old_item)
+    after = pendulum.now('utc')
+    assert album1.item == album1.refresh_item().item
+    album2.refresh_item()
+    assert album2.item['postCount'] == 1
+    assert before < pendulum.parse(album2.item['postsLastUpdatedAt']) < after
+
+    # trigger for deleting the post while in that album
+    old_item = new_item
+    new_item = new_item.copy()
+    new_item.pop('albumId')
+    new_item.pop('gsiK3SortKey')
+    before = pendulum.now('utc')
+    album_manager.on_post_album_change_update_counts_and_timestamps(post.id, new_item=new_item, old_item=old_item)
+    after = pendulum.now('utc')
+    assert album1.item == album1.refresh_item().item
+    album2.refresh_item()
+    assert album2.item['postCount'] == 0
+    assert before < pendulum.parse(album2.item['postsLastUpdatedAt']) < after

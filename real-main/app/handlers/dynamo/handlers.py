@@ -45,6 +45,13 @@ register = dispatch.register
 
 register('album', '-', ['INSERT'], user_manager.on_album_add_update_album_count)
 register('album', '-', ['INSERT', 'MODIFY'], album_manager.on_album_add_edit_sync_delete_at)
+register(
+    'album',
+    '-',
+    ['INSERT', 'MODIFY'],
+    album_manager.on_album_posts_last_updated_at_change_update_art_if_needed,
+    {'postsLastUpdatedAt': None},
+)
 register('album', '-', ['REMOVE'], album_manager.on_album_delete_delete_album_art)
 register('album', '-', ['REMOVE'], post_manager.on_album_delete_remove_posts)
 register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)
@@ -135,7 +142,7 @@ register(
     'post',
     '-',
     ['INSERT', 'MODIFY', 'REMOVE'],
-    album_manager.on_post_album_change_update_art_if_needed,
+    album_manager.on_post_album_change_update_counts_and_timestamps,
     {'albumId': None, 'gsiK3SortKey': -1},  # all non-completed posts are given rank of -1
 )
 register('post', 'feed', ['INSERT'], feed_manager.fire_gql_subscription_user_feed_post_added)

@@ -170,10 +170,7 @@ def test_add_text_only_post_to_album(post_manager, user, album):
     post.refresh_item()
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3SortKey'] == 0  # album rank
-
-    album.refresh_item()
-    assert album.item['postCount'] == 1
-    assert album.item['rankCount'] == 1
+    assert album.refresh_item().item['rankCount'] == 1
 
 
 def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant_data):
@@ -184,10 +181,7 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant
     assert post.id == post_id
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3SortKey'] == -1  # album rank
-
-    album.refresh_item()
-    assert 'postCount' not in album.item
-    assert 'rankCount' not in album.item
+    assert 'rankCount' not in album.refresh_item().item
 
     # complete the video post
     transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
@@ -203,10 +197,7 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant
     post.refresh_item()
     assert post.item['albumId'] == album.id
     assert post.item['gsiK3SortKey'] == 0  # album rank
-
-    album.refresh_item()
-    assert album.item['postCount'] == 1
-    assert album.item['rankCount'] == 1
+    assert album.refresh_item().item['rankCount'] == 1
 
 
 def test_add_video_post_minimal(post_manager, user):

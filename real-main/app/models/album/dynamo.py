@@ -19,12 +19,6 @@ class AlbumDynamo:
             'sortKey': '-',
         }
 
-    def typed_pk(self, album_id):
-        return {
-            'partitionKey': {'S': f'album/{album_id}'},
-            'sortKey': {'S': '-'},
-        }
-
     def get_album(self, album_id, strongly_consistent=False):
         return self.client.get_item(self.pk(album_id), ConsistentRead=strongly_consistent)
 
@@ -121,48 +115,41 @@ class AlbumDynamo:
             return item_deleted
         raise AlbumDoesNotExist(album_id)
 
-    def transact_add_post(self, album_id, now=None):
-        "Transaction to change album properties to reflect adding a post to the album"
+    def increment_post_count(self, album_id, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Update': {
-                'Key': self.typed_pk(album_id),
-                'UpdateExpression': 'ADD postCount :one SET postsLastUpdatedAt = :now',
-                'ExpressionAttributeValues': {':one': {'N': '1'}, ':now': {'S': now.to_iso8601_string()}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
+            'Key': self.pk(album_id),
+            'UpdateExpression': 'ADD postCount :one SET postsLastUpdatedAt = :now',
+            'ExpressionAttributeValues': {':one': 1, ':now': now.to_iso8601_string()},
         }
-        return query_kwargs
+        return self.client.update_item(
+            query_kwargs,
+            failure_warning=f'Failed to increment postCount and set postsLastUpdatedAt for album `{album_id}`',
+        )
 
-    def transact_remove_post(self, album_id, now=None):
-        "Transaction to change album properties to reflect removing a post from the album"
+    def decrement_post_count(self, album_id, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Update': {
-                'Key': self.typed_pk(album_id),
-                'UpdateExpression': 'ADD postCount :negative_one SET postsLastUpdatedAt = :now',
-                'ExpressionAttributeValues': {
-                    ':negative_one': {'N': '-1'},
-                    ':now': {'S': now.to_iso8601_string()},
-                    ':zero': {'N': '0'},
-                },
-                'ConditionExpression': 'attribute_exists(partitionKey) and postCount > :zero',
-            }
+            'Key': self.pk(album_id),
+            'UpdateExpression': 'ADD postCount :negative_one SET postsLastUpdatedAt = :now',
+            'ExpressionAttributeValues': {':negative_one': -1, ':now': now.to_iso8601_string(), ':zero': 0},
+            'ConditionExpression': 'postCount > :zero',
         }
-        return query_kwargs
+        return self.client.update_item(
+            query_kwargs,
+            failure_warning=f'Failed to decrement postCount and set postsLastUpdatedAt for album `{album_id}`',
+        )
 
-    def transact_reorder_post(self, album_id, now=None):
-        "Transaction to change album properties to reflect adding a post to the album"
+    def update_posts_last_updated_at(self, album_id, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
-            'Update': {
-                'Key': self.typed_pk(album_id),
-                'UpdateExpression': 'SET postsLastUpdatedAt = :now',
-                'ExpressionAttributeValues': {':now': {'S': now.to_iso8601_string()}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',
-            }
+            'Key': self.pk(album_id),
+            'UpdateExpression': 'SET postsLastUpdatedAt = :now',
+            'ExpressionAttributeValues': {':now': now.to_iso8601_string()},
         }
-        return query_kwargs
+        return self.client.update_item(
+            query_kwargs, failure_warning=f'Failed to update postsLastUpdatedAt for album `{album_id}`'
+        )
 
     def increment_rank_count(self, album_id):
         return self.client.increment_count(self.pk(album_id), 'rankCount')

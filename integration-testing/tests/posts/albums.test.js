@@ -41,10 +41,12 @@ test('Create a posts in an album, album post ordering', async () => {
   let postedAt = resp.data.addPost.postedAt
 
   // check the album
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(1)
-  expect(resp.data.album.postsLastUpdatedAt).toBe(postedAt)
+  expect(resp.data.album.postsLastUpdatedAt > postedAt).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
   expect(resp.data.album.posts.items).toHaveLength(1)
   expect(resp.data.album.posts.items[0].postId).toBe(postId1)
 
@@ -54,17 +56,17 @@ test('Create a posts in an album, album post ordering', async () => {
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId2)
   let uploadUrl = resp.data.addPost.imageUploadUrl
-  let before = moment().toISOString()
+  let before = moment()
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostCompleted(ourClient, postId2)
-  let after = moment().toISOString()
 
   // check the album
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(2)
-  expect(before <= resp.data.album.postsLastUpdatedAt).toBe(true)
-  expect(after >= resp.data.album.postsLastUpdatedAt).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
   expect(resp.data.album.posts.items).toHaveLength(2)
   expect(resp.data.album.posts.items[0].postId).toBe(postId1)
   expect(resp.data.album.posts.items[1].postId).toBe(postId2)
@@ -76,6 +78,7 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(resp.data.addPost.postId).toBe(postId3)
 
   // check the album
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(3)
@@ -180,6 +183,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   const uploadUrl = resp.data.addPost.imageUploadUrl
 
   // check the album's posts, should not see the new post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(0)
@@ -196,6 +200,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp.data.post.postStatus).toBe('COMPLETED')
 
   // check the album's posts, *should* see the new post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(1)
@@ -222,20 +227,20 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp.data.addPost.album).toBeNull()
 
   // move that post into the 2nd album
-  let before = moment().toISOString()
+  let before = moment()
   resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: albumId2}})
-  let after = moment().toISOString()
   expect(resp.data.editPostAlbum.postId).toBe(postId)
   expect(resp.data.editPostAlbum.album.albumId).toBe(albumId2)
 
   // check the second album
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId: albumId2}})
   expect(resp.data.album.albumId).toBe(albumId2)
   expect(resp.data.album.postCount).toBe(1)
   expect(resp.data.album.posts.items).toHaveLength(1)
   expect(resp.data.album.posts.items[0].postId).toBe(postId)
-  expect(before <= resp.data.album.postsLastUpdatedAt).toBe(true)
-  expect(after >= resp.data.album.postsLastUpdatedAt).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
 
   // add an unrelated text-only post to the first album
   const postId2 = uuidv4()
@@ -246,19 +251,19 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp.data.addPost.album.albumId).toBe(albumId1)
 
   // move the original post out of the 2nd album and into the first
-  before = moment().toISOString()
+  before = moment()
   resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: albumId1}})
-  after = moment().toISOString()
   expect(resp.data.editPostAlbum.postId).toBe(postId)
   expect(resp.data.editPostAlbum.album.albumId).toBe(albumId1)
 
   // check the 2nd album
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId: albumId2}})
   expect(resp.data.album.albumId).toBe(albumId2)
   expect(resp.data.album.postCount).toBe(0)
   expect(resp.data.album.posts.items).toHaveLength(0)
-  expect(before <= resp.data.album.postsLastUpdatedAt).toBe(true)
-  expect(after >= resp.data.album.postsLastUpdatedAt).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
 
   // check the first album, including post order - new post should be at the back
   resp = await ourClient.query({query: queries.album, variables: {albumId: albumId1}})
@@ -267,24 +272,24 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp.data.album.posts.items).toHaveLength(2)
   expect(resp.data.album.posts.items[0].postId).toBe(postId2)
   expect(resp.data.album.posts.items[1].postId).toBe(postId)
-  expect(before <= resp.data.album.postsLastUpdatedAt).toBe(true)
-  expect(after >= resp.data.album.postsLastUpdatedAt).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
 
   // remove the post from that album
-  before = moment().toISOString()
+  before = moment()
   resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: null}})
-  after = moment().toISOString()
   expect(resp.data.editPostAlbum.postId).toBe(postId)
   expect(resp.data.editPostAlbum.album).toBeNull()
 
   // check the first album
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId: albumId1}})
   expect(resp.data.album.albumId).toBe(albumId1)
   expect(resp.data.album.postCount).toBe(1)
   expect(resp.data.album.posts.items).toHaveLength(1)
   expect(resp.data.album.posts.items[0].postId).toBe(postId2)
-  expect(before <= resp.data.album.postsLastUpdatedAt).toBe(true)
-  expect(after >= resp.data.album.postsLastUpdatedAt).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
+  expect(resp.data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
 })
 
 // TODO: define behavior here. It's probably ok to let vido posts into albums, as they now have 'poster' images
@@ -344,6 +349,7 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
   expect(resp.data.editPostAlbum.album.albumId).toBe(albumId)
 
   // check that Album.posts & friends have not changed
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(0)
@@ -377,6 +383,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp.data.addPost.album.albumId).toBe(albumId)
 
   // verify that's reflected in Album.posts and friends
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(2)
@@ -392,6 +399,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
 
   // verify that took it out of Album.post and friends
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(1)
@@ -406,6 +414,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
   expect(resp.data.restoreArchivedPost.postStatus).toBe('COMPLETED')
 
   // verify its now back in Album.posts and friends, in the back
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(2)
@@ -432,6 +441,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
   expect(resp.data.addPost.album.albumId).toBe(albumId)
 
   // verify that's reflected in Album.posts and friends
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(1)
@@ -446,6 +456,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
   expect(resp.data.deletePost.postStatus).toBe('DELETING')
 
   // verify that took it out of Album.post and friends
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(0)
@@ -483,6 +494,7 @@ test('Edit album post order failures', async () => {
   expect(resp.data.addPost.postId).toBe(postId3)
 
   // check album post order
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(2)
@@ -509,6 +521,7 @@ test('Edit album post order failures', async () => {
   )
 
   // check album post order has not changed
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   expect(resp.data.album.albumId).toBe(albumId)
   expect(resp.data.album.postCount).toBe(2)
@@ -546,6 +559,7 @@ test('Edit album post order', async () => {
   expect(resp.data.addPost.postId).toBe(postId3)
 
   // check album post order
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   let album = resp.data.album
   expect(album.albumId).toBe(albumId)
@@ -560,13 +574,14 @@ test('Edit album post order', async () => {
   variables = {postId: postId3, precedingPostId: null}
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId3)
-  await misc.sleep(2000) // dynamo
 
   // check album post order
+  await misc.sleep(3000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   album = resp.data.album
   expect(album.albumId).toBe(albumId)
   expect(album.postCount).toBe(3)
+  expect(album.postsLastUpdatedAt > prevAlbum.postsLastUpdatedAt).toBe(true)
   expect(album.posts.items).toHaveLength(3)
   expect(album.posts.items[0].postId).toBe(postId3)
   expect(album.posts.items[1].postId).toBe(postId1)
@@ -584,13 +599,14 @@ test('Edit album post order', async () => {
   variables = {postId: postId2, precedingPostId: postId3}
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId2)
-  await misc.sleep(2000) // dynamo
 
   // check album post order
+  await misc.sleep(3000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   album = resp.data.album
   expect(album.albumId).toBe(albumId)
   expect(album.postCount).toBe(3)
+  expect(album.postsLastUpdatedAt > prevAlbum.postsLastUpdatedAt).toBe(true)
   expect(album.posts.items).toHaveLength(3)
   expect(album.posts.items[0].postId).toBe(postId3)
   expect(album.posts.items[1].postId).toBe(postId2)
@@ -608,13 +624,14 @@ test('Edit album post order', async () => {
   variables = {postId: postId1}
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId1)
-  await misc.sleep(2000) // dynamo
 
   // check album post order
+  await misc.sleep(3000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   album = resp.data.album
   expect(album.albumId).toBe(albumId)
   expect(album.postCount).toBe(3)
+  expect(album.postsLastUpdatedAt > prevAlbum.postsLastUpdatedAt).toBe(true)
   expect(album.posts.items).toHaveLength(3)
   expect(album.posts.items[0].postId).toBe(postId1)
   expect(album.posts.items[1].postId).toBe(postId3)
@@ -632,13 +649,14 @@ test('Edit album post order', async () => {
   variables = {postId: postId3, precedingPostId: postId1}
   resp = await ourClient.mutate({mutation: mutations.editPostAlbumOrder, variables})
   expect(resp.data.editPostAlbumOrder.postId).toBe(postId3)
-  await misc.sleep(2000) // dynamo
 
   // check album again directly, make sure nothing changed
+  await misc.sleep(3000)
   resp = await ourClient.query({query: queries.album, variables: {albumId}})
   album = resp.data.album
   expect(album.albumId).toBe(albumId)
   expect(album.postCount).toBe(3)
+  expect(album.postsLastUpdatedAt).toBe(prevAlbum.postsLastUpdatedAt)
   expect(album.posts.items).toHaveLength(3)
   expect(album.posts.items[0].postId).toBe(postId1)
   expect(album.posts.items[1].postId).toBe(postId3)

@@ -127,8 +127,6 @@ def test_complete_with_expiration(post_manager, post_with_media_with_expiration,
 
 def test_complete_with_album(album_manager, post_manager, post_with_media_with_album, user_manager, image_data):
     post = post_with_media_with_album
-    posted_by_user_id = post.item['postedByUserId']
-    posted_by_user = user_manager.get_user(posted_by_user_id)
     album = album_manager.get_album(post.item['albumId'])
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == -1
@@ -141,9 +139,7 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     post.follower_manager = mock.Mock(post.follower_manager)
 
     # check starting state
-    assert album.item.get('postCount', 0) == 0
     assert album.item.get('rankCount', 0) == 0
-    assert posted_by_user.item.get('postCount', 0) == 0
     assert post.item['postStatus'] == PostStatus.PENDING
 
     # complete the post, check state
@@ -152,7 +148,6 @@ def test_complete_with_album(album_manager, post_manager, post_with_media_with_a
     assert post.item['gsiK3PartitionKey'] == f'post/{album.id}'
     assert post.item['gsiK3SortKey'] == 0
     album.refresh_item()
-    assert album.item.get('postCount', 0) == 1
     assert album.item.get('rankCount', 0) == 1
 
     # check correct calls happened to far-flung other managers

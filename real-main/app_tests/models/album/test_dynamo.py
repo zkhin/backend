@@ -139,60 +139,96 @@ def test_delete_album(album_dynamo, album_item):
     assert album_dynamo.get_album(album_id) is None
 
 
-def test_transact_add_post(album_dynamo, album_item):
+def test_increment_decrement_post_count(album_dynamo, album_item, caplog):
+    # check starting state
     album_id = album_item['albumId']
     assert 'postCount' not in album_item
-    assert 'rankCount' not in album_item
     assert 'postsLastUpdatedAt' not in album_item
 
-    # verify cant add to album that DNE
-    transact = album_dynamo.transact_add_post(str(uuid4()))
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
+    # check we can't decrement or increment album that DNE
+    album_id_dne = str(uuid4())
+    with caplog.at_level(logging.WARNING):
+        album_dynamo.decrement_post_count(album_id_dne)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert album_id_dne in caplog.records[0].msg
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        album_dynamo.increment_post_count(album_id_dne)
+    assert len(caplog.records) == 1
+    assert 'Failed to increment' in caplog.records[0].msg
+    assert album_id_dne in caplog.records[0].msg
 
-    # add a post, check the new state
+    # check we can't decrement below zero
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        album_dynamo.decrement_post_count(album_id)
+    assert len(caplog.records) == 1
+    assert 'Failed to decrement' in caplog.records[0].msg
+    assert album_id in caplog.records[0].msg
+
+    # increment specifiying timestamp
     now = pendulum.now('utc')
-    transact = album_dynamo.transact_add_post(album_id, now=now)
-    album_dynamo.client.transact_write_items([transact])
-    new_album_item = album_dynamo.get_album(album_id)
-    assert new_album_item['postCount'] == 1
-    assert new_album_item['postsLastUpdatedAt'] == now.to_iso8601_string()
+    new_album_item = album_dynamo.increment_post_count(album_id, now=now)
+    assert album_dynamo.get_album(album_id) == new_album_item
+    assert new_album_item.pop('postCount') == 1
+    assert new_album_item.pop('postsLastUpdatedAt') == now.to_iso8601_string()
+    assert new_album_item == album_item
 
-    # add another post, check the new state
-    transact = album_dynamo.transact_add_post(album_id)
-    album_dynamo.client.transact_write_items([transact])
-    new_album_item = album_dynamo.get_album(album_id)
-    assert new_album_item['postCount'] == 2
-    assert new_album_item['postsLastUpdatedAt'] > now.to_iso8601_string()
+    # increment without specificying timestamp
+    before = pendulum.now('utc')
+    new_album_item = album_dynamo.increment_post_count(album_id)
+    after = pendulum.now('utc')
+    assert album_dynamo.get_album(album_id) == new_album_item
+    assert new_album_item.pop('postCount') == 2
+    assert before < pendulum.parse(new_album_item.pop('postsLastUpdatedAt')) < after
+    assert new_album_item == album_item
 
-    # check nothing else got changed
-    del new_album_item['postCount']
-    del new_album_item['postsLastUpdatedAt']
+    # decrement without specifying timestamp
+    before = pendulum.now('utc')
+    new_album_item = album_dynamo.decrement_post_count(album_id)
+    after = pendulum.now('utc')
+    assert album_dynamo.get_album(album_id) == new_album_item
+    assert new_album_item.pop('postCount') == 1
+    assert before < pendulum.parse(new_album_item.pop('postsLastUpdatedAt')) < after
+    assert new_album_item == album_item
+
+    # decrement specifying timestamp
+    now = pendulum.now('utc')
+    new_album_item = album_dynamo.decrement_post_count(album_id, now=now)
+    assert album_dynamo.get_album(album_id) == new_album_item
+    assert new_album_item.pop('postCount') == 0
+    assert new_album_item.pop('postsLastUpdatedAt') == now.to_iso8601_string()
     assert new_album_item == album_item
 
 
-def test_transact_remove_post(album_dynamo, album_item):
+def test_update_posts_last_updated_at(album_dynamo, album_item, caplog):
+    # check starting state
     album_id = album_item['albumId']
+    assert 'postsLastUpdatedAt' not in album_item
 
-    # add a post, check state
-    transact = album_dynamo.transact_add_post(album_id)
-    album_dynamo.client.transact_write_items([transact])
-    album_item = album_dynamo.get_album(album_id)
-    assert album_item.get('postCount', 0) == 1
-    assert album_item['postsLastUpdatedAt']
+    # check we can't update album that DNE
+    album_id_dne = str(uuid4())
+    with caplog.at_level(logging.WARNING):
+        album_dynamo.update_posts_last_updated_at(album_id_dne)
+    assert len(caplog.records) == 1
+    assert 'Failed to update' in caplog.records[0].msg
+    assert album_id_dne in caplog.records[0].msg
 
-    # remove that post, check state
+    # update without specifiying timestamp
+    before = pendulum.now('utc')
+    new_album_item = album_dynamo.update_posts_last_updated_at(album_id)
+    after = pendulum.now('utc')
+    assert album_dynamo.get_album(album_id) == new_album_item
+    assert before < pendulum.parse(new_album_item.pop('postsLastUpdatedAt')) < after
+    assert new_album_item == album_item
+
+    # update specifiying timestamp
     now = pendulum.now('utc')
-    transact = album_dynamo.transact_remove_post(album_id, now=now)
-    album_dynamo.client.transact_write_items([transact])
-    album_item = album_dynamo.get_album(album_id)
-    assert album_item.get('postCount', 0) == 0
-    assert album_item['postsLastUpdatedAt'] == now.to_iso8601_string()
-
-    # verify we can't remove another post
-    transact = album_dynamo.transact_remove_post(album_id)
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
+    new_album_item = album_dynamo.update_posts_last_updated_at(album_id, now=now)
+    assert album_dynamo.get_album(album_id) == new_album_item
+    assert pendulum.parse(new_album_item.pop('postsLastUpdatedAt')) == now
+    assert new_album_item == album_item
 
 
 def test_generate_by_user(album_dynamo, album_item):
@@ -232,37 +268,6 @@ def test_set_album_hash(album_dynamo, album_item):
     del album_item['artHash']
     assert album_dynamo.set_album_art_hash(album_id, None) == album_item
     assert album_dynamo.get_album(album_id) == album_item
-
-
-def test_reorder_post(album_dynamo, album_item):
-    album_id = album_item['albumId']
-    assert 'rankCount' not in album_id
-    assert 'postsLastUpdatedAt' not in album_id
-
-    # verify can't operate on album that DNE
-    transact = album_dynamo.transact_reorder_post(str(uuid4()))
-    with pytest.raises(album_dynamo.client.exceptions.TransactionCanceledException):
-        album_dynamo.client.transact_write_items([transact])
-
-    # without specifying timestamp
-    before = pendulum.now('utc')
-    transact = album_dynamo.transact_reorder_post(album_id)
-    after = pendulum.now('utc')
-    album_dynamo.client.transact_write_items([transact])
-    new_album_item = album_dynamo.get_album(album_id)
-    assert pendulum.parse(new_album_item['postsLastUpdatedAt']) > before
-    assert pendulum.parse(new_album_item['postsLastUpdatedAt']) < after
-    album_item['postsLastUpdatedAt'] = new_album_item['postsLastUpdatedAt']
-    assert album_item == new_album_item
-
-    # with specifying timestamp
-    now = pendulum.now('utc')
-    transact = album_dynamo.transact_reorder_post(album_id, now=now)
-    album_dynamo.client.transact_write_items([transact])
-    new_album_item = album_dynamo.get_album(album_id)
-    assert pendulum.parse(new_album_item['postsLastUpdatedAt']) == now
-    album_item['postsLastUpdatedAt'] = new_album_item['postsLastUpdatedAt']
-    assert album_item == new_album_item
 
 
 def test_set_and_clear_delete_at(album_dynamo, album_item, caplog):
@@ -311,8 +316,7 @@ def test_set_and_clear_delete_at(album_dynamo, album_item, caplog):
     assert 'gsiK1SortKey' not in new_item
 
     # verify we cannot set if for an album that has a non-zero postCount
-    transact = album_dynamo.transact_add_post(album_id)
-    album_dynamo.client.transact_write_items([transact])
+    album_dynamo.increment_post_count(album_id)
     with caplog.at_level(logging.WARNING):
         assert album_dynamo.set_delete_at(album_id, pendulum.now('utc')) is None
     assert len(caplog.records) == 1
