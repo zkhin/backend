@@ -47,9 +47,7 @@ def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
     with pytest.raises(PostException, match='native.jpg image data not found'):
         pending_post.process_image_upload()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
-
-    pending_post.refresh_item()
-    assert pending_post.item['postStatus'] == PostStatus.PROCESSING
+    assert pending_post.refresh_item().item['postStatus'] == PostStatus.PROCESSING
 
 
 def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, grant_data):
@@ -87,11 +85,10 @@ def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, gran
     assert post.complete.mock_calls == [mock.call(now=now)]
 
     assert post.item['postStatus'] == PostStatus.COMPLETED
-    post.refresh_item()
-    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.refresh_item().item['postStatus'] == PostStatus.COMPLETED
 
 
-def test_process_image_upload_with_crop(pending_post, s3_uploads_client, grant_data):
+def test_process_image_upload_success_jpeg_with_crop(pending_post, s3_uploads_client, grant_data):
     post = pending_post
     assert post.item['postStatus'] == PostStatus.PENDING
     post.image_item['crop'] = {'upperLeft': {'x': 4, 'y': 2}, 'lowerRight': {'x': 102, 'y': 104}}
@@ -126,8 +123,7 @@ def test_process_image_upload_with_crop(pending_post, s3_uploads_client, grant_d
     assert post.complete.mock_calls == [mock.call(now=now)]
 
     assert post.item['postStatus'] == PostStatus.COMPLETED
-    post.refresh_item()
-    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.refresh_item().item['postStatus'] == PostStatus.COMPLETED
 
 
 def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_client, heic_data):
@@ -139,6 +135,7 @@ def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_cl
     # put some data in the mocked s3
     native_path = post.get_image_path(image_size.NATIVE_HEIC)
     s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
+    assert s3_uploads_client.exists(native_path)
 
     # mock out a bunch of methods
     post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
@@ -165,6 +162,48 @@ def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_cl
     assert post.set_checksum.mock_calls == [mock.call()]
     assert post.complete.mock_calls == [mock.call(now=now)]
 
+    # check the heic image was deleted because of the crop
+    assert not s3_uploads_client.exists(native_path)
+
     assert post.item['postStatus'] == PostStatus.COMPLETED
-    post.refresh_item()
+    assert post.refresh_item().item['postStatus'] == PostStatus.COMPLETED
+
+
+def test_process_image_upload_success_heic_with_no_crop(pending_post, s3_uploads_client, heic_data):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    post.image_item['imageFormat'] = 'HEIC'
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
+
+    # process, verify
+    post.process_image_upload()
     assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.refresh_item().item['postStatus'] == PostStatus.COMPLETED
+
+    # check the heic image was _not_ deleted because no crop was requested
+    assert s3_uploads_client.exists(native_path)
+
+
+def test_process_image_upload_success_heic_with_noop_crop(pending_post, s3_uploads_client, heic_data, heic_dims):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    post.image_item['imageFormat'] = 'HEIC'
+    post.image_item['crop'] = {
+        'upperLeft': {'x': 0, 'y': 0},
+        'lowerRight': {'x': heic_dims[0], 'y': heic_dims[1]},
+    }
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
+
+    # process, verify
+    post.process_image_upload()
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.refresh_item().item['postStatus'] == PostStatus.COMPLETED
+
+    # check the heic image was _not_ deleted because the crop matched the image dimensions exactly
+    assert s3_uploads_client.exists(native_path)

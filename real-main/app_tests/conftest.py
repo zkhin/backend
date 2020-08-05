@@ -50,6 +50,12 @@ def heic_data_b64(heic_data):
 
 
 @pytest.fixture
+def heic_dims():
+    # (widith, height) of the 'heic_data' image
+    yield (4032, 3024)
+
+
+@pytest.fixture
 def appsync_client():
     yield mock.Mock(clients.AppSyncClient(appsync_graphql_url='my-graphql-url'))
 

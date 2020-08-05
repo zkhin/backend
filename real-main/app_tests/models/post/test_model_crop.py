@@ -88,7 +88,8 @@ def test_cannot_overcrop_jpeg_post_width(user, jpeg_image_post, crop):
 def test_successful_jpeg_crop_to_minimal_image(user, jpeg_image_post, crop, s3_uploads_client):
     # crop the image
     jpeg_image_post.image_item['crop'] = crop
-    jpeg_image_post.crop_native_jpeg_cache()
+    cropped = jpeg_image_post.crop_native_jpeg_cache()
+    assert cropped is True
 
     # check the new image dimensions
     image = jpeg_image_post.native_jpeg_cache.get_image()
@@ -103,7 +104,8 @@ def test_successful_jpeg_crop_to_minimal_image(user, jpeg_image_post, crop, s3_u
 def test_successful_jpeg_crop_off_nothing(user, jpeg_image_post, crop, s3_uploads_client):
     # crop the image
     jpeg_image_post.image_item['crop'] = crop
-    jpeg_image_post.crop_native_jpeg_cache()
+    cropped = jpeg_image_post.crop_native_jpeg_cache()
+    assert cropped is False
 
     # check the new image dimensions
     image = jpeg_image_post.native_jpeg_cache.get_image()
@@ -121,7 +123,8 @@ def test_jpeg_metadata_preserved_through_crop(user, jpeg_image_post, s3_uploads_
 
     # crop the image
     jpeg_image_post.image_item['crop'] = {'upperLeft': {'x': 8, 'y': 8}, 'lowerRight': {'x': 64, 'y': 64}}
-    jpeg_image_post.crop_native_jpeg_cache()
+    cropped = jpeg_image_post.crop_native_jpeg_cache()
+    assert cropped is True
 
     # check the image dimensions have changed, but the exif data has not
     image = jpeg_image_post.native_jpeg_cache.get_image()
@@ -133,5 +136,6 @@ def test_jpeg_metadata_preserved_through_crop(user, jpeg_image_post, s3_uploads_
 def test_cached_native_jpeg_cache_dirty_after_crop(user, jpeg_image_post, s3_uploads_client):
     # crop the image, check there is no cached data right after
     jpeg_image_post.image_item['crop'] = {'upperLeft': {'x': 8, 'y': 8}, 'lowerRight': {'x': 64, 'y': 64}}
-    jpeg_image_post.crop_native_jpeg_cache()
+    cropped = jpeg_image_post.crop_native_jpeg_cache()
+    assert cropped is True
     assert not jpeg_image_post.native_jpeg_cache.is_synced

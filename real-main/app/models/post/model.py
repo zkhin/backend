@@ -269,12 +269,11 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         if self.image_item.get('imageFormat') == 'HEIC':
             self.fill_native_jpeg_cache_from_heic()
-        if self.image_item.get('crop'):
-            self.crop_native_jpeg_cache()
+        cropped = self.crop_native_jpeg_cache() if self.image_item.get('crop') else False
         if self.native_jpeg_cache.is_synced is False:
             self.native_jpeg_cache.flush()
 
-        if self.image_item.get('imageFormat') == 'HEIC':
+        if self.image_item.get('imageFormat') == 'HEIC' and cropped:
             self.native_heic_cache.clear()
             self.native_heic_cache.flush(include_deletes=True)
 
@@ -304,12 +303,17 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if lr_x > cur_width:
             raise PostException('Image not wide enough to crop as requested')
 
+        if ul_x == 0 and ul_y == 0 and lr_x == cur_width and lr_y == cur_height:
+            # crop matches image dimensions exactly, no-op
+            return False
+
         try:
             image = image.crop((ul_x, ul_y, lr_x, lr_y))
         except Exception as err:
             raise PostException(f'Unable to crop image for post `{self.id}`: {err}')
 
         self.native_jpeg_cache.set(image=image)
+        return True
 
     def upload_native_image_data_base64(self, image_data):
         "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
