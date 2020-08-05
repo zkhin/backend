@@ -392,32 +392,6 @@ def test_post_set_is_verified(post_dynamo):
     assert post_dynamo.get_post(post_id)['isVerified'] is False
 
 
-def test_batch_get_posted_by_user_ids_not_found(post_dynamo):
-    post_id = 'my-post-id'
-    resp = post_dynamo.batch_get_posted_by_user_ids([post_id])
-    assert resp == []
-
-
-def test_batch_get_posted_by_user_ids(post_dynamo):
-    user_id_1 = 'my-user-id-1'
-    user_id_2 = 'my-user-id-2'
-    post_id_1 = 'my-post-id-1'
-    post_id_2 = 'my-post-id-2'
-    post_id_3 = 'my-post-id-3'
-    post_id_4 = 'my-post-id-4'
-
-    # first user adds two posts, second user adds one post, leaves one post DNE
-    transacts = [
-        post_dynamo.transact_add_pending_post(user_id_1, post_id_1, 'ptype', text='lore ipsum'),
-        post_dynamo.transact_add_pending_post(user_id_1, post_id_2, 'ptype', text='lore ipsum'),
-        post_dynamo.transact_add_pending_post(user_id_2, post_id_3, 'ptype', text='lore ipsum'),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-
-    resp = post_dynamo.batch_get_posted_by_user_ids([post_id_1, post_id_2, post_id_3, post_id_4])
-    assert sorted(resp) == [user_id_1, user_id_1, user_id_2]
-
-
 def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     # create a post with a lifetime, then delete it
     user_id = 'uid'

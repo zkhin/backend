@@ -18,12 +18,6 @@ class CommentDynamo:
             'sortKey': '-',
         }
 
-    def typed_pk(self, comment_id):
-        return {
-            'partitionKey': {'S': f'comment/{comment_id}'},
-            'sortKey': {'S': '-'},
-        }
-
     def get_comment(self, comment_id, strongly_consistent=False):
         return self.client.get_item(self.pk(comment_id), ConsistentRead=strongly_consistent)
 

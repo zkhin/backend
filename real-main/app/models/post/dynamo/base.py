@@ -22,12 +22,6 @@ class PostDynamo:
             'sortKey': '-',
         }
 
-    def typed_pk(self, post_id):
-        return {
-            'partitionKey': {'S': f'post/{post_id}'},
-            'sortKey': {'S': '-'},
-        }
-
     def get_post(self, post_id, strongly_consistent=False):
         return self.client.get_item(self.pk(post_id), ConsistentRead=strongly_consistent)
 
@@ -45,13 +39,6 @@ class PostDynamo:
         if exclude_post_id:
             query_kwargs['FilterExpression'] = Attr('postId').ne(exclude_post_id)
         return next(self.client.generate_all_query(query_kwargs), None)
-
-    def batch_get_posted_by_user_ids(self, post_ids):
-        "Given a list of post_ids, return a dict of post_id -> posted_by_user_id"
-        projection_expression = 'postedByUserId'
-        typed_keys = [self.typed_pk(post_id) for post_id in post_ids]
-        typed_result = self.client.batch_get_items(typed_keys, projection_expression)
-        return [r['postedByUserId']['S'] for r in typed_result]
 
     def generate_posts_by_user(self, user_id, completed=None):
         query_kwargs = {

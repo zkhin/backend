@@ -20,12 +20,6 @@ class UserDynamo:
             'sortKey': 'profile',
         }
 
-    def typed_pk(self, user_id):
-        return {
-            'partitionKey': {'S': f'user/{user_id}'},
-            'sortKey': {'S': 'profile'},
-        }
-
     def get_user(self, user_id, strongly_consistent=False):
         return self.client.get_item(self.pk(user_id), ConsistentRead=strongly_consistent)
 

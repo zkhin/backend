@@ -17,12 +17,6 @@ class FollowerDynamo:
             'sortKey': f'follower/{follower_user_id}',
         }
 
-    def typed_pk(self, follower_user_id, followed_user_id):
-        return {
-            'partitionKey': {'S': f'user/{followed_user_id}'},
-            'sortKey': {'S': f'follower/{follower_user_id}'},
-        }
-
     def get_following(self, follower_user_id, followed_user_id, strongly_consistent=False):
         pk = self.pk(follower_user_id, followed_user_id)
         return self.client.get_item(pk, ConsistentRead=strongly_consistent)

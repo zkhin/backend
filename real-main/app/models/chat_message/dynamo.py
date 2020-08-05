@@ -15,12 +15,6 @@ class ChatMessageDynamo:
             'sortKey': '-',
         }
 
-    def typed_pk(self, message_id):
-        return {
-            'partitionKey': {'S': f'chatMessage/{message_id}'},
-            'sortKey': {'S': '-'},
-        }
-
     def get_chat_message(self, message_id, strongly_consistent=False):
         return self.client.get_item(self.pk(message_id), ConsistentRead=strongly_consistent)
 

@@ -17,12 +17,6 @@ class CardDynamo:
             'sortKey': '-',
         }
 
-    def typed_pk(self, card_id):
-        return {
-            'partitionKey': {'S': f'card/{card_id}'},
-            'sortKey': {'S': '-'},
-        }
-
     def get_card(self, card_id, strongly_consistent=False):
         return self.client.get_item(self.pk(card_id), ConsistentRead=strongly_consistent)
 
