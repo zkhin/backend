@@ -57,27 +57,21 @@ def post_with_media_with_album(album_manager, post_manager, user):
 
 def test_complete_error_for_status(post_manager, post):
     # sneak behind the model change the post's status
-    transacts = [post_manager.dynamo.transact_set_post_status(post.item, PostStatus.COMPLETED)]
-    post_manager.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post_manager.dynamo.set_post_status(post.item, PostStatus.COMPLETED)
 
     with pytest.raises(PostException) as error_info:
         post.complete()
     assert PostStatus.COMPLETED in str(error_info.value)
 
     # sneak behind the model change the post's status
-    transacts = [post_manager.dynamo.transact_set_post_status(post.item, PostStatus.ARCHIVED)]
-    post_manager.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post_manager.dynamo.set_post_status(post.item, PostStatus.ARCHIVED)
 
     with pytest.raises(PostException) as error_info:
         post.complete()
     assert PostStatus.ARCHIVED in str(error_info.value)
 
     # sneak behind the model change the post's status
-    transacts = [post_manager.dynamo.transact_set_post_status(post.item, PostStatus.DELETING)]
-    post_manager.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post_manager.dynamo.set_post_status(post.item, PostStatus.DELETING)
 
     with pytest.raises(PostException) as error_info:
         post.complete()

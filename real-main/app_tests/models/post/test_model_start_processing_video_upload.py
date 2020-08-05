@@ -27,8 +27,7 @@ def test_cant_start_processing_video_upload_various_errors(post_manager, user, p
     with pytest.raises(AssertionError, match='VIDEO'):
         image_post.start_processing_video_upload()
 
-    transacts = [post_manager.dynamo.transact_set_post_status(pending_video_post.item, PostStatus.COMPLETED)]
-    post_manager.dynamo.client.transact_write_items(transacts)
+    post_manager.dynamo.set_post_status(pending_video_post.item, PostStatus.COMPLETED)
     completed_post = pending_video_post.refresh_item()
     with pytest.raises(AssertionError, match='PENDING'):
         completed_post.start_processing_video_upload()

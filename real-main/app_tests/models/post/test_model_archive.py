@@ -43,18 +43,7 @@ def post_with_media(post_manager, user):
 
 def test_archive_post_wrong_status(post_manager, post):
     # change the post to DELETING status
-    transacts = [post_manager.dynamo.transact_set_post_status(post.item, PostStatus.DELETING)]
-    post_manager.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
-
-    # verify we can't archive a post if we're in the process of deleting it
-    with pytest.raises(PostException):
-        post.archive()
-
-    # change the post to DELETING status
-    transacts = [post_manager.dynamo.transact_set_post_status(post.item, PostStatus.DELETING)]
-    post_manager.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post_manager.dynamo.set_post_status(post.item, PostStatus.DELETING)
 
     # verify we can't archive a post if we're in the process of deleting it
     with pytest.raises(PostException):

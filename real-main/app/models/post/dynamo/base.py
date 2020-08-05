@@ -171,7 +171,7 @@ class PostDynamo:
     def increment_viewed_by_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'viewedByCount')
 
-    def transact_set_post_status(self, post_item, status, original_post_id=None, album_rank=None):
+    def set_post_status(self, post_item, status, original_post_id=None, album_rank=None):
         album_id = post_item.get('albumId')
 
         assert (album_rank is not None) is bool(
@@ -181,36 +181,33 @@ class PostDynamo:
 
         exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsia2sk']
         exp_values = {
-            ':postStatus': {'S': status},
-            ':gsia2sk': {'S': f'{status}/{post_item["postedAt"]}'},
+            ':postStatus': status,
+            ':gsia2sk': f'{status}/{post_item["postedAt"]}',
         }
 
         if original_post_id:
             exp_sets.append('originalPostId = :opi')
-            exp_values[':opi'] = {'S': original_post_id}
+            exp_values[':opi'] = original_post_id
 
         if album_id:
             exp_sets.append('gsiK3SortKey = :ar')
-            exp_values[':ar'] = {'N': str(album_rank)}
+            exp_values[':ar'] = album_rank
 
         if 'expiresAt' in post_item:
             exp_sets.append('gsiA1SortKey = :gsiA1SortKey')
-            exp_values[':gsiA1SortKey'] = {'S': f'{status}/{post_item["expiresAt"]}'}
+            exp_values[':gsiA1SortKey'] = f'{status}/{post_item["expiresAt"]}'
 
-        transact = {
-            'Update': {
-                'Key': self.typed_pk(post_item['postId']),
-                'UpdateExpression': 'SET ' + ', '.join(exp_sets),
-                'ExpressionAttributeValues': exp_values,
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            },
+        query_kwargs = {
+            'Key': self.pk(post_item['postId']),
+            'UpdateExpression': 'SET ' + ', '.join(exp_sets),
+            'ExpressionAttributeValues': exp_values,
         }
 
         # the setAsUserPhoto attr is not needed after reaching COMPLETED, so delete it if it exists
         if status == PostStatus.COMPLETED:
-            transact['Update']['UpdateExpression'] += ' REMOVE setAsUserPhoto'
+            query_kwargs['UpdateExpression'] += ' REMOVE setAsUserPhoto'
 
-        return transact
+        return self.client.update_item(query_kwargs)
 
     def set(
         self,
@@ -395,7 +392,7 @@ class PostDynamo:
         msg = f'Failed to clear commentsUnviewedCount for post `{post_id}`'
         return self.client.update_item(query_kwargs, failure_warning=msg)
 
-    def transact_set_album_id(self, post_item, album_id, album_rank=None):
+    def set_album_id(self, post_item, album_id, album_rank=None):
         post_id = post_item['postId']
         post_status = post_item['postStatus']
 
@@ -404,36 +401,27 @@ class PostDynamo:
         ), 'album_rank must be specified only when setting album_id for a completed post'
         album_rank = album_rank if album_rank is not None else -1
 
-        transact_item = {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            },
-        }
+        query_kwargs = {'Key': self.pk(post_id)}
         if album_id:
-            transact_item['Update'][
-                'UpdateExpression'
-            ] = 'SET albumId = :aid, gsiK3PartitionKey = :pk, gsiK3SortKey = :ar'
-            transact_item['Update']['ExpressionAttributeValues'] = {
-                ':aid': {'S': album_id},
-                ':pk': {'S': f'post/{album_id}'},
-                ':ar': {'N': str(album_rank)},
-                ':ps': {'S': post_status},
+            query_kwargs['UpdateExpression'] = 'SET albumId = :aid, gsiK3PartitionKey = :pk, gsiK3SortKey = :ar'
+            query_kwargs['ConditionExpression'] = 'postStatus = :ps'
+            query_kwargs['ExpressionAttributeValues'] = {
+                ':aid': album_id,
+                ':pk': f'post/{album_id}',
+                ':ar': album_rank,
+                ':ps': post_status,
             }
-            transact_item['Update']['ConditionExpression'] += ' and postStatus = :ps'
         else:
-            transact_item['Update']['UpdateExpression'] = 'REMOVE albumId, gsiK3PartitionKey, gsiK3SortKey'
-        return transact_item
+            query_kwargs['UpdateExpression'] = 'REMOVE albumId, gsiK3PartitionKey, gsiK3SortKey'
+        return self.client.update_item(query_kwargs)
 
-    def transact_set_album_rank(self, post_id, album_rank):
-        return {
-            'Update': {
-                'Key': self.typed_pk(post_id),
-                'UpdateExpression': 'SET gsiK3SortKey = :ar',
-                'ExpressionAttributeValues': {':ar': {'N': str(album_rank)}},
-                'ConditionExpression': 'attribute_exists(partitionKey)',  # only updates, no creates
-            }
+    def set_album_rank(self, post_id, album_rank):
+        query_kwargs = {
+            'Key': self.pk(post_id),
+            'UpdateExpression': 'SET gsiK3SortKey = :ar',
+            'ExpressionAttributeValues': {':ar': album_rank},
         }
+        return self.client.update_item(query_kwargs)
 
     def generate_post_ids_in_album(self, album_id, completed=None, after_rank=None):
         assert completed is None or after_rank is None, 'Cant specify both completed and after_rank kwargs'

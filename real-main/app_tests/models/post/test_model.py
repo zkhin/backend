@@ -78,9 +78,7 @@ def image_post(user, post_manager, grant_data_b64):
 @pytest.fixture
 def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
     post = pending_video_post
-    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
-    post.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post.dynamo.set_post_status(post.item, PostStatus.PROCESSING)
     image_path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(image_path, grant_data, 'image/jpeg')
     yield post
@@ -470,10 +468,7 @@ def test_error_processing_post(post_manager, user):
     post = post_manager.add_post(user, 'pid2', PostType.IMAGE)
 
     # manually mark the Post as being processed
-    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
-    post.dynamo.client.transact_write_items(transacts)
-
-    post.refresh_item()
+    post.item = post.dynamo.set_post_status(post.item, PostStatus.PROCESSING)
     assert post.item['postStatus'] == PostStatus.PROCESSING
 
     # error it out, verify in-mem copy got marked as such

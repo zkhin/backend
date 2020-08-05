@@ -21,9 +21,7 @@ def pending_video_post(post_manager, user):
 @pytest.fixture
 def processing_video_post(pending_video_post, s3_uploads_client, grant_data):
     post = pending_video_post
-    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
-    post.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post.dynamo.set_post_status(post.item, PostStatus.PROCESSING)
     poster_path = post.get_poster_path()
     s3_uploads_client.put_object(poster_path, grant_data, 'image/jpeg')
     yield post

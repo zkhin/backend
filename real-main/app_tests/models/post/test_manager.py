@@ -184,9 +184,7 @@ def test_video_post_to_album(post_manager, user, album, s3_uploads_client, grant
     assert 'rankCount' not in album.refresh_item().item
 
     # complete the video post
-    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
-    post.dynamo.client.transact_write_items(transacts)
-    post.refresh_item()
+    post.item = post.dynamo.set_post_status(post.item, PostStatus.PROCESSING)
     image_path = post.get_image_path(image_size.NATIVE)
     s3_uploads_client.put_object(image_path, grant_data, 'image/jpeg')
     post.build_image_thumbnails()

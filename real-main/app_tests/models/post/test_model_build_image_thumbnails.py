@@ -26,9 +26,8 @@ def user(user_manager, cognito_client):
 @pytest.fixture
 def processing_image_post(post_manager, user):
     post = post_manager.add_post(user, 'pid', PostType.IMAGE)
-    transacts = [post.dynamo.transact_set_post_status(post.item, PostStatus.PROCESSING)]
-    post.dynamo.client.transact_write_items(transacts)
-    yield post.refresh_item()
+    post.item = post.dynamo.set_post_status(post.item, PostStatus.PROCESSING)
+    yield post
 
 
 def test_build_image_thumbnails_not_jpeg_data(s3_uploads_client, processing_image_post):

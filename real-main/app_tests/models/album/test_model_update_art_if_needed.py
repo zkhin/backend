@@ -1,6 +1,6 @@
 import base64
-import decimal
 import uuid
+from decimal import Decimal
 from os import path
 
 import pytest
@@ -82,8 +82,7 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     assert 'artHash' not in album.item
 
     # put the post in the album directly in dynamo
-    transacts = [post1.dynamo.transact_set_album_id(post1.item, album.id, album_rank=0)]
-    post1.dynamo.client.transact_write_items(transacts)
+    post1.dynamo.set_album_id(post1.item, album.id, album_rank=0)
 
     # update art
     album.update_art_if_needed()
@@ -98,8 +97,7 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.k4_jpeg_cache.get_fh().read()
 
     # remove the post from the album directly in dynamo
-    transacts = [post1.dynamo.transact_set_album_id(post1.item, None)]
-    post1.dynamo.client.transact_write_items(transacts)
+    post1.dynamo.set_album_id(post1.item, None)
 
     # update art
     album.update_art_if_needed()
@@ -115,8 +113,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert 'artHash' not in album.item
 
     # put the post in the album directly in dynamo
-    transacts = [post1.dynamo.transact_set_album_id(post1.item, album.id, album_rank=0.5)]
-    post1.dynamo.client.transact_write_items(transacts)
+    post1.dynamo.set_album_id(post1.item, album.id, album_rank=Decimal(0.5))
 
     # update art
     album.update_art_if_needed()
@@ -128,8 +125,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post1.k4_jpeg_cache.get_fh().read()
 
     # put the other post in the album directly, ahead of the firs
-    transacts = [post2.dynamo.transact_set_album_id(post2.item, album.id, album_rank=decimal.Decimal('0.2'))]
-    post2.dynamo.client.transact_write_items(transacts)
+    post2.dynamo.set_album_id(post2.item, album.id, album_rank=Decimal('0.2'))
 
     # update art
     album.update_art_if_needed()
@@ -141,8 +137,7 @@ def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):
     assert s3_uploads_client.get_object_data_stream(native_path).read() == post2.k4_jpeg_cache.get_fh().read()
 
     # now switch order, directly in dynsmo
-    transacts = [post1.dynamo.transact_set_album_rank(post1.id, decimal.Decimal('0.1'))]
-    post1.dynamo.client.transact_write_items(transacts)
+    post1.dynamo.set_album_rank(post1.id, Decimal('0.1'))
 
     # update art
     album.update_art_if_needed()
@@ -185,8 +180,7 @@ def test_1_4_9_16_posts_in_album(
     post_dynamo = post1.dynamo
 
     # put the first post in the album directly in dynamo
-    transacts = [post_dynamo.transact_set_album_id(post1.item, album.id, album_rank=0)]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.set_album_id(post1.item, album.id, album_rank=0)
 
     # update art
     album.update_art_if_needed()
@@ -199,12 +193,9 @@ def test_1_4_9_16_posts_in_album(
     assert first_native_image_data == post1.k4_jpeg_cache.get_fh().read()
 
     # add three more posts to the album
-    transacts = [
-        post_dynamo.transact_set_album_id(post2.item, album.id, album_rank=decimal.Decimal('0.05')),
-        post_dynamo.transact_set_album_id(post3.item, album.id, album_rank=decimal.Decimal('0.10')),
-        post_dynamo.transact_set_album_id(post4.item, album.id, album_rank=decimal.Decimal('0.15')),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.set_album_id(post2.item, album.id, album_rank=Decimal('0.05'))
+    post_dynamo.set_album_id(post3.item, album.id, album_rank=Decimal('0.10'))
+    post_dynamo.set_album_id(post4.item, album.id, album_rank=Decimal('0.15'))
 
     # update art
     album.update_art_if_needed()
@@ -217,15 +208,12 @@ def test_1_4_9_16_posts_in_album(
     assert fourth_native_image_data != first_native_image_data
 
     # add 5th thru 9th posts to the album
-    transacts = [
-        post_dynamo.transact_set_album_id(post5.item, album.id, album_rank=decimal.Decimal('0.20')),
-        post_dynamo.transact_set_album_id(post6.item, album.id, album_rank=decimal.Decimal('0.25')),
-        post_dynamo.transact_set_album_id(post6.item, album.id, album_rank=decimal.Decimal('0.30')),
-        post_dynamo.transact_set_album_id(post7.item, album.id, album_rank=decimal.Decimal('0.35')),
-        post_dynamo.transact_set_album_id(post8.item, album.id, album_rank=decimal.Decimal('0.40')),
-        post_dynamo.transact_set_album_id(post9.item, album.id, album_rank=decimal.Decimal('0.45')),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.set_album_id(post5.item, album.id, album_rank=Decimal('0.20'))
+    post_dynamo.set_album_id(post6.item, album.id, album_rank=Decimal('0.25'))
+    post_dynamo.set_album_id(post6.item, album.id, album_rank=Decimal('0.30'))
+    post_dynamo.set_album_id(post7.item, album.id, album_rank=Decimal('0.35'))
+    post_dynamo.set_album_id(post8.item, album.id, album_rank=Decimal('0.40'))
+    post_dynamo.set_album_id(post9.item, album.id, album_rank=Decimal('0.45'))
 
     # update art
     album.update_art_if_needed()
@@ -238,16 +226,13 @@ def test_1_4_9_16_posts_in_album(
     assert nineth_native_image_data != fourth_native_image_data
 
     # add 10th thru 16th posts to the album
-    transacts = [
-        post_dynamo.transact_set_album_id(post10.item, album.id, album_rank=decimal.Decimal('0.50')),
-        post_dynamo.transact_set_album_id(post11.item, album.id, album_rank=decimal.Decimal('0.55')),
-        post_dynamo.transact_set_album_id(post12.item, album.id, album_rank=decimal.Decimal('0.60')),
-        post_dynamo.transact_set_album_id(post13.item, album.id, album_rank=decimal.Decimal('0.65')),
-        post_dynamo.transact_set_album_id(post14.item, album.id, album_rank=decimal.Decimal('0.70')),
-        post_dynamo.transact_set_album_id(post15.item, album.id, album_rank=decimal.Decimal('0.75')),
-        post_dynamo.transact_set_album_id(post16.item, album.id, album_rank=decimal.Decimal('0.80')),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.set_album_id(post10.item, album.id, album_rank=Decimal('0.50'))
+    post_dynamo.set_album_id(post11.item, album.id, album_rank=Decimal('0.55'))
+    post_dynamo.set_album_id(post12.item, album.id, album_rank=Decimal('0.60'))
+    post_dynamo.set_album_id(post13.item, album.id, album_rank=Decimal('0.65'))
+    post_dynamo.set_album_id(post14.item, album.id, album_rank=Decimal('0.70'))
+    post_dynamo.set_album_id(post15.item, album.id, album_rank=Decimal('0.75'))
+    post_dynamo.set_album_id(post16.item, album.id, album_rank=Decimal('0.80'))
 
     # update art
     album.update_art_if_needed()

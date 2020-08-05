@@ -261,9 +261,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         now = now or pendulum.now('utc')
 
         # mark ourselves as processing
-        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.PROCESSING)]
-        self.dynamo.client.transact_write_items(transacts)
-        self.item['postStatus'] = PostStatus.PROCESSING
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.PROCESSING)
 
         if image_data:
             # s3 trigger is a no-op because we are already in PROCESSING
@@ -324,9 +322,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         assert self.status in (PostStatus.PENDING, PostStatus.ERROR), 'Can only call for PENDING & ERROR posts'
 
         # mark ourselves as processing
-        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.PROCESSING)]
-        self.dynamo.client.transact_write_items(transacts)
-        self.item['postStatus'] = PostStatus.PROCESSING
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.PROCESSING)
 
         # start the media convert job
         input_key = self.get_original_video_path()
@@ -350,11 +346,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def error(self):
         if self.status not in (PostStatus.PENDING, PostStatus.PROCESSING):
             raise PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
-
-        transacts = [self.dynamo.transact_set_post_status(self.item, PostStatus.ERROR)]
-        self.dynamo.client.transact_write_items(transacts)
-
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.ERROR)
         return self
 
     def complete(self, now=None):
@@ -380,19 +372,13 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         album = album.increment_rank_count() if album else None
         if album_id and not album:
             # album has disappeared, so remove the post from the album
-            transact = self.dynamo.transact_set_album_id(self.item, None)
-            self.dynamo.client.transact_write_items([transact])
-            self.refresh_item()
+            self.item = self.dynamo.set_album_id(self.item, None)
         album_rank = album.get_last_rank() if album else None
 
         # complete the post
-        transacts = [
-            self.dynamo.transact_set_post_status(
-                self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
-            ),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.set_post_status(
+            self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
+        )
 
         # update the user's profile photo, if needed
         if set_as_user_photo:
@@ -419,11 +405,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             raise PostException(f'Cannot archive post with status `{self.status}`')
 
         # set the post as archived
-        transacts = [
-            self.dynamo.transact_set_post_status(self.item, PostStatus.ARCHIVED),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.ARCHIVED)
 
         if forced:
             self.user_manager.dynamo.increment_post_forced_archiving_count(self.user_id)
@@ -450,17 +432,11 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         album = album.increment_rank_count() if album else None
         if album_id and not album:
             # album has disappeared, so remove the post from the album
-            transact = self.dynamo.transact_set_album_id(self.item, None)
-            self.dynamo.client.transact_write_items([transact])
-            self.refresh_item()
+            self.item = self.dynamo.set_album_id(self.item, None)
         album_rank = album.get_last_rank() if album else None
 
         # restore the post
-        transacts = [
-            self.dynamo.transact_set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.COMPLETED, album_rank=album_rank)
 
         # refresh the first story if needed
         if self.item.get('expiresAt'):
@@ -471,11 +447,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def delete(self):
         "Delete the post and all its media"
         # mark the post and the media as in the deleting process
-        transacts = [
-            self.dynamo.transact_set_post_status(self.item, PostStatus.DELETING),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.DELETING)
 
         # dislike all likes of the post
         self.like_manager.dislike_all_of_post(self.id)
@@ -589,9 +561,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if album_id and not album:
             raise PostException(f'Album `{album_id}` does not exist')
 
-        transacts = [self.dynamo.transact_set_album_id(self.item, album_id, album_rank=album_rank)]
-        self.dynamo.client.transact_write_items(transacts)
-        self.refresh_item(strongly_consistent=True)
+        self.item = self.dynamo.set_album_id(self.item, album_id, album_rank=album_rank)
         return self
 
     def set_album_order(self, preceding_post_id):
@@ -619,8 +589,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         album = album.increment_rank_count() if album else None
         if not album:
             # album has disappeared, so remove the post from the album
-            transact = self.dynamo.transact_set_album_id(self.item, None)
-            self.dynamo.client.transact_write_items([transact])
+            self.item = self.dynamo.set_album_id(self.item, None)
             # fail with server error - api client did nothing wrong
             raise Exception(f'Album `{album_id}` that post `{self.id}` was in does not exist')
 
@@ -638,11 +607,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             # putting the post at the front
             album_rank = album.get_first_rank()
 
-        transacts = [
-            self.dynamo.transact_set_album_rank(self.id, album_rank),
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-        self.item['gsiK3SortKey'] = album_rank
+        self.item = self.dynamo.set_album_rank(self.id, album_rank)
         return self
 
     def flag(self, user):
