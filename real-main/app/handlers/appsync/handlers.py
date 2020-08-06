@@ -9,7 +9,7 @@ from app.mixins.flag.exceptions import FlagException
 from app.models.album.exceptions import AlbumException
 from app.models.appstore.exceptions import AppStoreException
 from app.models.block.enums import BlockStatus
-from app.models.block.exceptions import AlreadyBlocked, NotBlocked
+from app.models.block.exceptions import BlockException
 from app.models.card.exceptions import CardException
 from app.models.chat.exceptions import ChatException
 from app.models.chat_message.enums import ChatMessageNotificationType
@@ -441,7 +441,7 @@ def block_user(caller_user, arguments, source, context):
 
     try:
         block_manager.block(blocker_user, blocked_user)
-    except AlreadyBlocked as err:
+    except BlockException as err:
         raise ClientException(str(err))
 
     resp = blocked_user.serialize(caller_user.id)
@@ -464,7 +464,7 @@ def unblock_user(caller_user, arguments, source, context):
 
     try:
         block_manager.unblock(blocker_user, blocked_user)
-    except NotBlocked as err:
+    except BlockException as err:
         raise ClientException(str(err))
 
     resp = blocked_user.serialize(caller_user.id)

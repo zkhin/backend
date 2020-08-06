@@ -9,11 +9,20 @@
   #return ('SELF')
 #end
 
+#set ($keys = [{
+  'partitionKey': { 'S': "user/$targetUserId" },
+  'sortKey': { 'S': "blocker/$callerUserId" }
+}, {
+  'partitionKey': { 'S': 'block/$callerUserId/$targetUserId' },
+  'sortKey': { 'S': '-' }
+}])
+
 {
   "version": "2018-05-29",
-  "operation": "GetItem",
-  "key": {
-    "partitionKey": { "S": "block/$callerUserId/$targetUserId" },
-    "sortKey": { "S": "-" }
+  "operation": "BatchGetItem",
+  "tables": {
+    "${dynamoTable}": {
+      "keys": $util.toJson($keys)
+    }
   }
 }

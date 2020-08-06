@@ -3,7 +3,7 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
-from . import exceptions
+from .exceptions import AlreadyBlocked
 
 logger = logging.getLogger()
 
@@ -12,23 +12,25 @@ class BlockDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def pk(self, blocker_user_id, blocked_user_id):
-        return {
-            'partitionKey': f'block/{blocker_user_id}/{blocked_user_id}',
-            'sortKey': '-',
-        }
+    def pk(self, blocker_user_id, blocked_user_id, old=False):
+        return (
+            {'partitionKey': f'block/{blocker_user_id}/{blocked_user_id}', 'sortKey': '-'}
+            if old
+            else {'partitionKey': f'user/{blocked_user_id}', 'sortKey': f'blocker/{blocker_user_id}'}
+        )
 
     def get_block(self, blocker_user_id, blocked_user_id):
-        return self.client.get_item(self.pk(blocker_user_id, blocked_user_id))
+        return self.client.get_item(self.pk(blocker_user_id, blocked_user_id)) or self.client.get_item(
+            self.pk(blocker_user_id, blocked_user_id, old=True)
+        )
 
-    def add_block(self, blocker_user_id, blocked_user_id, now=None):
+    def add_block(self, blocker_user_id, blocked_user_id, now=None, old=False):
         now = now or pendulum.now('utc')
         blocked_at_str = now.to_iso8601_string()
         query_kwargs = {
             'Item': {
+                **self.pk(blocker_user_id, blocked_user_id, old=old),
                 'schemaVersion': 0,
-                'partitionKey': f'block/{blocker_user_id}/{blocked_user_id}',
-                'sortKey': '-',
                 'gsiA1PartitionKey': f'block/{blocker_user_id}',
                 'gsiA1SortKey': blocked_at_str,
                 'gsiA2PartitionKey': f'block/{blocked_user_id}',
@@ -41,15 +43,12 @@ class BlockDynamo:
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.AlreadyBlocked(blocker_user_id, blocked_user_id)
+            raise AlreadyBlocked(blocker_user_id, blocked_user_id)
 
     def delete_block(self, blocker_user_id, blocked_user_id):
-        pk = self.pk(blocker_user_id, blocked_user_id)
-        cond_exp = 'attribute_exists(partitionKey)'  # fail if doesnt exist
-        try:
-            return self.client.delete_item(pk, ConditionExpression=cond_exp)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.NotBlocked(blocker_user_id, blocked_user_id)
+        return self.client.delete_item(self.pk(blocker_user_id, blocked_user_id)) or self.client.delete_item(
+            self.pk(blocker_user_id, blocked_user_id, old=True)
+        )
 
     def generate_blocks_by_blocker(self, blocker_user_id):
         query_kwargs = {
@@ -71,10 +70,20 @@ class BlockDynamo:
             for block_item in self.generate_blocks_by_blocker(blocker_user_id)
         )
         self.client.batch_delete_items(key_generator)
+        key_generator = (
+            self.pk(blocker_user_id, block_item['blockedUserId'], old=True)
+            for block_item in self.generate_blocks_by_blocker(blocker_user_id)
+        )
+        self.client.batch_delete_items(key_generator)
 
     def delete_all_blocks_of_user(self, blocked_user_id):
         key_generator = (
             self.pk(block_item['blockerUserId'], blocked_user_id)
+            for block_item in self.generate_blocks_by_blocked(blocked_user_id)
+        )
+        self.client.batch_delete_items(key_generator)
+        key_generator = (
+            self.pk(block_item['blockerUserId'], blocked_user_id, old=True)
             for block_item in self.generate_blocks_by_blocked(blocked_user_id)
         )
         self.client.batch_delete_items(key_generator)

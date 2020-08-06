@@ -4,6 +4,7 @@ from app import models
 
 from .dynamo import BlockDynamo
 from .enums import BlockStatus
+from .exceptions import NotBlocked
 
 logger = logging.getLogger()
 
@@ -55,7 +56,10 @@ class BlockManager:
         return block_item
 
     def unblock(self, blocker_user, blocked_user):
-        return self.dynamo.delete_block(blocker_user.id, blocked_user.id)
+        deleted_item = self.dynamo.delete_block(blocker_user.id, blocked_user.id)
+        if not deleted_item:
+            raise NotBlocked(blocker_user.id, blocked_user.id)
+        return deleted_item
 
     def unblock_all_blocks(self, user_id):
         """

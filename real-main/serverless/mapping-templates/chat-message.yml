@@ -19,6 +19,7 @@
   functions:
     - Users.batchGet
     - Users.batchGet.blockerStatus
+    - Users.batchGet.blockerStatus.old
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
 
