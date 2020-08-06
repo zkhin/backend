@@ -134,6 +134,7 @@ register(
     feed_manager.on_post_status_change_sync_feed,
     {'postStatus': None},
 )
+register('post', '-', ['MODIFY'], post_manager.on_post_status_change_fire_gql_notifications, {'postStatus': None})
 register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts, {'postStatus': None})
 register('post', '-', ['REMOVE'], card_manager.on_post_delete_delete_cards)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_flags)

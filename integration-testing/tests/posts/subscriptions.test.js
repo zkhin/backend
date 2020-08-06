@@ -23,6 +23,167 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
+test('POST_COMPLETED notification triggers correctly posts', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we subscribe to notifications
+  let notificationsCount = 0
+  const notificationHandlers = []
+  const notifications = [
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+  ]
+  const sub = await ourClient
+    .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
+    .subscribe({
+      next: ({data}) => {
+        if (data.onNotification.type.startsWith('POST_')) {
+          notificationsCount += 1
+          notificationHandlers.shift().resolve(data.onNotification)
+        }
+      },
+      error: (resp) => notificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
+    })
+  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000) // let the subscription initialize
+
+  // we create a text-only post, it completes automatically
+  const postId1 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore'}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('COMPLETED')
+    })
+
+  // check we received notification for that post
+  await notifications.shift().then((notif) => {
+    expect(notif.type).toBe('POST_COMPLETED')
+    expect(notif.postId).toBe(postId1)
+    expect((notificationsCount -= 1)).toBe(0)
+  })
+
+  // we create an image post, upload the image data along with post creation to complete it immediately
+  const postId2 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId2)
+      expect(post.postStatus).toBe('COMPLETED')
+    })
+
+  // check we received a notification for that post
+  await notifications.shift().then((notif) => {
+    expect(notif.type).toBe('POST_COMPLETED')
+    expect(notif.postId).toBe(postId2)
+    expect((notificationsCount -= 1)).toBe(0)
+  })
+
+  // archive a post, then restore it (trying to generate a spurious fire)
+  await ourClient
+    .mutate({mutation: mutations.archivePost, variables: {postId: postId1}})
+    .then(({data: {archivePost: post}}) => expect(post.postStatus).toBe('ARCHIVED'))
+  await ourClient
+    .mutate({mutation: mutations.restoreArchivedPost, variables: {postId: postId1}})
+    .then(({data: {restoreArchivedPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
+
+  // create another image post, don't upload the image data yet
+  const postId3 = uuidv4()
+  const uploadUrl = await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId3}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId3)
+      expect(post.postStatus).toBe('PENDING')
+      return post.imageUploadUrl
+    })
+
+  // check we have not received any notifications
+  await misc.sleep(5 * 1000).then(() => expect(notificationsCount).toBe(0))
+
+  // upload the image data to cloudfront
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+
+  // check we received a notification for that post
+  await notifications.shift().then((notif) => {
+    expect(notif.type).toBe('POST_COMPLETED')
+    expect(notif.postId).toBe(postId3)
+    expect((notificationsCount -= 1)).toBe(0)
+  })
+
+  // shut down the subscription
+  sub.unsubscribe()
+  await subInitTimeout
+})
+
+test('POST_ERROR notification triggers correctly posts', async () => {
+  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+
+  // we subscribe to notifications
+  let notificationsCount = 0
+  const notificationHandlers = []
+  const notifications = [
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+  ]
+  const sub = await ourClient
+    .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
+    .subscribe({
+      next: ({data}) => {
+        if (data.onNotification.type.startsWith('POST_')) {
+          notificationsCount += 1
+          notificationHandlers.shift().resolve(data.onNotification)
+        }
+      },
+      error: (resp) => notificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
+    })
+  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000) // let the subscription initialize
+
+  // we create an image post, upload invalid image data along with post creation to send it to ERROR it immediately
+  const postId1 = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, imageData: 'invalid-image-data'}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('ERROR')
+    })
+
+  // check we received a notification for that post
+  await notifications.shift().then((notif) => {
+    expect(notif.type).toBe('POST_ERROR')
+    expect(notif.postId).toBe(postId1)
+    expect((notificationsCount -= 1)).toBe(0)
+  })
+
+  // create another image post, don't upload the image data yet
+  const postId3 = uuidv4()
+  const uploadUrl = await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId3}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId3)
+      expect(post.postStatus).toBe('PENDING')
+      return post.imageUploadUrl
+    })
+
+  // check we have not received any notifications
+  await misc.sleep(5 * 1000).then(() => expect(notificationsCount).toBe(0))
+
+  // upload some invalid image data to cloudfront
+  await rp.put({url: uploadUrl, headers: imageHeaders, body: 'other-invalid-image-data'})
+
+  // check we received a notification for that post
+  await notifications.shift().then((notif) => {
+    expect(notif.type).toBe('POST_ERROR')
+    expect(notif.postId).toBe(postId3)
+    expect((notificationsCount -= 1)).toBe(0)
+  })
+
+  // shut down the subscription
+  sub.unsubscribe()
+  await subInitTimeout
+})
+
 test('Post message triggers cannot be called from external graphql client', async () => {
   const [ourClient, ourUserId] = await loginCache.getCleanLogin()
 

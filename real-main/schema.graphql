@@ -242,7 +242,7 @@ type Mutation {
   triggerNotification(input: NotificationInput!): Notification!
   triggerCardNotification(input: CardNotificationInput!): CardNotification!
   triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
-  triggerPostNotification(input: PostNotificationInput!): PostNotification!
+  triggerPostNotification(input: PostNotificationInput!): PostNotification!  # DEPRECATED
 
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
@@ -263,8 +263,7 @@ type Subscription {
   #   - does not fire for the caller's own messages
   onChatMessageNotification(userId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
 
-  # Fires for some changes (see PostNotificationType) to callers's own posts
-  #   - userId must be caller's own userId
+  # DEPRECATED: use onNotifcation with POST_COMPLETED and POST_ERROR NotificationTypes
   onPostNotification(userId: ID!): PostNotification @aws_subscribe(mutations: ["triggerPostNotification"])
 }
 
@@ -279,6 +278,14 @@ type Notification {
   userChatsWithUnviewedMessagesCount: Int
 }
 
+# POST_COMPLETED
+#   - fires when one of the user's posts reaches COMPLETED state for the first time
+#   - Notification.postId: the id of the post
+#
+# POST_ERROR
+#   - fires when one of the user's posts reaches ERROR state
+#   - Notification.postId: the id of the post
+#
 # USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
 #   - fires when User.chatsWithUnviewedMessagesCount changes
 #   - Notification.userChatsWithUnviewedMessagesCount: the new value
@@ -288,6 +295,8 @@ type Notification {
 #   - Notification.postId: the id of the post that was added
 #   - Notification.postedAt: the postedAt timestamp of the post that was added
 enum NotificationType {
+  POST_COMPLETED
+  POST_ERROR
   USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
   USER_FEED_POST_ADDED
 }
@@ -722,16 +731,19 @@ type PaginatedPosts {
   nextToken: String
 }
 
+# DEPRECATED
 type PostNotification {
   userId: ID!  # user this notification is intended for
   type: PostNotificationType!
   post: Post!
 }
 
+# DEPRECATED
 enum PostNotificationType {
   COMPLETED
 }
 
+# DEPRECATED
 input PostNotificationInput {
   userId: ID!  # user this notification is intended for
   type: PostNotificationType!

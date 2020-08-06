@@ -10,10 +10,11 @@ from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
+from app.utils import GqlNotificationType
 
 from .appsync import PostAppSync
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
-from .enums import PostType
+from .enums import PostStatus, PostType
 from .exceptions import PostException
 from .model import Post
 
@@ -325,3 +326,15 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         for post_id in self.dynamo.generate_post_ids_in_album(album_id):
             if post := self.get_post(post_id):
                 post.set_album(None)
+
+    def on_post_status_change_fire_gql_notifications(self, post_id, new_item, old_item):
+        old_post = self.init_post(old_item)
+        new_post = self.init_post(new_item)
+        kwargs = {'postId': post_id}
+
+        if new_post.status == PostStatus.ERROR:
+            self.appsync.client.fire_notification(new_post.user_id, GqlNotificationType.POST_ERROR, **kwargs)
+
+        initial_statuses = (PostStatus.PENDING, PostStatus.PROCESSING)
+        if new_post.status == PostStatus.COMPLETED and old_post.status in initial_statuses:
+            self.appsync.client.fire_notification(new_post.user_id, GqlNotificationType.POST_COMPLETED, **kwargs)
