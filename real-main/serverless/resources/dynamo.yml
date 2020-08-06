@@ -29,6 +29,10 @@ Resources:
           AttributeType: S
         - AttributeName: gsiA3SortKey
           AttributeType: S
+        - AttributeName: gsiA4PartitionKey
+          AttributeType: S
+        - AttributeName: gsiA4SortKey
+          AttributeType: N
         - AttributeName: gsiK1PartitionKey
           AttributeType: S
         - AttributeName: gsiK1SortKey
@@ -68,6 +72,14 @@ Resources:
           - AttributeName: gsiA3PartitionKey
             KeyType: HASH
           - AttributeName: gsiA3SortKey
+            KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI-A4
+          KeySchema:
+          - AttributeName: gsiA4PartitionKey
+            KeyType: HASH
+          - AttributeName: gsiA4SortKey
             KeyType: RANGE
           Projection:
             ProjectionType: ALL

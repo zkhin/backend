@@ -1,5 +1,5 @@
-import uuid
 from decimal import Decimal
+from uuid import uuid4
 
 import pendulum
 import pytest
@@ -19,7 +19,7 @@ def trending_dynamo_itype2(dynamo_client):
 
 
 def test_add(trending_dynamo):
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
 
     # verify floats are not accepted as scores
     with pytest.raises(AssertionError, match='decimal'):
@@ -36,7 +36,9 @@ def test_add(trending_dynamo):
     assert item.pop('schemaVersion') == 0
     assert pendulum.parse(item.pop('lastDeflatedAt')) == now
     assert pendulum.parse(item.pop('createdAt')) == now
+    assert item.pop('gsiA4PartitionKey').split('/') == ['itype', 'trending']
     assert item.pop('gsiK3PartitionKey').split('/') == ['itype', 'trending']
+    assert item.pop('gsiA4SortKey') == 42
     assert item.pop('gsiK3SortKey') == 42
     assert item == {}
 
@@ -45,13 +47,14 @@ def test_add(trending_dynamo):
         trending_dynamo.add(item_id, Decimal(99))
 
     # add another trending without specifying timestamp, float score
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     assert trending_dynamo.get(item_id) is None
     initial_score = Decimal(1 / 6)
     before = pendulum.now('utc')
     item = trending_dynamo.add(item_id, initial_score)
     after = pendulum.now('utc')
     assert item == trending_dynamo.get(item_id)
+    assert item['gsiA4SortKey'] == Decimal('0.166666667')  # nine decimal places
     assert item['gsiK3SortKey'] == Decimal('0.166666667')  # nine decimal places
     created_at = pendulum.parse(item['createdAt'])
     assert before < created_at < after
@@ -59,7 +62,7 @@ def test_add(trending_dynamo):
 
 
 def test_add_score_failures(trending_dynamo):
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
 
     # verify can't add negative score
     with pytest.raises(AssertionError, match='cannot be negative'):
@@ -77,29 +80,34 @@ def test_add_score_failures(trending_dynamo):
 
 def test_add_score_success(trending_dynamo):
     # add a trending to db
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     now = pendulum.now('utc')
     item = trending_dynamo.add(item_id, Decimal(42), now=now)
     assert item['partitionKey'] == f'itype/{item_id}'
+    assert item['gsiA4SortKey'] == 42
     assert item['gsiK3SortKey'] == 42
 
     # verify we can add an integer to its score
     trending_dynamo.add_score(item_id, Decimal(17), now)
     new_item = trending_dynamo.get(item_id)
+    assert new_item['gsiA4SortKey'] == 42 + 17
     assert new_item['gsiK3SortKey'] == 42 + 17
+    item['gsiA4SortKey'] = new_item['gsiA4SortKey']
     item['gsiK3SortKey'] = new_item['gsiK3SortKey']
     assert new_item == item
 
     # verify we can add a float to its score
     trending_dynamo.add_score(item_id, Decimal(1 / 6), now)
     new_item = trending_dynamo.get(item_id)
+    assert new_item['gsiA4SortKey'] == pytest.approx(Decimal(42 + 17 + 1 / 6))
     assert new_item['gsiK3SortKey'] == pytest.approx(Decimal(42 + 17 + 1 / 6))
+    item['gsiA4SortKey'] = new_item['gsiA4SortKey']
     item['gsiK3SortKey'] = new_item['gsiK3SortKey']
     assert new_item == item
 
 
 def test_deflate_score_failures(trending_dynamo):
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     now = pendulum.now('utc')
     yesterday = now.subtract(days=1).date()
 
@@ -133,48 +141,60 @@ def test_deflate_score_failures(trending_dynamo):
 
 def test_deflate_score_success(trending_dynamo):
     # add a trending to db
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     now = pendulum.now('utc')
     item = trending_dynamo.add(item_id, Decimal(6 / 7), now=now)
     assert item['partitionKey'] == f'itype/{item_id}'
     assert pendulum.parse(item['lastDeflatedAt']) == now
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(6 / 7))
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(6 / 7))
+    assert item['gsiA4SortKey'] == item['gsiK3SortKey']
 
     # verify we can deflate score
     now = pendulum.now('utc')
     trending_dynamo.deflate_score(item_id, item['gsiK3SortKey'], Decimal(1 / 6), now.date(), now)
     new_item = trending_dynamo.get(item_id)
     assert pendulum.parse(new_item['lastDeflatedAt']) == now
+    assert new_item['gsiA4SortKey'] == pytest.approx(Decimal(1 / 6))
     assert new_item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 6))
+    assert new_item['gsiA4SortKey'] == new_item['gsiK3SortKey']
     item['lastDeflatedAt'] = new_item['lastDeflatedAt']
+    item['gsiA4SortKey'] = new_item['gsiA4SortKey']
     item['gsiK3SortKey'] = new_item['gsiK3SortKey']
     assert new_item == item
 
 
 def test_percision_applied_to_add_new_and_deflate(trending_dynamo):
     # add a trending to db
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     now = pendulum.now('utc')
     item = trending_dynamo.add(item_id, Decimal(6 / 7), now=now)
     assert item['partitionKey'] == f'itype/{item_id}'
     assert pendulum.parse(item['lastDeflatedAt']) == now
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(6 / 7))
     assert item['gsiK3SortKey'] == pytest.approx(Decimal(6 / 7))
+    assert item['gsiA4SortKey'] == Decimal('0.857142857')  # nine decimal places
     assert item['gsiK3SortKey'] == Decimal('0.857142857')  # nine decimal places
+    assert item['gsiA4SortKey'] == item['gsiK3SortKey']
 
     # verify we can deflate score
     now = pendulum.now('utc')
     trending_dynamo.deflate_score(item_id, item['gsiK3SortKey'], Decimal(1 / 6), now.date(), now)
     new_item = trending_dynamo.get(item_id)
     assert pendulum.parse(new_item['lastDeflatedAt']) == now
+    assert new_item['gsiA4SortKey'] == pytest.approx(Decimal(1 / 6))
     assert new_item['gsiK3SortKey'] == pytest.approx(Decimal(1 / 6))
+    assert new_item['gsiA4SortKey'] == Decimal('0.166666667')  # nine decimal places
     assert new_item['gsiK3SortKey'] == Decimal('0.166666667')  # nine decimal places
+    assert new_item['gsiA4SortKey'] == new_item['gsiK3SortKey']
     item['lastDeflatedAt'] = new_item['lastDeflatedAt']
+    item['gsiA4SortKey'] = new_item['gsiA4SortKey']
     item['gsiK3SortKey'] = new_item['gsiK3SortKey']
     assert new_item == item
 
 
 def test_delete_failures(trending_dynamo):
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
 
     # verify need to use decimals
     with pytest.raises(AssertionError, match='decimal'):
@@ -192,17 +212,18 @@ def test_delete_failures(trending_dynamo):
 
 def test_delete_success(trending_dynamo):
     # add an item
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     item = trending_dynamo.add(item_id, Decimal(1 / 6))
     assert trending_dynamo.get(item_id) == item
 
     # delete that item by matching scores, verify it's gone
+    assert item['gsiA4SortKey'] == item['gsiK3SortKey']
     deleted_item = trending_dynamo.delete(item_id, Decimal(item['gsiK3SortKey']))
     assert deleted_item == item
     assert trending_dynamo.get(item_id) is None
 
     # add another item
-    item_id = str(uuid.uuid4())
+    item_id = str(uuid4())
     item = trending_dynamo.add(item_id, Decimal(1 / 6))
     assert trending_dynamo.get(item_id)
 
@@ -216,26 +237,47 @@ def test_delete_success(trending_dynamo):
     assert trending_dynamo.get(item_id) is None
 
 
+def test_generate_items(trending_dynamo, trending_dynamo_itype2):
+    # add a distraction
+    trending_dynamo_itype2.add(str(uuid4()), Decimal(42))
+
+    # test generate none
+    keys = list(trending_dynamo.generate_items())
+    assert len(keys) == 0
+
+    # test generate one
+    item1 = trending_dynamo.add(str(uuid4()), Decimal(42))
+    assert list(trending_dynamo.generate_items()) == [item1]
+
+    # test generate two, in correct order
+    item2 = trending_dynamo.add(str(uuid4()), Decimal(54))
+    assert list(trending_dynamo.generate_items()) == [item1, item2]
+
+    # test generate three, in correct order
+    item3 = trending_dynamo.add(str(uuid4()), Decimal(40))
+    assert list(trending_dynamo.generate_items()) == [item3, item1, item2]
+
+
 def test_generate_keys(trending_dynamo, trending_dynamo_itype2):
     key_attributes = ['partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey']
     # add a distraction
-    trending_dynamo_itype2.add(str(uuid.uuid4()), Decimal(42))
+    trending_dynamo_itype2.add(str(uuid4()), Decimal(42))
 
     # test generate none
     keys = list(trending_dynamo.generate_keys())
     assert len(keys) == 0
 
     # test generate one
-    item1 = trending_dynamo.add(str(uuid.uuid4()), Decimal(42))
+    item1 = trending_dynamo.add(str(uuid4()), Decimal(42))
     key1 = {k: item1[k] for k in key_attributes}
     assert list(trending_dynamo.generate_keys()) == [key1]
 
     # test generate two, in correct order
-    item2 = trending_dynamo.add(str(uuid.uuid4()), Decimal(54))
+    item2 = trending_dynamo.add(str(uuid4()), Decimal(54))
     key2 = {k: item2[k] for k in key_attributes}
     assert list(trending_dynamo.generate_keys()) == [key1, key2]
 
     # test generate three, in correct order
-    item3 = trending_dynamo.add(str(uuid.uuid4()), Decimal(40))
+    item3 = trending_dynamo.add(str(uuid4()), Decimal(40))
     key3 = {k: item3[k] for k in key_attributes}
     assert list(trending_dynamo.generate_keys()) == [key3, key1, key2]

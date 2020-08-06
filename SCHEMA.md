@@ -33,7 +33,7 @@ We have no local secondary indexes.
 | `user/{userId}` | `profile` | `10` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `bio`, `photoPostId`, `userStatus`, `privacyStatus`, `albumCount`, `chatMessagesCreationCount`, `chatMessagesDeletionCount`, `chatMessagesForcedDeletionCount`, `chatCount`, `chatsWithUnviewedMessagesCount`, `cardCount`, `commentCount`, `commentDeletedCount`, `commentForcedDeletionCount`, `followedCount`, `followerCount`, `followersRequestedCount`, `postCount`, `postArchivedCount`, `postDeletedCount`, `postForcedArchivingCount`, `lastManuallyReindexedAt`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `lastDisabedAt`, `acceptedEULAVersion`, `postViewedByCount`, `usernameLastValue`, `usernameLastChangedAt`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean` | `username/{username}` | `-` |
 | `user/{userId}` | `follower/{userId}` | `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `user/{userId}` | `follower/{userId}/firstStory` | `1` | `postId` | | | `follower/{followerUserId}/firstStory` | `{expiresAt}` |
-| `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | | | | | `user/trending` | `{score}` |
+| `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | `user/trending` | `{score}` | | | | | | | | | `user/trending` | `{score}` |
 | `appStoreReceipt/{receiptDataB64MD5}` | `-` | `0` | `userId`, `receiptDataB64`, `receiptDataB64MD5`, `verifyAttemptsFirstAt`, `verifyAttemptsLastAt`, `verifyAttemptsCount`, `verifyAttemptsStatusCodes:[Number]` | `appStoreReceipt/{userId}` | `-` | | | | | `appStoreReceipt` | `{verifyAttemptsNextAt}` |
 | `appStoreSub/{originalTransactionId}` | `-` | `0` | `userId`, `receiptDataB64`, `latestReceiptInfo` | `appStoreSub/{userId}` |`{originalPurchaseAt}` | | | | | `appStoreSub` | `{expiresAt}` |
 | `block/{blockerUserId}/{blockedUserId}` | `-`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
@@ -43,7 +43,7 @@ We have no local secondary indexes.
 | `post/{postId}` | `image` | `0` | `takenInReal:Boolean`, `originalFormat`, `imageFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]` |
 | `post/{postId}` | `like/{userId}` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `post/{postId}` | `originalMetadata` | `0` | `originalMetadata` |
-| `post/{postId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | | | | | `post/trending` | `{score}` |
+| `post/{postId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | `post/trending` | `{score}` | | | | | | | | | `post/trending` | `{score}` |
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount` | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
 | `comment/{commentId}` | `-` | `1` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]`, `flagCount` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | `flag/{userId}` | `comment` |
