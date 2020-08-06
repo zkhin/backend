@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 
 from app.models.follower.dynamo.first_story import FirstStoryDynamo
@@ -16,6 +18,15 @@ def story():
         'expiresAt': 'e-at',
         'postedAt': 'p-at',
     }
+
+
+def test_key_parse_key(fs_dynamo):
+    follower_user_id, followed_user_id = str(uuid4()), str(uuid4())
+    key = fs_dynamo.key(followed_user_id, follower_user_id)
+    assert len(key) == 2
+    assert key['partitionKey'].split('/') == ['user', followed_user_id]
+    assert key['sortKey'].split('/') == ['follower', follower_user_id, 'firstStory']
+    assert fs_dynamo.parse_key(key) == (followed_user_id, follower_user_id)
 
 
 def test_set_all_no_followers(fs_dynamo, story):

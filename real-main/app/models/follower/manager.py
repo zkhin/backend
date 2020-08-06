@@ -2,6 +2,7 @@ import logging
 
 from app import models
 from app.models.user.enums import UserPrivacyStatus
+from app.utils import GqlNotificationType
 
 from .dynamo.base import FollowerDynamo
 from .dynamo.first_story import FirstStoryDynamo
@@ -22,6 +23,8 @@ class FollowerManager:
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
+        if 'appsync' in clients:
+            self.appsync_client = clients['appsync']
         if 'dynamo' in clients:
             self.dynamo = FollowerDynamo(clients['dynamo'])
             self.first_story_dynamo = FirstStoryDynamo(clients['dynamo'])
@@ -159,3 +162,12 @@ class FollowerManager:
 
         if not ffs_prev and not ffs_now:
             raise AssertionError('Should be unreachable condition')
+
+    def on_first_story_post_id_change_fire_gql_notifications(self, user_id, new_item=None, old_item=None):
+        followed_user_id, follower_user_id = self.first_story_dynamo.parse_key(new_item or old_item)
+        kwargs = {'followedUserId': followed_user_id}
+        if new_item:
+            kwargs['postId'] = new_item['postId']
+        self.appsync_client.fire_notification(
+            follower_user_id, GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED, **kwargs,
+        )

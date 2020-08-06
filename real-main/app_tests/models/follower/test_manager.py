@@ -1,4 +1,5 @@
-import uuid
+from unittest.mock import call, patch
+from uuid import uuid4
 
 import pendulum
 import pytest
@@ -7,13 +8,14 @@ from app.models.follower.enums import FollowStatus
 from app.models.follower.exceptions import FollowerAlreadyExists, FollowerException
 from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
+from app.utils import GqlNotificationType
 
 
 @pytest.fixture
 def users(user_manager, cognito_client):
     "Us and them"
-    our_user_id, our_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    their_user_id, their_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    our_user_id, our_username = str(uuid4()), str(uuid4())[:8]
+    their_user_id, their_username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(our_user_id, our_username, f'{our_username}@real.app')
     cognito_client.create_verified_user_pool_entry(their_user_id, their_username, f'{their_username}@real.app')
     our_user = user_manager.create_cognito_only_user(our_user_id, our_username)
@@ -28,7 +30,7 @@ other_users = users
 def their_post(follower_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
     post = post_manager.add_post(
-        users[1], str(uuid.uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
+        users[1], str(uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
     )
     yield post
 
@@ -298,3 +300,50 @@ def test_generate_followed_user_ids(follower_manager, users, other_users):
     assert uids == [their_user.id]
     uids = list(follower_manager.generate_followed_user_ids(our_user.id, follow_status=FollowStatus.REQUESTED))
     assert uids == [other_user.id]
+
+
+def test_on_first_story_post_id_change_fire_gql_notifications(follower_manager, users, their_post):
+    # create a followed first story item to test with
+    our_user, their_user = users
+    follower_manager.first_story_dynamo.set_all(iter([our_user.id]), their_post.item)
+    fs_key = follower_manager.first_story_dynamo.key(their_user.id, our_user.id)
+    fs_item = follower_manager.first_story_dynamo.client.get_item(fs_key)
+
+    # trigger for item creation, verify calls
+    with patch.object(follower_manager, 'appsync_client') as appsync_client_mock:
+        follower_manager.on_first_story_post_id_change_fire_gql_notifications(their_user.id, new_item=fs_item)
+    assert appsync_client_mock.mock_calls == [
+        call.fire_notification(
+            our_user.id,
+            GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED,
+            postId=their_post.id,
+            followedUserId=their_user.id,
+        )
+    ]
+
+    # trigger for item update, verify calls
+    new_post_id = str(uuid4())
+    new_item = {**fs_item, 'postId': new_post_id}
+    with patch.object(follower_manager, 'appsync_client') as appsync_client_mock:
+        follower_manager.on_first_story_post_id_change_fire_gql_notifications(
+            their_user.id, new_item=new_item, old_item=fs_item
+        )
+    assert appsync_client_mock.mock_calls == [
+        call.fire_notification(
+            our_user.id,
+            GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED,
+            postId=new_post_id,
+            followedUserId=their_user.id,
+        )
+    ]
+
+    # trigger for item delete, verify calls
+    with patch.object(follower_manager, 'appsync_client') as appsync_client_mock:
+        follower_manager.on_first_story_post_id_change_fire_gql_notifications(their_user.id, old_item=fs_item)
+    assert appsync_client_mock.mock_calls == [
+        call.fire_notification(
+            our_user.id,
+            GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED,
+            followedUserId=their_user.id,
+        )
+    ]

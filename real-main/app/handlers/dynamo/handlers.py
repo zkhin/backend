@@ -159,6 +159,13 @@ register(
 )
 register(
     'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    follower_manager.on_first_story_post_id_change_fire_gql_notifications,
+    {'postId': None},
+)
+register(
+    'user',
     'profile',
     ['INSERT', 'MODIFY'],
     card_manager.on_user_chats_with_unviewed_messages_count_change_sync_card,

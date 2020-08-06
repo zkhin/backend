@@ -273,6 +273,7 @@ type Notification {
 
   # Each of the following fields will be non-null only for some NotificationTypes,
   # exactly which is listed in the comments for the NotificationType
+  followedUserId: ID
   postedAt: AWSDateTime
   postId: ID
   userChatsWithUnviewedMessagesCount: Int
@@ -294,17 +295,25 @@ type Notification {
 #   - fires when a post is added to User.feed
 #   - Notification.postId: the id of the post that was added
 #   - Notification.postedAt: the postedAt timestamp of the post that was added
+#
+# USER_FOLLOWED_USERS_WITH_STORIES_CHANGED
+#   - fires when one of the user's followeds changes their first story
+#   - Notification.postId: the id of the post that is now the followed user's first story
+#                          will be null if the followed user no longer has a first story
+#   - Notification.followedUserId: the id of the followed user whose first story changed
 enum NotificationType {
   POST_COMPLETED
   POST_ERROR
   USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
   USER_FEED_POST_ADDED
+  USER_FOLLOWED_USERS_WITH_STORIES_CHANGED
 }
 
 input NotificationInput {
   # Used internally to get AppSync to send notifications over GQL subscriptiosn
   userId: ID!  # user this notification is intended for
   type: NotificationType!
+  followedUserId: ID
   postedAt: AWSDateTime
   postId: ID
   userChatsWithUnviewedMessagesCount: Int
