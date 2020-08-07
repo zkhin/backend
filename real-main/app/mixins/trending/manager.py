@@ -28,38 +28,26 @@ class TrendingManagerMixin:
         now = now or pendulum.now('utc')
         # iterates from lowest score upward, deflate and count each one
         total_count, deflated_count = 0, 0
-        for trending_keys in self.trending_dynamo.generate_keys():
-            deflated = self.trending_deflate_item(trending_keys, now=now)
+        for item in self.trending_dynamo.generate_items():
+            deflated = self.trending_deflate_item(item, now=now)
             deflated_count += int(deflated)
             total_count += 1
         return total_count, deflated_count
 
     def trending_deflate_item(self, trending_item, now=None, retry_count=0):
-        """
-        Deflate a single trending item. Can accept a full trending_item or just the keys from PK & GSI-K3.
-
-        When operating on just the trending_keys, will assume that we are on a once-per-day deflation schedule.
-        If that's not the case, our first write to dynamo to deflate the score write will fail.
-        We will then pull the full trending item from the DB (thus getting the correct lastDeflatedAt) and
-        recurse on this method to deflate the score.
-        """
         item_id = trending_item['partitionKey'].split('/')[1]
         if retry_count > 2:
             raise Exception(
                 f'trending_deflate_item() failed for item `{self.item_type}:{item_id}` after {retry_count} tries'
             )
 
-        current_score = trending_item['gsiK3SortKey']
+        current_score = trending_item['gsiA4SortKey']
         if current_score == 0:
             logging.warning(f'Trending for item `{self.item_type}:{item_id}` already has score of zero')
             return False
 
         now = now or pendulum.now('utc')
-        last_deflation_at = (
-            pendulum.parse(trending_item['lastDeflatedAt'])
-            if 'lastDeflatedAt' in trending_item
-            else now.subtract(days=1)  # common case, dynamo write will fail if we're wrong
-        )
+        last_deflation_at = pendulum.parse(trending_item['lastDeflatedAt'])
         days_since_last_deflation = (now - last_deflation_at.start_of('day')).days
         if days_since_last_deflation < 1:
             logging.warning(f'Trending for item `{self.item_type}:{item_id}` has already been deflated today')
@@ -70,9 +58,7 @@ class TrendingManagerMixin:
         try:
             self.trending_dynamo.deflate_score(item_id, current_score, new_score, last_deflation_at.date(), now)
         except TrendingDNEOrAttributeMismatch:
-            logging.warning(
-                f'Trending deflate (common case assumption?) failure, trying again for `{self.item_type}:{item_id}`'
-            )
+            logging.warning(f'Trending deflate failure, trying again for `{self.item_type}:{item_id}`')
             trending_item = self.trending_dynamo.get(item_id, strongly_consistent=True)
             return self.trending_deflate_item(trending_item, now=now, retry_count=retry_count + 1)
         return True
@@ -83,9 +69,9 @@ class TrendingManagerMixin:
             return 0
 
         deleted = 0
-        for trending_keys in self.trending_dynamo.generate_keys():
-            item_id = trending_keys['partitionKey'].split('/')[1]
-            current_score = trending_keys['gsiK3SortKey']
+        for item in self.trending_dynamo.generate_items():
+            item_id = item['partitionKey'].split('/')[1]
+            current_score = item['gsiA4SortKey']
             if current_score >= self.min_score_to_keep:
                 break
             try:

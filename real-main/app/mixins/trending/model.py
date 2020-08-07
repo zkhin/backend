@@ -24,7 +24,7 @@ class TrendingModelMixin:
 
     @property
     def trending_score(self):
-        return self.trending_item['gsiK3SortKey'] if self.trending_item else None
+        return self.trending_item['gsiA4SortKey'] if self.trending_item else None
 
     def refresh_trending_item(self, strongly_consistent=False):
         self._trending_item = self.trending_dynamo.get(self.id, strongly_consistent=strongly_consistent)

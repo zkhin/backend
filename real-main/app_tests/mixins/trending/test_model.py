@@ -36,7 +36,7 @@ def test_increment_score_add_new(model):
     model.trending_increment_score(now=now)
     assert pendulum.parse(model.trending_item['createdAt']) == now
     assert pendulum.parse(model.trending_item['lastDeflatedAt']) == now
-    assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5))
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(Decimal(2 ** 0.5))
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
@@ -54,7 +54,7 @@ def test_increment_score_add_new_race_condition(model, caplog):
     assert 'retry 1' in caplog.records[0].msg
     assert pendulum.parse(model.trending_item['createdAt']) == created_at
     assert pendulum.parse(model.trending_item['lastDeflatedAt']) == created_at
-    assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 + 2 ** 0.25))
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(Decimal(2 + 2 ** 0.25))
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
@@ -62,17 +62,17 @@ def test_increment_score_update_existing_basic(model):
     # create the trending item
     created_at = pendulum.parse('2020-06-08T12:00:00Z')  # 1/2 way through the day
     model.trending_increment_score(now=created_at)
-    assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5))
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(Decimal(2 ** 0.5))
 
     # udpate the score
     now = pendulum.parse('2020-06-08T18:00:00Z')  # 3/4 way through the day
     model.trending_increment_score(now=now)
-    assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75))
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75))
 
     # udpate the score, more than one day after last deflation
     now = pendulum.parse('2020-06-09T01:00:00Z')  # 25 hrs after
     model.trending_increment_score(now=now)
-    assert model.trending_item['gsiK3SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75 + 2 ** (25 / 24)))
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(Decimal(2 ** 0.5 + 2 ** 0.75 + 2 ** (25 / 24)))
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
@@ -80,7 +80,7 @@ def test_increment_score_update_existing_race_condition_deflation(model, caplog)
     # create the trending item
     created_at = pendulum.parse('2020-06-08T12:00:00Z')  # 1/2 way through the day
     model.trending_increment_score(now=created_at)
-    score = model.trending_item['gsiK3SortKey']
+    score = model.trending_item['gsiA4SortKey']
     assert score == pytest.approx(Decimal(2 ** 0.5))
 
     # sneak behind our model's back and apply a deflation
@@ -94,7 +94,7 @@ def test_increment_score_update_existing_race_condition_deflation(model, caplog)
         model.trending_increment_score(now=now)
     assert len(caplog.records) == 1
     assert 'retry 1' in caplog.records[0].msg
-    assert model.trending_item['gsiK3SortKey'] == pytest.approx(new_score + Decimal(2 ** (1 / 12)))
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(new_score + Decimal(2 ** (1 / 12)))
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))

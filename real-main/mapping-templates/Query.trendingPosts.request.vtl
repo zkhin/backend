@@ -7,12 +7,12 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiK3PartitionKey = :pk",
+    "expression": "gsiA4PartitionKey = :pk",
     "expressionValues": {
       ":pk": { "S": "post/trending" },
     }
   },
-  "index": "GSI-K3",
+  "index": "GSI-A4",
   "scanIndexForward": false,
   "limit": $limit
   #if ($ctx.args.nextToken)

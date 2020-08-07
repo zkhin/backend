@@ -851,26 +851,26 @@ def test_set_colors_colortheif_fails(s3_uploads_client, pending_image_post, capl
 
 
 def test_trending_increment_score_success_case(image_post):
-    org_score = image_post.trending_item['gsiK3SortKey']
+    org_score = image_post.trending_item['gsiA4SortKey']
     recorded = image_post.trending_increment_score()
     assert recorded is True
-    assert image_post.trending_item['gsiK3SortKey'] > org_score
+    assert image_post.trending_item['gsiA4SortKey'] > org_score
 
 
 def test_trending_increment_score_skips_non_verified_image_posts(image_post):
-    org_score = image_post.trending_item['gsiK3SortKey']
+    org_score = image_post.trending_item['gsiA4SortKey']
     image_post.item['isVerified'] = False
     recorded = image_post.trending_increment_score()
     assert recorded is False
-    assert image_post.trending_item['gsiK3SortKey'] == org_score
+    assert image_post.trending_item['gsiA4SortKey'] == org_score
 
 
 def test_trending_increment_score_skips_non_original_posts(image_post):
-    org_score = image_post.trending_item['gsiK3SortKey']
+    org_score = image_post.trending_item['gsiA4SortKey']
     image_post.item['originalPostId'] = str(uuid.uuid4())
     recorded = image_post.trending_increment_score()
     assert recorded is False
-    assert image_post.trending_item['gsiK3SortKey'] == org_score
+    assert image_post.trending_item['gsiA4SortKey'] == org_score
 
 
 def test_trending_increment_score_skip_real_users_posts(real_user, post_manager, grant_data_b64):
@@ -885,24 +885,24 @@ def test_trending_increment_score_skip_real_users_posts(real_user, post_manager,
 
 def test_trending_increment_score_skip_posts_over_24_hours_old(post):
     # verify we can increment its trending as normal
-    org_score = post.trending_item['gsiK3SortKey']
+    org_score = post.trending_item['gsiA4SortKey']
     post.item['originalPostId'] = str(uuid.uuid4())
     recorded = post.trending_increment_score()
     assert recorded is True
-    assert post.trending_item['gsiK3SortKey'] != org_score
+    assert post.trending_item['gsiA4SortKey'] != org_score
 
     # hack it's age to 23:59, verify we can increment its trending
     post.item['postedAt'] = pendulum.now('utc').subtract(hours=23, minutes=59).to_iso8601_string()
-    org_score = post.trending_item['gsiK3SortKey']
+    org_score = post.trending_item['gsiA4SortKey']
     post.item['originalPostId'] = str(uuid.uuid4())
     recorded = post.trending_increment_score()
     assert recorded is True
-    assert post.trending_item['gsiK3SortKey'] != org_score
+    assert post.trending_item['gsiA4SortKey'] != org_score
 
     # hack it's age to 24hrs + a few microseconds, verify we cannot increment its trending anymore
     post.item['postedAt'] = pendulum.now('utc').subtract(hours=24).to_iso8601_string()
-    org_score = post.trending_item['gsiK3SortKey']
+    org_score = post.trending_item['gsiA4SortKey']
     post.item['originalPostId'] = str(uuid.uuid4())
     recorded = post.trending_increment_score()
     assert recorded is False
-    assert post.trending_item['gsiK3SortKey'] == org_score
+    assert post.trending_item['gsiA4SortKey'] == org_score

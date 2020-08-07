@@ -9,8 +9,6 @@ import pytest
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate(manager):
-    key_attributes = ['partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey']
-
     # test with none
     manager.trending_deflate_item = Mock()
     resp = manager.trending_deflate()
@@ -20,32 +18,29 @@ def test_trending_deflate(manager):
     # test with one
     manager.trending_deflate_item = Mock(return_value=True)
     item1 = manager.trending_dynamo.add(str(uuid4()), Decimal(2))
-    keys1 = {k: item1[k] for k in key_attributes}
     now = pendulum.now('utc')
     resp = manager.trending_deflate(now=now)
     assert resp == (1, 1)
-    assert manager.trending_deflate_item.mock_calls == [call(keys1, now=now)]
+    assert manager.trending_deflate_item.mock_calls == [call(item1, now=now)]
 
     # test with two, order
     manager.trending_deflate_item = Mock(return_value=False)
     item2 = manager.trending_dynamo.add(str(uuid4()), Decimal(3))
-    keys2 = {k: item2[k] for k in key_attributes}
     now = pendulum.now('utc')
     resp = manager.trending_deflate(now=now)
     assert resp == (2, 0)
-    assert manager.trending_deflate_item.mock_calls == [call(keys1, now=now), call(keys2, now=now)]
+    assert manager.trending_deflate_item.mock_calls == [call(item1, now=now), call(item2, now=now)]
 
     # test with three, order
     manager.trending_deflate_item = Mock(return_value=True)
     item3 = manager.trending_dynamo.add(str(uuid4()), Decimal(2.5))
-    keys3 = {k: item3[k] for k in key_attributes}
     now = pendulum.now('utc')
     resp = manager.trending_deflate(now=now)
     assert resp == (3, 3)
     assert manager.trending_deflate_item.mock_calls == [
-        call(keys1, now=now),
-        call(keys3, now=now),
-        call(keys2, now=now),
+        call(item1, now=now),
+        call(item3, now=now),
+        call(item2, now=now),
     ]
 
 
@@ -95,13 +90,13 @@ def test_trending_deflate_item_already_has_score_of_zero(manager, caplog):
 
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
-def test_trending_deflate_item_no_recursion_without_last_deflated_at_assumption(manager, caplog):
+def test_trending_deflate_item_no_recursion(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
     item_id, item_score = str(uuid4()), Decimal(0.4)
     item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
     assert pendulum.parse(item['lastDeflatedAt']) == created_at
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.4))
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(0.4))
 
     # do the deflation, next day
     now = pendulum.parse('2020-06-08T18:00:00Z')
@@ -111,68 +106,17 @@ def test_trending_deflate_item_no_recursion_without_last_deflated_at_assumption(
     assert caplog.records == []
     item = manager.trending_dynamo.get(item_id)
     assert pendulum.parse(item['lastDeflatedAt']) == now
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.20))
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(0.20))
 
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
-def test_trending_deflate_item_no_recursion_with_last_deflated_at_assumption(manager, caplog):
+def test_trending_deflate_item_with_recursion(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
     item_id, item_score = str(uuid4()), Decimal(0.4)
     item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
     assert pendulum.parse(item['lastDeflatedAt']) == created_at
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.4))
-    keys = {
-        k: v for k, v in item.items() if k in ('partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey')
-    }
-
-    # do the deflation, next day, so the common case assumption (that the job is run once per day) should hold
-    now = pendulum.parse('2020-06-08T18:00:00Z')
-    with caplog.at_level(logging.WARNING):
-        deflated = manager.trending_deflate_item(keys, now=now)
-    assert deflated is True
-    assert caplog.records == []
-    item = manager.trending_dynamo.get(item_id)
-    assert pendulum.parse(item['lastDeflatedAt']) == now
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.20))
-
-
-@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
-def test_trending_deflate_item_with_recursion_with_last_deflated_at_assumption(manager, caplog):
-    # add a trending item
-    created_at = pendulum.parse('2020-06-07T12:00:00Z')
-    item_id, item_score = str(uuid4()), Decimal(0.4)
-    item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
-    assert pendulum.parse(item['lastDeflatedAt']) == created_at
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.4))
-    keys = {
-        k: v for k, v in item.items() if k in ('partitionKey', 'sortKey', 'gsiK3PartitionKey', 'gsiK3SortKey')
-    }
-
-    # do a deflation run two days later, so the common case asumption fails
-    now = pendulum.parse('2020-06-09T18:00:00Z')
-    with caplog.at_level(logging.WARNING):
-        deflated = manager.trending_deflate_item(keys, now=now)
-    assert deflated is True
-    assert len(caplog.records) == 1
-    assert 'trying again' in caplog.records[0].msg
-    assert manager.item_type in caplog.records[0].msg
-    assert item_id in caplog.records[0].msg
-
-    # verify it was deflated correctly
-    item = manager.trending_dynamo.get(item_id)
-    assert pendulum.parse(item['lastDeflatedAt']) == now
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.10))  # two days worth of deflating
-
-
-@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
-def test_trending_deflate_item_with_recursion_without_last_deflated_at_assumption(manager, caplog):
-    # add a trending item
-    created_at = pendulum.parse('2020-06-07T12:00:00Z')
-    item_id, item_score = str(uuid4()), Decimal(0.4)
-    item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
-    assert pendulum.parse(item['lastDeflatedAt']) == created_at
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.4))
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(0.4))
 
     # sneak behind our manager's back and increment its score
     manager.trending_dynamo.add_score(item_id, Decimal(1), created_at)
@@ -190,7 +134,7 @@ def test_trending_deflate_item_with_recursion_without_last_deflated_at_assumptio
     # verify it was deflated correctly
     item = manager.trending_dynamo.get(item_id)
     assert pendulum.parse(item['lastDeflatedAt']) == now
-    assert item['gsiK3SortKey'] == pytest.approx(Decimal(0.7))
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(0.7))
 
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
@@ -264,8 +208,8 @@ def test_trending_delete_tail_race_condition(manager, caplog):
     manager.trending_dynamo.add(item2_id, item2_score, now=item2_lda)
 
     # mock the generator so we can make a race condition
-    keys = list(manager.trending_dynamo.generate_keys())
-    manager.trending_dynamo.generate_keys = Mock(return_value=(k for k in keys))
+    items = list(manager.trending_dynamo.generate_items())
+    manager.trending_dynamo.generate_items = Mock(return_value=(i for i in items))
 
     # add more score to one of them to create the rce condition
     manager.trending_dynamo.add_score(item2_id, Decimal(1), item2_lda)

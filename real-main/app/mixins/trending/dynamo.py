@@ -36,8 +36,6 @@ class TrendingDynamo:
                 'schemaVersion': 0,
                 'gsiA4PartitionKey': f'{self.item_type}/trending',
                 'gsiA4SortKey': initial_score.quantize(self.PERCISION).normalize(),
-                'gsiK3PartitionKey': f'{self.item_type}/trending',
-                'gsiK3SortKey': initial_score.quantize(self.PERCISION).normalize(),
                 'lastDeflatedAt': now_str,
                 'createdAt': now_str,
             },
@@ -52,7 +50,7 @@ class TrendingDynamo:
         assert score_to_add >= 0, 'Score cannot be negative'
         query_kwargs = {
             'Key': self.pk(item_id),
-            'UpdateExpression': 'ADD gsiA4SortKey :sta, gsiK3SortKey :sta',
+            'UpdateExpression': 'ADD gsiA4SortKey :sta',
             'ConditionExpression': 'lastDeflatedAt = :elda',
             'ExpressionAttributeValues': {
                 ':sta': score_to_add.quantize(self.PERCISION).normalize(),
@@ -71,8 +69,8 @@ class TrendingDynamo:
         assert expected_score > new_score, 'New score must be less than existing score'
         query_kwargs = {
             'Key': self.pk(item_id),
-            'UpdateExpression': 'SET gsiA4SortKey = :ns, gsiK3SortKey = :ns, lastDeflatedAt = :lda',
-            'ConditionExpression': 'gsiA4SortKey = :es AND gsiK3SortKey = :es AND begins_with(lastDeflatedAt, :eldd)',
+            'UpdateExpression': 'SET gsiA4SortKey = :ns, lastDeflatedAt = :lda',
+            'ConditionExpression': 'gsiA4SortKey = :es AND begins_with(lastDeflatedAt, :eldd)',
             'ExpressionAttributeValues': {
                 ':es': expected_score,  # no normalization because must match exactly
                 ':ns': new_score.quantize(self.PERCISION).normalize(),
@@ -89,7 +87,7 @@ class TrendingDynamo:
         if expected_score is not None:
             assert isinstance(expected_score, Decimal), 'Boto uses decimals for numbers'
             kwargs = {
-                'ConditionExpression': 'gsiA4SortKey = :es AND gsiK3SortKey = :es',
+                'ConditionExpression': 'gsiA4SortKey = :es',
                 'ExpressionAttributeValues': {
                     ':es': expected_score,  # no normalization because must match exactly
                 },
@@ -107,14 +105,5 @@ class TrendingDynamo:
             'KeyConditionExpression': 'gsiA4PartitionKey = :gsia1pk',
             'ExpressionAttributeValues': {':gsia1pk': f'{self.item_type}/trending'},
             'IndexName': 'GSI-A4',
-        }
-        return self.client.generate_all_query(query_kwargs)
-
-    def generate_keys(self):
-        "Generates only primary key and GSI-K3. Ordered with lowest score first."
-        query_kwargs = {
-            'KeyConditionExpression': 'gsiK3PartitionKey = :gsik3pk',
-            'ExpressionAttributeValues': {':gsik3pk': f'{self.item_type}/trending'},
-            'IndexName': 'GSI-K3',
         }
         return self.client.generate_all_query(query_kwargs)
