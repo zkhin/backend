@@ -2,13 +2,7 @@
   $util.error($ctx.error.message, $ctx.error.type)
 #end
 
-#if (! $util.isNull($ctx.result.data.${dynamoTable}[0]))
-  #set ($result = $ctx.result.data.${dynamoTable}[0])
-#elseif (! $util.isNull($ctx.result.data.${dynamoTable}[1]))
-  #set ($result = $ctx.result.data.${dynamoTable}[1])
-#end
-
-#if ($util.isNull($result))
+#if ($util.isNull($ctx.result))
   #set ($status = 'NOT_BLOCKING')
 #else
   #set ($status = 'BLOCKING')

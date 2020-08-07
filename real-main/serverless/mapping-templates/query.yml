@@ -14,7 +14,6 @@
   functions:
     - Users.batchGet
     - Users.batchGet.blockerStatus
-    - Users.batchGet.blockerStatus.old
     - Users.batchGet.followedStatus
 
 - type: Query
@@ -36,7 +35,6 @@
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus
-    - Users.batchGet.blockerStatus.old
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus
@@ -56,7 +54,6 @@
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus
-    - Users.batchGet.blockerStatus.old
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus

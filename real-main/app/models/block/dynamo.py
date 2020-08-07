@@ -12,24 +12,18 @@ class BlockDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
-    def pk(self, blocker_user_id, blocked_user_id, old=False):
-        return (
-            {'partitionKey': f'block/{blocker_user_id}/{blocked_user_id}', 'sortKey': '-'}
-            if old
-            else {'partitionKey': f'user/{blocked_user_id}', 'sortKey': f'blocker/{blocker_user_id}'}
-        )
+    def pk(self, blocker_user_id, blocked_user_id):
+        return {'partitionKey': f'user/{blocked_user_id}', 'sortKey': f'blocker/{blocker_user_id}'}
 
     def get_block(self, blocker_user_id, blocked_user_id):
-        return self.client.get_item(self.pk(blocker_user_id, blocked_user_id)) or self.client.get_item(
-            self.pk(blocker_user_id, blocked_user_id, old=True)
-        )
+        return self.client.get_item(self.pk(blocker_user_id, blocked_user_id))
 
-    def add_block(self, blocker_user_id, blocked_user_id, now=None, old=False):
+    def add_block(self, blocker_user_id, blocked_user_id, now=None):
         now = now or pendulum.now('utc')
         blocked_at_str = now.to_iso8601_string()
         query_kwargs = {
             'Item': {
-                **self.pk(blocker_user_id, blocked_user_id, old=old),
+                **self.pk(blocker_user_id, blocked_user_id),
                 'schemaVersion': 0,
                 'gsiA1PartitionKey': f'block/{blocker_user_id}',
                 'gsiA1SortKey': blocked_at_str,
@@ -46,9 +40,7 @@ class BlockDynamo:
             raise AlreadyBlocked(blocker_user_id, blocked_user_id)
 
     def delete_block(self, blocker_user_id, blocked_user_id):
-        return self.client.delete_item(self.pk(blocker_user_id, blocked_user_id)) or self.client.delete_item(
-            self.pk(blocker_user_id, blocked_user_id, old=True)
-        )
+        return self.client.delete_item(self.pk(blocker_user_id, blocked_user_id))
 
     def generate_blocks_by_blocker(self, blocker_user_id):
         query_kwargs = {
@@ -70,20 +62,10 @@ class BlockDynamo:
             for block_item in self.generate_blocks_by_blocker(blocker_user_id)
         )
         self.client.batch_delete_items(key_generator)
-        key_generator = (
-            self.pk(blocker_user_id, block_item['blockedUserId'], old=True)
-            for block_item in self.generate_blocks_by_blocker(blocker_user_id)
-        )
-        self.client.batch_delete_items(key_generator)
 
     def delete_all_blocks_of_user(self, blocked_user_id):
         key_generator = (
             self.pk(block_item['blockerUserId'], blocked_user_id)
-            for block_item in self.generate_blocks_by_blocked(blocked_user_id)
-        )
-        self.client.batch_delete_items(key_generator)
-        key_generator = (
-            self.pk(block_item['blockerUserId'], blocked_user_id, old=True)
             for block_item in self.generate_blocks_by_blocked(blocked_user_id)
         )
         self.client.batch_delete_items(key_generator)

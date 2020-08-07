@@ -21,7 +21,6 @@
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus
-    - Users.batchGet.blockerStatus.old
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus
@@ -78,7 +77,6 @@
   functions:
     - Users.batchGet
     - Users.batchGet.blockerStatus
-    - Users.batchGet.blockerStatus.old
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
 
