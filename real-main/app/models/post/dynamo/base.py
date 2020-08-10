@@ -72,7 +72,7 @@ class PostDynamo:
         }
         return self.client.generate_all_scan(query_kwargs)
 
-    def transact_add_pending_post(
+    def add_pending_post(
         self,
         posted_by_user_id,
         post_id,
@@ -91,63 +91,52 @@ class PostDynamo:
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
         post_status = enums.PostStatus.PENDING
-        post_item = {
-            'schemaVersion': {'N': '3'},
-            'partitionKey': {'S': f'post/{post_id}'},
-            'sortKey': {'S': '-'},
-            'gsiA2PartitionKey': {'S': f'post/{posted_by_user_id}'},
-            'gsiA2SortKey': {'S': f'{post_status}/{posted_at_str}'},
-            'postId': {'S': post_id},
-            'postedAt': {'S': posted_at_str},
-            'postedByUserId': {'S': posted_by_user_id},
-            'postType': {'S': post_type},
-            'postStatus': {'S': post_status},
+        item = {
+            'schemaVersion': 3,
+            'partitionKey': f'post/{post_id}',
+            'sortKey': '-',
+            'gsiA2PartitionKey': f'post/{posted_by_user_id}',
+            'gsiA2SortKey': f'{post_status}/{posted_at_str}',
+            'postId': post_id,
+            'postedAt': posted_at_str,
+            'postedByUserId': posted_by_user_id,
+            'postType': post_type,
+            'postStatus': post_status,
         }
         if expires_at:
             expires_at_str = expires_at.to_iso8601_string()
-            post_item.update(
+            item.update(
                 {
-                    'expiresAt': {'S': expires_at_str},
-                    'gsiA1PartitionKey': {'S': f'post/{posted_by_user_id}'},
-                    'gsiA1SortKey': {'S': f'{post_status}/{expires_at_str}'},
-                    'gsiK1PartitionKey': {'S': f'post/{expires_at.date()}'},
-                    'gsiK1SortKey': {'S': str(expires_at.time())},
+                    'expiresAt': expires_at_str,
+                    'gsiA1PartitionKey': f'post/{posted_by_user_id}',
+                    'gsiA1SortKey': f'{post_status}/{expires_at_str}',
+                    'gsiK1PartitionKey': f'post/{expires_at.date()}',
+                    'gsiK1SortKey': str(expires_at.time()),
                 }
             )
         if album_id:
-            post_item.update(
+            item.update(
                 {
-                    'albumId': {'S': album_id},
-                    'gsiK3PartitionKey': {'S': f'post/{album_id}'},
-                    'gsiK3SortKey': {'N': '-1'},  # all non-completed posts have a rank of -1
+                    'albumId': album_id,
+                    'gsiK3PartitionKey': f'post/{album_id}',
+                    'gsiK3SortKey': -1,  # all non-completed posts have a rank of -1
                 }
             )
         if text:
-            post_item['text'] = {'S': text}
+            item['text'] = text
         if text_tags is not None:
-            post_item['textTags'] = {
-                'L': [
-                    {'M': {'tag': {'S': text_tag['tag']}, 'userId': {'S': text_tag['userId']}}}
-                    for text_tag in text_tags
-                ]
-            }
+            item['textTags'] = [{'tag': tt['tag'], 'userId': tt['userId']} for tt in text_tags]
         if comments_disabled is not None:
-            post_item['commentsDisabled'] = {'BOOL': comments_disabled}
+            item['commentsDisabled'] = comments_disabled
         if likes_disabled is not None:
-            post_item['likesDisabled'] = {'BOOL': likes_disabled}
+            item['likesDisabled'] = likes_disabled
         if sharing_disabled is not None:
-            post_item['sharingDisabled'] = {'BOOL': sharing_disabled}
+            item['sharingDisabled'] = sharing_disabled
         if verification_hidden is not None:
-            post_item['verificationHidden'] = {'BOOL': verification_hidden}
+            item['verificationHidden'] = verification_hidden
         if set_as_user_photo is not None:
-            post_item['setAsUserPhoto'] = {'BOOL': set_as_user_photo}
-
-        return {
-            'Put': {
-                'Item': post_item,
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            }
-        }
+            item['setAsUserPhoto'] = set_as_user_photo
+        return self.client.add_item({'Item': item})
 
     def increment_flag_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'flagCount')

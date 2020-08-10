@@ -147,25 +147,21 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 raise PostException(msg)
 
         # add the pending post & media to dynamo in a transaction
-        transacts = [
-            self.dynamo.transact_add_pending_post(
-                posted_by_user.id,
-                post_id,
-                post_type,
-                posted_at=now,
-                expires_at=expires_at,
-                text=text,
-                text_tags=text_tags,
-                comments_disabled=comments_disabled,
-                likes_disabled=likes_disabled,
-                sharing_disabled=sharing_disabled,
-                verification_hidden=verification_hidden,
-                album_id=album_id,
-                set_as_user_photo=set_as_user_photo,
-            )
-        ]
-        self.dynamo.client.transact_write_items(transacts)
-        post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
+        post_item = self.dynamo.add_pending_post(
+            posted_by_user.id,
+            post_id,
+            post_type,
+            posted_at=now,
+            expires_at=expires_at,
+            text=text,
+            text_tags=text_tags,
+            comments_disabled=comments_disabled,
+            likes_disabled=likes_disabled,
+            sharing_disabled=sharing_disabled,
+            verification_hidden=verification_hidden,
+            album_id=album_id,
+            set_as_user_photo=set_as_user_photo,
+        )
         post = self.init_post(post_item)
 
         # text-only posts can be completed immediately

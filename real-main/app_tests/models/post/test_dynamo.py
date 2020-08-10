@@ -25,35 +25,27 @@ def test_post_add_and_delete(post_dynamo):
     user_id = 'my-user-id'
 
     # add the post
-    transact = post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-
-    # post exists now
-    resp = post_dynamo.get_post(post_id)
-    assert resp['postId'] == post_id
+    post = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == post
 
     # check strongly_consistent kwarg accepted
-    resp = post_dynamo.get_post(post_id, strongly_consistent=True)
-    assert resp['postId'] == post_id
+    assert post_dynamo.get_post(post_id, strongly_consistent=True) == post
 
     # delete the post, check no longer exists
     post_dynamo.delete_post(post_id)
     assert post_dynamo.get_post(post_id) is None
 
 
-def test_transact_add_pending_post_sans_options(post_dynamo):
+def test_add_pending_post_sans_options(post_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
     posted_at = pendulum.now('utc')
+    posted_at_str = posted_at.to_iso8601_string()
     post_type = 'ptype'
 
     # add the post
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, post_type, posted_at=posted_at)]
-    post_dynamo.client.transact_write_items(transacts)
-
-    # retrieve post, check format
-    posted_at_str = posted_at.to_iso8601_string()
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post(user_id, post_id, post_type, posted_at=posted_at)
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item == {
         'schemaVersion': 3,
         'partitionKey': 'post/pid',
@@ -68,7 +60,7 @@ def test_transact_add_pending_post_sans_options(post_dynamo):
     }
 
 
-def test_transact_add_pending_post_with_options(post_dynamo):
+def test_add_pending_post_with_options(post_dynamo):
     user_id = 'pbuid'
     post_id = 'pid'
     post_type = 'ptype'
@@ -78,29 +70,26 @@ def test_transact_add_pending_post_with_options(post_dynamo):
     text = 'lore @ipsum'
     text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
 
-    transacts = [
-        post_dynamo.transact_add_pending_post(
-            user_id,
-            post_id,
-            post_type,
-            posted_at=posted_at,
-            expires_at=expires_at,
-            text=text,
-            text_tags=text_tags,
-            comments_disabled=True,
-            likes_disabled=False,
-            sharing_disabled=False,
-            verification_hidden=True,
-            album_id=album_id,
-            set_as_user_photo=True,
-        )
-    ]
-    post_dynamo.client.transact_write_items(transacts)
+    post_item = post_dynamo.add_pending_post(
+        user_id,
+        post_id,
+        post_type,
+        posted_at=posted_at,
+        expires_at=expires_at,
+        text=text,
+        text_tags=text_tags,
+        comments_disabled=True,
+        likes_disabled=False,
+        sharing_disabled=False,
+        verification_hidden=True,
+        album_id=album_id,
+        set_as_user_photo=True,
+    )
 
     # retrieve post, check format
     posted_at_str = posted_at.to_iso8601_string()
     expires_at_str = expires_at.to_iso8601_string()
-    post_item = post_dynamo.get_post(post_id)
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item == {
         'schemaVersion': 3,
         'partitionKey': 'post/pid',
@@ -136,21 +125,18 @@ def test_transact_add_post_already_exists(post_dynamo):
     post_type = 'ptype'
 
     # add the post
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, post_type)]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.add_pending_post(user_id, post_id, post_type)
 
     # try to add it again
-    with pytest.raises(post_dynamo.client.exceptions.TransactionCanceledException):
-        post_dynamo.client.transact_write_items(transacts)
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.add_pending_post(user_id, post_id, post_type)
 
 
 def test_generate_posts_by_user(post_dynamo):
     user_id = 'uid'
 
     # add & complete a post by another user as bait (shouldn't show up in our upcoming queries)
-    transacts = [post_dynamo.transact_add_pending_post('other-uid', 'pidX', 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pidX')
+    post_item = post_dynamo.add_pending_post('other-uid', 'pidX', 'ptype', text='lore ipsum')
     post_dynamo.set_post_status(post_item, PostStatus.COMPLETED)
 
     # test generate no posts
@@ -158,9 +144,7 @@ def test_generate_posts_by_user(post_dynamo):
 
     # we add a post
     post_id = 'pid'
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
 
     # should see if if we generate all statues, but not for COMPLETED status only
     assert [p['postId'] for p in post_dynamo.generate_posts_by_user(user_id)] == [post_id]
@@ -177,8 +161,7 @@ def test_generate_posts_by_user(post_dynamo):
 
     # we add another post
     post_id_2 = 'pid2'
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id_2, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.add_pending_post(user_id, post_id_2, 'ptype', text='lore ipsum')
 
     # check genertaion
     post_ids = [p['postId'] for p in post_dynamo.generate_posts_by_user(user_id)]
@@ -193,9 +176,8 @@ def test_set_post_status(post_dynamo):
     keys_that_change = ('postStatus', 'gsiA2SortKey')
 
     # add a post, verify starts pending
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-    org_post_item = post_dynamo.get_post(post_id)
+    org_post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == org_post_item
     assert org_post_item['postStatus'] == PostStatus.PENDING
 
     # set post status without specifying an original post id
@@ -229,14 +211,10 @@ def test_set_post_status_with_expires_at_and_album_id(post_dynamo):
 
     # add a post, verify starts pending
     expires_at = pendulum.now('utc') + pendulum.duration(days=1)
-    post_dynamo.client.transact_write_items(
-        [
-            post_dynamo.transact_add_pending_post(
-                user_id, post_id, 'ptype', text='l', expires_at=expires_at, album_id='aid'
-            ),
-        ]
+    post_item = post_dynamo.add_pending_post(
+        user_id, post_id, 'ptype', text='l', expires_at=expires_at, album_id='aid'
     )
-    post_item = post_dynamo.get_post(post_id)
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item['postStatus'] == PostStatus.PENDING
 
     new_status = PostStatus.DELETING
@@ -251,10 +229,8 @@ def test_set_post_status_COMPLETED_clears_set_as_user_photo(post_dynamo):
     user_id = 'my-user-id'
 
     # add a post, verify stating state
-    post_dynamo.client.transact_write_items(
-        [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', set_as_user_photo=True)]
-    )
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', set_as_user_photo=True)
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item['postStatus'] == PostStatus.PENDING
     assert post_item['setAsUserPhoto'] is True
 
@@ -274,9 +250,8 @@ def test_set_post_status_album_rank_handled_correctly_to_and_from_COMPLETED_in_a
     user_id = 'my-user-id'
 
     # add a post, verify starts pending
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='l', album_id='aid')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='l', album_id='aid')
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item['postStatus'] == PostStatus.PENDING
     assert post_item['gsiK3SortKey'] == -1
 
@@ -312,12 +287,9 @@ def test_set_checksum(post_dynamo):
     with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.set_checksum(post_id, posted_at_str, checksum)
 
-    # create the post
-    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-
-    # check starting state
-    post_item = post_dynamo.get_post(post_id)
+    # create the post, check starting state
+    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item['postId'] == post_id
     assert 'checksum' not in post_item
     assert 'gsiK2PartitionKey' not in post_item
@@ -341,13 +313,7 @@ def test_get_first_with_checksum(post_dynamo):
     # one post
     post_id_1 = 'pid'
     posted_at_1 = pendulum.now('utc')
-    post_dynamo.client.transact_write_items(
-        [
-            post_dynamo.transact_add_pending_post(
-                'uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1
-            )
-        ]
-    )
+    post_dynamo.add_pending_post('uid', post_id_1, 'ptype', text='lore ipsum', posted_at=posted_at_1)
     posted_at_str_1 = posted_at_1.to_iso8601_string()
     post_dynamo.set_checksum(post_id_1, posted_at_str_1, checksum)
     assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
@@ -355,13 +321,7 @@ def test_get_first_with_checksum(post_dynamo):
     # two media, we should get the one with earliest postedAt
     post_id_2 = 'pid2'
     posted_at_2 = pendulum.now('utc')
-    post_dynamo.client.transact_write_items(
-        [
-            post_dynamo.transact_add_pending_post(
-                'uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2
-            )
-        ]
-    )
+    post_dynamo.add_pending_post('uid', post_id_2, 'ptype', text='lore ipsum', posted_at=posted_at_2)
     posted_at_str_2 = posted_at_2.to_iso8601_string()
     post_dynamo.set_checksum(post_id_2, posted_at_str_2, checksum)
     assert post_dynamo.get_first_with_checksum(checksum) == post_id_1
@@ -374,12 +334,10 @@ def test_post_set_is_verified(post_dynamo):
     with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.set_is_verified(post_id, True)
 
-    # create the post
-    transacts = [post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
-
-    # verify starting state
-    assert 'isVerified' not in post_dynamo.get_post(post_id)
+    # create the post, verify starting state
+    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == post_item
+    assert 'isVerified' not in post_item
 
     # change the value, verify
     post_item = post_dynamo.set_is_verified(post_id, True)
@@ -398,12 +356,8 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     post_id = 'post-id'
     text = 'lore ipsum'
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
-    transacts = [
-        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-
-    org_post_item = post_dynamo.get_post(post_id)
+    org_post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)
+    assert post_dynamo.get_post(post_id) == org_post_item
     assert org_post_item['postId'] == post_id
     assert org_post_item['expiresAt'] == expires_at.to_iso8601_string()
 
@@ -411,9 +365,8 @@ def test_set_expires_at_matches_creating_story_directly(post_dynamo):
     post_dynamo.client.delete_item({'partitionKey': f'post/{post_id}', 'sortKey': '-'})
 
     # now add it to the DB, without a lifetime
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text)]
-    post_dynamo.client.transact_write_items(transacts)
-    new_post_item = post_dynamo.get_post(post_id)
+    new_post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text=text)
+    assert post_dynamo.get_post(post_id) == new_post_item
     assert new_post_item['postId'] == post_id
     assert 'expiresAt' not in new_post_item
 
@@ -429,9 +382,8 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
     user_id = 'uid'
     post_id = 'post-id'
     text = 'lore ipsum'
-    transacts = [post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text)]
-    post_dynamo.client.transact_write_items(transacts)
-    org_post_item = post_dynamo.get_post(post_id)
+    org_post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text=text)
+    assert post_dynamo.get_post(post_id) == org_post_item
     assert org_post_item['postId'] == post_id
     assert 'expiresAt' not in org_post_item
 
@@ -440,11 +392,8 @@ def test_remove_expires_at_matches_creating_story_directly(post_dynamo):
 
     # now add it to the DB, with a lifetime
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
-    transacts = [
-        post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-    new_post_item = post_dynamo.get_post(post_id)
+    new_post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text=text, expires_at=expires_at)
+    assert post_dynamo.get_post(post_id) == new_post_item
     assert new_post_item['postId'] == post_id
     assert new_post_item['expiresAt'] == expires_at.to_iso8601_string()
 
@@ -466,11 +415,8 @@ def test_get_next_completed_post_to_expire_one_post(post_dynamo):
     post_id_1 = 'post-id-1'
     expires_at = pendulum.now('utc') + pendulum.duration(hours=1)
 
-    transacts = [
-        post_dynamo.transact_add_pending_post(user_id, post_id_1, 'ptype', text='t', expires_at=expires_at)
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id_1)
+    post_item = post_dynamo.add_pending_post(user_id, post_id_1, 'ptype', text='t', expires_at=expires_at)
+    assert post_dynamo.get_post(post_id_1) == post_item
     post_dynamo.set_post_status(post_item, PostStatus.COMPLETED)
 
     assert post_dynamo.get_next_completed_post_to_expire(user_id)['postId'] == post_id_1
@@ -483,13 +429,8 @@ def test_get_next_completed_post_to_expire_two_posts(post_dynamo):
     expires_at_1, expires_at_2 = now + pendulum.duration(days=1), now + pendulum.duration(hours=12)
 
     # add those posts
-    transacts = [
-        post_dynamo.transact_add_pending_post(user_id, post_id_1, 'ptype', text='t', expires_at=expires_at_1),
-        post_dynamo.transact_add_pending_post(user_id, post_id_2, 'ptype', text='t', expires_at=expires_at_2),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-    post1 = post_dynamo.get_post(post_id_1)
-    post2 = post_dynamo.get_post(post_id_2)
+    post1 = post_dynamo.add_pending_post(user_id, post_id_1, 'ptype', text='t', expires_at=expires_at_1)
+    post2 = post_dynamo.add_pending_post(user_id, post_id_2, 'ptype', text='t', expires_at=expires_at_2)
 
     # check niether of them show up
     assert post_dynamo.get_next_completed_post_to_expire(user_id) is None
@@ -514,9 +455,7 @@ def test_set_no_values(post_dynamo):
 def test_set_text(post_dynamo):
     # create a post with some text
     text = 'for shiz'
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text=text, text_tags=[])]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pid1')
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text=text, text_tags=[])
     assert post_item['text'] == text
     assert post_item['textTags'] == []
 
@@ -550,9 +489,8 @@ def test_set_text(post_dynamo):
 
 def test_set_comments_disabled(post_dynamo):
     # create a post with some text, media objects
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pid1')
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
     assert 'commentsDisabled' not in post_item
 
     # edit it back and forth
@@ -568,9 +506,8 @@ def test_set_comments_disabled(post_dynamo):
 
 def test_set_likes_disabled(post_dynamo):
     # create a post with some text, media objects
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pid1')
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
     assert 'likesDisabled' not in post_item
 
     # edit it back and forth
@@ -586,9 +523,8 @@ def test_set_likes_disabled(post_dynamo):
 
 def test_set_sharing_disabled(post_dynamo):
     # create a post with some text, media objects
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pid1')
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
     assert 'sharingDisabled' not in post_item
 
     # edit it back and forth
@@ -604,9 +540,8 @@ def test_set_sharing_disabled(post_dynamo):
 
 def test_set_verification_hidden(post_dynamo):
     # create a post with some text, media objects
-    transacts = [post_dynamo.transact_add_pending_post('uidA', 'pid1', 'ptype', text='t')]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post('pid1')
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
     assert 'verificationHidden' not in post_item
 
     # edit it back and forth
@@ -629,15 +564,9 @@ def test_generate_expired_post_pks_by_day(post_dynamo):
     expires_at_1 = now + lifetime_1
     expires_at_2 = now + lifetime_2
 
-    transacts = [
-        post_dynamo.transact_add_pending_post('uidA', 'post-id-1', 'ptype', text='no', expires_at=expires_at_1),
-        post_dynamo.transact_add_pending_post('uidA', 'post-id-2', 'ptype', text='me', expires_at=expires_at_2),
-        post_dynamo.transact_add_pending_post('uidA', 'post-id-3', 'ptype', text='digas'),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-    post1 = post_dynamo.get_post('post-id-1')
-    post2 = post_dynamo.get_post('post-id-2')
-    post3 = post_dynamo.get_post('post-id-3')
+    post1 = post_dynamo.add_pending_post('uidA', 'post-id-1', 'ptype', text='no', expires_at=expires_at_1)
+    post2 = post_dynamo.add_pending_post('uidA', 'post-id-2', 'ptype', text='me', expires_at=expires_at_2)
+    post3 = post_dynamo.add_pending_post('uidA', 'post-id-3', 'ptype', text='digas')
 
     post_dynamo.set_post_status(post1, PostStatus.COMPLETED)
     post_dynamo.set_post_status(post2, PostStatus.COMPLETED)
@@ -684,16 +613,14 @@ def test_generate_expired_post_pks_with_scan(post_dynamo):
     yesterday = now - pendulum.duration(days=1)
     lifetime = pendulum.duration(seconds=1)
 
-    gen_transact = post_dynamo.transact_add_pending_post
-    transacts = [
-        gen_transact('u', 'p1', 'ptype', text='no', posted_at=week_ago, expires_at=(week_ago + lifetime)),
-        gen_transact('u', 'p2', 'ptype', text='me', posted_at=yesterday, expires_at=(yesterday + lifetime)),
-        gen_transact('u', 'p3', 'ptype', text='digas', posted_at=now, expires_at=(now + lifetime)),
-        gen_transact('u', 'p4', 'ptype', text='por favor'),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-    post1 = post_dynamo.get_post('p1')
-    post2 = post_dynamo.get_post('p2')
+    post1 = post_dynamo.add_pending_post(
+        'u', 'p1', 'ptype', text='no', posted_at=week_ago, expires_at=(week_ago + lifetime)
+    )
+    post2 = post_dynamo.add_pending_post(
+        'u', 'p2', 'ptype', text='me', posted_at=yesterday, expires_at=(yesterday + lifetime)
+    )
+    post_dynamo.add_pending_post('u', 'p3', 'ptype', text='digas', posted_at=now, expires_at=(now + lifetime))
+    post_dynamo.add_pending_post('u', 'p4', 'ptype', text='por favor')
 
     # scan with cutoff of yesterday should only see the post from a week ago
     expired_posts = list(post_dynamo.generate_expired_post_pks_with_scan(yesterday.date()))
@@ -715,9 +642,8 @@ def test_set_last_unviewed_comment_at(post_dynamo):
     post_id = 'pid'
 
     # add a post, verify starts with no new comment activity
-    transact = post_dynamo.transact_add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == post_item
     assert 'gsiA3PartitionKey' not in post_item
     assert 'gsiA3SortKey' not in post_item
 
@@ -750,9 +676,8 @@ def test_set_album_id_pending_post(post_dynamo):
     post_id = 'pid'
 
     # add a post without an album_id
-    transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == post_item
     assert 'albumId' not in post_item
     assert 'gsiK3PartitionKey' not in post_item
     assert 'gsiK3SortKey' not in post_item
@@ -795,9 +720,7 @@ def test_set_album_id_completed_post(post_dynamo):
     post_id = 'pid'
 
     # add a post without an album_id
-    transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
     post_item = post_dynamo.set_post_status(post_item, PostStatus.COMPLETED)
     assert post_item['postStatus'] == PostStatus.COMPLETED
     assert 'albumId' not in post_item
@@ -839,9 +762,8 @@ def test_set_album_id_fails_wrong_status(post_dynamo):
     post_id = 'pid'
 
     # add a post without an album_id
-    transact = post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
-    post_dynamo.client.transact_write_items([transact])
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == post_item
     assert 'albumId' not in post_item
     assert 'gsiK3PartitionKey' not in post_item
     assert 'gsiK3SortKey' not in post_item
@@ -866,11 +788,8 @@ def test_generate_post_ids_in_album(post_dynamo):
     # add two posts in an album
     album_id = 'aid'
     post_id_1, post_id_2 = 'pid1', 'pid2'
-    transacts = [
-        post_dynamo.transact_add_pending_post('uid', post_id_1, 'ptype', text='lore', album_id=album_id),
-        post_dynamo.transact_add_pending_post('uid', post_id_2, 'ptype', text='lore', album_id=album_id),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.add_pending_post('uid', post_id_1, 'ptype', text='lore', album_id=album_id)
+    post_dynamo.add_pending_post('uid', post_id_2, 'ptype', text='lore', album_id=album_id)
 
     # verify those posts do show up if we query all posts
     post_ids = list(post_dynamo.generate_post_ids_in_album(album_id))
@@ -940,11 +859,8 @@ def test_generate_post_ids_in_album(post_dynamo):
 def test_set_album_rank(post_dynamo):
     # add a posts in an album
     album_id, post_id = 'aid', 'pid'
-    transacts = [
-        post_dynamo.transact_add_pending_post('uid', post_id, 'ptype', text='lore', album_id=album_id),
-    ]
-    post_dynamo.client.transact_write_items(transacts)
-    post_item = post_dynamo.get_post(post_id)
+    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore', album_id=album_id)
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item['gsiK3SortKey'] == -1
 
     # change the album rank
@@ -986,8 +902,7 @@ def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo,
     caplog.clear()
 
     # add a post, check starting state
-    transacts = [post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype', text='lore ipsum')]
-    post_dynamo.client.transact_write_items(transacts)
+    post_dynamo.add_pending_post(str(uuid4()), post_id, 'ptype', text='lore ipsum')
     assert 'commentsUnviewedCount' not in post_dynamo.get_post(post_id)
 
     # increment
@@ -1059,8 +974,7 @@ def test_increment_decrement_count(post_dynamo, caplog, incrementor_name, decrem
         caplog.clear()
 
     # add the post to the DB, verify it is in DB
-    transact = post_dynamo.transact_add_pending_post(str(uuid4()), post_id, 'ptype')
-    post_dynamo.client.transact_write_items([transact])
+    post_dynamo.add_pending_post(str(uuid4()), post_id, 'ptype')
     assert attribute_name not in post_dynamo.get_post(post_id)
 
     assert incrementor(post_id)[attribute_name] == 1
