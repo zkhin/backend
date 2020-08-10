@@ -7,21 +7,19 @@ class PostOriginalMetadataDynamo:
     def __init__(self, dynamo_client):
         self.client = dynamo_client
 
+    def key(self, post_id):
+        return {'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata'}
+
     def get(self, post_id):
-        return self.client.get_item({'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata'})
+        return self.client.get_item(self.key(post_id))
 
     def delete(self, post_id):
-        return self.client.delete_item({'partitionKey': f'post/{post_id}', 'sortKey': 'originalMetadata'})
+        return self.client.delete_item(self.key(post_id))
 
-    def transact_add(self, post_id, original_metadata):
-        return {
-            'Put': {
-                'Item': {
-                    'schemaVersion': {'N': '0'},
-                    'partitionKey': {'S': f'post/{post_id}'},
-                    'sortKey': {'S': 'originalMetadata'},
-                    'originalMetadata': {'S': original_metadata},
-                },
-                'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
-            }
+    def add(self, post_id, original_metadata):
+        item = {
+            **self.key(post_id),
+            'schemaVersion': 0,
+            'originalMetadata': original_metadata,
         }
+        return self.client.add_item({'Item': item})

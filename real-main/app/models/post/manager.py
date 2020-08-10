@@ -176,9 +176,12 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                     taken_in_real=image_input.get('takenInReal'),
                 )
             )
-            if original_metadata := image_input.get('originalMetadata'):
-                transacts.append(self.original_metadata_dynamo.transact_add(post_id, original_metadata))
         self.dynamo.client.transact_write_items(transacts)
+
+        if post_type == PostType.IMAGE:
+            # 'image_input' is straight from graphql, format dictated by schema
+            if original_metadata := (image_input or {}).get('originalMetadata'):
+                self.original_metadata_dynamo.add(post_id, original_metadata)
 
         post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
         post = self.init_post(post_item)
