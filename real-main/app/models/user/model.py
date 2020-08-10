@@ -210,6 +210,10 @@ class User(TrendingModelMixin):
         self.item = self.dynamo.set_user_accepted_eula_version(self.id, version)
         return self
 
+    def get_apns_token(self):
+        endpoint_item = self.pinpoint_client.get_user_endpoints(self.id, 'APNS')
+        return list(endpoint_item.values()).pop()['Address'] if endpoint_item else None
+
     def set_apns_token(self, token):
         if token is None:
             self.pinpoint_client.delete_user_endpoint(self.id, 'APNS')

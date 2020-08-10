@@ -1,6 +1,6 @@
 import logging
-import uuid
-from unittest import mock
+from unittest.mock import Mock, call, patch
+from uuid import uuid4
 
 import pytest
 
@@ -11,28 +11,28 @@ from app.models.user.exceptions import UserException, UserValidationException, U
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user2(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user3(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user_verified_phone(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     phone = '+12125551212'
     cognito_client.user_pool_client.admin_create_user(
         UserPoolId=cognito_client.user_pool_id,
@@ -58,7 +58,7 @@ def test_refresh(user):
 
 
 def test_invalid_username(user):
-    user.cognito_client = mock.Mock()
+    user.cognito_client = Mock()
 
     invalid_username = '-'
     with pytest.raises(UserValidationException):
@@ -69,7 +69,7 @@ def test_invalid_username(user):
 
 
 def test_update_username_no_change(user):
-    user.cognito_client = mock.Mock()
+    user.cognito_client = Mock()
 
     org_user_item = user.item
     user.update_username(user.username)
@@ -96,7 +96,7 @@ def test_cant_update_username_to_one_already_taken(user, user2):
 
     # mock out the cognito backend so it behaves like the real thing
     exception = user.cognito_client.user_pool_client.exceptions.AliasExistsException({}, None)
-    user.cognito_client.set_user_attributes = mock.Mock(side_effect=exception)
+    user.cognito_client.set_user_attributes = Mock(side_effect=exception)
 
     # verify we can't update to that username
     with pytest.raises(UserValidationException):
@@ -300,8 +300,8 @@ def test_finish_change_email(user):
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
     # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
-    user.cognito_client.verify_user_attribute = mock.Mock()
-    user.cognito_client.clear_user_attribute = mock.Mock()
+    user.cognito_client.verify_user_attribute = Mock()
+    user.cognito_client.clear_user_attribute = Mock()
 
     user.finish_change_contact_attribute('email', 'access_token', 'verification_code')
     assert user.item['email'] == new_email
@@ -311,9 +311,9 @@ def test_finish_change_email(user):
     assert attrs['email_verified'] == 'true'
 
     assert user.cognito_client.verify_user_attribute.mock_calls == [
-        mock.call('access_token', 'email', 'verification_code'),
+        call('access_token', 'email', 'verification_code'),
     ]
-    assert user.cognito_client.clear_user_attribute.mock_calls == [mock.call(user.id, 'custom:unverified_email')]
+    assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_email')]
 
 
 def test_start_change_phone(user):
@@ -346,8 +346,8 @@ def test_finish_change_phone(user):
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_phone': new_phone})
 
     # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
-    user.cognito_client.verify_user_attribute = mock.Mock()
-    user.cognito_client.clear_user_attribute = mock.Mock()
+    user.cognito_client.verify_user_attribute = Mock()
+    user.cognito_client.clear_user_attribute = Mock()
 
     user.finish_change_contact_attribute('phone', 'access_token', 'verification_code')
     assert user.item['phoneNumber'] == new_phone
@@ -357,9 +357,9 @@ def test_finish_change_phone(user):
     assert attrs['phone_number_verified'] == 'true'
 
     assert user.cognito_client.verify_user_attribute.mock_calls == [
-        mock.call('access_token', 'phone_number', 'verification_code'),
+        call('access_token', 'phone_number', 'verification_code'),
     ]
-    assert user.cognito_client.clear_user_attribute.mock_calls == [mock.call(user.id, 'custom:unverified_phone')]
+    assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_phone')]
 
 
 def test_start_change_email_same_as_existing(user):
@@ -408,7 +408,7 @@ def test_finish_change_email_wrong_verification_code(user):
 
     # moto has not yet implemented verify_user_attribute
     exception = user.cognito_client.user_pool_client.exceptions.CodeMismatchException({}, None)
-    user.cognito_client.user_pool_client.verify_user_attribute = mock.Mock(side_effect=exception)
+    user.cognito_client.user_pool_client.verify_user_attribute = Mock(side_effect=exception)
 
     access_token = {}
     verification_code = {}
@@ -607,9 +607,37 @@ def test_set_apns_token(user):
     # set the token
     user.pinpoint_client.reset_mock()
     user.set_apns_token('token-1')
-    assert user.pinpoint_client.mock_calls == [mock.call.update_user_endpoint(user.id, 'APNS', 'token-1')]
+    assert user.pinpoint_client.mock_calls == [call.update_user_endpoint(user.id, 'APNS', 'token-1')]
 
     # delete the token
     user.pinpoint_client.reset_mock()
     user.set_apns_token(None)
-    assert user.pinpoint_client.mock_calls == [mock.call.delete_user_endpoint(user.id, 'APNS')]
+    assert user.pinpoint_client.mock_calls == [call.delete_user_endpoint(user.id, 'APNS')]
+
+
+def test_get_apns_token(user):
+    # test not found response
+    with patch.object(user, 'pinpoint_client', **{'get_user_endpoints.return_value': {}}) as pc_mock:
+        assert user.get_apns_token() is None
+    assert pc_mock.mock_calls == [call.get_user_endpoints(user.id, 'APNS')]
+
+    # test found response. A few of these aren't actually uuid4's in reality, just random strings
+    address = str(uuid4())
+    sample_resp = {
+        str(uuid4()): {
+            'Address': address,
+            'ApplicationId': str(uuid4()),
+            'ChannelType': 'APNS',
+            'CohortId': '83',
+            'CreationDate': '2020-06-10T23:51:30.033Z',
+            'EffectiveDate': '2020-06-10T23:51:30.033Z',
+            'EndpointStatus': 'ACTIVE',
+            'Id': str(uuid4()),
+            'OptOut': 'NONE',
+            'RequestId': str(uuid4()),
+            'User': {'UserId': user.id},
+        }
+    }
+    with patch.object(user, 'pinpoint_client', **{'get_user_endpoints.return_value': sample_resp}) as pc_mock:
+        assert user.get_apns_token() == address
+    assert pc_mock.mock_calls == [call.get_user_endpoints(user.id, 'APNS')]
