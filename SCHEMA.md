@@ -55,6 +55,8 @@ We have no local secondary indexes.
 | `user/{userId}` | `follower/{userId}` | `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `user/{userId}` | `follower/{userId}/firstStory` | `1` | `postId` | | | `follower/{followerUserId}/firstStory` | `{expiresAt}` |
 | `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | `user/trending` | `{score}` | | | | | | | | | `user/trending` | `{score}` |
+| `userEmail/{email}` | `-` | `0` | `userId` |
+| `userPhoneNumber/{phoneNumber}` | `-` | `0` | `userId` |
 
 ### Notes
 

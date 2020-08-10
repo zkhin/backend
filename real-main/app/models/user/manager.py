@@ -11,7 +11,7 @@ from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
 
-from .dynamo import UserDynamo
+from .dynamo import UserContactAttributeDynamo, UserDynamo
 from .enums import UserStatus
 from .exceptions import UserAlreadyExists, UserValidationException
 from .model import User
@@ -59,6 +59,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 setattr(self, f'{client_name}_client', clients[client_name])
         if 'dynamo' in clients:
             self.dynamo = UserDynamo(clients['dynamo'])
+            self.email_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userEmail')
+            self.phone_number_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userPhoneNumber')
         self.validate = UserValidate()
         self.placeholder_photos_directory = placeholder_photos_directory
 
@@ -355,3 +357,19 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.decrement_post_archived_count(user_id)
         if old_status == PostStatus.COMPLETED:
             self.dynamo.decrement_post_count(user_id)
+
+    def on_user_contact_attribute_change_update_subitem(
+        self, attr_name, dynamo_lib_name, user_id, new_item=None, old_item=None
+    ):
+        dynamo_lib = getattr(self, dynamo_lib_name)
+        if new_value := (new_item or {}).get(attr_name):
+            dynamo_lib.add(new_value, user_id)
+        if old_value := (old_item or {}).get(attr_name):
+            dynamo_lib.delete(old_value, user_id)
+
+    on_user_email_change_update_subitem = partialmethod(
+        on_user_contact_attribute_change_update_subitem, 'email', 'email_dynamo'
+    )
+    on_user_phone_number_change_update_subitem = partialmethod(
+        on_user_contact_attribute_change_update_subitem, 'phoneNumber', 'phone_number_dynamo'
+    )

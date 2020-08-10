@@ -224,6 +224,20 @@ register(
 )
 register(
     'user',
+    'profile',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    user_manager.on_user_email_change_update_subitem,
+    {'email': None},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    user_manager.on_user_phone_number_change_update_subitem,
+    {'phoneNumber': None},
+)
+register(
+    'user',
     'follower',
     ['INSERT', 'MODIFY', 'REMOVE'],
     feed_manager.on_user_follow_status_change_sync_feed,

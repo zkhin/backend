@@ -263,3 +263,33 @@ def test_on_post_status_change_sync_counts_old_status(
     user.refresh_item()
     for col in count_cols:
         assert user.item.get(col, 0) == (0 if col == count_col_decremented else 1)
+
+
+@pytest.mark.parametrize(
+    'method_name, attr_name, dynamo_lib_name',
+    [
+        ['on_user_email_change_update_subitem', 'email', 'email_dynamo'],
+        ['on_user_phone_number_change_update_subitem', 'phoneNumber', 'phone_number_dynamo'],
+    ],
+)
+def test_on_user_contact_attribute_change_update_subitem(
+    user_manager, user, method_name, attr_name, dynamo_lib_name
+):
+    # test adding for the first time
+    new_item = {**user.item, attr_name: 'the-value'}
+    with patch.object(user_manager, dynamo_lib_name) as dynamo_lib_mock:
+        getattr(user_manager, method_name)(user.id, new_item=new_item)
+    assert dynamo_lib_mock.mock_calls == [call.add('the-value', user.id)]
+
+    # test changing to a different value
+    old_item = new_item.copy()
+    new_item = {**old_item, attr_name: 'new-value'}
+    with patch.object(user_manager, dynamo_lib_name) as dynamo_lib_mock:
+        getattr(user_manager, method_name)(user.id, new_item=new_item, old_item=old_item)
+    assert dynamo_lib_mock.mock_calls == [call.add('new-value', user.id), call.delete('the-value', user.id)]
+
+    # test deleting the value
+    old_item = new_item.copy()
+    with patch.object(user_manager, dynamo_lib_name) as dynamo_lib_mock:
+        getattr(user_manager, method_name)(user.id, old_item=old_item)
+    assert dynamo_lib_mock.mock_calls == [call.delete('new-value', user.id)]
