@@ -328,6 +328,8 @@ def test_add_image_post_with_image_data_processing_error(user, post_manager, gra
     assert post.item['postedByUserId'] == user.id
     assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['postStatus'] == PostStatus.ERROR
+    assert post.item['postStatusReason'].startswith('Unable to decode native jpeg data for post')
+    assert post.id in post.item['postStatusReason']
 
 
 def test_add_image_post_with_options(post_manager, album, user):
@@ -512,14 +514,15 @@ def test_set_post_status_to_error(post_manager, user_manager, user):
     # create a COMPLETED post, verify cannot transition it to ERROR
     post = post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
     with pytest.raises(PostException, match='PENDING'):
-        post.error()
+        post.error('this reason')
 
     # add a PENDING post, transition it to ERROR, verify all good
     post = post_manager.add_post(user, 'pid', PostType.IMAGE)
-    post.error()
+    reason = 'just because'
+    post.error(reason)
     assert post.item['postStatus'] == PostStatus.ERROR
-    post.refresh_item()
-    assert post.item['postStatus'] == PostStatus.ERROR
+    assert post.item['postStatusReason'] == reason
+    assert post.item == post.refresh_item().item
 
 
 def test_record_views(post_manager, user, user2, posts, caplog):

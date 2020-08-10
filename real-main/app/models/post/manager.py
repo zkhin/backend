@@ -185,9 +185,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             if image_data := image_input.get('imageData'):
                 try:
                     post.process_image_upload(image_data=image_data, now=now)
-                except PostException as err:
+                except Exception as err:
+                    post.error(str(err))
+                    if not isinstance(err, PostException):
+                        raise err
                     logger.warning(str(err))
-                    post.error()
 
         return post
 

@@ -67,9 +67,11 @@ def image_post_uploaded(event, context):
 
     try:
         post.process_image_upload()
-    except PostException as err:
+    except Exception as err:
+        post.error(str(err))
+        if not isinstance(err, PostException):
+            raise err
         logger.warning(str(err))
-        post.error()
 
 
 @handler_logging
@@ -102,9 +104,11 @@ def video_post_uploaded(event, context):
 
     try:
         post.start_processing_video_upload()
-    except PostException as err:
+    except Exception as err:
+        post.error(str(err))
+        if not isinstance(err, PostException):
+            raise err
         logger.warning(str(err))
-        post.error()
 
 
 @handler_logging
@@ -131,6 +135,8 @@ def video_post_processed(event, context):
 
     try:
         post.finish_processing_video_upload()
-    except PostException as err:
+    except Exception as err:
+        post.error(str(err))
+        if not isinstance(err, PostException):
+            raise err
         logger.warning(str(err))
-        post.error()

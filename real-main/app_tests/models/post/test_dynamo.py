@@ -205,6 +205,37 @@ def test_set_post_status(post_dynamo):
         post_dynamo.set_post_status(org_post_item, PostStatus.ARCHIVED, album_rank=0.5)
 
 
+def test_set_post_status_status_reason(post_dynamo):
+    user_id, post_id = str(uuid4()), str(uuid4())
+
+    # add a post, verify starts pending
+    org_post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='lore ipsum')
+    assert post_dynamo.get_post(post_id) == org_post_item
+    assert org_post_item['postStatus'] == PostStatus.PENDING
+
+    # set the status to something without a reason
+    post_item = post_dynamo.set_post_status(org_post_item, 'yup')
+    assert post_dynamo.get_post(post_id) == post_item
+    assert 'postStatusReason' not in post_item
+
+    # set the status to something with a reason
+    reason = 'because I said so'
+    post_item = post_dynamo.set_post_status(org_post_item, 'nope', status_reason=reason)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['postStatusReason'] == reason
+
+    # set the status to something else with a different reason
+    reason = 'why not?'
+    post_item = post_dynamo.set_post_status(org_post_item, 'ok', status_reason=reason)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['postStatusReason'] == reason
+
+    # set the status to something without a reason, should clear it out
+    post_item = post_dynamo.set_post_status(org_post_item, 'sure')
+    assert post_dynamo.get_post(post_id) == post_item
+    assert 'postStatusReason' not in post_item
+
+
 def test_set_post_status_with_expires_at_and_album_id(post_dynamo):
     post_id = 'my-post-id'
     user_id = 'my-user-id'

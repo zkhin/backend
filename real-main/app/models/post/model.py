@@ -348,10 +348,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         self.build_image_thumbnails()
         self.complete()
 
-    def error(self):
+    def error(self, reason):
         if self.status not in (PostStatus.PENDING, PostStatus.PROCESSING):
             raise PostException('Only posts with status PENDING or PROCESSING may transition to ERROR')
-        self.item = self.dynamo.set_post_status(self.item, PostStatus.ERROR)
+        self.item = self.dynamo.set_post_status(self.item, PostStatus.ERROR, status_reason=reason)
         return self
 
     def complete(self, now=None):

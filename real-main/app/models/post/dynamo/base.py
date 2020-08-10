@@ -147,7 +147,7 @@ class PostDynamo:
     def increment_viewed_by_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'viewedByCount')
 
-    def set_post_status(self, post_item, status, original_post_id=None, album_rank=None):
+    def set_post_status(self, post_item, status, status_reason=None, original_post_id=None, album_rank=None):
         album_id = post_item.get('albumId')
 
         assert (album_rank is not None) is bool(
@@ -156,6 +156,7 @@ class PostDynamo:
         album_rank = album_rank if album_rank is not None else -1
 
         exp_sets = ['postStatus = :postStatus', 'gsiA2SortKey = :gsia2sk']
+        exp_removes = []
         exp_values = {
             ':postStatus': status,
             ':gsia2sk': f'{status}/{post_item["postedAt"]}',
@@ -169,19 +170,27 @@ class PostDynamo:
             exp_sets.append('gsiK3SortKey = :ar')
             exp_values[':ar'] = album_rank
 
+        if status_reason:
+            exp_sets.append('postStatusReason = :psr')
+            exp_values[':psr'] = status_reason
+        else:
+            exp_removes.append('postStatusReason')
+
         if 'expiresAt' in post_item:
             exp_sets.append('gsiA1SortKey = :gsiA1SortKey')
             exp_values[':gsiA1SortKey'] = f'{status}/{post_item["expiresAt"]}'
 
-        query_kwargs = {
-            'Key': self.pk(post_item['postId']),
-            'UpdateExpression': 'SET ' + ', '.join(exp_sets),
-            'ExpressionAttributeValues': exp_values,
-        }
-
         # the setAsUserPhoto attr is not needed after reaching COMPLETED, so delete it if it exists
         if status == PostStatus.COMPLETED:
-            query_kwargs['UpdateExpression'] += ' REMOVE setAsUserPhoto'
+            exp_removes.append('setAsUserPhoto')
+
+        query_kwargs = {
+            'Key': self.pk(post_item['postId']),
+            'UpdateExpression': (
+                'SET ' + ', '.join(exp_sets) + (' REMOVE ' + ', '.join(exp_removes) if exp_removes else '')
+            ),
+            'ExpressionAttributeValues': exp_values,
+        }
 
         return self.client.update_item(query_kwargs)
 

@@ -446,21 +446,20 @@ def test_serailize(user, post, user_manager):
 def test_error_failure(post_manager, post):
     # verify can't change a completed post to error
     with pytest.raises(PostException, match='PENDING'):
-        post.error()
+        post.error('not used')
 
 
 def test_error_pending_post(post_manager, user):
     # create a pending post
     post = post_manager.add_post(user, 'pid2', PostType.IMAGE)
     assert post.item['postStatus'] == PostStatus.PENDING
+    assert 'postStatusReason' not in post.item['postStatus']
 
     # error it out, verify in-mem copy got marked as such
-    post.error()
+    post.error('just because')
     assert post.item['postStatus'] == PostStatus.ERROR
-
-    # verify error state saved to DB
-    post.refresh_item()
-    assert post.item['postStatus'] == PostStatus.ERROR
+    assert post.item['postStatusReason'] == 'just because'
+    assert post.item == post.refresh_item().item
 
 
 def test_error_processing_post(post_manager, user):
@@ -470,14 +469,13 @@ def test_error_processing_post(post_manager, user):
     # manually mark the Post as being processed
     post.item = post.dynamo.set_post_status(post.item, PostStatus.PROCESSING)
     assert post.item['postStatus'] == PostStatus.PROCESSING
+    assert 'postStatusReason' not in post.item['postStatus']
 
     # error it out, verify in-mem copy got marked as such
-    post.error()
+    post.error('of course')
     assert post.item['postStatus'] == PostStatus.ERROR
-
-    # verify error state saved to DB
-    post.refresh_item()
-    assert post.item['postStatus'] == PostStatus.ERROR
+    assert post.item['postStatusReason'] == 'of course'
+    assert post.item == post.refresh_item().item
 
 
 def test_set_album_errors(album_manager, post_manager, user_manager, post, post_with_media, user):
