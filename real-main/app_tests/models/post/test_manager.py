@@ -128,7 +128,7 @@ def test_add_text_only_post(post_manager, user):
     assert post.item['textTags'] == []
     assert post.item['postStatus'] == PostStatus.COMPLETED
     assert 'expiresAt' not in post.item
-    assert post.image_item is None
+    assert not post.image_item
 
 
 def test_add_text_with_tags_post(post_manager, user):
@@ -214,7 +214,7 @@ def test_add_video_post_minimal(post_manager, user):
     assert 'text' not in post.item
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
-    assert post.image_item is None
+    assert not post.image_item
 
 
 def test_add_video_post_maximal(post_manager, user):
@@ -252,14 +252,14 @@ def test_add_video_post_maximal(post_manager, user):
     assert post.item['text'] == text
     assert len(post.item['textTags']) == 1
     assert post.item['expiresAt'] == expires_at.to_iso8601_string()
-    assert post.image_item is None
+    assert not post.image_item
     assert post.item['commentsDisabled'] is True
     assert post.item['likesDisabled'] is True
     assert post.item['sharingDisabled'] is True
     assert post.item['verificationHidden'] is True
 
 
-def test_add_image_post(post_manager, user):
+def test_add_image_post_no_image_input(post_manager, user):
     post_id = 'pid'
     now = pendulum.now('utc')
 
@@ -275,8 +275,7 @@ def test_add_image_post(post_manager, user):
     assert 'text' not in post.item
     assert 'textTags' not in post.item
     assert 'expiresAt' not in post.item
-    assert post.image_item['partitionKey'] == post.item['partitionKey']
-    assert post.image_item['sortKey'] == 'image'
+    assert not post.image_item
 
 
 def test_add_image_post_text_empty_string(post_manager, user):
@@ -291,8 +290,7 @@ def test_add_image_post_text_empty_string(post_manager, user):
     assert post.id == post_id
     assert 'text' not in post.item
     assert 'textTags' not in post.item
-    assert post.image_item['partitionKey'] == post.item['partitionKey']
-    assert post.image_item['sortKey'] == 'image'
+    assert not post.image_item
 
 
 def test_add_image_post_with_image_data(user, post_manager, grant_data_b64):

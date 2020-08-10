@@ -164,25 +164,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 set_as_user_photo=set_as_user_photo,
             )
         ]
-        if post_type == PostType.IMAGE:
-            # 'image_input' is straight from graphql, format dictated by schema
-            image_input = image_input or {}
-            transacts.append(
-                self.image_dynamo.transact_add(
-                    post_id,
-                    crop=image_input.get('crop'),
-                    image_format=image_input.get('imageFormat'),
-                    original_format=image_input.get('originalFormat'),
-                    taken_in_real=image_input.get('takenInReal'),
-                )
-            )
         self.dynamo.client.transact_write_items(transacts)
-
-        if post_type == PostType.IMAGE:
-            # 'image_input' is straight from graphql, format dictated by schema
-            if original_metadata := (image_input or {}).get('originalMetadata'):
-                self.original_metadata_dynamo.add(post_id, original_metadata)
-
         post_item = self.dynamo.get_post(post_id, strongly_consistent=True)
         post = self.init_post(post_item)
 
@@ -190,9 +172,21 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if post.type == PostType.TEXT_ONLY:
             post.complete(now=now)
 
-        if post.type == PostType.IMAGE:
+        if post.type == PostType.IMAGE and image_input:
+            # 'image_input' is straight from graphql, format dictated by schema
+            image_attributes = {
+                'crop': image_input.get('crop'),
+                'image_format': image_input.get('imageFormat'),
+                'original_format': image_input.get('originalFormat'),
+                'taken_in_real': image_input.get('takenInReal'),
+            }
+            post._image_item = self.image_dynamo.set_initial_attributes(post_id, **image_attributes)
+
+            if original_metadata := image_input.get('originalMetadata'):
+                self.original_metadata_dynamo.add(post_id, original_metadata)
+
+            # if the upload included the image data, complete the post immediately
             if image_data := image_input.get('imageData'):
-                post.refresh_image_item(strongly_consistent=True)
                 try:
                     post.process_image_upload(image_data=image_data, now=now)
                 except PostException as err:

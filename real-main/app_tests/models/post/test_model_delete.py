@@ -42,7 +42,9 @@ def completed_post_with_media(post_manager, user, image_data_b64):
 
 @pytest.fixture
 def post_with_media(post_manager, user):
-    yield post_manager.add_post(user, 'pid4', PostType.IMAGE, text='t', image_input={'originalMetadata': '{}'})
+    yield post_manager.add_post(
+        user, 'pid4', PostType.IMAGE, text='t', image_input={'originalMetadata': '{}', 'imageFormat': 'JPEG'}
+    )
 
 
 def test_delete_completed_text_only_post_with_expiration(post_manager, post_with_expiration, user_manager):
@@ -93,17 +95,13 @@ def test_delete_pending_media_post(post_manager, post_with_media, user_manager):
     post.refresh_item()
     post.refresh_image_item()
 
-    assert post.item is None
-    assert post.image_item is None
+    assert not post.item
+    assert not post.image_item
     assert post_manager.original_metadata_dynamo.get(post_with_media.id) is None
 
     # check calls to mocked out managers
-    assert post.comment_manager.mock_calls == [
-        mock.call.delete_all_on_post(post.id),
-    ]
-    assert post.like_manager.mock_calls == [
-        mock.call.dislike_all_of_post(post.id),
-    ]
+    assert post.comment_manager.mock_calls == [mock.call.delete_all_on_post(post.id)]
+    assert post.like_manager.mock_calls == [mock.call.dislike_all_of_post(post.id)]
     assert post.follower_manager.mock_calls == []
 
 
@@ -128,8 +126,8 @@ def test_delete_completed_media_post(post_manager, completed_post_with_media, us
     post.refresh_item()
     post.refresh_image_item()
 
-    assert post.item is None
-    assert post.image_item is None
+    assert not post.item
+    assert not post.image_item
 
     # check calls to mocked out managers
     assert post.comment_manager.mock_calls == [

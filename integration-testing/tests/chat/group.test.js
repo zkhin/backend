@@ -69,7 +69,7 @@ test('Create and edit a group chat', async () => {
   const messageIdSystem1 = chat.messages.items[1].messageId
 
   // check we have the chat
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.userId).toBe(ourUserId)
   expect(resp.data.self.chatCount).toBe(1)
@@ -99,6 +99,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // check other2 sees both those messages
+  await misc.sleep(2000)
   resp = await other2Client.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messageCount).toBe(5)
@@ -117,6 +118,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.editGroupChat.name).toBe('new name')
 
   // check we see the updated name and the messages
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.name).toBe('new name')
@@ -143,6 +145,7 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.editGroupChat.name).toBeNull()
 
   // check other1 sees the updated name
+  await misc.sleep(2000)
   resp = await other1Client.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.name).toBeNull()

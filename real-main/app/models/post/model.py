@@ -173,7 +173,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self
 
     def refresh_image_item(self, strongly_consistent=False):
-        self._image_item = self.image_dynamo.get(self.id, strongly_consistent=strongly_consistent)
+        self._image_item = self.image_dynamo.get(self.id, strongly_consistent=strongly_consistent) or {}
         return self
 
     def get_s3_image_path(self, size):
@@ -223,9 +223,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     def get_image_writeonly_url(self):
         assert self.type == PostType.IMAGE
-        # protect against this being called before dynamo index has converged
-        if not self.image_item:
-            return None
         size = image_size.NATIVE_HEIC if self.image_item.get('imageFormat') == 'HEIC' else image_size.NATIVE
         path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
@@ -527,7 +524,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self
 
     def set_is_verified(self):
-        assert self.image_item
         path = self.get_image_path(image_size.NATIVE)
         image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
         is_verified = self.post_verification_client.verify_image(

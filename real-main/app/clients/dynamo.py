@@ -78,6 +78,20 @@ class DynamoClient:
                 raise
             logger.warning(failure_warning)
 
+    def set_attributes(self, key, **attributes):
+        """
+        Set the given attributes for the given key.
+        If the item does not exist, create it.
+        """
+        assert attributes, 'Must provide at least one attribute to set'
+        kwargs = {
+            'Key': key,
+            'UpdateExpression': 'SET ' + ', '.join([f'{k} = :{k}' for k in attributes.keys()]),
+            'ExpressionAttributeValues': {f':{k}': v for k, v in attributes.items()},
+            'ReturnValues': 'ALL_NEW',
+        }
+        return self.table.update_item(**kwargs).get('Attributes')
+
     def increment_count(self, key, attribute_name):
         "Best-effort attempt to increment a counter. Logs a WARNING upon failure."
         query_kwargs = {

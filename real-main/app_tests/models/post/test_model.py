@@ -408,7 +408,7 @@ def test_set_cant_create_contentless_post(post_manager, post):
 
     # verify the post is text-only
     assert org_text
-    assert post.image_item is None
+    assert not post.image_item
 
     # verify we can't set the text to null on that post
     with pytest.raises(PostException):
@@ -749,12 +749,7 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
     assert 'native.heic' not in cloudfront_client.generate_presigned_url.call_args.args[0]
 
     # set the imageFormat to heic
-    query_kwargs = {
-        'Key': {'partitionKey': f'post/{post.id}', 'sortKey': 'image'},
-        'UpdateExpression': 'SET imageFormat = :im',
-        'ExpressionAttributeValues': {':im': 'HEIC'},
-    }
-    dynamo_client.update_item(query_kwargs)
+    dynamo_client.set_attributes({'partitionKey': f'post/{post.id}', 'sortKey': 'image'}, imageFormat='HEIC')
     post.refresh_image_item()
 
     # check a heic image post
