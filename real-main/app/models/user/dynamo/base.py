@@ -39,7 +39,7 @@ class UserDynamo:
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Item': {
-                'schemaVersion': 10,
+                'schemaVersion': 11,
                 'partitionKey': f'user/{user_id}',
                 'sortKey': 'profile',
                 'gsiA1PartitionKey': f'username/{username}',
