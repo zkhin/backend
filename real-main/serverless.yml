@@ -254,6 +254,16 @@ custom:
         name: ChatMemberships.batchGet
 
       - dataSource: DynamodbDataSource
+        name: Query.findUsers.batchGetByEmail
+        request: Query.findUsers/batchGetByEmail.request.vtl
+        response: Query.findUsers/batchGetByEmail.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: Query.findUsers.batchGetByPhoneNumber
+        request: Query.findUsers/batchGetByPhoneNumber.request.vtl
+        response: Query.findUsers/batchGetByPhoneNumber.response.vtl
+
+      - dataSource: DynamodbDataSource
         name: ChatMessages.batchGet
 
       - dataSource: NoneDataSource

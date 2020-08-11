@@ -1,0 +1,13 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+## trim down to a list of userIds
+#set ($userIds = $ctx.prev.result)
+#foreach ($item in $ctx.result.data.${dynamoTable})
+  #if (!$util.isNull($item) && !$userIds.contains($item.userId))
+    $util.qr($userIds.add($item.userId))
+  #end
+#end
+
+$util.toJson($userIds)

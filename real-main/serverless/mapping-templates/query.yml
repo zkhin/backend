@@ -25,6 +25,15 @@
   dataSource: DynamodbDataSource
 
 - type: Query
+  field: findUsers
+  kind: PIPELINE
+  request: Query.findUsers/before.request.vtl
+  response: Query.findUsers/after.response.vtl
+  functions:
+    - Query.findUsers.batchGetByEmail
+    - Query.findUsers.batchGetByPhoneNumber
+
+- type: Query
   field: post
   request: Query.post/before.request.vtl
   response: Query.post/after.response.vtl
