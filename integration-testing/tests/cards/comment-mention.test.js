@@ -20,9 +20,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('CommenttMention card generation and format, fullfilling and dismissing card', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient, , , , theirUsername] = await loginCache.getCleanLogin()
-  const [otherClient, otherUserId, , , otherUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient, username: theirUsername} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -94,9 +94,9 @@ test('CommenttMention card generation and format, fullfilling and dismissing car
 })
 
 test('CommenttMention card deletion on comment deletion', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client, , , , other1Username] = await loginCache.getCleanLogin()
-  const [other2Client, , , , other2Username] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, username: other1Username} = await loginCache.getCleanLogin()
+  const {client: other2Client, username: other2Username} = await loginCache.getCleanLogin()
 
   // we add a text-only post
   const postId = uuidv4()

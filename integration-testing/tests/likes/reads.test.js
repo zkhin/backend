@@ -24,7 +24,7 @@ afterAll(async () => await loginCache.reset())
 
 test('Cant request over 100 of any of the like lists', async () => {
   // we add a post
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, imageData}
   await ourClient.mutate({mutation: mutations.addPost, variables})
@@ -48,9 +48,9 @@ test('Cant request over 100 of any of the like lists', async () => {
 
 test('Order of users that have onymously liked a post', async () => {
   // us and two other private users
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -114,7 +114,7 @@ test('Order of users that have onymously liked a post', async () => {
 })
 
 test('Order of onymously liked posts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
@@ -145,7 +145,7 @@ test('Order of onymously liked posts', async () => {
 })
 
 test('Order of anonymously liked posts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
@@ -176,8 +176,8 @@ test('Order of anonymously liked posts', async () => {
 })
 
 test('Media objects show up correctly in lists of liked posts', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // add an image post
   const postId = uuidv4()
@@ -205,8 +205,8 @@ test('Media objects show up correctly in lists of liked posts', async () => {
 
 test('Like lists and counts are private to the owner of the post', async () => {
   // https://github.com/real-social-media/backend/issues/16
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

@@ -24,8 +24,8 @@ afterAll(async () => await loginCache.reset())
 
 test('Blocked user only see absolutely minimal profile of blocker via direct access', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -163,8 +163,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
 test('Blocked cannot see blocker in search results, blocker can see blocked in search results', async () => {
   // use and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // change our username to something without a dash https://github.com/Imcloug/Selfly-BackEnd/issues/48
   const ourUsername = 'TESTER' + misc.shortRandomString()
@@ -203,8 +203,8 @@ test('Blocked cannot see blocker in search results, blocker can see blocked in s
 
 test('Blocked cannot see blockers follower or followed users lists', async () => {
   // use and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -223,8 +223,8 @@ test('Blocked cannot see blockers follower or followed users lists', async () =>
 
 test('Blocked cannot see blockers posts or stories', async () => {
   // use and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -245,8 +245,8 @@ test('Blocked cannot see blockers posts or stories', async () => {
 
 test('Blocked cannot see blockers lists of likes', async () => {
   // use and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -265,8 +265,8 @@ test('Blocked cannot see blockers lists of likes', async () => {
 
 test('Blocked cannot see directly see blockers posts', async () => {
   // use and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})

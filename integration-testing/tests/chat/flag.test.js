@@ -18,9 +18,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Flag chat failures', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
 
   // we create a group chat with us and other1 in it
   const chatId = uuidv4()
@@ -58,8 +58,8 @@ test('Flag chat failures', async () => {
 })
 
 test('Flag chat success', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a direct chat with them
   const chatId = uuidv4()

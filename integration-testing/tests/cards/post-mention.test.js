@@ -20,9 +20,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('PostMention card generation and format for image post, fullfilling and dismissing card', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId, , , other1Username] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId, , , other2Username] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId, username: other1Username} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId, username: other2Username} = await loginCache.getCleanLogin()
 
   // we add an image post and tag both users
   const postId = uuidv4()
@@ -105,9 +105,9 @@ test('PostMention card generation and format for image post, fullfilling and dis
 })
 
 test('PostMention card generation for editing text-only post, post deletion', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId, , , other1Username] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId, , , other2Username] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId, username: other1Username} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId, username: other2Username} = await loginCache.getCleanLogin()
 
   // we add a text-only post and tag one user
   const postId = uuidv4()

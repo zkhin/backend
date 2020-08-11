@@ -22,7 +22,7 @@ afterAll(async () => await loginCache.reset())
 
 // expects the placeholder photos directory in the REAL-Themes bucket *not* to be set up
 test('Mutation.createCognitoOnlyUser with no placeholder photos in bucket fails softly', async () => {
-  const [client, userId, , , username] = await loginCache.getCleanLogin()
+  const {client, userId, username} = await loginCache.getCleanLogin()
 
   // reset the user to clear & re-initialize their presence from dynamo
   let resp = await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
@@ -42,7 +42,7 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   const placeholderPhotosDirectory = ''
   const placeholderPhotoCode = ''
 
-  const [client, userId, , , username] = await loginCache.getCleanLogin()
+  const {client, userId, username} = await loginCache.getCleanLogin()
 
   // reset the user to clear & re-initialize their presence from dynamo
   let resp = await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})

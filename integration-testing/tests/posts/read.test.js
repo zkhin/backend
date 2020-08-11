@@ -20,7 +20,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Filter User.posts by variour criteria', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const completedImagePostId = uuidv4()
   const pendingImagePostId = uuidv4()
   const completedTextOnlyPostId = uuidv4()

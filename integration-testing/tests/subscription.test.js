@@ -19,8 +19,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Notification trigger cannot be called from external graphql client', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // create a well-formed valid chat notification object
   const mutation = mutations.triggerNotification
@@ -41,8 +41,8 @@ test('Cannot subscribe to other users notifications', async () => {
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
   // the subscription next() method is never triggered
 
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // We both listen to notifictions on **our** user object
   const ourNotifications = []

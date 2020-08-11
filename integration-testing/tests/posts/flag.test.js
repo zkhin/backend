@@ -20,7 +20,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cant flag our own post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -40,8 +40,8 @@ test('Cant flag our own post', async () => {
 })
 
 test('Anybody can flag post of public user', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -55,8 +55,8 @@ test('Anybody can flag post of public user', async () => {
 })
 
 test('Cant flag a post if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -75,8 +75,8 @@ test('Cant flag a post if we are disabled', async () => {
 })
 
 test('Follower can flag post of private user, non-follower cannot', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -111,7 +111,7 @@ test('Follower can flag post of private user, non-follower cannot', async () => 
 })
 
 test('Cannot flag post that does not exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // try to flag a non-existent post
   const postId = uuidv4()
@@ -121,8 +121,8 @@ test('Cannot flag post that does not exist', async () => {
 })
 
 test('Post.flagStatus changes correctly when post is flagged', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -147,8 +147,8 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
 })
 
 test('Cannot double-flag a post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -167,8 +167,8 @@ test('Cannot double-flag a post', async () => {
 
 test('Cannot flag post of user that has blocked us', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -193,8 +193,8 @@ test('Cannot flag post of user that has blocked us', async () => {
 
 test('Cannot flag post of user we have blocked', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()

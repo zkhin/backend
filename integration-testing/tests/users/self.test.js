@@ -14,7 +14,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Query.self for user that exists, matches Query.user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   const selfItem = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
@@ -28,7 +28,7 @@ test('Query.self for user that exists, matches Query.user', async () => {
 })
 
 test('Query.self for user that does not exist', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // reset user to remove from dynamo
   await ourClient
@@ -44,7 +44,7 @@ test('Query.self for user that does not exist', async () => {
 })
 
 test('Query.user matches Query.self', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   const selfItem = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)

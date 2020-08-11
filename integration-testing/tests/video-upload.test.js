@@ -25,12 +25,12 @@ afterAll(async () => await loginCache.reset())
 test(
   'Upload video basic success',
   async () => {
-    const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+    const {client, userId} = await loginCache.getCleanLogin()
 
     // add a pending video post
     const postId = uuidv4()
     let variables = {postId, postType: 'VIDEO'}
-    let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+    let resp = await client.mutate({mutation: mutations.addPost, variables})
     expect(resp.data.addPost.postId).toBe(postId)
     expect(resp.data.addPost.postType).toBe('VIDEO')
     expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -39,10 +39,10 @@ test(
 
     // upload our video to that url
     await rp.put({url: videoUploadUrl, headers: videoHeaders, body: videoData})
-    await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
+    await misc.sleepUntilPostCompleted(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the basic parts of the post is as we expect
-    resp = await ourClient.query({query: queries.post, variables: {postId}})
+    resp = await client.query({query: queries.post, variables: {postId}})
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.postStatus).toBe('COMPLETED')
     expect(resp.data.post.videoUploadUrl).toBeNull()
@@ -62,7 +62,7 @@ test(
 
     // verify the video part of the post is all good
     const videoUrl = resp.data.post.video.urlMasterM3U8
-    expect(videoUrl).toContain(ourUserId)
+    expect(videoUrl).toContain(userId)
     expect(videoUrl).toContain(postId)
     expect(videoUrl).toContain('hls')
     expect(videoUrl).toContain('video')
@@ -102,12 +102,12 @@ test(
 test(
   'Create video post in album, move in and out',
   async () => {
-    const [ourClient] = await loginCache.getCleanLogin()
+    const {client} = await loginCache.getCleanLogin()
 
     // we add an album
     const albumId = uuidv4()
     let variables = {albumId, name: 'first'}
-    let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables})
+    let resp = await client.mutate({mutation: mutations.addAlbum, variables})
     expect(resp.data.addAlbum.albumId).toBe(albumId)
     expect(resp.data.addAlbum.postCount).toBe(0)
     expect(resp.data.addAlbum.postsLastUpdatedAt).toBeNull()
@@ -117,7 +117,7 @@ test(
     // add a pending video post to that album
     const postId = uuidv4()
     variables = {postId, postType: 'VIDEO', albumId}
-    resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+    resp = await client.mutate({mutation: mutations.addPost, variables})
     expect(resp.data.addPost.postId).toBe(postId)
     expect(resp.data.addPost.postType).toBe('VIDEO')
     expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -127,10 +127,10 @@ test(
 
     // upload our video to that url
     await rp.put({url: videoUploadUrl, headers: videoHeaders, body: videoData})
-    await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
+    await misc.sleepUntilPostCompleted(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the appears as we expect
-    resp = await ourClient.query({query: queries.post, variables: {postId}})
+    resp = await client.query({query: queries.post, variables: {postId}})
     expect(resp.data.post.postId).toBe(postId)
     expect(resp.data.post.postStatus).toBe('COMPLETED')
     expect(resp.data.post.videoUploadUrl).toBeNull()
@@ -138,7 +138,7 @@ test(
 
     // check the album
     await misc.sleep(2000)
-    resp = await ourClient.query({query: queries.album, variables: {albumId}})
+    resp = await client.query({query: queries.album, variables: {albumId}})
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(1)
     expect(resp.data.album.posts.items).toHaveLength(1)
@@ -153,13 +153,13 @@ test(
     expect(placeholderAlbumArt.url64p.split('?')[0]).not.toBe(postAlbumArt.url64p.split('?')[0])
 
     // remove the post from the album
-    resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId}})
+    resp = await client.mutate({mutation: mutations.editPostAlbum, variables: {postId}})
     expect(resp.data.editPostAlbum.postId).toBe(postId)
     expect(resp.data.editPostAlbum.album).toBeNull()
 
     // check the album
     await misc.sleep(2000)
-    resp = await ourClient.query({query: queries.album, variables: {albumId}})
+    resp = await client.query({query: queries.album, variables: {albumId}})
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(0)
     expect(resp.data.album.posts.items).toHaveLength(0)
@@ -173,13 +173,13 @@ test(
     expect(placeholderAlbumArt.url64p.split('?')[0]).toBe(albumArt.url64p.split('?')[0])
 
     // add the post from the album
-    resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})
+    resp = await client.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})
     expect(resp.data.editPostAlbum.postId).toBe(postId)
     expect(resp.data.editPostAlbum.album.albumId).toBe(albumId)
 
     // check the album
     await misc.sleep(2000)
-    resp = await ourClient.query({query: queries.album, variables: {albumId}})
+    resp = await client.query({query: queries.album, variables: {albumId}})
     expect(resp.data.album.albumId).toBe(albumId)
     expect(resp.data.album.postCount).toBe(1)
     expect(resp.data.album.posts.items).toHaveLength(1)

@@ -16,8 +16,8 @@ afterAll(async () => await loginCache.reset())
 
 test('User.blockedUsers, User.blockedStatus respond correctly to blocking and unblocking', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // verify we haven't blocked them
   let resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
@@ -56,16 +56,16 @@ test('User.blockedUsers, User.blockedStatus respond correctly to blocking and un
 })
 
 test('Unblocking a user we have not blocked is an error', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
   await expect(
     ourClient.mutate({mutation: mutations.unblockUser, variables: {userId: theirUserId}}),
   ).rejects.toThrow(/ClientError: .* has not blocked /)
 })
 
 test('Double blocking a user is an error', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -78,7 +78,7 @@ test('Double blocking a user is an error', async () => {
 })
 
 test('Trying to block or unblock yourself is an error', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   let variables = {userId: ourUserId}
   await expect(ourClient.mutate({mutation: mutations.blockUser, variables})).rejects.toThrow(
     /ClientError: Cannot block yourself/,
@@ -90,9 +90,9 @@ test('Trying to block or unblock yourself is an error', async () => {
 
 test('User.blockedUsers ordering, privacy', async () => {
   // us and two others
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we block both of them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: other1UserId}})
@@ -114,8 +114,8 @@ test('User.blockedUsers ordering, privacy', async () => {
 
 test('We can block & unblock a user that has blocked us', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they block us
   let resp = await theirClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})
@@ -131,8 +131,8 @@ test('We can block & unblock a user that has blocked us', async () => {
 })
 
 test('We cannot block a user if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
@@ -146,8 +146,8 @@ test('We cannot block a user if we are disabled', async () => {
 })
 
 test('We cannot unblock a user if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})

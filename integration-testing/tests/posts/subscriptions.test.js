@@ -24,7 +24,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('POST_COMPLETED notification triggers correctly posts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to notifications
   let notificationsCount = 0
@@ -117,7 +117,7 @@ test('POST_COMPLETED notification triggers correctly posts', async () => {
 })
 
 test('POST_ERROR notification triggers correctly posts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to notifications
   let notificationsCount = 0
@@ -185,7 +185,7 @@ test('POST_ERROR notification triggers correctly posts', async () => {
 })
 
 test('Post message triggers cannot be called from external graphql client', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // create an image post in pending state
   const postId = uuidv4()
@@ -208,8 +208,8 @@ test('Post message triggers cannot be called from external graphql client', asyn
 })
 
 test('Cannot subscribe to other users notifications', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // verify we cannot subscribe to their messages
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
@@ -239,7 +239,7 @@ test('Cannot subscribe to other users notifications', async () => {
 })
 
 test('Format for COMPLETED message notifications', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to post notifications
   const ourNotifications = []

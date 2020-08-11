@@ -20,8 +20,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Delete comments', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -83,8 +83,8 @@ test('Delete comments', async () => {
 })
 
 test('Delete someone elses comment on our post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -125,14 +125,14 @@ test('Delete someone elses comment on our post', async () => {
 })
 
 test('Cant delete a comment that doesnt exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   await expect(
     ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: uuidv4()}}),
   ).rejects.toThrow(/ClientError: No comment/)
 })
 
 test('Cant delete comments if our user is disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -156,8 +156,8 @@ test('Cant delete comments if our user is disabled', async () => {
 })
 
 test('Cant delete someone elses comment on someone elses post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -190,7 +190,7 @@ test('Cant delete someone elses comment on someone elses post', async () => {
 })
 
 test('Can delete comments even if we have comments disabled and the post has comments disabled', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -248,8 +248,8 @@ test('Can delete comments even if we have comments disabled and the post has com
 })
 
 test('Deleting comments in the presence of post views adjusts comment counts on post correctly', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

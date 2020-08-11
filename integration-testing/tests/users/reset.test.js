@@ -25,8 +25,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test("resetUser really releases the user's username", async () => {
-  const [ourClient, ourUserId, ourPassword] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, theirPassword] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, password: ourPassword} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, password: theirPassword} = await loginCache.getCleanLogin()
 
   // set our username
   const ourUsername = cognito.generateUsername()
@@ -83,8 +83,8 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   // we can't completely verify this. As such this is a best-effort test.
 
   // create us and another user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they follow us, we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -165,8 +165,8 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
 })
 
 test('resetUser deletes any likes we have placed', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -201,9 +201,9 @@ test('resetUser deletes any likes we have placed', async () => {
 
 test('resetUser deletes all blocks of us and by us', async () => {
   // us and two other users
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
 
   // we block one of them, and the other one blocks us
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: other1UserId}})
@@ -235,8 +235,8 @@ test('resetUser deletes all blocks of us and by us', async () => {
 })
 
 test('resetUser deletes users flags of posts', async () => {
-  const [ourClient, , , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -261,7 +261,7 @@ test('resetUser deletes users flags of posts', async () => {
 })
 
 test('resetUser with optional username intializes new user correctly', async () => {
-  const [client, userId, password, email] = await loginCache.getCleanLogin()
+  const {client, userId, password, email} = await loginCache.getCleanLogin()
   const newUsername = cognito.generateUsername()
 
   // reset our user
@@ -283,8 +283,8 @@ test('resetUser with optional username intializes new user correctly', async () 
 })
 
 test('resetUser deletes any comments we have added to posts', async () => {
-  const [ourClient, , , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -317,8 +317,8 @@ test('resetUser deletes any comments we have added to posts', async () => {
 })
 
 test('resetUser deletes any albums we have added', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we create an album
   const albumId = uuidv4()
@@ -338,9 +338,9 @@ test('resetUser deletes any albums we have added', async () => {
 })
 
 test('resetUser deletes all of our direct chats', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
   const [chatId1, chatId2] = [uuidv4(), uuidv4()]
 
   // we open up a direct chat with other1
@@ -374,8 +374,8 @@ test('resetUser deletes all of our direct chats', async () => {
 })
 
 test('resetUser causes us to leave group chats', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with them
   const [chatId, messageId] = [uuidv4(), uuidv4()]
@@ -420,7 +420,7 @@ test('resetUser causes us to leave group chats', async () => {
 })
 
 test('resetUser changes userStatus', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // check our status
   let resp = await ourClient.query({query: queries.self})
@@ -434,7 +434,7 @@ test('resetUser changes userStatus', async () => {
 })
 
 test('Can reset a disabled user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
@@ -461,8 +461,8 @@ test('Can reset a disabled user', async () => {
 })
 
 test('Delete a user', async () => {
-  const [ourClient, ourUserId] = await cognito.getAppSyncLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await cognito.getAppSyncLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // check we can query ok
   let resp = await ourClient.query({query: queries.self})
@@ -488,8 +488,8 @@ test('Delete a user', async () => {
 })
 
 test('Delete a user disabled user', async () => {
-  const [ourClient, ourUserId] = await cognito.getAppSyncLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await cognito.getAppSyncLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // check we can query ok
   let resp = await ourClient.query({query: queries.self})

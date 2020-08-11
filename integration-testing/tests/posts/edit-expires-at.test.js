@@ -22,7 +22,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cant edit Post.expiresAt for post that do not exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const variables = {
     postId: uuidv4(),
     expiresAt: moment().add(moment.duration('P1D')).toISOString(),
@@ -33,8 +33,8 @@ test('Cant edit Post.expiresAt for post that do not exist', async () => {
 })
 
 test('Cant edit Post.expiresAt for post that isnt ours', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // they add a post
@@ -50,7 +50,7 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
 })
 
 test('Cant set Post.expiresAt to datetime in the past', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -66,7 +66,7 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
 })
 
 test('Cant edit Post.expiresAt if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -87,7 +87,7 @@ test('Cant edit Post.expiresAt if we are disabled', async () => {
 })
 
 test('Cant set Post.expiresAt with datetime without timezone info', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -103,7 +103,7 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
 })
 
 test('Add and remove expiresAt from a Post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post without an expiresAt
@@ -141,7 +141,7 @@ test('Add and remove expiresAt from a Post', async () => {
 })
 
 test('Edit Post.expiresAt with UTC', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   const lifetime = 'P1D'
 
@@ -171,7 +171,7 @@ test('Edit Post.expiresAt with UTC', async () => {
 })
 
 test('Edit Post.expiresAt with non-UTC', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   const lifetime = 'P1D'
 
@@ -203,7 +203,7 @@ test('Edit Post.expiresAt with non-UTC', async () => {
 })
 
 test('Adding and clearing Post.expiresAt removes and adds it to users stories', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // add a post with no lifetime
@@ -238,8 +238,8 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
 })
 
 test('Clearing Post.expiresAt removes from first followed stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we follow them
@@ -269,9 +269,9 @@ test('Clearing Post.expiresAt removes from first followed stories', async () => 
 })
 
 test('Changing Post.expiresAt is reflected in first followed stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [otherClient, otherUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
   const theirPostId = uuidv4()
   const otherPostId = uuidv4()
 

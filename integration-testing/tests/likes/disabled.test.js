@@ -20,8 +20,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cannot like/dislike posts with likes disabled', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post with likes disabled
   const postId = uuidv4()
@@ -58,8 +58,8 @@ test('Cannot like/dislike posts with likes disabled', async () => {
 })
 
 test('Likes preservered through period with posts likes disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post with likes enabled
@@ -117,8 +117,8 @@ test('Likes preservered through period with posts likes disabled', async () => {
 })
 
 test('User disables likes, cannot like/dislike posts, nor can other users dislike/like their posts', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const ourPostId = uuidv4()
@@ -191,8 +191,8 @@ test('User disables likes, cannot like/dislike posts, nor can other users dislik
 })
 
 test('Verify likes preserved through period in which user disables their likes', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post

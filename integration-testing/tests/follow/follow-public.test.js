@@ -20,8 +20,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Follow & unfollow a public user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check we start in a NOT_FOLLOWING state
   let resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
@@ -51,8 +51,8 @@ test('Follow & unfollow a public user', async () => {
 })
 
 test('Cant follow someone if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
@@ -66,8 +66,8 @@ test('Cant follow someone if we are disabled', async () => {
 })
 
 test('Cant unfollow someone if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -85,8 +85,8 @@ test('Cant unfollow someone if we are disabled', async () => {
 })
 
 test('Try to double follow a user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them, goes through immediately
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -129,8 +129,8 @@ test('Try to double follow a user', async () => {
 })
 
 test('Try to unfollow a user we are not following', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // try to unfollow them
   await expect(
@@ -139,8 +139,8 @@ test('Try to unfollow a user we are not following', async () => {
 })
 
 test('When we stop following a public user, any likes of ours on their posts are unchanged', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})

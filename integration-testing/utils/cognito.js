@@ -160,7 +160,7 @@ const getAppSyncLogin = async (newUserPhone) => {
       : {mutation: mutations.createCognitoOnlyUser, variables: {username}},
   )
 
-  return [appSyncClient, userId, password, email, username]
+  return {client: appSyncClient, userId, password, email, username}
 }
 
 /**
@@ -189,7 +189,7 @@ class AppSyncLoginCache {
     // purposefully avoiding parallelism here so we can run more test suites in parrellel
     let login = this.dirtyLogins.pop()
     while (login) {
-      const [client, , , , username] = login
+      const {client, username} = login
       await client.clearStore()
       await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
       this.cleanLogins.push(login)
@@ -199,10 +199,10 @@ class AppSyncLoginCache {
 
   async reset() {
     // purposefully avoiding parallelism here so we can run more test suites in parrellel
-    this.cleanLogins.forEach(([client]) => client.mutate({mutation: mutations.resetUser}))
+    this.cleanLogins.forEach(({client}) => client.mutate({mutation: mutations.resetUser}))
     let login = this.dirtyLogins.pop()
     while (login) {
-      const [client] = login
+      const {client} = login
       await client.mutate({mutation: mutations.resetUser})
       this.cleanLogins.push(login)
       login = this.dirtyLogins.pop()

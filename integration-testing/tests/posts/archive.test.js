@@ -24,7 +24,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Archive an image post', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we upload an image post
   const postId = uuidv4()
@@ -72,7 +72,7 @@ test('Archive an image post', async () => {
 })
 
 test('Cant archive a post in PENDING status', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we create a post, leave it with pending status
   const postId = uuidv4()
@@ -88,7 +88,7 @@ test('Cant archive a post in PENDING status', async () => {
 })
 
 test('Cant archive a post or restore an archived post if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we create a post
   const postId = uuidv4()
@@ -124,7 +124,7 @@ test('Cant archive a post or restore an archived post if we are disabled', async
 })
 
 test('Archiving an image post does not affect image urls', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we uplaod an image post
   const postId = uuidv4()
@@ -152,7 +152,7 @@ test('Archiving an image post does not affect image urls', async () => {
 })
 
 test('Restoring an archived image post', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we upload an image post
   const postId = uuidv4()
@@ -188,7 +188,7 @@ test('Restoring an archived image post', async () => {
 })
 
 test('Attempts to restore invalid posts', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // verify can't restore a post that doens't exist
@@ -217,7 +217,7 @@ test('Attempts to restore invalid posts', async () => {
   expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
 
   // verify another user can't restore our archived our post
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   await expect(
     theirClient.mutate({
       mutation: mutations.restoreArchivedPost,
@@ -231,7 +231,7 @@ test('Attempts to restore invalid posts', async () => {
 })
 
 test('Post count reacts to user archiving posts', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // verify count starts at zero
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(0))
@@ -285,8 +285,8 @@ test('Post count reacts to user archiving posts', async () => {
 })
 
 test('Cant archive a post that is not ours', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -305,8 +305,8 @@ test('Cant archive a post that is not ours', async () => {
 
 test('When a post is archived, any likes of it disappear', async () => {
   // us and them, they add a post
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: mutations.addPost, variables})

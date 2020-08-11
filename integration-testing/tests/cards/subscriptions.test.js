@@ -19,7 +19,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Card message triggers cannot be called from external graphql client', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // verify we can't call the trigger method, even with well-formed input
   await expect(
@@ -39,8 +39,8 @@ test('Card message triggers cannot be called from external graphql client', asyn
 })
 
 test('Cannot subscribe to other users notifications', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we both try to subscribe to their messages
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that

@@ -16,8 +16,8 @@ afterAll(async () => await loginCache.reset())
 
 test('Follow a private user - approved', async () => {
   // us and a private user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -45,8 +45,8 @@ test('Follow a private user - approved', async () => {
 
 test('Follow a private user - denied', async () => {
   // us and a private user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -67,8 +67,8 @@ test('Follow a private user - denied', async () => {
 })
 
 test('Deny & then approve a preivously approved follow request', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -97,8 +97,8 @@ test('Deny & then approve a preivously approved follow request', async () => {
 
 test('Cancelling follow requests', async () => {
   // us and a private user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -140,14 +140,14 @@ test('Cancelling follow requests', async () => {
 
 test('Private user changing to public has follow requests taken care of', async () => {
   // new user for us, make us private
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // two other users
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // both request to follow us, we ignore one request and deny the other
   await other1Client.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})

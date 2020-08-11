@@ -24,7 +24,7 @@ afterAll(async () => await loginCache.reset())
 
 test('Edit post', async () => {
   // we create an image post
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
   expect(resp.data.addPost.postId).toBe(postId)
@@ -50,7 +50,7 @@ test('Edit post', async () => {
 })
 
 test('Edit post failures for for various scenarios', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // verify we can't edit a post that doesn't exist
@@ -74,7 +74,7 @@ test('Edit post failures for for various scenarios', async () => {
   ).rejects.toThrow('Empty edit requested')
 
   // verify another user can't edit it
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   await expect(
     theirClient.mutate({
       mutation: mutations.editPost,
@@ -99,10 +99,10 @@ test('Edit post failures for for various scenarios', async () => {
 })
 
 test('Edit post edits the copies of posts in followers feeds', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // a user that follows us
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   let resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
@@ -132,7 +132,7 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
 })
 
 test('Disable comments causes existing comments to disappear, then reappear when comments re-enabled', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -181,7 +181,7 @@ test('Disable comments causes existing comments to disappear, then reappear when
 })
 
 test('Edit post set likesDisabled', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -203,7 +203,7 @@ test('Edit post set likesDisabled', async () => {
 })
 
 test('Edit post set sharingDisabled', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -225,7 +225,7 @@ test('Edit post set sharingDisabled', async () => {
 })
 
 test('Edit post set verificationHidden', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // we add a post
@@ -247,9 +247,9 @@ test('Edit post set verificationHidden', async () => {
 })
 
 test('Edit post text ensure textTagged users is rewritten', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
-  const [, otherUserId, , , otherUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
+  const {userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
 
   // we add a post a tag
   let postId = uuidv4()

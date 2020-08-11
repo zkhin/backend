@@ -28,8 +28,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Post lifecycle, visibility and trending', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a text-only post
   const postId1 = uuidv4()
@@ -103,9 +103,9 @@ test('Post lifecycle, visibility and trending', async () => {
 })
 
 test('Non-owner views contribute to trending, filter by viewedStatus, reset & delete clear trending', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await cognito.getAppSyncLogin() // user is deleted in this test case
-  const [otherClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await cognito.getAppSyncLogin() // user is deleted in this test case
+  const {client: otherClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId1 = uuidv4()
@@ -216,9 +216,9 @@ test('Non-owner views contribute to trending, filter by viewedStatus, reset & de
 })
 
 test('Blocked, private post & user visibility of posts & users in trending', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-  const [otherClient, otherUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId1 = uuidv4()
@@ -287,8 +287,8 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
 })
 
 test('Posts that fail verification do not end up in trending', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a image post that fails verification
   const postId = uuidv4()
@@ -315,9 +315,9 @@ test('Posts that fail verification do not end up in trending', async () => {
 })
 
 test('Views of non-original posts contribute to the original post & user in trending', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [otherClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient} = await loginCache.getCleanLogin()
 
   // they add an image post that will pass verification
   const postId1 = uuidv4()

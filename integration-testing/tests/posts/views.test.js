@@ -23,9 +23,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Report post views', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we add two posts
   const postId1 = uuidv4()
@@ -82,7 +82,7 @@ test('Report post views', async () => {
 })
 
 test('Cannot report post views if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -102,8 +102,8 @@ test('Cannot report post views if we are disabled', async () => {
 })
 
 test('Post.viewedStatus', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we a posts
   const postId = uuidv4()
@@ -127,9 +127,9 @@ test('Post.viewedStatus', async () => {
 })
 
 test('Report post views on non-completed posts are ignored', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
 
   // add a pending post
   const postId1 = uuidv4()
@@ -170,9 +170,9 @@ test('Report post views on non-completed posts are ignored', async () => {
 })
 
 test('Post views are de-duplicated by user', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -212,7 +212,7 @@ test('Post views are de-duplicated by user', async () => {
 })
 
 test('Report post views error conditions', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // must report at least one view
   let variables = {postIds: []}
@@ -232,9 +232,9 @@ test('Report post views error conditions', async () => {
 })
 
 test('Post views on duplicate posts are viewed post and original post', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-  const [otherClient, otherUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   // we add an image post
   const ourPostId = uuidv4()

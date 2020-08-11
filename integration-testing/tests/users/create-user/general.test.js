@@ -17,7 +17,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Mutation.createCognitoOnlyUser with invalid username fails', async () => {
-  const [client, userId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // reset the user to clear their presence from dynamo
   let resp = await client.mutate({mutation: mutations.resetUser})
@@ -42,7 +42,7 @@ test('Mutation.createCognitoOnlyUser with invalid username fails', async () => {
 })
 
 test('User can login with username used in Mutation.createCognitoOnlyUser', async () => {
-  const [client, userId, password] = await loginCache.getCleanLogin()
+  const {client, userId, password} = await loginCache.getCleanLogin()
 
   // reset the user to clear their presence from dynamo
   let resp = await client.mutate({mutation: mutations.resetUser})
@@ -66,8 +66,8 @@ test('User can login with username used in Mutation.createCognitoOnlyUser', asyn
 })
 
 test('Username collision causes Mutation.createCognitoOnlyUser to fail', async () => {
-  const [theirClient, theirUserId, theirPassword] = await loginCache.getCleanLogin()
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, password: theirPassword} = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // get their username
   let resp = await theirClient.query({query: queries.self})
@@ -95,7 +95,7 @@ test('Username collision causes Mutation.createCognitoOnlyUser to fail', async (
 })
 
 test('Mutation.createCognitoOnlyUser saves fullName and can pull email from cognito, phone is null', async () => {
-  const [client, userId, , email] = await loginCache.getCleanLogin()
+  const {client, userId, email} = await loginCache.getCleanLogin()
 
   // reset the user to clear their presence from dynamo
   let resp = await client.mutate({mutation: mutations.resetUser})
@@ -116,7 +116,7 @@ test('Mutation.createCognitoOnlyUser saves fullName and can pull email from cogn
 
 test('Mutation.createCognitoOnlyUser can pull phone from cognito, if set', async () => {
   const phone = '+12125551212'
-  const [client, userId] = await cognito.getAppSyncLogin(phone)
+  const {client, userId} = await cognito.getAppSyncLogin(phone)
 
   // reset the user to clear their presence from dynamo
   let resp = await client.mutate({mutation: mutations.resetUser})

@@ -21,7 +21,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('No text tags', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // post with no text
   let variables = {postId: uuidv4()}
@@ -46,9 +46,9 @@ test('No text tags', async () => {
 })
 
 test('Lots of text tags, current username does not match tagged one', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
-  const [, otherUserId, , , otherUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
+  const {userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
 
   // add a post with a few tags, including a repeat
   let postId = uuidv4()
@@ -79,7 +79,7 @@ test('Lots of text tags, current username does not match tagged one', async () =
 })
 
 test('Changing username should not affect who is in tags', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
 
   // add a post in which we tag ourselves
   let postId = uuidv4()
@@ -109,26 +109,26 @@ test('Changing username should not affect who is in tags', async () => {
 test('Tags of usernames with special characters', async () => {
   // Allowed characters for usernames: alphanumeric, underscore and dot
   // Only testing one (dificult) case one here, unit tests will get all the corner cases
-  const [ourClient, ourUserId, , , ourOldUsername] = await loginCache.getCleanLogin()
+  const {client, userId, username: ourOldUsername} = await loginCache.getCleanLogin()
   const ourUsername = `._._${ourOldUsername}_.._`
-  let resp = await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
+  let resp = await client.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
   expect(resp.data.setUserDetails.username).toBe(ourUsername)
 
   // create a post and tag ourselves
   let postId = uuidv4()
   let text = `talking to myself @${ourUsername}-!?`
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, text}})
+  resp = await client.mutate({mutation: mutations.addPost, variables: {postId, text}})
   expect(resp.data.addPost.text).toBe(text)
   expect(resp.data.addPost.textTaggedUsers).toHaveLength(1)
   expect(resp.data.addPost.textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
-  expect(resp.data.addPost.textTaggedUsers[0].user.userId).toBe(ourUserId)
+  expect(resp.data.addPost.textTaggedUsers[0].user.userId).toBe(userId)
   expect(resp.data.addPost.textTaggedUsers[0].user.username).toBe(ourUsername)
 })
 
 test('Tagged user blocks caller', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
-  const [otherClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
+  const {client: otherClient} = await loginCache.getCleanLogin()
 
   // other adds a post that tags them
   let postId = uuidv4()

@@ -20,7 +20,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Add post no expiration', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
@@ -56,7 +56,7 @@ test('Add post no expiration', async () => {
 })
 
 test('Add post with expiration', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
   const text = 'zeds dead baby, zeds dead'
@@ -77,7 +77,7 @@ test('Add post with expiration', async () => {
 })
 
 test('Add post with text of empty string same as null text', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, text: ''}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
@@ -88,7 +88,7 @@ test('Add post with text of empty string same as null text', async () => {
 })
 
 test('Cannot add post with invalid lifetime', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const variables = {postId: uuidv4()}
 
   // malformed duration string
@@ -117,7 +117,7 @@ test('Cannot add post with invalid lifetime', async () => {
 })
 
 test('Mental health settings default values', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // no user-level settings set, system-level defaults should appear
   let variables = {postId: uuidv4()}
@@ -166,7 +166,7 @@ test('Mental health settings default values', async () => {
 })
 
 test('Mental health settings specify values', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // create a post, specify defaults
   let postId = uuidv4()
@@ -218,7 +218,7 @@ test('Mental health settings specify values', async () => {
 })
 
 test('Disabled user cannot add a post', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})

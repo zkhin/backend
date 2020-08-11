@@ -16,7 +16,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('getFollowe[d|r]Users cant request NOT_FOLLOWING', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   let variables = {userId: ourUserId, followStatus: 'NOT_FOLLOWING'}
   await ourClient.query({query: queries.followedUsers, variables, errorPolicy: 'all'}).then(({data, errors}) => {
     expect(errors.length).toBeTruthy()
@@ -30,12 +30,12 @@ test('getFollowe[d|r]Users cant request NOT_FOLLOWING', async () => {
 
 test('getFollowe[d|r]Users queries respond correctly for each followStatus', async () => {
   // two new private users
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   variables = {privacyStatus: 'PRIVATE'}
   resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -162,10 +162,10 @@ test('getFollowe[d|r]Users queries respond correctly for each followStatus', asy
 
 test('Get Followe[d|r] Users order', async () => {
   // us and three others
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
-  const [other3Client, other3UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
+  const {client: other3Client, userId: other3UserId} = await loginCache.getCleanLogin()
 
   // we follow all of them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: other1UserId}})
@@ -199,8 +199,8 @@ test('Get Followe[d|r] Users order', async () => {
 })
 
 test('getFollowe[d|r]Users queries only allow followStatus FOLLOWING when querying about other users', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, userId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId} = await loginCache.getCleanLogin()
 
   // we can see their FOLLOWING relationships
   let resp = await ourClient.query({query: queries.followedUsers, variables: {userId}})
@@ -244,8 +244,8 @@ test('getFollowe[d|r]Users queries only allow followStatus FOLLOWING when queryi
 
 test('getFollowe[d|r]Users queries correctly hide responses when querying about other private users', async () => {
   // another private user, don't follow them yet
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, userId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')

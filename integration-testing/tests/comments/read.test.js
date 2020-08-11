@@ -20,7 +20,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('One user adds multiple comments, ordering', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -73,8 +73,8 @@ test('One user adds multiple comments, ordering', async () => {
 })
 
 test('Comment viewed status reacts to views Post correctly', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -181,8 +181,8 @@ test('Comment viewed status reacts to views Post correctly', async () => {
 })
 
 test('Comments of private user on public post are visible to all', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they go private
   let variables = {privacyStatus: 'PRIVATE'}

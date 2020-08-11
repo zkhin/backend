@@ -23,7 +23,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Create a posts in an album, album post ordering', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -89,7 +89,7 @@ test('Create a posts in an album, album post ordering', async () => {
 })
 
 test('Cant create post in or move post into album that doesnt exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const albumId = uuidv4() // doesn't exist
 
   // verify we cannot create a post in that album
@@ -121,8 +121,8 @@ test('Cant create post in or move post into album that doesnt exist', async () =
 })
 
 test('Cant create post in or move post into an album thats not ours', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they create an album
   const albumId = uuidv4()
@@ -164,7 +164,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
 })
 
 test('Adding a post with PENDING status does not affect Album.posts until COMPLETED', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -210,7 +210,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
 })
 
 test('Add, remove, change albums for an existing post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add two albums
   const [albumId1, albumId2] = [uuidv4(), uuidv4()]
@@ -294,7 +294,7 @@ test('Add, remove, change albums for an existing post', async () => {
 
 // TODO: define behavior here. It's probably ok to let vido posts into albums, as they now have 'poster' images
 test.skip('Cant add video post to album (yet)', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add an albums
   const albumId = uuidv4()
@@ -318,7 +318,7 @@ test.skip('Cant add video post to album (yet)', async () => {
 })
 
 test('Adding an existing post to album not in COMPLETED status has no affect on Album.post & friends', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add an albums
   const albumId = uuidv4()
@@ -358,7 +358,7 @@ test('Adding an existing post to album not in COMPLETED status has no affect on 
 })
 
 test('Archiving a post removes it from Album.posts & friends, restoring it does not maintain rank', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add an album
   const albumId = uuidv4()
@@ -425,7 +425,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
 })
 
 test('Deleting a post removes it from Album.posts & friends', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add an albums
   const albumId = uuidv4()
@@ -465,8 +465,8 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
 })
 
 test('Edit album post order failures', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const [albumId, albumId2, postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4(), uuidv4()]
 
   // we add an album
@@ -537,7 +537,7 @@ test('Edit album post order failures', async () => {
 })
 
 test('Edit album post order', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const [albumId, postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
 
   // we add an album
@@ -671,7 +671,7 @@ test('Edit album post order', async () => {
 })
 
 test('Cannot edit post album if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()

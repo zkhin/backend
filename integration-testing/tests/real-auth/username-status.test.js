@@ -58,7 +58,7 @@ test('Invalid usernames', async () => {
 })
 
 test('Username availability', async () => {
-  const [, , , , takenUsername] = await loginCache.getCleanLogin()
+  const {username: takenUsername} = await loginCache.getCleanLogin()
 
   // not available
   qs = {username: takenUsername}

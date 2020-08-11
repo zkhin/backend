@@ -17,8 +17,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Only post owner can use viewedStatus with Post.commentsCount, others see null', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -46,8 +46,8 @@ test('Only post owner can use viewedStatus with Post.commentsCount, others see n
 })
 
 test('Adding comments: Post owners comments always viewed, others comments are unviewed', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -99,8 +99,8 @@ test('Adding comments: Post owners comments always viewed, others comments are u
 })
 
 test('Viewing posts: Post owners views clear the unviewed comment counter, others dont', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

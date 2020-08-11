@@ -21,8 +21,8 @@ afterAll(async () => await loginCache.reset())
 
 test('Blocking a user causes their onymous likes on our posts to dissapear', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -54,8 +54,8 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
 
 test('Blocking a user causes their anonymous likes on our posts to dissapear', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -82,8 +82,8 @@ test('Blocking a user causes their anonymous likes on our posts to dissapear', a
 
 test('Blocking a user that has requested to follow us causes their follow request to dissapear', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we go private
   let variables = {privacyStatus: 'PRIVATE'}
@@ -107,8 +107,8 @@ test('Blocking a user that has requested to follow us causes their follow reques
 
 test('Blocking a user that we have denied following to causes their follow request to dissapear', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we go private
   let variables = {privacyStatus: 'PRIVATE'}
@@ -135,8 +135,8 @@ test('Blocking a user that we have denied following to causes their follow reque
 
 test('Blocking a follower causes unfollowing, our posts in their feed and first story to disapear', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they follow us
   let resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
@@ -175,8 +175,8 @@ test('Blocking a follower causes unfollowing, our posts in their feed and first 
 
 test('Blocking a user that we have requested to follow us causes our follow request to dissapear', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they go private
   let variables = {privacyStatus: 'PRIVATE'}
@@ -200,8 +200,8 @@ test('Blocking a user that we have requested to follow us causes our follow requ
 
 test('Blocking a user that has denied our following to causes our follow request to dissapear', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they go private
   let variables = {privacyStatus: 'PRIVATE'}
@@ -228,8 +228,8 @@ test('Blocking a user that has denied our following to causes our follow request
 
 test('Blocking a user we follow causes unfollowing, their posts in feed and first story to disapear', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})

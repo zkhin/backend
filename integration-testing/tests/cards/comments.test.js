@@ -19,8 +19,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Comment card format, subscription notifications', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we subscribe to our cards
   const [resolvers, rejectors] = [[], []]
@@ -173,8 +173,8 @@ test('Comment card format, subscription notifications', async () => {
 })
 
 test('Comment cards are post-specific', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]

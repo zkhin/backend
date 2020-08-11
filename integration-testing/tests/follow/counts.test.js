@@ -15,8 +15,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Follow counts public user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check they have no followers or followeds
   let resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
@@ -37,7 +37,7 @@ test('Follow counts public user', async () => {
   expect(resp.data.user.followedCount).toBe(0)
   expect(resp.data.user.followedsCount).toBe(0)
 
-  // verify thier requested followers count didn't change
+  // verify their requested followers count didn't change
   resp = await theirClient.query({query: queries.user, variables: {userId: theirUserId}})
   expect(resp.data.user.followerCount).toBe(1)
   expect(resp.data.user.followersCount).toBe(1)
@@ -77,7 +77,7 @@ test('Follow counts public user', async () => {
 
 test('Follow counts private user', async () => {
   // create two new users, both private
-  const [u1Client, u1UserId] = await loginCache.getCleanLogin()
+  const {client: u1Client, userId: u1UserId} = await loginCache.getCleanLogin()
   let resp = await u1Client.mutate({
     mutation: mutations.setUserPrivacyStatus,
     variables: {privacyStatus: 'PRIVATE'},
@@ -86,7 +86,7 @@ test('Follow counts private user', async () => {
   expect(resp.data.setUserDetails.followedCount).toBe(0)
   expect(resp.data.setUserDetails.followerCount).toBe(0)
 
-  const [u2Client, u2UserId] = await loginCache.getCleanLogin()
+  const {client: u2Client, userId: u2UserId} = await loginCache.getCleanLogin()
   resp = await u2Client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
   expect(resp.data.setUserDetails.followedCount).toBe(0)

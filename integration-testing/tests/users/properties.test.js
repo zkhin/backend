@@ -25,97 +25,91 @@ describe('Read and write properties our our own profile', () => {
   // username is tested in the set-username.test.js
 
   test('followed/follwer status', async () => {
-    const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-    let resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    const {client, userId} = await loginCache.getCleanLogin()
+    let resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.followedStatus).toBe('SELF')
     expect(resp.data.user.followerStatus).toBe('SELF')
   })
 
   test('privacyStatus', async () => {
-    const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-    let resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    const {client, userId} = await loginCache.getCleanLogin()
+    let resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.privacyStatus).toBe('PUBLIC')
 
-    resp = await ourClient.mutate({
-      mutation: mutations.setUserPrivacyStatus,
-      variables: {privacyStatus: 'PRIVATE'},
-    })
+    resp = await client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
     expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
-    resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.privacyStatus).toBe('PRIVATE')
 
-    resp = await ourClient.mutate({
-      mutation: mutations.setUserPrivacyStatus,
-      variables: {privacyStatus: 'PUBLIC'},
-    })
+    resp = await client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PUBLIC'}})
     expect(resp.data.setUserDetails.privacyStatus).toBe('PUBLIC')
 
-    resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.privacyStatus).toBe('PUBLIC')
   })
 
   test('fullName and bio', async () => {
     const bio = "truckin'"
     const fullName = 'Hunter S.'
-    const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+    const {client, userId} = await loginCache.getCleanLogin()
 
-    let resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    let resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.bio).toBeNull()
     expect(resp.data.user.fullName).toBeNull()
 
     // set to some custom values
-    resp = await ourClient.mutate({mutation: mutations.setUserDetails, variables: {bio, fullName}})
+    resp = await client.mutate({mutation: mutations.setUserDetails, variables: {bio, fullName}})
     expect(resp.data.setUserDetails.bio).toBe(bio)
     expect(resp.data.setUserDetails.fullName).toBe(fullName)
 
-    resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.bio).toBe(bio)
     expect(resp.data.user.fullName).toBe(fullName)
 
     // clear out the custom values
-    resp = await ourClient.mutate({mutation: mutations.setUserDetails, variables: {bio: '', fullName: ''}})
+    resp = await client.mutate({mutation: mutations.setUserDetails, variables: {bio: '', fullName: ''}})
     expect(resp.data.setUserDetails.bio).toBeNull()
     expect(resp.data.setUserDetails.fullName).toBeNull()
 
-    resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    resp = await client.query({query: queries.user, variables: {userId}})
     expect(resp.data.user.bio).toBeNull()
     expect(resp.data.user.fullName).toBeNull()
   })
 })
 
 test('Disabled user cannot setUserDetails', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // disable ourselves
-  let resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.data.disableUser.userId).toBe(ourUserId)
+  let resp = await client.mutate({mutation: mutations.disableUser})
+  expect(resp.data.disableUser.userId).toBe(userId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify can't edit our details
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}})).rejects.toThrow(
+  await expect(client.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
 })
 
 test('setUserDetails without any arguments returns an error', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails})).rejects.toThrow(
+  const {client} = await loginCache.getCleanLogin()
+  await expect(client.mutate({mutation: mutations.setUserDetails})).rejects.toThrow(
     /ClientError: Called without any arguments/,
   )
 })
 
 test('Try to get user that does not exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
   const userId = uuidv4()
 
-  let resp = await ourClient.query({query: queries.user, variables: {userId}})
+  let resp = await client.query({query: queries.user, variables: {userId}})
   expect(resp.data.user).toBeNull()
 })
 
 test('Various photoPostId failures', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // verify can't set profile photo using post that doesn't exist
   let postId = 'post-id-dne'
@@ -178,22 +172,22 @@ test('Various photoPostId failures', async () => {
 })
 
 test('Set and delete our profile photo, using postId', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // check that it's not already set
-  let resp = await ourClient.query({query: queries.self})
+  let resp = await client.query({query: queries.self})
   expect(resp.data.self.photo).toBeNull()
 
   // create a post with an image that we can use as a profile pic
   const postId = uuidv4()
   let variables = {postId, imageData: grantDataB64, takenInReal: true}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  resp = await client.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.postType).toBe('IMAGE')
 
   // set our photo
-  resp = await ourClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
+  resp = await client.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
   let image = resp.data.setUserDetails.photo
   expect(image.url).toBeTruthy()
   expect(image.url64p).toBeTruthy()
@@ -202,7 +196,7 @@ test('Set and delete our profile photo, using postId', async () => {
   expect(image.url4k).toBeTruthy()
 
   // check that it is really set already set, and that root urls are same as before
-  resp = await ourClient.query({query: queries.self})
+  resp = await client.query({query: queries.self})
   expect(image.url.split('?')[0]).toBe(resp.data.self.photo.url.split('?')[0])
   expect(image.url64p.split('?')[0]).toBe(resp.data.self.photo.url64p.split('?')[0])
   expect(image.url480p.split('?')[0]).toBe(resp.data.self.photo.url480p.split('?')[0])
@@ -217,22 +211,22 @@ test('Set and delete our profile photo, using postId', async () => {
   await rp.head({uri: image.url64p, simple: true})
 
   // delete our photo
-  resp = await ourClient.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: ''}})
+  resp = await client.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: ''}})
   expect(resp.data.setUserDetails.photo).toBeNull()
 
   // check that it really got deleted
-  resp = await ourClient.query({query: queries.self})
+  resp = await client.query({query: queries.self})
   expect(resp.data.self.photo).toBeNull()
 })
 
 test('Read properties of another private user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // set up another user in cognito, mark them as private
   const theirBio = 'keeping calm and carrying on'
   const theirFullName = 'HG Wells'
   const theirPhone = '+15105551000'
-  const [theirClient, theirUserId, , theirEmail] = await cognito.getAppSyncLogin(theirPhone)
+  const {client: theirClient, userId: theirUserId, email: theirEmail} = await cognito.getAppSyncLogin(theirPhone)
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -335,13 +329,13 @@ test('Read properties of another private user', async () => {
 })
 
 test('Read properties of another public user', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // set up another user in cognito, leave them as public
   const theirBio = 'keeping calm and carrying on'
   const theirFullName = 'HG Wells'
   const theirPhone = '+14155551212'
-  const [theirClient, theirUserId, , theirEmail] = await cognito.getAppSyncLogin(theirPhone)
+  const {client: theirClient, userId: theirUserId, email: theirEmail} = await cognito.getAppSyncLogin(theirPhone)
   await theirClient.mutate({
     mutation: mutations.setUserDetails,
     variables: {bio: theirBio, fullName: theirFullName},
@@ -389,107 +383,107 @@ test('Read properties of another public user', async () => {
 })
 
 test('User language code - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // we should default to english
-  let resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+  let resp = await client.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.languageCode).toBe('en')
 
   // we change our language code
-  resp = await ourClient.mutate({mutation: mutations.setUserLanguageCode, variables: {languageCode: 'de'}})
+  resp = await client.mutate({mutation: mutations.setUserLanguageCode, variables: {languageCode: 'de'}})
   expect(resp.data.setUserDetails.languageCode).toBe('de')
 
   // check another user can't see our language
-  const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.languageCode).toBeNull()
 })
 
 test('User theme code - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // we should default to 'black.green'
-  let resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+  let resp = await client.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.themeCode).toBe('black.green')
 
   // we change our theme code
-  resp = await ourClient.mutate({mutation: mutations.setUserThemeCode, variables: {themeCode: 'green.orange'}})
+  resp = await client.mutate({mutation: mutations.setUserThemeCode, variables: {themeCode: 'green.orange'}})
   expect(resp.data.setUserDetails.themeCode).toBe('green.orange')
 
   // we go to private
-  resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+  resp = await client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // Check to ensure another rando *can* see our themeCode
   // This is necessary because profile pics are planned to have some styling based on chosen theme
-  const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.themeCode).toBe('green.orange')
 })
 
 test('User accepted EULA version - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // we should default to null
-  let resp = await ourClient.query({query: queries.self})
+  let resp = await client.query({query: queries.self})
   expect(resp.data.self.acceptedEULAVersion).toBeNull()
 
   // we change our accepted version
-  resp = await ourClient.mutate({
+  resp = await client.mutate({
     mutation: mutations.setUserAcceptedEULAVersion,
     variables: {version: '2019-11-14'},
   })
   expect(resp.data.setUserAcceptedEULAVersion.acceptedEULAVersion).toBe('2019-11-14')
 
   // check to make sure that version stuck
-  resp = await ourClient.query({query: queries.self})
+  resp = await client.query({query: queries.self})
   expect(resp.data.self.acceptedEULAVersion).toBe('2019-11-14')
 
   // check another user can't see our acepted version
-  const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: queries.user, variables: {userId: userId}})
   expect(resp.data.user.acceptedEULAVersion).toBeNull()
 
   // check we can null out accepted version
-  resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: ''}})
+  resp = await client.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: ''}})
   expect(resp.data.setUserAcceptedEULAVersion.acceptedEULAVersion).toBeNull()
 
   // disable ourselves
-  resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.data.disableUser.userId).toBe(ourUserId)
+  resp = await client.mutate({mutation: mutations.disableUser})
+  expect(resp.data.disableUser.userId).toBe(userId)
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can no longer edit the EULA
   await expect(
-    ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '42'}}),
+    client.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '42'}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 test('User commentsDisabled - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // we should default to false
-  let resp = await ourClient.query({query: queries.self})
+  let resp = await client.query({query: queries.self})
   expect(resp.data.self.commentsDisabled).toBe(false)
 
   // we change it
   let variables = {commentsDisabled: true}
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
+  resp = await client.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
   expect(resp.data.setUserDetails.commentsDisabled).toBe(true)
 
   // check to make sure that version stuck
-  resp = await ourClient.query({query: queries.self})
+  resp = await client.query({query: queries.self})
   expect(resp.data.self.commentsDisabled).toBe(true)
 
   // check another user can't see values
-  const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: queries.user, variables: {userId: userId}})
   expect(resp.data.user.commentsDisabled).toBeNull()
 })
 
 test('User likesDisabled - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to false
   await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.likesDisabled).toBe(false))
@@ -507,65 +501,65 @@ test('User likesDisabled - get, set, privacy', async () => {
 })
 
 test('User sharingDisabled - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // we should default to false
-  let resp = await ourClient.query({query: queries.self})
+  let resp = await client.query({query: queries.self})
   expect(resp.data.self.sharingDisabled).toBe(false)
 
   // we change it
   let variables = {sharingDisabled: true}
-  resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
+  resp = await client.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
   expect(resp.data.setUserDetails.sharingDisabled).toBe(true)
 
   // check to make sure that version stuck
-  resp = await ourClient.query({query: queries.self})
+  resp = await client.query({query: queries.self})
   expect(resp.data.self.sharingDisabled).toBe(true)
 
   // check another user can't see values
-  const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.sharingDisabled).toBeNull()
 })
 
 test('User verificationHidden - get, set, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // we should default to false
-  let resp = await ourClient.query({query: queries.self})
+  let resp = await client.query({query: queries.self})
   expect(resp.data.self.verificationHidden).toBe(false)
 
   // we change it
-  resp = await ourClient.mutate({
+  resp = await client.mutate({
     mutation: mutations.setUserMentalHealthSettings,
     variables: {verificationHidden: true},
   })
   expect(resp.data.setUserDetails.verificationHidden).toBe(true)
 
   // check to make sure that version stuck
-  resp = await ourClient.query({query: queries.self})
+  resp = await client.query({query: queries.self})
   expect(resp.data.self.verificationHidden).toBe(true)
 
   // check another user can't see values
-  const [theirClient] = await loginCache.getCleanLogin()
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.verificationHidden).toBeNull()
 })
 
 test('User setUserAPNSToken', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client, userId} = await loginCache.getCleanLogin()
 
   // reading the APNS token is purposefully left out of the api, so verification here is limited
 
   // set it
-  let resp = await ourClient.mutate({mutation: mutations.setUserAPNSToken, variables: {token: 'apns-token'}})
-  expect(resp.data.setUserAPNSToken.userId).toBe(ourUserId)
+  let resp = await client.mutate({mutation: mutations.setUserAPNSToken, variables: {token: 'apns-token'}})
+  expect(resp.data.setUserAPNSToken.userId).toBe(userId)
 
   // change it
-  resp = await ourClient.mutate({mutation: mutations.setUserAPNSToken, variables: {token: 'apns-token-other'}})
-  expect(resp.data.setUserAPNSToken.userId).toBe(ourUserId)
+  resp = await client.mutate({mutation: mutations.setUserAPNSToken, variables: {token: 'apns-token-other'}})
+  expect(resp.data.setUserAPNSToken.userId).toBe(userId)
 
   // delete it
-  resp = await ourClient.mutate({mutation: mutations.setUserAPNSToken, variables: {token: ''}})
-  expect(resp.data.setUserAPNSToken.userId).toBe(ourUserId)
+  resp = await client.mutate({mutation: mutations.setUserAPNSToken, variables: {token: ''}})
+  expect(resp.data.setUserAPNSToken.userId).toBe(userId)
 })

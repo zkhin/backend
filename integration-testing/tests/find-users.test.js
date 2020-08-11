@@ -16,30 +16,35 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Find users by email & phoneNumber too many', async () => {
-  const [ourClient, , , ourEmail] = await loginCache.getCleanLogin()
-  const emails = Array(101).fill(ourEmail)
+  const {client, email} = await loginCache.getCleanLogin()
+  const emails = Array(101).fill(email)
   await misc.sleep(2000)
-  await expect(ourClient.query({query: queries.findUsers, variables: {emails}})).rejects.toThrow(
+  await expect(client.query({query: queries.findUsers, variables: {emails}})).rejects.toThrow(
     /Cannot submit more than 100 combined emails and phoneNumbers/,
   )
 })
 
 test('Find users can handle duplicate emails', async () => {
-  const [ourClient, ourUserId, , ourEmail, ourUsername] = await loginCache.getCleanLogin()
+  const {client, userId, email, username} = await loginCache.getCleanLogin()
   await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.findUsers, variables: {emails: [ourEmail, ourEmail]}})
+  await client
+    .query({query: queries.findUsers, variables: {emails: [email, email]}})
     .then(({data: {findUsers}}) => {
       expect(findUsers.items).toHaveLength(1)
-      expect(findUsers.items[0].userId).toBe(ourUserId)
-      expect(findUsers.items[0].username).toBe(ourUsername)
+      expect(findUsers.items[0].userId).toBe(userId)
+      expect(findUsers.items[0].username).toBe(username)
     })
 })
 
 test('Find users by email', async () => {
-  const [ourClient, ourUserId, , ourEmail, ourUsername] = await loginCache.getCleanLogin()
-  const [, other1UserId, , other1Email, other1Username] = await loginCache.getCleanLogin()
-  const [, other2UserId, , other2Email, other2Username] = await loginCache.getCleanLogin()
+  const {
+    client: ourClient,
+    userId: ourUserId,
+    email: ourEmail,
+    username: ourUsername,
+  } = await loginCache.getCleanLogin()
+  const {userId: other1UserId, email: other1Email, username: other1Username} = await loginCache.getCleanLogin()
+  const {userId: other2UserId, email: other2Email, username: other2Username} = await loginCache.getCleanLogin()
   const cmp = (a, b) => a.userId < b.userId
 
   // how each user will appear in search results, based on our query
@@ -72,9 +77,16 @@ test('Find users by email', async () => {
 })
 
 test('Find users by phone, and by phone and email', async () => {
-  const [ourClient, ourUserId, , ourEmail, ourUsername] = await loginCache.getCleanLogin()
+  const {
+    client: ourClient,
+    userId: ourUserId,
+    email: ourEmail,
+    username: ourUsername,
+  } = await loginCache.getCleanLogin()
   const theirPhone = '+15105551011'
-  const [, theirUserId, , theirEmail, theirUsername] = await cognito.getAppSyncLogin(theirPhone)
+  const {userId: theirUserId, email: theirEmail, username: theirUsername} = await cognito.getAppSyncLogin(
+    theirPhone,
+  )
   const cmp = (a, b) => a.userId < b.userId
 
   // how each user will appear in search results, based on our query

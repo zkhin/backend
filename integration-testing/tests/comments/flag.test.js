@@ -21,8 +21,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cant flag our own comment', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -47,9 +47,9 @@ test('Cant flag our own comment', async () => {
 })
 
 test('Anybody can flag a comment of private user on post of public user', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // they go private
   const privacyStatus = 'PRIVATE'
@@ -86,8 +86,8 @@ test('Anybody can flag a comment of private user on post of public user', async 
 })
 
 test('Cant flag a comment if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -111,8 +111,8 @@ test('Cant flag a comment if we are disabled', async () => {
 })
 
 test('Follower can flag comment on post of private user, non-follower cannot', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -168,8 +168,8 @@ test('Follower can flag comment on post of private user, non-follower cannot', a
 })
 
 test('Comments flagged by post owner are force-deleted', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -221,18 +221,18 @@ test('Comments flagged by post owner are force-deleted', async () => {
 })
 
 test('Cannot flag comment that does not exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // try to flag a non-existent post
   const commentId = uuidv4()
-  await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+  await expect(client.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
     /ClientError: Comment .* does not exist/,
   )
 })
 
 test('Cannot flag comment of user that has blocked us', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -265,8 +265,8 @@ test('Cannot flag comment of user that has blocked us', async () => {
 })
 
 test('Cannot flag comment of user we have blocked', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()

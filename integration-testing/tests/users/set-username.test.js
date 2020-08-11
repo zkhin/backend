@@ -17,7 +17,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('setting invalid username fails', async () => {
-  const [client] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
   const usernameTooShort = 'aa'
   const usernameTooLong = 'a'.repeat(31)
   const usernameBadChar = 'a!a'
@@ -35,7 +35,7 @@ test('setting invalid username fails', async () => {
 })
 
 test('changing username succeeds, then can use it to login in lowercase', async () => {
-  const [client, , password] = await loginCache.getCleanLogin()
+  const {client, password} = await loginCache.getCleanLogin()
   const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
   await client.mutate({mutation: mutations.setUsername, variables: {username}})
 
@@ -49,8 +49,8 @@ test('changing username succeeds, then can use it to login in lowercase', async 
 })
 
 test('collision on changing username fails, login username is not changed', async () => {
-  const [ourClient, , ourPassword] = await loginCache.getCleanLogin()
-  const [theirClient, , theirPassword] = await loginCache.getCleanLogin()
+  const {client: ourClient, password: ourPassword} = await loginCache.getCleanLogin()
+  const {client: theirClient, password: theirPassword} = await loginCache.getCleanLogin()
 
   const ourUsername = 'TESTERgotSOMEcase' + misc.shortRandomString()
   await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})

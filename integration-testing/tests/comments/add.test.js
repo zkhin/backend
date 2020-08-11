@@ -20,8 +20,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Add a comments', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -71,8 +71,8 @@ test('Add a comments', async () => {
 })
 
 test('Verify commentIds cannot be re-used ', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -93,7 +93,7 @@ test('Verify commentIds cannot be re-used ', async () => {
 })
 
 test('Cant add comments to post that doesnt exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const commentId = uuidv4()
   await expect(
     ourClient.mutate({mutation: mutations.addComment, variables: {commentId, postId: 'pid', text: 't'}}),
@@ -101,7 +101,7 @@ test('Cant add comments to post that doesnt exist', async () => {
 })
 
 test('Cant add comments if our user is disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -121,8 +121,8 @@ test('Cant add comments if our user is disabled', async () => {
 })
 
 test('Cant add comments to post with comments disabled', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post with comments disabled
   const postId = uuidv4()
@@ -139,8 +139,8 @@ test('Cant add comments to post with comments disabled', async () => {
 })
 
 test('Cant add comments to a post of a user that has blocked us, or a user we have blocked', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they block us
   let variables = {userId: ourUserId}
@@ -174,8 +174,8 @@ test('Cant add comments to a post of a user that has blocked us, or a user we ha
 })
 
 test('Cant add comments to a post of a private user unless were following them', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they go private
   let variables = {privacyStatus: 'PRIVATE'}

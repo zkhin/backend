@@ -14,8 +14,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cant accept or deny a follow request if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they go private
   const privacyStatus = 'PRIVATE'
@@ -43,8 +43,8 @@ test('Cant accept or deny a follow request if we are disabled', async () => {
 
 test('Try to double-accept a follow request', async () => {
   // us and a private user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -65,8 +65,8 @@ test('Try to double-accept a follow request', async () => {
 
 test('Try to double-deny a follow request', async () => {
   // us and a private user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
@@ -86,8 +86,8 @@ test('Try to double-deny a follow request', async () => {
 })
 
 test('Cant accept/deny non-existent follow requests', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
   await expect(
     ourClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: theirUserId}}),
   ).rejects.toThrow(/ClientError: .* has not requested /)
@@ -98,8 +98,8 @@ test('Cant accept/deny non-existent follow requests', async () => {
 
 test('Cant request to follow a user that has blocked us', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they block us
   let resp = await theirClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})
@@ -119,8 +119,8 @@ test('Cant request to follow a user that has blocked us', async () => {
 
 test('Cant request to follow a user that we have blocked', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})

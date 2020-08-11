@@ -19,8 +19,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Add messages to a direct chat', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId1, text1] = [uuidv4(), uuidv4(), 'hey this is msg 1']
@@ -110,8 +110,8 @@ test('Add messages to a direct chat', async () => {
 })
 
 test('Report chat views', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const [chatId, messageId1, messageId2, messageId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
 
   // they open up a chat with us
@@ -217,7 +217,7 @@ test('Report chat views', async () => {
 })
 
 test('Disabled user cannot add, edit, or delete chat messages', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with just us in it
   const chatId = uuidv4()
@@ -249,9 +249,9 @@ test('Disabled user cannot add, edit, or delete chat messages', async () => {
 })
 
 test('Cant add a message to a chat we are not in', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
   const [chatId, messageId] = [uuidv4(), uuidv4()]
 
   // they open up a chat with us
@@ -275,8 +275,8 @@ test('Cant add a message to a chat we are not in', async () => {
 })
 
 test('Tag users in a chat message', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
   const [chatId, messageId1, messageId2, messageId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
 
   // they open up a chat with us, with a tags in the message
@@ -325,9 +325,9 @@ test('Tag users in a chat message', async () => {
 })
 
 test('Edit chat message', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
@@ -390,9 +390,9 @@ test('Edit chat message', async () => {
 })
 
 test('Delete chat message', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
@@ -431,8 +431,8 @@ test('Delete chat message', async () => {
 })
 
 test('Deleting chat messages adjusts messages counts correctly', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
@@ -517,9 +517,9 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
 })
 
 test('User.chats sort order should react to message adds, but not to edits and deletes', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
 
   // other1 opens up a chat with us
   const [chatId1, messageId11] = [uuidv4(), uuidv4()]
@@ -587,8 +587,8 @@ test('User.chats sort order should react to message adds, but not to edits and d
 })
 
 test('User.chatsWithUnviewedMessages', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId1, messageId1] = [uuidv4(), uuidv4()]
@@ -672,8 +672,8 @@ test('User.chatsWithUnviewedMessages', async () => {
 })
 
 test('USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED subscription notifications', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to notifications
   let notificationsCount = 0

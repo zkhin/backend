@@ -23,8 +23,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Posts that are not within a day of expiring do not show up as a stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -52,8 +52,8 @@ test('Posts that are not within a day of expiring do not show up as a stories', 
 })
 
 test('Add a post that shows up as story', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -83,7 +83,7 @@ test('Add a post that shows up as story', async () => {
 })
 
 test('Add posts with images show up in stories', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
   const imageData = new Buffer.from(imageBytes).toString('base64')
 
@@ -113,7 +113,7 @@ test('Add posts with images show up in stories', async () => {
 })
 
 test('Stories are ordered by first-to-expire-first', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add three stories with various lifetimes
   const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]
@@ -138,9 +138,9 @@ test('Stories are ordered by first-to-expire-first', async () => {
 })
 
 test('Followed users with stories are ordered by first-to-expire-first', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we follow the two other users
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: other1UserId}})
@@ -188,7 +188,7 @@ test('Followed users with stories are ordered by first-to-expire-first', async (
 
 test('Stories of private user are visible to themselves and followers only', async () => {
   // us, a private user with a story
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
@@ -206,7 +206,7 @@ test('Stories of private user are visible to themselves and followers only', asy
   expect(resp.data.user.stories.items[0].postId).toBe(postId)
 
   // verify new user, not yet following us, cannot see our stories
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.userStories, variables: {userId: ourUserId}})
   expect(resp.data.user.stories).toBeNull()
 
@@ -238,8 +238,8 @@ test('Stories of private user are visible to themselves and followers only', asy
 
 // waiting on a way to externally trigger the 'archive expired posts' cron job
 test.skip('Post that expires is removed from stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
@@ -269,8 +269,8 @@ test.skip('Post that expires is removed from stories', async () => {
 })
 
 test('Post that is archived is removed from stories', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   let resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})

@@ -18,9 +18,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Flag message failures', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
   const mutation = mutations.flagChatMessage
 
   // we create a group chat with us and other1 in it
@@ -93,8 +93,8 @@ test('Flag message failures', async () => {
 })
 
 test('Flag message success', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a direct chat with them
   const [chatId, messageId] = [uuidv4(), uuidv4()]
@@ -133,8 +133,8 @@ test('Flag message success', async () => {
 })
 
 test('User disabled from flagged messages', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a direct chat with them
   const [chatId, messageId] = [uuidv4(), uuidv4()]

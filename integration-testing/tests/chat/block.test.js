@@ -18,8 +18,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Blocking a user causes our direct chat with them to disappear to both of us', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId1, text1] = [uuidv4(), uuidv4(), 'hey this is msg 1']
@@ -67,8 +67,8 @@ test('Blocking a user causes our direct chat with them to disappear to both of u
 })
 
 test('Cannot open a direct chat with a user that blocks us or that we block', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we block them
   let resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -90,8 +90,8 @@ test('Cannot open a direct chat with a user that blocks us or that we block', as
 })
 
 test('Blocking a user we are in a group chat with', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with them
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
@@ -142,9 +142,9 @@ test('Blocking a user we are in a group chat with', async () => {
 })
 
 test('Creating a group chat with users with have a blocking relationship skips them', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [, otherUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {userId: otherUserId} = await loginCache.getCleanLogin()
 
   // they block us
   let resp = await theirClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})
@@ -181,9 +181,9 @@ test('Creating a group chat with users with have a blocking relationship skips t
 })
 
 test('Adding somebody we have a blocking relationship with to a group chat skips them', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {userId: other2UserId} = await loginCache.getCleanLogin()
 
   // other1 blocks us
   let resp = await other1Client.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}})
@@ -229,9 +229,9 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
 })
 
 test('Test create a group chat with two users that have a blocking relationship between them', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // other1 blocks other2
   let resp = await other1Client.mutate({mutation: mutations.blockUser, variables: {userId: other2UserId}})

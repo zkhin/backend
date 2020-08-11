@@ -27,12 +27,12 @@ afterAll(async () => await loginCache.reset())
 test('new users auto-follow a user with username `real`, if they exist', async () => {
   // the real user has a random username at this point from the [before|after]_each methods
   // create a new user. Should not auto-follow anyone
-  const [client, , , , username] = await loginCache.getCleanLogin()
+  const {client, username} = await loginCache.getCleanLogin()
   let resp = await client.query({query: queries.ourFollowedUsers})
   expect(resp.data.self.followedUsers.items).toHaveLength(0)
 
   // set the real user's username to 'real', give dynamo a moment to sync
-  const [realClient, realUserId] = await loginCache.getCleanLogin()
+  const {client: realClient, userId: realUserId} = await loginCache.getCleanLogin()
   await realClient.mutate({mutation: mutations.setUsername, variables: {username: 'real'}})
   await misc.sleep(2000)
 

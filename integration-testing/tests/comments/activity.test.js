@@ -17,7 +17,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Post owner comment activity does not change newCommentActivity', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -48,8 +48,8 @@ test('Post owner comment activity does not change newCommentActivity', async () 
 })
 
 test('Post newCommentActivity - set, reset, privacy', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

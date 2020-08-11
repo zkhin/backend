@@ -26,8 +26,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Chat message triggers cannot be called from external graphql client', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId] = [uuidv4(), uuidv4()]
@@ -62,8 +62,8 @@ test('Chat message triggers cannot be called from external graphql client', asyn
 })
 
 test('Cannot subscribe to other users messages', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // verify we cannot subscribe to their messages
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
@@ -109,9 +109,9 @@ test('Cannot subscribe to other users messages', async () => {
 })
 
 test('Messages in multiple chats fire', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [otherClient, otherUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to chat messages
   const ourMsgNotifications = []
@@ -233,8 +233,8 @@ test('Messages in multiple chats fire', async () => {
 })
 
 test('Format for ADDED, EDITED, DELETED message notifications', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
 
   // they open up a chat with us
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
@@ -382,9 +382,9 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 })
 
 test('Notifications for a group chat', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with all of us in it
   const chatId = uuidv4()
@@ -475,8 +475,8 @@ test('Notifications for a group chat', async () => {
 })
 
 test('Message notifications from blocke[r|d] users have authorUserId but no author', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with both of us in it
   const chatId = uuidv4()

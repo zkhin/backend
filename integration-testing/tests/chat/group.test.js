@@ -19,9 +19,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Create and edit a group chat', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId, , , other1Username] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId, , , other2Username] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId, username: other1Username} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId, username: other2Username} = await loginCache.getCleanLogin()
 
   // we create a group chat with all of us in it, check details are correct
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
@@ -166,8 +166,8 @@ test('Create and edit a group chat', async () => {
 })
 
 test('Creating a group chat with our userId in the listed userIds has no affect', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with the two of us in it, and we uncessarily add our user Id to the userIds
   const [chatId, messageId] = [uuidv4(), uuidv4()]
@@ -183,8 +183,8 @@ test('Creating a group chat with our userId in the listed userIds has no affect'
 })
 
 test('Cannot create, edit, add others to or leave a group chat if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with just us in it
   const chatId = uuidv4()
@@ -220,8 +220,8 @@ test('Cannot create, edit, add others to or leave a group chat if we are disable
 })
 
 test('Exclude users from list of users in a chat', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with the two of us in it
   const [chatId, messageId] = [uuidv4(), uuidv4()]
@@ -255,9 +255,9 @@ test('Exclude users from list of users in a chat', async () => {
 })
 
 test('Create a group chat with just us and without a name, add people to it and leave from it', async () => {
-  const [ourClient, ourUserId, , , ourUsername] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId, , , theirUsername] = await loginCache.getCleanLogin()
-  const [otherClient, otherUserId, , , otherUsername] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
 
   // we create a group chat with no name and just us in it
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
@@ -354,8 +354,8 @@ test('Create a group chat with just us and without a name, add people to it and 
 })
 
 test('Cant add a users that does not exist to a group', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with us and another non-existent user in it,
   // should skip over the non-existent user
@@ -386,9 +386,9 @@ test('Cant add a users that does not exist to a group', async () => {
 })
 
 test('Add someone to a group chat that is already there is a no-op', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, other1UserId] = await loginCache.getCleanLogin()
-  const [, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: other1UserId} = await loginCache.getCleanLogin()
+  const {userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with both of us in it
   const chatId = uuidv4()
@@ -423,9 +423,9 @@ test('Add someone to a group chat that is already there is a no-op', async () =>
 })
 
 test('Cannot add someone to a chat that DNE, that we are not in or that is a a direct chat', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [other1Client, other1UserId] = await loginCache.getCleanLogin()
-  const [, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {userId: other2UserId} = await loginCache.getCleanLogin()
 
   // check we can't add other1 to a chat that DNE
   let variables = {chatId: uuidv4(), userIds: [other1UserId]}
@@ -461,8 +461,8 @@ test('Cannot add someone to a chat that DNE, that we are not in or that is a a d
 })
 
 test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check we cannot leave a chat that DNE
   let variables = {chatId: uuidv4()}
@@ -498,8 +498,8 @@ test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat
 })
 
 test('Cannnot edit name of chat that DNE, that we are not in, or that is a direct chat', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check we cannot edit a chat that DNE
   let variables = {chatId: uuidv4(), name: 'new name'}

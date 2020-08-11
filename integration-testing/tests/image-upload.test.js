@@ -38,26 +38,26 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Uploading image sets width, height and colors', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // upload an image post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
+  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId}})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.image).toBeNull()
   const uploadUrl = resp.data.addPost.imageUploadUrl
 
   // double check the image post
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.image).toBeNull()
 
   // upload the first of those images, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostCompleted(client, postId)
 
   // check width, height and colors are now set
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.image.height).toBe(imageHeight)
@@ -69,11 +69,11 @@ test('Uploading image sets width, height and colors', async () => {
 })
 
 test('Uploading png image results in error', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // create a pending image post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
+  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId}})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   const uploadUrl = resp.data.addPost.imageUploadUrl
@@ -83,17 +83,17 @@ test('Uploading png image results in error', async () => {
   await misc.sleep(5000)
 
   // check that post ended up in an ERROR state
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('ERROR')
 })
 
 test('Upload heic image', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // create a pending image post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
+  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   const uploadUrl = resp.data.addPost.imageUploadUrl
@@ -101,10 +101,10 @@ test('Upload heic image', async () => {
 
   // upload a heic, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: heicHeaders, body: heicImageData})
-  await misc.sleepUntilPostCompleted(ourClient, postId, {maxWaitMs: 20 * 1000})
+  await misc.sleepUntilPostCompleted(client, postId, {maxWaitMs: 20 * 1000})
 
   // check that post completed and generated all thumbnails ok
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.isVerified).toBe(true)
@@ -138,11 +138,11 @@ test('Upload heic image', async () => {
 })
 
 test('Thumbnails built on successful upload', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // create a pending image post
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
+  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId}})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   const uploadUrl = resp.data.addPost.imageUploadUrl
@@ -150,9 +150,9 @@ test('Thumbnails built on successful upload', async () => {
   // upload a big jpeg, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: bigImageData})
   await misc.sleep(5000) // big jpeg, so takes at least a few seconds to process
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostCompleted(client, postId)
 
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   const image = resp.data.post.image
   expect(image).toBeTruthy()

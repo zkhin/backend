@@ -26,14 +26,14 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('PostViews card generation and format', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [u1Client] = await loginCache.getCleanLogin()
-  const [u2Client] = await loginCache.getCleanLogin()
-  const [u3Client] = await loginCache.getCleanLogin()
-  const [u4Client] = await loginCache.getCleanLogin()
-  const [u5Client] = await loginCache.getCleanLogin()
-  const [u6Client] = await loginCache.getCleanLogin()
-  const [u7Client] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: u1Client} = await loginCache.getCleanLogin()
+  const {client: u2Client} = await loginCache.getCleanLogin()
+  const {client: u3Client} = await loginCache.getCleanLogin()
+  const {client: u4Client} = await loginCache.getCleanLogin()
+  const {client: u5Client} = await loginCache.getCleanLogin()
+  const {client: u6Client} = await loginCache.getCleanLogin()
+  const {client: u7Client} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

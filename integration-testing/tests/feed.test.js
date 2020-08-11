@@ -20,8 +20,8 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('When followed user adds/deletes a post, our feed reacts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to feed notifications
   let notificationsCount = 0
@@ -110,8 +110,8 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
 })
 
 test('When we follow/unfollow a user with posts, our feed reacts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to feed notifications
   let notificationsCount = 0
@@ -195,8 +195,8 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
 })
 
 test('When a private user accepts or denies our follow request, our feed reacts', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // set them to private
   await theirClient
@@ -248,8 +248,8 @@ test('When a private user accepts or denies our follow request, our feed reacts'
 })
 
 test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow request, our feed reacts', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // set them to private
   await theirClient
@@ -295,8 +295,8 @@ test('When a user changes PRIVATE to PUBLIC, and we had an REQUESTED follow requ
 
 // waiting on a way to externally trigger the 'archive expired posts' cron job
 test.skip('Post that expires is removed from feed', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   await ourClient
@@ -323,8 +323,8 @@ test.skip('Post that expires is removed from feed', async () => {
 })
 
 test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctly', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we follow them
   await ourClient
@@ -357,8 +357,8 @@ test('Feed Post.postedBy.blockerStatus and followedStatus are filled in correctl
 })
 
 test('Feed privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // verify we can see our feed, via self and user queries
   await ourClient

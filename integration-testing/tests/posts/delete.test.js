@@ -21,8 +21,8 @@ afterAll(async () => await loginCache.reset())
 
 test('Delete a post that was our next story to expire', async () => {
   // us, them, they follow us
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   let resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
@@ -84,7 +84,7 @@ test('Delete a post that was our next story to expire', async () => {
 })
 
 test('Deleting image post', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we create an image post
   const postId = uuidv4()
@@ -109,7 +109,7 @@ test('Deleting image post', async () => {
 })
 
 test('Invalid attempts to delete posts', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // verify can't delete post that doens't exist
@@ -122,7 +122,7 @@ test('Invalid attempts to delete posts', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // verify another user can't delete our post
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   await expect(
     theirClient.mutate({
       mutation: mutations.deletePost,
@@ -136,7 +136,7 @@ test('Invalid attempts to delete posts', async () => {
 })
 
 test('Cant delete a post if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we create a post
   const postId = uuidv4()
@@ -157,8 +157,8 @@ test('Cant delete a post if we are disabled', async () => {
 
 test('When a post is deleted, any likes of it disappear', async () => {
   // us and them, they add a post
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await theirClient.mutate({mutation: mutations.addPost, variables})

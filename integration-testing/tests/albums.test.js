@@ -22,7 +22,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Add, read, and delete an album', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add an album with minimal options
   const albumId = uuidv4()
@@ -65,7 +65,7 @@ test('Add, read, and delete an album', async () => {
 })
 
 test('Cannot add, edit or delete an album if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add an album with minimal options
   const albumId = uuidv4()
@@ -94,7 +94,7 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
 })
 
 test('Add album with empty string description, treated as null', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const albumId = uuidv4()
   await ourClient
     .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'r', description: ''}})
@@ -105,7 +105,7 @@ test('Add album with empty string description, treated as null', async () => {
 })
 
 test('Edit an album', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add an album with maximal options
   const albumId = uuidv4()
@@ -163,8 +163,8 @@ test('Edit an album', async () => {
 })
 
 test('Cant create two albums with same id', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -179,8 +179,8 @@ test('Cant create two albums with same id', async () => {
 })
 
 test('Cant edit or delete somebody elses album', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -203,7 +203,7 @@ test('Cant edit or delete somebody elses album', async () => {
 })
 
 test('Empty album edit raises error', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -218,7 +218,7 @@ test('Empty album edit raises error', async () => {
 })
 
 test('Cant edit, delete an album that doesnt exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const albumId = uuidv4() // doesnt exist
 
   // cant edit or delete the non-existing album
@@ -231,8 +231,8 @@ test('Cant edit, delete an album that doesnt exist', async () => {
 })
 
 test('User.albums and Query.album block privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we add an album
   const albumId = uuidv4()
@@ -292,8 +292,8 @@ test('User.albums and Query.album block privacy', async () => {
 })
 
 test('User.albums and Query.album private user privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check they *can* see our albums
   await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
@@ -373,7 +373,7 @@ test('User.albums and Query.album private user privacy', async () => {
 })
 
 test('User.albums matches direct access, ordering', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // check we have no albums
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
@@ -413,7 +413,7 @@ test('User.albums matches direct access, ordering', async () => {
 })
 
 test('Album art generated for 0, 1 and 4 posts in album', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we an album
   const albumId = uuidv4()

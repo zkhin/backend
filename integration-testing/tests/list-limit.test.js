@@ -20,7 +20,7 @@ afterAll(async () => await loginCache.reset())
 
 // Use of selfFeed is arbitrary, could use any paginated list query
 test('Paginated list limits', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // verify requesting limit of -1, 0, 101 are errors
   await ourClient
@@ -55,7 +55,7 @@ test('Paginated list limits', async () => {
 
 // Use of comments is arbitrary, could use any paginated list query
 test('Paginated list default', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
 
   // add a post

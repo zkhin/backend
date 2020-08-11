@@ -15,7 +15,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Upload app store receipt data', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // receipt is verified async so mutation returns `true` even when uploading invalid data
   await ourClient

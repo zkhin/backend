@@ -18,9 +18,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Create a direct chat', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // check we have no direct chat between us
   let resp = await ourClient.query({query: queries.self})
@@ -117,8 +117,8 @@ test('Create a direct chat', async () => {
 })
 
 test('Cannot create a direct chat if one already exists', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they open up a direct chat with us
   const chatId = uuidv4()
@@ -140,8 +140,8 @@ test('Cannot create a direct chat if one already exists', async () => {
 })
 
 test('Cannot create a direct chat if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we disable ourselves
   let resp = await ourClient.mutate({mutation: mutations.disableUser})
@@ -156,7 +156,7 @@ test('Cannot create a direct chat if we are disabled', async () => {
 })
 
 test('Cannot open direct chat with self', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   const chatId = uuidv4()
   let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
@@ -166,9 +166,9 @@ test('Cannot open direct chat with self', async () => {
 })
 
 test('Create multiple direct chats', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client] = await loginCache.getCleanLogin()
-  const [other2Client] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
 
   // check we have no chats
   let resp = await ourClient.query({query: queries.self})

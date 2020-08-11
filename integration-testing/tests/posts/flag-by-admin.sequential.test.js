@@ -33,16 +33,16 @@ afterAll(async () => await loginCache.reset())
  */
 
 test('If the `real` or `ian` users flag a post, it should be immediately archived', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // set the ian user's username to 'ian'
-  const [ianClient] = await loginCache.getCleanLogin()
+  const {client: ianClient} = await loginCache.getCleanLogin()
   await ianClient.mutate({mutation: mutations.setUsername, variables: {username: 'ian'}})
 
   // set the real user's username to 'real'
   // note this one is done last so other users don't auto-follow them
-  const [realClient] = await loginCache.getCleanLogin()
+  const {client: realClient} = await loginCache.getCleanLogin()
   await realClient.mutate({mutation: mutations.setUsername, variables: {username: 'real'}})
 
   // We add three posts

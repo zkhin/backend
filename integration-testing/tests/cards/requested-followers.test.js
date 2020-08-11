@@ -16,9 +16,9 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Requested followers card with correct format, subscription notifications', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [other1Client] = await loginCache.getCleanLogin()
-  const [other2Client, other2UserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: other1Client} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we subscribe to our cards
   const [resolvers, rejectors] = [[], []]

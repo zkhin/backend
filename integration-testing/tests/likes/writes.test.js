@@ -20,7 +20,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cannot like/dislike posts that do not exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   let variables = {postId: uuidv4()}
 
   await expect(ourClient.mutate({mutation: mutations.onymouslyLikePost, variables})).rejects.toThrow(
@@ -35,7 +35,7 @@ test('Cannot like/dislike posts that do not exist', async () => {
 })
 
 test('Cannot like or dislike posts if we are disabled', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -75,7 +75,7 @@ test('Cannot like or dislike posts if we are disabled', async () => {
 
 test('Cannot like PENDING posts', async () => {
   // we add an image post, but don't upload the image
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
   expect(resp.data.addPost.postId).toBe(postId)
@@ -93,7 +93,7 @@ test('Cannot like PENDING posts', async () => {
 
 test('Cannot like ARCHIVED posts', async () => {
   // we add a post, and archive it
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
@@ -113,7 +113,7 @@ test('Cannot like ARCHIVED posts', async () => {
 })
 
 test('Cannot double like a post', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
@@ -150,7 +150,7 @@ test('Cannot double like a post', async () => {
 })
 
 test('Cannot dislike a post we have not liked', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // add a post
   const postId = uuidv4()
@@ -166,8 +166,8 @@ test('Cannot dislike a post we have not liked', async () => {
 
 test('Cannot like posts of a user that has blocked us', async () => {
   // us and them
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -200,8 +200,8 @@ test('Cannot like posts of a user that has blocked us', async () => {
 
 test('Cannot like posts of a user we have blocked', async () => {
   // us and them
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // they add a post
   const postId = uuidv4()
@@ -234,8 +234,8 @@ test('Cannot like posts of a user we have blocked', async () => {
 
 test('Can only like posts of private users if we are a follower of theirs', async () => {
   // us and another private user
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
 
@@ -291,7 +291,7 @@ test('Can only like posts of private users if we are a follower of theirs', asyn
 
 test('Onymously like, then dislike, a post', async () => {
   // we add a post
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
@@ -351,7 +351,7 @@ test('Onymously like, then dislike, a post', async () => {
 
 test('Anonymously like, then dislike, a post', async () => {
   // we add a post
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
@@ -408,8 +408,8 @@ test('Anonymously like, then dislike, a post', async () => {
 })
 
 test('Like counts show up for posts in feed', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

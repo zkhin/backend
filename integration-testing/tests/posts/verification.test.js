@@ -25,7 +25,7 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Add image post passes verification', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add a image post, check in PENDING
   const postId = uuidv4()
@@ -51,7 +51,7 @@ test('Add image post passes verification', async () => {
 })
 
 test('Add image post fails verification', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
   const postId = uuidv4()
@@ -71,7 +71,7 @@ test('Add image post fails verification', async () => {
 })
 
 test('Add image post verification hidden hides verification state', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   // we add a image post with verification hidden, give s3 trigger a second to fire
   const postId = uuidv4()
@@ -112,8 +112,8 @@ test('Add image post verification hidden hides verification state', async () => 
 })
 
 test('Post verification hidden setting is private to post owner', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post without setting verification hidden
   const postId = uuidv4()

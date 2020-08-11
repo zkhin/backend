@@ -25,15 +25,15 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Visiblity of post() and user.posts() for a public user', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // a user that follows us
-  const [followerClient] = await loginCache.getCleanLogin()
+  const {client: followerClient} = await loginCache.getCleanLogin()
   let resp = await followerClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // some rando off the internet
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
   const postId = uuidv4()
@@ -69,13 +69,13 @@ test('Visiblity of post() and user.posts() for a public user', async () => {
 
 test('Visiblity of post() and user.posts() for a private user', async () => {
   // our user, set to private
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // some rando off the internet
-  const [randoClient] = await loginCache.getCleanLogin()
+  const {client: randoClient} = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
   const postId = uuidv4()
@@ -101,13 +101,13 @@ test('Visiblity of post() and user.posts() for a private user', async () => {
 
 test('Visiblity of post() and user.posts() for the follow stages user', async () => {
   // our user, set to private
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   let variables = {privacyStatus: 'PRIVATE'}
   let resp = await ourClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
   expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
 
   // a user will follows us
-  const [followerClient, followerUserId] = await loginCache.getCleanLogin()
+  const {client: followerClient, userId: followerUserId} = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
   const postId = uuidv4()
@@ -139,7 +139,7 @@ test('Visiblity of post() and user.posts() for the follow stages user', async ()
 })
 
 test('Post that does not exist', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
   const resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -147,8 +147,8 @@ test('Post that does not exist', async () => {
 })
 
 test('Post that is not complete', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a image post, we don't complete it
   const postId = uuidv4()
@@ -167,8 +167,8 @@ test('Post that is not complete', async () => {
 })
 
 test('Post.viewedBy only visible to post owner', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()

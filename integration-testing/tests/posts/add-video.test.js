@@ -15,27 +15,27 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Add video post failures', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // verify can't use setAsUserPhoto with video posts
   let variables = {postId: uuidv4(), postType: 'VIDEO', setAsUserPhoto: true}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+  await expect(client.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
     /ClientError: Cannot .* with setAsUserPhoto$/,
   )
 
   // verify can't use image_input with video posts
   variables = {postId: uuidv4(), postType: 'VIDEO', takenInReal: true}
-  await expect(ourClient.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
+  await expect(client.mutate({mutation: mutations.addPost, variables})).rejects.toThrow(
     /ClientError: Cannot .* with ImageInput$/,
   )
 })
 
 test('Add pending video post minimal', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
   let variables = {postId, postType: 'VIDEO'}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  let resp = await client.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('VIDEO')
   expect(resp.data.addPost.postStatus).toBe('PENDING')
@@ -51,7 +51,7 @@ test('Add pending video post minimal', async () => {
 })
 
 test('Add pending video post maximal', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
   const text = 'lore ipsum'
@@ -64,7 +64,7 @@ test('Add pending video post maximal', async () => {
     sharingDisabled: true,
     verificationHidden: true,
   }
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  let resp = await client.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('VIDEO')
   expect(resp.data.addPost.postStatus).toBe('PENDING')

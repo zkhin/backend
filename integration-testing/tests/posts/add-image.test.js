@@ -24,19 +24,19 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test('Cant use jpeg data for an HEIC image', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // add a post as HEIC, but actually send up jpeg data
   const postId1 = uuidv4()
   let variables = {postId: postId1, imageData, imageFormat: 'HEIC'}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  let resp = await client.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('ERROR')
   expect(resp.data.addPost.image).toBeNull()
   expect(resp.data.addPost.imageUploadUrl).toBeNull()
 
   // check the post, make sure it error'd out
-  resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
+  resp = await client.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.data.post.postId).toBe(postId1)
   expect(resp.data.post.postStatus).toBe('ERROR')
   expect(resp.data.post.isVerified).toBeNull()
@@ -44,7 +44,7 @@ test('Cant use jpeg data for an HEIC image', async () => {
 
   // add a post as HEIC, but actually send up jpeg data
   const postId2 = uuidv4()
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageFormat: 'HEIC'}})
+  resp = await client.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageFormat: 'HEIC'}})
   expect(resp.data.addPost.postId).toBe(postId2)
   let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
@@ -54,7 +54,7 @@ test('Cant use jpeg data for an HEIC image', async () => {
   await misc.sleep(3000)
 
   // check the post, make sure it error'd out
-  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
+  resp = await client.query({query: queries.post, variables: {postId: postId2}})
   expect(resp.data.post.postId).toBe(postId2)
   expect(resp.data.post.postStatus).toBe('ERROR')
   expect(resp.data.post.isVerified).toBeNull()
@@ -62,11 +62,11 @@ test('Cant use jpeg data for an HEIC image', async () => {
 })
 
 test('Add image post with image data directly included', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // add the post with image data included in the gql call
   const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postType).toBe('IMAGE')
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
@@ -86,7 +86,7 @@ test('Add image post with image data directly included', async () => {
   expect(s3ImageData.equals(imageBytes)).toBe(true)
 
   // double check everything saved to db correctly
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.imageUploadUrl).toBeNull()
@@ -100,12 +100,12 @@ test('Add image post with image data directly included', async () => {
 })
 
 test('Add image post (with postType specified), check non-duplicates are not marked as such', async () => {
-  const [ourClient] = await loginCache.getCleanLogin()
+  const {client} = await loginCache.getCleanLogin()
 
   // we add a image post, give s3 trigger a second to fire
   const postId = uuidv4()
   let variables = {postId, postType: 'IMAGE'}
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  let resp = await client.mutate({mutation: mutations.addPost, variables})
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('PENDING')
@@ -115,18 +115,18 @@ test('Add image post (with postType specified), check non-duplicates are not mar
 
   // upload the image, give S3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostCompleted(client, postId)
 
   // add another image post with a different image
   const postId2 = uuidv4()
   variables = {postId: postId2}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  resp = await client.mutate({mutation: mutations.addPost, variables})
   uploadUrl = resp.data.addPost.imageUploadUrl
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
-  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleepUntilPostCompleted(client, postId2)
 
   // check the post has changed status and looks good
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
+  resp = await client.query({query: queries.post, variables: {postId}})
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.postStatus).toBe('COMPLETED')
@@ -135,19 +135,19 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   expect(post.originalPost.postId).toBe(postId)
 
   // check the originalPost properties don't point at each other
-  resp = await ourClient.query({query: queries.post, variables: {postId: postId}})
+  resp = await client.query({query: queries.post, variables: {postId: postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.originalPost.postId).toBe(postId)
-  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
+  resp = await client.query({query: queries.post, variables: {postId: postId2}})
   expect(resp.data.post.postId).toBe(postId2)
   expect(resp.data.post.postStatus).toBe('COMPLETED')
   expect(resp.data.post.originalPost.postId).toBe(postId2)
 })
 
 test('Post.originalPost - duplicates caught on creation, privacy', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
-  const [theirClient, theirUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   const ourPostId = uuidv4()
   const theirPostId = uuidv4()
@@ -215,7 +215,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
 })
 
 test('Add post setAsUserPhoto failures', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // verify doesn't set user photo if uploaded image can't be processed (image data included with upload)
   const postId1 = uuidv4()
@@ -244,7 +244,7 @@ test('Add post setAsUserPhoto failures', async () => {
 })
 
 test('Add post setAsUserPhoto success', async () => {
-  const [ourClient, ourUserId] = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // check we have no profile photo
   let resp = await ourClient.query({query: queries.self})
