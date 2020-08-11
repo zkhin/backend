@@ -1,10 +1,9 @@
-/* eslint-env jest */
-
 const AWS = require('aws-sdk')
 const dotenv = require('dotenv')
 const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 
+jest.retryTimes(2)
 dotenv.config()
 
 const cognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID

@@ -1,10 +1,10 @@
-/* eslint-env jest */
-
 const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
 const {mutations} = require('../../../schema')
+
+jest.retryTimes(2)
 
 describe('cognito-only user', () => {
   let client, accessToken

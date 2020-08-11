@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const moment = require('moment')
 const uuidv4 = require('uuid/v4')
 
@@ -8,6 +6,7 @@ const {mutations, queries} = require('../../schema')
 const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

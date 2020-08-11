@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
@@ -12,8 +10,8 @@ const {mutations, subscriptions} = require('../../schema')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

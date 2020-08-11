@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const fs = require('fs')
 const path = require('path')
 const rp = require('request-promise-native')
@@ -13,8 +11,8 @@ const smallGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixture
 const smallGrantDataB64 = new Buffer.from(smallGrantData).toString('base64')
 const bigGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'big-grant.jpg'))
 const imageHeaders = {'Content-Type': 'image/jpeg'}
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

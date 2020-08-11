@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const exifReader = require('exif-reader')
 const fs = require('fs')
 const path = require('path')
@@ -22,6 +20,7 @@ const grantBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 
 const grantData = new Buffer.from(grantBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 /**
  * This test suite cannot run in parrallel with others because it
  * depends on global state - namely the trending users/posts indexes.
@@ -17,6 +15,7 @@ const imageData = misc.generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const jpgHeaders = {'Content-Type': 'image/jpeg'}
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

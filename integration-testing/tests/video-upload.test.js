@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const fs = require('fs')
 const moment = require('moment')
 const path = require('path')
@@ -12,8 +10,8 @@ const {mutations, queries} = require('../schema')
 
 const videoData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'sample.mov'))
 const videoHeaders = {'Content-Type': 'video/quicktime'}
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

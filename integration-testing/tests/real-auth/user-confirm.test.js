@@ -1,10 +1,9 @@
-/* eslint-env jest */
-
 const dotenv = require('dotenv')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
+jest.retryTimes(2)
 
 dotenv.config()
 

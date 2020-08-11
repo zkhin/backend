@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const fs = require('fs')
 const path = require('path')
 const rp = require('request-promise-native')
@@ -12,8 +10,8 @@ const {mutations, queries} = require('../../schema')
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

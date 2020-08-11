@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const fs = require('fs')
 const path = require('path')
 const uuidv4 = require('uuid/v4')
@@ -10,10 +8,9 @@ const misc = require('../../utils/misc')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
-
 const AuthFlow = cognito.AuthFlow
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

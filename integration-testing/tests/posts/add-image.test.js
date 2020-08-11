@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
@@ -12,8 +10,8 @@ const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageBytes2 = misc.generateRandomJpeg(300, 200)
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const heicHeaders = {'Content-Type': 'image/heic'}
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

@@ -1,12 +1,10 @@
-/* eslint-env jest */
-
 const cognito = require('../../../utils/cognito.js')
 const misc = require('../../../utils/misc.js')
 const {mutations, queries} = require('../../../schema')
 
 const AuthFlow = cognito.AuthFlow
-
 const loginCache = new cognito.AppSyncLoginCache()
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

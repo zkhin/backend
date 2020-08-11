@@ -1,9 +1,9 @@
-/* eslint-env jest */
-
 const rp = require('request-promise-native')
 
 const cognito = require('../../../utils/cognito.js')
 const {mutations} = require('../../../schema')
+
+jest.retryTimes(2)
 
 /* Run me as a one-off, as you'll have to get a valid facebook access token
  * for our app. Can be generated from https://developers.facebook.com/tools/explorer/
@@ -13,8 +13,6 @@ const {mutations} = require('../../../schema')
  */
 describe.skip('facebook user', () => {
   const facebookAccessToken = process.env.FACEBOOK_ACCESS_TOKEN
-  if (facebookAccessToken === undefined) throw new Error('Env var FACEBOOK_ACCESS_TOKEN must be defined')
-
   let client
 
   beforeEach(async () => {
@@ -28,6 +26,8 @@ describe.skip('facebook user', () => {
   })
 
   test('Mutation.createFacebookUser success', async () => {
+    if (facebookAccessToken === undefined) throw new Error('Env var FACEBOOK_ACCESS_TOKEN must be defined')
+
     // get the email associated with the token from google
     const profile = await rp.get({
       uri: 'https://graph.facebook.com/me',

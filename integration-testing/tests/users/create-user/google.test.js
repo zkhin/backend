@@ -1,9 +1,9 @@
-/* eslint-env jest */
-
 const rp = require('request-promise-native')
 
 const cognito = require('../../../utils/cognito.js')
 const {mutations} = require('../../../schema')
+
+jest.retryTimes(2)
 
 /* Run me as a one-off, as you'll have to get a valid google id token
  * for our app. Can be generated from https://developers.google.com/oauthplayground/
@@ -13,8 +13,6 @@ const {mutations} = require('../../../schema')
  */
 describe.skip('google user', () => {
   const googleIdToken = process.env.GOOGLE_ID_TOKEN
-  if (googleIdToken === undefined) throw new Error('Env var GOOGLE_ID_TOKEN must be defined')
-
   let client
 
   beforeEach(async () => {
@@ -28,6 +26,8 @@ describe.skip('google user', () => {
   })
 
   test('Mutation.createGoogleUser success', async () => {
+    if (googleIdToken === undefined) throw new Error('Env var GOOGLE_ID_TOKEN must be defined')
+
     // get the email associated with the token from google
     const tokenInfo = await rp.get({
       uri: 'https://oauth2.googleapis.com/tokeninfo',
