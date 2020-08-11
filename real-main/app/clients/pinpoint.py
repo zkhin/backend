@@ -16,7 +16,7 @@ class PinpointClient:
 
     def send_user_apns(self, user_id, url, title, body=None):
         "Returns a bool representing if the APNS was successfully sent"
-        apns_msg = {'Action': 'URL', 'Title': title, 'Url': url, 'Badge': 0}
+        apns_msg = {'Action': 'URL', 'Title': title, 'Url': url}
         if body:
             apns_msg['Body'] = body
         kwargs = {
