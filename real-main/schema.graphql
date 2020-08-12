@@ -91,6 +91,9 @@ type Mutation {
   # After user initiates a in-app subscription with the apple app store, the receipt should be uploaded here
   addAppStoreReceipt(receiptData: String!): Boolean
 
+  # Let the user give themselves some free Diamond subscription
+  grantUserSubscriptionBonus: User
+
   # Set optional user details.
   # Only the specified arguments will be set.
   # To delete an String/ID argument, set it to the empty string (ie bio="").
@@ -342,6 +345,7 @@ type User {
   themeCode: String
   signedUpAt: AWSDateTime
   photo: Image
+  subscriptionLevel: SubscriptionLevel
 
   blockedStatus: BlockStatus!  # is the caller blocking them?
   blockerStatus: BlockStatus!  # are they blocking the caller?
@@ -365,6 +369,7 @@ type User {
   likesDisabled: Boolean
   sharingDisabled: Boolean
   verificationHidden: Boolean
+  subscriptionExpiresAt: AWSDateTime
 
   # User's feed
   #   - private to the user themselves only
@@ -456,6 +461,11 @@ type User {
 type PaginatedUsers {
   items: [User!]!
   nextToken: String
+}
+
+enum SubscriptionLevel {
+  BASIC
+  DIAMOND
 }
 
 type Card {

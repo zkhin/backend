@@ -1,13 +1,14 @@
 import logging
 import os
 
+import pendulum
 import stringcase
 
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .enums import UserPrivacyStatus, UserStatus
+from .enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
 from .validate import UserValidate
 
@@ -27,6 +28,7 @@ class User(TrendingModelMixin):
 
     client_names = ['cloudfront', 'cognito', 'elasticsearch', 'dynamo', 'pinpoint', 's3_uploads']
     item_type = 'user'
+    subscription_bonus_duration = pendulum.duration(months=3)
 
     def __init__(
         self,
@@ -363,4 +365,10 @@ class User(TrendingModelMixin):
         self.cognito_client.set_user_attributes(self.id, attrs)
         self.item = self.dynamo.set_user_details(self.id, **{names['short']: value})
         self.cognito_client.clear_user_attribute(self.id, f'custom:unverified_{names["short"]}')
+        return self
+
+    def grant_subscription_bonus(self, now=None):
+        now = now or pendulum.now('utc')
+        expires_at = now + self.subscription_bonus_duration
+        self.item = self.dynamo.grant_subscription(self.id, UserSubscriptionLevel.DIAMOND, now, expires_at)
         return self

@@ -11,3 +11,11 @@ class UserPrivacyStatus:
     PUBLIC = 'PUBLIC'
 
     _ALL = (PRIVATE, PUBLIC)
+
+
+class UserSubscriptionLevel:
+    BASIC = 'BASIC'
+    DIAMOND = 'DIAMOND'
+
+    _ALL = (BASIC, DIAMOND)
+    _PAID = (DIAMOND,)

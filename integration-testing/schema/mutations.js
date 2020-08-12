@@ -188,6 +188,16 @@ module.exports.deleteUser = gql`
   }
 `
 
+module.exports.grantUserSubscriptionBonus = gql`
+  mutation GrantUserSubscriptionBonus {
+    grantUserSubscriptionBonus {
+      userId
+      subscriptionLevel
+      subscriptionExpiresAt
+    }
+  }
+`
+
 module.exports.addAppStoreReceipt = gql`
   mutation AddAppStoreReceipt($receiptData: String!) {
     addAppStoreReceipt(receiptData: $receiptData)

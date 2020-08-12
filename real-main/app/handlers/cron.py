@@ -85,6 +85,13 @@ def send_user_notifications(event, context):
         logger.info(f'User notifications sent successfully: {success_cnt} out of {total_cnt}')
 
 
+@handler_logging
+def clear_expired_user_subscriptions(event, context):
+    cnt = user_manager.clear_expired_subscriptions()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Expired user subscriptions cleared: {cnt}')
+
+
 # TODO: enable to handle re-verification of apple receipts after temporary failures
 # @handler_logging
 # def verify_receipts(event, context):

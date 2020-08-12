@@ -4,6 +4,7 @@ import uuid
 from decimal import Decimal
 from unittest import mock
 
+import pendulum
 import pytest
 
 from app.models.user.exceptions import UserAlreadyExists, UserValidationException
@@ -11,13 +12,15 @@ from app.utils import GqlNotificationType
 
 
 @pytest.fixture
-def cognito_only_user1(user_manager, cognito_client):
+def cognito_only_user(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
-cognito_only_user2 = cognito_only_user1
+user1 = cognito_only_user
+user2 = cognito_only_user
+user3 = cognito_only_user
 
 
 @pytest.fixture
@@ -32,14 +35,14 @@ def test_get_user_that_doesnt_exist(user_manager):
     assert resp is None
 
 
-def test_get_user_by_username(user_manager, cognito_only_user1):
+def test_get_user_by_username(user_manager, user1):
     # check a user that doesn't exist
     user = user_manager.get_user_by_username('nope_not_there')
     assert user is None
 
     # check a user that exists
-    user = user_manager.get_user_by_username(cognito_only_user1.username)
-    assert user.id == cognito_only_user1.id
+    user = user_manager.get_user_by_username(user1.username)
+    assert user.id == user1.id
 
 
 def test_create_cognito_user(user_manager, cognito_client):
@@ -181,10 +184,10 @@ def test_create_cognito_only_user_invalid_username(user_manager):
         user_manager.create_cognito_only_user(user_id, invalid_username, full_name=full_name)
 
 
-def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user1, cognito_client):
+def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user, cognito_client):
     user_id = 'uid'
-    username_1 = cognito_only_user1.username.upper()
-    username_2 = cognito_only_user1.username.lower()
+    username_1 = cognito_only_user.username.upper()
+    username_2 = cognito_only_user.username.lower()
 
     # frontend does this part out-of-band: creates the user in cognito, no preferred_username
     cognito_client.user_pool_client.admin_create_user(
@@ -233,21 +236,21 @@ def test_create_cognito_only_user_follow_real_user_doesnt_exist(user_manager, co
     assert list(user.follower_manager.dynamo.generate_followed_items(user.id)) == []
 
 
-def test_follow_real_user_exists(user_manager, cognito_only_user1, follower_manager, real_user):
-    # verify no followers (ensures cognito_only_user1 fixture generated before real_user)
-    assert list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+def test_follow_real_user_exists(user_manager, user1, follower_manager, real_user):
+    # verify no followers (ensures user1 fixture generated before real_user)
+    assert list(follower_manager.dynamo.generate_followed_items(user1.id)) == []
 
     # follow that real user
-    user_manager.follow_real_user(cognito_only_user1)
-    followeds = list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id))
+    user_manager.follow_real_user(user1)
+    followeds = list(follower_manager.dynamo.generate_followed_items(user1.id))
     assert len(followeds) == 1
     assert followeds[0]['followedUserId'] == real_user.id
 
 
-def test_follow_real_user_doesnt_exist(user_manager, cognito_only_user1, follower_manager):
-    assert list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
-    user_manager.follow_real_user(cognito_only_user1)
-    assert list(follower_manager.dynamo.generate_followed_items(cognito_only_user1.id)) == []
+def test_follow_real_user_doesnt_exist(user_manager, user1, follower_manager):
+    assert list(follower_manager.dynamo.generate_followed_items(user1.id)) == []
+    user_manager.follow_real_user(user1)
+    assert list(follower_manager.dynamo.generate_followed_items(user1.id)) == []
 
 
 def test_create_cognito_only_user_follow_real_user_if_exists(user_manager, cognito_client, real_user):
@@ -427,7 +430,7 @@ def test_get_random_placeholder_photo_code(user_manager):
     assert code in ['black-white-cat', 'orange-person']
 
 
-def test_get_text_tags(user_manager, cognito_only_user1, cognito_only_user2):
+def test_get_text_tags(user_manager, user1, user2):
     # no tags
     text = 'no tags here'
     assert user_manager.get_text_tags(text) == []
@@ -437,14 +440,9 @@ def test_get_text_tags(user_manager, cognito_only_user1, cognito_only_user2):
     assert user_manager.get_text_tags(text) == []
 
     # with tags, some that exist and others that dont
-    username1 = cognito_only_user1.username
-    username2 = cognito_only_user2.username
-    text = f'hey @{username1} and @nopenope and @{username2}'
+    text = f'hey @{user1.username} and @nopenope and @{user2.username}'
     assert sorted(user_manager.get_text_tags(text), key=lambda x: x['tag']) == sorted(
-        [
-            {'tag': f'@{username1}', 'userId': cognito_only_user1.id},
-            {'tag': f'@{username2}', 'userId': cognito_only_user2.id},
-        ],
+        [{'tag': f'@{user1.username}', 'userId': user1.id}, {'tag': f'@{user2.username}', 'userId': user2.id}],
         key=lambda x: x['tag'],
     )
 
@@ -465,6 +463,39 @@ def test_username_tag_regex(user_manager):
 
     # uglies
     assert re.findall(reg, 'hi @._._ @4_. @A_A\n@B.4\r@333!?') == ['@._._', '@4_.', '@A_A', '@B.4', '@333']
+
+
+def test_clear_expired_subscriptions(user_manager, user1, user2, user3):
+    sub_duration = pendulum.duration(months=3)
+    ms = pendulum.duration(microseconds=1)
+
+    # grant these users subscriptions that expire at different times, verify
+    now1 = pendulum.now('utc')
+    user1.grant_subscription_bonus(now=now1)
+    user2.grant_subscription_bonus(now=now1 + pendulum.duration(hours=1))
+    user3.grant_subscription_bonus(now=now1 + pendulum.duration(hours=2))
+    assert user1.refresh_item().item['subscriptionLevel']
+    assert user2.refresh_item().item['subscriptionLevel']
+    assert user3.refresh_item().item['subscriptionLevel']
+
+    # test clear none
+    assert user_manager.clear_expired_subscriptions() == 0
+    assert user_manager.clear_expired_subscriptions(now=now1 + sub_duration - ms) == 0
+    assert user1.refresh_item().item['subscriptionLevel']
+    assert user2.refresh_item().item['subscriptionLevel']
+    assert user3.refresh_item().item['subscriptionLevel']
+
+    # test clear one of them
+    assert user_manager.clear_expired_subscriptions(now=now1 + sub_duration) == 1
+    assert 'subscriptionLevel' not in user1.refresh_item().item
+    assert user2.refresh_item().item['subscriptionLevel']
+    assert user3.refresh_item().item['subscriptionLevel']
+
+    # test clear two of them
+    assert user_manager.clear_expired_subscriptions(now=now1 + sub_duration + pendulum.duration(hours=2)) == 2
+    assert 'subscriptionLevel' not in user1.refresh_item().item
+    assert 'subscriptionLevel' not in user2.refresh_item().item
+    assert 'subscriptionLevel' not in user3.refresh_item().item
 
 
 def test_fire_gql_subscription_chats_with_unviewed_messages_count(user_manager):

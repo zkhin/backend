@@ -315,6 +315,16 @@ def delete_user(caller_user_id, arguments, source, context):
     return user.serialize(caller_user_id)
 
 
+@routes.register('Mutation.grantUserSubscriptionBonus')
+@validate_caller
+def grant_user_subscription_bonus(caller_user, arguments, source, context):
+    try:
+        caller_user.grant_subscription_bonus()
+    except UserException as err:
+        raise ClientException(str(err))
+    return caller_user.serialize(caller_user.id)
+
+
 @routes.register('Mutation.addAppStoreReceipt')
 @validate_caller
 def add_app_store_receipt(caller_user, arguments, source, context):

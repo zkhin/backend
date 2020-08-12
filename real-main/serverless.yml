@@ -443,6 +443,18 @@ functions:
       - functionErrors
       - functionThrottles
 
+  clearExpiredUserSubscriptions:
+    name: ${self:provider.stackName}-clearExpiredUserSubscriptions
+    handler: app.handlers.cron.clear_expired_user_subscriptions
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 day)'
+    alarms:
+      - functionErrors
+      - functionThrottles
+
   deflateTrendingUsers:
     name: ${self:provider.stackName}-deflateTrendingUsers
     handler: app.handlers.cron.deflate_trending_users

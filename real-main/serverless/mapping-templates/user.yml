@@ -71,6 +71,16 @@
   response: PassThru.response.vtl
 
 - type: User
+  field: subscriptionLevel
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: subscriptionExpiresAt
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
   field: email
   dataSource: NoneDataSource
   response: PassThru.response.vtl

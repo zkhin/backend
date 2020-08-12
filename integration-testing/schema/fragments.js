@@ -177,5 +177,7 @@ module.exports.simpleUserFields = gql`
     viewCountsHidden
     signedUpAt
     userStatus
+    subscriptionLevel
+    subscriptionExpiresAt
   }
 `

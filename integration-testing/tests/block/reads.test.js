@@ -97,6 +97,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.privacyStatus).toBe('PUBLIC')
   expect(ourUserFull.sharingDisabled).toBe(false)
   expect(ourUserFull.signedUpAt).toBeTruthy()
+  expect(ourUserFull.subscriptionLevel).toBe('BASIC')
+  expect(ourUserFull.subscriptionExpiresAt).toBeNull()
   expect(ourUserFull.themeCode).toBeTruthy()
   expect(ourUserFull.userStatus).toBe('ACTIVE')
   expect(ourUserFull.verificationHidden).toBe(false)
@@ -152,6 +154,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.sharingDisabled = null
   ourUserFull.signedUpAt = null
   ourUserFull.stories = null
+  ourUserFull.subscriptionLevel = null
   ourUserFull.themeCode = null
   ourUserFull.userStatus = null
   ourUserFull.verificationHidden = null

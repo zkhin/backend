@@ -4,8 +4,8 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
-from ..enums import UserPrivacyStatus, UserStatus
-from ..exceptions import UserAlreadyExists
+from ..enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from ..exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
 
 logger = logging.getLogger()
 
@@ -19,6 +19,9 @@ class UserDynamo:
             'partitionKey': f'user/{user_id}',
             'sortKey': 'profile',
         }
+
+    def parse_pk(self, pk):
+        return pk['partitionKey'].split('/')[1]
 
     def get_user(self, user_id, strongly_consistent=False):
         return self.client.get_item(self.pk(user_id), ConsistentRead=strongly_consistent)
@@ -184,6 +187,62 @@ class UserDynamo:
             query_kwargs['UpdateExpression'] = 'SET acceptedEULAVersion = :aev'
             query_kwargs['ExpressionAttributeValues'] = {':aev': version}
         return self.client.update_item(query_kwargs)
+
+    def grant_subscription(self, user_id, sub_level, sub_granted_at, sub_expires_at):
+        assert sub_level != UserSubscriptionLevel.BASIC, "Cannot grant BASIC subscriptions"
+        assert sub_expires_at, "Subscription grants must expire"
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'SET #sl = :sl, #sga = :sga, #sea = :sea, #gsipk = :gsipk, #gsisk = :sea',
+            'ConditionExpression': 'attribute_not_exists(#sga)',  # each user gets max one subscription grant
+            'ExpressionAttributeNames': {
+                '#sl': 'subscriptionLevel',
+                '#sea': 'subscriptionExpiresAt',
+                '#sga': 'subscriptionGrantedAt',
+                '#gsipk': 'gsiK1PartitionKey',
+                '#gsisk': 'gsiK1SortKey',
+            },
+            'ExpressionAttributeValues': {
+                ':sl': sub_level,
+                ':sga': sub_granted_at.to_iso8601_string(),
+                ':sea': sub_expires_at.to_iso8601_string(),
+                ':gsipk': f'user/{sub_level}',
+            },
+        }
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException:
+            # this improperly also catches the condition where the user item doesn't exist because
+            # there is no way for us to know which conditional check clause failed
+            raise UserAlreadyGrantedSubscription(user_id)
+
+    def clear_subscription(self, user_id):
+        # delete any active subscription, but leave the subscriptionGrantedAt if it exists
+        # to record that this user has used up their free subscription bonus
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'REMOVE #sl, #sea, #gsipk, #gsisk',
+            'ExpressionAttributeNames': {
+                '#sl': 'subscriptionLevel',
+                '#sea': 'subscriptionExpiresAt',
+                '#gsipk': 'gsiK1PartitionKey',
+                '#gsisk': 'gsiK1SortKey',
+            },
+        }
+        return self.client.update_item(query_kwargs)
+
+    def generate_user_ids_by_subscription_level(self, sub_level, max_expires_at=None):
+        assert sub_level != UserSubscriptionLevel.BASIC, "Cannot generate for BASIC subscriptions"
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiK1PartitionKey = :gsipk',
+            'ProjectionExpression': 'partitionKey',
+            'ExpressionAttributeValues': {':gsipk': f'user/{sub_level}'},
+            'IndexName': 'GSI-K1',
+        }
+        if max_expires_at:
+            query_kwargs['KeyConditionExpression'] += ' AND gsiK1SortKey <= :mea'
+            query_kwargs['ExpressionAttributeValues'][':mea'] = max_expires_at.to_iso8601_string()
+        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
 
     def increment_album_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'albumCount')

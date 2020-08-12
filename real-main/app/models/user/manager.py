@@ -4,6 +4,8 @@ import random
 import re
 from functools import partialmethod
 
+import pendulum
+
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
@@ -12,7 +14,7 @@ from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
 
 from .dynamo import UserContactAttributeDynamo, UserDynamo
-from .enums import UserStatus
+from .enums import UserStatus, UserSubscriptionLevel
 from .exceptions import UserAlreadyExists, UserValidationException
 from .model import User
 from .validate import UserValidate
@@ -222,6 +224,16 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             if user_item:
                 text_tags.append({'tag': tag, 'userId': user_item['userId']})
         return text_tags
+
+    def clear_expired_subscriptions(self, now=None):
+        "Clear expired subscriptions. Return a count of how many were cleared"
+        now = now or pendulum.now('utc')
+        count = 0
+        for sub_level in UserSubscriptionLevel._PAID:
+            for user_id in self.dynamo.generate_user_ids_by_subscription_level(sub_level, max_expires_at=now):
+                self.dynamo.clear_subscription(user_id)
+                count += 1
+        return count
 
     def fire_gql_subscription_chats_with_unviewed_messages_count(self, user_id, new_item, old_item=None):
         self.appsync_client.fire_notification(

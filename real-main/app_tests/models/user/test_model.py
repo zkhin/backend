@@ -2,11 +2,17 @@ import logging
 from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
+import pendulum
 import pytest
 
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserPrivacyStatus, UserStatus
-from app.models.user.exceptions import UserException, UserValidationException, UserVerificationException
+from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from app.models.user.exceptions import (
+    UserAlreadyGrantedSubscription,
+    UserException,
+    UserValidationException,
+    UserVerificationException,
+)
 
 
 @pytest.fixture
@@ -641,3 +647,30 @@ def test_get_apns_token(user):
     with patch.object(user, 'pinpoint_client', **{'get_user_endpoints.return_value': sample_resp}) as pc_mock:
         assert user.get_apns_token() == address
     assert pc_mock.mock_calls == [call.get_user_endpoints(user.id, 'APNS')]
+
+
+def test_grant_subscription_bonus(user):
+    assert 'subscriptionLevel' not in user.item
+    assert 'subscriptionGrantedAt' not in user.item
+    assert 'subscriptionExpiresAt' not in user.item
+    sub_duration = pendulum.duration(months=3)
+
+    # grant a subscription
+    before = pendulum.now('utc')
+    user.grant_subscription_bonus()
+    after = pendulum.now('utc')
+    assert user.item == user.refresh_item().item
+    assert user.item['subscriptionLevel'] == UserSubscriptionLevel.DIAMOND
+    assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
+    assert before + sub_duration < pendulum.parse(user.item['subscriptionExpiresAt']) < after + sub_duration
+
+    # clear it (as if it expired)
+    user.item = user.dynamo.clear_subscription(user.id)
+    assert user.item == user.refresh_item().item
+    assert 'subscriptionLevel' not in user.item
+    assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
+    assert 'subscriptionExpiresAt' not in user.item
+
+    # verify can't grant it again
+    with pytest.raises(UserAlreadyGrantedSubscription):
+        user.grant_subscription_bonus()
