@@ -384,6 +384,7 @@ functions:
   s3ImagePostUploaded:
     name: ${self:provider.stackName}-s3ImagePostUploaded
     handler: app.handlers.s3.image_post_uploaded
+    memorySize: 3008
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
