@@ -47,7 +47,9 @@ class CachedImage:
                 heif_file = pyheif.read(fh)
             except (ValueError, pyheif.error.HeifError) as err:
                 raise PostException(f'Unable to read HEIC file for post `{self.post_id}`: {err}')
-            return PIL.Image.frombytes(mode=heif_file.mode, size=heif_file.size, data=heif_file.data)
+            return PIL.Image.frombytes(
+                heif_file.mode, heif_file.size, heif_file.data, 'raw', heif_file.mode, heif_file.stride
+            )
 
         else:
             try:
