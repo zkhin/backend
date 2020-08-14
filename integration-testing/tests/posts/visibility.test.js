@@ -42,7 +42,7 @@ test('Visiblity of post() and user.posts() for a public user', async () => {
 
   // upload the image, give S3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we should see the post
   resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})

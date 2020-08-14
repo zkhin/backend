@@ -41,10 +41,22 @@ def test_cant_process_image_upload_various_errors(
         completed_post.process_image_upload()
 
 
-def test_process_image_upload_exception_partway_thru_non_jpeg(pending_post):
+def test_process_image_upload_exception_partway_thru_no_jpeg(pending_post):
     assert pending_post.item['postStatus'] == PostStatus.PENDING
 
     with pytest.raises(PostException, match='native.jpg image data not found'):
+        pending_post.process_image_upload()
+    assert pending_post.item['postStatus'] == PostStatus.PROCESSING
+    assert pending_post.refresh_item().item['postStatus'] == PostStatus.PROCESSING
+
+
+def test_process_image_upload_exception_partway_thru_bad_heic_data(pending_post, s3_uploads_client):
+    assert pending_post.item['postStatus'] == PostStatus.PENDING
+    pending_post.image_item['imageFormat'] = 'HEIC'
+    s3_heic_path = pending_post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(s3_heic_path, b'notheicdata', 'image/heic')
+
+    with pytest.raises(PostException, match='Unable to read HEIC'):
         pending_post.process_image_upload()
     assert pending_post.item['postStatus'] == PostStatus.PROCESSING
     assert pending_post.refresh_item().item['postStatus'] == PostStatus.PROCESSING
@@ -60,8 +72,6 @@ def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, gran
     s3_uploads_client.put_object(native_path, grant_data, 'image/jpeg')
 
     # mock out a bunch of methods
-    post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
-    post.crop_native_jpeg_cache = mock.Mock(wraps=post.crop_native_jpeg_cache)
     post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
     post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
     post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
@@ -74,8 +84,6 @@ def test_process_image_upload_success_jpeg(pending_post, s3_uploads_client, gran
     post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert post.fill_native_jpeg_cache_from_heic.mock_calls == []
-    assert post.crop_native_jpeg_cache.mock_calls == []
     assert post.native_jpeg_cache.flush.mock_calls == []
     assert post.build_image_thumbnails.mock_calls == [mock.call()]
     assert post.set_height_and_width.mock_calls == [mock.call()]
@@ -98,8 +106,6 @@ def test_process_image_upload_success_jpeg_with_crop(pending_post, s3_uploads_cl
     s3_uploads_client.put_object(native_path, grant_data, 'image/jpeg')
 
     # mock out a bunch of methods
-    post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
-    post.crop_native_jpeg_cache = mock.Mock(wraps=post.crop_native_jpeg_cache)
     post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
     post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
     post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
@@ -112,8 +118,6 @@ def test_process_image_upload_success_jpeg_with_crop(pending_post, s3_uploads_cl
     post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert post.fill_native_jpeg_cache_from_heic.mock_calls == []
-    assert post.crop_native_jpeg_cache.mock_calls == [mock.call()]
     assert post.native_jpeg_cache.flush.mock_calls == [mock.call()]
     assert post.build_image_thumbnails.mock_calls == [mock.call()]
     assert post.set_height_and_width.mock_calls == [mock.call()]
@@ -138,8 +142,6 @@ def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_cl
     assert s3_uploads_client.exists(native_path)
 
     # mock out a bunch of methods
-    post.fill_native_jpeg_cache_from_heic = mock.Mock(wraps=post.fill_native_jpeg_cache_from_heic)
-    post.crop_native_jpeg_cache = mock.Mock(wraps=post.crop_native_jpeg_cache)
     post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
     post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
     post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
@@ -152,8 +154,6 @@ def test_process_image_upload_success_heic_with_crop(pending_post, s3_uploads_cl
     post.process_image_upload(now=now)
 
     # check the mocks were called correctly
-    assert post.fill_native_jpeg_cache_from_heic.mock_calls == [mock.call()]
-    assert post.crop_native_jpeg_cache.mock_calls == [mock.call()]
     assert post.native_jpeg_cache.flush.mock_calls == [mock.call()]
     assert post.build_image_thumbnails.mock_calls == [mock.call()]
     assert post.set_height_and_width.mock_calls == [mock.call()]

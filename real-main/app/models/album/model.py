@@ -122,15 +122,19 @@ class Album:
 
         posts = [self.post_manager.get_post(post_id) for post_id in post_ids]
         if len(posts) == 0:
-            new_native_buf = None
+            new_native_image = None
         elif len(posts) == 1:
-            new_native_buf = posts[0].k4_jpeg_cache.get_fh()
+            new_native_image = posts[0].k4_jpeg_cache.readonly_image
         else:
-            image_data_buffers = [post.p1080_jpeg_cache.get_fh() for post in posts]
-            new_native_buf = art.generate_zoomed_grid(image_data_buffers)
+            images = [post.p1080_jpeg_cache.readonly_image for post in posts]
+            new_native_image = art.generate_zoomed_grid(images)
 
-        if new_native_buf:
-            self.save_art_images(new_art_hash, new_native_buf)
+        if new_native_image:
+            # convert to jpeg
+            buf_out = io.BytesIO()
+            new_native_image.save(buf_out, format='JPEG', quality=100)
+            buf_out.seek(0)
+            self.save_art_images(new_art_hash, buf_out)
 
         self.item = self.dynamo.set_album_art_hash(self.id, new_art_hash)
 

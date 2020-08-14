@@ -81,7 +81,7 @@ test('Add image post with image data directly included', async () => {
 
   // check the data in the native image is correct
   const s3ImageData = await rp.get({uri: image.url, encoding: null})
-  expect(s3ImageData.equals(imageBytes)).toBe(true)
+  expect(s3ImageData).toEqual(imageBytes)
 
   // double check everything saved to db correctly
   resp = await client.query({query: queries.post, variables: {postId}})
@@ -113,7 +113,7 @@ test('Add image post (with postType specified), check non-duplicates are not mar
 
   // upload the image, give S3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(client, postId)
+  await misc.sleepUntilPostProcessed(client, postId)
 
   // add another image post with a different image
   const postId2 = uuidv4()
@@ -121,7 +121,7 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   resp = await client.mutate({mutation: mutations.addPost, variables})
   uploadUrl = resp.data.addPost.imageUploadUrl
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
-  await misc.sleepUntilPostCompleted(client, postId2)
+  await misc.sleepUntilPostProcessed(client, postId2)
 
   // check the post has changed status and looks good
   resp = await client.query({query: queries.post, variables: {postId}})
@@ -275,7 +275,7 @@ test('Add post setAsUserPhoto success', async () => {
 
   // upload the image data
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleepUntilPostProcessed(ourClient, postId2)
 
   // make sure dynamo converges
   await misc.sleep(2000)

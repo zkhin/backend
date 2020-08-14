@@ -52,7 +52,7 @@ test('Uploading image sets width, height and colors', async () => {
 
   // upload the first of those images, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
-  await misc.sleepUntilPostCompleted(client, postId)
+  await misc.sleepUntilPostProcessed(client, postId)
 
   // check width, height and colors are now set
   resp = await client.query({query: queries.post, variables: {postId}})
@@ -99,7 +99,7 @@ test('Upload heic image', async () => {
 
   // upload a heic, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: heicHeaders, body: heicImageData})
-  await misc.sleepUntilPostCompleted(client, postId, {maxWaitMs: 20 * 1000})
+  await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 20 * 1000})
 
   // check that post completed and generated all thumbnails ok
   resp = await client.query({query: queries.post, variables: {postId}})
@@ -148,7 +148,7 @@ test('Thumbnails built on successful upload', async () => {
   // upload a big jpeg, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: bigImageData})
   await misc.sleep(5000) // big jpeg, so takes at least a few seconds to process
-  await misc.sleepUntilPostCompleted(client, postId)
+  await misc.sleepUntilPostProcessed(client, postId)
 
   resp = await client.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)

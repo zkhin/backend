@@ -18,17 +18,17 @@ def test_genearate_text_image():
         generate_text_image('', dims_4k).read(1)
 
     # test one long word on a small image
-    assert generate_text_image('supercalifragilisticexpialidocious', dims_64p).read(1)
+    assert generate_text_image('supercalifragilisticexpialidocious', dims_64p)
 
     # test two words
-    assert generate_text_image('Fly high', dims_4k).read(1)
+    assert generate_text_image('Fly high', dims_4k)
 
     # test a general message
-    assert generate_text_image('Today for lunch I had a burger. It was really good', dims_4k).read(1)
+    assert generate_text_image('Today for lunch I had a burger. It was really good', dims_4k)
 
     # test a long message
     msg = ('And you, what did you have for lunch today? ' * 10).strip()
-    assert generate_text_image(msg, dims_4k).read(1)
+    assert generate_text_image(msg, dims_4k)
 
 
 def test_rectangle_wrap():

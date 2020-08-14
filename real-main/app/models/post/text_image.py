@@ -1,4 +1,3 @@
-import io
 import logging
 import os.path
 
@@ -52,12 +51,7 @@ def generate_text_image(text, dimensions, font_size=None):
     # write out the text in center of the image
     xy = ((image_width - text_width) / 2, (image_height - text_height) / 2 - line_spacing / 2)
     draw.text(xy, text, align='center', fill=(255, 255, 255), font=font)
-
-    # save it as a jpeg
-    buf_out = io.BytesIO()
-    img.save(buf_out, format='JPEG', quality=100)
-    buf_out.seek(0)
-    return buf_out
+    return img
 
 
 class Token:

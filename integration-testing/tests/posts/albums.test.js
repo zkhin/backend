@@ -56,7 +56,7 @@ test('Create a posts in an album, album post ordering', async () => {
   let uploadUrl = resp.data.addPost.imageUploadUrl
   let before = moment()
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleepUntilPostProcessed(ourClient, postId2)
 
   // check the album
   await misc.sleep(2000)
@@ -144,7 +144,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp.data.addPost.album).toBeNull()
   let uploadUrl = resp.data.addPost.imageUploadUrl
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // verify neither we or them cannot move the post into their album
   variables = {postId, albumId}
@@ -190,7 +190,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
 
   // upload the image, thus completing the post
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // verify the post is now COMPLETED
   resp = await ourClient.query({query: queries.post, variables: {postId}})

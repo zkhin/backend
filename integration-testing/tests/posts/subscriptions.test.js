@@ -273,10 +273,10 @@ test('Format for COMPLETED message notifications', async () => {
 
   // upload the images, sleep until the posts complete
   await rp.put({url: uploadUrl1, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId1)
+  await misc.sleepUntilPostProcessed(ourClient, postId1)
 
   await rp.put({url: uploadUrl2, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleepUntilPostProcessed(ourClient, postId2)
 
   // wait a bit more for messages to show up
   await misc.sleep(5000)

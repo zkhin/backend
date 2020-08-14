@@ -1,16 +1,15 @@
 import uuid
 from os import path
 
-import PIL.Image
 import pytest
 
 from app.models.post.enums import PostType
 from app.models.post.exceptions import PostException
 from app.utils import image_size
 
-grant_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
-grant_height = 320
-grant_width = 240
+jpeg_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'grant.jpg')
+jpeg_height = 320
+jpeg_width = 240
 
 heic_path = path.join(path.dirname(__file__), '..', '..', 'fixtures', 'IMG_0265.HEIC')
 heic_height = 3024
@@ -25,117 +24,89 @@ def user(user_manager, cognito_client):
 
 
 @pytest.fixture
-def jpeg_image_post(post_manager, user, s3_uploads_client):
+def native_jpeg_cached_image(post_manager, user, s3_uploads_client):
     post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageFormat': 'JPEG'})
     s3_path = post.get_image_path(image_size.NATIVE)
-    s3_uploads_client.put_object(s3_path, open(grant_path, 'rb'), 'image/jpeg')
-    yield post
+    s3_uploads_client.put_object(s3_path, open(jpeg_path, 'rb'), 'image/jpeg')
+    yield post.native_jpeg_cache
 
 
-def heic_image_post(post_manager, user, s3_uploads_client):
-    image_input = {
-        'imageFormat': 'HEIC',
-        'crop': {'upperLeft': {'x': 42, 'y': 24}, 'lowerRight': {'x': 200, 'y': 150}},
-    }
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input=image_input)
+@pytest.fixture
+def native_heic_cached_image(post_manager, user, s3_uploads_client):
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageFormat': 'HEIC'})
     s3_path = post.get_image_path(image_size.NATIVE_HEIC)
-    s3_uploads_client.put_object(s3_path, open(heic_path, 'rb'), 'image/jpeg')
-    yield post
-
-
-def test_cannot_crop_wrong_post_type(post_manager, user):
-    text_only_post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
-    with pytest.raises(AssertionError, match='post type'):
-        text_only_post.crop_native_jpeg_cache()
-
-    video_post = post_manager.add_post(user, str(uuid.uuid4()), PostType.VIDEO, text='t')
-    with pytest.raises(AssertionError, match='post type'):
-        video_post.crop_native_jpeg_cache()
-
-
-def test_cannot_crop_no_crop(post_manager, user):
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE)
-    with pytest.raises(AssertionError, match='no crop specified'):
-        post.crop_native_jpeg_cache()
+    s3_uploads_client.put_object(s3_path, open(heic_path, 'rb'), 'image/heic')
+    yield post.native_heic_cache
 
 
 @pytest.mark.parametrize(
-    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height + 1}}]
-)
-def test_cannot_overcrop_jpeg_post_height(user, jpeg_image_post, crop):
-    jpeg_image_post.image_item['crop'] = crop
-    with pytest.raises(PostException, match='not tall enough'):
-        jpeg_image_post.crop_native_jpeg_cache()
-
-
-@pytest.mark.parametrize(
-    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width + 1, 'y': grant_height}}]
-)
-def test_cannot_overcrop_jpeg_post_width(user, jpeg_image_post, crop):
-    jpeg_image_post.image_item['crop'] = crop
-    with pytest.raises(PostException, match='not wide enough'):
-        jpeg_image_post.crop_native_jpeg_cache()
-
-
-@pytest.mark.parametrize(
-    'crop',
+    'cached_image, height, width',
     [
-        {'upperLeft': {'x': 0, 'y': grant_height - 1}, 'lowerRight': {'x': 1, 'y': grant_height}},
-        {'upperLeft': {'x': grant_width - 1, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': 1}},
-        {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': 1, 'y': 1}},
+        [pytest.lazy_fixture('native_jpeg_cached_image'), jpeg_height, jpeg_width],
+        [pytest.lazy_fixture('native_heic_cached_image'), heic_height, heic_width],
     ],
 )
-def test_successful_jpeg_crop_to_minimal_image(user, jpeg_image_post, crop, s3_uploads_client):
-    # crop the image
-    jpeg_image_post.image_item['crop'] = crop
-    cropped = jpeg_image_post.crop_native_jpeg_cache()
-    assert cropped is True
-
-    # check the new image dimensions
-    image = jpeg_image_post.native_jpeg_cache.get_image()
-    width, height = image.size
-    assert width == 1
-    assert height == 1
+def test_cannot_overcrop_height(user, cached_image, height, width):
+    crop = {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': width, 'y': height + 1}}
+    with pytest.raises(PostException, match='not tall enough'):
+        cached_image.crop(crop)
 
 
 @pytest.mark.parametrize(
-    'crop', [{'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': grant_width, 'y': grant_height}}]
+    'cached_image, height, width',
+    [
+        [pytest.lazy_fixture('native_jpeg_cached_image'), jpeg_height, jpeg_width],
+        [pytest.lazy_fixture('native_heic_cached_image'), heic_height, heic_width],
+    ],
 )
-def test_successful_jpeg_crop_off_nothing(user, jpeg_image_post, crop, s3_uploads_client):
-    # crop the image
-    jpeg_image_post.image_item['crop'] = crop
-    cropped = jpeg_image_post.crop_native_jpeg_cache()
-    assert cropped is False
-
-    # check the new image dimensions
-    image = jpeg_image_post.native_jpeg_cache.get_image()
-    width, height = image.size
-    assert width == grant_width
-    assert height == grant_height
+def test_cannot_overcrop_width(user, cached_image, height, width):
+    crop = {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': width + 1, 'y': height}}
+    with pytest.raises(PostException, match='not wide enough'):
+        cached_image.crop(crop)
 
 
-def test_jpeg_metadata_preserved_through_crop(user, jpeg_image_post, s3_uploads_client):
+@pytest.mark.parametrize(
+    'cached_image, height, width',
+    [
+        [pytest.lazy_fixture('native_jpeg_cached_image'), jpeg_height, jpeg_width],
+        [pytest.lazy_fixture('native_heic_cached_image'), heic_height, heic_width],
+    ],
+)
+def test_successful_crop_off_nothing(user, cached_image, height, width):
+    # crop the image, check the new image dimensions
+    crop = {'upperLeft': {'x': 0, 'y': 0}, 'lowerRight': {'x': width, 'y': height}}
+    cached_image.crop(crop)
+    assert cached_image.is_synced is True
+    assert cached_image.readonly_image.size == (width, height)
+
+
+@pytest.mark.parametrize(
+    'cached_image, min_y, max_y, min_x, max_x',
+    [
+        [pytest.lazy_fixture('native_jpeg_cached_image'), jpeg_height - 1, jpeg_height, 0, 1],
+        [pytest.lazy_fixture('native_jpeg_cached_image'), 0, 1, jpeg_width - 1, jpeg_width],
+        [pytest.lazy_fixture('native_jpeg_cached_image'), 0, 1, 0, 1],
+        [pytest.lazy_fixture('native_heic_cached_image'), heic_height - 1, heic_height, 0, 1],
+        [pytest.lazy_fixture('native_heic_cached_image'), 0, 1, heic_width - 1, heic_width],
+        [pytest.lazy_fixture('native_heic_cached_image'), 0, 1, 0, 1],
+    ],
+)
+def test_successful_jpeg_crop_to_minimal(user, cached_image, min_y, max_y, min_x, max_x):
+    # crop the image, check the new image dims
+    crop = {'upperLeft': {'x': min_x, 'y': min_y}, 'lowerRight': {'x': max_x, 'y': max_y}}
+    cached_image.crop(crop)
+    assert cached_image.is_synced is False
+    assert cached_image.readonly_image.size == (1, 1)
+
+
+def test_jpeg_metadata_preserved_through_crop(user, native_jpeg_cached_image, s3_uploads_client):
     # get the original exif tags
-    path = jpeg_image_post.get_image_path(image_size.NATIVE)
-    image = PIL.Image.open(s3_uploads_client.get_object_data_stream(path))
-    exif_data = image.info['exif']
+    exif_data = native_jpeg_cached_image.readonly_image.info['exif']  # raw bytes
     assert exif_data
 
-    # crop the image
-    jpeg_image_post.image_item['crop'] = {'upperLeft': {'x': 8, 'y': 8}, 'lowerRight': {'x': 64, 'y': 64}}
-    cropped = jpeg_image_post.crop_native_jpeg_cache()
-    assert cropped is True
-
-    # check the image dimensions have changed, but the exif data has not
-    image = jpeg_image_post.native_jpeg_cache.get_image()
-    assert image.size[0] != grant_width
-    assert image.size[1] != grant_width
-    assert image.info['exif'] == exif_data
-
-
-def test_cached_native_jpeg_cache_dirty_after_crop(user, jpeg_image_post, s3_uploads_client):
-    # crop the image, check there is no cached data right after
-    jpeg_image_post.image_item['crop'] = {'upperLeft': {'x': 8, 'y': 8}, 'lowerRight': {'x': 64, 'y': 64}}
-    cropped = jpeg_image_post.crop_native_jpeg_cache()
-    assert cropped is True
-    assert not jpeg_image_post.native_jpeg_cache.is_synced
+    # crop the image, check the image dimensions have changed, but the exif data has not
+    crop = {'upperLeft': {'x': 8, 'y': 8}, 'lowerRight': {'x': 64, 'y': 64}}
+    native_jpeg_cached_image.crop(crop)
+    assert native_jpeg_cached_image.is_synced is False
+    assert native_jpeg_cached_image.readonly_image.size == (56, 56)
+    assert native_jpeg_cached_image.readonly_image.info['exif'] == exif_data

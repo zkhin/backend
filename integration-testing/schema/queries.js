@@ -304,6 +304,23 @@ module.exports.post = gql`
   ${fragments.video}
 `
 
+module.exports.postsThree = gql`
+  query Posts($postId1: ID!, $postId2: ID!, $postId3: ID!) {
+    post1: post(postId: $postId1) {
+      postId
+      postStatus
+    }
+    post2: post(postId: $postId2) {
+      postId
+      postStatus
+    }
+    post3: post(postId: $postId3) {
+      postId
+      postStatus
+    }
+  }
+`
+
 module.exports.userPosts = gql`
   query UserPosts($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
     user(userId: $userId) {

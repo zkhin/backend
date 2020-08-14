@@ -182,7 +182,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
   const uploadUrl = resp.data.addPost.imageUploadUrl
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we anonymously like the post, they onymously like it
   resp = await ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}})

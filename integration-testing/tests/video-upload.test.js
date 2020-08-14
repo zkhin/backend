@@ -37,7 +37,7 @@ test(
 
     // upload our video to that url
     await rp.put({url: videoUploadUrl, headers: videoHeaders, body: videoData})
-    await misc.sleepUntilPostCompleted(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
+    await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the basic parts of the post is as we expect
     resp = await client.query({query: queries.post, variables: {postId}})
@@ -125,7 +125,7 @@ test(
 
     // upload our video to that url
     await rp.put({url: videoUploadUrl, headers: videoHeaders, body: videoData})
-    await misc.sleepUntilPostCompleted(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
+    await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the appears as we expect
     resp = await client.query({query: queries.post, variables: {postId}})

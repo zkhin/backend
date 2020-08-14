@@ -28,6 +28,11 @@ VIDEO_POSTER_PREFIX = 'video-poster/poster'
 IMAGE_DIR = 'image'
 
 
+class ColorThiefFromImage(colorthief.ColorThief):
+    def __init__(self, image):
+        self.image = image
+
+
 class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     item_type = 'post'
@@ -95,42 +100,49 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # lazy caches
         if self.type == PostType.TEXT_ONLY:
-
-            def upstream_source(dims):
-                return generate_text_image(self.item['text'], dims)
-
-            self.k4_jpeg_cache = CachedImage(self.id, image_size.K4, source=upstream_source)
-            self.p1080_jpeg_cache = CachedImage(self.id, image_size.P1080, source=upstream_source)
+            text = self.item['text']
+            self.k4_jpeg_cache = CachedImage(
+                self.id, source=lambda: generate_text_image(text, image_size.K4.max_dimensions)
+            )
+            self.p1080_jpeg_cache = CachedImage(
+                self.id, source=lambda: generate_text_image(text, image_size.P1080.max_dimensions)
+            )
         elif s3_uploads_client:
             self.native_heic_cache = CachedImage(
                 self.id,
-                image_size.NATIVE_HEIC,
+                image_size=image_size.NATIVE_HEIC,
                 s3_client=s3_uploads_client,
                 s3_path=self.get_image_path(image_size.NATIVE_HEIC),
             )
             self.native_jpeg_cache = CachedImage(
                 self.id,
-                image_size.NATIVE,
+                image_size=image_size.NATIVE,
                 s3_client=s3_uploads_client,
                 s3_path=self.get_image_path(image_size.NATIVE),
             )
             self.k4_jpeg_cache = CachedImage(
-                self.id, image_size.K4, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.K4)
+                self.id,
+                image_size=image_size.K4,
+                s3_client=s3_uploads_client,
+                s3_path=self.get_image_path(image_size.K4),
             )
             self.p1080_jpeg_cache = CachedImage(
                 self.id,
-                image_size.P1080,
+                image_size=image_size.P1080,
                 s3_client=s3_uploads_client,
                 s3_path=self.get_image_path(image_size.P1080),
             )
             self.p480_jpeg_cache = CachedImage(
                 self.id,
-                image_size.P480,
+                image_size=image_size.P480,
                 s3_client=s3_uploads_client,
                 s3_path=self.get_image_path(image_size.P480),
             )
             self.p64_jpeg_cache = CachedImage(
-                self.id, image_size.P64, s3_client=s3_uploads_client, s3_path=self.get_image_path(image_size.P64)
+                self.id,
+                image_size=image_size.P64,
+                s3_client=s3_uploads_client,
+                s3_path=self.get_image_path(image_size.P64),
             )
 
     @property
@@ -227,26 +239,20 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         path = self.get_image_path(size)
         return self.cloudfront_client.generate_presigned_url(path, ['PUT'])
 
-    def delete_s3_video(self):
-        path = self.get_original_video_path()
-        self.s3_uploads_client.delete_object(path)
-
     def serialize(self, caller_user_id):
         resp = self.item.copy()
         resp['postedBy'] = self.user_manager.get_user(self.user_id).serialize(caller_user_id)
         return resp
 
     def build_image_thumbnails(self):
-        image = self.native_jpeg_cache.get_image()
+        image = self.native_jpeg_cache.readonly_image.copy()
         # ordered by decreasing size
         for cache in (self.k4_jpeg_cache, self.p1080_jpeg_cache, self.p480_jpeg_cache, self.p64_jpeg_cache):
-            fh = io.BytesIO()
             try:
                 image.thumbnail(cache.image_size.max_dimensions, resample=PIL.Image.LANCZOS)
-                image.save(fh, format='JPEG', quality=100, icc_profile=image.info.get('icc_profile'))
             except Exception as err:
                 raise PostException(f'Unable to thumbnail image as jpeg for post `{self.id}`: {err}')
-            cache.set(image=image)
+            cache.set_image(image)
             cache.flush()
 
     def process_image_upload(self, image_data=None, now=None):
@@ -260,13 +266,19 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # mark ourselves as processing
         self.item = self.dynamo.set_post_status(self.item, PostStatus.PROCESSING)
 
+        # set up a cached image with the raw data (four different ways to receive the data now)
+        source_cached_image = (
+            self.native_heic_cache if self.image_item.get('imageFormat') == 'HEIC' else self.native_jpeg_cache
+        )
         if image_data:
-            # s3 trigger is a no-op because we are already in PROCESSING
-            self.upload_native_image_data_base64(image_data)
+            source_cached_image.set_data(io.BytesIO(base64.b64decode(image_data)))
 
-        if self.image_item.get('imageFormat') == 'HEIC':
-            self.fill_native_jpeg_cache_from_heic()
-        cropped = self.crop_native_jpeg_cache() if self.image_item.get('crop') else False
+        if crop := self.image_item.get('crop'):
+            source_cached_image.crop(crop)
+
+        if source_cached_image != self.native_jpeg_cache:
+            self.native_jpeg_cache.set_image(source_cached_image.readonly_image)  # set_image makes a copy
+
         if self.native_jpeg_cache.is_synced is False:
             self.native_jpeg_cache.flush()
 
@@ -274,7 +286,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # save HEIC images for this special user, even if a crop is specified
         special_user_id = 'us-east-1:965eaacd-2bfb-46e2-866e-15be352a90e5'
 
-        if self.image_item.get('imageFormat') == 'HEIC' and cropped and self.user_id != special_user_id:
+        if self.native_heic_cache.is_synced is False and self.user_id != special_user_id:
+            # the HEIC image was edited (cropped) but we can't save that as HEIC, so we just delete it
             self.native_heic_cache.clear()
             self.native_heic_cache.flush(include_deletes=True)
 
@@ -284,43 +297,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         self.set_is_verified()
         self.set_checksum()
         self.complete(now=now)
-
-    def fill_native_jpeg_cache_from_heic(self):
-        assert self.type == PostType.IMAGE, 'Cannot operate on post of non-IMAGE post type'
-        image = self.native_heic_cache.get_image()
-        self.native_jpeg_cache.set(image=image)
-
-    def crop_native_jpeg_cache(self):
-        assert self.type == PostType.IMAGE, 'Cannot operate on post of non-IMAGE post type'
-        assert (crop := self.image_item.get('crop')) , 'Cannot crop post with no crop specified'
-
-        image = self.native_jpeg_cache.get_image()
-        cur_width, cur_height = image.size
-        ul_x, ul_y = crop['upperLeft']['x'], crop['upperLeft']['y']
-        lr_x, lr_y = crop['lowerRight']['x'], crop['lowerRight']['y']
-
-        if lr_y > cur_height:
-            raise PostException('Image not tall enough to crop as requested')
-        if lr_x > cur_width:
-            raise PostException('Image not wide enough to crop as requested')
-
-        if ul_x == 0 and ul_y == 0 and lr_x == cur_width and lr_y == cur_height:
-            # crop matches image dimensions exactly, no-op
-            return False
-
-        try:
-            image = image.crop((ul_x, ul_y, lr_x, lr_y))
-        except Exception as err:
-            raise PostException(f'Unable to crop image for post `{self.id}`: {err}')
-
-        self.native_jpeg_cache.set(image=image)
-        return True
-
-    def upload_native_image_data_base64(self, image_data):
-        "Given a base64-encoded string of image data, set the native image in S3 and our cached copy of the data"
-        cache = self.native_heic_cache if self.image_item.get('imageFormat') == 'HEIC' else self.native_jpeg_cache
-        cache.set(io.BytesIO(base64.b64decode(image_data)))
-        cache.flush()
 
     def start_processing_video_upload(self):
         assert self.type == PostType.VIDEO, 'Can only process_video_upload() for VIDEO posts'
@@ -504,13 +480,13 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self
 
     def set_height_and_width(self):
-        width, height = self.native_jpeg_cache.get_image().size
+        width, height = self.native_jpeg_cache.readonly_image.size
         self._image_item = self.image_dynamo.set_height_and_width(self.id, height, width)
         return self
 
     def set_colors(self):
         try:
-            colors = colorthief.ColorThief(self.native_jpeg_cache.get_fh()).get_palette(color_count=5)
+            colors = ColorThiefFromImage(self.native_jpeg_cache.readonly_image).get_palette(color_count=5)
         except Exception as err:
             logger.warning(f'ColorTheif failed to get palette with error `{err}` for post `{self.id}`')
         else:

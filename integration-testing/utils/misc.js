@@ -22,31 +22,34 @@ const generateRandomJpeg = (width, height) => {
   return jpeg.encode(imgData, quality).data
 }
 
-const sleepUntilPostCompleted = async (
+const sleepUntilPostProcessed = async (
   gqlClient,
   postId,
   {maxWaitMs = 10 * 1000, pollingIntervalMs = 1000} = {},
 ) => {
-  const queryPost = gql(`query Post ($postId: ID!) {
-    post (postId: $postId) {
-      postId
-      postStatus
+  const queryPost = gql`
+    query Post($postId: ID!) {
+      post(postId: $postId) {
+        postStatus
+      }
     }
-  }`)
-
+  `
+  const notProcessedStatuses = ['PENDING', 'PROCESSING']
   let waitedMs = 0
   while (waitedMs < maxWaitMs) {
-    let resp = await gqlClient.query({query: queryPost, variables: {postId}})
-    if (resp.data.post.postStatus == 'COMPLETED') return
+    let postStatus = await gqlClient
+      .query({query: queryPost, variables: {postId}})
+      .then(({data}) => data.post.postStatus)
+    if (!notProcessedStatuses.includes(postStatus)) return
     await sleep(pollingIntervalMs)
     waitedMs += pollingIntervalMs
   }
-  throw Error(`Post ${postId} never reached status COMPLETED`)
+  throw Error(`Post ${postId} never left statuses ${notProcessedStatuses}`)
 }
 
 module.exports = {
   generateRandomJpeg,
   shortRandomString,
   sleep,
-  sleepUntilPostCompleted,
+  sleepUntilPostProcessed,
 }

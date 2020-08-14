@@ -4,111 +4,149 @@ import PIL.Image
 import PIL.ImageOps
 import pyheif
 
-from app.utils import image_size
-
 from .exceptions import PostException
 
 
 class CachedImage:
-
-    jpeg_content_type = 'image/jpeg'
-    heic_content_type = 'image/heic'
-
-    def __init__(self, post_id, img_size, s3_client=None, s3_path=None, source=None):
-        assert (s3_client and s3_path) or source, 'Either s3 kwargs or source required'
+    def __init__(self, post_id, image_size=None, s3_client=None, s3_path=None, source=None, content_type=None):
+        assert (s3_client and s3_path) or source, 'Either s3 kwargs or source kwargs required'
 
         self.post_id = post_id
-        self.image_size = img_size
+        self.image_size = image_size
         self.s3_client = s3_client
         self.s3_path = s3_path
         self.source = source
+        self.content_type = content_type or (image_size.content_type if image_size else None)
 
-        self.is_synced = None
+        # if self._image is set, that's the latest data
+        # if self._image is not set, then self._data will contain the latest data
         self._data = None
+        self._image = None
+
+        # Possible values and meanings:
+        #   - True: what's in the cache is known to match the source
+        #   - False: what's in the cache is thought to be different than the source
+        #   - None: cache has never been filled
+        self.is_synced = None
 
     @property
-    def content_type(self):
-        return self.heic_content_type if self.image_size == image_size.NATIVE_HEIC else self.jpeg_content_type
-
-    @property
-    def is_empty(self):
-        return not bool(self._data)
-
-    def get_fh(self):
-        if self.is_synced is None:
+    def readonly_image(self):
+        """
+        It's not really readonly, the name is just to scare the client into not mutating it.
+        Use readonly_image.copy() first if you want to make changes.
+        """
+        if not self._image and not self._data:
             self.refresh()
-        return io.BytesIO(self._data)
+        if not self._image and self._data:
+            self._fill_image_from_data()
+        return self._image
 
-    def get_image(self):
-        fh = self.get_fh()
-
-        if self.image_size == image_size.NATIVE_HEIC:
+    def _fill_image_from_data(self):
+        fh = io.BytesIO(self._data)
+        if self.content_type == 'image/heic':
             try:
                 heif_file = pyheif.read(fh)
             except (ValueError, pyheif.error.HeifError) as err:
                 raise PostException(f'Unable to read HEIC file for post `{self.post_id}`: {err}')
-            return PIL.Image.frombytes(
+            self._image = PIL.Image.frombytes(
                 heif_file.mode, heif_file.size, heif_file.data, 'raw', heif_file.mode, heif_file.stride
             )
-
-        else:
+        elif self.content_type == 'image/jpeg':
             try:
-                return PIL.ImageOps.exif_transpose(PIL.Image.open(fh))
+                self._image = PIL.ImageOps.exif_transpose(PIL.Image.open(fh))
             except PostException:
                 raise
             except Exception as err:
                 raise PostException(f'Unable to decode native jpeg data for post `{self.post_id}`: {err}')
+        else:
+            raise PostException(f'Unrecognized content-type `{self.content_type}`')
+
+    def set_image(self, image):
+        self._data = None
+        self._image = image.copy()
+        self.is_synced = False
+        return self
+
+    def set_data(self, fh):
+        fh.seek(0)
+        self._data = fh.read()
+        self._image = None
+        self.is_synced = False
+        return self
+
+    def clear(self):
+        if not (self.is_synced and self._image is None and self._data is None):
+            self._data = None
+            self._image = None
+            self.is_synced = False
+        return self
 
     def refresh(self):
         if self.source:
-            fh = self.source(self.image_size.max_dimensions)
+            self._data = None
+            self._image = self.source()
         else:
             try:
                 fh = self.s3_client.get_object_data_stream(self.s3_path)
             except self.s3_client.exceptions.NoSuchKey:
-                raise PostException(f'{self.image_size.filename} image data not found for post `{self.post_id}`')
-
-        self._data = fh.read()
+                raise PostException(f'{self.s3_path} image data not found for post `{self.post_id}`')
+            self._data = fh.read()
+            self._image = None
         self.is_synced = True
         return self
 
-    def set(self, fh=None, image=None):
-        assert (fh is not None) != (image is not None)  # python has no logical xor infix operator :(
+    def crop(self, crop):
+        cur_width, cur_height = self.readonly_image.size
+        ul_x, ul_y = crop['upperLeft']['x'], crop['upperLeft']['y']
+        lr_x, lr_y = crop['lowerRight']['x'], crop['lowerRight']['y']
 
-        if image:
-            fh = io.BytesIO()
-            # Note that PIL/Pillow's save method treats None differently than not present for some kwargs
-            kwargs = {
-                'format': 'JPEG',
-                'quality': 100,
-            }
-            if 'icc_profile' in image.info:
-                kwargs['icc_profile'] = image.info['icc_profile']
-            if 'exif' in image.info:
-                kwargs['exif'] = image.info['exif']
-            try:
-                image.save(fh, **kwargs)
-            except Exception as err:
-                raise PostException(f'Unable to save pil image for post `{self.post_id}`: {err}')
+        if lr_y > cur_height:
+            raise PostException('Image not tall enough to crop as requested')
+        if lr_x > cur_width:
+            raise PostException('Image not wide enough to crop as requested')
 
-        fh.seek(0)
+        if ul_x == 0 and ul_y == 0 and lr_x == cur_width and lr_y == cur_height:
+            return self
+
+        try:
+            self._image = self.readonly_image.crop((ul_x, ul_y, lr_x, lr_y))
+        except Exception as err:
+            raise PostException(f'Unable to crop image for post `{self.id}`: {err}')
+
+        self._data = None
         self.is_synced = False
-        self._data = fh.read()
         return self
 
     def flush(self, include_deletes=False):
-        if not self.is_synced:
-            if self._data:
-                self.s3_client.put_object(self.s3_path, self.get_fh(), self.content_type)
-            else:
+        assert self.s3_path, 'Can only flush cached images backed by S3'
+        if self.is_synced is None:
+            raise Exception('Nothing to flush back')
+        if self.is_synced is False:
+            if not self._data and not self._image:
                 if not include_deletes:
                     raise Exception('Refusing to flush back empty cache without `include_deletes` kwarg')
                 self.s3_client.delete_object(self.s3_path)
+            else:
+                if self._data:
+                    fh = io.BytesIO(self._data)
+                elif self._image:
+                    assert self.content_type == 'image/jpeg', 'Non-jpeg images can only be flushed back empty'
+                    fh = io.BytesIO()
+                    kwargs = {  # Note: Pillow's Image.save treats None differently than not present for some kwargs
+                        k: v
+                        for k, v in {
+                            'format': 'JPEG',
+                            'quality': 100,  # per spec
+                            'icc_profile': self._image.info.get('icc_profile'),
+                            'exif': self._image.info.get('exif'),
+                        }.items()
+                        if v is not None
+                    }
+                    try:
+                        self._image.save(fh, **kwargs)
+                    except Exception as err:
+                        raise PostException(f'Unable to save pil image for post `{self.post_id}`: {err}')
+                    fh.seek(0)
+                self.s3_client.put_object(self.s3_path, fh, self.content_type)
             self.is_synced = True
-        return self
-
-    def clear(self):
-        if self._data is not None:
-            self._data = None
-            self.is_synced = False
         return self

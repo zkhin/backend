@@ -259,7 +259,7 @@ test('Post count reacts to user archiving posts', async () => {
 
   // upload the image for the post, verify post completes and count now goes up
   await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostCompleted(ourClient, postId2)
+  await misc.sleepUntilPostProcessed(ourClient, postId2)
   await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId: postId2}}).then(({data: {post}}) => {
     expect(post.postStatus).toBe('COMPLETED')

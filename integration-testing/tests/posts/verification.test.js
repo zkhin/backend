@@ -38,7 +38,7 @@ test('Add image post passes verification', async () => {
   let uploadUrl = post.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
   await rp.put({url: uploadUrl, headers: imageHeaders, body: bigGrantData})
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // check the post is now verified
   resp = await ourClient.query({query: queries.post, variables: {postId}})

@@ -2,6 +2,8 @@
 
 import argparse
 
+import PIL.Image
+
 # relative imports don't work from scripts, so depending on 'art' to be globally unique
 # https://stackoverflow.com/a/16985066
 from art import generate_basic_grid, generate_zoomed_grid
@@ -39,8 +41,8 @@ def parse_args():
 def main():
     output_file, input_files, algorithim_id = parse_args()
     algo = algorithims[algorithim_id]
-    output_buf = algo(input_files)
-    output_file.write(output_buf.read())
+    output_image = algo([PIL.Image.open(fh) for fh in input_files])
+    output_image.save(output_file, format='JPEG', quality=100)
 
 
 if __name__ == '__main__':

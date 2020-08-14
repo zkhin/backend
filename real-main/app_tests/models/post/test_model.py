@@ -1,4 +1,3 @@
-import base64
 import decimal
 import logging
 import uuid
@@ -194,29 +193,6 @@ def test_get_hls_access_cookies(cloudfront_client, s3_uploads_client):
     assert cloudfront_client.mock_calls == [mock.call.generate_presigned_cookies(cookie_path)]
 
 
-def test_delete_s3_video(s3_uploads_client):
-    post_item = {
-        'postedByUserId': 'uid',
-        'postId': 'pid',
-        'postType': PostType.VIDEO,
-    }
-    post = Post(post_item, s3_uploads_client=s3_uploads_client)
-    path = post.get_original_video_path()
-    assert s3_uploads_client.exists(path) is False
-
-    # even with video in s3 should not error out
-    post.delete_s3_video()
-    assert s3_uploads_client.exists(path) is False
-
-    # put some data up there
-    s3_uploads_client.put_object(path, b'data', 'application/octet-stream')
-    assert s3_uploads_client.exists(path) is True
-
-    # delete it, verify it's gone
-    post.delete_s3_video()
-    assert s3_uploads_client.exists(path) is False
-
-
 def test_set_checksum(post):
     assert 'checksum' not in post.item
 
@@ -337,28 +313,6 @@ def test_clear_expires_at(post_with_expiration):
     assert post.follower_manager.mock_calls == [
         mock.call.refresh_first_story(story_prev=post_org_item, story_now=None),
     ]
-
-
-def test_upload_native_image_data_base64(pending_image_post):
-    post = pending_image_post
-    native_path = post.get_image_path(image_size.NATIVE)
-    image_data = b'imagedatahere'
-    image_data_b64 = base64.b64encode(image_data)
-
-    # mark the post a processing (in mem sufficient)
-    post.item['postStatus'] = PostStatus.PROCESSING
-
-    # check no data on post, nor in s3
-    assert not hasattr(post, '_native_jpeg_data')
-    with pytest.raises(post.s3_uploads_client.exceptions.NoSuchKey):
-        assert post.s3_uploads_client.get_object_data_stream(native_path)
-
-    # put data up there
-    post.upload_native_image_data_base64(image_data_b64)
-
-    # check it was placed in mem and in s3
-    assert post.native_jpeg_cache.get_fh().read() == image_data
-    assert post.s3_uploads_client.get_object_data_stream(native_path).read() == image_data
 
 
 def test_set(post, user):
@@ -754,45 +708,6 @@ def test_get_image_writeonly_url(pending_image_post, cloudfront_client, dynamo_c
     assert post.get_image_writeonly_url()
     assert 'native.jpg' not in cloudfront_client.generate_presigned_url.call_args.args[0]
     assert 'native.heic' in cloudfront_client.generate_presigned_url.call_args.args[0]
-
-
-def test_fill_native_jpeg_cache_from_heic(pending_image_post, s3_uploads_client):
-    post = pending_image_post
-
-    # put the heic image in the bucket
-    s3_heic_path = post.get_image_path(image_size.NATIVE_HEIC)
-    s3_uploads_client.put_object(s3_heic_path, open(heic_path, 'rb'), 'image/heic')
-
-    # verify there's no native jpeg
-    s3_jpeg_path = post.get_image_path(image_size.NATIVE)
-    assert not s3_uploads_client.exists(s3_jpeg_path)
-
-    post.fill_native_jpeg_cache_from_heic()
-
-    # verify the jpeg cache is now full, of the correct size, and s3 has not been filled
-    assert not post.native_jpeg_cache.is_empty
-    assert not post.native_jpeg_cache.is_synced
-    assert post.native_jpeg_cache.get_image().size == (heic_width, heic_height)
-    assert not s3_uploads_client.exists(s3_jpeg_path)
-
-
-def test_fill_native_jpeg_cache_from_heic_bad_heic_data(pending_image_post, s3_uploads_client):
-    post = pending_image_post
-
-    # put some non-heic data in the heic spot
-    s3_heic_path = post.get_image_path(image_size.NATIVE_HEIC)
-    s3_uploads_client.put_object(s3_heic_path, b'notheicdata', 'image/heic')
-
-    # verify there's no native jpeg
-    s3_jpeg_path = post.get_image_path(image_size.NATIVE)
-    assert not s3_uploads_client.exists(s3_jpeg_path)
-
-    with pytest.raises(PostException, match='Unable to read HEIC'):
-        post.fill_native_jpeg_cache_from_heic()
-
-    # verify there's still no native jpeg
-    assert post.native_jpeg_cache.is_empty
-    assert not s3_uploads_client.exists(s3_jpeg_path)
 
 
 def test_set_height_and_width(s3_uploads_client, pending_image_post):

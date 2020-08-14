@@ -59,7 +59,7 @@ test('Post lifecycle, visibility and trending', async () => {
 
   // they upload the image, completing their post
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
-  await misc.sleepUntilPostCompleted(theirClient, postId1)
+  await misc.sleepUntilPostProcessed(theirClient, postId1)
   await misc.sleep(4000) // a bit more time for dynamo trending index converge
 
   // check that shows up in trending posts, their post should be on top

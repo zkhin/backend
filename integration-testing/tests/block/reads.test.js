@@ -35,7 +35,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-  await misc.sleepUntilPostCompleted(ourClient, postId)
+  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we set some details on our profile
   resp = await ourClient.mutate({
