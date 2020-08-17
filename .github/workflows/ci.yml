@@ -2,30 +2,6 @@ name: Continuous Integration
 on: [push, pull_request]
 jobs:
 
-  real-auth-pytest:
-    runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_XRAY_SDK_ENABLED: false
-
-    steps:
-    - name: Git checkout
-      uses: actions/checkout@v1
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.8
-
-    - name: Install Poetry
-      uses: dschep/install-poetry-action@v1.3
-
-    - name: Install dependencies
-      run: cd real-auth && poetry install
-
-    - name: Test with pytest
-      run: cd real-auth && poetry run pytest tests
-
   real-main-pytest:
     runs-on: ubuntu-latest
     env:
@@ -64,13 +40,6 @@ jobs:
     - name: Install python lint tools
       run: pip install black flake8 flake8-bugbear isort
 
-    - name: Lint real-auth
-      working-directory: real-auth
-      run: |
-        black --check --diff .
-        isort --check --diff .
-        flake8 .
-
     - name: Lint real-cloudfront
       working-directory: real-cloudfront
       run: |
@@ -100,11 +69,6 @@ jobs:
 
     - name: Install pylint
       run: pip install pylint
-
-    - name: Lint real-auth
-      working-directory: real-auth
-      run: |
-        pylint real_auth tests
 
     - name: Lint real-cloudfront
       working-directory: real-cloudfront
