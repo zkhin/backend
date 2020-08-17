@@ -13,6 +13,7 @@ const {mutations, queries} = require('../schema')
 
 const imageData = misc.generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
+const imageData2B64 = new Buffer.from(misc.generateRandomJpeg(8, 8)).toString('base64')
 const jpgHeaders = {'Content-Type': 'image/jpeg'}
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(2)
@@ -285,32 +286,41 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
   expect(resp.data.trendingUsers.items).toHaveLength(0)
 })
 
-test('Posts that fail verification do not end up in trending', async () => {
-  const {client: ourClient} = await loginCache.getCleanLogin()
-  const {client: theirClient} = await loginCache.getCleanLogin()
+test('Posts that fail verification get lower trending scores', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // we add a post that passes verification
+  const postId1 = uuidv4()
+  await client
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId1, imageData: imageDataB64, takenInReal: true},
+    })
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('COMPLETED')
+      expect(post.isVerified).toBe(true)
+    })
 
   // we add a image post that fails verification
-  const postId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData: imageDataB64}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-  expect(resp.data.addPost.isVerified).toBe(false)
+  await misc.sleep(1000) // ordering
+  const postId2 = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData: imageData2B64}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId2)
+      expect(post.postStatus).toBe('COMPLETED')
+      expect(post.isVerified).toBe(false)
+    })
 
-  // check it does not appear in trending
-  resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.data.trendingPosts.items).toHaveLength(0)
-
-  // they report to have viewed the post
-  resp = await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
-  await misc.sleep(2000) // dynamo
-
-  // check it does not appear in trending
-  resp = await theirClient.query({query: queries.trendingPosts})
-  expect(resp.data.trendingPosts.items).toHaveLength(0)
-
-  // check we do not appear in trending
-  resp = await ourClient.query({query: queries.trendingUsers})
-  expect(resp.data.trendingUsers.items).toHaveLength(0)
+  // check ordering. Even though the post that failed verification was more recent, it should appear
+  // after the post that passed verification because it received less trending points
+  await misc.sleep(2000)
+  await client.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(2)
+    expect(trendingPosts.items[0].postId).toBe(postId1)
+    expect(trendingPosts.items[1].postId).toBe(postId2)
+  })
 })
 
 test('Views of non-original posts contribute to the original post & user in trending', async () => {
