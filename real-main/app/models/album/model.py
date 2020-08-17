@@ -2,7 +2,6 @@ import hashlib
 import io
 import itertools
 import logging
-import os
 
 import PIL.Image
 
@@ -12,8 +11,6 @@ from . import art
 from .exceptions import AlbumException
 
 logger = logging.getLogger()
-
-CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN')
 
 
 class Album:
@@ -28,7 +25,6 @@ class Album:
         s3_uploads_client=None,
         user_manager=None,
         post_manager=None,
-        frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
     ):
         self.dynamo = album_dynamo
         if cloudfront_client:
@@ -39,7 +35,6 @@ class Album:
             self.post_manager = post_manager
         if user_manager:
             self.user_manager = user_manager
-        self.frontend_resources_domain = frontend_resources_domain
         self.item = album_item
         self.id = album_item['albumId']
         self.user_id = album_item['ownedByUserId']
@@ -81,7 +76,7 @@ class Album:
         art_image_path = self.get_art_image_path(size)
         if art_image_path:
             return self.cloudfront_client.generate_presigned_url(art_image_path, ['GET', 'HEAD'])
-        return f'https://{self.frontend_resources_domain}/default-album-art/{size.filename}'
+        return None
 
     def get_art_image_path_prefix(self):
         return '/'.join([self.user_id, 'album', self.id])

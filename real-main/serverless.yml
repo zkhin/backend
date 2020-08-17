@@ -32,7 +32,6 @@ provider:
     USER_NOTIFICATIONS_ONLY_USERNAMES: ${env:USER_NOTIFICATIONS_ONLY_USERNAMES, ''}  # space-seperated list
 
     # Note: use of cloudformation variables with 'placeholder' is to avoid resource dependency loops
-    CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN: ${cf:real-production-themes.CloudFrontThemesDomainName, 'placeholder'}
     CLOUDFRONT_UPLOADS_DOMAIN: ${cf:real-${self:provider.stage}-cloudfront.CloudFrontUploadsDomainName, 'placeholder'}
 
     COGNITO_USER_POOL_ID: ${cf:${self:provider.stackName}.CognitoUserPoolId, 'placeholder'}
@@ -123,7 +122,6 @@ custom:
       level: ERROR
     substitutions:
       dynamoTable: ${self:provider.environment.DYNAMO_TABLE}
-      frontendResourcesDomain: ${self:provider.environment.CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN}
       lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
       realUserId: ${self:provider.environment.REAL_USER_ID}
     xrayEnabled: true

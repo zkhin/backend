@@ -110,7 +110,6 @@ test(
     expect(resp.data.addAlbum.postCount).toBe(0)
     expect(resp.data.addAlbum.postsLastUpdatedAt).toBeNull()
     expect(resp.data.addAlbum.posts.items).toHaveLength(0)
-    let placeholderAlbumArt = resp.data.addAlbum.art
 
     // add a pending video post to that album
     const postId = uuidv4()
@@ -143,13 +142,6 @@ test(
     expect(resp.data.album.posts.items[0].postId).toBe(postId)
     let postAlbumArt = resp.data.album.art
 
-    // verify album art urls have changed
-    expect(placeholderAlbumArt.url.split('?')[0]).not.toBe(postAlbumArt.url.split('?')[0])
-    expect(placeholderAlbumArt.url4k.split('?')[0]).not.toBe(postAlbumArt.url4k.split('?')[0])
-    expect(placeholderAlbumArt.url1080p.split('?')[0]).not.toBe(postAlbumArt.url1080p.split('?')[0])
-    expect(placeholderAlbumArt.url480p.split('?')[0]).not.toBe(postAlbumArt.url480p.split('?')[0])
-    expect(placeholderAlbumArt.url64p.split('?')[0]).not.toBe(postAlbumArt.url64p.split('?')[0])
-
     // remove the post from the album
     resp = await client.mutate({mutation: mutations.editPostAlbum, variables: {postId}})
     expect(resp.data.editPostAlbum.postId).toBe(postId)
@@ -162,13 +154,6 @@ test(
     expect(resp.data.album.postCount).toBe(0)
     expect(resp.data.album.posts.items).toHaveLength(0)
     let albumArt = resp.data.album.art
-
-    // verify album art urls are back to placeholders
-    expect(placeholderAlbumArt.url.split('?')[0]).toBe(albumArt.url.split('?')[0])
-    expect(placeholderAlbumArt.url4k.split('?')[0]).toBe(albumArt.url4k.split('?')[0])
-    expect(placeholderAlbumArt.url1080p.split('?')[0]).toBe(albumArt.url1080p.split('?')[0])
-    expect(placeholderAlbumArt.url480p.split('?')[0]).toBe(albumArt.url480p.split('?')[0])
-    expect(placeholderAlbumArt.url64p.split('?')[0]).toBe(albumArt.url64p.split('?')[0])
 
     // add the post from the album
     resp = await client.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})

@@ -99,18 +99,8 @@ def test_get_art_image_url(album):
     image_url = 'https://the-image.com'
     album.cloudfront_client.configure_mock(**{'generate_presigned_url.return_value': image_url})
 
-    # should get placeholder image when album has no artHash
-    assert 'artHash' not in album.item
-    domain = 'here.there.com'
-    album.frontend_resources_domain = domain
-    for size in image_size.JPEGS:
-        url = album.get_art_image_url(size)
-        assert domain in url
-        assert size.name in url
-
     # set an artHash, in mem is enough
     album.item['artHash'] = 'deadbeef'
-    url = album.get_art_image_url(image_size.NATIVE)
     for size in image_size.JPEGS:
         assert album.get_art_image_url(size) == image_url
 

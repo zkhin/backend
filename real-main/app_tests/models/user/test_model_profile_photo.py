@@ -85,14 +85,6 @@ def test_get_photo_url(user, uploaded_post, cloudfront_client):
     for size in image_size.JPEGS:
         assert user.get_photo_url(size) is None
 
-    # placeholder code set
-    placeholder_photo_code = 'pp-code'
-    user.item['placeholderPhotoCode'] = placeholder_photo_code
-    url_root = f'https://{user.frontend_resources_domain}/{user.placeholder_photos_directory}'
-    for size in image_size.JPEGS:
-        url = user.get_photo_url(size)
-        assert url == f'{url_root}/{placeholder_photo_code}/{size.name}.jpg'
-
     # photo post set
     user.update_photo(uploaded_post.id)
     assert user.item['photoPostId'] == uploaded_post.id

@@ -15,7 +15,6 @@ from .validate import UserValidate
 logger = logging.getLogger()
 
 S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTORY')
-CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN')
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
@@ -43,7 +42,6 @@ class User(TrendingModelMixin):
         like_manager=None,
         post_manager=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
-        frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -71,7 +69,6 @@ class User(TrendingModelMixin):
         self.item = user_item
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
-        self.frontend_resources_domain = frontend_resources_domain
 
     @property
     def username(self):
@@ -97,9 +94,6 @@ class User(TrendingModelMixin):
         photo_path = self.get_photo_path(size)
         if photo_path:
             return self.cloudfront_client.generate_presigned_url(photo_path, ['GET', 'HEAD'])
-        placeholder_path = self.get_placeholder_photo_path(size)
-        if placeholder_path and self.frontend_resources_domain:
-            return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
     def is_forced_disabling_criteria_met_by_chat_messages(self):

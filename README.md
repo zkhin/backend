@@ -64,14 +64,6 @@ _Once per AWS Account_
 
 - Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
 
-### Other stacks outside this repo
-
-The stacks in the following repos will need to be deployed before these
-
-- `themes`
-
-The `themes` stack will create an S3 bucket, within which there is a subdirectory `placeholder-photos`. The integration tests in this repo expect that subdirectory to be empty.
-
 ### First-time stack deployment order
 
 Resource dependencies between the stacks make initial deployment tricky. Stacks should be deployed in this order:
