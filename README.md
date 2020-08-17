@@ -31,12 +31,6 @@ Serverless expects the AWS credentials to have `AdministratorAccess` policy atta
 
 ### First-time deployment manual steps
 
-#### CloudWatch
-
-_Once per AWS Account, must be done before first deployment_
-
-- Create a LogGroup with name `sns/<aws-region>/<aws-account-id>/DirectPublishToPhoneNumber/Failure`. This log group will be referenced by all deployments in the account, and used by SNS to log SMS delivery failures.
-
 #### IAM
 
 _Once per AWS Account_
