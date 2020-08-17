@@ -160,13 +160,6 @@ test('Various photoPostId failures', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.postType).toBe('IMAGE')
-  expect(resp.data.addPost.isVerified).toBe(false)
-
-  // verify can't set our profile photo using non-verified post
-  variables = {photoPostId: postId}
-  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables})).rejects.toThrow(
-    /ClientError: .*is not verified/,
-  )
 })
 
 test('Set and delete our profile photo, using postId', async () => {

@@ -291,7 +291,7 @@ test('Format for COMPLETED message notifications', async () => {
       __typename: 'Post',
       postId: postId1,
       postStatus: 'COMPLETED',
-      isVerified: false,
+      isVerified: true,
     },
   })
   expect(ourNotifications[1].data.onPostNotification).toEqual({
