@@ -30,18 +30,11 @@ Serverless expects the AWS credentials to have `AdministratorAccess` policy atta
 
 ### First-time deployment manual steps
 
-#### IAM
-
-_Once per AWS Account_
-
-- Google needs to be configured as an [IAM OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) before `real-main` can be deployed. Step-by-step instructions are available [here](https://medium.com/fullstack-with-react-native-aws-serverless-and/set-up-openid-connect-oidc-provider-in-aws-91d498f3c9f7).
-
 #### SecretsManager
 
 _Once per deployment_
 
 - A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
-- Google OAuth Client Ids must be added. These are available from our google app's profile on the [google app console](https://console.developers.google.com/) and have format `{"ios": "***", "web": "***", ...}`. Reference the environment variable in serverless.yml for the proper naming.
 
 #### SES
 

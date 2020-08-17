@@ -7,7 +7,6 @@ __all__ = [
     'DynamoClient',
     'ElasticSearchClient',
     'FacebookClient',
-    'GoogleClient',
     'MediaConvertClient',
     'PinpointClient',
     'S3Client',
@@ -21,7 +20,6 @@ from .cognito import CognitoClient
 from .dynamo import DynamoClient
 from .elasticsearch import ElasticSearchClient
 from .facebook import FacebookClient
-from .google import GoogleClient
 from .mediaconvert import MediaConvertClient
 from .pinpoint import PinpointClient
 from .s3 import S3Client

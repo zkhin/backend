@@ -43,7 +43,6 @@ provider:
     S3_UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}
 
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
-    SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
 
   iamRoleStatements:
     - Effect: Allow

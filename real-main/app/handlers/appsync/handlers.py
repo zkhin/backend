@@ -44,7 +44,6 @@ clients = {
     'cognito': clients.CognitoClient(),
     'dynamo': clients.DynamoClient(),
     'facebook': clients.FacebookClient(),
-    'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
     'pinpoint': clients.PinpointClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
     's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
@@ -112,20 +111,6 @@ def create_facebook_user(caller_user_id, arguments, source, context):
     try:
         user = user_manager.create_federated_user(
             'facebook', caller_user_id, username, facebook_token, full_name=full_name
-        )
-    except UserException as err:
-        raise ClientException(str(err))
-    return user.serialize(caller_user_id)
-
-
-@routes.register('Mutation.createGoogleUser')
-def create_google_user(caller_user_id, arguments, source, context):
-    username = arguments['username']
-    full_name = arguments.get('fullName')
-    google_id_token = arguments['googleIdToken']
-    try:
-        user = user_manager.create_federated_user(
-            'google', caller_user_id, username, google_id_token, full_name=full_name
         )
     except UserException as err:
         raise ClientException(str(err))

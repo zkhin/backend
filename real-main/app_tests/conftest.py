@@ -120,11 +120,6 @@ def facebook_client():
 
 
 @pytest.fixture
-def google_client():
-    yield mock.Mock(clients.GoogleClient(lambda: {}))
-
-
-@pytest.fixture
 def pinpoint_client():
     yield mock.Mock(clients.PinpointClient(app_id='my-app-id'))
 
@@ -240,7 +235,6 @@ def user_manager(
     cognito_client,
     apple_client,
     facebook_client,
-    google_client,
     pinpoint_client,
     elasticsearch_client,
 ):
@@ -254,7 +248,6 @@ def user_manager(
             'cognito': cognito_client,
             'apple': apple_client,
             'facebook': facebook_client,
-            'google': google_client,
             'pinpoint': pinpoint_client,
             'elasticsearch': elasticsearch_client,
         }
