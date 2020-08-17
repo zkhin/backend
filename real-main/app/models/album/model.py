@@ -76,7 +76,7 @@ class Album:
         art_image_path = self.get_art_image_path(size)
         if art_image_path:
             return self.cloudfront_client.generate_presigned_url(art_image_path, ['GET', 'HEAD'])
-        return None
+        return 'https://placeholder.com/image.jpeg'
 
     def get_art_image_path_prefix(self):
         return '/'.join([self.user_id, 'album', self.id])
