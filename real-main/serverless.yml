@@ -124,7 +124,6 @@ custom:
       level: ERROR
     substitutions:
       dynamoTable: ${self:provider.environment.DYNAMO_TABLE}
-      frontendResourcesDomain: ${self:provider.environment.CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN}
       lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
       realUserId: ${self:provider.environment.REAL_USER_ID}
     xrayEnabled: true
