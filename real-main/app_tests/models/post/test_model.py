@@ -765,14 +765,6 @@ def test_trending_increment_score_success_case(image_post):
     assert image_post.trending_item['gsiA4SortKey'] > org_score
 
 
-def test_trending_increment_score_skips_non_verified_image_posts(image_post):
-    org_score = image_post.trending_item['gsiA4SortKey']
-    image_post.item['isVerified'] = False
-    recorded = image_post.trending_increment_score()
-    assert recorded is False
-    assert image_post.trending_item['gsiA4SortKey'] == org_score
-
-
 def test_trending_increment_score_skips_non_original_posts(image_post):
     org_score = image_post.trending_item['gsiA4SortKey']
     image_post.item['originalPostId'] = str(uuid.uuid4())

@@ -40,6 +40,15 @@ def test_increment_score_add_new(model):
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
+def test_increment_score_with_multiplier(model):
+    now = pendulum.parse('2020-06-08T12:00:00Z')  # halfway through the day
+    model.trending_increment_score(now=now, multiplier=0.5)
+    assert pendulum.parse(model.trending_item['createdAt']) == now
+    assert pendulum.parse(model.trending_item['lastDeflatedAt']) == now
+    assert model.trending_item['gsiA4SortKey'] == pytest.approx(Decimal(0.5 * 2 ** 0.5))
+
+
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['user', 'post']))
 def test_increment_score_add_new_race_condition(model, caplog):
     # sneak behind the model's back and add a trending
     assert model.trending_item is None

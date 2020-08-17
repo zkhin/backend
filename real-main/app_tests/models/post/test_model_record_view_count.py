@@ -100,24 +100,26 @@ def test_text_only_posts_trend(post_manager, user, user2):
     assert user.trending_score == 1
 
 
-def test_non_verified_image_posts_dont_trend(post_manager, user, user2, image_data_b64):
+def test_non_verified_image_posts_trend_with_lower_multiplier(post_manager, user, user2, image_data_b64):
     # create an original post that fails verification
+    now = pendulum.parse('2020-06-09T00:00:00Z')  # exact begining of day so post gets exactly one free trending
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': False})
     post = post_manager.add_post(
-        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, now=now,
     )
     assert post.type == PostType.IMAGE
     assert post.is_verified is False
     assert post.original_post_id == post.id
-    assert post.trending_score is None
-    assert post.refresh_trending_item().trending_score is None
-    assert user.refresh_trending_item().trending_score is None
+    assert post.trending_score == 0.5
+    assert post.refresh_trending_item().trending_score == 0.5
+    assert user.refresh_trending_item().trending_score is None  # users don't get a free boost into trending
 
-    # record a view, verify no affect on trending
-    post.record_view_count(user2.id, 4)
-    assert post.trending_score is None
-    assert post.refresh_trending_item().trending_score is None
-    assert user.refresh_trending_item().trending_score is None
+    # record a view, verify adds to trending
+    viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
+    post.record_view_count(user2.id, 4, viewed_at=viewed_at)
+    assert post.trending_score == 0.5 + 1
+    assert post.refresh_trending_item().trending_score == 0.5 + 1
+    assert user.refresh_trending_item().trending_score == 0.5  # includes an extra deflation compared to post
 
 
 def test_verified_image_posts_originality_determines_trending(post_manager, user, image_data_b64, user2, user3):

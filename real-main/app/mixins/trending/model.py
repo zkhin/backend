@@ -30,7 +30,7 @@ class TrendingModelMixin:
         self._trending_item = self.trending_dynamo.get(self.id, strongly_consistent=strongly_consistent)
         return self
 
-    def trending_increment_score(self, now=None, retry_count=0):
+    def trending_increment_score(self, now=None, multiplier=1, retry_count=0):
         "Return a boolean indicating if the score was incremented or not"
         if retry_count > 0:
             logger.warning(
@@ -43,7 +43,7 @@ class TrendingModelMixin:
         now = now or pendulum.now('utc')
         last_deflated_at = pendulum.parse(self.trending_item['lastDeflatedAt']) if self.trending_item else now
         days_since_last_deflation = (now - last_deflated_at.start_of('day')).total_days()
-        inflated_score = Decimal(self.score_inflation_per_day ** days_since_last_deflation)
+        inflated_score = Decimal(multiplier * self.score_inflation_per_day ** days_since_last_deflation)
 
         if self.trending_item:
             try:
@@ -62,7 +62,7 @@ class TrendingModelMixin:
 
         # we lost a race condition, try again.
         self.refresh_trending_item(strongly_consistent=True)
-        return self.trending_increment_score(now=now, retry_count=retry_count + 1)
+        return self.trending_increment_score(now=now, multiplier=multiplier, retry_count=retry_count + 1)
 
     def trending_delete(self):
         self.trending_dynamo.delete(self.id)

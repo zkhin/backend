@@ -373,7 +373,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.follower_manager.refresh_first_story(story_now=self.item)
 
         # give new posts a free bump into trending, but not their user
-        self.trending_increment_score(now=now)
+        kwargs = {'now': now}
+        if self.type == PostType.IMAGE and not self.is_verified:
+            kwargs['multiplier'] = 0.5
+        self.trending_increment_score(**kwargs)
 
         # alert frontend
         self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)
@@ -612,9 +615,13 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.user_id == user_id:
             return False  # post owner's views don't count for trending, etc.
 
-        recorded = self.trending_increment_score(now=viewed_at)
+        kwargs = {'now': viewed_at}
+        if self.type == PostType.IMAGE and not self.is_verified:
+            kwargs['multiplier'] = 0.5
+
+        recorded = self.trending_increment_score(**kwargs)
         if recorded:
-            self.user.trending_increment_score(now=viewed_at)
+            self.user.trending_increment_score(**kwargs)
 
         # record the viewedBy on the post and user
         if is_new_view:
@@ -631,10 +638,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     def trending_increment_score(self, now=None, **kwargs):
         now = now or pendulum.now('utc')
-
-        # keep non-verified posts out of trending
-        if self.type == PostType.IMAGE and not self.is_verified:
-            return False
 
         # keep non-original posts out of trending
         if self.type == PostType.IMAGE and self.original_post_id != self.id:
