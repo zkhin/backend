@@ -307,9 +307,6 @@ custom:
     topics:
       alarm:
         topic: ${self:service}-${self:provider.stage}-alerts-alarm
-        notifications:
-          - protocol: email
-            endpoint: mike+${self:provider.stage}-#{AWS::AccountId}@real.app
     definitions:
       functionUsersForceDisabled:
         metric: usersForceDisabled
