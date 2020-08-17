@@ -64,7 +64,6 @@ Resource dependencies between the stacks make initial deployment tricky. Stacks 
 - `real-lambda-layers`
 - `real-main`, with the following commented out from `serverless.yml`
   - the `AWS::S3::BucketPolicy` resource that depends on `real-cloudfront`
-  - the `AWS::Logs::MetricFilter`s and `AWS::CloudWatch::Alarm` that depend on a AppSync GraphQL LogGroup
 - `real-cloudfront`
 - `real-main` again, with nothing commented out
 

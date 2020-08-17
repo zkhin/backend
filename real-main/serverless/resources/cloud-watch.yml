@@ -16,26 +16,6 @@ Resources:
       TreatMissingData: missing
       Statistic: Sum
 
-  AppSyncServerErrorLogMetricFilterALERT:
-    Type: AWS::Logs::MetricFilter
-    Properties:
-      FilterPattern: '{ $.fieldInError IS TRUE && $.errors[0] != "* errorType=ClientError, *" }'
-      LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
-      MetricTransformations:
-        - MetricValue: 1
-          MetricNamespace: ${self:provider.stackName}
-          MetricName: AppSyncServerErrors
-
-  AppSyncServerErrorLogMetricFilterOK:
-    Type: AWS::Logs::MetricFilter
-    Properties:
-      FilterPattern: ''
-      LogGroupName: !Join [ /, [ /aws/appsync/apis, !GetAtt GraphQlApi.ApiId ] ]
-      MetricTransformations:
-        - MetricValue: 0
-          MetricNamespace: ${self:provider.stackName}
-          MetricName: AppSyncServerErrors
-
   SMSSpendLimitErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
