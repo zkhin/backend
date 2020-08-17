@@ -48,7 +48,7 @@ test('PostViews card generation and format', async () => {
   await u5Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify no card generated yet
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)
@@ -59,7 +59,7 @@ test('PostViews card generation and format', async () => {
   await u6Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify a card was generated, check format
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   const cardId = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -93,7 +93,7 @@ test('PostViews card generation and format', async () => {
   await u7Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify no card generated (card only generates once per post)
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)

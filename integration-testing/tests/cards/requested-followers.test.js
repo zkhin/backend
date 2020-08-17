@@ -58,7 +58,7 @@ test('Requested followers card with correct format, subscription notifications',
     .then(({data}) => expect(data.followUser.followedStatus).toBe('REQUESTED'))
 
   // verify a card was generated for their follow request, with correct format
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000)
   const card1 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -89,7 +89,7 @@ test('Requested followers card with correct format, subscription notifications',
     .then(({data}) => expect(data.followUser.followedStatus).toBe('REQUESTED'))
 
   // verify the card has changed title
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000)
   const card2 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -120,7 +120,7 @@ test('Requested followers card with correct format, subscription notifications',
     .then(({data}) => expect(data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING'))
 
   // verify the card now matches the original card again
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(1)
@@ -145,7 +145,7 @@ test('Requested followers card with correct format, subscription notifications',
     .then(({data}) => expect(data.acceptFollowerUser.followerStatus).toBe('FOLLOWING'))
 
   // verify the card has disappeared
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(0)
