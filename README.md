@@ -41,7 +41,6 @@ _Once per AWS Account_
 _Once per deployment_
 
 - A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
-- Credentials to access the post verification API must be added. Note these are stage-specific. Reference the environment variable in serverless.yml for required format.
 - Google OAuth Client Ids must be added. These are available from our google app's profile on the [google app console](https://console.developers.google.com/) and have format `{"ios": "***", "web": "***", ...}`. Reference the environment variable in serverless.yml for the proper naming.
 
 #### SES
@@ -69,7 +68,6 @@ _Once per AWS Account_
 
 The stacks in the following repos will need to be deployed before these
 
-- `REAL-Post-Verification`
 - `themes`
 
 The `themes` stack will create an S3 bucket, within which there is a subdirectory `placeholder-photos`. The integration tests in this repo expect that subdirectory to be empty.

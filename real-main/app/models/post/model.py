@@ -46,7 +46,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         post_original_metadata_dynamo=None,
         cloudfront_client=None,
         mediaconvert_client=None,
-        post_verification_client=None,
         s3_uploads_client=None,
         album_manager=None,
         block_manager=None,
@@ -72,8 +71,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.cloudfront_client = cloudfront_client
         if mediaconvert_client is not None:
             self.mediaconvert_client = mediaconvert_client
-        if post_verification_client is not None:
-            self.post_verification_client = post_verification_client
         if s3_uploads_client is not None:
             self.s3_uploads_client = s3_uploads_client
 
@@ -500,15 +497,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self
 
     def set_is_verified(self):
-        path = self.get_image_path(image_size.NATIVE)
-        image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
-        is_verified = self.post_verification_client.verify_image(
-            image_url,
-            image_format=self.image_item.get('imageFormat'),
-            original_format=self.image_item.get('originalFormat'),
-            taken_in_real=self.image_item.get('takenInReal'),
-        )
-        self.item = self.dynamo.set_is_verified(self.id, is_verified)
+        self.item = self.dynamo.set_is_verified(self.id, True)
         return self
 
     def set_expires_at(self, expires_at):

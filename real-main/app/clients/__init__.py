@@ -10,7 +10,6 @@ __all__ = [
     'GoogleClient',
     'MediaConvertClient',
     'PinpointClient',
-    'PostVerificationClient',
     'S3Client',
     'SecretsManagerClient',
 ]
@@ -25,6 +24,5 @@ from .facebook import FacebookClient
 from .google import GoogleClient
 from .mediaconvert import MediaConvertClient
 from .pinpoint import PinpointClient
-from .post_verification import PostVerificationClient
 from .s3 import S3Client
 from .secretsmanager import SecretsManagerClient

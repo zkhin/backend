@@ -20,7 +20,6 @@ clients = {
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'dynamo': clients.DynamoClient(),
     'mediaconvert': clients.MediaConvertClient(),
-    'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
 }
 

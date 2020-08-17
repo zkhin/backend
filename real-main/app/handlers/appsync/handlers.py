@@ -46,7 +46,6 @@ clients = {
     'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
     'pinpoint': clients.PinpointClient(),
-    'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
     's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
 }

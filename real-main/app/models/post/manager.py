@@ -62,7 +62,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'cloudfront_client': self.clients.get('cloudfront'),
             'mediaconvert_client': self.clients.get('mediaconvert'),
-            'post_verification_client': self.clients.get('post_verification'),
             's3_uploads_client': self.clients.get('s3_uploads'),
             'album_manager': self.album_manager,
             'block_manager': self.block_manager,

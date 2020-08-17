@@ -76,12 +76,6 @@ def mediaconvert_client():
 
 
 @pytest.fixture
-def post_verification_client():
-    # by default, all images pass verification
-    yield mock.Mock(clients.PostVerificationClient(lambda: None), **{'verify_image.return_value': True})
-
-
-@pytest.fixture
 def cognito_client():
     with moto.mock_cognitoidp():
         # https://github.com/spulec/moto/blob/80b64f9b3ff5/tests/test_cognitoidp/test_cognitoidp.py#L1133
@@ -225,14 +219,13 @@ def like_manager(dynamo_client):
 
 
 @pytest.fixture
-def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_client, post_verification_client):
+def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_client):
     yield models.PostManager(
         {
             'appsync': appsync_client,
             'dynamo': dynamo_client,
             's3_uploads': s3_uploads_client,
             'cloudfront': cloudfront_client,
-            'post_verification': post_verification_client,
         }
     )
 

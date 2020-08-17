@@ -209,55 +209,6 @@ def test_set_checksum(post):
     assert post.item['checksum'] == md5
 
 
-def test_set_is_verified_minimal(pending_image_post):
-    # check initial state and configure mock
-    post = pending_image_post
-    assert 'isVerified' not in post.item
-    post.post_verification_client = mock.Mock(**{'verify_image.return_value': False})
-
-    # do the call, check final state
-    post.set_is_verified()
-    assert post.item['isVerified'] is False
-    post.refresh_item()
-    assert post.item['isVerified'] is False
-
-    # check mock called correctly
-    assert post.post_verification_client.mock_calls == [
-        mock.call.verify_image(
-            post.get_image_readonly_url(image_size.NATIVE),
-            image_format=None,
-            original_format=None,
-            taken_in_real=None,
-        )
-    ]
-
-
-def test_set_is_verified_maximal(pending_image_post):
-    # check initial state and configure mock
-    post = pending_image_post
-    assert 'isVerified' not in post.item
-    post.post_verification_client = mock.Mock(**{'verify_image.return_value': True})
-    post.image_item['imageFormat'] = 'ii'
-    post.image_item['originalFormat'] = 'oo'
-    post.image_item['takenInReal'] = False
-
-    # do the call, check final state
-    post.set_is_verified()
-    assert post.item['isVerified'] is True
-    post.refresh_item()
-    assert post.item['isVerified'] is True
-
-    # check mock called correctly
-    assert post.post_verification_client.mock_calls == [
-        mock.call.verify_image(
-            post.get_image_readonly_url(image_size.NATIVE),
-            image_format='ii',
-            original_format='oo',
-            taken_in_real=False,
-        )
-    ]
-
-
 def test_set_expires_at(post):
     # add a post without an expires at
     assert 'expiresAt' not in post.item
