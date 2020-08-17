@@ -36,27 +36,6 @@ _Once per deployment_
 
 - A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
 
-#### SES
-
-_Once per AWS Account_
-
-To allow [SES](https://console.aws.amazon.com/ses/home) to send transactional emails from Cognito:
-
-- Add and verify the domain `real.app`. To do this you will need to be able to add a code to a TXT record on the `real.app` domain.
-- Configure the MAIL FROM domain of `mail.real.app`
-- If this is a production account, you will also want to configure DKIM for `real.app` in the SES interface.
-
-You must also confirm, using the SES interface,  the email address you wish to send email from (even if you've already confirmed the domain). By default `no-reply@real.app` will be used. You can either:
-
-- confirm that email address. You would want to do this for a brand-new production deployment, and possibly for a new staging or pre-production deployment.
-- alternatively, you can set the environment variable `SES_SENDER_ADDRESS` in a `.env` file in the `real-main` directory to an email address you control, and then confirm that email address in SES.
-
-#### SNS
-
-_Once per AWS Account_
-
-- Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
-
 ### First-time stack deployment order
 
 Resource dependencies between the stacks make initial deployment tricky. Stacks should be deployed in this order:
