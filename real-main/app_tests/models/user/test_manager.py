@@ -381,55 +381,6 @@ def test_create_federated_user_cognito_identity_pool_exception_cleansup(user_man
     assert user_manager.cognito_client.delete_user_pool_entry.mock_calls == [mock.call(user_id)]
 
 
-def test_get_available_placeholder_photo_codes(user_manager):
-    s3_client = user_manager.s3_placeholder_photos_client
-    user_manager.placeholder_photos_directory = 'placeholder-photos'
-
-    # check before we add any placeholder photos
-    codes = user_manager.get_available_placeholder_photo_codes()
-    assert codes == []
-
-    # add a placeholder photo, check again
-    path = 'placeholder-photos/black-white-cat/native.jpg'
-    s3_client.put_object(path, b'placeholder', 'image/jpeg')
-    codes = user_manager.get_available_placeholder_photo_codes()
-    assert len(codes) == 1
-    assert codes[0] == 'black-white-cat'
-
-    # add another placeholder photo, check again
-    path = 'placeholder-photos/orange-person/native.jpg'
-    s3_client.put_object(path, b'placeholder', 'image/jpeg')
-    path = 'placeholder-photos/orange-person/4k.jpg'
-    s3_client.put_object(path, b'placeholder', 'image/jpeg')
-    codes = user_manager.get_available_placeholder_photo_codes()
-    assert len(codes) == 2
-    assert codes[0] == 'black-white-cat'
-    assert codes[1] == 'orange-person'
-
-
-def test_get_random_placeholder_photo_code(user_manager):
-    s3_client = user_manager.s3_placeholder_photos_client
-    user_manager.placeholder_photos_directory = 'placeholder-photos'
-
-    # check before we add any placeholder photos
-    code = user_manager.get_random_placeholder_photo_code()
-    assert code is None
-
-    # add a placeholder photo, check again
-    path = 'placeholder-photos/black-white-cat/native.jpg'
-    s3_client.put_object(path, b'placeholder', 'image/jpeg')
-    code = user_manager.get_random_placeholder_photo_code()
-    assert code == 'black-white-cat'
-
-    # add another placeholder photo, check again
-    path = 'placeholder-photos/orange-person/native.jpg'
-    s3_client.put_object(path, b'placeholder', 'image/jpeg')
-    path = 'placeholder-photos/orange-person/4k.jpg'
-    s3_client.put_object(path, b'placeholder', 'image/jpeg')
-    code = user_manager.get_random_placeholder_photo_code()
-    assert code in ['black-white-cat', 'orange-person']
-
-
 def test_get_text_tags(user_manager, user1, user2):
     # no tags
     text = 'no tags here'

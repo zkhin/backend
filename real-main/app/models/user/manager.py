@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 import re
 from functools import partialmethod
 
@@ -95,17 +94,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         }
         return User(user_item, self.clients, **kwargs) if user_item else None
 
-    def get_available_placeholder_photo_codes(self):
-        # don't want to foce the test suite to always pass in this parameter
-        if not self.placeholder_photos_directory:
-            return []
-        paths = self.s3_placeholder_photos_client.list_common_prefixes(self.placeholder_photos_directory + '/')
-        return [path.split('/')[-2] for path in paths]
-
-    def get_random_placeholder_photo_code(self):
-        codes = self.get_available_placeholder_photo_codes()
-        return random.choice(codes) if codes else None
-
     def create_cognito_only_user(self, user_id, username, full_name=None):
         # try to claim the new username, will raise an validation exception if already taken
         self.validate.username(username)
@@ -131,16 +119,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             raise UserValidationException(f'Username `{username}` already taken (case-insensitive comparison)')
 
         # create new user in the DB, have them follow the real user if they exist
-        photo_code = self.get_random_placeholder_photo_code()
         try:
-            item = self.dynamo.add_user(
-                user_id,
-                username,
-                full_name=full_name,
-                email=email,
-                phone=phone,
-                placeholder_photo_code=photo_code,
-            )
+            item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email, phone=phone,)
         except UserAlreadyExists:
             # un-claim the username in cognito
             if preferred_username:
@@ -196,10 +176,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             raise
 
         # create new user in the DB, have them follow the real user if they exist
-        photo_code = self.get_random_placeholder_photo_code()
-        item = self.dynamo.add_user(
-            user_id, username, full_name=full_name, email=email, placeholder_photo_code=photo_code
-        )
+        item = self.dynamo.add_user(user_id, username, full_name=full_name, email=email)
         user = self.init_user(item)
         self.follow_real_user(user)
         return user
