@@ -3,6 +3,9 @@
   dataSource: LambdaDataSource
   request: Lambda.request.vtl
   response: Lambda.response.vtl
+  caching:
+    keys:
+      - $context.source.artHash
 
 - type: Album
   field: postCount

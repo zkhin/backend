@@ -120,6 +120,8 @@ custom:
   appSync:
     name: ${self:service}-${self:provider.stage}
     authenticationType: AWS_IAM
+    caching:
+      behavior: PER_RESOLVER_CACHING
     logConfig:
       level: ERROR
     substitutions:
