@@ -838,7 +838,8 @@ def report_post_views(caller_user, arguments, source, context):
     if len(post_ids) > 100:
         raise ClientException('A max of 100 post ids may be reported at a time')
 
-    post_manager.record_views(post_ids, caller_user.id)
+    viewed_at = pendulum.now('utc')
+    post_manager.record_views(post_ids, caller_user.id, viewed_at=viewed_at)
     return True
 
 
@@ -1100,7 +1101,8 @@ def report_chat_views(caller_user, arguments, source, context):
     if len(chat_ids) > 100:
         raise ClientException('A max of 100 chat ids may be reported at a time')
 
-    chat_manager.record_views(chat_ids, caller_user.id)
+    viewed_at = pendulum.now('utc')
+    chat_manager.record_views(chat_ids, caller_user.id, viewed_at=viewed_at)
     return True
 
 

@@ -198,12 +198,16 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if not grouped_post_ids:
             return
 
+        results = []
         for post_id, view_count in grouped_post_ids.items():
             post = self.get_post(post_id)
             if not post:
                 logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE post `{post_id}`')
                 continue
-            post.record_view_count(user_id, view_count, viewed_at=viewed_at)
+            results.append(post.record_view_count(user_id, view_count, viewed_at=viewed_at))
+
+        if any(results):
+            self.user_manager.dynamo.update_last_post_view_at(user_id, now=viewed_at)
 
     def delete_recently_expired_posts(self, now=None):
         "Delete posts that expired yesterday or today"

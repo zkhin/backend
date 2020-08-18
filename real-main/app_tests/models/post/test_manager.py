@@ -532,22 +532,28 @@ def test_record_views(post_manager, user, user2, posts, caplog):
     with caplog.at_level(logging.WARNING):
         post_manager.record_views(['pid-dne'], user2.id)
     assert len(caplog.records) == 1
+    assert 'on DNE post' in caplog.records[0].msg
     assert 'pid-dne' in caplog.records[0].msg
     assert user2.id in caplog.records[0].msg
+    assert 'lastPostViewAt' not in user2.refresh_item().item
 
     # recording views on our own post
     assert post_manager.view_dynamo.get_view(post1.id, user.id) is None
     assert post_manager.view_dynamo.get_view(post2.id, user.id) is None
+    assert 'postLastViewAt' not in user.refresh_item().item
     post_manager.record_views([post1.id, post2.id], user.id)
     assert post_manager.view_dynamo.get_view(post1.id, user.id)['viewCount'] == 1
     assert post_manager.view_dynamo.get_view(post2.id, user.id)['viewCount'] == 1
+    assert user.refresh_item().item['lastPostViewAt']
 
     # another user can record views of our posts
     assert post_manager.view_dynamo.get_view(post1.id, user2.id) is None
     assert post_manager.view_dynamo.get_view(post2.id, user2.id) is None
+    assert 'postLastViewAt' not in user2.refresh_item().item
     post_manager.record_views([post1.id, post2.id, post1.id], user2.id)
     assert post_manager.view_dynamo.get_view(post1.id, user2.id)['viewCount'] == 2
     assert post_manager.view_dynamo.get_view(post2.id, user2.id)['viewCount'] == 1
+    assert user2.refresh_item().item['lastPostViewAt']
 
 
 def test_delete_all_by_user(post_manager, user):

@@ -609,7 +609,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
 
         if self.user_id == user_id:
-            return False  # post owner's views don't count for trending, etc.
+            return True  # post owner's views don't count for trending, etc.
 
         kwargs = {'now': viewed_at}
         if self.type == PostType.IMAGE and not self.is_verified:
