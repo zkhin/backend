@@ -93,15 +93,13 @@ test('Comment card format, subscription notifications', async () => {
   })
 
   // verify subscription fired correctly with that new card
-  // Note that thumbnails are not included in subscription notifcations, yet
+  // Note that thumbnails are not included in subscription notifcations
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('ADDED')
-    const {thumbnail: cardNotificationThumbnail, ...cardNotificationOtherFields} = data.onCardNotification.card
-    const {thumbnail: card1Thumbnail, ...card1OtherFields} = card1
-    expect(cardNotificationThumbnail).toBeNull()
-    expect(cardNotificationThumbnail).not.toEqual(card1Thumbnail)
-    expect(cardNotificationOtherFields).toEqual(card1OtherFields)
+    const {thumbnail, ...card1OtherFields} = card1
+    expect(thumbnail).toBeTruthy()
+    expect(data.onCardNotification.card).toEqual(card1OtherFields)
   })
   nextNotification = new Promise((resolve, reject) => {
     resolvers.push(resolve)
@@ -113,7 +111,7 @@ test('Comment card format, subscription notifications', async () => {
     .mutate({mutation: mutations.addComment, variables: {commentId: uuidv4(), postId, text: 'nice post'}})
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
-  // verify card has changed title and possibly thumbnail urls, but nothing else
+  // verify card has changed title, but nothing else
   await misc.sleep(2000)
   const card2 = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
@@ -121,10 +119,9 @@ test('Comment card format, subscription notifications', async () => {
     expect(data.self.cards.items).toHaveLength(1)
     const card = data.self.cards.items[0]
     expect(card.title).toBe('You have 2 new comments')
-    const {title: cardTitle, thumbnail: cardThumbnail, ...cardOtherFields} = card
-    const {title: card1Title, thumbnail: card1Thumbnail, ...card1OtherFields} = card1
+    const {title: cardTitle, ...cardOtherFields} = card
+    const {title: card1Title, ...card1OtherFields} = card1
     expect(cardTitle).not.toBe(card1Title)
-    expect(cardThumbnail).not.toEqual(card1Thumbnail)
     expect(cardOtherFields).toEqual(card1OtherFields)
     return card
   })
@@ -133,11 +130,9 @@ test('Comment card format, subscription notifications', async () => {
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('EDITED')
-    const {thumbnail: cardNotificationThumbnail, ...cardNotificationOtherFields} = data.onCardNotification.card
-    const {thumbnail: card2Thumbnail, ...card2OtherFields} = card2
-    expect(cardNotificationThumbnail).toBeNull()
-    expect(cardNotificationThumbnail).not.toEqual(card2Thumbnail)
-    expect(cardNotificationOtherFields).toEqual(card2OtherFields)
+    const {thumbnail, ...card2OtherFields} = card2
+    expect(thumbnail).toBeTruthy()
+    expect(data.onCardNotification.card).toEqual(card2OtherFields)
   })
   nextNotification = new Promise((resolve, reject) => {
     resolvers.push(resolve)
@@ -159,11 +154,9 @@ test('Comment card format, subscription notifications', async () => {
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('DELETED')
-    const {thumbnail: cardNotificationThumbnail, ...cardNotificationOtherFields} = data.onCardNotification.card
-    const {thumbnail: card2Thumbnail, ...card2OtherFields} = card2
-    expect(cardNotificationThumbnail).toBeNull()
-    expect(cardNotificationThumbnail).not.toEqual(card2Thumbnail)
-    expect(cardNotificationOtherFields).toEqual(card2OtherFields)
+    const {thumbnail, ...card2OtherFields} = card2
+    expect(thumbnail).toBeTruthy()
+    expect(data.onCardNotification.card).toEqual(card2OtherFields)
   })
 
   // shut down the subscription

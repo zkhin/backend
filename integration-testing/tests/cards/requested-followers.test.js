@@ -68,15 +68,16 @@ test('Requested followers card with correct format, subscription notifications',
     expect(card.title).toBe('You have 1 pending follow request')
     expect(card.subTitle).toBeNull()
     expect(card.action).toBe('https://real.app/chat/')
-    expect(card.thumbnail).toBeNull()
     return card
   })
+  const {thumbnail: card1Thumbnail, ...card1ExcludingThumbnail} = card1
+  expect(card1Thumbnail).toBeNull()
 
   // verify subscription fired correctly with that new card
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('ADDED')
-    expect(data.onCardNotification.card).toEqual(card1)
+    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
   })
   nextNotification = new Promise((resolve, reject) => {
     resolvers.push(resolve)
@@ -102,12 +103,14 @@ test('Requested followers card with correct format, subscription notifications',
     expect(cardOtherFields).toEqual(card1OtherFields)
     return card
   })
+  const {thumbnail: card2Thumbnail, ...card2ExcludingThumbnail} = card2
+  expect(card2Thumbnail).toBeNull()
 
   // verify subscription fired correctly with that changed card
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('EDITED')
-    expect(data.onCardNotification.card).toEqual(card2)
+    expect(data.onCardNotification.card).toEqual(card2ExcludingThumbnail)
   })
   nextNotification = new Promise((resolve, reject) => {
     resolvers.push(resolve)
@@ -132,7 +135,7 @@ test('Requested followers card with correct format, subscription notifications',
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('EDITED')
-    expect(data.onCardNotification.card).toEqual(card1)
+    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
   })
   nextNotification = new Promise((resolve, reject) => {
     resolvers.push(resolve)
@@ -156,7 +159,7 @@ test('Requested followers card with correct format, subscription notifications',
   await nextNotification.then(({data}) => {
     expect(data.onCardNotification.userId).toBe(ourUserId)
     expect(data.onCardNotification.type).toBe('DELETED')
-    expect(data.onCardNotification.card).toEqual(card1)
+    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
   })
 
   // shut down the subscription

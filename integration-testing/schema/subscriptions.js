@@ -21,11 +21,13 @@ module.exports.onCardNotification = gql`
       userId
       type
       card {
-        ...CardFragment
+        cardId
+        title
+        subTitle
+        action
       }
     }
   }
-  ${fragments.card}
 `
 
 module.exports.onChatMessageNotification = gql`
