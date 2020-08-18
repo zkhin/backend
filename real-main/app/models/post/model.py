@@ -282,11 +282,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.native_jpeg_cache.is_synced is False:
             self.native_jpeg_cache.flush()
 
-        # TODO: remove me when no longer needed
-        # save HEIC images for this special user, even if a crop is specified
-        special_user_id = 'us-east-1:965eaacd-2bfb-46e2-866e-15be352a90e5'
-
-        if self.native_heic_cache.is_synced is False and self.user_id != special_user_id:
+        if self.native_heic_cache.is_synced is False:
             # the HEIC image was edited (cropped) but we can't save that as HEIC, so we just delete it
             self.native_heic_cache.clear()
             self.native_heic_cache.flush(include_deletes=True)
