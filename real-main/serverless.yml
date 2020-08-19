@@ -186,7 +186,7 @@ custom:
         functions:
           - Posts.batchGet
           - Posts.filterBy.postStatus
-          - Posts.filterBy.viewedStatus
+          - PaginatedPosts.items.applyFilters
           - Users.beginPipeline
           - Users.batchGet
           - Users.batchGet.blockerStatus
@@ -240,7 +240,9 @@ custom:
         response: PassThru.response.vtl
 
       - dataSource: DynamodbDataSource
-        name: Posts.filterBy.viewedStatus
+        name: PaginatedPosts.items.applyFilters
+        request: PaginatedPosts.items/applyFilters.request.vtl
+        response: PaginatedPosts.items/applyFilters.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Albums.batchGet

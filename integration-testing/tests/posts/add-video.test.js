@@ -69,7 +69,7 @@ test('Add pending video post maximal', async () => {
   expect(resp.data.addPost.postStatus).toBe('PENDING')
   expect(resp.data.addPost.videoUploadUrl).toBeTruthy()
   expect(resp.data.addPost.text).toBe(text)
-  expect(resp.data.addPost.isVerified).toBe(true)
+  expect(resp.data.addPost.isVerified).toBeNull()
   expect(resp.data.addPost.image).toBeNull()
   expect(resp.data.addPost.imageUploadUrl).toBeNull()
   expect(resp.data.addPost.commentsDisabled).toBe(true)

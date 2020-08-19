@@ -7,7 +7,7 @@
 ##       doesn't work. Avoid: #set($item = arrayWithNulls[$index])
 
 ## retrieve the results of the query
-#foreach ($post in $ctx.prev.result)
+#foreach ($post in $ctx.stash.posts)
   #if ($util.isNull($post.viewedStatus))
     #set ($index = $ctx.stash.postIdToIndex[$post.postId])
     #if ($util.isNull($ctx.result.data.${dynamoTable}[$index]))
@@ -20,7 +20,7 @@
 
 ## filter those results
 #set ($posts = [])
-#foreach ($post in $ctx.prev.result)
+#foreach ($post in $ctx.stash.posts)
   #if ($post.viewedStatus == $viewedStatus)
     $util.qr($posts.add($post))
   #end

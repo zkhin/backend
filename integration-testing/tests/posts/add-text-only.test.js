@@ -35,7 +35,7 @@ test('Add text-only post failures', async () => {
   )
 })
 
-test('Add text-only post', async () => {
+test('Add text-only post minimal', async () => {
   const {client} = await loginCache.getCleanLogin()
 
   const postId = uuidv4()
@@ -50,4 +50,37 @@ test('Add text-only post', async () => {
   expect(resp.data.addPost.isVerified).toBeNull()
   expect(resp.data.addPost.image).toBeNull()
   expect(resp.data.addPost.imageUploadUrl).toBeNull()
+  expect(resp.data.addPost.commentsDisabled).toBe(false)
+  expect(resp.data.addPost.likesDisabled).toBe(true)
+  expect(resp.data.addPost.sharingDisabled).toBe(false)
+  expect(resp.data.addPost.verificationHidden).toBe(false)
+})
+
+test('Add text-only post maximal', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  const postId = uuidv4()
+  const text = 'zeds dead baby, zeds dead'
+
+  let variables = {
+    postId,
+    text,
+    postType: 'TEXT_ONLY',
+    commentsDisabled: true,
+    likesDisabled: false,
+    sharingDisabled: true,
+    verificationHidden: true,
+  }
+  let resp = await client.mutate({mutation: mutations.addPost, variables})
+  expect(resp.data.addPost.postId).toBe(postId)
+  expect(resp.data.addPost.postType).toBe('TEXT_ONLY')
+  expect(resp.data.addPost.postStatus).toBe('COMPLETED')
+  expect(resp.data.addPost.text).toBe(text)
+  expect(resp.data.addPost.isVerified).toBeNull()
+  expect(resp.data.addPost.image).toBeNull()
+  expect(resp.data.addPost.imageUploadUrl).toBeNull()
+  expect(resp.data.addPost.commentsDisabled).toBe(true)
+  expect(resp.data.addPost.likesDisabled).toBe(false)
+  expect(resp.data.addPost.sharingDisabled).toBe(true)
+  expect(resp.data.addPost.verificationHidden).toBe(true)
 })

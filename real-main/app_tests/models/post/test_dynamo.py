@@ -359,26 +359,47 @@ def test_get_first_with_checksum(post_dynamo):
 
 
 def test_post_set_is_verified(post_dynamo):
-    post_id = 'pid'
+    post_id = str(uuid4())
 
     # can't set for post that doesnt exist
     with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
         post_dynamo.set_is_verified(post_id, True)
 
     # create the post, verify starting state
-    post_item = post_dynamo.add_pending_post('uid', post_id, 'ptype', text='lore ipsum')
+    post_item = post_dynamo.add_pending_post(str(uuid4()), post_id, 'ptype', text='lore ipsum')
     assert post_dynamo.get_post(post_id) == post_item
     assert 'isVerified' not in post_item
+    assert 'isVerifiedHiddenValue' not in post_item
 
-    # change the value, verify
-    post_item = post_dynamo.set_is_verified(post_id, True)
-    assert post_item['isVerified'] is True
-    assert post_dynamo.get_post(post_id)['isVerified'] is True
-
-    # change the value, verify
+    # set the value, verify
     post_item = post_dynamo.set_is_verified(post_id, False)
+    assert post_dynamo.get_post(post_id) == post_item
     assert post_item['isVerified'] is False
-    assert post_dynamo.get_post(post_id)['isVerified'] is False
+    assert 'isVerifiedHiddenValue' not in post_item
+
+    # don't change the value but hide it
+    post_item = post_dynamo.set_is_verified(post_id, False, hidden=True)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['isVerified'] is True
+    assert post_item['isVerifiedHiddenValue'] is False
+
+    # change the value and keep it hidden, verify
+    post_item = post_dynamo.set_is_verified(post_id, True, hidden=True)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['isVerified'] is True
+    assert post_item['isVerifiedHiddenValue'] is True
+
+    # unhide the value, change it at the same time
+    post_item = post_dynamo.set_is_verified(post_id, False, hidden=False)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['isVerified'] is False
+    assert 'isVerifiedHiddenValue' not in post_item
+
+    # change the value
+    post_item = post_dynamo.set_is_verified(post_id, True)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['isVerified'] is True
+    assert 'isVerifiedHiddenValue' not in post_item
 
 
 def test_set_expires_at_matches_creating_story_directly(post_dynamo):

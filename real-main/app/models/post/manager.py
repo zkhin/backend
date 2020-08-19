@@ -337,3 +337,16 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         initial_statuses = (PostStatus.PENDING, PostStatus.PROCESSING)
         if new_post.status == PostStatus.COMPLETED and old_post.status in initial_statuses:
             self.appsync.client.fire_notification(new_post.user_id, GqlNotificationType.POST_COMPLETED, **kwargs)
+
+    def on_post_verification_hidden_change_update_is_verified(self, post_id, new_item, old_item=None):
+        old_verif_hidden = old_item.get('verificationHidden', False)
+        new_verif_hidden = new_item.get('verificationHidden', False)
+
+        is_verif = None
+        if old_verif_hidden is False and new_verif_hidden is True:
+            is_verif = new_item.get('isVerified')
+        if old_verif_hidden is True and new_verif_hidden is False:
+            is_verif = new_item.get('isVerifiedHiddenValue')
+
+        if is_verif is not None:
+            self.dynamo.set_is_verified(post_id, is_verif, hidden=new_verif_hidden)

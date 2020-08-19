@@ -404,3 +404,44 @@ def test_on_post_status_change_fire_gql_notifications(post_manager, post, user):
     assert appsync_mock.mock_calls == [
         call.client.fire_notification(user.id, GqlNotificationType.POST_ERROR, postId=post.id)
     ]
+
+
+@pytest.mark.parametrize('is_verified', [True, False])
+def test_on_post_verification_hidden_change_update_is_verified(post_manager, post, user, is_verified):
+    # check starting state
+    assert 'isVerified' not in post.item
+    assert 'isVerifiedHiddenValue' not in post.item
+    assert 'verificationHidden' not in post.item
+
+    # verificationHidden is set before the post is verified, check
+    new_item = {**post.item, 'verificationHidden': True}
+    for old_item in [{**post.item}, {**post.item, 'verificationHidden': False}]:
+        post_manager.on_post_verification_hidden_change_update_is_verified(
+            post.id, new_item=new_item, old_item=old_item
+        )
+        post.refresh_item()
+        assert 'isVerified' not in post.item
+        assert 'isVerifiedHiddenValue' not in post.item
+
+    # verificationHidden is set as True, check
+    new_item = {**post.item, 'verificationHidden': True, 'isVerified': is_verified}
+    for old_item in [{**post.item}, {**post.item, 'verificationHidden': False}]:
+        post_manager.on_post_verification_hidden_change_update_is_verified(
+            post.id, new_item=new_item, old_item=old_item
+        )
+        post.refresh_item()
+        assert post.item['isVerified'] is True
+        assert post.item['isVerifiedHiddenValue'] is is_verified
+
+    # verificationHidden is set as False, check
+    old_item = {**post.item, 'verificationHidden': True}
+    for new_item in [
+        {**post.item, 'verificationHidden': False, 'isVerified': is_verified},
+        {**post.item, 'isVerified': is_verified},
+    ]:
+        post_manager.on_post_verification_hidden_change_update_is_verified(
+            post.id, new_item=new_item, old_item=old_item
+        )
+        post.refresh_item()
+        assert post.item['isVerified'] is is_verified
+        assert 'isVerifiedHiddenValue' not in post.item

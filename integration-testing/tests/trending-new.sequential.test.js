@@ -346,10 +346,24 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
     .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
 })
 
-test('Posts that fail verification get lower trending scores', async () => {
+test('Posts that fail verification get lower trending scores, can be filter', async () => {
   const {client} = await loginCache.getCleanLogin()
 
+  // we add a post that is not verified
+  const postId0 = uuidv4()
+  await client
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId0, postType: 'TEXT_ONLY', text: 'lore ipsum'},
+    })
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId0)
+      expect(post.postStatus).toBe('COMPLETED')
+      expect(post.isVerified).toBeNull()
+    })
+
   // we add a post that passes verification
+  await misc.sleep(1000) // ordering
   const postId1 = uuidv4()
   await client
     .mutate({
@@ -377,10 +391,25 @@ test('Posts that fail verification get lower trending scores', async () => {
   // after the post that passed verification because it received less trending points
   await misc.sleep(2000)
   await client.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(2)
+    expect(trendingPosts.items).toHaveLength(3)
     expect(trendingPosts.items[0].postId).toBe(postId1)
-    expect(trendingPosts.items[1].postId).toBe(postId2)
+    expect(trendingPosts.items[1].postId).toBe(postId0)
+    expect(trendingPosts.items[2].postId).toBe(postId2)
   })
+
+  // test filtering on verification status
+  await client
+    .query({query: queries.trendingPosts, variables: {isVerified: true}})
+    .then(({data: {trendingPosts}}) => {
+      expect(trendingPosts.items).toHaveLength(1)
+      expect(trendingPosts.items[0].postId).toBe(postId1)
+    })
+  await client
+    .query({query: queries.trendingPosts, variables: {isVerified: false}})
+    .then(({data: {trendingPosts}}) => {
+      expect(trendingPosts.items).toHaveLength(1)
+      expect(trendingPosts.items[0].postId).toBe(postId2)
+    })
 })
 
 test('Views of non-original posts contribute to the original post & user in trending', async () => {

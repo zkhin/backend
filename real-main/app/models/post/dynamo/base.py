@@ -269,12 +269,19 @@ class PostDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def set_is_verified(self, post_id, is_verified):
+    def set_is_verified(self, post_id, is_verified, hidden=False):
         query_kwargs = {
             'Key': self.pk(post_id),
-            'UpdateExpression': 'SET isVerified = :iv',
-            'ExpressionAttributeValues': {':iv': is_verified},
+            'UpdateExpression': 'SET isVerified = :visibleValue',
+            'ExpressionAttributeValues': {},
         }
+        if hidden:
+            query_kwargs['UpdateExpression'] += ', isVerifiedHiddenValue = :hiddenValue'
+            query_kwargs['ExpressionAttributeValues'][':visibleValue'] = True
+            query_kwargs['ExpressionAttributeValues'][':hiddenValue'] = is_verified
+        else:
+            query_kwargs['UpdateExpression'] += ' REMOVE isVerifiedHiddenValue'
+            query_kwargs['ExpressionAttributeValues'][':visibleValue'] = is_verified
         return self.client.update_item(query_kwargs)
 
     def get_first_with_checksum(self, checksum):

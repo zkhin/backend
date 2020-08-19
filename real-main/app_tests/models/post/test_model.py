@@ -213,13 +213,13 @@ def test_set_is_verified_minimal(pending_image_post):
     # check initial state and configure mock
     post = pending_image_post
     assert 'isVerified' not in post.item
-    post.post_verification_client = mock.Mock(**{'verify_image.return_value': False})
+    post.post_verification_client = mock.Mock(**{'verify_image.return_value': True})
 
     # do the call, check final state
     post.set_is_verified()
-    assert post.item['isVerified'] is False
-    post.refresh_item()
-    assert post.item['isVerified'] is False
+    assert post.item == post.refresh_item().item
+    assert post.item['isVerified'] is True
+    assert 'isVerifiedHiddenValue' not in post.item
 
     # check mock called correctly
     assert post.post_verification_client.mock_calls == [
@@ -236,16 +236,17 @@ def test_set_is_verified_maximal(pending_image_post):
     # check initial state and configure mock
     post = pending_image_post
     assert 'isVerified' not in post.item
-    post.post_verification_client = mock.Mock(**{'verify_image.return_value': True})
+    post.post_verification_client = mock.Mock(**{'verify_image.return_value': False})
     post.image_item['imageFormat'] = 'ii'
     post.image_item['originalFormat'] = 'oo'
     post.image_item['takenInReal'] = False
+    post.item['verificationHidden'] = True
 
     # do the call, check final state
     post.set_is_verified()
+    assert post.item == post.refresh_item().item
     assert post.item['isVerified'] is True
-    post.refresh_item()
-    assert post.item['isVerified'] is True
+    assert post.item['isVerifiedHiddenValue'] is False
 
     # check mock called correctly
     assert post.post_verification_client.mock_calls == [

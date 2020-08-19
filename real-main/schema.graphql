@@ -757,8 +757,8 @@ type Post {
 }
 
 type PaginatedPosts {
-  # If `viewedStatus` is non-null, posts will be filtered down to just those with that `viewedStatus`
-  items(viewedStatus: ViewedStatus): [Post!]!
+  # Set the optional arguments to filter down the set of returned posts
+  items(viewedStatus: ViewedStatus, isVerified: Boolean): [Post!]!
   nextToken: String
 }
 

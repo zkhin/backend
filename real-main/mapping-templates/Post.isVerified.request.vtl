@@ -1,9 +1,0 @@
-## if verification is hidden, isVerified is always true
-#if ($ctx.source.verificationHidden)
-  #return (true)
-#end
-
-{
-  "version": "2018-05-29",
-  "payload": $util.toJson($ctx.source.isVerified)
-}

@@ -128,11 +128,6 @@
   response: Lambda.response.vtl
 
 - type: Post
-  field: isVerified
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
-
-- type: Post
   field: hasNewCommentActivity
   dataSource: NoneDataSource
   response: PassThru.response.vtl

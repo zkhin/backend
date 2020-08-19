@@ -94,6 +94,7 @@ test('Add image post verification hidden hides verification state', async () => 
   expect(resp.data.editPost.verificationHidden).toBe(false)
 
   // now the real verification status should show up
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.isVerified).toBe(false)

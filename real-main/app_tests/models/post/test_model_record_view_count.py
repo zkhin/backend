@@ -122,6 +122,25 @@ def test_non_verified_image_posts_trend_with_lower_multiplier(post_manager, user
     assert user.refresh_trending_item().trending_score == 0.5  # includes an extra deflation compared to post
 
 
+def test_text_only_posts_trend_with_full_multiplier(post_manager, user, user2):
+    # create an original post that fails verification
+    now = pendulum.parse('2020-06-09T00:00:00Z')  # exact begining of day so post gets exactly one free trending
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='lore ipsum', now=now)
+    assert post.type == PostType.TEXT_ONLY
+    assert post.is_verified is None
+    assert post.original_post_id == post.id
+    assert post.trending_score == 1
+    assert post.refresh_trending_item().trending_score == 1
+    assert user.refresh_trending_item().trending_score is None  # users don't get a free boost into trending
+
+    # record a view, verify adds to trending
+    viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
+    post.record_view_count(user2.id, 4, viewed_at=viewed_at)
+    assert post.trending_score == 2 + 1
+    assert post.refresh_trending_item().trending_score == 2 + 1
+    assert user.refresh_trending_item().trending_score == 1  # includes an extra deflation compared to post
+
+
 def test_verified_image_posts_originality_determines_trending(post_manager, user, image_data_b64, user2, user3):
     # create an original image post
     now = pendulum.parse('2020-06-09T00:00:00Z')  # exact begining of day so post gets exactly one free trending

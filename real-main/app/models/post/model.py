@@ -507,7 +507,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             original_format=self.image_item.get('originalFormat'),
             taken_in_real=self.image_item.get('takenInReal'),
         )
-        self.item = self.dynamo.set_is_verified(self.id, is_verified)
+        hidden = self.item.get('verificationHidden', False)
+        self.item = self.dynamo.set_is_verified(self.id, is_verified, hidden=hidden)
         return self
 
     def set_expires_at(self, expires_at):
@@ -612,7 +613,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             return True  # post owner's views don't count for trending, etc.
 
         kwargs = {'now': viewed_at}
-        if self.type == PostType.IMAGE and not self.is_verified:
+        if self.is_verified is False:  # note that non-image posts have is_verified value of None
             kwargs['multiplier'] = 0.5
 
         recorded = self.trending_increment_score(**kwargs)
