@@ -126,23 +126,23 @@ def test_add_post_to_feeds(feed_dynamo):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter([]), post_item)
+    assert feed_dynamo.add_post_to_feeds(iter([]), post_item) == []
 
     # add post to the feeds
-    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
+    assert feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item) == feed_uids
 
     # check the feeds are as expected
     assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['post/pid3']
     assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['post/pid3']
 
-    # add noather post to the feeds
+    # add another post to the feeds
     posted_at = pendulum.now('utc').to_iso8601_string()
     post_item = {
         'postId': 'pid2',
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
+    assert feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item) == feed_uids
 
     # check the feeds are as expected
     assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == [
@@ -158,11 +158,8 @@ def test_add_post_to_feeds(feed_dynamo):
 def test_delete_by_post(feed_dynamo):
     feed_uids = ['fuid1', 'fuid2']
 
-    # delete post from no feeds - verify no error
-    feed_dynamo.delete_by_post('pid')
-
     # delete post from feeds where it doesn't exist - verify no error
-    feed_dynamo.delete_by_post('pid')
+    assert feed_dynamo.delete_by_post('pid') == []
 
     # add a post to two feeds
     posted_at = pendulum.now('utc').to_iso8601_string()
@@ -171,7 +168,7 @@ def test_delete_by_post(feed_dynamo):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item)
+    assert feed_dynamo.add_post_to_feeds(iter(feed_uids), post_item) == feed_uids
 
     # add another post to one of the feeds
     post_item = {
@@ -179,7 +176,7 @@ def test_delete_by_post(feed_dynamo):
         'postedByUserId': 'pbuid',
         'postedAt': posted_at,
     }
-    feed_dynamo.add_post_to_feeds(iter([feed_uids[0]]), post_item)
+    assert feed_dynamo.add_post_to_feeds(iter(feed_uids[:1]), post_item) == feed_uids[:1]
 
     # verify the two feeds look as expected
     assert sorted([f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])]) == [
@@ -189,14 +186,14 @@ def test_delete_by_post(feed_dynamo):
     assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == ['post/pid3']
 
     # delete a post from the feeds
-    feed_dynamo.delete_by_post('pid3')
+    assert feed_dynamo.delete_by_post('pid3') == feed_uids
 
     # verify the two feeds look as expected
     assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])] == ['post/pid2']
     assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[1])] == []
 
     # delete the other post from the feeds
-    feed_dynamo.delete_by_post('pid2')
+    assert feed_dynamo.delete_by_post('pid2') == feed_uids[:1]
 
     # verify the two feeds look as expected
     assert [f['partitionKey'] for f in feed_dynamo.generate_feed(feed_uids[0])] == []

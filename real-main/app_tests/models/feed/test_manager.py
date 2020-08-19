@@ -54,7 +54,7 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
         'postedByUserId': our_user.id,
         'postedAt': posted_at,
     }
-    feed_manager.add_post_to_followers_feeds(our_user.id, post_item)
+    assert feed_manager.add_post_to_followers_feeds(our_user.id, post_item) == ['ouid']
 
     # check feeds
     assert [f['partitionKey'] for f in feed_manager.dynamo.generate_feed(our_user.id)] == ['post/pid1']
@@ -71,7 +71,7 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
         'postedByUserId': our_user.id,
         'postedAt': posted_at,
     }
-    feed_manager.add_post_to_followers_feeds(our_user.id, post_item)
+    assert feed_manager.add_post_to_followers_feeds(our_user.id, post_item) == ['ouid', 'tuid']
 
     # check feeds
     assert sorted([f['partitionKey'] for f in feed_manager.dynamo.generate_feed(our_user.id)]) == [

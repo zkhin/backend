@@ -21,31 +21,42 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
+  // we follow them
+  await ourClient
+    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
+
   // we subscribe to feed notifications
-  let notificationsCount = 0
-  const notificationHandlers = []
-  const notifications = [
-    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
-    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+  let feedChangedNotificationsCount = 0
+  let feedPostAddedNotificationsCount = 0
+  const feedPostAddedNotificationHandlers = []
+  const feedChangedNotificationHandlers = []
+  const feedChangedNotifications = [
+    new Promise((resolve, reject) => feedChangedNotificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => feedChangedNotificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => feedChangedNotificationHandlers.push({resolve, reject})),
+  ]
+  const feedPostAddedNotifications = [
+    new Promise((resolve, reject) => feedPostAddedNotificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => feedPostAddedNotificationHandlers.push({resolve, reject})),
   ]
   const sub = await ourClient
     .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
     .subscribe({
       next: ({data}) => {
+        if (data.onNotification.type === 'USER_FEED_CHANGED') {
+          feedChangedNotificationsCount += 1
+          feedChangedNotificationHandlers.shift().resolve(data.onNotification)
+        }
         if (data.onNotification.type === 'USER_FEED_POST_ADDED') {
-          notificationsCount += 1
-          notificationHandlers.shift().resolve(data.onNotification)
+          feedPostAddedNotificationsCount += 1
+          feedPostAddedNotificationHandlers.shift().resolve(data.onNotification)
         }
       },
-      error: (resp) => notificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
+      error: (resp) => feedPostAddedNotificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
-
-  // we follow them
-  await ourClient
-    .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
 
   // our feed starts empty
   await ourClient
@@ -77,18 +88,23 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
     expect(user.feed.items[1].image).toBeTruthy()
   })
 
-  // verify we recieved two notifications for those two posts being added to our feed, order not defined
-  await notifications.shift().then(({postId, postedAt}) => {
-    expect([post1.postId, post2.postId]).toContain(postId)
-    expect([post1.postedAt, post2.postedAt]).toContain(postedAt)
-  })
-  await notifications.shift().then(({postId, postedAt}) => {
-    expect([post1.postId, post2.postId]).toContain(postId)
-    expect([post1.postedAt, post2.postedAt]).toContain(postedAt)
-  })
-  expect(notificationsCount).toBe(2)
+  // verify we received two notifications for our feed changing, as it changed once for each post
+  await feedChangedNotifications.shift().then(({type}) => expect(type).toBe('USER_FEED_CHANGED'))
+  await feedChangedNotifications.shift().then(({type}) => expect(type).toBe('USER_FEED_CHANGED'))
+  expect(feedChangedNotificationsCount).toBe(2)
 
-  // they archive a post, verify it disappears from our feed
+  // verify we received two notifications for those two posts being added to our feed, order not defined
+  await feedPostAddedNotifications.shift().then(({postId, postedAt}) => {
+    expect([post1.postId, post2.postId]).toContain(postId)
+    expect([post1.postedAt, post2.postedAt]).toContain(postedAt)
+  })
+  await feedPostAddedNotifications.shift().then(({postId, postedAt}) => {
+    expect([post1.postId, post2.postId]).toContain(postId)
+    expect([post1.postedAt, post2.postedAt]).toContain(postedAt)
+  })
+  expect(feedPostAddedNotificationsCount).toBe(2)
+
+  // they archive a post, verify that post is not longer in the feed
   await theirClient
     .mutate({mutation: mutations.archivePost, variables: {postId: postId1}})
     .then(({data: {archivePost: post}}) => {
@@ -102,6 +118,10 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
     expect(user.feed.items[0].text).toBe('I cant do that')
   })
 
+  // verify we received a notification that our feed changed from the post archiving
+  await feedChangedNotifications.shift().then(({type}) => expect(type).toBe('USER_FEED_CHANGED'))
+  expect(feedChangedNotificationsCount).toBe(3)
+
   // shut down oursubscription
   sub.unsubscribe()
   await subInitTimeout
@@ -112,22 +132,32 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to feed notifications
-  let notificationsCount = 0
-  const notificationHandlers = []
-  const notifications = [
-    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
-    new Promise((resolve, reject) => notificationHandlers.push({resolve, reject})),
+  let feedChangedNotificationsCount = 0
+  let feedPostAddedNotificationsCount = 0
+  const feedChangedNotificationHandlers = []
+  const feedPostAddedNotificationHandlers = []
+  const feedChangedNotifications = [
+    new Promise((resolve, reject) => feedChangedNotificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => feedChangedNotificationHandlers.push({resolve, reject})),
+  ]
+  const feedPostAddedNotifications = [
+    new Promise((resolve, reject) => feedPostAddedNotificationHandlers.push({resolve, reject})),
+    new Promise((resolve, reject) => feedPostAddedNotificationHandlers.push({resolve, reject})),
   ]
   const sub = await ourClient
     .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
     .subscribe({
       next: ({data}) => {
+        if (data.onNotification.type === 'USER_FEED_CHANGED') {
+          feedChangedNotificationsCount += 1
+          feedChangedNotificationHandlers.shift().resolve(data.onNotification)
+        }
         if (data.onNotification.type === 'USER_FEED_POST_ADDED') {
-          notificationsCount += 1
-          notificationHandlers.shift().resolve(data.onNotification)
+          feedPostAddedNotificationsCount += 1
+          feedPostAddedNotificationHandlers.shift().resolve(data.onNotification)
         }
       },
-      error: (resp) => notificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
+      error: (resp) => feedPostAddedNotificationHandlers.shift().reject(resp), // necessry? could this just throw an error?
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
@@ -167,16 +197,20 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
     expect(user.feed.items[1].image).toBeTruthy()
   })
 
-  // verify we recieved two notifications for those two posts being added to our feed, order not defined
-  await notifications.shift().then(({postId, postedAt}) => {
+  // verify we received a notification for our feed changing (just one)
+  await feedChangedNotifications.shift().then(({type}) => expect(type).toBe('USER_FEED_CHANGED'))
+  expect(feedChangedNotificationsCount).toBe(1)
+
+  // verify we received two notifications for those two posts being added to our feed, order not defined
+  await feedPostAddedNotifications.shift().then(({postId, postedAt}) => {
     expect([post1.postId, post2.postId]).toContain(postId)
     expect([post1.postedAt, post2.postedAt]).toContain(postedAt)
   })
-  await notifications.shift().then(({postId, postedAt}) => {
+  await feedPostAddedNotifications.shift().then(({postId, postedAt}) => {
     expect([post1.postId, post2.postId]).toContain(postId)
     expect([post1.postedAt, post2.postedAt]).toContain(postedAt)
   })
-  expect(notificationsCount).toBe(2)
+  expect(feedPostAddedNotificationsCount).toBe(2)
 
   // we unfollow them, and those two posts disappear from our feed
   await ourClient
@@ -186,6 +220,10 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
   await ourClient
     .query({query: queries.selfFeed})
     .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
+
+  // verify we received a notification for our feed changing again
+  await feedChangedNotifications.shift().then(({type}) => expect(type).toBe('USER_FEED_CHANGED'))
+  expect(feedChangedNotificationsCount).toBe(2)
 
   // shut down oursubscription
   sub.unsubscribe()

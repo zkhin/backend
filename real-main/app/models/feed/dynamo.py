@@ -34,8 +34,11 @@ class FeedDynamo:
         self.client.batch_put_items(item_generator)
 
     def add_post_to_feeds(self, feed_user_id_generator, post_item):
-        item_generator = (self.build_item(feed_user_id, post_item) for feed_user_id in feed_user_id_generator)
+        "Add the post to all the feeds of the generated user_ids, return a list of those user_ids"
+        feed_user_ids = list(feed_user_id_generator)
+        item_generator = (self.build_item(feed_user_id, post_item) for feed_user_id in feed_user_ids)
         self.client.batch_put_items(item_generator)
+        return feed_user_ids
 
     def delete_by_post_owner(self, feed_user_id, post_user_id):
         "Delete all feed items by `posted_by_user_id` from the feed of `feed_user_id`"
@@ -43,9 +46,11 @@ class FeedDynamo:
         self.client.batch_delete_items(pk_generator)
 
     def delete_by_post(self, post_id):
-        "Delete all feed items of `post_id` in the feeds of `feed_user_id_generator`"
-        pk_generator = self.generate_feed_pks_by_post(post_id)
-        self.client.batch_delete_items(pk_generator)
+        "Delete all feed items of `post_id`, return a list of affected user_ids"
+        pks = list(self.generate_feed_pks_by_post(post_id))
+        self.client.batch_delete_items(pk for pk in pks)
+        feed_user_ids = [self.parse_pk(pk)[1] for pk in pks]
+        return feed_user_ids
 
     def generate_feed(self, feed_user_id):
         query_kwargs = {

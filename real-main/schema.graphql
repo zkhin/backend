@@ -302,6 +302,9 @@ type Notification {
 #   - fires when User.chatsWithUnviewedMessagesCount changes
 #   - Notification.userChatsWithUnviewedMessagesCount: the new value
 #
+# USER_FEED_CHANGED
+#   - fires when the User's feed may have changed and should be refreshed
+#
 # USER_FEED_POST_ADDED
 #   - fires when a post is added to User.feed
 #   - Notification.postId: the id of the post that was added
@@ -316,6 +319,7 @@ enum NotificationType {
   POST_COMPLETED
   POST_ERROR
   USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
+  USER_FEED_CHANGED
   USER_FEED_POST_ADDED
   USER_FOLLOWED_USERS_WITH_STORIES_CHANGED
 }

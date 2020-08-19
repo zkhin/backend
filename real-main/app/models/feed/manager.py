@@ -32,7 +32,7 @@ class FeedManager:
         user_id_gen = itertools.chain(
             [followed_user_id], self.follower_manager.generate_follower_user_ids(followed_user_id)
         )
-        self.dynamo.add_post_to_feeds(user_id_gen, post_item)
+        return self.dynamo.add_post_to_feeds(user_id_gen, post_item)
 
     def on_user_follow_status_change_sync_feed(self, followed_user_id, new_item=None, old_item=None):
         follower_user_id = (new_item or old_item)['followerUserId']
@@ -41,14 +41,17 @@ class FeedManager:
             self.add_users_posts_to_feed(follower_user_id, followed_user_id)
         else:
             self.dynamo.delete_by_post_owner(follower_user_id, followed_user_id)
+        self.appsync_client.fire_notification(follower_user_id, GqlNotificationType.USER_FEED_CHANGED)
 
     def on_post_status_change_sync_feed(self, post_id, new_item=None, old_item=None):
         posted_by_user_id = (new_item or old_item)['postedByUserId']
         new_status = (new_item or {}).get('postStatus')
         if new_status == PostStatus.COMPLETED:
-            self.add_post_to_followers_feeds(posted_by_user_id, new_item)
+            feed_user_ids = self.add_post_to_followers_feeds(posted_by_user_id, new_item)
         else:
-            self.dynamo.delete_by_post(post_id)
+            feed_user_ids = self.dynamo.delete_by_post(post_id)
+        for user_id in feed_user_ids:
+            self.appsync_client.fire_notification(user_id, GqlNotificationType.USER_FEED_CHANGED)
 
     def fire_gql_subscription_user_feed_post_added(self, user_id, new_item):
         post_id, user_id = self.dynamo.parse_pk(new_item)
