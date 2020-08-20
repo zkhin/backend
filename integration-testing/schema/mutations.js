@@ -179,7 +179,7 @@ module.exports.disableUser = gql`
 `
 
 module.exports.deleteUser = gql`
-  mutation DisableUser {
+  mutation DeleteUser {
     deleteUser {
       userId
       username
