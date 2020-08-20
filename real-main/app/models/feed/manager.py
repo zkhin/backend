@@ -52,9 +52,3 @@ class FeedManager:
             feed_user_ids = self.dynamo.delete_by_post(post_id)
         for user_id in feed_user_ids:
             self.appsync_client.fire_notification(user_id, GqlNotificationType.USER_FEED_CHANGED)
-
-    def fire_gql_subscription_user_feed_post_added(self, user_id, new_item):
-        post_id, user_id = self.dynamo.parse_pk(new_item)
-        self.appsync_client.fire_notification(
-            user_id, GqlNotificationType.USER_FEED_POST_ADDED, postId=post_id, postedAt=new_item['gsiA1SortKey'],
-        )

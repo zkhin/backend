@@ -285,7 +285,6 @@ type Notification {
   # Each of the following fields will be non-null only for some NotificationTypes,
   # exactly which is listed in the comments for the NotificationType
   followedUserId: ID
-  postedAt: AWSDateTime
   postId: ID
   userChatsWithUnviewedMessagesCount: Int
 }
@@ -305,11 +304,6 @@ type Notification {
 # USER_FEED_CHANGED
 #   - fires when the User's feed may have changed and should be refreshed
 #
-# USER_FEED_POST_ADDED
-#   - fires when a post is added to User.feed
-#   - Notification.postId: the id of the post that was added
-#   - Notification.postedAt: the postedAt timestamp of the post that was added
-#
 # USER_FOLLOWED_USERS_WITH_STORIES_CHANGED
 #   - fires when one of the user's followeds changes their first story
 #   - Notification.postId: the id of the post that is now the followed user's first story
@@ -320,7 +314,6 @@ enum NotificationType {
   POST_ERROR
   USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
   USER_FEED_CHANGED
-  USER_FEED_POST_ADDED
   USER_FOLLOWED_USERS_WITH_STORIES_CHANGED
 }
 
@@ -329,7 +322,6 @@ input NotificationInput {
   userId: ID!  # user this notification is intended for
   type: NotificationType!
   followedUserId: ID
-  postedAt: AWSDateTime
   postId: ID
   userChatsWithUnviewedMessagesCount: Int
 }

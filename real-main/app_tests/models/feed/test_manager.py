@@ -1,11 +1,9 @@
-from unittest.mock import call, patch
 from uuid import uuid4
 
 import pendulum
 import pytest
 
 from app.models.post.enums import PostType
-from app.utils import GqlNotificationType
 
 
 @pytest.fixture
@@ -80,23 +78,3 @@ def test_add_post_to_followers_feeds(feed_manager, user_manager):
     ]
     assert [f['partitionKey'] for f in feed_manager.dynamo.generate_feed(their_user.id)] == ['post/pid2']
     assert list(feed_manager.dynamo.generate_feed(another_user.id)) == []
-
-
-def test_fire_gql_subscription_user_feed_post_added(feed_manager):
-    feed_user_id = str(uuid4())
-    post_item = {
-        'postId': str(uuid4()),
-        'postedByUserId': str(uuid4()),
-        'postedAt': pendulum.now('utc').to_iso8601_string(),
-    }
-    feed_item = feed_manager.dynamo.build_item(feed_user_id, post_item)
-    with patch.object(feed_manager, 'appsync_client') as appsync_client_mock:
-        feed_manager.fire_gql_subscription_user_feed_post_added(feed_user_id, feed_item)
-    assert appsync_client_mock.mock_calls == [
-        call.fire_notification(
-            feed_user_id,
-            GqlNotificationType.USER_FEED_POST_ADDED,
-            postId=post_item['postId'],
-            postedAt=post_item['postedAt'],
-        )
-    ]

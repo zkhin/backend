@@ -8,7 +8,6 @@ module.exports.onNotification = gql`
       userId
       type
       followedUserId
-      postedAt
       postId
       userChatsWithUnviewedMessagesCount
     }

@@ -155,7 +155,6 @@ register(
     album_manager.on_post_album_change_update_counts_and_timestamps,
     {'albumId': None, 'gsiK3SortKey': -1},  # all non-completed posts are given rank of -1
 )
-register('post', 'feed', ['INSERT'], feed_manager.fire_gql_subscription_user_feed_post_added)
 register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
