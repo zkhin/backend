@@ -161,7 +161,7 @@ const getAppSyncLogin = async (newUserPhone) => {
       break
     } catch (err) {
       if (err.code !== 'NotAuthorizedException') throw err
-      console.warning(`Cognito identity pool rejected user '${userId}'s idToken '${idToken}' with error: ${err}`)
+      console.warn(`Cognito identity pool rejected user '${userId}'s idToken '${idToken}' with error: ${err}`)
     }
     retries -= 1
   }
