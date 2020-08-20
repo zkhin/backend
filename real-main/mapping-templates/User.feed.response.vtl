@@ -4,8 +4,7 @@
 
 #set ($postIds = [])
 #foreach ($item in $ctx.result.items)
-  #set ($postId = $item.partitionKey.split('/')[1])
-  $util.qr($postIds.add($postId))
+  $util.qr($postIds.add($item.postId))
 #end
 
 $util.toJson({

@@ -14,15 +14,9 @@
     "version": "2018-05-29",
     "operation": "Query",
     "query": {
-        "expression": "gsiA1PartitionKey = :pk",
+        "expression": "feedUserId = :fuid",
         "expressionValues": {
-            ":pk": { "S": "feed/$targetUserId" }
-        }
-    },
-    "filter": {
-        "expression": "attribute_not_exists(expiresAt) or expiresAt > :now",
-        "expressionValues": {
-            ":now": { "S" : "$util.time.nowISO8601()" }
+            ":fuid": { "S": "$targetUserId" }
         }
     },
     "index": "GSI-A1",

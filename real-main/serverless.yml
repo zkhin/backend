@@ -297,6 +297,11 @@ custom:
         config:
           tableName: ${self:provider.environment.DYNAMO_TABLE}
 
+      - type: AMAZON_DYNAMODB
+        name: DynamodbFeedDataSource
+        config:
+          tableName: ${self:provider.environment.DYNAMO_FEED_TABLE}
+
       - type: AWS_LAMBDA
         name: LambdaDataSource
         config:
