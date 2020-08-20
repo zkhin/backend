@@ -148,10 +148,24 @@ const getAppSyncLogin = async (newUserPhone) => {
   // get some credentials to use with the graphql client
   // note that for a new user, this step also adds an entry in the 'Logins' array of the entry in
   // in the identity pool for the entry in the user pool.
-  const appSyncClient = await identityPoolClient
-    .getCredentialsForIdentity({IdentityId: userId, Logins: {[userPoolLoginsKey]: idToken}})
-    .promise()
-    .then(({Credentials}) => getAppSyncClient(Credentials))
+  // Someimtes the identity pool randomly rejects credentials, but if you try again immediately,
+  // it accepts them.
+  let appSyncClient
+  let retries = 2
+  while (retries > 0) {
+    try {
+      appSyncClient = await identityPoolClient
+        .getCredentialsForIdentity({IdentityId: userId, Logins: {[userPoolLoginsKey]: idToken}})
+        .promise()
+        .then(({Credentials}) => getAppSyncClient(Credentials))
+      break
+    } catch (err) {
+      if (err.code !== 'NotAuthorizedException') throw err
+      console.warning(`Cognito identity pool rejected user '${userId}'s idToken '${idToken}' with error: ${err}`)
+    }
+    retries -= 1
+  }
+  if (!appSyncClient) throw Error(`User '${userId}' failed to get credentials from cognito identity pool`)
 
   const username = familyName + myUuid.substring(24)
   await appSyncClient.mutate(
