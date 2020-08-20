@@ -1,20 +1,22 @@
 # REAL Backend Dynamo Schema
 
-As [recommended by AWS](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html#bp-general-nosql-design-approach), REAL is following a single-table design. However, data is for the most part normalized because
+As [recommended by AWS](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-general-nosql-design.html#bp-general-nosql-design-approach), REAL is generally following a single-table design. However,
 
-- primary access is through graphql resolvers which map better to normalized data than de-normalized data
-- normalized data allows for greater flexibility in access patterns, which is very useful with a brand-new product
+  - within the main table data is for the most part normalized for flexibility and ease of use with graphql resolvers
+  - feed items have been moved into their own purpose-built table
 
-## Table Schema
-
-### Types
+## Types
 
 - Unless otherwise noted, all types are strings.
 - Attributes that end with `At` are  (ex: `createdAt`) are of type [AWSDateTime](https://docs.aws.amazon.com/appsync/latest/devguide/scalars.html#appsync-defined-scalars), ie an ISO8601 datetime string, with timezone information that is always just 'Z'
 - Attributes that end with `Count` are  (ex: `postCount`) are numbers (non-negative integers, actually).
 - Attributes that end with `Id` are  (ex: `postId`) in general version 4 uuid's. An exception is `userId` which follows the format `{aws-region}:{uuid}`.
 
-### Indexes
+## Tables
+
+### Main Table
+
+#### Indexes
 
 We have no local secondary indexes.
 
@@ -27,7 +29,7 @@ We have no local secondary indexes.
 - GSI-K2: (`gsiK2PartitionKey`, `gsiK2SortKey`) with keys only.
 - GSI-K3: (`gsiK3PartitionKey`, `gsiK3SortKey:Number`) with keys only.
 
-### Schema
+#### Schema
 
 | Table Partition Key `partitionKey` | Table Sort Key `sortKey` | Schema Version `schemaVersion` | Attributes | GSI-A1 Partition Key `gsiA1PartitionKey` | GSI-A1 Sort Key `gsiA1SortKey` | GSI-A2 Partition Key `gsiA2PartitionKey` | GSI-A2 Sort Key `gsiA2SortKey` | GSI-A3 Partition Key `gsiA3PartitionKey` | GSI-A3 Sort Key `gsiA3SortKey` | GSI-A4 Partition Key `gsiA4PartitionKey` | GSI-A4 Sort Key `gsiA4SortKey:Number` | GSI-K1 Partition Key `gsiK1PartitionKey` | GSI-K1 Sort Key `gsiK1SortKey` | GSI-K2 Partition Key `gsiK2PartitionKey` | GSI-K2 Sort Key `gsiK2SortKey` | GSI-K3 Partition Key `gsiK3PartitionKey` | GSI-K3 Sort Key `gsiK3SortKey:Number` |
 | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
@@ -59,7 +61,7 @@ We have no local secondary indexes.
 | `userEmail/{email}` | `-` | `0` | `userId` |
 | `userPhoneNumber/{phoneNumber}` | `-` | `0` | `userId` |
 
-### Notes
+#### Notes
 
 - `schemaVersion` is an number (non-negative integer, actually) attribute that is used for asynchronous data migrations.
 - `username` is a human-readable string of their choosing
@@ -78,3 +80,16 @@ We have no local secondary indexes.
   - `userId` and `userId2` in the field are the two users in the chat, their id's in alphanumeric sorted order
 - only `Card` items with `postId`, `commentId` attributes will have indexes `GSI-A2` and `GSI-A3`
 - For `AppStoreReceipt` and `AppStoreSub` items, fields `receiptData`, `originalTransactionId`, `latestReceiptInfo`, `expiresAt` etc all match the meaning described in the [apple documentation](https://developer.apple.com/documentation/appstorereceipts).
+
+### Feed Table
+
+#### Indexes
+
+- The table's primary key is (`postId`, `feedUserId`).
+- GSI-A1: (`feedUserId`, `postedAt`) with keys and all attributes.
+- GSI-A2: (`feedUserId`, `postedByUserId`) with keys and all attributes.
+
+#### Notes
+
+- All types are strings.
+- There are no attributes beyond those listed in the indexes above.

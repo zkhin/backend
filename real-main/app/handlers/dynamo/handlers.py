@@ -11,6 +11,7 @@ from app.models.user.enums import UserStatus
 
 from .dispatch import DynamoDispatch
 
+DYNAMO_FEED_TABLE = os.environ.get('DYNAMO_FEED_TABLE')
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
@@ -20,6 +21,7 @@ clients = {
     'appstore': clients.AppStoreClient(),
     'appsync': clients.AppSyncClient(),
     'dynamo': clients.DynamoClient(),
+    'dynamo_feed': clients.DynamoClient(table_name=DYNAMO_FEED_TABLE),
     'elasticsearch': clients.ElasticSearchClient(),
     'pinpoint': clients.PinpointClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),

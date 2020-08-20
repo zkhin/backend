@@ -21,8 +21,8 @@ class FeedManager:
         self.clients = clients
         if 'appsync' in clients:
             self.appsync_client = clients['appsync']
-        if 'dynamo' in clients:
-            self.dynamo = FeedDynamo(clients['dynamo'])
+        if 'dynamo' in clients and 'dynamo_feed' in clients:
+            self.dynamo = FeedDynamo(clients['dynamo'], clients['dynamo_feed'])
 
     def add_users_posts_to_feed(self, feed_user_id, posted_by_user_id):
         post_item_generator = self.post_manager.dynamo.generate_posts_by_user(posted_by_user_id, completed=True)

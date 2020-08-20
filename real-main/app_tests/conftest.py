@@ -9,7 +9,7 @@ import pytest
 from app import clients, models
 from app.models.card.templates import CardTemplate
 
-from .dynamodb.table_schema import table_schema
+from .dynamodb.table_schema import feed_table_schema, main_table_schema
 
 heic_path = path.join(path.dirname(__file__), 'fixtures', 'IMG_0265.HEIC')
 grant_path = path.join(path.dirname(__file__), 'fixtures', 'grant.jpg')
@@ -105,9 +105,22 @@ def cognito_client():
 
 
 @pytest.fixture
-def dynamo_client():
+def dynamo_clients():
     with moto.mock_dynamodb2():
-        yield clients.DynamoClient(table_name='my-table', create_table_schema=table_schema)
+        yield (
+            clients.DynamoClient(table_name='main-table', create_table_schema=main_table_schema),
+            clients.DynamoClient(table_name='feed-table', create_table_schema=feed_table_schema),
+        )
+
+
+@pytest.fixture
+def dynamo_client(dynamo_clients):
+    yield dynamo_clients[0]
+
+
+@pytest.fixture
+def dynamo_feed_client(dynamo_clients):
+    yield dynamo_clients[1]
 
 
 @pytest.fixture
@@ -210,8 +223,10 @@ def comment_manager(dynamo_client, user_manager, appsync_client):
 
 
 @pytest.fixture
-def feed_manager(dynamo_client):
-    yield models.FeedManager({'appsync': appsync_client, 'dynamo': dynamo_client})
+def feed_manager(appsync_client, dynamo_client, dynamo_feed_client):
+    yield models.FeedManager(
+        {'appsync': appsync_client, 'dynamo': dynamo_client, 'dynamo_feed': dynamo_feed_client}
+    )
 
 
 @pytest.fixture

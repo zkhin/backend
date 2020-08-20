@@ -133,10 +133,14 @@ class DynamoClient:
 
     def batch_delete_items(self, generator):
         "Batch delete the items or keys yielded by `generator`. Returns count of how many deletes requested."
+        key_generator = ({k: item[k] for k in ('partitionKey', 'sortKey')} for item in generator)
+        return self.batch_delete(key_generator)
+
+    def batch_delete(self, key_generator):
+        "Batch delete items by keys yielded by `generator`. Returns count of how many deletes requested."
         cnt = 0
         with self.table.batch_writer() as batch:
-            for item in generator:
-                key = {k: item[k] for k in ('partitionKey', 'sortKey')}
+            for key in key_generator:
                 batch.delete_item(Key=key)
                 cnt += 1
         return cnt
@@ -174,12 +178,13 @@ class DynamoClient:
 
     def generate_all_query(self, query_kwargs):
         "Return a generator that iterates over all results of the query"
-        next_token = False
-        while next_token is not None:
-            paginated = self.query(query_kwargs, next_token=next_token)
-            for item in paginated['items']:
+        last_key = False
+        while last_key is not None:
+            start_kwargs = {'ExclusiveStartKey': last_key} if last_key else {}
+            resp = self.table.query(**query_kwargs, **start_kwargs)
+            for item in resp['Items']:
                 yield item
-            next_token = paginated.get('nextToken')
+            last_key = resp.get('LastEvaluatedKey')
 
     def generate_all_scan(self, scan_kwargs):
         "Return a generator that iterates over all results of the scan"

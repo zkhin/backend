@@ -2,7 +2,7 @@
 # This should be kept in sync with what's described in serverless.yaml
 
 
-table_schema = {
+main_table_schema = {
     'KeySchema': [
         {'AttributeName': 'partitionKey', 'KeyType': 'HASH'},
         {'AttributeName': 'sortKey', 'KeyType': 'RANGE'},
@@ -82,5 +82,37 @@ table_schema = {
         {'AttributeName': 'gsiK2SortKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK3PartitionKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK3SortKey', 'AttributeType': 'N'},
+    ],
+}
+
+
+feed_table_schema = {
+    'KeySchema': [
+        {'AttributeName': 'postId', 'KeyType': 'HASH'},
+        {'AttributeName': 'feedUserId', 'KeyType': 'RANGE'},
+    ],
+    'GlobalSecondaryIndexes': [
+        {
+            'IndexName': 'GSI-A1',
+            'KeySchema': [
+                {'AttributeName': 'feedUserId', 'KeyType': 'HASH'},
+                {'AttributeName': 'postedAt', 'KeyType': 'RANGE'},
+            ],
+            'Projection': {'ProjectionType': 'ALL'},
+        },
+        {
+            'IndexName': 'GSI-A2',
+            'KeySchema': [
+                {'AttributeName': 'feedUserId', 'KeyType': 'HASH'},
+                {'AttributeName': 'postedByUserId', 'KeyType': 'RANGE'},
+            ],
+            'Projection': {'ProjectionType': 'ALL'},
+        },
+    ],
+    'AttributeDefinitions': [
+        {'AttributeName': 'postId', 'AttributeType': 'S'},
+        {'AttributeName': 'postedAt', 'AttributeType': 'S'},
+        {'AttributeName': 'postedByUserId', 'AttributeType': 'S'},
+        {'AttributeName': 'feedUserId', 'AttributeType': 'S'},
     ],
 }
