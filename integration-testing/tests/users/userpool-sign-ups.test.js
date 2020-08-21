@@ -136,7 +136,7 @@ describe('Test sign-ups to cognito user pool', () => {
     const username = 'us-east-1:' + uuidv4()
     const password = generatePassword()
     const email = 'success+any@simulator.amazonses.com'
-    const phone = '+14158745464'
+    const phone = '+14155551313'
 
     await cognitoClient
       .signUp({
@@ -183,7 +183,7 @@ describe('Test sign-ups to cognito user pool', () => {
     const username = 'us-east-1:' + uuidv4()
     const password = generatePassword()
     const email = 'success+any@simulator.amazonses.com'
-    const phone = '+14158745464'
+    const phone = '+14155551314'
 
     const respSignUp = await cognitoClient
       .signUp({
