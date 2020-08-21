@@ -63,8 +63,8 @@ class UserDynamo:
             query_kwargs['Item']['phoneNumber'] = phone
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise UserAlreadyExists(user_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise UserAlreadyExists(user_id) from err
 
     def update_user_username(self, user_id, username, old_username, now=None):
         now = now or pendulum.now('utc')
@@ -211,10 +211,10 @@ class UserDynamo:
         }
         try:
             return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
+        except self.client.exceptions.ConditionalCheckFailedException as err:
             # this improperly also catches the condition where the user item doesn't exist because
             # there is no way for us to know which conditional check clause failed
-            raise UserAlreadyGrantedSubscription(user_id)
+            raise UserAlreadyGrantedSubscription(user_id) from err
 
     def clear_subscription(self, user_id):
         # delete any active subscription, but leave the subscriptionGrantedAt if it exists

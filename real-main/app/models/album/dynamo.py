@@ -41,8 +41,8 @@ class AlbumDynamo:
             query_kwargs['Item']['description'] = description
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise AlbumAlreadyExists(album_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AlbumAlreadyExists(album_id) from err
 
     def set(self, album_id, name=None, description=None):
         assert name is not None or description is not None, 'Action-less post edit requested'

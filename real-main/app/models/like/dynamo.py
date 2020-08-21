@@ -51,8 +51,8 @@ class LikeDynamo:
         }
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise AlreadyLiked(liked_by_user_id, post_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AlreadyLiked(liked_by_user_id, post_id) from err
 
     def delete_like(self, liked_by_user_id, post_id, like_status):
         kwargs = {
@@ -61,8 +61,8 @@ class LikeDynamo:
         }
         try:
             self.client.delete_item(self.pk(liked_by_user_id, post_id), **kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise NotLikedWithStatus(liked_by_user_id, post_id, like_status)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise NotLikedWithStatus(liked_by_user_id, post_id, like_status) from err
 
     def generate_of_post(self, post_id):
         query_kwargs = {

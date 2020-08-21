@@ -29,8 +29,8 @@ class AppStoreReceiptDynamo:
         }
         try:
             self.client.add_item({'Item': item})
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise AppStoreReceiptAlreadyExists(receipt_data_b64_md5)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AppStoreReceiptAlreadyExists(receipt_data_b64_md5) from err
         return item
 
     def add_verification_attempt(self, key, status_code, at, next_at=None, first=False):

@@ -40,7 +40,7 @@ class MediaConvertClient:
         try:
             return resp['Endpoints'][0]['Url']
         except Exception as err:
-            raise Exception(f'Unable to parse response from MediaConvert::DescribeEndpoints: {err}')
+            raise Exception(f'Unable to parse response from MediaConvert::DescribeEndpoints: {err}') from err
 
     def create_job(self, input_s3_key, video_output_s3_key_prefix, image_output_s3_key_prefix):
         input_url = f's3://{self.uploads_bucket}/{input_s3_key}'

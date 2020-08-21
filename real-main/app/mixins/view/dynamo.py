@@ -57,8 +57,8 @@ class ViewDynamo:
         }
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.ViewAlreadyExists(self.item_type, item_id, user_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.ViewAlreadyExists(self.item_type, item_id, user_id) from err
 
     def increment_view_count(self, item_id, user_id, view_count, viewed_at):
         pk = self.pk(item_id, user_id)
@@ -69,5 +69,5 @@ class ViewDynamo:
         }
         try:
             return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.ViewDoesNotExist(self.item_type, item_id, user_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.ViewDoesNotExist(self.item_type, item_id, user_id) from err

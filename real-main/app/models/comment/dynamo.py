@@ -42,8 +42,8 @@ class CommentDynamo:
         }
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.CommentAlreadyExists(comment_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.CommentAlreadyExists(comment_id) from err
 
     def delete_comment(self, comment_id):
         return self.client.delete_item(self.pk(comment_id))

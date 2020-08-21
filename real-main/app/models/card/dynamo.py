@@ -58,8 +58,8 @@ class CardDynamo:
             query_kwargs['Item']['gsiA3SortKey'] = '-'
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise CardAlreadyExists(card_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise CardAlreadyExists(card_id) from err
 
     def update_title(self, card_id, title):
         query_kwargs = {

@@ -246,8 +246,8 @@ class User(TrendingModelMixin):
         self.validate.username(username)
         try:
             self.cognito_client.set_user_attributes(self.id, {'preferred_username': username.lower()})
-        except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
-            raise UserValidationException(f'Username `{username}` already taken (case-insensitive cmp)')
+        except self.cognito_client.user_pool_client.exceptions.AliasExistsException as err:
+            raise UserValidationException(f'Username `{username}` already taken (case-insensitive cmp)') from err
 
         self.item = self.dynamo.update_user_username(self.id, username, old_username)
         return self
@@ -354,8 +354,8 @@ class User(TrendingModelMixin):
         # try to do the validation
         try:
             self.cognito_client.verify_user_attribute(access_token, names['cognito'], verification_code)
-        except self.cognito_client.user_pool_client.exceptions.CodeMismatchException:
-            raise UserVerificationException('Verification code is invalid')
+        except self.cognito_client.user_pool_client.exceptions.CodeMismatchException as err:
+            raise UserVerificationException('Verification code is invalid') from err
 
         # success, update cognito, dynamo, then delete the temporary attribute in cognito
         attrs = {

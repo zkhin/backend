@@ -32,5 +32,7 @@ class PostVerificationClient:
             raise Exception(f'Post verification service error `{resp.status_code}` with body `{resp.text}`')
         try:
             return resp.json()['data']['isVerified']
-        except Exception:
-            raise Exception(f'Unable to parse response from post verification service with body: `{resp.text}`')
+        except Exception as err:
+            raise Exception(
+                f'Unable to parse response from post verification service with body: `{resp.text}`'
+            ) from err

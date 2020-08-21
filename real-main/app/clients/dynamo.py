@@ -226,5 +226,5 @@ class DynamoClient:
                 if reason == 'ConditionalCheckFailed':
                     # the transact_item with this transaction_exception failed
                     if transact_exception is not None:
-                        raise transact_exception
+                        raise transact_exception from err
             raise err

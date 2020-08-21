@@ -62,7 +62,7 @@ jobs:
         python-version: 3.8
 
     - name: Install python lint tools
-      run: pip install black flake8 flake8-bugbear isort
+      run: pip install black flake8 flake8-bugbear isort pylint
 
     - name: Lint real-auth
       working-directory: real-auth
@@ -70,50 +70,22 @@ jobs:
         black --check --diff .
         isort --check --diff .
         flake8 .
-
-    - name: Lint real-cloudfront
-      working-directory: real-cloudfront
-      run: |
-        black --check --diff .
-        isort --check --diff .
-        flake8 .
-
-    - name: Lint real-main
-      working-directory: real-main
-      run: |
-        black --check --diff .
-        isort --check --diff .
-        flake8 .
-
-  # pylint still requires isort<5, so can't be installed in same venv as other linting tools
-  # https://github.com/PyCQA/pylint/pull/3725
-  python-lint-pylint:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Git checkout
-      uses: actions/checkout@v1
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.8
-
-    - name: Install pylint
-      run: pip install pylint
-
-    - name: Lint real-auth
-      working-directory: real-auth
-      run: |
         pylint real_auth tests
 
     - name: Lint real-cloudfront
       working-directory: real-cloudfront
       run: |
+        black --check --diff .
+        isort --check --diff .
+        flake8 .
         pylint edge_app
 
     - name: Lint real-main
       working-directory: real-main
       run: |
+        black --check --diff .
+        isort --check --diff .
+        flake8 .
         pylint app app_tests migrations migrations_tests
 
   javascript-lint:

@@ -37,6 +37,6 @@ class AppStoreSubDynamo:
         }
         try:
             self.client.add_item({'Item': item})
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise AppStoreSubAlreadyExists(original_transaction_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AppStoreSubAlreadyExists(original_transaction_id) from err
         return item

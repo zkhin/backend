@@ -34,8 +34,8 @@ class FlagDynamo:
         }
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise AlreadyFlagged(self.item_type, item_id, user_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AlreadyFlagged(self.item_type, item_id, user_id) from err
 
     def delete(self, item_id, user_id):
         deleted = self.client.delete_item(self.pk(item_id, user_id))

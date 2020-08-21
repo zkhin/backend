@@ -68,8 +68,10 @@ class Migration:
 
         try:
             self.dynamo_table.update_item(**kwargs)
-        except self.dynamo_client.exceptions.ConditionalCheckFailedException:
-            raise Exception(f'Update failed for user `{user_id}` - post archived as migration ran? Run again')
+        except self.dynamo_client.exceptions.ConditionalCheckFailedException as err:
+            raise Exception(
+                f'Update failed for user `{user_id}` - post archived as migration ran? Run again'
+            ) from err
 
     def dynamo_count_archived_posts(self, user_id):
         logger.warning(f'User `{user_id}`: counting archived posts')

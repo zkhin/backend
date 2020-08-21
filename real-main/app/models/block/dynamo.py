@@ -36,8 +36,8 @@ class BlockDynamo:
         }
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise AlreadyBlocked(blocker_user_id, blocked_user_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AlreadyBlocked(blocker_user_id, blocked_user_id) from err
 
     def delete_block(self, blocker_user_id, blocked_user_id):
         return self.client.delete_item(self.pk(blocker_user_id, blocked_user_id))

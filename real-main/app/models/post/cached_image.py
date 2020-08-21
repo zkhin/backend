@@ -47,7 +47,7 @@ class CachedImage:
             try:
                 heif_file = pyheif.read(fh)
             except (ValueError, pyheif.error.HeifError) as err:
-                raise PostException(f'Unable to read HEIC file for post `{self.post_id}`: {err}')
+                raise PostException(f'Unable to read HEIC file for post `{self.post_id}`: {err}') from err
             self._image = PIL.Image.frombytes(
                 heif_file.mode, heif_file.size, heif_file.data, 'raw', heif_file.mode, heif_file.stride
             )
@@ -57,7 +57,9 @@ class CachedImage:
             except PostException:
                 raise
             except Exception as err:
-                raise PostException(f'Unable to decode native jpeg data for post `{self.post_id}`: {err}')
+                raise PostException(
+                    f'Unable to decode native jpeg data for post `{self.post_id}`: {err}'
+                ) from err
         else:
             raise PostException(f'Unrecognized content-type `{self.content_type}`')
 
@@ -88,8 +90,8 @@ class CachedImage:
         else:
             try:
                 fh = self.s3_client.get_object_data_stream(self.s3_path)
-            except self.s3_client.exceptions.NoSuchKey:
-                raise PostException(f'{self.s3_path} image data not found for post `{self.post_id}`')
+            except self.s3_client.exceptions.NoSuchKey as err:
+                raise PostException(f'{self.s3_path} image data not found for post `{self.post_id}`') from err
             self._data = fh.read()
             self._image = None
         self.is_synced = True
@@ -111,7 +113,7 @@ class CachedImage:
         try:
             self._image = self.readonly_image.crop((ul_x, ul_y, lr_x, lr_y))
         except Exception as err:
-            raise PostException(f'Unable to crop image for post `{self.id}`: {err}')
+            raise PostException(f'Unable to crop image for post `{self.id}`: {err}') from err
 
         self._data = None
         self.is_synced = False
@@ -145,7 +147,7 @@ class CachedImage:
                     try:
                         self._image.save(fh, **kwargs)
                     except Exception as err:
-                        raise PostException(f'Unable to save pil image for post `{self.post_id}`: {err}')
+                        raise PostException(f'Unable to save pil image for post `{self.post_id}`: {err}') from err
                     fh.seek(0)
                 self.s3_client.put_object(self.s3_path, fh, self.content_type)
             self.is_synced = True

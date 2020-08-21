@@ -251,7 +251,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             try:
                 image.thumbnail(cache.image_size.max_dimensions, resample=PIL.Image.LANCZOS)
             except Exception as err:
-                raise PostException(f'Unable to thumbnail image as jpeg for post `{self.id}`: {err}')
+                raise PostException(f'Unable to thumbnail image as jpeg for post `{self.id}`: {err}') from err
             cache.set_image(image)
             cache.flush()
 

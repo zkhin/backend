@@ -42,8 +42,8 @@ class TrendingDynamo:
         }
         try:
             return self.client.add_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingAlreadyExists(self.item_type, item_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.TrendingAlreadyExists(self.item_type, item_id) from err
 
     def add_score(self, item_id, score_to_add, expected_last_deflated_at):
         assert isinstance(score_to_add, Decimal), 'Boto uses decimals for numbers'
@@ -59,8 +59,8 @@ class TrendingDynamo:
         }
         try:
             return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id) from err
 
     def deflate_score(self, item_id, expected_score, new_score, expected_last_deflation_date, now):
         assert isinstance(expected_score, Decimal), 'Boto uses decimals for numbers'
@@ -80,8 +80,8 @@ class TrendingDynamo:
         }
         try:
             return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id) from err
 
     def delete(self, item_id, expected_score=None):
         if expected_score is not None:
@@ -96,8 +96,8 @@ class TrendingDynamo:
             kwargs = {}
         try:
             return self.client.delete_item(self.pk(item_id), **kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException:
-            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.TrendingDNEOrAttributeMismatch(self.item_type, item_id) from err
 
     def generate_items(self):
         "Ordered with lowest score first."

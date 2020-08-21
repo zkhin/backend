@@ -87,7 +87,7 @@ def create_cognito_only_user(caller_user_id, arguments, source, context):
     try:
         user = user_manager.create_cognito_only_user(caller_user_id, username, full_name=full_name)
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return user.serialize(caller_user_id)
 
 
@@ -101,7 +101,7 @@ def create_apple_user(caller_user_id, arguments, source, context):
             'apple', caller_user_id, username, apple_token, full_name=full_name
         )
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return user.serialize(caller_user_id)
 
 
@@ -115,7 +115,7 @@ def create_facebook_user(caller_user_id, arguments, source, context):
             'facebook', caller_user_id, username, facebook_token, full_name=full_name
         )
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return user.serialize(caller_user_id)
 
 
@@ -129,7 +129,7 @@ def create_google_user(caller_user_id, arguments, source, context):
             'google', caller_user_id, username, google_id_token, full_name=full_name
         )
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return user.serialize(caller_user_id)
 
 
@@ -140,7 +140,7 @@ def start_change_user_email(caller_user, arguments, source, context):
     try:
         caller_user.start_change_contact_attribute('email', email)
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
@@ -152,7 +152,7 @@ def finish_change_user_email(caller_user, arguments, source, context):
     try:
         caller_user.finish_change_contact_attribute('email', access_token, code)
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
@@ -163,7 +163,7 @@ def start_change_user_phone_number(caller_user, arguments, source, context):
     try:
         caller_user.start_change_contact_attribute('phone', phone)
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
@@ -175,7 +175,7 @@ def finish_change_user_phone_number(caller_user, arguments, source, context):
     try:
         caller_user.finish_change_contact_attribute('phone', access_token, code)
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
@@ -219,7 +219,7 @@ def set_user_details(caller_user, arguments, source, context):
         try:
             caller_user.update_username(username)
         except UserException as err:
-            raise ClientException(str(err))
+            raise ClientException(str(err)) from err
 
     # are we setting a new profile picture?
     if photo_post_id is not None:
@@ -227,7 +227,7 @@ def set_user_details(caller_user, arguments, source, context):
         try:
             caller_user.update_photo(post_id)
         except UserException as err:
-            raise ClientException(str(err))
+            raise ClientException(str(err)) from err
 
     # are we changing our privacy status?
     if privacy_status is not None:
@@ -289,7 +289,7 @@ def reset_user(caller_user_id, arguments, source, context):
         try:
             user = user_manager.create_cognito_only_user(caller_user_id, new_username)
         except UserException as err:
-            raise ClientException(str(err))
+            raise ClientException(str(err)) from err
 
     return user.serialize(caller_user_id) if user else None
 
@@ -321,7 +321,7 @@ def grant_user_subscription_bonus(caller_user, arguments, source, context):
     try:
         caller_user.grant_subscription_bonus()
     except UserException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
@@ -332,7 +332,7 @@ def add_app_store_receipt(caller_user, arguments, source, context):
     try:
         appstore_manager.add_receipt(receipt_data, caller_user.id)
     except AppStoreException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
     return True
 
 
@@ -367,7 +367,7 @@ def follow_user(caller_user, arguments, source, context):
     try:
         follow = follower_manager.request_to_follow(follower_user, followed_user)
     except FollowerException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = followed_user.serialize(caller_user.id)
     resp['followedStatus'] = follow.status
@@ -389,7 +389,7 @@ def unfollow_user(caller_user, arguments, source, context):
     try:
         follow.unfollow()
     except FollowerException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = user_manager.get_user(followed_user_id, strongly_consistent=True).serialize(caller_user.id)
     resp['followedStatus'] = follow.status
@@ -409,7 +409,7 @@ def accept_follower_user(caller_user, arguments, source, context):
     try:
         follow.accept()
     except FollowerException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = user_manager.get_user(follower_user_id, strongly_consistent=True).serialize(caller_user.id)
     resp['followerStatus'] = follow.status
@@ -429,7 +429,7 @@ def deny_follower_user(caller_user, arguments, source, context):
     try:
         follow.deny()
     except FollowerException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = user_manager.get_user(follower_user_id, strongly_consistent=True).serialize(caller_user.id)
     resp['followerStatus'] = follow.status
@@ -452,7 +452,7 @@ def block_user(caller_user, arguments, source, context):
     try:
         block_manager.block(blocker_user, blocked_user)
     except BlockException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = blocked_user.serialize(caller_user.id)
     resp['blockedStatus'] = BlockStatus.BLOCKING
@@ -475,7 +475,7 @@ def unblock_user(caller_user, arguments, source, context):
     try:
         block_manager.unblock(blocker_user, blocked_user)
     except BlockException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = blocked_user.serialize(caller_user.id)
     resp['blockedStatus'] = BlockStatus.NOT_BLOCKING
@@ -500,8 +500,8 @@ def add_post(caller_user, arguments, source, context):
     if lifetime_iso:
         try:
             lifetime_duration = pendulum.parse(lifetime_iso)
-        except pendulum.exceptions.ParserError:
-            raise ClientException(f'Unable to parse lifetime `{lifetime_iso}`')
+        except pendulum.exceptions.ParserError as err:
+            raise ClientException(f'Unable to parse lifetime `{lifetime_iso}`') from err
         if not isinstance(lifetime_duration, pendulum.Duration):
             raise ClientException(f'Unable to parse lifetime `{lifetime_iso}` as duration')
     else:
@@ -523,7 +523,7 @@ def add_post(caller_user, arguments, source, context):
             set_as_user_photo=set_as_user_photo,
         )
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -620,7 +620,7 @@ def edit_post(caller_user, arguments, source, context):
     try:
         post.set(**edit_kwargs)
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -641,7 +641,7 @@ def edit_post_album(caller_user, arguments, source, context):
     try:
         post.set_album(album_id)
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -662,7 +662,7 @@ def edit_post_album_order(caller_user, arguments, source, context):
     try:
         post.set_album_order(preceding_post_id)
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -700,7 +700,7 @@ def flag_post(caller_user, arguments, source, context):
     try:
         post.flag(caller_user)
     except (PostException, FlagException) as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = post.serialize(caller_user.id)
     resp['flagStatus'] = FlagStatus.FLAGGED
@@ -722,7 +722,7 @@ def archive_post(caller_user, arguments, source, context):
     try:
         post.archive()
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -742,7 +742,7 @@ def delete_post(caller_user, arguments, source, context):
     try:
         post = post.delete()
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -762,7 +762,7 @@ def restore_archived_post(caller_user, arguments, source, context):
     try:
         post.restore()
     except PostException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return post.serialize(caller_user.id)
 
@@ -779,7 +779,7 @@ def onymously_like_post(caller_user, arguments, source, context):
     try:
         like_manager.like_post(caller_user, post, LikeStatus.ONYMOUSLY_LIKED)
     except LikeException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = post.serialize(caller_user.id)
     resp['likeStatus'] = LikeStatus.ONYMOUSLY_LIKED
@@ -798,7 +798,7 @@ def anonymously_like_post(caller_user, arguments, source, context):
     try:
         like_manager.like_post(caller_user, post, LikeStatus.ANONYMOUSLY_LIKED)
     except LikeException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = post.serialize(caller_user.id)
     resp['likeStatus'] = LikeStatus.ANONYMOUSLY_LIKED
@@ -853,7 +853,7 @@ def add_comment(caller_user, arguments, source, context):
     try:
         comment = comment_manager.add_comment(comment_id, post_id, caller_user.id, text)
     except CommentException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return comment.serialize(caller_user.id)
 
@@ -870,7 +870,7 @@ def delete_comment(caller_user, arguments, source, context):
     try:
         comment.delete(deleter_user_id=caller_user.id)
     except CommentException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return comment.serialize(caller_user.id)
 
@@ -887,7 +887,7 @@ def flag_comment(caller_user, arguments, source, context):
     try:
         comment.flag(caller_user)
     except (CommentException, FlagException) as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = comment.serialize(caller_user.id)
     resp['flagStatus'] = FlagStatus.FLAGGED
@@ -909,7 +909,7 @@ def delete_card(caller_user, arguments, source, context):
     try:
         card.delete()
     except CardException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return card.serialize(caller_user.id)
 
@@ -938,7 +938,7 @@ def add_album(caller_user, arguments, source, context):
     try:
         album = album_manager.add_album(caller_user.id, album_id, name, description=description)
     except AlbumException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return album.serialize(caller_user.id)
 
@@ -963,7 +963,7 @@ def edit_album(caller_user, arguments, source, context):
     try:
         album.update(name=name, description=description)
     except AlbumException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return album.serialize(caller_user.id)
 
@@ -983,7 +983,7 @@ def delete_album(caller_user, arguments, source, context):
     try:
         album.delete()
     except AlbumException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return album.serialize(caller_user.id)
 
@@ -1015,7 +1015,7 @@ def create_direct_chat(caller_user, arguments, source, context):
         chat = chat_manager.add_direct_chat(chat_id, caller_user.id, user_id, now=now)
         msg = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user.id, now=now)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     msg.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=[user_id])
     chat.refresh_item(strongly_consistent=True)
@@ -1033,7 +1033,7 @@ def create_group_chat(caller_user, arguments, source, context):
         chat.add(caller_user, user_ids)
         message = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user.id)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     message.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=user_ids)
     chat.refresh_item(strongly_consistent=True)
@@ -1053,7 +1053,7 @@ def edit_group_chat(caller_user, arguments, source, context):
     try:
         chat.edit(caller_user, name=name)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return chat.item
 
@@ -1070,7 +1070,7 @@ def add_to_group_chat(caller_user, arguments, source, context):
     try:
         chat.add(caller_user, user_ids)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return chat.item
 
@@ -1087,7 +1087,7 @@ def leave_group_chat(caller_user, arguments, source, context):
     try:
         chat.leave(caller_user)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     return chat.item
 
@@ -1118,7 +1118,7 @@ def flag_chat(caller_user, arguments, source, context):
     try:
         chat.flag(caller_user)
     except (ChatException, FlagException) as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = chat.item.copy()
     resp['flagStatus'] = FlagStatus.FLAGGED
@@ -1137,7 +1137,7 @@ def add_chat_message(caller_user, arguments, source, context):
     try:
         message = chat_message_manager.add_chat_message(message_id, text, chat_id, caller_user.id)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     message.trigger_notifications(ChatMessageNotificationType.ADDED)
     return message.serialize(caller_user.id)
@@ -1155,7 +1155,7 @@ def edit_chat_message(caller_user, arguments, source, context):
     try:
         message.edit(text)
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     message.trigger_notifications(ChatMessageNotificationType.EDITED)
     return message.serialize(caller_user.id)
@@ -1173,7 +1173,7 @@ def delete_chat_message(caller_user, arguments, source, context):
     try:
         message.delete()
     except ChatException as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     message.trigger_notifications(ChatMessageNotificationType.DELETED)
     return message.serialize(caller_user.id)
@@ -1191,7 +1191,7 @@ def flag_chat_message(caller_user, arguments, source, context):
     try:
         message.flag(caller_user)
     except (ChatMessageException, FlagException) as err:
-        raise ClientException(str(err))
+        raise ClientException(str(err)) from err
 
     resp = message.serialize(caller_user.id)
     resp['flagStatus'] = FlagStatus.FLAGGED

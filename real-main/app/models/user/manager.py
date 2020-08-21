@@ -114,10 +114,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
         try:
             attrs = self.cognito_client.get_user_attributes(user_id)
-        except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
+        except self.cognito_client.user_pool_client.exceptions.UserNotFoundException as err:
             raise UserValidationException(
                 f'No entry found in cognito user pool with cognito username `{user_id}`'
-            )
+            ) from err
         preferred_username = attrs.get('preferred_username', None)
         email = attrs.get('email') if attrs.get('email_verified', 'false') == 'true' else None
         phone = attrs.get('phone_number') if attrs.get('phone_number_verified', 'false') == 'true' else None
@@ -128,8 +128,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         # this is part of allowing case-insensitive logins
         try:
             self.cognito_client.set_user_attributes(user_id, {'preferred_username': username.lower()})
-        except self.cognito_client.user_pool_client.exceptions.AliasExistsException:
-            raise UserValidationException(f'Username `{username}` already taken (case-insensitive comparison)')
+        except self.cognito_client.user_pool_client.exceptions.AliasExistsException as err:
+            raise UserValidationException(
+                f'Username `{username}` already taken (case-insensitive comparison)'
+            ) from err
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
@@ -166,7 +168,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             email = provider_client.get_verified_email(token).lower()
         except ValueError as err:
             logger.warning(str(err))
-            raise UserValidationException(str(err))
+            raise UserValidationException(str(err)) from err
 
         # set the user up in cognito, claims the username at the same time
         try:
@@ -178,12 +180,12 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         ) as err:
             # Not ideal: relying on cognito not to change these exact error messages.
             if 'Already found an entry for the provided username' in str(err):
-                raise UserValidationException(f'Username `{username}` already taken')
+                raise UserValidationException(f'Username `{username}` already taken') from err
             if 'An account with the email already exists' in str(err):
-                raise UserValidationException(f'Email `{email}` already taken')
+                raise UserValidationException(f'Email `{email}` already taken') from err
             if 'User account already exists' in str(err):
-                raise UserValidationException(f'An account for userId `{user_id}` already exists')
-            raise UserValidationException(str(err))
+                raise UserValidationException(f'An account for userId `{user_id}` already exists') from err
+            raise UserValidationException(str(err)) from err
 
         tokens = {
             'cognito_token': self.cognito_client.get_user_pool_id_token(user_id),
