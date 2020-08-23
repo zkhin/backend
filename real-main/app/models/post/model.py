@@ -10,7 +10,7 @@ from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
 from app.mixins.view.model import ViewModelMixin
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserPrivacyStatus
+from app.models.user.enums import UserPrivacyStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserException
 from app.utils import image_size
 
@@ -369,10 +369,8 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.follower_manager.refresh_first_story(story_now=self.item)
 
         # give new posts a free bump into trending, but not their user
-        kwargs = {'now': now}
-        if self.type == PostType.IMAGE and not self.is_verified:
-            kwargs['multiplier'] = 0.5
-        self.trending_increment_score(**kwargs)
+        trending_kwargs = {'now': now, 'multiplier': self.get_trending_multiplier()}
+        self.trending_increment_score(**trending_kwargs)
 
         # alert frontend
         self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)
@@ -612,13 +610,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.user_id == user_id:
             return True  # post owner's views don't count for trending, etc.
 
-        kwargs = {'now': viewed_at}
-        if self.is_verified is False:  # note that non-image posts have is_verified value of None
-            kwargs['multiplier'] = 0.5
-
-        recorded = self.trending_increment_score(**kwargs)
+        trending_kwargs = {'now': viewed_at, 'multiplier': self.get_trending_multiplier()}
+        recorded = self.trending_increment_score(**trending_kwargs)
         if recorded:
-            self.user.trending_increment_score(**kwargs)
+            self.user.trending_increment_score(**trending_kwargs)
 
         # record the viewedBy on the post and user
         if is_new_view:
@@ -632,6 +627,14 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
                 original_post.record_view_count(user_id, view_count, viewed_at=viewed_at)
 
         return True
+
+    def get_trending_multiplier(self):
+        multiplier = 1
+        if self.is_verified is False:  # note that non-image posts have is_verified value of None
+            multiplier /= 2
+        if self.user.subscription_level == UserSubscriptionLevel.DIAMOND:
+            multiplier *= 4
+        return multiplier
 
     def trending_increment_score(self, now=None, **kwargs):
         now = now or pendulum.now('utc')

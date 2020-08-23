@@ -7,6 +7,7 @@ import pytest
 
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
+from app.models.user.enums import UserSubscriptionLevel
 from app.models.user.exceptions import UserException
 from app.utils import image_size
 
@@ -225,36 +226,42 @@ def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, p
 
 
 def test_which_posts_get_free_trending(post_manager, user, image_data_b64, grant_data_b64):
+    now = pendulum.now('utc').start_of('day')  # beginning of day to normalize all the trending values
     # verify text-only post gets some free trending
-    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t', now=now)
     assert post.type == PostType.TEXT_ONLY
-    assert post.trending_item
+    assert post.trending_item['gsiA4SortKey'] == 1
 
-    # verify a image post that fails verification but is original does not get some free trending
+    # verify a image post that fails verification and is original gets reduced trending
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': False})
     post = post_manager.add_post(
-        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64}
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': grant_data_b64}, now=now,
     )
     assert post.is_verified is False
     assert post.original_post_id == post.id
-    assert post.trending_item
+    assert post.trending_item['gsiA4SortKey'] == 0.5
 
     # verify a image post that passes verification and is original gets free trending
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': True})
     post = post_manager.add_post(
-        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, now=now,
     )
     assert post.is_verified is True
     assert post.original_post_id == post.id
-    assert post.trending_item
+    assert post.trending_item['gsiA4SortKey'] == 1
 
     # verify a image post that passes verification but is not original does not get free trending
     post = post_manager.add_post(
-        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}
+        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, now=now,
     )
     assert post.is_verified is True
     assert post.original_post_id != post.id
     assert post.trending_item is None
+
+    # check that if the user is a subscriber they get 4x the trending
+    assert user.grant_subscription_bonus().subscription_level == UserSubscriptionLevel.DIAMOND
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t', now=now)
+    assert post.trending_item['gsiA4SortKey'] == 4
 
     # verify the owner of the posts that got free trending did not get any free trending themselves
     assert user.trending_item is None

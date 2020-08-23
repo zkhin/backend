@@ -10,6 +10,7 @@ import pytest
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.post.model import Post
+from app.models.user.enums import UserSubscriptionLevel
 from app.utils import image_size
 
 grant_height = 320
@@ -807,3 +808,28 @@ def test_trending_increment_score_skip_posts_over_24_hours_old(post):
     recorded = post.trending_increment_score()
     assert recorded is False
     assert post.trending_item['gsiA4SortKey'] == org_score
+
+
+def test_get_trending_multiplier(post):
+    # walk through the matrix, test them all
+    assert 'isVerifed' not in post.item
+    assert 'subscriptionLevel' not in post.user.item
+    assert post.get_trending_multiplier() == 1
+
+    post.user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
+    assert post.get_trending_multiplier() == 4
+
+    post.user.item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
+    assert post.get_trending_multiplier() == 1
+
+    post.item['isVerified'] = None
+    assert post.get_trending_multiplier() == 1
+
+    post.item['isVerified'] = True
+    assert post.get_trending_multiplier() == 1
+
+    post.item['isVerified'] = False
+    assert post.get_trending_multiplier() == 0.5
+
+    post.user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
+    assert post.get_trending_multiplier() == 2

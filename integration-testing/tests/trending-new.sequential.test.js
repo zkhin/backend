@@ -346,7 +346,7 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
     .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
 })
 
-test('Posts that fail verification get lower trending scores, can be filter', async () => {
+test('Posts that fail verification get lower trending scores, can be filtered', async () => {
   const {client} = await loginCache.getCleanLogin()
 
   // we add a post that is not verified
@@ -410,6 +410,56 @@ test('Posts that fail verification get lower trending scores, can be filter', as
       expect(trendingPosts.items).toHaveLength(1)
       expect(trendingPosts.items[0].postId).toBe(postId2)
     })
+})
+
+test('Users with subscription get trending boost', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+
+  // we give ourselves some free diamond
+  await ourClient
+    .mutate({mutation: mutations.grantUserSubscriptionBonus})
+    .then(({data: {grantUserSubscriptionBonus: user}}) => {
+      expect(user.userId).toBe(ourUserId)
+      expect(user.subscriptionLevel).toBe('DIAMOND')
+    })
+
+  // we upload a post that fails verification (with a subscription)
+  await misc.sleep(2000)
+  const postId0 = uuidv4()
+  await ourClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId0, imageData: imageDataB64, takenInReal: false},
+    })
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId0)
+      expect(post.postStatus).toBe('COMPLETED')
+      expect(post.isVerified).toBe(false)
+    })
+
+  // they upload a post that passes verification (without a subscription)
+  await misc.sleep(1000)
+  const postId1 = uuidv4()
+  await theirClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId1, imageData: imageData2B64, takenInReal: true},
+    })
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('COMPLETED')
+      expect(post.isVerified).toBe(true)
+    })
+
+  // check in trending ordering. Even though the 2nd post was more recent, and it passed
+  // verification, the subscribers post should be ordered first in trending.
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(2)
+    expect(trendingPosts.items[0].postId).toBe(postId0)
+    expect(trendingPosts.items[1].postId).toBe(postId1)
+  })
 })
 
 test('Views of non-original posts contribute to the original post & user in trending', async () => {

@@ -650,7 +650,7 @@ def test_get_apns_token(user):
 
 
 def test_grant_subscription_bonus(user):
-    assert 'subscriptionLevel' not in user.item
+    assert user.subscription_level == UserSubscriptionLevel.BASIC
     assert 'subscriptionGrantedAt' not in user.item
     assert 'subscriptionExpiresAt' not in user.item
     sub_duration = pendulum.duration(months=3)
@@ -660,14 +660,14 @@ def test_grant_subscription_bonus(user):
     user.grant_subscription_bonus()
     after = pendulum.now('utc')
     assert user.item == user.refresh_item().item
-    assert user.item['subscriptionLevel'] == UserSubscriptionLevel.DIAMOND
+    assert user.subscription_level == UserSubscriptionLevel.DIAMOND
     assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
     assert before + sub_duration < pendulum.parse(user.item['subscriptionExpiresAt']) < after + sub_duration
 
     # clear it (as if it expired)
     user.item = user.dynamo.clear_subscription(user.id)
     assert user.item == user.refresh_item().item
-    assert 'subscriptionLevel' not in user.item
+    assert user.subscription_level == UserSubscriptionLevel.BASIC
     assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
     assert 'subscriptionExpiresAt' not in user.item
 

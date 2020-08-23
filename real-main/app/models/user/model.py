@@ -81,6 +81,10 @@ class User(TrendingModelMixin):
     def status(self):
         return self.item.get('userStatus', UserStatus.ACTIVE)
 
+    @property
+    def subscription_level(self):
+        return self.item.get('subscriptionLevel', UserSubscriptionLevel.BASIC)
+
     def get_photo_path(self, size, photo_post_id=None):
         photo_post_id = photo_post_id or self.item.get('photoPostId')
         if not photo_post_id:
