@@ -83,6 +83,21 @@ def test_on_comment_delete_adjusts_counts(user_manager, user, comment, caplog):
     assert new_item == org_item
 
 
+def test_on_user_add_delete_user_deleted_subitem(user_manager, user):
+    key = {'partitionKey': f'user/{user.id}', 'sortKey': 'deleted'}
+    # add a deleted subitem, verify
+    user_manager.dynamo.add_user_deleted(user.id)
+    assert user_manager.dynamo.client.get_item(key)
+
+    # run handler, verify
+    user_manager.on_user_add_delete_user_deleted_subitem(user.id, new_item=user.item)
+    assert user_manager.dynamo.client.get_item(key) is None
+
+    # run handler again, verify doesn't crash & idempotent
+    user_manager.on_user_add_delete_user_deleted_subitem(user.id, new_item=user.item)
+    assert user_manager.dynamo.client.get_item(key) is None
+
+
 def test_on_user_delete_calls_elasticsearch(user_manager, user):
     with patch.object(user_manager, 'elasticsearch_client') as elasticsearch_client_mock:
         user_manager.on_user_delete(user.id, user.item)
@@ -93,6 +108,13 @@ def test_on_user_delete_calls_pinpoint(user_manager, user):
     with patch.object(user_manager, 'pinpoint_client') as pinpoint_client_mock:
         user_manager.on_user_delete(user.id, user.item)
     assert pinpoint_client_mock.mock_calls == [call.delete_user_endpoints(user.id)]
+
+
+def test_on_user_delete_adds_user_deleted_subitem(user_manager, user):
+    key = {'partitionKey': f'user/{user.id}', 'sortKey': 'deleted'}
+    assert user_manager.dynamo.client.get_item(key) is None
+    user_manager.on_user_delete(user.id, user.item)
+    assert user_manager.dynamo.client.get_item(key) is not None
 
 
 def test_on_card_add_increment_count(user_manager, user, card):

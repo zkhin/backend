@@ -260,7 +260,12 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         card = self.card_manager.init_card(old_item)
         self.dynamo.decrement_card_count(card.user_id)
 
+    def on_user_add_delete_user_deleted_subitem(self, user_id, new_item):
+        # the integration test suite reuses deleted users as a performance enhancement
+        self.dynamo.delete_user_deleted(user_id)
+
     def on_user_delete(self, user_id, old_item):
+        self.dynamo.add_user_deleted(user_id)
         self.elasticsearch_client.delete_user(user_id)
         self.pinpoint_client.delete_user_endpoints(user_id)
 

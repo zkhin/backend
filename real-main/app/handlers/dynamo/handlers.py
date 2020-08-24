@@ -172,6 +172,7 @@ register(
     follower_manager.on_first_story_post_id_change_fire_gql_notifications,
     {'postId': None},
 )
+register('user', 'profile', ['INSERT'], user_manager.on_user_add_delete_user_deleted_subitem)
 register(
     'user',
     'profile',

@@ -55,6 +55,7 @@ We have no local secondary indexes.
 | `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount` | | | | | | | | | `post/{postId}` | `view/{firstViewedAt}` |
 | `user/{userId}` | `profile` | `11` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `bio`, `photoPostId`, `userStatus`, `privacyStatus`, `subscriptionLevel`, `subscriptionGrantedAt`, `subscriptionExpiresAt`, `albumCount`, `chatMessagesCreationCount`, `chatMessagesDeletionCount`, `chatMessagesForcedDeletionCount`, `chatCount`, `chatsWithUnviewedMessagesCount`, `cardCount`, `commentCount`, `commentDeletedCount`, `commentForcedDeletionCount`, `followedCount`, `followerCount`, `followersRequestedCount`, `postCount`, `postArchivedCount`, `postDeletedCount`, `postForcedArchivingCount`, `lastManuallyReindexedAt`, `lastPostViewAt`, `lastClient`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `lastDisabedAt`, `acceptedEULAVersion`, `postViewedByCount`, `usernameLastValue`, `usernameLastChangedAt`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean` | `username/{username}` | `-` | | | | | | | `user/{subscriptionLevel}` | `{subscriptionExpiresAt}` or `~` |
 | `user/{userId}` | `blocker/{userId}`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
+| `user/{userId}` | `deleted`| `0` | `userId`, `deletedAt` | `userDeleted` | `{deletedAt}` |
 | `user/{userId}` | `follower/{userId}` | `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
 | `user/{userId}` | `follower/{userId}/firstStory` | `1` | `postId` | | | `follower/{followerUserId}/firstStory` | `{expiresAt}` |
 | `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | `user/trending` | `{score}` |
@@ -80,6 +81,7 @@ We have no local secondary indexes.
   - `userId` and `userId2` in the field are the two users in the chat, their id's in alphanumeric sorted order
 - only `Card` items with `postId`, `commentId` attributes will have indexes `GSI-A2` and `GSI-A3`
 - For `AppStoreReceipt` and `AppStoreSub` items, fields `receiptData`, `originalTransactionId`, `latestReceiptInfo`, `expiresAt` etc all match the meaning described in the [apple documentation](https://developer.apple.com/documentation/appstorereceipts).
+- The `userDeleted` subitem is added when a user is deleted and serves as an anonymous tombstone
 
 ### Feed Table
 
