@@ -649,6 +649,39 @@ def test_get_apns_token(user):
     assert pc_mock.mock_calls == [call.get_user_endpoints(user.id, 'APNS')]
 
 
+def test_set_last_client(user):
+    assert 'lastClient' not in user.refresh_item().item
+    user.dynamo = Mock(wraps=user.dynamo)
+
+    # set it, verify
+    client_1 = {
+        'device': 'original razr',
+        'system': 'brew',
+    }
+    with patch.object(user, 'dynamo', Mock(wraps=user.dynamo)) as dynamo_mock:
+        user.set_last_client(client_1)
+    assert len(dynamo_mock.mock_calls) == 1
+    assert user.item == user.refresh_item().item
+    assert user.item['lastClient'] == client_1
+
+    # update it, verify
+    client_2 = {
+        'device': 'original razr',
+        'element': 'out of it',
+    }
+    with patch.object(user, 'dynamo', Mock(wraps=user.dynamo)) as dynamo_mock:
+        user.set_last_client(client_2)
+    assert len(dynamo_mock.mock_calls) == 1
+    assert user.item == user.refresh_item().item
+    assert user.item['lastClient'] == client_2
+
+    # verify setting it to the same value does no writes to dynamo
+    with patch.object(user, 'dynamo', Mock(wraps=user.dynamo)) as dynamo_mock:
+        user.set_last_client(client_2)
+    assert dynamo_mock.mock_calls == []
+    assert user.item['lastClient'] == client_2
+
+
 def test_grant_subscription_bonus(user):
     assert user.subscription_level == UserSubscriptionLevel.BASIC
     assert 'subscriptionGrantedAt' not in user.item

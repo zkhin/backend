@@ -69,30 +69,42 @@ user_manager = managers.get('user') or models.UserManager(clients, managers=mana
 def validate_caller(func):
     "Decorator that inits a caller_user model and verifies the caller is ACTIVE"
 
-    def wrapper(caller_user_id, arguments, source, context):
+    def wrapper(caller_user_id, arguments, **kwargs):
         caller_user = user_manager.get_user(caller_user_id)
         if not caller_user:
             raise ClientException(f'User `{caller_user_id}` does not exist')
         if caller_user.status != UserStatus.ACTIVE:
             raise ClientException(f'User `{caller_user_id}` is not ACTIVE')
-        return func(caller_user, arguments, source, context)
+        return func(caller_user, arguments, **kwargs)
+
+    return wrapper
+
+
+def update_last_client(func):
+    "Decorator that updates User.lastClient if as needed"
+
+    def wrapper(caller_user, arguments, client=None, **kwargs):
+        if caller_user and client:
+            caller_user.set_last_client(client)
+        return func(caller_user, arguments, client=client, **kwargs)
 
     return wrapper
 
 
 @routes.register('Mutation.createCognitoOnlyUser')
-def create_cognito_only_user(caller_user_id, arguments, source, context):
+def create_cognito_only_user(caller_user_id, arguments, client=None, **kwargs):
     username = arguments['username']
     full_name = arguments.get('fullName')
     try:
         user = user_manager.create_cognito_only_user(caller_user_id, username, full_name=full_name)
     except UserException as err:
         raise ClientException(str(err)) from err
+    user.set_last_client(client)
     return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.createAppleUser')
-def create_apple_user(caller_user_id, arguments, source, context):
+def create_apple_user(caller_user_id, arguments, client=None, **kwargs):
     username = arguments['username']
     full_name = arguments.get('fullName')
     apple_token = arguments['appleIdToken']
@@ -102,11 +114,12 @@ def create_apple_user(caller_user_id, arguments, source, context):
         )
     except UserException as err:
         raise ClientException(str(err)) from err
+    user.set_last_client(client)
     return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.createFacebookUser')
-def create_facebook_user(caller_user_id, arguments, source, context):
+def create_facebook_user(caller_user_id, arguments, client=None, **kwargs):
     username = arguments['username']
     full_name = arguments.get('fullName')
     facebook_token = arguments['facebookAccessToken']
@@ -116,11 +129,12 @@ def create_facebook_user(caller_user_id, arguments, source, context):
         )
     except UserException as err:
         raise ClientException(str(err)) from err
+    user.set_last_client(client)
     return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.createGoogleUser')
-def create_google_user(caller_user_id, arguments, source, context):
+def create_google_user(caller_user_id, arguments, client=None, **kwargs):
     username = arguments['username']
     full_name = arguments.get('fullName')
     google_id_token = arguments['googleIdToken']
@@ -130,12 +144,14 @@ def create_google_user(caller_user_id, arguments, source, context):
         )
     except UserException as err:
         raise ClientException(str(err)) from err
+    user.set_last_client(client)
     return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.startChangeUserEmail')
 @validate_caller
-def start_change_user_email(caller_user, arguments, source, context):
+@update_last_client
+def start_change_user_email(caller_user, arguments, **kwargs):
     email = arguments['email']
     try:
         caller_user.start_change_contact_attribute('email', email)
@@ -146,7 +162,8 @@ def start_change_user_email(caller_user, arguments, source, context):
 
 @routes.register('Mutation.finishChangeUserEmail')
 @validate_caller
-def finish_change_user_email(caller_user, arguments, source, context):
+@update_last_client
+def finish_change_user_email(caller_user, arguments, **kwargs):
     access_token = arguments['cognitoAccessToken']
     code = arguments['verificationCode']
     try:
@@ -158,7 +175,8 @@ def finish_change_user_email(caller_user, arguments, source, context):
 
 @routes.register('Mutation.startChangeUserPhoneNumber')
 @validate_caller
-def start_change_user_phone_number(caller_user, arguments, source, context):
+@update_last_client
+def start_change_user_phone_number(caller_user, arguments, **kwargs):
     phone = arguments['phoneNumber']
     try:
         caller_user.start_change_contact_attribute('phone', phone)
@@ -169,7 +187,8 @@ def start_change_user_phone_number(caller_user, arguments, source, context):
 
 @routes.register('Mutation.finishChangeUserPhoneNumber')
 @validate_caller
-def finish_change_user_phone_number(caller_user, arguments, source, context):
+@update_last_client
+def finish_change_user_phone_number(caller_user, arguments, **kwargs):
     access_token = arguments['cognitoAccessToken']
     code = arguments['verificationCode']
     try:
@@ -181,7 +200,8 @@ def finish_change_user_phone_number(caller_user, arguments, source, context):
 
 @routes.register('Mutation.setUserDetails')
 @validate_caller
-def set_user_details(caller_user, arguments, source, context):
+@update_last_client
+def set_user_details(caller_user, arguments, **kwargs):
     username = arguments.get('username')
     full_name = arguments.get('fullName')
     bio = arguments.get('bio')
@@ -251,7 +271,8 @@ def set_user_details(caller_user, arguments, source, context):
 
 @routes.register('Mutation.setUserAcceptedEULAVersion')
 @validate_caller
-def set_user_accepted_eula_version(caller_user, arguments, source, context):
+@update_last_client
+def set_user_accepted_eula_version(caller_user, arguments, **kwargs):
     version = arguments['version']
 
     # use the empty string to request deleting
@@ -264,7 +285,8 @@ def set_user_accepted_eula_version(caller_user, arguments, source, context):
 
 @routes.register('Mutation.setUserAPNSToken')
 @validate_caller
-def set_user_apns_token(caller_user, arguments, source, context):
+@update_last_client
+def set_user_apns_token(caller_user, arguments, **kwargs):
     token = arguments['token']
 
     # use the empty string to request deleting
@@ -276,7 +298,7 @@ def set_user_apns_token(caller_user, arguments, source, context):
 
 
 @routes.register('Mutation.resetUser')
-def reset_user(caller_user_id, arguments, source, context):
+def reset_user(caller_user_id, arguments, client=None, **kwargs):
     new_username = arguments.get('newUsername') or None  # treat empty string like null
 
     # resetUser may be called when user exists in cognito but not in dynamo
@@ -290,34 +312,38 @@ def reset_user(caller_user_id, arguments, source, context):
             user = user_manager.create_cognito_only_user(caller_user_id, new_username)
         except UserException as err:
             raise ClientException(str(err)) from err
+        user.set_last_client(client)
 
     return user.serialize(caller_user_id) if user else None
 
 
 @routes.register('Mutation.disableUser')
-def disable_user(caller_user_id, arguments, source, context):
+def disable_user(caller_user_id, arguments, client=None, **kwargs):
     # mark our user as in the process of deleting
     user = user_manager.get_user(caller_user_id)
     if not user:
         raise ClientException(f'User `{caller_user_id}` does not exist')
 
+    user.set_last_client(client)
     user.disable()
     return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.deleteUser')
-def delete_user(caller_user_id, arguments, source, context):
+def delete_user(caller_user_id, arguments, client=None, **kwargs):
     user = user_manager.get_user(caller_user_id)
     if not user:
         raise ClientException(f'User `{caller_user_id}` does not exist')
 
+    user.set_last_client(client)
     user.delete()
     return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.grantUserSubscriptionBonus')
 @validate_caller
-def grant_user_subscription_bonus(caller_user, arguments, source, context):
+@update_last_client
+def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
     try:
         caller_user.grant_subscription_bonus()
     except UserException as err:
@@ -327,7 +353,8 @@ def grant_user_subscription_bonus(caller_user, arguments, source, context):
 
 @routes.register('Mutation.addAppStoreReceipt')
 @validate_caller
-def add_app_store_receipt(caller_user, arguments, source, context):
+@update_last_client
+def add_app_store_receipt(caller_user, arguments, **kwargs):
     receipt_data = arguments['receiptData']
     try:
         appstore_manager.add_receipt(receipt_data, caller_user.id)
@@ -337,7 +364,7 @@ def add_app_store_receipt(caller_user, arguments, source, context):
 
 
 @routes.register('User.photo')
-def user_photo(caller_user_id, arguments, source, context):
+def user_photo(caller_user_id, arguments, source=None, **kwargs):
     user = user_manager.init_user(source)
     native_url = user.get_photo_url(image_size.NATIVE)
     if not native_url:
@@ -353,7 +380,8 @@ def user_photo(caller_user_id, arguments, source, context):
 
 @routes.register('Mutation.followUser')
 @validate_caller
-def follow_user(caller_user, arguments, source, context):
+@update_last_client
+def follow_user(caller_user, arguments, **kwargs):
     follower_user = caller_user
     followed_user_id = arguments['userId']
 
@@ -378,7 +406,8 @@ def follow_user(caller_user, arguments, source, context):
 
 @routes.register('Mutation.unfollowUser')
 @validate_caller
-def unfollow_user(caller_user, arguments, source, context):
+@update_last_client
+def unfollow_user(caller_user, arguments, **kwargs):
     follower_user = caller_user
     followed_user_id = arguments['userId']
 
@@ -398,7 +427,8 @@ def unfollow_user(caller_user, arguments, source, context):
 
 @routes.register('Mutation.acceptFollowerUser')
 @validate_caller
-def accept_follower_user(caller_user, arguments, source, context):
+@update_last_client
+def accept_follower_user(caller_user, arguments, **kwargs):
     followed_user = caller_user
     follower_user_id = arguments['userId']
 
@@ -418,7 +448,8 @@ def accept_follower_user(caller_user, arguments, source, context):
 
 @routes.register('Mutation.denyFollowerUser')
 @validate_caller
-def deny_follower_user(caller_user, arguments, source, context):
+@update_last_client
+def deny_follower_user(caller_user, arguments, **kwargs):
     followed_user = caller_user
     follower_user_id = arguments['userId']
 
@@ -438,7 +469,8 @@ def deny_follower_user(caller_user, arguments, source, context):
 
 @routes.register('Mutation.blockUser')
 @validate_caller
-def block_user(caller_user, arguments, source, context):
+@update_last_client
+def block_user(caller_user, arguments, **kwargs):
     blocker_user = caller_user
     blocked_user_id = arguments['userId']
 
@@ -461,7 +493,8 @@ def block_user(caller_user, arguments, source, context):
 
 @routes.register('Mutation.unblockUser')
 @validate_caller
-def unblock_user(caller_user, arguments, source, context):
+@update_last_client
+def unblock_user(caller_user, arguments, **kwargs):
     blocker_user = caller_user
     blocked_user_id = arguments['userId']
 
@@ -484,7 +517,8 @@ def unblock_user(caller_user, arguments, source, context):
 
 @routes.register('Mutation.addPost')
 @validate_caller
-def add_post(caller_user, arguments, source, context):
+@update_last_client
+def add_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     post_type = arguments.get('postType') or PostType.IMAGE
     text = arguments.get('text')
@@ -529,7 +563,7 @@ def add_post(caller_user, arguments, source, context):
 
 
 @routes.register('Post.image')
-def post_image(caller_user_id, arguments, source, context):
+def post_image(caller_user_id, arguments, source=None, **kwargs):
     post = post_manager.get_post(source['postId'])
 
     if not post or post.status == PostStatus.DELETING:
@@ -555,7 +589,7 @@ def post_image(caller_user_id, arguments, source, context):
 
 
 @routes.register('Post.imageUploadUrl')
-def post_image_upload_url(caller_user_id, arguments, source, context):
+def post_image_upload_url(caller_user_id, arguments, source=None, **kwargs):
     post_id = source['postId']
     user_id = source['postedByUserId']
 
@@ -570,7 +604,7 @@ def post_image_upload_url(caller_user_id, arguments, source, context):
 
 
 @routes.register('Post.video')
-def post_video(caller_user_id, arguments, source, context):
+def post_video(caller_user_id, arguments, source=None, **kwargs):
     post = post_manager.get_post(source['postId'])
 
     statuses = (PostStatus.COMPLETED, PostStatus.ARCHIVED)
@@ -584,7 +618,7 @@ def post_video(caller_user_id, arguments, source, context):
 
 
 @routes.register('Post.videoUploadUrl')
-def post_video_upload_url(caller_user_id, arguments, source, context):
+def post_video_upload_url(caller_user_id, arguments, source=None, **kwargs):
     post_id = source['postId']
     user_id = source['postedByUserId']
 
@@ -600,7 +634,8 @@ def post_video_upload_url(caller_user_id, arguments, source, context):
 
 @routes.register('Mutation.editPost')
 @validate_caller
-def edit_post(caller_user, arguments, source, context):
+@update_last_client
+def edit_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     edit_kwargs = {
         'text': arguments.get('text'),
@@ -627,7 +662,8 @@ def edit_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.editPostAlbum')
 @validate_caller
-def edit_post_album(caller_user, arguments, source, context):
+@update_last_client
+def edit_post_album(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     album_id = arguments.get('albumId') or None
 
@@ -648,7 +684,8 @@ def edit_post_album(caller_user, arguments, source, context):
 
 @routes.register('Mutation.editPostAlbumOrder')
 @validate_caller
-def edit_post_album_order(caller_user, arguments, source, context):
+@update_last_client
+def edit_post_album_order(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     preceding_post_id = arguments.get('precedingPostId')
 
@@ -669,7 +706,8 @@ def edit_post_album_order(caller_user, arguments, source, context):
 
 @routes.register('Mutation.editPostExpiresAt')
 @validate_caller
-def edit_post_expires_at(caller_user, arguments, source, context):
+@update_last_client
+def edit_post_expires_at(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     expires_at_str = arguments.get('expiresAt')
     expires_at = pendulum.parse(expires_at_str) if expires_at_str else None
@@ -690,7 +728,8 @@ def edit_post_expires_at(caller_user, arguments, source, context):
 
 @routes.register('Mutation.flagPost')
 @validate_caller
-def flag_post(caller_user, arguments, source, context):
+@update_last_client
+def flag_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.get_post(post_id)
@@ -709,7 +748,8 @@ def flag_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.archivePost')
 @validate_caller
-def archive_post(caller_user, arguments, source, context):
+@update_last_client
+def archive_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.get_post(post_id)
@@ -729,7 +769,8 @@ def archive_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.deletePost')
 @validate_caller
-def delete_post(caller_user, arguments, source, context):
+@update_last_client
+def delete_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.get_post(post_id)
@@ -749,7 +790,8 @@ def delete_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.restoreArchivedPost')
 @validate_caller
-def restore_archived_post(caller_user, arguments, source, context):
+@update_last_client
+def restore_archived_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.get_post(post_id)
@@ -769,7 +811,8 @@ def restore_archived_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.onymouslyLikePost')
 @validate_caller
-def onymously_like_post(caller_user, arguments, source, context):
+@update_last_client
+def onymously_like_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.get_post(post_id)
@@ -788,7 +831,8 @@ def onymously_like_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.anonymouslyLikePost')
 @validate_caller
-def anonymously_like_post(caller_user, arguments, source, context):
+@update_last_client
+def anonymously_like_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.get_post(post_id)
@@ -807,7 +851,8 @@ def anonymously_like_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.dislikePost')
 @validate_caller
-def dislike_post(caller_user, arguments, source, context):
+@update_last_client
+def dislike_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
     post = post_manager.dynamo.get_post(post_id)
@@ -831,7 +876,8 @@ def dislike_post(caller_user, arguments, source, context):
 
 @routes.register('Mutation.reportPostViews')
 @validate_caller
-def report_post_views(caller_user, arguments, source, context):
+@update_last_client
+def report_post_views(caller_user, arguments, **kwargs):
     post_ids = arguments['postIds']
     if len(post_ids) == 0:
         raise ClientException('A minimum of 1 post id must be reported')
@@ -845,7 +891,8 @@ def report_post_views(caller_user, arguments, source, context):
 
 @routes.register('Mutation.addComment')
 @validate_caller
-def add_comment(caller_user, arguments, source, context):
+@update_last_client
+def add_comment(caller_user, arguments, **kwargs):
     comment_id = arguments['commentId']
     post_id = arguments['postId']
     text = arguments['text']
@@ -860,7 +907,8 @@ def add_comment(caller_user, arguments, source, context):
 
 @routes.register('Mutation.deleteComment')
 @validate_caller
-def delete_comment(caller_user, arguments, source, context):
+@update_last_client
+def delete_comment(caller_user, arguments, **kwargs):
     comment_id = arguments['commentId']
 
     comment = comment_manager.get_comment(comment_id)
@@ -877,7 +925,8 @@ def delete_comment(caller_user, arguments, source, context):
 
 @routes.register('Mutation.flagComment')
 @validate_caller
-def flag_comment(caller_user, arguments, source, context):
+@update_last_client
+def flag_comment(caller_user, arguments, **kwargs):
     comment_id = arguments['commentId']
 
     comment = comment_manager.get_comment(comment_id)
@@ -896,7 +945,8 @@ def flag_comment(caller_user, arguments, source, context):
 
 @routes.register('Mutation.deleteCard')
 @validate_caller
-def delete_card(caller_user, arguments, source, context):
+@update_last_client
+def delete_card(caller_user, arguments, **kwargs):
     card_id = arguments['cardId']
 
     card = card_manager.get_card(card_id)
@@ -915,7 +965,7 @@ def delete_card(caller_user, arguments, source, context):
 
 
 @routes.register('Card.thumbnail')
-def card_thumbnail(caller_user_id, arguments, source, context):
+def card_thumbnail(caller_user_id, arguments, source=None, **kwargs):
     card = card_manager.get_card(source['cardId'])
     if card and card.post and card.post.type != PostType.TEXT_ONLY:
         return {
@@ -930,7 +980,8 @@ def card_thumbnail(caller_user_id, arguments, source, context):
 
 @routes.register('Mutation.addAlbum')
 @validate_caller
-def add_album(caller_user, arguments, source, context):
+@update_last_client
+def add_album(caller_user, arguments, **kwargs):
     album_id = arguments['albumId']
     name = arguments['name']
     description = arguments.get('description')
@@ -945,7 +996,8 @@ def add_album(caller_user, arguments, source, context):
 
 @routes.register('Mutation.editAlbum')
 @validate_caller
-def edit_album(caller_user, arguments, source, context):
+@update_last_client
+def edit_album(caller_user, arguments, **kwargs):
     album_id = arguments['albumId']
     name = arguments.get('name')
     description = arguments.get('description')
@@ -970,7 +1022,8 @@ def edit_album(caller_user, arguments, source, context):
 
 @routes.register('Mutation.deleteAlbum')
 @validate_caller
-def delete_album(caller_user, arguments, source, context):
+@update_last_client
+def delete_album(caller_user, arguments, **kwargs):
     album_id = arguments['albumId']
 
     album = album_manager.get_album(album_id)
@@ -989,7 +1042,7 @@ def delete_album(caller_user, arguments, source, context):
 
 
 @routes.register('Album.art')
-def album_art(caller_user_id, arguments, source, context):
+def album_art(caller_user_id, arguments, source=None, **kwargs):
     album = album_manager.init_album(source)
     return {
         'url': album.get_art_image_url(image_size.NATIVE),
@@ -1002,7 +1055,8 @@ def album_art(caller_user_id, arguments, source, context):
 
 @routes.register('Mutation.createDirectChat')
 @validate_caller
-def create_direct_chat(caller_user, arguments, source, context):
+@update_last_client
+def create_direct_chat(caller_user, arguments, **kwargs):
     chat_id, user_id = arguments['chatId'], arguments['userId']
     message_id, message_text = arguments['messageId'], arguments['messageText']
 
@@ -1024,7 +1078,8 @@ def create_direct_chat(caller_user, arguments, source, context):
 
 @routes.register('Mutation.createGroupChat')
 @validate_caller
-def create_group_chat(caller_user, arguments, source, context):
+@update_last_client
+def create_group_chat(caller_user, arguments, **kwargs):
     chat_id, user_ids, name = arguments['chatId'], arguments['userIds'], arguments.get('name')
     message_id, message_text = arguments['messageId'], arguments['messageText']
 
@@ -1042,7 +1097,8 @@ def create_group_chat(caller_user, arguments, source, context):
 
 @routes.register('Mutation.editGroupChat')
 @validate_caller
-def edit_group_chat(caller_user, arguments, source, context):
+@update_last_client
+def edit_group_chat(caller_user, arguments, **kwargs):
     chat_id = arguments['chatId']
     name = arguments.get('name')
 
@@ -1060,7 +1116,8 @@ def edit_group_chat(caller_user, arguments, source, context):
 
 @routes.register('Mutation.addToGroupChat')
 @validate_caller
-def add_to_group_chat(caller_user, arguments, source, context):
+@update_last_client
+def add_to_group_chat(caller_user, arguments, **kwargs):
     chat_id, user_ids = arguments['chatId'], arguments['userIds']
 
     chat = chat_manager.get_chat(chat_id)
@@ -1077,7 +1134,8 @@ def add_to_group_chat(caller_user, arguments, source, context):
 
 @routes.register('Mutation.leaveGroupChat')
 @validate_caller
-def leave_group_chat(caller_user, arguments, source, context):
+@update_last_client
+def leave_group_chat(caller_user, arguments, **kwargs):
     chat_id = arguments['chatId']
 
     chat = chat_manager.get_chat(chat_id)
@@ -1094,7 +1152,8 @@ def leave_group_chat(caller_user, arguments, source, context):
 
 @routes.register('Mutation.reportChatViews')
 @validate_caller
-def report_chat_views(caller_user, arguments, source, context):
+@update_last_client
+def report_chat_views(caller_user, arguments, **kwargs):
     chat_ids = arguments['chatIds']
     if len(chat_ids) == 0:
         raise ClientException('A minimum of 1 chat id must be reported')
@@ -1108,7 +1167,8 @@ def report_chat_views(caller_user, arguments, source, context):
 
 @routes.register('Mutation.flagChat')
 @validate_caller
-def flag_chat(caller_user, arguments, source, context):
+@update_last_client
+def flag_chat(caller_user, arguments, **kwargs):
     chat_id = arguments['chatId']
 
     chat = chat_manager.get_chat(chat_id)
@@ -1127,7 +1187,8 @@ def flag_chat(caller_user, arguments, source, context):
 
 @routes.register('Mutation.addChatMessage')
 @validate_caller
-def add_chat_message(caller_user, arguments, source, context):
+@update_last_client
+def add_chat_message(caller_user, arguments, **kwargs):
     chat_id, message_id, text = arguments['chatId'], arguments['messageId'], arguments['text']
 
     chat = chat_manager.get_chat(chat_id)
@@ -1145,7 +1206,8 @@ def add_chat_message(caller_user, arguments, source, context):
 
 @routes.register('Mutation.editChatMessage')
 @validate_caller
-def edit_chat_message(caller_user, arguments, source, context):
+@update_last_client
+def edit_chat_message(caller_user, arguments, **kwargs):
     message_id, text = arguments['messageId'], arguments['text']
 
     message = chat_message_manager.get_chat_message(message_id)
@@ -1163,7 +1225,8 @@ def edit_chat_message(caller_user, arguments, source, context):
 
 @routes.register('Mutation.deleteChatMessage')
 @validate_caller
-def delete_chat_message(caller_user, arguments, source, context):
+@update_last_client
+def delete_chat_message(caller_user, arguments, **kwargs):
     message_id = arguments['messageId']
 
     message = chat_message_manager.get_chat_message(message_id)
@@ -1181,7 +1244,8 @@ def delete_chat_message(caller_user, arguments, source, context):
 
 @routes.register('Mutation.flagChatMessage')
 @validate_caller
-def flag_chat_message(caller_user, arguments, source, context):
+@update_last_client
+def flag_chat_message(caller_user, arguments, **kwargs):
     message_id = arguments['messageId']
 
     message = chat_message_manager.get_chat_message(message_id)
@@ -1199,12 +1263,12 @@ def flag_chat_message(caller_user, arguments, source, context):
 
 
 @routes.register('Mutation.lambdaClientError')
-def lambda_client_error(caller_user_id, arguments, source, context):
+def lambda_client_error(caller_user_id, arguments, context=None, **kwargs):
     request_id = getattr(context, 'aws_request_id', None)
     raise ClientException(f'Test of lambda client error, request `{request_id}`')
 
 
 @routes.register('Mutation.lambdaServerError')
-def lambda_server_error(caller_user_id, arguments, source, context):
+def lambda_server_error(caller_user_id, arguments, context=None, **kwargs):
     request_id = getattr(context, 'aws_request_id', None)
     raise Exception(f'Test of lambda server error, request `{request_id}`')

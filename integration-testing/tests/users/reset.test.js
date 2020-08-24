@@ -139,9 +139,6 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   resp = await ourClient.mutate({mutation: mutations.resetUser})
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
-  // clear their client's cache
-  await theirClient.resetStore()
-
   // verify they cannot see our user directly anymore
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp.data.user).toBeNull()
@@ -186,9 +183,6 @@ test('resetUser deletes any likes we have placed', async () => {
   resp = await ourClient.mutate({mutation: mutations.resetUser})
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
-  // clear their client's cache
-  await theirClient.resetStore()
-
   // check the post no longer has that like
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
@@ -219,9 +213,6 @@ test('resetUser deletes all blocks of us and by us', async () => {
   // reset our user, and re-initialize
   resp = await ourClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ourUsername}})
   expect(resp.data.resetUser.userId).toBe(ourUserId)
-
-  // clear their client's cache
-  await other2Client.resetStore()
 
   // verify both of the blocks have now disappeared
   resp = await ourClient.query({query: queries.self})
@@ -449,7 +440,6 @@ test('Can reset a disabled user', async () => {
   expect(resp.data.resetUser.userStatus).toBe('DELETING')
 
   // verify that worked
-  await ourClient.resetStore()
   await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
     expect(data).toBeNull()
     expect(errors).toHaveLength(1)

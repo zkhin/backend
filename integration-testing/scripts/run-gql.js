@@ -3,8 +3,7 @@
 /* eslint no-unused-vars: 0 */
 
 const AWS = require('aws-sdk')
-const AWSAppSyncClient = require('aws-appsync').default
-const {createAppSyncLink} = require('aws-appsync')
+const {default: AWSAppSyncClient, createAppSyncLink} = require('aws-appsync')
 const {setContext} = require('apollo-link-context')
 const {ApolloLink} = require('apollo-link')
 const {createHttpLink} = require('apollo-link-http')
@@ -48,12 +47,7 @@ const appsyncConfig = {
   disableOffline: true,
 }
 const appsyncOptions = {
-  defaultOptions: {
-    query: {
-      fetchPolicy: 'network-only',
-      errorPolicy: 'all',
-    },
-  },
+  defaultOptions: {query: {fetchPolicy: 'no-cache'}},
   link: createAppSyncLink({
     ...appsyncConfig,
     resultsFetcherLink: ApolloLink.from([

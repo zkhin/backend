@@ -39,14 +39,7 @@ const appsyncConfig = {
   auth: {type: 'AWS_IAM', credentials: awsCredentials},
   disableOffline: true,
 }
-const appsyncOptions = {
-  defaultOptions: {
-    query: {
-      fetchPolicy: 'network-only',
-      errorPolicy: 'all',
-    },
-  },
-}
+const appsyncOptions = {defaultOptions: {query: {fetchPolicy: 'no-cache'}}}
 const appsyncClient = new AWSAppSyncClient(appsyncConfig, appsyncOptions)
 
 // TODO: this should be await'ed

@@ -68,9 +68,6 @@ test('When we stop following a private user, any likes of ours on their posts di
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
-  // clear our cache
-  await ourClient.resetStore()
-
   // check those likes disappeared from the lists
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
@@ -135,9 +132,6 @@ test('When a private user decides to deny our following, any likes of ours on th
   // now they deny our following
   resp = await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
-
-  // reset our cache
-  await ourClient.resetStore()
 
   // check we can no longer see lists of likes
   await misc.sleep(2000)

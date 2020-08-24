@@ -34,12 +34,8 @@ def setup_one_route():
     routes.clear()
 
     @routes.register('Type.field')
-    def mocked_handler(caller_user_id, arguments, source, context):  # pylint: disable=unused-variable
-        return {
-            'caller_user_id': caller_user_id,
-            'arguments': arguments,
-            'source': source,
-        }
+    def mocked_handler(caller_user_id, arguments, **kwargs):  # pylint: disable=unused-variable
+        return {'caller_user_id': caller_user_id, 'arguments': arguments, 'kwargs': kwargs}
 
 
 def test_unknown_field_raises_exception(setup_one_route, cognito_authed_event):
@@ -49,22 +45,41 @@ def test_unknown_field_raises_exception(setup_one_route, cognito_authed_event):
 
 
 def test_basic_success(setup_one_route, cognito_authed_event):
-    resp = dispatch(cognito_authed_event, {})
-    assert resp == {
-        'success': {'caller_user_id': '42-42', 'arguments': ['arg1', 'arg2'], 'source': {'anotherField': 42}},
+    assert dispatch(cognito_authed_event, {}) == {
+        'success': {
+            'caller_user_id': '42-42',
+            'arguments': ['arg1', 'arg2'],
+            'kwargs': {'source': {'anotherField': 42}, 'context': {}, 'client': {'version': '1.2.3(456)'}},
+        },
     }
 
 
 def test_no_source(setup_one_route, cognito_authed_event):
     cognito_authed_event['source'] = None
-    resp = dispatch(cognito_authed_event, {})
-    assert resp == {
-        'success': {'caller_user_id': '42-42', 'arguments': ['arg1', 'arg2'], 'source': None},
+    assert dispatch(cognito_authed_event, {}) == {
+        'success': {
+            'caller_user_id': '42-42',
+            'arguments': ['arg1', 'arg2'],
+            'kwargs': {'source': None, 'context': {}, 'client': {'version': '1.2.3(456)'}},
+        },
     }
 
 
 def test_api_key_authenticated(setup_one_route, api_key_authed_event):
-    resp = dispatch(api_key_authed_event, {})
-    assert resp == {
-        'success': {'caller_user_id': None, 'arguments': ['arg1', 'arg2'], 'source': {'anotherField': 42}},
+    assert dispatch(api_key_authed_event, {}) == {
+        'success': {
+            'caller_user_id': None,
+            'arguments': ['arg1', 'arg2'],
+            'kwargs': {'source': {'anotherField': 42}, 'context': {}, 'client': {}},
+        },
+    }
+
+
+def test_context_passed(setup_one_route, api_key_authed_event):
+    assert dispatch(api_key_authed_event, {'foo': 'bar'}) == {
+        'success': {
+            'caller_user_id': None,
+            'arguments': ['arg1', 'arg2'],
+            'kwargs': {'source': {'anotherField': 42}, 'context': {'foo': 'bar'}, 'client': {}},
+        },
     }

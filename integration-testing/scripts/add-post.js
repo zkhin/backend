@@ -139,8 +139,7 @@ prmt.get(prmtSchema, async (err, result) => {
     {
       defaultOptions: {
         query: {
-          fetchPolicy: 'network-only',
-          errorPolicy: 'all',
+          fetchPolicy: 'no-cache',
         },
       },
     },

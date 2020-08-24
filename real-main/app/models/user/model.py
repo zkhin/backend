@@ -240,6 +240,11 @@ class User(TrendingModelMixin):
         self.item = self.dynamo.set_user_privacy_status(self.id, privacy_status)
         return self
 
+    def set_last_client(self, client):
+        if self.item.get('lastClient') != client:
+            self.item = self.dynamo.set_last_client(self.id, client)
+        return self
+
     def update_username(self, username):
         old_username = self.item['username']
         if old_username == username:

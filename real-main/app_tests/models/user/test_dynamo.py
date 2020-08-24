@@ -440,6 +440,34 @@ def test_set_user_privacy_status(user_dynamo):
     assert user_item['privacyStatus'] == UserPrivacyStatus.PUBLIC
 
 
+def test_set_last_client(user_dynamo):
+    user_id = str(uuid4())
+
+    # create the user, verify user starts with no client info
+    user_item = user_dynamo.add_user(user_id, 'my-username')
+    assert user_item['userId'] == user_id
+    assert 'lastClient' not in user_item
+
+    # set some client info, verify
+    client_1 = {
+        'version': 'v2001',
+        'system': 'one device to rule them all',
+    }
+    user_item = user_dynamo.set_last_client(user_id, client_1)
+    assert user_dynamo.get_user(user_id) == user_item
+    assert user_item['lastClient'] == client_1
+
+    # update to some new client info, verify
+    client_2 = {
+        'system': 'and in the darkness use my camera flash to disable them',
+        'version': 'v2022',
+        'some-other-useful-data': 42,
+    }
+    user_item = user_dynamo.set_last_client(user_id, client_2)
+    assert user_dynamo.get_user(user_id) == user_item
+    assert user_item['lastClient'] == client_2
+
+
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
     [

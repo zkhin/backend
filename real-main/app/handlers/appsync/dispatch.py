@@ -45,6 +45,7 @@ def event_to_extras(event):
 def dispatch(event, context):
     "Top-level dispatch of appsync event to the correct handler"
     # it is a sin that python has no dictionary destructing asignment
+    client = get_client_details(event)
     gql = get_gql_details(event)
     field = gql.get('field')
     caller_user_id = gql.get('callerUserId')
@@ -63,7 +64,9 @@ def dispatch(event, context):
         logger.info(f'Handling AppSync GQL resolution of `{field}`')
 
     try:
-        resp = handler(caller_user_id, arguments, source, context)
+        # Once support for direct-to-lambda resolvers lands, would be good to simplify this interface
+        # to match that. https://github.com/sid88in/serverless-appsync-plugin/pull/350
+        resp = handler(caller_user_id, arguments, source=source, context=context, client=client)
     except ClientException as err:
         msg = 'ClientError: ' + str(err)
         logger.warning(msg)

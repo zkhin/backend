@@ -188,6 +188,14 @@ class UserDynamo:
             query_kwargs['ExpressionAttributeValues'] = {':aev': version}
         return self.client.update_item(query_kwargs)
 
+    def set_last_client(self, user_id, client):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'SET lastClient = :lc',
+            'ExpressionAttributeValues': {':lc': client},
+        }
+        return self.client.update_item(query_kwargs)
+
     def grant_subscription(self, user_id, sub_level, sub_granted_at, sub_expires_at):
         assert sub_level != UserSubscriptionLevel.BASIC, "Cannot grant BASIC subscriptions"
         assert sub_expires_at, "Subscription grants must expire"

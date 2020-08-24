@@ -184,9 +184,6 @@ test('When a post is deleted, any likes of it disappear', async () => {
   resp = await theirClient.mutate({mutation: mutations.deletePost, variables: {postId}})
   expect(resp.data.deletePost.postStatus).toBe('DELETING')
 
-  // clear our cache
-  await ourClient.resetStore()
-
   // verify the post has disappeared from the like lists
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(0)

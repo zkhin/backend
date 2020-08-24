@@ -332,9 +332,6 @@ test('When a post is archived, any likes of it disappear', async () => {
   resp = await theirClient.mutate({mutation: mutations.archivePost, variables: {postId}})
   expect(resp.data.archivePost.postStatus).toBe('ARCHIVED')
 
-  // clear our cache
-  await ourClient.resetStore()
-
   // verify we can no longer see the post
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post).toBeNull()

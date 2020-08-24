@@ -4,7 +4,10 @@
  */
 
 const AWS = require('aws-sdk')
-const AWSAppSyncClient = require('aws-appsync').default
+const {default: AWSAppSyncClient, createAppSyncLink} = require('aws-appsync')
+const {setContext} = require('apollo-link-context')
+const {ApolloLink} = require('apollo-link')
+const {createHttpLink} = require('apollo-link-http')
 const callerId = require('caller-id')
 const dotenv = require('dotenv')
 const jwtDecode = require('jwt-decode')
@@ -78,16 +81,30 @@ const generateRRUuid = (callerData) => {
 
 const getAppSyncClient = async (creds) => {
   const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
-  const client = new AWSAppSyncClient(
-    {
-      url: appsyncApiUrl,
-      region: AWS.config.region,
-      auth: {type: 'AWS_IAM', credentials},
-      disableOffline: true,
-    },
-    // https://www.apollographql.com/docs/react/api/react-apollo/#optionsfetchpolicy
-    {defaultOptions: {query: {fetchPolicy: 'network-only'}}},
-  )
+  const appSyncConfig = {
+    url: appsyncApiUrl,
+    region: AWS.config.region,
+    auth: {type: 'AWS_IAM', credentials},
+    disableOffline: true,
+  }
+  const appSyncOptions = {
+    defaultOptions: {query: {fetchPolicy: 'no-cache'}},
+    link: createAppSyncLink({
+      ...appSyncConfig,
+      resultsFetcherLink: ApolloLink.from([
+        setContext((request, previousContext) => ({
+          headers: {
+            ...previousContext.headers,
+            ['x-real-version']: '0.1.0',
+            ['x-real-device']: 'TestingClient',
+            ['x-real-system']: 'REAL Backend Integration Tests',
+          },
+        })),
+        createHttpLink({uri: appSyncConfig.url}),
+      ]),
+    }),
+  }
+  const client = new AWSAppSyncClient(appSyncConfig, appSyncOptions)
   await client.hydrated()
   return client
 }
