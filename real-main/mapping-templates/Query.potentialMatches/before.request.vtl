@@ -1,0 +1,5 @@
+#if ($util.isNull($ctx.args.userId))
+  $util.error('userId is missing', 'ClientError')
+#end
+
+$util.toJson([$ctx.args.userId])

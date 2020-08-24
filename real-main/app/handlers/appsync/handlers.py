@@ -195,6 +195,8 @@ def set_user_details(caller_user, arguments, source, context):
     likes_disabled = arguments.get('likesDisabled')
     sharing_disabled = arguments.get('sharingDisabled')
     verification_hidden = arguments.get('verificationHidden')
+    date_of_birth = arguments.get('dateOfBirth')
+    gender = arguments.get('gender')
 
     args = (
         username,
@@ -210,6 +212,8 @@ def set_user_details(caller_user, arguments, source, context):
         sharing_disabled,
         verification_hidden,
         view_counts_hidden,
+        date_of_birth,
+        gender,
     )
     if all(v is None for v in args):
         raise ClientException('Called without any arguments... probably not what you intended?')
@@ -245,6 +249,8 @@ def set_user_details(caller_user, arguments, source, context):
         likes_disabled=likes_disabled,
         sharing_disabled=sharing_disabled,
         verification_hidden=verification_hidden,
+        date_of_birht=date_of_birth,
+        gender=gender,
     )
     return caller_user.serialize(caller_user.id)
 

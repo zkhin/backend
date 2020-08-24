@@ -1,0 +1,16 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#if ($ctx.prev.result.isEmpty())
+  #return
+#end
+#set ($user = $ctx.prev.result[0])
+#set ($keys = [])
+
+$util.qr($keys.add({
+  'partitionKey': {'S': "userDateOfBirth/$user.dateOfBrith"},
+  'sortKey': {'S': '-'}
+}))
+
+$util.toJson($userIds)

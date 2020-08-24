@@ -77,3 +77,11 @@
     - ChatMemberships.batchGet
     - Query.chat.transform
     - Chats.batchGet
+
+- type: Query
+  field: potentialMatches
+  kind: PIPELINE
+  request: Query.potentialMatches/before.request.vtl
+  response: Query.potentialMatches/after.response.vtl
+  functions:
+    - Users.batchGet

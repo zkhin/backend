@@ -142,6 +142,8 @@ class UserDynamo:
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
+        date_of_birth=None,
+        gender=None,
     ):
         "To ignore an attribute, leave it set to None. To delete an attribute, set it to the empty string."
         expression_actions = collections.defaultdict(list)
@@ -167,6 +169,8 @@ class UserDynamo:
         process_attr('likesDisabled', likes_disabled)
         process_attr('sharingDisabled', sharing_disabled)
         process_attr('verificationHidden', verification_hidden)
+        process_attr('dateOfBirth', date_of_birth)
+        process_attr('gender', gender)
 
         query_kwargs = {
             'Key': self.pk(user_id),

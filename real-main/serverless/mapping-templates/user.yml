@@ -200,3 +200,13 @@
 - type: User
   field: directChat
   dataSource: DynamodbDataSource
+
+- type: User
+  field: dateOfBirth
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: gender
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl

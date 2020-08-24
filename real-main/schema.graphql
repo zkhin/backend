@@ -45,6 +45,9 @@ type Query {
   # Globally trending users
   trendingUsers(limit: Int, nextToken: String): PaginatedUsers!
 
+  # Potenial matches with user
+  potentialMatches(userId: ID!): PaginatedUsers!
+
   # A specific post
   #   - posts that do not have COMPLETED postStatus are private to only the post owner
   #   - posts of private users are private to only themselves and their followers
@@ -110,7 +113,9 @@ type Mutation {
     sharingDisabled: Boolean,
     verificationHidden: Boolean,
     languageCode: String,
-    themeCode: String
+    themeCode: String,
+    dateOfBirth: AWSDateTime,
+    gender: String
   ): User
 
   # Various one-off user property setters
@@ -370,6 +375,8 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
   subscriptionExpiresAt: AWSDateTime
+  dateOfBirth: AWSDateTime
+  gender: String
 
   # User's feed
   #   - private to the user themselves only
