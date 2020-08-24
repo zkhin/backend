@@ -15,10 +15,10 @@ class CognitoClientException(Exception):
     pass
 
 
-@handler_logging
+@handler_logging(event_to_extras=lambda event: {'event': event})
 def pre_sign_up(event, context):
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling Cognito PreSignUp event', extra={'event': event})
+        logger.info('Handling Cognito PreSignUp event')
 
     validate_username_format(event)
     validate_user_attribute_lowercase(event, 'email')
@@ -46,10 +46,10 @@ def pre_sign_up(event, context):
     return event
 
 
-@handler_logging
+@handler_logging(event_to_extras=lambda event: {'event': event})
 def pre_auth(event, context):
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling Cognito PreAuth event', extra={'event': event})
+        logger.info('Handling Cognito PreAuth event')
 
     # if the user doesn't exist in the user pool or is unconfirmed
     # cognito appears to create a random uuid as their 'userName'
@@ -58,10 +58,10 @@ def pre_auth(event, context):
     return event
 
 
-@handler_logging
+@handler_logging(event_to_extras=lambda event: {'event': event})
 def custom_message(event, context):
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling Cognito CustomMessage event', extra={'event': event})
+        logger.info('Handling Cognito CustomMessage event')
 
     if event['triggerSource'] in ('CustomMessage_SignUp', 'CustomMessage_ResendCode'):
         user_id = event['userName']
@@ -99,10 +99,10 @@ def custom_message(event, context):
     return event
 
 
-@handler_logging
+@handler_logging(event_to_extras=lambda event: {'event': event})
 def define_auth_challenge(event, context):
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling Cognito DefineAuthChallenge event', extra={'event': event})
+        logger.info('Handling Cognito DefineAuthChallenge event')
     # Log the user in, no need to challenge them. Note that
     # custom auth is restricted to only the backend user pool client
     event['response']['issueTokens'] = True

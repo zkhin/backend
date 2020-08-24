@@ -28,20 +28,24 @@ managers = {}
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 
 
-@handler_logging
-def image_post_uploaded(event, context):
+def event_to_extras(event):
     # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
     # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
     path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
+    return {'s3_key': path}
 
+
+@handler_logging(event_to_extras=event_to_extras)
+def image_post_uploaded(event, context):
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling S3 Object Created (image post uploaded) event', extra={'s3_key': path})
+        logger.info('Handling S3 Object Created (image post uploaded) event')
 
     # Avoid firing on creation of other images (profile photo, album art)
     # Once images are moved to their new path at {userId}/post/{postId}/image/{size}.jpg,
     # the s3 object created event suffix filter should be expaneded to '/image/native.jpg'
     # and this check removed (currently set to '/native.jpg').
+    path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
     if 'post' not in path:
         return
 
@@ -74,17 +78,13 @@ def image_post_uploaded(event, context):
         logger.warning(str(err))
 
 
-@handler_logging
+@handler_logging(event_to_extras=event_to_extras)
 def video_post_uploaded(event, context):
-    # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
-    # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
-    path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
-    size_bytes = event['Records'][0]['s3']['object']['size']
-
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling S3 Object Created (video post uploaded) event', extra={'s3_key': path})
+        logger.info('Handling S3 Object Created (video post uploaded) event')
 
+    path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
     _, _, post_id, _ = path.split('/')
 
     # strongly consistent because we may have just added the post to dynamo
@@ -97,6 +97,7 @@ def video_post_uploaded(event, context):
         logger.warning(f'Post `{post_id}` is not in PENDING status: `{post.status}`, ignoring upload')
         return
 
+    size_bytes = event['Records'][0]['s3']['object']['size']
     max_size_bytes = 2 * 1024 * 1024 * 1024  # 2GB as speced via chat
     if size_bytes > max_size_bytes:
         logger.warning(f'Received upload of `{size_bytes}` bytes which exceeds max size for post `{post_id}`')
@@ -111,16 +112,13 @@ def video_post_uploaded(event, context):
         logger.warning(str(err))
 
 
-@handler_logging
+@handler_logging(event_to_extras=event_to_extras)
 def video_post_processed(event, context):
-    # Seems the boto s3 client deals with non-urlencoded keys to objects everywhere, but
-    # apparenttly this falls outside that scope. The event emitter passes us a urlencoded path.
-    path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
-
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info('Handling S3 Object Created (video post processed) event', extra={'s3_key': path})
+        logger.info('Handling S3 Object Created (video post processed) event')
 
+    path = urllib.parse.unquote(event['Records'][0]['s3']['object']['key'])
     _, _, post_id, _, _ = path.split('/')
 
     # strongly consistent because we may have just added the post to dynamo

@@ -15,18 +15,41 @@ if route_path:
     routes.discover(route_path)
 
 
-@handler_logging
+def get_client_details(event):
+    headers = event['headers']  # most of the request headers
+    client = {
+        'version': headers.get('x-real-version'),
+        'device': headers.get('x-real-device'),
+        'system': headers.get('x-real-system'),
+    }
+    return {k: v for k, v in client.items() if v is not None}
+
+
+def get_gql_details(event):
+    gql = {
+        'arguments': event['arguments'],
+        'field': event['field'],
+        'source': event.get('source'),
+        'callerUserId': (event.get('identity') or {}).get('cognitoIdentityId'),
+    }
+    return {k: v for k, v in gql.items() if v is not None}
+
+
+def event_to_extras(event):
+    client = get_client_details(event)
+    gql = get_gql_details(event)
+    return {'gq': gql, 'client': client}
+
+
+@handler_logging(event_to_extras=event_to_extras)
 def dispatch(event, context):
     "Top-level dispatch of appsync event to the correct handler"
-
-    arguments = event['arguments']  # graphql field arguments, if any
-    field = event['field']  # graphql field name in format 'ParentType.fieldName'
-    headers = event['headers']  # most of the request headers
-    source = event.get('source')  # result of parent resolver, if any
-
-    # identity.cognitoIdentityId is None when called by backend to trigger subscriptions
-    identity = event.get('identity')
-    caller_user_id = identity.get('cognitoIdentityId') if identity else None
+    # it is a sin that python has no dictionary destructing asignment
+    gql = get_gql_details(event)
+    field = gql.get('field')
+    caller_user_id = gql.get('callerUserId')
+    arguments = gql.get('arguments')
+    source = gql.get('source')
 
     handler = routes.get_handler(field)
     if not handler:
@@ -35,24 +58,9 @@ def dispatch(event, context):
         logger.exception(msg)
         raise Exception(msg)
 
-    gql_details = {
-        'field': field,
-        'callerUserId': caller_user_id,
-        'arguments': arguments,
-        'source': source,
-    }
-
-    client = {}
-    if (version := headers.get('x-real-version')) :
-        client['version'] = version
-    if (device := headers.get('x-real-device')) :
-        client['device'] = device
-    if (system := headers.get('x-real-system')) :
-        client['system'] = system
-
     # we suppress INFO logging, except this message
     with LogLevelContext(logger, logging.INFO):
-        logger.info(f'Handling AppSync GQL resolution of `{field}`', extra={'gql': gql_details, 'client': client})
+        logger.info(f'Handling AppSync GQL resolution of `{field}`')
 
     try:
         resp = handler(caller_user_id, arguments, source, context)
