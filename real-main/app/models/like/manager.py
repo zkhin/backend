@@ -72,13 +72,29 @@ class LikeManager:
         for like_item in self.dynamo.generate_of_post(post_id):
             self.init_like(like_item).dislike()
 
-    def dislike_all_by_user(self, liked_by_user_id):
-        "Dislike all likes by a user"
-        for like_item in self.dynamo.generate_by_liked_by(liked_by_user_id):
-            self.init_like(like_item).dislike()
-
     def dislike_all_by_user_from_user(self, liked_by_user_id, posted_by_user_id):
         "Dislike all likes by one user on posts from another user"
         for like_pk in self.dynamo.generate_pks_by_liked_by_for_posted_by(liked_by_user_id, posted_by_user_id):
             liked_by_user_id, post_id = self.dynamo.parse_pk(like_pk)
             self.get_like(liked_by_user_id, post_id).dislike()
+
+    def on_user_delete_dislike_all_by_user(self, user_id, old_item):
+        "Dislike all likes by a user"
+        for like_item in self.dynamo.generate_by_liked_by(user_id):
+            self.init_like(like_item).dislike()
+
+    def on_user_follow_status_change_sync_likes(self, user_id, new_item=None, old_item=None):
+        "For consistency, delete likes of posts of private users by non-followers"
+        new_status = (new_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
+        followed_user_id = user_id
+        follower_user_id = (new_item or old_item)['sortKey'].split('/')[1]
+
+        if new_status == FollowStatus.DENIED:
+            # we assume the followed user to be private because must be in order to get to DENIED
+            self.dislike_all_by_user_from_user(follower_user_id, followed_user_id)
+
+        if new_status == FollowStatus.NOT_FOLLOWING:
+            # check to see if the followed user is private
+            followed_user = self.user_manager.get_user(followed_user_id)
+            if followed_user and followed_user.item.get('privacyStatus') == UserPrivacyStatus.PRIVATE:
+                self.dislike_all_by_user_from_user(follower_user_id, followed_user_id)

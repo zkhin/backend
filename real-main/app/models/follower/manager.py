@@ -1,4 +1,5 @@
 import logging
+from itertools import chain
 
 from app import models
 from app.models.user.enums import UserPrivacyStatus
@@ -18,9 +19,7 @@ class FollowerManager:
         managers = managers or {}
         managers['follower'] = self
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
-        self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
-        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:
@@ -36,14 +35,7 @@ class FollowerManager:
         return self.init_follow(item) if item else None
 
     def init_follow(self, follow_item):
-        return Follower(
-            follow_item,
-            self.dynamo,
-            self.first_story_dynamo,
-            like_manager=self.like_manager,
-            post_manager=self.post_manager,
-            user_manager=self.user_manager,
-        )
+        return Follower(follow_item, self.dynamo, self.first_story_dynamo)
 
     def get_follow_status(self, follower_user_id, followed_user_id):
         if follower_user_id == followed_user_id:
@@ -84,12 +76,6 @@ class FollowerManager:
             else FollowStatus.FOLLOWING
         )
         follow_item = self.dynamo.add_following(follower_user.id, followed_user.id, follow_status)
-
-        if follow_status == FollowStatus.FOLLOWING:
-            post = self.post_manager.dynamo.get_next_completed_post_to_expire(followed_user.id)
-            if post:
-                self.first_story_dynamo.set_all([follower_user.id], post)
-
         return self.init_follow(follow_item)
 
     def accept_all_requested_follow_requests(self, followed_user_id):
@@ -101,24 +87,6 @@ class FollowerManager:
         for item in self.dynamo.generate_follower_items(followed_user_id, FollowStatus.DENIED):
             # TODO: do as batch write
             self.dynamo.delete_following(item)
-
-    def reset_follower_items(self, followed_user_id):
-        for item in self.dynamo.generate_follower_items(followed_user_id):
-            # they were following us, then do an unfollow() to keep their counts correct
-            if item['followStatus'] == FollowStatus.FOLLOWING:
-                self.init_follow(item).unfollow()
-            else:
-                # TODO: do as batch write
-                self.dynamo.delete_following(item)
-
-    def reset_followed_items(self, follower_user_id):
-        for item in self.dynamo.generate_followed_items(follower_user_id):
-            # if we were following them, then do an unfollow() to keep their counts correct
-            if item['followStatus'] == FollowStatus.FOLLOWING:
-                self.init_follow(item).unfollow()
-            else:
-                # TODO: do as batch write
-                self.dynamo.delete_following(item)
 
     def refresh_first_story(self, story_prev=None, story_now=None):
         "Refresh the firstStory items, if needed, after the a story has changed."
@@ -171,3 +139,22 @@ class FollowerManager:
         self.appsync_client.fire_notification(
             follower_user_id, GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED, **kwargs,
         )
+
+    def on_user_follow_status_change_sync_first_story(self, user_id, new_item=None, old_item=None):
+        new_status = (new_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
+        followed_user_id = user_id
+        follower_user_id = (new_item or old_item)['sortKey'].split('/')[1]
+
+        if new_status == FollowStatus.FOLLOWING:
+            post = self.post_manager.dynamo.get_next_completed_post_to_expire(followed_user_id)
+            if post:
+                self.first_story_dynamo.set_all([follower_user_id], post)
+        else:
+            self.first_story_dynamo.delete_all([follower_user_id], followed_user_id)
+
+    def on_user_delete_delete_follower_items(self, user_id, old_item):
+        key_generator = chain(
+            self.dynamo.generate_follower_items(user_id, keys_only=True),
+            self.dynamo.generate_followed_items(user_id, keys_only=True),
+        )
+        self.dynamo.client.batch_delete(key_generator)

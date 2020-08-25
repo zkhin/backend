@@ -97,16 +97,6 @@ def test_request_to_follow_public_user_with_story(follower_manager, users, their
     assert follower_manager.request_to_follow(our_user, their_user).status == FollowStatus.FOLLOWING
     assert follower_manager.get_follow(our_user.id, their_user.id).status == FollowStatus.FOLLOWING
 
-    # check the firstStory
-    follow = follower_manager.get_follow(our_user.id, their_user.id)
-    follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
-    pk = {
-        'partitionKey': f'user/{followed_user_id}',
-        'sortKey': f'follower/{follower_user_id}/firstStory',
-    }
-    ffs = follower_manager.dynamo.client.get_item(pk)
-    assert ffs['postId'] == their_post.id
-
 
 def test_request_to_follow_private_user(follower_manager, users):
     our_user, their_user = users
@@ -203,42 +193,6 @@ def test_delete_all_denied_follow_requests(follower_manager, users_private):
 
     # delete all the denied follow requests, should disappear
     follower_manager.delete_all_denied_follow_requests(their_user.id)
-    assert follower_manager.get_follow(our_user.id, their_user.id) is None
-
-
-def test_reset_follower_items(follower_manager, users_private):
-    our_user, their_user = users_private
-
-    # request to follow them
-    assert follower_manager.request_to_follow(our_user, their_user).status == FollowStatus.REQUESTED
-
-    # do a reset, should clear
-    follower_manager.reset_follower_items(their_user.id)
-    assert follower_manager.get_follow(our_user.id, their_user.id) is None
-
-    # request to follow, and accept the following
-    assert follower_manager.request_to_follow(our_user, their_user).accept().status == FollowStatus.FOLLOWING
-
-    # do reset, verify
-    follower_manager.reset_follower_items(their_user.id)
-    assert follower_manager.get_follow(our_user.id, their_user.id) is None
-
-
-def test_reset_followed_items(follower_manager, users_private):
-    our_user, their_user = users_private
-
-    # request to follow them
-    assert follower_manager.request_to_follow(our_user, their_user).status == FollowStatus.REQUESTED
-
-    # do a reset, should clear
-    follower_manager.reset_followed_items(our_user.id)
-    assert follower_manager.get_follow(our_user.id, their_user.id) is None
-
-    # request to follow, and accept the following
-    assert follower_manager.request_to_follow(our_user, their_user).accept().status == FollowStatus.FOLLOWING
-
-    # do reset, verify
-    follower_manager.reset_followed_items(our_user.id)
     assert follower_manager.get_follow(our_user.id, their_user.id) is None
 
 
@@ -347,3 +301,66 @@ def test_on_first_story_post_id_change_fire_gql_notifications(follower_manager, 
             followedUserId=their_user.id,
         )
     ]
+
+
+def test_on_user_follow_status_change_sync_first_story(follower_manager, users, their_post):
+    # check starting state has no first story item
+    us, them = users
+    fs_key = follower_manager.first_story_dynamo.key(them.id, us.id)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key) is None
+
+    # fire for us following them, verify cretes first story
+    old_item = None
+    new_item = follower_manager.dynamo.add_following(us.id, them.id, FollowStatus.FOLLOWING)
+    follower_manager.on_user_follow_status_change_sync_first_story(them.id, new_item=new_item, old_item=old_item)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key)['postId'] == their_post.id
+
+    # fire for us unfollowing them or one of us getting deleted, verify deletes first story
+    old_item = new_item
+    new_item = None
+    follower_manager.on_user_follow_status_change_sync_first_story(them.id, new_item=new_item, old_item=old_item)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key) is None
+
+    # fire for us requesting to follow them, verify nothing happens
+    new_item = follower_manager.dynamo.update_following_status(old_item, FollowStatus.REQUESTED)
+    old_item = None
+    follower_manager.on_user_follow_status_change_sync_first_story(them.id, new_item=new_item, old_item=old_item)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key) is None
+
+    # fire for them accepting our request, verify cretes first story
+    old_item = new_item
+    new_item = follower_manager.dynamo.update_following_status(old_item, FollowStatus.FOLLOWING)
+    follower_manager.on_user_follow_status_change_sync_first_story(them.id, new_item=new_item, old_item=old_item)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key)['postId'] == their_post.id
+
+    # fire for them denying our request, verify deletes first story
+    old_item = new_item
+    new_item = follower_manager.dynamo.update_following_status(old_item, FollowStatus.DENIED)
+    follower_manager.on_user_follow_status_change_sync_first_story(them.id, new_item=new_item, old_item=old_item)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key) is None
+
+    # fire for a user delete, verify no error
+    old_item = new_item
+    new_item = None
+    follower_manager.on_user_follow_status_change_sync_first_story(them.id, new_item=new_item, old_item=old_item)
+    assert follower_manager.first_story_dynamo.client.get_item(fs_key) is None
+
+
+def test_on_user_delete_delete_follower_items(follower_manager, users_private):
+    our_user, their_user = users_private
+
+    # we request to follow them, they follow us
+    assert follower_manager.request_to_follow(our_user, their_user)
+    assert follower_manager.request_to_follow(their_user, our_user)
+    assert follower_manager.get_follow(our_user.id, their_user.id).status == FollowStatus.REQUESTED
+    assert follower_manager.get_follow(their_user.id, our_user.id).status == FollowStatus.FOLLOWING
+
+    # fire handler for a delete of our user, verify follow items are gone
+    follower_manager.on_user_delete_delete_follower_items(our_user.id, old_item=our_user.item)
+    assert follower_manager.get_follow(our_user.id, their_user.id) is None
+    assert follower_manager.get_follow(their_user.id, our_user.id) is None
+
+    # fire handler again, verify idempotent
+    follower_manager.on_user_delete_delete_follower_items(our_user.id, old_item=our_user.item)
+    assert follower_manager.get_follow(our_user.id, their_user.id) is None
+    assert follower_manager.get_follow(their_user.id, our_user.id) is None

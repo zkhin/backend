@@ -126,24 +126,28 @@ def test_generate_followers(follower_dynamo, user1, user2, user3):
     other2_user = user3
 
     # check we have no followers
-    resp = list(follower_dynamo.generate_follower_items(our_user.id))
-    assert len(resp) == 0
+    items = list(follower_dynamo.generate_follower_items(our_user.id))
+    assert len(items) == 0
 
     # one user follows us, check our generated followers
     follower_dynamo.add_following(other1_user.id, our_user.id, 'anything')
-    resp = list(follower_dynamo.generate_follower_items(our_user.id))
-    assert len(resp) == 1
-    assert resp[0]['followerUserId'] == other1_user.id
-    assert resp[0]['followedUserId'] == our_user.id
+    items = list(follower_dynamo.generate_follower_items(our_user.id))
+    assert len(items) == 1
+    assert items[0]['followerUserId'] == other1_user.id
+    assert items[0]['followedUserId'] == our_user.id
 
     # the other user follows us, check our generated followers
     follower_dynamo.add_following(other2_user.id, our_user.id, 'anything')
-    resp = list(follower_dynamo.generate_follower_items(our_user.id))
-    assert len(resp) == 2
-    assert resp[0]['followerUserId'] == other1_user.id
-    assert resp[0]['followedUserId'] == our_user.id
-    assert resp[1]['followerUserId'] == other2_user.id
-    assert resp[1]['followedUserId'] == our_user.id
+    items = list(follower_dynamo.generate_follower_items(our_user.id))
+    assert len(items) == 2
+    assert items[0]['followerUserId'] == other1_user.id
+    assert items[0]['followedUserId'] == our_user.id
+    assert items[1]['followerUserId'] == other2_user.id
+    assert items[1]['followedUserId'] == our_user.id
+
+    # test generating just the keys,
+    keys = list(follower_dynamo.generate_follower_items(our_user.id, keys_only=True))
+    assert keys == [{k: item[k] for k in ('partitionKey', 'sortKey')} for item in items]
 
 
 def test_generate_followeds(follower_dynamo, user1, user2, user3):
@@ -152,21 +156,25 @@ def test_generate_followeds(follower_dynamo, user1, user2, user3):
     other2_user = user3
 
     # check we have no followeds
-    resp = list(follower_dynamo.generate_followed_items(our_user.id))
-    assert len(resp) == 0
+    items = list(follower_dynamo.generate_followed_items(our_user.id))
+    assert len(items) == 0
 
     # we follow another user, check our generated followeds
     follower_dynamo.add_following(our_user.id, other1_user.id, 'anything')
-    resp = list(follower_dynamo.generate_followed_items(our_user.id))
-    assert len(resp) == 1
-    assert resp[0]['followerUserId'] == our_user.id
-    assert resp[0]['followedUserId'] == other1_user.id
+    items = list(follower_dynamo.generate_followed_items(our_user.id))
+    assert len(items) == 1
+    assert items[0]['followerUserId'] == our_user.id
+    assert items[0]['followedUserId'] == other1_user.id
 
     # we follow the other user, check our generated followeds
     follower_dynamo.add_following(our_user.id, other2_user.id, 'anything')
-    resp = list(follower_dynamo.generate_followed_items(our_user.id))
-    assert len(resp) == 2
-    assert resp[0]['followerUserId'] == our_user.id
-    assert resp[0]['followedUserId'] == other1_user.id
-    assert resp[1]['followerUserId'] == our_user.id
-    assert resp[1]['followedUserId'] == other2_user.id
+    items = list(follower_dynamo.generate_followed_items(our_user.id))
+    assert len(items) == 2
+    assert items[0]['followerUserId'] == our_user.id
+    assert items[0]['followedUserId'] == other1_user.id
+    assert items[1]['followerUserId'] == our_user.id
+    assert items[1]['followedUserId'] == other2_user.id
+
+    # test generating just the keys,
+    keys = list(follower_dynamo.generate_followed_items(our_user.id, keys_only=True))
+    assert keys == [{k: item[k] for k in ('partitionKey', 'sortKey')} for item in items]

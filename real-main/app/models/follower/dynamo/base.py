@@ -55,7 +55,7 @@ class FollowerDynamo:
         key = {k: follow_item[k] for k in ('partitionKey', 'sortKey')}
         return self.client.delete_item(key)
 
-    def generate_followed_items(self, user_id, follow_status=None, limit=None, next_token=None):
+    def generate_followed_items(self, user_id, follow_status=None, keys_only=False):
         "Generate items that represent a followed of the given user (that the given user is the follower)"
         key_conditions = [Key('gsiA1PartitionKey').eq(f'follower/{user_id}')]
         if follow_status is not None:
@@ -64,9 +64,11 @@ class FollowerDynamo:
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-A1',
         }
+        if keys_only:
+            query_kwargs['ProjectionExpression'] = 'partitionKey, sortKey'
         return self.client.generate_all_query(query_kwargs)
 
-    def generate_follower_items(self, user_id, follow_status=None, limit=None, next_token=None):
+    def generate_follower_items(self, user_id, follow_status=None, keys_only=False):
         "Generate items that represent a follower of the given user (that the given user is the followed)"
         key_conditions = [Key('gsiA2PartitionKey').eq(f'followed/{user_id}')]
         if follow_status is not None:
@@ -75,4 +77,6 @@ class FollowerDynamo:
             'KeyConditionExpression': functools.reduce(lambda a, b: a & b, key_conditions),
             'IndexName': 'GSI-A2',
         }
+        if keys_only:
+            query_kwargs['ProjectionExpression'] = 'partitionKey, sortKey'
         return self.client.generate_all_query(query_kwargs)

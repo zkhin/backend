@@ -5,7 +5,6 @@ import pytest
 
 from app.models.follower.enums import FollowStatus
 from app.models.follower.exceptions import FollowerAlreadyHasStatus
-from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
 
@@ -74,15 +73,6 @@ def test_accept_follow_request_with_story(users_private, their_post, requested_f
     assert follow.accept().status == FollowStatus.FOLLOWING
     assert follow.refresh_item().status == FollowStatus.FOLLOWING
 
-    # check the firstStory
-    follower_user_id, followed_user_id = follow.item['followerUserId'], follow.item['followedUserId']
-    pk = {
-        'partitionKey': f'user/{followed_user_id}',
-        'sortKey': f'follower/{follower_user_id}/firstStory',
-    }
-    ffs = follow.dynamo.client.get_item(pk)
-    assert ffs['postId'] == their_post.id
-
 
 def test_deny_follow_request(users_private, requested_follow):
     our_user, their_user = users_private
@@ -130,23 +120,15 @@ def test_deny_follow_request_that_was_previously_approved(users_private, request
 
 
 def test_deny_follow_request_user_had_liked_post(users_private, their_post, requested_follow, like_manager):
-    our_user, _ = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
     # approve the follow request
     assert follow.accept().status == FollowStatus.FOLLOWING
 
-    # we like their post
-    like_manager.like_post(our_user, their_post, LikeStatus.ONYMOUSLY_LIKED)
-    like = like_manager.get_like(our_user.id, their_post.id)
-    assert like.item['likeStatus'] == LikeStatus.ONYMOUSLY_LIKED
-
     # they change their mind and deny our following
     assert follow.deny().status == FollowStatus.DENIED
-
-    # check the like was removed from their post
-    assert like_manager.get_like(our_user.id, their_post.id) is None
+    assert follow.refresh_item().status == FollowStatus.DENIED
 
 
 def test_unfollow_public_user_we_were_following(users, follow):
@@ -177,21 +159,12 @@ def test_unfollow_private_user_we_had_requested_to_follow(users_private, request
 
 
 def test_unfollow_private_user_we_were_following(users_private, their_post, requested_follow, like_manager):
-    our_user, _ = users_private
     follow = requested_follow
     assert follow.status == FollowStatus.REQUESTED
 
     # approve the follow request
     assert follow.accept().status == FollowStatus.FOLLOWING
 
-    # like their post
-    like_manager.like_post(our_user, their_post, LikeStatus.ONYMOUSLY_LIKED)
-    like = like_manager.get_like(our_user.id, their_post.id)
-    assert like.item['likeStatus'] == LikeStatus.ONYMOUSLY_LIKED
-
-    # unfollow them
+    # unfollow them, verify
     assert follow.unfollow().status == FollowStatus.NOT_FOLLOWING
     assert follow.refresh_item().status == FollowStatus.NOT_FOLLOWING
-
-    # check the like was removed from their post
-    assert like_manager.get_like(our_user.id, their_post.id) is None

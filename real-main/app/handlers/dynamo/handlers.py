@@ -37,6 +37,7 @@ chat_message_manager = managers.get('chat_message') or models.ChatMessageManager
 comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
 feed_manager = managers.get('feed') or models.FeedManager(clients, managers=managers)
 follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
+like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
@@ -184,6 +185,20 @@ register(
     'user',
     'follower',
     ['INSERT', 'MODIFY', 'REMOVE'],
+    follower_manager.on_user_follow_status_change_sync_first_story,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
+)
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    like_manager.on_user_follow_status_change_sync_likes,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
+)
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
     user_manager.sync_follow_counts_due_to_follow_status,
     {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
@@ -269,6 +284,8 @@ register('user', 'profile', ['REMOVE'], chat_manager.on_user_delete_leave_all_ch
 register('user', 'profile', ['REMOVE'], chat_message_manager.on_user_delete_delete_flags)
 register('user', 'profile', ['REMOVE'], comment_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], comment_manager.on_user_delete_delete_flags)
+register('user', 'profile', ['REMOVE'], follower_manager.on_user_delete_delete_follower_items)
+register('user', 'profile', ['REMOVE'], like_manager.on_user_delete_dislike_all_by_user)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_flags)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)

@@ -1,7 +1,5 @@
 import logging
 
-from app.models.user.enums import UserPrivacyStatus
-
 from .enums import FollowStatus
 from .exceptions import FollowerAlreadyHasStatus
 
@@ -9,26 +7,12 @@ logger = logging.getLogger()
 
 
 class Follower:
-    def __init__(
-        self,
-        follow_item,
-        follow_dynamo,
-        first_story_dynamo,
-        like_manager=None,
-        post_manager=None,
-        user_manager=None,
-    ):
+    def __init__(self, follow_item, follow_dynamo, first_story_dynamo):
         self.dynamo = follow_dynamo
         self.first_story_dynamo = first_story_dynamo
         self.followed_user_id = follow_item['followedUserId']
         self.follower_user_id = follow_item['followerUserId']
         self.item = follow_item
-        if like_manager:
-            self.like_manager = like_manager
-        if post_manager:
-            self.post_manager = post_manager
-        if user_manager:
-            self.user_manager = user_manager
 
     @property
     def status(self):
@@ -43,14 +27,6 @@ class Follower:
         if not force and self.status == FollowStatus.DENIED:
             raise FollowerAlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
         self.dynamo.delete_following(self.item)
-
-        if self.status == FollowStatus.FOLLOWING:
-            self.first_story_dynamo.delete_all([self.follower_user_id], self.followed_user_id)
-            # if the user is a private user, then we no longer have access to their posts thus we clear our likes
-            followed_user_item = self.user_manager.dynamo.get_user(self.followed_user_id)
-            if followed_user_item['privacyStatus'] == UserPrivacyStatus.PRIVATE:
-                self.like_manager.dislike_all_by_user_from_user(self.follower_user_id, self.followed_user_id)
-
         self.item['followStatus'] = FollowStatus.NOT_FOLLOWING
         return self
 
@@ -58,25 +34,12 @@ class Follower:
         "Returns the status of the follow request"
         if self.status == FollowStatus.FOLLOWING:
             raise FollowerAlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.FOLLOWING)
-        self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING)
-
-        post = self.post_manager.dynamo.get_next_completed_post_to_expire(self.followed_user_id)
-        if post:
-            self.first_story_dynamo.set_all([self.follower_user_id], post)
-
-        self.item['followStatus'] = FollowStatus.FOLLOWING
+        self.item = self.dynamo.update_following_status(self.item, FollowStatus.FOLLOWING)
         return self
 
     def deny(self):
         "Returns the status of the follow request"
         if self.status == FollowStatus.DENIED:
             raise FollowerAlreadyHasStatus(self.follower_user_id, self.followed_user_id, FollowStatus.DENIED)
-        self.dynamo.update_following_status(self.item, FollowStatus.DENIED)
-
-        if self.status == FollowStatus.FOLLOWING:
-            self.first_story_dynamo.delete_all([self.follower_user_id], self.followed_user_id)
-            # clear any likes that were droped on the followed's posts by the follower
-            self.like_manager.dislike_all_by_user_from_user(self.follower_user_id, self.followed_user_id)
-
-        self.item['followStatus'] = FollowStatus.DENIED
+        self.item = self.dynamo.update_following_status(self.item, FollowStatus.DENIED)
         return self

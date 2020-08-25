@@ -168,14 +168,6 @@ class User(TrendingModelMixin):
         if self.status != UserStatus.DELETING:
             self.item = self.dynamo.set_user_status(self.id, UserStatus.DELETING)
 
-        # for REQUESTED and DENIED, just delete them
-        # for FOLLOWING, unfollow so that the other user's counts remain correct
-        self.follower_manager.reset_followed_items(self.id)
-        self.follower_manager.reset_follower_items(self.id)
-
-        # delete all our likes & comments & albums & posts
-        self.like_manager.dislike_all_by_user(self.id)
-
         # delete our own profile. Leave our stale item around so we can serialize
         self.dynamo.delete_user(self.id)
 

@@ -74,19 +74,3 @@ def test_delete_user_clears_cognito(user, cognito_client):
     user.delete()
     with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
         cognito_client.get_user_attributes(user.id)
-
-
-def test_delete_user_managers_all_called(user):
-    # check starting state
-    assert user.follower_manager.mock_calls == []
-    assert user.like_manager.mock_calls == []
-
-    # delete user, check final state
-    user.delete()
-    assert user.follower_manager.mock_calls == [
-        mock.call.reset_followed_items(user.id),
-        mock.call.reset_follower_items(user.id),
-    ]
-    assert user.like_manager.mock_calls == [
-        mock.call.dislike_all_by_user(user.id),
-    ]

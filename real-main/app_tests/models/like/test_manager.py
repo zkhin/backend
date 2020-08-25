@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from app.models.follower.enums import FollowStatus
 from app.models.like.enums import LikeStatus
 from app.models.like.exceptions import AlreadyLiked, LikeException
 from app.models.post.enums import PostType
@@ -198,7 +199,7 @@ def test_dislike_all_of_post(like_manager, user1, user2, user1_posts):
     assert list(like_manager.dynamo.generate_of_post(post2.id)) == []
 
 
-def test_dislike_all_by_user(like_manager, user1, user2, user1_posts):
+def test_on_user_delete_dislike_all_by_user(like_manager, user1, user2, user1_posts):
     post1, post2 = user1_posts
 
     # check likes
@@ -220,7 +221,7 @@ def test_dislike_all_by_user(like_manager, user1, user2, user1_posts):
     assert [(li['likedByUserId'], li['postId']) for li in like_items] == [(user1.id, post2.id)]
 
     # clear one users likes
-    like_manager.dislike_all_by_user(user1.id)
+    like_manager.on_user_delete_dislike_all_by_user(user1.id, old_item=user1.item)
 
     # check likes
     like_items = like_manager.dynamo.generate_of_post(post1.id)
@@ -228,7 +229,7 @@ def test_dislike_all_by_user(like_manager, user1, user2, user1_posts):
     assert list(like_manager.dynamo.generate_of_post(post2.id)) == []
 
     # clear other users likes
-    like_manager.dislike_all_by_user(user2.id)
+    like_manager.on_user_delete_dislike_all_by_user(user2.id, old_item=user2.item)
 
     # check likes
     assert list(like_manager.dynamo.generate_of_post(post1.id)) == []
@@ -292,3 +293,41 @@ def test_dislike_all_by_user_from_user(like_manager, user1, user2, user1_posts, 
     # check likes
     assert list(like_manager.dynamo.generate_of_post(post1.id)) == []
     assert list(like_manager.dynamo.generate_of_post(post2.id)) == []
+
+
+def test_on_user_follow_status_change_sync_likes(like_manager, follower_manager, user1, user2, user1_posts):
+    # user2 likes user1's post, verify
+    post1, _ = user1_posts
+    like_manager.like_post(user2, post1, LikeStatus.ANONYMOUSLY_LIKED)
+    assert like_manager.get_like(user2.id, post1.id)
+
+    # user1 goes private
+    user1.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    assert user1.refresh_item().item['privacyStatus'] == UserPrivacyStatus.PRIVATE
+
+    # user2 requests to follow user1, verify no change to likes
+    old_item = None
+    new_item = follower_manager.dynamo.add_following(user2.id, user1.id, FollowStatus.REQUESTED)
+    like_manager.on_user_follow_status_change_sync_likes(user1.id, new_item=new_item, old_item=old_item)
+    assert like_manager.get_like(user2.id, post1.id)
+
+    # user1 denies the follow request. Verify the like is deleted
+    old_item = new_item
+    new_item = follower_manager.dynamo.update_following_status(old_item, FollowStatus.DENIED)
+    like_manager.on_user_follow_status_change_sync_likes(user1.id, new_item=new_item, old_item=old_item)
+    assert like_manager.get_like(user2.id, post1.id) is None
+
+    # user1 accepts the follow request
+    old_item = new_item
+    new_item = follower_manager.dynamo.update_following_status(old_item, FollowStatus.FOLLOWING)
+    like_manager.on_user_follow_status_change_sync_likes(user1.id, new_item=new_item, old_item=old_item)
+    assert like_manager.get_like(user2.id, post1.id) is None
+
+    # user2 re-likes the post
+    like_manager.like_post(user2, post1, LikeStatus.ONYMOUSLY_LIKED)
+    assert like_manager.get_like(user2.id, post1.id)
+
+    # follow item is deleted, verify the like is deleted
+    old_item = new_item
+    like_manager.on_user_follow_status_change_sync_likes(user1.id, old_item=old_item)
+    assert like_manager.get_like(user2.id, post1.id) is None
