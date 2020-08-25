@@ -2,8 +2,9 @@ class UserStatus:
     ACTIVE = 'ACTIVE'
     DISABLED = 'DISABLED'
     DELETING = 'DELETING'
+    RESETTING = 'RESETTING'
 
-    _ALL = (ACTIVE, DISABLED, DELETING)
+    _ALL = (ACTIVE, DISABLED, DELETING, RESETTING)
 
 
 class UserPrivacyStatus:

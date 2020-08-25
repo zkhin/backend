@@ -304,7 +304,7 @@ def reset_user(caller_user_id, arguments, client=None, **kwargs):
     # resetUser may be called when user exists in cognito but not in dynamo
     user = user_manager.get_user(caller_user_id)
     if user:
-        user.delete(skip_cognito=True)
+        user.reset()
 
     if new_username:
         # equivalent to calling Mutation.createCognitoOnlyUser()

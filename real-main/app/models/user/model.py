@@ -164,23 +164,23 @@ class User(TrendingModelMixin):
             raise Exception(f'Unrecognized user status `{self.status}`')
         return self
 
-    def delete(self, skip_cognito=False):
+    def reset(self):
+        # the user's last status is used by post-delete dynamo stream handler
+        if self.status != UserStatus.RESETTING:
+            self.item = self.dynamo.set_user_status(self.id, UserStatus.RESETTING)
+        self.dynamo.delete_user(self.id)
+        # release the user's username from cognito
+        try:
+            self.cognito_client.clear_user_attribute(self.id, 'preferred_username')
+        except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
+            logger.warning(f'No cognito user pool entry found when resetting user `{self.id}`')
+        return self
+
+    def delete(self):
+        # the user's last status is used by post-delete dynamo stream handler
         if self.status != UserStatus.DELETING:
             self.item = self.dynamo.set_user_status(self.id, UserStatus.DELETING)
-
-        # delete our own profile. Leave our stale item around so we can serialize
         self.dynamo.delete_user(self.id)
-
-        if skip_cognito:
-            # release our preferred_username from cognito
-            try:
-                self.cognito_client.clear_user_attribute(self.id, 'preferred_username')
-            except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
-                logger.warning(f'No cognito user pool entry found when deleting user `{self.id}`')
-        else:
-            self.cognito_client.delete_user_pool_entry(self.id)
-            self.cognito_client.delete_identity_pool_entry(self.id)
-
         return self
 
     def set_accepted_eula_version(self, version):

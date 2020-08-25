@@ -22,17 +22,21 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 test("resetUser really releases the user's username", async () => {
-  const {client: ourClient, userId: ourUserId, password: ourPassword} = await loginCache.getCleanLogin()
-  const {client: theirClient, userId: theirUserId, password: theirPassword} = await loginCache.getCleanLogin()
+  const {client: ourClient, password: ourPassword} = await loginCache.getCleanLogin()
+  const {client: theirClient, password: theirPassword} = await loginCache.getCleanLogin()
 
   // set our username
   const ourUsername = cognito.generateUsername()
-  let resp = await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
+  await ourClient
+    .mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
+    .then(({data: {setUserDetails: user}}) => expect(user.username).toBe(ourUsername))
 
   // verify we can login using our username
-  let AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}
-  resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-  expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
+  const USERNAME = ourUsername.toLowerCase()
+  await cognito.userPoolClient
+    .initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: ourPassword}})
+    .promise()
+    .then(({AuthenticationResult: {AccessToken}}) => expect(AccessToken).toBeTruthy())
 
   // verify someone else cannot claim our username or variants of
   let mutation = mutations.setUsername
@@ -47,32 +51,37 @@ test("resetUser really releases the user's username", async () => {
   )
 
   // reset our account
-  resp = await ourClient.mutate({mutation: mutations.resetUser})
-  expect(resp.data.resetUser.userId).toBe(ourUserId)
+  await ourClient
+    .mutate({mutation: mutations.resetUser})
+    .then(({data: {resetUser: user}}) => expect(user.userStatus).toBe('RESETTING'))
 
   // verify we cannot login with our username anymore
-  AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: ourPassword}
-  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()).rejects.toThrow(
-    /Incorrect username or password/,
-  )
+  await misc.sleep(2000)
+  await expect(
+    cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: ourPassword}}).promise(),
+  ).rejects.toThrow(/Incorrect username or password/)
 
   // verify that someone else can now claim our released username and then login with it
-  await theirClient.mutate({
-    mutation: mutations.setUsername,
-    variables: {username: ourUsername},
-  })
-  AuthParameters = {USERNAME: ourUsername.toLowerCase(), PASSWORD: theirPassword}
-  resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-  expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
+  await theirClient
+    .mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
+    .then(({data: {setUserDetails: user}}) => expect(user.username).toBe(ourUsername))
+  await cognito.userPoolClient
+    .initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: theirPassword}})
+    .promise()
+    .then(({AuthenticationResult: {AccessToken}}) => expect(AccessToken).toBeTruthy())
 
   // verify they can release that username by specifying the empty string for newUsername (same as null)
-  resp = await theirClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ''}})
-  expect(resp.data.resetUser.userId).toBe(theirUserId)
+  await theirClient
+    .mutate({mutation: mutations.resetUser, variables: {newUsername: ''}})
+    .then(({data: {resetUser: user}}) => expect(user.userStatus).toBe('RESETTING'))
 
   // verify they cannot login with their username anymore
-  await expect(cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()).rejects.toThrow(
-    /Incorrect username or password/,
-  )
+  await misc.sleep(2000)
+  await expect(
+    cognito.userPoolClient
+      .initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: theirPassword}})
+      .promise(),
+  ).rejects.toThrow(/Incorrect username or password/)
 })
 
 test("resetUser deletes all the user's data (best effort test)", async () => {
@@ -140,6 +149,7 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
   // verify they cannot see our user directly anymore
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
   expect(resp.data.user).toBeNull()
 
@@ -215,6 +225,7 @@ test('resetUser deletes all blocks of us and by us', async () => {
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
   // verify both of the blocks have now disappeared
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.blockedUsers.items).toHaveLength(0)
 
@@ -254,21 +265,27 @@ test('resetUser with optional username intializes new user correctly', async () 
   const newUsername = cognito.generateUsername()
 
   // reset our user
-  let resp = await client.mutate({mutation: mutations.resetUser, variables: {newUsername}})
-  expect(resp.data.resetUser.userId).toBe(userId)
-  expect(resp.data.resetUser.username).toBe(newUsername)
-  expect(resp.data.resetUser.fullName).toBeNull()
+  await client
+    .mutate({mutation: mutations.resetUser, variables: {newUsername}})
+    .then(({data: {resetUser: user}}) => {
+      expect(user.userId).toBe(userId)
+      expect(user.username).toBe(newUsername)
+      expect(user.fullName).toBeNull()
+    })
 
   // make sure it stuck in the DB
-  resp = await client.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(userId)
-  expect(resp.data.self.username).toBe(newUsername)
-  expect(resp.data.self.email).toBe(email)
+  await misc.sleep(2000)
+  await client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(userId)
+    expect(user.username).toBe(newUsername)
+    expect(user.email).toBe(email)
+  })
 
   // make sure we can login with the new username
-  let AuthParameters = {USERNAME: newUsername.toLowerCase(), PASSWORD: password}
-  resp = await cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters}).promise()
-  expect(resp).toHaveProperty('AuthenticationResult.AccessToken')
+  await cognito.userPoolClient
+    .initiateAuth({AuthFlow, AuthParameters: {USERNAME: newUsername.toLowerCase(), PASSWORD: password}})
+    .promise()
+    .then(({AuthenticationResult: {AccessToken}}) => expect(AccessToken).toBeTruthy())
 })
 
 test('resetUser deletes any comments we have added to posts', async () => {
@@ -413,33 +430,38 @@ test('resetUser changes userStatus', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // check our status
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.userStatus).toBe('ACTIVE')
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('ACTIVE')
+  })
 
   // reset our user
-  resp = await ourClient.mutate({mutation: mutations.resetUser})
-  expect(resp.data.resetUser.userId).toBe(ourUserId)
-  expect(resp.data.resetUser.userStatus).toBe('DELETING')
+  await ourClient.mutate({mutation: mutations.resetUser}).then(({data: {resetUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('RESETTING')
+  })
 })
 
 test('Can reset a disabled user', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // disable ourselves
-  let resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.data.disableUser.userId).toBe(ourUserId)
-  expect(resp.data.disableUser.userStatus).toBe('DISABLED')
+  await ourClient.mutate({mutation: mutations.disableUser}).then(({data: {disableUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DISABLED')
+  })
 
   // double check our status
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.userStatus).toBe('DISABLED')
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DISABLED')
+  })
 
   // reset our account
-  resp = await ourClient.mutate({mutation: mutations.resetUser})
-  expect(resp.data.resetUser.userId).toBe(ourUserId)
-  expect(resp.data.resetUser.userStatus).toBe('DELETING')
+  await ourClient.mutate({mutation: mutations.resetUser}).then(({data: {resetUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('RESETTING')
+  })
 
   // verify that worked
   await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
@@ -454,17 +476,18 @@ test('Delete a user', async () => {
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // check we can query ok
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.userStatus).toBe('ACTIVE')
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('ACTIVE')
+  })
 
   // delete ourselves
-  resp = await ourClient.mutate({mutation: mutations.deleteUser})
-  expect(resp.data.deleteUser.userId).toBe(ourUserId)
-  expect(resp.data.deleteUser.userStatus).toBe('DELETING')
+  await ourClient.mutate({mutation: mutations.deleteUser}).then(({data: {deleteUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DELETING')
+  })
 
   // check we no longer exist (but our GQL creds can't be revoked)
-  await ourClient.clearStore()
   await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
     expect(errors).toHaveLength(1)
     expect(errors[0]['message']).toBe('User does not exist')
@@ -472,8 +495,9 @@ test('Delete a user', async () => {
   })
 
   // check another user sees us gone
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user).toBeNull()
+  await theirClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user).toBeNull())
 })
 
 test('Delete a user disabled user', async () => {
@@ -481,26 +505,31 @@ test('Delete a user disabled user', async () => {
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // check we can query ok
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.userStatus).toBe('ACTIVE')
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('ACTIVE')
+  })
 
   // disable ourselves
-  resp = await ourClient.mutate({mutation: mutations.disableUser})
-  expect(resp.data.disableUser.userId).toBe(ourUserId)
-  expect(resp.data.disableUser.userStatus).toBe('DISABLED')
+  await ourClient.mutate({mutation: mutations.disableUser}).then(({data: {disableUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DISABLED')
+  })
 
   // check another user sees that status
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.userId).toBe(ourUserId)
-  expect(resp.data.user.userStatus).toBe('DISABLED')
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DISABLED')
+  })
 
   // delete ourselves
-  resp = await ourClient.mutate({mutation: mutations.deleteUser})
-  expect(resp.data.deleteUser.userId).toBe(ourUserId)
-  expect(resp.data.deleteUser.userStatus).toBe('DELETING')
+  await ourClient.mutate({mutation: mutations.deleteUser}).then(({data: {deleteUser: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.userStatus).toBe('DELETING')
+  })
 
   // check another user sees us gone
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user).toBeNull()
+  await theirClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user).toBeNull())
 })

@@ -571,6 +571,7 @@ enum UserStatus {
   ACTIVE
   DISABLED
   DELETING
+  RESETTING
 }
 
 enum PrivacyStatus {

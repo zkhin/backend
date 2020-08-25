@@ -397,3 +397,15 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     on_user_phone_number_change_update_subitem = partialmethod(
         on_user_contact_attribute_change_update_subitem, 'phoneNumber', 'phone_number_dynamo'
     )
+
+    def on_user_delete_delete_cognito(self, user_id, old_item):
+        old_status = old_item.get('userStatus', UserStatus.ACTIVE)
+        # for resets (used by the integration test suite) we leave the user in cognito
+        # as a performance enhancement.
+        if old_status != UserStatus.RESETTING:
+            try:
+                self.cognito_client.delete_user_pool_entry(user_id)
+            except self.cognito_client.user_pool_client.exceptions.UserNotFoundException:
+                logger.warning(f'No cognito user pool entry found when deleting user `{user_id}`')
+            # TODO: catch 404 error & log warning
+            self.cognito_client.delete_identity_pool_entry(user_id)

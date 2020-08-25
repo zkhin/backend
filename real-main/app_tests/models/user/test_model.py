@@ -707,3 +707,25 @@ def test_grant_subscription_bonus(user):
     # verify can't grant it again
     with pytest.raises(UserAlreadyGrantedSubscription):
         user.grant_subscription_bonus()
+
+
+def test_reset(user):
+    # verify starting state
+    assert user.refresh_item().status == UserStatus.ACTIVE
+
+    # do the reset, verify congito called to free the user's username
+    # note that moto cognito has not yet implemented admin_delete_user_attributes
+    with patch.object(user, 'cognito_client') as cognito_client_mock:
+        user.reset()
+    assert cognito_client_mock.mock_calls == [call.clear_user_attribute(user.id, 'preferred_username')]
+
+    # verify final dynamo state
+    assert user.status == UserStatus.RESETTING
+    assert user.refresh_item().item is None
+
+
+def test_delete(user):
+    assert user.refresh_item().status == UserStatus.ACTIVE
+    user.delete()
+    assert user.status == UserStatus.DELETING
+    assert user.refresh_item().item is None

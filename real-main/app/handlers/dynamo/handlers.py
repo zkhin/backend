@@ -20,6 +20,7 @@ xray.patch_all()
 clients = {
     'appstore': clients.AppStoreClient(),
     'appsync': clients.AppSyncClient(),
+    'cognito': clients.CognitoClient(),
     'dynamo': clients.DynamoClient(),
     'dynamo_feed': clients.DynamoClient(table_name=DYNAMO_FEED_TABLE),
     'elasticsearch': clients.ElasticSearchClient(),
@@ -289,6 +290,7 @@ register('user', 'profile', ['REMOVE'], like_manager.on_user_delete_dislike_all_
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_flags)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
+register('user', 'profile', ['REMOVE'], user_manager.on_user_delete_delete_cognito)
 
 
 @handler_logging

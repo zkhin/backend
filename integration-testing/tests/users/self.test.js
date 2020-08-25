@@ -5,7 +5,6 @@ jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
-  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 
 beforeEach(async () => await loginCache.clean())

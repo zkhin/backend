@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from app.models.post.enums import PostStatus, PostType
+from app.models.user.enums import UserStatus
 from app.utils import image_size
 
 
@@ -341,3 +342,23 @@ def test_on_user_contact_attribute_change_update_subitem(
     with patch.object(user_manager, dynamo_lib_name) as dynamo_lib_mock:
         getattr(user_manager, method_name)(user.id, old_item=old_item)
     assert dynamo_lib_mock.mock_calls == [call.delete('new-value', user.id)]
+
+
+def test_delete_user_clears_cognito(user_manager, user, cognito_client):
+    # moto has not yet implemented identity pool describeIdentity, so skipping that for now
+    assert cognito_client.get_user_attributes(user.id)
+
+    # user status with RESETTING, verify leaves cognito alone
+    old_item = {**user.item, 'userStatus': UserStatus.RESETTING}
+    user_manager.on_user_delete_delete_cognito(user.id, old_item=old_item)
+    cognito_client.get_user_attributes(user.id)
+
+    # user status with anything other than RESETTING
+    user_manager.on_user_delete_delete_cognito(user.id, old_item=user.item)
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
+        cognito_client.get_user_attributes(user.id)
+
+    # fire again, make sure handler doesn't error out on missing cognito profile
+    user_manager.on_user_delete_delete_cognito(user.id, old_item=user.item)
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
+        cognito_client.get_user_attributes(user.id)
