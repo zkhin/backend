@@ -41,7 +41,7 @@ def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, 
     # check no flags
     assert post.item.get('flagCount', 0) == 0
     assert post.refresh_item().item.get('flagCount', 0) == 0
-    assert list(post.flag_dynamo.generate_by_item(post.id)) == []
+    assert list(post.flag_dynamo.generate_keys_by_item(post.id)) == []
 
     # accept the follow request - now can flag
     following.accept()
@@ -49,4 +49,4 @@ def test_cant_flag_post_of_private_user_we_are_not_following(post, user, user2, 
 
     # check the flag exists
     assert post.item.get('flagCount', 0) == 1  # count incremented in mem only at this point
-    assert len(list(post.flag_dynamo.generate_by_item(post.id))) == 1
+    assert len(list(post.flag_dynamo.generate_keys_by_item(post.id))) == 1

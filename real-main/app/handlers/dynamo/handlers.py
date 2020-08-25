@@ -169,8 +169,22 @@ register(
     'user',
     'follower',
     ['INSERT', 'MODIFY', 'REMOVE'],
+    feed_manager.on_user_follow_status_change_sync_feed,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
+)
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
     follower_manager.on_first_story_post_id_change_fire_gql_notifications,
     {'postId': None},
+)
+register(
+    'user',
+    'follower',
+    ['INSERT', 'MODIFY', 'REMOVE'],
+    user_manager.sync_follow_counts_due_to_follow_status,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
 register('user', 'profile', ['INSERT'], user_manager.on_user_add_delete_user_deleted_subitem)
 register(
@@ -245,22 +259,12 @@ register(
     user_manager.on_user_phone_number_change_update_subitem,
     {'phoneNumber': None},
 )
-register(
-    'user',
-    'follower',
-    ['INSERT', 'MODIFY', 'REMOVE'],
-    feed_manager.on_user_follow_status_change_sync_feed,
-    {'followStatus': FollowStatus.NOT_FOLLOWING},
-)
-register(
-    'user',
-    'follower',
-    ['INSERT', 'MODIFY', 'REMOVE'],
-    user_manager.sync_follow_counts_due_to_follow_status,
-    {'followStatus': FollowStatus.NOT_FOLLOWING},
-)
 register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_receipts)
 register('user', 'profile', ['REMOVE'], card_manager.on_user_delete_delete_cards)
+register('user', 'profile', ['REMOVE'], chat_manager.on_user_delete_delete_flags)
+register('user', 'profile', ['REMOVE'], chat_message_manager.on_user_delete_delete_flags)
+register('user', 'profile', ['REMOVE'], comment_manager.on_user_delete_delete_flags)
+register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_flags)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 
 

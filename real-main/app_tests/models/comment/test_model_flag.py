@@ -43,7 +43,7 @@ def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, use
     # check no flags
     assert comment.item.get('flagCount', 0) == 0
     assert comment.refresh_item().item.get('flagCount', 0) == 0
-    assert list(comment.flag_dynamo.generate_by_item(comment.id)) == []
+    assert list(comment.flag_dynamo.generate_keys_by_item(comment.id)) == []
 
     # accept the follow request - now can flag
     following.accept()
@@ -51,4 +51,4 @@ def test_cant_flag_comment_on_post_of_unfollowed_private_user(comment, user, use
 
     # check the flag exists
     assert comment.item.get('flagCount', 0) == 1  # count incremented in mem only at this point
-    assert len(list(comment.flag_dynamo.generate_by_item(comment.id))) == 1
+    assert len(list(comment.flag_dynamo.generate_keys_by_item(comment.id))) == 1

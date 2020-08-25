@@ -123,11 +123,9 @@ def test_delete_user_managers_all_called(user):
         mock.call.reset_follower_items(user.id),
     ]
     assert user.post_manager.mock_calls == [
-        mock.call.unflag_all_by_user(user.id),
         mock.call.delete_all_by_user(user.id),
     ]
     assert user.comment_manager.mock_calls == [
-        mock.call.unflag_all_by_user(user.id),
         mock.call.delete_all_by_user(user.id),
     ]
     assert user.like_manager.mock_calls == [

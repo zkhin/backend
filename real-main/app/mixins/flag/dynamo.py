@@ -42,25 +42,19 @@ class FlagDynamo:
         if not deleted:
             raise NotFlagged(self.item_type, item_id, user_id)
 
-    def delete_all_for_item(self, item_id):
-        generator = self.generate_by_item(item_id, pks_only=True)
-        self.client.batch_delete_items(generator)
-
-    def generate_by_item(self, item_id, pks_only=False):
+    def generate_keys_by_item(self, item_id):
         query_kwargs = {
+            'ProjectionExpression': 'partitionKey, sortKey',
             'KeyConditionExpression': 'partitionKey = :pk AND begins_with(sortKey, :sk_prefix)',
             'ExpressionAttributeValues': {':pk': f'{self.item_type}/{item_id}', ':sk_prefix': 'flag/'},
         }
-        if pks_only:
-            query_kwargs['ProjectionExpression'] = 'partitionKey, sortKey'
         return self.client.generate_all_query(query_kwargs)
 
-    def generate_item_ids_by_user(self, user_id):
+    def generate_keys_by_user(self, user_id):
         query_kwargs = {
-            'ProjectionExpression': 'partitionKey',
+            'ProjectionExpression': 'partitionKey, sortKey',
             'KeyConditionExpression': 'gsiK1PartitionKey = :pk AND gsiK1SortKey = :sk',
             'ExpressionAttributeValues': {':pk': f'flag/{user_id}', ':sk': self.item_type},
             'IndexName': 'GSI-K1',
         }
-        prefix_len = len(self.item_type) + 1
-        return (i['partitionKey'][prefix_len:] for i in self.client.generate_all_query(query_kwargs))
+        return self.client.generate_all_query(query_kwargs)

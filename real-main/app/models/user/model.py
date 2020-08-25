@@ -173,10 +173,6 @@ class User(TrendingModelMixin):
         self.follower_manager.reset_followed_items(self.id)
         self.follower_manager.reset_follower_items(self.id)
 
-        # unflag everything we've flagged
-        self.post_manager.unflag_all_by_user(self.id)
-        self.comment_manager.unflag_all_by_user(self.id)
-
         # delete all our likes & comments & albums & posts
         self.like_manager.dislike_all_by_user(self.id)
         self.comment_manager.delete_all_by_user(self.id)

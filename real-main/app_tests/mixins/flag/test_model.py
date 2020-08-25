@@ -43,13 +43,13 @@ user2 = user
 def test_flag_success(model, user2):
     # check starting state
     assert model.item.get('flagCount', 0) == 0
-    assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 0
+    assert len(list(model.flag_dynamo.generate_keys_by_item(model.id))) == 0
 
     # flag it, verify count incremented in memory but not yet in DB
     model.flag(user2)
     assert model.item.get('flagCount', 0) == 1
     assert model.refresh_item().item.get('flagCount', 0) == 0
-    assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 1
+    assert len(list(model.flag_dynamo.generate_keys_by_item(model.id))) == 1
 
     # verify we can't flag the post second time
     with pytest.raises(FlagException, match='already been flagged'):
@@ -64,7 +64,7 @@ def test_cant_flag_our_own_model(model, user):
         model.flag(user)
     assert model.item.get('flagCount', 0) == 0
     assert model.refresh_item().item.get('flagCount', 0) == 0
-    assert list(model.flag_dynamo.generate_by_item(model.id)) == []
+    assert list(model.flag_dynamo.generate_keys_by_item(model.id)) == []
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment', 'message']))
@@ -74,7 +74,7 @@ def test_cant_flag_model_of_user_thats_blocking_us(model, user, user2, block_man
         model.flag(user2)
     assert model.item.get('flagCount', 0) == 0
     assert model.refresh_item().item.get('flagCount', 0) == 0
-    assert list(model.flag_dynamo.generate_by_item(model.id)) == []
+    assert list(model.flag_dynamo.generate_keys_by_item(model.id)) == []
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment', 'message']))
@@ -84,7 +84,7 @@ def test_cant_flag_model_of_user_we_are_blocking(model, user, user2, block_manag
         model.flag(user2)
     assert model.item.get('flagCount', 0) == 0
     assert model.refresh_item().item.get('flagCount', 0) == 0
-    assert list(model.flag_dynamo.generate_by_item(model.id)) == []
+    assert list(model.flag_dynamo.generate_keys_by_item(model.id)) == []
 
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment', 'message']))
@@ -94,13 +94,13 @@ def test_unflag(model, user2):
     model.dynamo.increment_flag_count(model.id)
     assert model.item.get('flagCount', 0) == 1
     assert model.refresh_item().item.get('flagCount', 0) == 1
-    assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 1
+    assert len(list(model.flag_dynamo.generate_keys_by_item(model.id))) == 1
 
     # unflag, verify counter decremented in mem but not yet in dynamo
     model.unflag(user2.id)
     assert model.item.get('flagCount', 0) == 0
     assert model.refresh_item().item.get('flagCount', 0) == 1
-    assert len(list(model.flag_dynamo.generate_by_item(model.id))) == 0
+    assert len(list(model.flag_dynamo.generate_keys_by_item(model.id))) == 0
 
     # verify can't unflag if we haven't flagged
     with pytest.raises(FlagException, match='not been flagged'):

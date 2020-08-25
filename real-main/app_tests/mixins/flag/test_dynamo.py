@@ -63,46 +63,21 @@ def test_delete(flag_dynamo):
         flag_dynamo.delete(item_id, user_id)
 
 
-def test_delete_all_for_item(flag_dynamo):
-    item_id_1, item_id_2 = str(uuid.uuid4()), str(uuid.uuid4())
-    assert list(flag_dynamo.generate_by_item(item_id_1)) == []
-    assert list(flag_dynamo.generate_by_item(item_id_2)) == []
-
-    # add a flag to item 2 as a distraction, should not be touched
-    flag_dynamo.add(item_id_2, 'uid')
-    dummy = next(flag_dynamo.generate_by_item(item_id_2))
-
-    # test deleting none
-    flag_dynamo.delete_all_for_item(item_id_1)
-    assert list(flag_dynamo.generate_by_item(item_id_1)) == []
-    assert list(flag_dynamo.generate_by_item(item_id_2)) == [dummy]
-
-    # add two flags to the item
-    flag_dynamo.add(item_id_1, 'uid')
-    flag_dynamo.add(item_id_1, 'uid2')
-    assert len(list(flag_dynamo.generate_by_item(item_id_1))) == 2
-
-    # test deleting those two
-    flag_dynamo.delete_all_for_item(item_id_1)
-    assert list(flag_dynamo.generate_by_item(item_id_1)) == []
-    assert list(flag_dynamo.generate_by_item(item_id_2)) == [dummy]
-
-
-def test_generate_by_item(flag_dynamo):
+def test_generate_keys_by_item(flag_dynamo):
     item_id = str(uuid.uuid4())
 
     # add a flag for a different item
     flag_dynamo.add('id-other', 'uid')
 
     # test generate no items
-    assert list(flag_dynamo.generate_by_item(item_id)) == []
-    assert list(flag_dynamo.generate_by_item(item_id)) == []
+    assert list(flag_dynamo.generate_keys_by_item(item_id)) == []
+    assert list(flag_dynamo.generate_keys_by_item(item_id)) == []
 
     # add a flag for this item
     flag_dynamo.add(item_id, 'uid')
 
     # test generate one item
-    items = list(flag_dynamo.generate_by_item(item_id))
+    items = list(flag_dynamo.generate_keys_by_item(item_id))
     assert len(items) == 1
     assert items[0]['partitionKey'] == f'itype/{item_id}'
     assert items[0]['sortKey'] == 'flag/uid'
@@ -111,31 +86,27 @@ def test_generate_by_item(flag_dynamo):
     flag_dynamo.add(item_id, 'uid2')
 
     # test generate two items
-    items = list(flag_dynamo.generate_by_item(item_id))
+    items = list(flag_dynamo.generate_keys_by_item(item_id))
     assert len(items) == 2
     assert items[0]['partitionKey'] == f'itype/{item_id}'
     assert items[0]['sortKey'] == 'flag/uid'
     assert items[1]['partitionKey'] == f'itype/{item_id}'
     assert items[1]['sortKey'] == 'flag/uid2'
 
-    # check the pks_only flag works
-    items = list(flag_dynamo.generate_by_item(item_id, pks_only=True))
-    assert len(items) == 2
-    assert items[0] == {'partitionKey': f'itype/{item_id}', 'sortKey': 'flag/uid'}
-    assert items[1] == {'partitionKey': f'itype/{item_id}', 'sortKey': 'flag/uid2'}
 
-
-def test_generate_item_ids_by_user(flag_dynamo):
+def test_generate_keys_by_user(flag_dynamo):
     user_id = str(uuid.uuid4())
 
     # add a flag by a different user, test
     flag_dynamo.add('iid', 'uid-other')
-    assert list(flag_dynamo.generate_item_ids_by_user(user_id)) == []
+    assert list(flag_dynamo.generate_keys_by_user(user_id)) == []
 
     # add a flag by this user, test
     flag_dynamo.add('iid', user_id)
-    assert list(flag_dynamo.generate_item_ids_by_user(user_id)) == ['iid']
+    key_1 = {'partitionKey': 'itype/iid', 'sortKey': f'flag/{user_id}'}
+    assert list(flag_dynamo.generate_keys_by_user(user_id)) == [key_1]
 
     # add another flag by this user, test
     flag_dynamo.add('iid2', user_id)
-    assert list(flag_dynamo.generate_item_ids_by_user(user_id)) == ['iid', 'iid2']
+    key_2 = {'partitionKey': 'itype/iid2', 'sortKey': f'flag/{user_id}'}
+    assert list(flag_dynamo.generate_keys_by_user(user_id)) == [key_1, key_2]

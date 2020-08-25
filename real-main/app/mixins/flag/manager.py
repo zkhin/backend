@@ -14,11 +14,6 @@ class FlagManagerMixin:
         if 'dynamo' in clients:
             self.flag_dynamo = FlagDynamo(self.item_type, clients['dynamo'])
 
-    def unflag_all_by_user(self, user_id):
-        for item_id in self.flag_dynamo.generate_item_ids_by_user(user_id):
-            # this could be performance and edge-case optimized
-            self.get_model(item_id).unflag(user_id)
-
     def on_flag_add(self, item_id, new_item):
         raise NotImplementedError('Subclasses must implement')
 
@@ -26,4 +21,10 @@ class FlagManagerMixin:
         self.dynamo.decrement_flag_count(item_id)
 
     def on_item_delete_delete_flags(self, item_id, old_item):
-        self.flag_dynamo.delete_all_for_item(item_id)
+        key_generator = self.flag_dynamo.generate_keys_by_item(item_id)
+        self.dynamo.client.batch_delete_items(key_generator)
+
+    def on_user_delete_delete_flags(self, user_id, old_item):
+        # flagCounts on the item are decremented by post-delete dynamo handler
+        key_generator = self.flag_dynamo.generate_keys_by_user(user_id)
+        self.dynamo.client.batch_delete_items(key_generator)

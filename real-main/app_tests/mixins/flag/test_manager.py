@@ -44,33 +44,6 @@ chat2 = chat
 
 
 @pytest.mark.parametrize(
-    'manager, model1, model2',
-    [
-        pytest.lazy_fixture(['post_manager', 'post', 'post2']),
-        pytest.lazy_fixture(['comment_manager', 'comment', 'comment2']),
-        pytest.lazy_fixture(['chat_message_manager', 'message', 'message2']),
-        pytest.lazy_fixture(['chat_manager', 'chat', 'chat2']),
-    ],
-)
-def test_unflag_all_by_user(manager, model1, model2, user2):
-    # check we haven't flagged anything
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
-
-    # unflag all, check
-    manager.unflag_all_by_user(user2.id)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
-
-    # user flags both those posts
-    model1.flag(user2)
-    model2.flag(user2)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == [model1.id, model2.id]
-
-    # unflag all, check
-    manager.unflag_all_by_user(user2.id)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
-
-
-@pytest.mark.parametrize(
     'manager, model',
     [
         pytest.lazy_fixture(['post_manager', 'post']),
@@ -106,21 +79,47 @@ def test_on_flag_delete(manager, model, caplog):
     ],
 )
 def test_on_item_delete_delete_flags(manager, model1, model2, user2, user3):
-    # user2 flags both those models
+    # user2 flags both those models, user3 flags one model
     model1.flag(user2)
     model2.flag(user2)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == [model1.id, model2.id]
-
-    # user3 flags one model
     model1.flag(user3)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user3.id)) == [model1.id]
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user2.id))) == 2
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user3.id))) == 1
 
     # react to a delete of the first model, verify
     manager.on_item_delete_delete_flags(model1.id, old_item=model1.item)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == [model2.id]
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user3.id)) == []
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user2.id))) == 1
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user3.id))) == 0
 
     # react to a delete of the second model, verify
     manager.on_item_delete_delete_flags(model2.id, old_item=model2.item)
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user2.id)) == []
-    assert list(manager.flag_dynamo.generate_item_ids_by_user(user3.id)) == []
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user2.id))) == 0
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user3.id))) == 0
+
+
+@pytest.mark.parametrize(
+    'manager, model1, model2',
+    [
+        pytest.lazy_fixture(['post_manager', 'post', 'post2']),
+        pytest.lazy_fixture(['comment_manager', 'comment', 'comment2']),
+        pytest.lazy_fixture(['chat_message_manager', 'message', 'message2']),
+        pytest.lazy_fixture(['chat_manager', 'chat', 'chat2']),
+    ],
+)
+def test_on_user_delete_delete_flags(manager, model1, model2, user2, user3):
+    # user2 flags both those models, user3 flags one model
+    model1.flag(user2)
+    model2.flag(user2)
+    model1.flag(user3)
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user2.id))) == 2
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user3.id))) == 1
+
+    # react to a delete of the user2, verify
+    manager.on_user_delete_delete_flags(user2.id, old_item=user2.item)
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user2.id))) == 0
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user3.id))) == 1
+
+    # react to a delete of the second model, verify
+    manager.on_item_delete_delete_flags(model2.id, old_item=model2.item)
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user2.id))) == 0
+    assert len(list(manager.flag_dynamo.generate_keys_by_user(user3.id))) == 1
