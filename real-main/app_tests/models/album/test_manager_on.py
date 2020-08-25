@@ -187,3 +187,23 @@ def test_on_post_album_change_update_counts_and_timestamps(album_manager, user, 
     album2.refresh_item()
     assert album2.item['postCount'] == 0
     assert before < pendulum.parse(album2.item['postsLastUpdatedAt']) < after
+
+
+def test_on_user_delete_delete_all_by_user(album_manager, user):
+    # delete all for a user that has none, verify no error
+    album_manager.on_user_delete_delete_all_by_user(user.id, old_item=user.item)
+
+    # add two albums for our user
+    album_id_1, album_id_2 = 'aid1', 'aid2'
+    album_manager.add_album(user.id, album_id_1, 'album name')
+    album_manager.add_album(user.id, album_id_2, 'album name')
+
+    # verify we can see those albums
+    album_items = list(album_manager.dynamo.generate_by_user(user.id))
+    assert len(album_items) == 2
+    assert album_items[0]['albumId'] == album_id_1
+    assert album_items[1]['albumId'] == album_id_2
+
+    # delete them all, verify
+    album_manager.on_user_delete_delete_all_by_user(user.id, old_item=user.item)
+    assert list(album_manager.dynamo.generate_by_user(user.id)) == []

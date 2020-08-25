@@ -283,7 +283,7 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .then(({data}) => expect(data.addComment.commentId).toBe(commentId4))
 
   // check the post has the correct counts
-  await misc.sleep(1000)
+  await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
     expect(data.post.postId).toBe(postId)
     expect(data.post.commentCount).toBe(4)

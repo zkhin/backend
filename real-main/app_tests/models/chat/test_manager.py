@@ -122,45 +122,6 @@ def test_add_maximal_group_chat(chat_manager, user1):
     ]
 
 
-def test_leave_all_chats(chat_manager, user1, user2, user3):
-    # user1 opens up direct chats with both of the other two users
-    chat_id_1 = 'cid1'
-    chat_id_2 = 'cid2'
-    chat_manager.add_direct_chat(chat_id_1, user1.id, user2.id)
-    chat_manager.add_direct_chat(chat_id_2, user1.id, user3.id)
-
-    # user1 sets up a group chat with only themselves in it, and another with user2
-    chat_id_3 = 'cid3'
-    chat_id_4 = 'cid4'
-    chat_manager.add_group_chat(chat_id_3, user1)
-    chat_manager.add_group_chat(chat_id_4, user1).add(user1, [user2.id])
-
-    # verify we see the chat and chat_memberships in the DB
-    assert chat_manager.dynamo.get(chat_id_1)['userCount'] == 2
-    assert chat_manager.dynamo.get(chat_id_2)['userCount'] == 2
-    assert chat_manager.dynamo.get(chat_id_3)['userCount'] == 1
-    assert chat_manager.dynamo.get(chat_id_4)['userCount'] == 2
-    assert chat_manager.member_dynamo.get(chat_id_1, user1.id)
-    assert chat_manager.member_dynamo.get(chat_id_1, user2.id)
-    assert chat_manager.member_dynamo.get(chat_id_2, user1.id)
-    assert chat_manager.member_dynamo.get(chat_id_2, user3.id)
-    assert chat_manager.member_dynamo.get(chat_id_3, user1.id)
-    assert chat_manager.member_dynamo.get(chat_id_4, user1.id)
-    assert chat_manager.member_dynamo.get(chat_id_4, user2.id)
-
-    # user1 leaves all their chats, which should trigger deletes of both direct chats
-    chat_manager.leave_all_chats(user1.id)
-
-    # verify we see the chat and chat_memberships in the DB
-    assert chat_manager.dynamo.get(chat_id_1) is None
-    assert chat_manager.dynamo.get(chat_id_2) is None
-    assert chat_manager.dynamo.get(chat_id_3) is None
-    assert chat_manager.dynamo.get(chat_id_4)['userCount'] == 1
-    assert chat_manager.member_dynamo.get(chat_id_3, user1.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_4, user1.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_4, user2.id)
-
-
 def test_record_views(chat_manager, user1, user2, user3, caplog):
     chat_id = str(uuid.uuid4())
 

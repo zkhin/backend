@@ -18,6 +18,7 @@ const uuidv4 = require('uuid/v4')
 require('isomorphic-fetch')
 
 const {mutations} = require('../schema')
+const misc = require('./misc')
 
 dotenv.config()
 AWS.config = new AWS.Config()
@@ -205,14 +206,15 @@ class AppSyncLoginCache {
   }
 
   addCleanLogin(login) {
-    this.cleanLogins.push(login)
+    this.cleanLogins.push({login, timer: Promise.resolve()})
   }
 
   /* Return a clean login. If no clean logins are left, throws an exception. */
   async getCleanLogin() {
-    const login = this.cleanLogins.pop()
+    const {login, timer} = this.cleanLogins.pop()
     if (!login) throw new Error('No more clean logins left. Perhaps initialize more in beforeAll()?')
     this.dirtyLogins.push(login)
+    await timer // give post-user-reset dyanmo stream handlers time to run
     return login
   }
 
@@ -223,21 +225,15 @@ class AppSyncLoginCache {
       const {client, username} = login
       await client.clearStore()
       await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
-      this.cleanLogins.push(login)
+      this.cleanLogins.push({login, timer: misc.sleep(3000)})
       login = this.dirtyLogins.pop()
     }
   }
 
   async reset() {
     // purposefully avoiding parallelism here so we can run more test suites in parrellel
-    this.cleanLogins.forEach(({client}) => client.mutate({mutation: mutations.resetUser}))
-    let login = this.dirtyLogins.pop()
-    while (login) {
-      const {client} = login
-      await client.mutate({mutation: mutations.resetUser})
-      this.cleanLogins.push(login)
-      login = this.dirtyLogins.pop()
-    }
+    this.cleanLogins.forEach(({login: {client}}) => client.mutate({mutation: mutations.resetUser}))
+    this.dirtyLogins.forEach(({client}) => client.mutate({mutation: mutations.resetUser}))
   }
 }
 

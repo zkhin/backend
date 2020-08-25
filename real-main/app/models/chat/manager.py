@@ -110,8 +110,8 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         self.chat_message_manager.add_system_message_group_created(chat_id, created_by_user, name=name, now=now)
         return self.get_chat(chat_id, strongly_consistent=True)
 
-    def leave_all_chats(self, user_id):
-        user = None
+    def on_user_delete_leave_all_chats(self, user_id, old_item):
+        user = self.user_manager.init_user(old_item)
         for chat_id in self.member_dynamo.generate_chat_ids_by_user(user_id):
             chat = self.get_chat(chat_id)
             if not chat:
@@ -120,7 +120,6 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             if chat.type == ChatType.DIRECT:
                 chat.delete()
             else:
-                user = user or self.user_manager.get_user(user_id)
                 chat.leave(user)
 
     def record_views(self, chat_ids, user_id, viewed_at=None):

@@ -140,23 +140,6 @@ def test_private_user_can_comment_on_own_post(comment_manager, user, post):
     assert comment.id == comment_id
 
 
-def test_delete_all_by_user(comment_manager, user, post, user2, user3):
-    # add a comment by an unrelated user for distraction
-    comment_other = comment_manager.add_comment('coid', post.id, user2.id, 'lore')
-
-    # add two comments by our target user
-    comment_1 = comment_manager.add_comment('cid1', post.id, user3.id, 'lore')
-    comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
-
-    # delete all the comments by the user, verify it worked
-    comment_manager.delete_all_by_user(user3.id)
-    assert comment_manager.get_comment(comment_1.id) is None
-    assert comment_manager.get_comment(comment_2.id) is None
-
-    # verify the unrelated comment was untouched
-    assert comment_manager.get_comment(comment_other.id)
-
-
 def test_delete_all_on_post(comment_manager, user, post, post_manager, user2, user3):
     # add another post, add a comment on it for distraction
     post_other = post_manager.add_post(user, 'pid-other', PostType.TEXT_ONLY, text='go go')

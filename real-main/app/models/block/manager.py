@@ -61,10 +61,7 @@ class BlockManager:
             raise NotBlocked(blocker_user.id, blocked_user.id)
         return deleted_item
 
-    def unblock_all_blocks(self, user_id):
-        """
-        Unblock everyone who the user has blocked, or has blocked the user.
-        Intended to be called with admin-level authentication (not authenticated as the user themselves).
-        """
+    def on_user_delete_unblock_all_blocks(self, user_id, old_item):
+        "Unblock everyone who the user has blocked, or has blocked the user"
         self.dynamo.delete_all_blocks_by_user(user_id)
         self.dynamo.delete_all_blocks_of_user(user_id)

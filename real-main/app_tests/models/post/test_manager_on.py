@@ -415,7 +415,7 @@ def test_on_post_verification_hidden_change_update_is_verified(post_manager, pos
 
     # verificationHidden is set before the post is verified, check
     new_item = {**post.item, 'verificationHidden': True}
-    for old_item in [{**post.item}, {**post.item, 'verificationHidden': False}]:
+    for old_item in [{**post.item}, {**post.item, 'verificationHidden': False}, None]:
         post_manager.on_post_verification_hidden_change_update_is_verified(
             post.id, new_item=new_item, old_item=old_item
         )
@@ -425,7 +425,7 @@ def test_on_post_verification_hidden_change_update_is_verified(post_manager, pos
 
     # verificationHidden is set as True, check
     new_item = {**post.item, 'verificationHidden': True, 'isVerified': is_verified}
-    for old_item in [{**post.item}, {**post.item, 'verificationHidden': False}]:
+    for old_item in [{**post.item}, {**post.item, 'verificationHidden': False}, None]:
         post_manager.on_post_verification_hidden_change_update_is_verified(
             post.id, new_item=new_item, old_item=old_item
         )
@@ -445,3 +445,23 @@ def test_on_post_verification_hidden_change_update_is_verified(post_manager, pos
         post.refresh_item()
         assert post.item['isVerified'] is is_verified
         assert 'isVerifiedHiddenValue' not in post.item
+
+
+def test_on_user_delete_delete_all_by_user(post_manager, user):
+    assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []
+
+    # test delete none
+    post_manager.on_user_delete_delete_all_by_user(user.id, old_item=user.item)
+    assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []
+
+    # user adds two posts
+    post1 = post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
+    post2 = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='t')
+    post_items = list(post_manager.dynamo.generate_posts_by_user(user.id))
+    assert len(post_items) == 2
+    assert post_items[0]['postId'] == post1.id
+    assert post_items[1]['postId'] == post2.id
+
+    # test delete those posts
+    post_manager.on_user_delete_delete_all_by_user(user.id, old_item=user.item)
+    assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []

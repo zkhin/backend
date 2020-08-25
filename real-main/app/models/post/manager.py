@@ -246,7 +246,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
 
-    def delete_all_by_user(self, user_id):
+    def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()
 
@@ -339,7 +339,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.appsync.client.fire_notification(new_post.user_id, GqlNotificationType.POST_COMPLETED, **kwargs)
 
     def on_post_verification_hidden_change_update_is_verified(self, post_id, new_item, old_item=None):
-        old_verif_hidden = old_item.get('verificationHidden', False)
+        old_verif_hidden = (old_item or {}).get('verificationHidden', False)
         new_verif_hidden = new_item.get('verificationHidden', False)
 
         is_verif = None

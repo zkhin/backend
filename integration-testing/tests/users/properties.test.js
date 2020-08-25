@@ -382,6 +382,7 @@ test('Read properties of another public user', async () => {
 
 test('User language code - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to english
   let resp = await client.query({query: queries.user, variables: {userId}})
@@ -392,13 +393,13 @@ test('User language code - get, set, privacy', async () => {
   expect(resp.data.setUserDetails.languageCode).toBe('de')
 
   // check another user can't see our language
-  const {client: theirClient} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.languageCode).toBeNull()
 })
 
 test('User theme code - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to 'black.green'
   let resp = await client.query({query: queries.user, variables: {userId}})
@@ -414,13 +415,13 @@ test('User theme code - get, set, privacy', async () => {
 
   // Check to ensure another rando *can* see our themeCode
   // This is necessary because profile pics are planned to have some styling based on chosen theme
-  const {client: theirClient} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.themeCode).toBe('green.orange')
 })
 
 test('User accepted EULA version - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to null
   let resp = await client.query({query: queries.self})
@@ -438,7 +439,6 @@ test('User accepted EULA version - get, set, privacy', async () => {
   expect(resp.data.self.acceptedEULAVersion).toBe('2019-11-14')
 
   // check another user can't see our acepted version
-  const {client: theirClient} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.user, variables: {userId: userId}})
   expect(resp.data.user.acceptedEULAVersion).toBeNull()
 
@@ -459,6 +459,7 @@ test('User accepted EULA version - get, set, privacy', async () => {
 
 test('User commentsDisabled - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to false
   let resp = await client.query({query: queries.self})
@@ -474,7 +475,6 @@ test('User commentsDisabled - get, set, privacy', async () => {
   expect(resp.data.self.commentsDisabled).toBe(true)
 
   // check another user can't see values
-  const {client: theirClient} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.user, variables: {userId: userId}})
   expect(resp.data.user.commentsDisabled).toBeNull()
 })
@@ -500,6 +500,7 @@ test('User likesDisabled - get, set, privacy', async () => {
 
 test('User sharingDisabled - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to false
   let resp = await client.query({query: queries.self})
@@ -515,13 +516,13 @@ test('User sharingDisabled - get, set, privacy', async () => {
   expect(resp.data.self.sharingDisabled).toBe(true)
 
   // check another user can't see values
-  const {client: theirClient} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.sharingDisabled).toBeNull()
 })
 
 test('User verificationHidden - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we should default to false
   let resp = await client.query({query: queries.self})
@@ -539,7 +540,6 @@ test('User verificationHidden - get, set, privacy', async () => {
   expect(resp.data.self.verificationHidden).toBe(true)
 
   // check another user can't see values
-  const {client: theirClient} = await loginCache.getCleanLogin()
   resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.verificationHidden).toBeNull()
 })

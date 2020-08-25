@@ -265,9 +265,14 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.dynamo.delete_user_deleted(user_id)
 
     def on_user_delete(self, user_id, old_item):
+        "Delete various user-related objects/items"
         self.dynamo.add_user_deleted(user_id)
         self.elasticsearch_client.delete_user(user_id)
         self.pinpoint_client.delete_user_endpoints(user_id)
+
+        user = self.init_user(old_item)
+        user.clear_photo_s3_objects()
+        user.trending_delete()
 
     def sync_user_status_due_to(self, check_method_name, forced_by, user_id, new_item, old_item=None):
         user = self.init_user(new_item)

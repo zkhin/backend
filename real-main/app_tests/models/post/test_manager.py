@@ -554,23 +554,3 @@ def test_record_views(post_manager, user, user2, posts, caplog):
     assert post_manager.view_dynamo.get_view(post1.id, user2.id)['viewCount'] == 2
     assert post_manager.view_dynamo.get_view(post2.id, user2.id)['viewCount'] == 1
     assert user2.refresh_item().item['lastPostViewAt']
-
-
-def test_delete_all_by_user(post_manager, user):
-    assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []
-
-    # test delete none
-    post_manager.delete_all_by_user(user.id)
-    assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []
-
-    # user adds two posts
-    post1 = post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t')
-    post2 = post_manager.add_post(user, 'pid2', PostType.TEXT_ONLY, text='t')
-    post_items = list(post_manager.dynamo.generate_posts_by_user(user.id))
-    assert len(post_items) == 2
-    assert post_items[0]['postId'] == post1.id
-    assert post_items[1]['postId'] == post2.id
-
-    # test delete those posts
-    post_manager.delete_all_by_user(user.id)
-    assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []

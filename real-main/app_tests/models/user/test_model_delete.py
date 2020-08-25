@@ -5,7 +5,6 @@ from unittest import mock
 import pytest
 
 from app.models.user.enums import UserStatus
-from app.utils import image_size
 
 
 @pytest.fixture
@@ -77,44 +76,10 @@ def test_delete_user_clears_cognito(user, cognito_client):
         cognito_client.get_user_attributes(user.id)
 
 
-def test_delete_user_with_profile_pic(user):
-    post_id = 'mid'
-    photo_data = b'this is an image'
-    content_type = 'image/jpeg'
-
-    # add a profile pic of all sizes for that user
-    paths = [user.get_photo_path(size, photo_post_id=post_id) for size in image_size.JPEGS]
-    for path in paths:
-        user.s3_uploads_client.put_object(path, photo_data, content_type)
-    user.dynamo.set_user_photo_post_id(user.id, post_id)
-    user.refresh_item()
-
-    # verify s3 was populated, dynamo set
-    for size in image_size.JPEGS:
-        path = user.get_photo_path(size)
-        assert user.s3_uploads_client.exists(path)
-    assert 'photoPostId' in user.item
-
-    # moto cognito has not yet implemented admin_delete_user_attributes
-    user.cognito_client.user_pool_client.admin_delete_user_attributes = mock.Mock()
-
-    # delete the user
-    user.delete()
-
-    # verify the profile pic got removed from s3
-    for path in paths:
-        assert not user.s3_uploads_client.exists(path)
-
-
 def test_delete_user_managers_all_called(user):
     # check starting state
     assert user.follower_manager.mock_calls == []
-    assert user.post_manager.mock_calls == []
-    assert user.comment_manager.mock_calls == []
     assert user.like_manager.mock_calls == []
-    assert user.album_manager.mock_calls == []
-    assert user.block_manager.mock_calls == []
-    assert user.chat_manager.mock_calls == []
 
     # delete user, check final state
     user.delete()
@@ -122,21 +87,6 @@ def test_delete_user_managers_all_called(user):
         mock.call.reset_followed_items(user.id),
         mock.call.reset_follower_items(user.id),
     ]
-    assert user.post_manager.mock_calls == [
-        mock.call.delete_all_by_user(user.id),
-    ]
-    assert user.comment_manager.mock_calls == [
-        mock.call.delete_all_by_user(user.id),
-    ]
     assert user.like_manager.mock_calls == [
         mock.call.dislike_all_by_user(user.id),
-    ]
-    assert user.album_manager.mock_calls == [
-        mock.call.delete_all_by_user(user.id),
-    ]
-    assert user.block_manager.mock_calls == [
-        mock.call.unblock_all_blocks(user.id),
-    ]
-    assert user.chat_manager.mock_calls == [
-        mock.call.leave_all_chats(user.id),
     ]

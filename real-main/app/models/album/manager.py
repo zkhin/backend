@@ -44,7 +44,7 @@ class AlbumManager:
         album_item = self.dynamo.add_album(album_id, caller_user_id, name, description, created_at=now)
         return self.init_album(album_item)
 
-    def delete_all_by_user(self, user_id):
+    def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for album_item in self.dynamo.generate_by_user(user_id):
             self.init_album(album_item).delete()
 

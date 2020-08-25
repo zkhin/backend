@@ -73,26 +73,6 @@ def test_add_album_errors(album_manager, user):
         album_manager.add_album(user.id, album_id, 'album name')
 
 
-def test_delete_all_by_user(album_manager, user):
-    # delete all for a user that has none, verify no error
-    album_manager.delete_all_by_user('uid-none')
-
-    # add two albums for our user
-    album_id_1, album_id_2 = 'aid1', 'aid2'
-    album_manager.add_album(user.id, album_id_1, 'album name')
-    album_manager.add_album(user.id, album_id_2, 'album name')
-
-    # verify we can see those albums
-    album_items = list(album_manager.dynamo.generate_by_user(user.id))
-    assert len(album_items) == 2
-    assert album_items[0]['albumId'] == album_id_1
-    assert album_items[1]['albumId'] == album_id_2
-
-    # delete them all, verify
-    album_manager.delete_all_by_user(user.id)
-    assert list(album_manager.dynamo.generate_by_user(user.id)) == []
-
-
 def test_garbage_collect(album_manager, user):
     # add three albums: one not in the index, and three in with diff. deleteAt timestamps
     album1 = album_manager.add_album(user.id, str(uuid4()), 'album name')

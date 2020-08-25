@@ -132,7 +132,7 @@ def test_cant_unblock_if_not_blocked(block_manager, blocker_user, blocked_user):
         block_manager.unblock(blocker_user, blocked_user)
 
 
-def test_unblock_all_blocks(block_manager, blocker_user, blocked_user, blocked_user_2):
+def test_on_user_delete_unblock_all_blocks(block_manager, blocker_user, blocked_user, blocked_user_2):
     # blocker blocks both the blocked
     block_manager.block(blocker_user, blocked_user)
     block_manager.block(blocker_user, blocked_user_2)
@@ -148,7 +148,7 @@ def test_unblock_all_blocks(block_manager, blocker_user, blocked_user, blocked_u
     assert block_manager.dynamo.get_block(blocked_user_2.id, blocker_user.id) is not None
 
     # clear all our blocks
-    block_manager.unblock_all_blocks(blocker_user.id)
+    block_manager.on_user_delete_unblock_all_blocks(blocker_user.id, old_item=blocker_user.item)
 
     # check they are no longer in the db
     assert block_manager.dynamo.get_block(blocker_user.id, blocked_user.id) is None

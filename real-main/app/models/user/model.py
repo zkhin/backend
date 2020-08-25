@@ -175,21 +175,6 @@ class User(TrendingModelMixin):
 
         # delete all our likes & comments & albums & posts
         self.like_manager.dislike_all_by_user(self.id)
-        self.comment_manager.delete_all_by_user(self.id)
-        self.album_manager.delete_all_by_user(self.id)
-        self.post_manager.delete_all_by_user(self.id)
-
-        # remove all blocks of and by us
-        self.block_manager.unblock_all_blocks(self.id)
-
-        # leave all chats we are part of (auto-deletes direct & solo chats)
-        self.chat_manager.leave_all_chats(self.id)
-
-        # remove our trending item, if it's there
-        self.trending_delete()
-
-        # delete current and old profile photos
-        self.clear_photo_s3_objects()
 
         # delete our own profile. Leave our stale item around so we can serialize
         self.dynamo.delete_user(self.id)

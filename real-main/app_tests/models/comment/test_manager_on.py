@@ -88,3 +88,20 @@ def test_on_flag_add_force_delete_by_crowdsourced_criteria(comment_manager, comm
     assert len(caplog.records) == 1
     assert 'Force deleting comment' in caplog.records[0].msg
     assert comment.refresh_item().item is None
+
+
+def test_on_user_delete_delete_all_by_user(comment_manager, user, post, user2, user3):
+    # add a comment by an unrelated user for distraction
+    comment_other = comment_manager.add_comment('coid', post.id, user2.id, 'lore')
+
+    # add two comments by our target user
+    comment_1 = comment_manager.add_comment('cid1', post.id, user3.id, 'lore')
+    comment_2 = comment_manager.add_comment('cid2', post.id, user3.id, 'lore')
+
+    # delete all the comments by the user, verify it worked
+    comment_manager.on_user_delete_delete_all_by_user(user3.id, old_item=user3.item)
+    assert comment_manager.get_comment(comment_1.id) is None
+    assert comment_manager.get_comment(comment_2.id) is None
+
+    # verify the unrelated comment was untouched
+    assert comment_manager.get_comment(comment_other.id)

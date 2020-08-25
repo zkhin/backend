@@ -244,6 +244,7 @@ test('resetUser deletes users flags of posts', async () => {
   await ourClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ourUsername}})
 
   // check we can that we have not flagged the post
+  await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.flagStatus).toBe('NOT_FLAGGED')
 })
@@ -391,6 +392,7 @@ test('resetUser causes us to leave group chats', async () => {
 
   // check we disappeared from the chat, and our message now appears without an author
   // and another system message showed up
+  await misc.sleep(2000)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.userCount).toBe(1)
