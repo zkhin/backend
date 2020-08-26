@@ -96,3 +96,10 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, cv1, cv2, cv3):
         assert new_item.pop('gsiA2PartitionKey')
         assert new_item.pop('gsiA2SortKey')
         assert new_item == item
+
+    # migrate again, test no-op
+    caplog.clear()
+    migration = Migration(dynamo_client, dynamo_table)
+    with caplog.at_level(logging.WARNING):
+        migration.run()
+    assert len(caplog.records) == 0

@@ -23,7 +23,13 @@ class Migration:
     def generate_all_post_views(self):
         "Return a generator of all items in the table that pass the filter"
         scan_kwargs = {
-            'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND begins_with(sortKey, :sk_prefix)',
+            'FilterExpression': ' AND '.join(
+                [
+                    'begins_with(partitionKey, :pk_prefix)',
+                    'begins_with(sortKey, :sk_prefix)',
+                    'attribute_not_exists(gsiA1PartitionKey)',
+                ]
+            ),
             'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sk_prefix': 'view/'},
         }
         while True:
