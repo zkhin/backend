@@ -49,8 +49,6 @@ class ViewDynamo:
                 'gsiA1SortKey': viewed_at_str,
                 'gsiA2PartitionKey': f'{self.item_type}View/{user_id}',
                 'gsiA2SortKey': viewed_at_str,
-                'gsiK1PartitionKey': key['partitionKey'],  # DEPRECATED
-                'gsiK1SortKey': f'view/{viewed_at_str}',  # DEPRECATED
                 'schemaVersion': 0,
                 'viewCount': view_count,
                 'firstViewedAt': viewed_at_str,

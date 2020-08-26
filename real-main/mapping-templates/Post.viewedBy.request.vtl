@@ -19,10 +19,9 @@
   "version": "2018-05-29",
   "operation": "Query",
   "query": {
-    "expression": "gsiK1PartitionKey = :pk and begins_with(gsiK1SortKey, :skPrefix)",
+    "expression": "gsiA1PartitionKey = :pk",
     "expressionValues": {
-      ":pk": { "S": "post/$ctx.source.postId" },
-      ":skPrefix": { "S": "view/" }
+      ":pk": { "S": "postView/$ctx.source.postId" }
     }
   },
   "filter": {
@@ -31,7 +30,7 @@
       ":sk": { "S": "view/$callerUserId" }
     }
   },
-  "index": "GSI-K1",
+  "index": "GSI-A1",
   "limit": $limit
   #if ($ctx.args.nextToken)
   , "nextToken": "$ctx.args.nextToken"
