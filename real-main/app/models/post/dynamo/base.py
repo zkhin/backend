@@ -147,6 +147,9 @@ class PostDynamo:
     def increment_viewed_by_count(self, post_id):
         return self.client.increment_count(self.pk(post_id), 'viewedByCount')
 
+    def decrement_viewed_by_count(self, post_id):
+        return self.client.decrement_count(self.pk(post_id), 'viewedByCount')
+
     def set_post_status(self, post_item, status, status_reason=None, original_post_id=None, album_rank=None):
         album_id = post_item.get('albumId')
 

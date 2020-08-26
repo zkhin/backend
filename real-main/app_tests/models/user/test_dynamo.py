@@ -492,7 +492,7 @@ def test_set_last_client(user_dynamo):
         ['increment_post_archived_count', 'decrement_post_archived_count', 'postArchivedCount'],
         ['increment_post_forced_archiving_count', None, 'postForcedArchivingCount'],
         ['increment_post_deleted_count', None, 'postDeletedCount'],
-        ['increment_post_viewed_by_count', None, 'postViewedByCount'],
+        ['increment_post_viewed_by_count', 'decrement_post_viewed_by_count', 'postViewedByCount'],
     ],
 )
 def test_increment_decrement_count(user_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):

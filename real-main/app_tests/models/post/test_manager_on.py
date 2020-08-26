@@ -465,3 +465,39 @@ def test_on_user_delete_delete_all_by_user(post_manager, user):
     # test delete those posts
     post_manager.on_user_delete_delete_all_by_user(user.id, old_item=user.item)
     assert list(post_manager.dynamo.generate_posts_by_user(user.id)) == []
+
+
+def test_on_post_view_add_delete_sync_viewed_by_counts(post_manager, post, caplog):
+    assert 'viewedByCount' not in post.refresh_item().item
+    assert 'postViewedByCount' not in post.user.refresh_item().item
+    item_post_owner = {'sortKey': f'view/{post.user_id}'}
+    item_other_user = {'sortKey': f'view/{uuid4()}'}
+
+    # trigger for creation of a new post view, verify
+    post_manager.on_post_view_add_delete_sync_viewed_by_counts(post.id, new_item=item_other_user)
+    assert post.refresh_item().item['viewedByCount'] == 1
+    assert post.user.refresh_item().item['postViewedByCount'] == 1
+
+    # trigger for creation of a new post view by post owner, verify does not affect counts
+    post_manager.on_post_view_add_delete_sync_viewed_by_counts(post.id, new_item=item_post_owner)
+    assert post.refresh_item().item['viewedByCount'] == 1
+    assert post.user.refresh_item().item['postViewedByCount'] == 1
+
+    # trigger for deletion of a post view by post owner, verify does not affect counts
+    post_manager.on_post_view_add_delete_sync_viewed_by_counts(post.id, old_item=item_post_owner)
+    assert post.refresh_item().item['viewedByCount'] == 1
+    assert post.user.refresh_item().item['postViewedByCount'] == 1
+
+    # trigger for deletion of post view, verify
+    post_manager.on_post_view_add_delete_sync_viewed_by_counts(post.id, old_item=item_other_user)
+    assert post.refresh_item().item['viewedByCount'] == 0
+    assert post.user.refresh_item().item['postViewedByCount'] == 0
+
+    # trigger for deletion of post view, verify logs error doesn't crash
+    with caplog.at_level(logging.WARNING):
+        post_manager.on_post_view_add_delete_sync_viewed_by_counts(post.id, old_item=item_other_user)
+    assert len(caplog.records) == 2
+    assert all(x in caplog.records[0].msg for x in ('Failed to decrement viewedByCount', post.id))
+    assert all(x in caplog.records[1].msg for x in ('Failed to decrement postViewedByCount', post.user_id))
+    assert post.refresh_item().item['viewedByCount'] == 0
+    assert post.user.refresh_item().item['postViewedByCount'] == 0

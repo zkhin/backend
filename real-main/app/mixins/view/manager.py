@@ -15,5 +15,9 @@ class ViewManagerMixin:
         raise NotImplementedError  # subclasses must implement
 
     def on_item_delete_delete_views(self, item_id, old_item):
-        pk_generator = self.view_dynamo.generate_views(item_id, pks_only=True)
-        self.view_dynamo.delete_views(pk_generator)
+        key_gen = self.view_dynamo.generate_keys_by_item(item_id)
+        self.view_dynamo.client.batch_delete_items(key_gen)
+
+    def on_user_delete_delete_views(self, user_id, old_item):
+        key_gen = self.view_dynamo.generate_keys_by_user(user_id)
+        self.view_dynamo.client.batch_delete_items(key_gen)

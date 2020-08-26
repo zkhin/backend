@@ -1000,7 +1000,7 @@ def test_transact_increment_decrement_clear_comments_unviewed_count(post_dynamo,
         ['increment_comment_count', 'decrement_comment_count', 'commentCount'],
         ['increment_flag_count', 'decrement_flag_count', 'flagCount'],
         ['increment_onymous_like_count', 'decrement_onymous_like_count', 'onymousLikeCount'],
-        ['increment_viewed_by_count', None, 'viewedByCount'],
+        ['increment_viewed_by_count', 'decrement_viewed_by_count', 'viewedByCount'],
     ],
 )
 def test_increment_decrement_count(post_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):

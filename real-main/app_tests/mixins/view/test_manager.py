@@ -65,3 +65,35 @@ def test_on_item_delete_delete_views(manager, model1, model2, user, user2):
     assert manager.view_dynamo.get_view(model2.id, user.id) is None
     assert manager.view_dynamo.get_view(model1.id, user2.id) is None
     assert manager.view_dynamo.get_view(model2.id, user2.id) is None
+
+
+@pytest.mark.parametrize(
+    'manager, model1, model2',
+    [
+        pytest.lazy_fixture(['post_manager', 'post', 'post2']),
+        pytest.lazy_fixture(['chat_manager', 'chat', 'chat2']),
+    ],
+)
+def test_on_user_delete_delete_views(manager, model1, model2, user, user2):
+    # configure starting state, verify
+    model1.record_view_count(user.id, 3)
+    model2.record_view_count(user.id, 3)
+    model1.record_view_count(user2.id, 3)
+    assert manager.view_dynamo.get_view(model1.id, user.id)
+    assert manager.view_dynamo.get_view(model2.id, user.id)
+    assert manager.view_dynamo.get_view(model1.id, user2.id)
+    assert manager.view_dynamo.get_view(model2.id, user2.id) is None
+
+    # delete views for one user, verify
+    manager.on_user_delete_delete_views(user.id, old_item=user.item)
+    assert manager.view_dynamo.get_view(model1.id, user.id) is None
+    assert manager.view_dynamo.get_view(model2.id, user.id) is None
+    assert manager.view_dynamo.get_view(model1.id, user2.id)
+    assert manager.view_dynamo.get_view(model2.id, user2.id) is None
+
+    # delete views for the other user, verify
+    manager.on_user_delete_delete_views(user2.id, old_item=user2.item)
+    assert manager.view_dynamo.get_view(model1.id, user.id) is None
+    assert manager.view_dynamo.get_view(model2.id, user.id) is None
+    assert manager.view_dynamo.get_view(model1.id, user2.id) is None
+    assert manager.view_dynamo.get_view(model2.id, user2.id) is None

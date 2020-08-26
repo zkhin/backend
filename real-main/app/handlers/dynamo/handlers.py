@@ -168,6 +168,7 @@ register(
 register(
     'post', 'view', ['INSERT', 'MODIFY'], post_manager.on_post_view_count_change_update_counts, {'viewCount': 0},
 )
+register('post', 'view', ['INSERT', 'REMOVE'], post_manager.on_post_view_add_delete_sync_viewed_by_counts)
 register(
     'user',
     'follower',
@@ -281,6 +282,7 @@ register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_r
 register('user', 'profile', ['REMOVE'], block_manager.on_user_delete_unblock_all_blocks)
 register('user', 'profile', ['REMOVE'], card_manager.on_user_delete_delete_cards)
 register('user', 'profile', ['REMOVE'], chat_manager.on_user_delete_delete_flags)
+register('user', 'profile', ['REMOVE'], chat_manager.on_user_delete_delete_views)
 register('user', 'profile', ['REMOVE'], chat_manager.on_user_delete_leave_all_chats)
 register('user', 'profile', ['REMOVE'], chat_message_manager.on_user_delete_delete_flags)
 register('user', 'profile', ['REMOVE'], comment_manager.on_user_delete_delete_all_by_user)
@@ -289,6 +291,7 @@ register('user', 'profile', ['REMOVE'], follower_manager.on_user_delete_delete_f
 register('user', 'profile', ['REMOVE'], like_manager.on_user_delete_dislike_all_by_user)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_flags)
+register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_views)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete_delete_cognito)
 

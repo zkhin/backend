@@ -42,32 +42,6 @@ def test_record_view_count_logs_warning_for_non_completed_posts(post, user2, cap
     assert post.id in caplog.records[0].msg
 
 
-def test_record_view_count_increments_counters(post, user2, user3):
-    # check starting state
-    assert post.refresh_item().item.get('viewedByCount', 0) == 0
-    assert post.user.refresh_item().item.get('postViewedByCount', 0) == 0
-
-    # verify recording view by post owner doesn't affect these counters
-    post.record_view_count(post.user_id, 2)
-    assert post.refresh_item().item.get('viewedByCount', 0) == 0
-    assert post.user.refresh_item().item.get('postViewedByCount', 0) == 0
-
-    # verify recording view by rando increments counters
-    post.record_view_count(user2.id, 2)
-    assert post.refresh_item().item.get('viewedByCount', 0) == 1
-    assert post.user.refresh_item().item.get('postViewedByCount', 0) == 1
-
-    # verify recording view by rando increments counters
-    post.record_view_count(user3.id, 2)
-    assert post.refresh_item().item.get('viewedByCount', 0) == 2
-    assert post.user.refresh_item().item.get('postViewedByCount', 0) == 2
-
-    # verify recording view by rando that's already viewed does not increment counters
-    post.record_view_count(user2.id, 2)
-    assert post.refresh_item().item.get('viewedByCount', 0) == 2
-    assert post.user.refresh_item().item.get('postViewedByCount', 0) == 2
-
-
 def test_record_view_count_records_to_original_post_as_well(post, post2, user2):
     # verify post owner's view doesn't make it up to the original
     post.item['originalPostId'] = post2.id

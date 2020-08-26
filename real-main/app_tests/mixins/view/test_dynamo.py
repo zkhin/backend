@@ -32,6 +32,10 @@ def test_add_and_increment_view(view_dynamo):
         'partitionKey': 'itype/iid',
         'sortKey': 'view/uid',
         'schemaVersion': 0,
+        'gsiA1PartitionKey': 'itypeView/iid',
+        'gsiA1SortKey': viewed_at_str,
+        'gsiA2PartitionKey': 'itypeView/uid',
+        'gsiA2SortKey': viewed_at_str,
         'gsiK1PartitionKey': 'itype/iid',
         'gsiK1SortKey': f'view/{viewed_at_str}',
         'viewCount': 5,
@@ -53,6 +57,10 @@ def test_add_and_increment_view(view_dynamo):
         'partitionKey': 'itype/iid',
         'sortKey': 'view/uid',
         'schemaVersion': 0,
+        'gsiA1PartitionKey': 'itypeView/iid',
+        'gsiA1SortKey': viewed_at_str,
+        'gsiA2PartitionKey': 'itypeView/uid',
+        'gsiA2SortKey': viewed_at_str,
         'gsiK1PartitionKey': 'itype/iid',
         'gsiK1SortKey': f'view/{viewed_at_str}',
         'viewCount': 10,
@@ -64,47 +72,27 @@ def test_add_and_increment_view(view_dynamo):
     assert view_dynamo.get_view(item_id, user_id) == view
 
 
-def test_generate_views(view_dynamo):
-    item_id = 'iid'
+def test_generate_keys_by_item_and_generate_keys_by_user(view_dynamo):
+    item_id_1, item_id_2 = str(uuid4()), str(uuid4())
+    user_id_1, user_id_2 = str(uuid4()), str(uuid4())
 
-    # set up a decoy item with same partitionKey
-    view_dynamo.client.add_item({'Item': {'partitionKey': 'itype/iid', 'sortKey': '-'}})
+    # user1 views both items, user2 views just item2
+    view_dynamo.add_view(item_id_1, user_id_1, 1, pendulum.now('utc'))
+    view_dynamo.add_view(item_id_2, user_id_1, 1, pendulum.now('utc'))
+    view_dynamo.add_view(item_id_2, user_id_2, 1, pendulum.now('utc'))
+    vk11 = view_dynamo.key(item_id_1, user_id_1)
+    vk12 = view_dynamo.key(item_id_2, user_id_1)
+    vk22 = view_dynamo.key(item_id_2, user_id_2)
 
-    # test generating no views
-    assert list(view_dynamo.generate_views(item_id)) == []
-    assert list(view_dynamo.generate_views(item_id, pks_only=True)) == []
+    # verify generation by item
+    assert list(view_dynamo.generate_keys_by_item(str(uuid4()))) == []
+    assert list(view_dynamo.generate_keys_by_item(item_id_1)) == [vk11]
+    assert list(view_dynamo.generate_keys_by_item(item_id_2)) == sorted([vk22, vk12], key=lambda x: x['sortKey'])
 
-    # add a view, test we generate it
-    user_id_1 = 'uid1'
-    view_dynamo.add_view(item_id, user_id_1, 1, pendulum.now('utc'))
-
-    views = list(view_dynamo.generate_views(item_id))
-    assert len(views) == 1
-    assert views[0]['partitionKey'] == 'itype/iid'
-    assert views[0]['sortKey'] == 'view/uid1'
-    assert views[0]['viewCount'] == 1
-
-    pks = list(view_dynamo.generate_views(item_id, pks_only=True))
-    assert len(pks) == 1
-    assert pks[0] == {'partitionKey': 'itype/iid', 'sortKey': 'view/uid1'}
-
-    # add another view, test they both generate
-    user_id_0 = 'uid0'
-    view_dynamo.add_view(item_id, user_id_0, 2, pendulum.now('utc'))
-
-    views = list(view_dynamo.generate_views(item_id))
-    assert len(views) == 2
-    assert views[0]['partitionKey'] == 'itype/iid'
-    assert views[0]['sortKey'] == 'view/uid0'
-    assert views[0]['viewCount'] == 2
-    assert views[1]['partitionKey'] == 'itype/iid'
-    assert views[1]['sortKey'] == 'view/uid1'
-    assert views[1]['viewCount'] == 1
-
-    pks = list(view_dynamo.generate_views(item_id, pks_only=True))
-    assert len(pks) == 2
-    assert pks[0] == {'partitionKey': 'itype/iid', 'sortKey': 'view/uid0'}
-    assert pks[1] == {'partitionKey': 'itype/iid', 'sortKey': 'view/uid1'}
+    # verify generation by user
+    assert list(view_dynamo.generate_keys_by_user(str(uuid4()))) == []
+    assert list(view_dynamo.generate_keys_by_user(user_id_1)) == [vk11, vk12]
+    assert list(view_dynamo.generate_keys_by_user(user_id_2)) == [vk22]
 
 
 def test_delete_view(view_dynamo):
@@ -125,23 +113,3 @@ def test_delete_view(view_dynamo):
     # delete a view that doesn't exist, should fail softly
     resp = view_dynamo.delete_view(item_id1, user_id1)
     assert resp is None
-
-
-def test_delete_views(view_dynamo):
-    # test empty delete, should not error out
-    view_dynamo.delete_views(x for x in ())
-
-    # add two views
-    view1 = view_dynamo.add_view('iid1', 'uid1', 1, pendulum.now('utc'))
-    view2 = view_dynamo.add_view('iid2', 'uid2', 2, pendulum.now('utc'))
-
-    # verify we see both of those in the db
-    assert view_dynamo.get_view('iid1', 'uid1')
-    assert view_dynamo.get_view('iid2', 'uid2')
-
-    # delete them
-    view_dynamo.delete_views(x for x in (view1, view2))
-
-    # verify they're gone
-    assert view_dynamo.get_view('iid1', 'uid1') is None
-    assert view_dynamo.get_view('iid2', 'uid2') is None

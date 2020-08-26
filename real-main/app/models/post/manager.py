@@ -350,3 +350,19 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
         if is_verif is not None:
             self.dynamo.set_is_verified(post_id, is_verif, hidden=new_verif_hidden)
+
+    def on_post_view_add_delete_sync_viewed_by_counts(self, post_id, new_item=None, old_item=None):
+        assert not (new_item and old_item), 'Should only be called for INSERT and REMOVE'
+        user_id = (new_item or old_item)['sortKey'].split('/')[1]
+        post = self.get_post(post_id)
+
+        # ignore posts that have been deleted and our own views on our own post
+        if not post or post.user_id == user_id:
+            return
+
+        if new_item:
+            self.dynamo.increment_viewed_by_count(post_id)
+            self.user_manager.dynamo.increment_post_viewed_by_count(post.user_id)
+        if old_item:
+            self.dynamo.decrement_viewed_by_count(post_id)
+            self.user_manager.dynamo.decrement_post_viewed_by_count(post.user_id)
