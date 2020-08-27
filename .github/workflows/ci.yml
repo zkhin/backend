@@ -62,7 +62,9 @@ jobs:
         python-version: 3.8
 
     - name: Install python lint tools
-      run: pip install black flake8 flake8-bugbear isort pylint
+      run: |
+        pip install --pre 'black<20'
+        pip install 'flake8<4' 'flake8-bugbear<21' 'isort<6' 'pylint<3'
 
     - name: Lint real-auth
       working-directory: real-auth
