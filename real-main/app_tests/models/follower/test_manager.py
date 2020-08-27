@@ -30,7 +30,11 @@ other_users = users
 def their_post(follower_manager, users, post_manager):
     "Give them a completed post with an expiration in the next 24 hours"
     post = post_manager.add_post(
-        users[1], str(uuid4()), PostType.TEXT_ONLY, lifetime_duration=pendulum.duration(hours=12), text='t',
+        users[1],
+        str(uuid4()),
+        PostType.TEXT_ONLY,
+        lifetime_duration=pendulum.duration(hours=12),
+        text='t',
     )
     yield post
 

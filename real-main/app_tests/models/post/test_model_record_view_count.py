@@ -80,7 +80,11 @@ def test_non_verified_image_posts_trend_with_lower_multiplier(post_manager, user
     now = pendulum.parse('2020-06-09T00:00:00Z')  # exact begining of day so post gets exactly one free trending
     post_manager.clients['post_verification'].configure_mock(**{'verify_image.return_value': False})
     post = post_manager.add_post(
-        user, str(uuid.uuid4()), PostType.IMAGE, image_input={'imageData': image_data_b64}, now=now,
+        user,
+        str(uuid.uuid4()),
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        now=now,
     )
     assert post.type == PostType.IMAGE
     assert post.is_verified is False

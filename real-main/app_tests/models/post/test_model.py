@@ -94,7 +94,11 @@ def albums(album_manager, user2):
 @pytest.fixture
 def post_with_expiration(post_manager, user2):
     yield post_manager.add_post(
-        user2, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user2,
+        'pid2',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=pendulum.duration(hours=1),
     )
 
 
@@ -545,13 +549,25 @@ def test_set_album_order_lots_of_set_middle(user2, albums, post_manager, image_d
     # album with three posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid1',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid2',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
     post3 = post_manager.add_post(
-        user2, 'pid3', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid3',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
 
     # check starting state
@@ -585,10 +601,18 @@ def test_set_album_order_lots_of_set_front(user2, albums, post_manager, image_da
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid1',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid2',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
 
     # check starting state
@@ -616,10 +640,18 @@ def test_set_album_order_lots_of_set_back(user2, albums, post_manager, image_dat
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid1',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid2',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
 
     # check starting state
@@ -647,10 +679,18 @@ def test_set_album_order_no_op(user2, albums, post_manager, image_data_b64):
     # album with two posts in it
     album, _ = albums
     post1 = post_manager.add_post(
-        user2, 'pid1', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid1',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
     post2 = post_manager.add_post(
-        user2, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user2,
+        'pid2',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
 
     # check starting state

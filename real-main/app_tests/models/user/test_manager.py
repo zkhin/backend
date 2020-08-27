@@ -190,9 +190,7 @@ def test_create_cognito_only_user_username_taken(user_manager, cognito_only_user
     username_2 = cognito_only_user.username.lower()
 
     # frontend does this part out-of-band: creates the user in cognito, no preferred_username
-    cognito_client.user_pool_client.admin_create_user(
-        UserPoolId=cognito_client.user_pool_id, Username=user_id,
-    )
+    cognito_client.user_pool_client.admin_create_user(UserPoolId=cognito_client.user_pool_id, Username=user_id)
 
     # moto doesn't seem to honor the 'make preferred usernames unique' setting (using it as an alias)
     # so mock it's response like to simulate that it does
@@ -337,7 +335,8 @@ def test_create_federated_user_email_taken(user_manager, provider):
     email = f'{username}@somedomain.com'
     user_manager.clients[provider].configure_mock(**{'get_verified_email.return_value': email})
     exception = user_manager.cognito_client.user_pool_client.exceptions.UsernameExistsException(
-        {'Error': {'Code': '<code>', 'Message': 'An account with the email already exists.'}}, '<operation name>',
+        {'Error': {'Code': '<code>', 'Message': 'An account with the email already exists.'}},
+        '<operation name>',
     )
     user_manager.cognito_client.user_pool_client.admin_create_user = mock.Mock(side_effect=exception)
     with pytest.raises(UserValidationException, match=f'Email `{email}` already taken'):

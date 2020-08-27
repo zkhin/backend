@@ -469,7 +469,11 @@ def test_delete_older_expired_posts(post_manager, user, caplog):
     assert 'expiresAt' not in post_no_expires.item
 
     post_future_expires = post_manager.add_post(
-        user, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user,
+        'pid2',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=pendulum.duration(hours=1),
     )
     assert post_future_expires.item['expiresAt'] > now.to_iso8601_string()
 

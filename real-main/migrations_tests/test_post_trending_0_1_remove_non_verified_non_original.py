@@ -68,7 +68,7 @@ def image_ok_2(dynamo_table):
 @pytest.fixture
 def not_verified(dynamo_table):
     post_id = str(uuid4())
-    dynamo_table.put_item(Item={'partitionKey': f'post/{post_id}', 'sortKey': '-', 'postId': post_id},)
+    dynamo_table.put_item(Item={'partitionKey': f'post/{post_id}', 'sortKey': '-', 'postId': post_id})
     dynamo_table.put_item(
         Item={
             'partitionKey': f'post/{post_id}',

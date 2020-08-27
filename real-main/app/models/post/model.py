@@ -354,7 +354,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # complete the post
         self.item = self.dynamo.set_post_status(
-            self.item, PostStatus.COMPLETED, original_post_id=original_post_id, album_rank=album_rank,
+            self.item,
+            PostStatus.COMPLETED,
+            original_post_id=original_post_id,
+            album_rank=album_rank,
         )
 
         # update the user's profile photo, if needed

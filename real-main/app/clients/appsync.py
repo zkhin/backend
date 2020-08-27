@@ -51,7 +51,10 @@ class AppSyncClient:
             session_token=creds.token,
         )
         transport = gql.transport.requests.RequestsHTTPTransport(
-            url=self.appsync_graphql_url, use_json=True, headers=self.headers, auth=auth,
+            url=self.appsync_graphql_url,
+            use_json=True,
+            headers=self.headers,
+            auth=auth,
         )
         resp = transport.execute(query, variables)
         if resp.errors:

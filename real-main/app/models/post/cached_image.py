@@ -134,7 +134,8 @@ class CachedImage:
                 elif self._image:
                     assert self.content_type == 'image/jpeg', 'Non-jpeg images can only be flushed back empty'
                     fh = io.BytesIO()
-                    kwargs = {  # Note: Pillow's Image.save treats None differently than not present for some kwargs
+                    # Note: Pillow's Image.save treats None differently than not present for some kwargs
+                    kwargs = {
                         k: v
                         for k, v in {
                             'format': 'JPEG',

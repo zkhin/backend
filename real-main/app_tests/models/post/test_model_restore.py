@@ -18,7 +18,11 @@ def user(user_manager, cognito_client):
 @pytest.fixture
 def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
-        user, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user,
+        'pid2',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=pendulum.duration(hours=1),
     )
 
 

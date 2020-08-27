@@ -23,7 +23,11 @@ user3 = user
 @pytest.fixture
 def post_with_expiration(post_manager, user):
     yield post_manager.add_post(
-        user, 'pid2', PostType.TEXT_ONLY, text='t', lifetime_duration=pendulum.duration(hours=1),
+        user,
+        'pid2',
+        PostType.TEXT_ONLY,
+        text='t',
+        lifetime_duration=pendulum.duration(hours=1),
     )
 
 
@@ -31,7 +35,11 @@ def post_with_expiration(post_manager, user):
 def post_with_album(album_manager, post_manager, user, image_data_b64):
     album = album_manager.add_album(user.id, 'aid', 'album name')
     yield post_manager.add_post(
-        user, 'pid2', PostType.IMAGE, image_input={'imageData': image_data_b64}, album_id=album.id,
+        user,
+        'pid2',
+        PostType.IMAGE,
+        image_input={'imageData': image_data_b64},
+        album_id=album.id,
     )
 
 

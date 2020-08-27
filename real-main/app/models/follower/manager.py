@@ -137,7 +137,9 @@ class FollowerManager:
         if new_item:
             kwargs['postId'] = new_item['postId']
         self.appsync_client.fire_notification(
-            follower_user_id, GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED, **kwargs,
+            follower_user_id,
+            GqlNotificationType.USER_FOLLOWED_USERS_WITH_STORIES_CHANGED,
+            **kwargs,
         )
 
     def on_user_follow_status_change_sync_first_story(self, user_id, new_item=None, old_item=None):

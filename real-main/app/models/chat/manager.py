@@ -79,7 +79,11 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
         transacts = [
             self.dynamo.transact_add(
-                chat_id, ChatType.DIRECT, created_by_user_id, with_user_id=with_user_id, now=now,
+                chat_id,
+                ChatType.DIRECT,
+                created_by_user_id,
+                with_user_id=with_user_id,
+                now=now,
             ),
             self.member_dynamo.transact_add(chat_id, created_by_user_id, now=now),
             self.member_dynamo.transact_add(chat_id, with_user_id, now=now),

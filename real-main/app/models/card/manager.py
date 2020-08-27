@@ -131,10 +131,14 @@ class CardManager:
             self.dynamo.delete_card(card_template.card_id)
 
     on_user_followers_requested_count_change_sync_card = partialmethod(
-        on_user_count_change_sync_card, 'followersRequestedCount', templates.RequestedFollowersCardTemplate,
+        on_user_count_change_sync_card,
+        'followersRequestedCount',
+        templates.RequestedFollowersCardTemplate,
     )
     on_user_chats_with_unviewed_messages_count_change_sync_card = partialmethod(
-        on_user_count_change_sync_card, 'chatsWithUnviewedMessagesCount', templates.ChatCardTemplate,
+        on_user_count_change_sync_card,
+        'chatsWithUnviewedMessagesCount',
+        templates.ChatCardTemplate,
     )
 
     def on_post_original_post_id_change_update_card(self, post_id, new_item, old_item=None):
@@ -188,11 +192,17 @@ class CardManager:
             self.add_or_update_card(card_template)
 
     on_comment_text_tags_change_update_card = partialmethod(
-        on_text_tags_change_update_card, 'comment_manager', 'init_comment', templates.CommentMentionCardTemplate,
+        on_text_tags_change_update_card,
+        'comment_manager',
+        'init_comment',
+        templates.CommentMentionCardTemplate,
     )
 
     on_post_text_tags_change_update_card = partialmethod(
-        on_text_tags_change_update_card, 'post_manager', 'init_post', templates.PostMentionCardTemplate,
+        on_text_tags_change_update_card,
+        'post_manager',
+        'init_post',
+        templates.PostMentionCardTemplate,
     )
 
     def on_post_viewed_by_count_change_update_card(self, post_id, new_item, old_item=None):

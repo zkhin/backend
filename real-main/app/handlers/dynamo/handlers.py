@@ -94,7 +94,11 @@ register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
 register('comment', '-', ['INSERT'], user_manager.on_comment_add)
 register(
-    'comment', '-', ['INSERT', 'MODIFY'], card_manager.on_comment_text_tags_change_update_card, {'textTags': []},
+    'comment',
+    '-',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_comment_text_tags_change_update_card,
+    {'textTags': []},
 )
 register('comment', '-', ['REMOVE'], card_manager.on_comment_delete_delete_cards)
 register('comment', '-', ['REMOVE'], comment_manager.on_item_delete_delete_flags)
@@ -124,7 +128,11 @@ register(
     {'originalPostId': None},
 )
 register(
-    'post', '-', ['INSERT', 'MODIFY'], card_manager.on_post_text_tags_change_update_card, {'textTags': []},
+    'post',
+    '-',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_post_text_tags_change_update_card,
+    {'textTags': []},
 )
 register(
     'post',
@@ -164,10 +172,18 @@ register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
 register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
 register(
-    'post', 'view', ['INSERT', 'MODIFY'], card_manager.on_post_view_count_change_update_cards, {'viewCount': 0},
+    'post',
+    'view',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_post_view_count_change_update_cards,
+    {'viewCount': 0},
 )
 register(
-    'post', 'view', ['INSERT', 'MODIFY'], post_manager.on_post_view_count_change_update_counts, {'viewCount': 0},
+    'post',
+    'view',
+    ['INSERT', 'MODIFY'],
+    post_manager.on_post_view_count_change_update_counts,
+    {'viewCount': 0},
 )
 register('post', 'view', ['INSERT', 'REMOVE'], post_manager.on_post_view_add_delete_sync_viewed_by_counts)
 register(

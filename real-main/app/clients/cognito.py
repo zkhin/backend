@@ -42,7 +42,10 @@ class CognitoClient:
         # we use to allow users to add a password-based login to their account (assuming
         # they started with a federate auth login).
         self.user_pool_client.admin_set_user_password(
-            UserPoolId=self.user_pool_id, Username=user_id, Password=str(uuid4()), Permanent=True,
+            UserPoolId=self.user_pool_id,
+            Username=user_id,
+            Password=str(uuid4()),
+            Permanent=True,
         )
 
     def get_user_pool_id_token(self, user_id):
@@ -87,7 +90,9 @@ class CognitoClient:
 
     def clear_user_attribute(self, user_id, name):
         self.user_pool_client.admin_delete_user_attributes(
-            UserPoolId=self.user_pool_id, Username=user_id, UserAttributeNames=[name],
+            UserPoolId=self.user_pool_id,
+            Username=user_id,
+            UserAttributeNames=[name],
         )
 
     def get_user_attributes(self, user_id):
@@ -97,7 +102,9 @@ class CognitoClient:
     def verify_user_attribute(self, access_token, attribute_name, code):
         "Raises an exception for failure, else success"
         self.user_pool_client.verify_user_attribute(
-            AccessToken=access_token, AttributeName=attribute_name, Code=code,
+            AccessToken=access_token,
+            AttributeName=attribute_name,
+            Code=code,
         )
 
     def get_user_status(self, user_id):
@@ -118,9 +125,7 @@ class CognitoClient:
         return user_items
 
     def delete_user_pool_entry(self, user_id):
-        self.user_pool_client.admin_delete_user(
-            UserPoolId=self.user_pool_id, Username=user_id,
-        )
+        self.user_pool_client.admin_delete_user(UserPoolId=self.user_pool_id, Username=user_id)
 
     def delete_identity_pool_entry(self, user_id):
         self.identity_pool_client.delete_identities(IdentityIdsToDelete=[user_id])

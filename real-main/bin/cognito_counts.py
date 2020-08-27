@@ -34,7 +34,10 @@ def parse_args():
         help='Only count users that were created in this date. Ex: 2020-05-19',
     )
     parser.add_argument(
-        '-s', dest='status', choices=USER_STASTUSES, help='Only count users with the given user status',
+        '-s',
+        dest='status',
+        choices=USER_STASTUSES,
+        help='Only count users with the given user status',
     )
     args = parser.parse_args()
     return args.date, args.status

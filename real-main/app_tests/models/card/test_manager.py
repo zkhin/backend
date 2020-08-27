@@ -238,7 +238,8 @@ def test_notify_users(card_manager, pinpoint_client, user, user2, TestCardTempla
 
     # add a card with a notification in the far future
     card1 = card_manager.add_or_update_card(
-        TestCardTemplate(user.id, title='t1', action='a1', notify_user_after=pendulum.duration(hours=1)), now=now,
+        TestCardTemplate(user.id, title='t1', action='a1', notify_user_after=pendulum.duration(hours=1)),
+        now=now,
     )
     assert card1.notify_user_at == now + pendulum.duration(hours=1)
 
@@ -310,7 +311,8 @@ def test_notify_users_failed_notification(card_manager, pinpoint_client, user, T
     # add card with a notification in the immediate past
     now = pendulum.now('utc')
     card = card_manager.add_or_update_card(
-        TestCardTemplate(user.id, title='t', action='a', notify_user_after=pendulum.duration()), now=now,
+        TestCardTemplate(user.id, title='t', action='a', notify_user_after=pendulum.duration()),
+        now=now,
     )
     assert card.notify_user_at == now
 

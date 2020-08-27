@@ -30,10 +30,14 @@ def test_basic(dynamo_client, dynamo_table):
         },
     )
     dynamo_table.update_item(
-        Key=post_pk_1, UpdateExpression='ADD viewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=post_pk_1,
+        UpdateExpression='ADD viewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
     dynamo_table.update_item(
-        Key=user_pk, UpdateExpression='ADD postViewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=user_pk,
+        UpdateExpression='ADD postViewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
 
     # create a postView by someone else on post 1 (with counts on post and user)
@@ -49,10 +53,14 @@ def test_basic(dynamo_client, dynamo_table):
         },
     )
     dynamo_table.update_item(
-        Key=post_pk_1, UpdateExpression='ADD viewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=post_pk_1,
+        UpdateExpression='ADD viewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
     dynamo_table.update_item(
-        Key=user_pk, UpdateExpression='ADD postViewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=user_pk,
+        UpdateExpression='ADD postViewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
 
     # create post 2 by same user
@@ -75,10 +83,14 @@ def test_basic(dynamo_client, dynamo_table):
         },
     )
     dynamo_table.update_item(
-        Key=post_pk_2, UpdateExpression='ADD viewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=post_pk_2,
+        UpdateExpression='ADD viewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
     dynamo_table.update_item(
-        Key=user_pk, UpdateExpression='ADD postViewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=user_pk,
+        UpdateExpression='ADD postViewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
 
     # create a postView by someone else on post 2 (with counts on post and user)
@@ -94,10 +106,14 @@ def test_basic(dynamo_client, dynamo_table):
         },
     )
     dynamo_table.update_item(
-        Key=post_pk_2, UpdateExpression='ADD viewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=post_pk_2,
+        UpdateExpression='ADD viewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
     dynamo_table.update_item(
-        Key=user_pk, UpdateExpression='ADD postViewedByCount :one', ExpressionAttributeValues={':one': 1},
+        Key=user_pk,
+        UpdateExpression='ADD postViewedByCount :one',
+        ExpressionAttributeValues={':one': 1},
     )
 
     # check everything is as expected

@@ -251,7 +251,10 @@ def test_on_album_delete_update_album_count(user_manager, album, user, caplog):
     ],
 )
 def test_on_post_status_change_sync_counts_new_status(
-    user_manager, user, new_status, count_col_incremented,
+    user_manager,
+    user,
+    new_status,
+    count_col_incremented,
 ):
     post_id = str(uuid4())
     new_item = {'postId': post_id, 'postedByUserId': user.id, 'postStatus': new_status}
@@ -281,7 +284,11 @@ def test_on_post_status_change_sync_counts_new_status(
     [[PostStatus.COMPLETED, 'postCount'], [PostStatus.ARCHIVED, 'postArchivedCount']],
 )
 def test_on_post_status_change_sync_counts_old_status(
-    user_manager, user, old_status, count_col_decremented, caplog,
+    user_manager,
+    user,
+    old_status,
+    count_col_decremented,
+    caplog,
 ):
     post_id = str(uuid4())
     new_item = {'postId': post_id, 'postedByUserId': user.id, 'postStatus': 'whateves'}

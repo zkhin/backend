@@ -7,7 +7,13 @@ logger = logging.getLogger()
 
 class Card:
     def __init__(
-        self, item, appsync=None, dynamo=None, pinpoint_client=None, post_manager=None, user_manager=None,
+        self,
+        item,
+        appsync=None,
+        dynamo=None,
+        pinpoint_client=None,
+        post_manager=None,
+        user_manager=None,
     ):
         self.appsync = appsync
         self.dynamo = dynamo
@@ -58,7 +64,12 @@ class Card:
 
     def trigger_notification(self, notification_type):
         self.appsync.trigger_notification(
-            notification_type, self.user_id, self.id, self.title, self.action, sub_title=self.sub_title,
+            notification_type,
+            self.user_id,
+            self.id,
+            self.title,
+            self.action,
+            sub_title=self.sub_title,
         )
 
     def notify_user(self):
