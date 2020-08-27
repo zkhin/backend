@@ -1,4 +1,4 @@
-import uuid
+from uuid import uuid4
 
 import pytest
 
@@ -8,7 +8,7 @@ from app.models.post.enums import PostType
 
 @pytest.fixture
 def user(user_manager, cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
@@ -19,15 +19,20 @@ user3 = user
 
 @pytest.fixture
 def post(post_manager, user):
-    yield post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    yield post_manager.add_post(user, str(uuid4()), PostType.TEXT_ONLY, text='t')
 
 
 @pytest.fixture
 def chat(chat_manager, user, user2):
-    yield chat_manager.add_direct_chat(str(uuid.uuid4()), user.id, user2.id)
+    yield chat_manager.add_direct_chat(str(uuid4()), user.id, user2.id)
 
 
-@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat']))
+@pytest.fixture
+def screen(screen_manager):
+    yield screen_manager.init_screen(f'screen-name-{uuid4()}')
+
+
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat']))  # screens have no owner
 def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     # check owner has always viewed it
     assert model.get_viewed_status(model.user_id) == ViewedStatus.VIEWED
@@ -35,7 +40,7 @@ def test_owner_cant_record_views_has_always_alread_viewed(model, user2):
     assert model.get_viewed_status(model.user_id) == ViewedStatus.VIEWED
 
 
-@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat']))
+@pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'chat', 'screen']))
 def test_record_and_get_views(model, user2, user3):
     # check users have not viewed it
     assert model.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED

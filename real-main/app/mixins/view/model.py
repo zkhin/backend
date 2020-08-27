@@ -25,7 +25,7 @@ class ViewModelMixin:
         That parent dependency is not reflected in the viewed status returned
         by this method.
         """
-        if self.user_id == user_id:  # owner of the item
+        if hasattr(self, 'user_id') and self.user_id == user_id:  # owner of the item
             return ViewedStatus.VIEWED
         elif self.view_dynamo.get_view(self.id, user_id):
             return ViewedStatus.VIEWED

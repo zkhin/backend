@@ -63,6 +63,7 @@ comment_manager = managers.get('comment') or models.CommentManager(clients, mana
 follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+screen_manager = managers.get('screen') or models.ScreenManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
 
@@ -338,6 +339,21 @@ def delete_user(caller_user_id, arguments, client=None, **kwargs):
     user.set_last_client(client)
     user.delete()
     return user.serialize(caller_user_id)
+
+
+@routes.register('Mutation.reportScreenViews')
+@validate_caller
+@update_last_client
+def report_screen_views(caller_user, arguments, **kwargs):
+    screens = arguments['screens']
+    if len(screens) == 0:
+        raise ClientException('A minimum of 1 screen must be reported')
+    if len(screens) > 100:
+        raise ClientException('A max of 100 screens may be reported at a time')
+
+    viewed_at = pendulum.now('utc')
+    screen_manager.record_views(screens, caller_user.id, viewed_at=viewed_at)
+    return True
 
 
 @routes.register('Mutation.grantUserSubscriptionBonus')

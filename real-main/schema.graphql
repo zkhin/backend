@@ -88,6 +88,9 @@ type Mutation {
   disableUser: User
   deleteUser: User
 
+  # To track usage of the app
+  reportScreenViews(screens: [String!]!): Boolean
+
   # After user initiates a in-app subscription with the apple app store, the receipt should be uploaded here
   addAppStoreReceipt(receiptData: String!): Boolean
 

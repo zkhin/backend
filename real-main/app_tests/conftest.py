@@ -253,6 +253,11 @@ def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_cl
 
 
 @pytest.fixture
+def screen_manager(dynamo_client):
+    yield models.ScreenManager({'dynamo': dynamo_client})
+
+
+@pytest.fixture
 def user_manager(
     appsync_client,
     cloudfront_client,

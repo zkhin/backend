@@ -548,6 +548,12 @@ module.exports.reportPostViews = gql`
   }
 `
 
+module.exports.reportScreenViews = gql`
+  mutation ReportScreenViews($screens: [String!]!) {
+    reportScreenViews(screens: $screens)
+  }
+`
+
 module.exports.deleteCard = gql`
   mutation DeleteCard($cardId: ID!) {
     deleteCard(cardId: $cardId) {

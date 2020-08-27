@@ -40,6 +40,7 @@ feed_manager = managers.get('feed') or models.FeedManager(clients, managers=mana
 follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+screen_manager = managers.get('screen') or models.ScreenManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
 # https://stackoverflow.com/a/46738251
@@ -292,6 +293,7 @@ register('user', 'profile', ['REMOVE'], like_manager.on_user_delete_dislike_all_
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_flags)
 register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_views)
+register('user', 'profile', ['REMOVE'], screen_manager.on_user_delete_delete_views)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete_delete_cognito)
 

@@ -10,6 +10,7 @@ __all__ = [
     'FollowerManager',
     'LikeManager',
     'PostManager',
+    'ScreenManager',
     'UserManager',
 ]
 
@@ -24,4 +25,5 @@ from .feed.manager import FeedManager
 from .follower.manager import FollowerManager
 from .like.manager import LikeManager
 from .post.manager import PostManager
+from .screen.manager import ScreenManager
 from .user.manager import UserManager
