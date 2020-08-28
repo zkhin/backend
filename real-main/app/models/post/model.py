@@ -608,15 +608,17 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         # record user's view of their own post, but don't increment any counters about it
         # their view will be filtered out when looking at Post.viewedBy
-        super().record_view_count(user_id, view_count, viewed_at=viewed_at)
+        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
 
         if self.user_id == user_id:
             return True  # post owner's views don't count for trending, etc.
 
-        trending_kwargs = {'now': viewed_at, 'multiplier': self.get_trending_multiplier()}
-        recorded = self.trending_increment_score(**trending_kwargs)
-        if recorded:
-            self.user.trending_increment_score(**trending_kwargs)
+        # only a user's first view a of a post counts for trending
+        if is_new_view:
+            trending_kwargs = {'now': viewed_at, 'multiplier': self.get_trending_multiplier()}
+            recorded = self.trending_increment_score(**trending_kwargs)
+            if recorded:
+                self.user.trending_increment_score(**trending_kwargs)
 
         # If this is a non-original post, count this like a view of the original post as well
         if self.original_post_id != self.id:

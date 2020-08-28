@@ -75,6 +75,34 @@ def test_text_only_posts_trend(post_manager, user, user2):
     assert user.trending_score == 1
 
 
+def test_only_first_view_of_post_causes_trending(post_manager, user, user2, user3):
+    # add a post
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t')
+    assert post.type == PostType.TEXT_ONLY
+    assert post.trending_score is not None
+    assert user.trending_score is None
+
+    # record a view, verify that boosts trending score
+    org_post_trending_score = post.trending_score
+    post.record_view_count(user2.id, 4)
+    assert post.refresh_trending_item().trending_score > org_post_trending_score
+    assert user.refresh_trending_item().trending_score is not None
+
+    # record another view by the same user, verify trending scores don't change
+    org_post_trending_score = post.trending_score
+    org_user_trending_score = post.user.trending_score
+    post.record_view_count(user2.id, 2)
+    assert post.refresh_trending_item().trending_score == org_post_trending_score
+    assert user.refresh_trending_item().trending_score == org_user_trending_score
+
+    # record a view by a different user, verify trending scores go up again
+    org_post_trending_score = post.trending_score
+    org_user_trending_score = post.user.trending_score
+    post.record_view_count(user3.id, 2)
+    assert post.refresh_trending_item().trending_score > org_post_trending_score
+    assert user.refresh_trending_item().trending_score > org_user_trending_score
+
+
 def test_non_verified_image_posts_trend_with_lower_multiplier(post_manager, user, user2, image_data_b64):
     # create an original post that fails verification
     now = pendulum.parse('2020-06-09T00:00:00Z')  # exact begining of day so post gets exactly one free trending
