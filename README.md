@@ -82,6 +82,10 @@ _Once per AWS Account_
 
 - Use [this guide](https://docs.aws.amazon.com/sns/latest/dg/sms_stats_cloudwatch.html#sns-viewing-cloudwatch-logs) to enable CloudWatch Logs for all SMS messages
 
+_Once per deployment_
+
+- If you wish to receive notifications for error alerts, after the first deployment is complete you can subscribe your email or phone to the auto-generated SNS topics using the [AWS SNS Console](https://console.aws.amazon.com/sns/v3/home).
+
 ### Other stacks outside this repo
 
 The stacks in the following repos will need to be deployed before these
