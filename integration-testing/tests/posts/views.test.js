@@ -358,3 +358,74 @@ test('Post views and deleted on user delete/reset', async () => {
     expect(post.viewedBy.items).toHaveLength(0)
   })
 })
+
+test('Report post views with FOCUS view type', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
+
+  // we add two posts
+  const postId1 = uuidv4()
+  const postId2 = uuidv4()
+  let variables = {postId: postId1, imageData: imageData1B64}
+  let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+  expect(resp.data.addPost.postId).toBe(postId1)
+  variables = {postId: postId2, imageData: imageData2B64}
+  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
+
+  // verify we have no post views
+  resp = await ourClient.query({query: queries.self})
+  expect(resp.data.self.postViewedByCount).toBe(0)
+
+  // verify niether of the posts have views
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
+  expect(resp.data.post.viewedByCount).toBe(0)
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
+  expect(resp.data.post.viewedByCount).toBe(0)
+
+  // other1 reports to have viewed both posts with FOCUS view type
+  resp = await other1Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {
+      postIds: [postId1, postId2],
+      viewType: 'FOCUS',
+    },
+  })
+
+  // other2 reports to have viewed one post
+  resp = await other2Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {
+      postIds: [postId2],
+      viewType: 'THUMBNAIL',
+    },
+  })
+
+  // we report to have viewed both posts (should not be recorded on our own posts)
+  resp = await other1Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1, postId2]},
+  })
+
+  // verify our view counts are correct
+  await misc.sleep(2000)
+  resp = await ourClient.query({query: queries.self})
+  expect(resp.data.self.postViewedByCount).toBe(3)
+
+  // verify the two posts have the right viewed by counts
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
+  expect(resp.data.post.viewedByCount).toBe(1)
+  expect(resp.data.post.viewedStatus).toBe('VIEWED')
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
+  expect(resp.data.post.viewedByCount).toBe(2)
+  expect(resp.data.post.viewedStatus).toBe('VIEWED')
+
+  // verify the two posts have the right viewedBy lists
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
+  expect(resp.data.post.viewedBy.items).toHaveLength(1)
+  expect(resp.data.post.viewedBy.items[0].userId).toBe(other1UserId)
+  resp = await ourClient.query({query: queries.post, variables: {postId: postId2}})
+  expect(resp.data.post.viewedBy.items).toHaveLength(2)
+  expect(resp.data.post.viewedBy.items[0].userId).toBe(other1UserId)
+  expect(resp.data.post.viewedBy.items[1].userId).toBe(other2UserId)
+})

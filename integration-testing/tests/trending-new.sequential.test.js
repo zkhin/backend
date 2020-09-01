@@ -600,3 +600,58 @@ test('Only first view of a post counts for trending', async () => {
     expect(trendingPosts.items[1].postId).toBe(postId2)
   })
 })
+
+test('Report with FOCUS view type, order of posts in the trending index', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: otherClient} = await loginCache.getCleanLogin()
+
+  // we add two posts
+  const [postId1, postId2] = [uuidv4(), uuidv4()]
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'first!'}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, postType: 'TEXT_ONLY', text: '2nd!'}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
+
+  // they view the first post, pause, then view the other
+  await theirClient.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1], viewType: 'THUMBNAIL'},
+  })
+  await misc.sleep(1000)
+  await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
+
+  // verify they show up in expected order in trending: most recently viewed should come first
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(2)
+    expect(trendingPosts.items[0].postId).toBe(postId2)
+    expect(trendingPosts.items[1].postId).toBe(postId1)
+  })
+
+  // they record another view on the first post, verify that does _not_ change trending order
+  await theirClient.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId2], viewType: 'THUMBNAIL'},
+  })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(2)
+    expect(trendingPosts.items[0].postId).toBe(postId2)
+    expect(trendingPosts.items[1].postId).toBe(postId1)
+  })
+
+  // other records another view on the first post, verify that does change trending order
+  await otherClient.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1], viewType: 'FOCUS'},
+  })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(2)
+    expect(trendingPosts.items[0].postId).toBe(postId1)
+    expect(trendingPosts.items[1].postId).toBe(postId2)
+  })
+})
