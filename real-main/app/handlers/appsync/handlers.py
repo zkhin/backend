@@ -895,13 +895,14 @@ def dislike_post(caller_user, arguments, **kwargs):
 @update_last_client
 def report_post_views(caller_user, arguments, **kwargs):
     post_ids = arguments['postIds']
+    view_type = arguments['view_type']
     if len(post_ids) == 0:
         raise ClientException('A minimum of 1 post id must be reported')
     if len(post_ids) > 100:
         raise ClientException('A max of 100 post ids may be reported at a time')
 
     viewed_at = pendulum.now('utc')
-    post_manager.record_views(post_ids, caller_user.id, viewed_at=viewed_at)
+    post_manager.record_views(post_ids, caller_user.id, viewed_at=viewed_at, view_type=view_type)
     return True
 
 

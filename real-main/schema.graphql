@@ -206,7 +206,7 @@ type Mutation {
   dislikePost(postId: ID!): Post
 
   # Report post views
-  reportPostViews(postIds: [ID!]!): Boolean
+  reportPostViews(postIds: [ID!]!, viewType: ViewType): Boolean
 
   # Report a notification card was read
   deleteCard(cardId: ID!): Card
@@ -635,6 +635,11 @@ enum FlagStatus {
 enum ImageFormat {
   HEIC
   JPEG
+}
+
+enum ViewType {
+  THUMBNAIL
+  FOCUS
 }
 
 input ImageInput {

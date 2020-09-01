@@ -1,6 +1,7 @@
 import logging
 
 from . import exceptions
+from .enums import ViewType
 
 logger = logging.getLogger()
 
@@ -39,7 +40,7 @@ class ViewDynamo:
     def delete_view(self, item_id, user_id):
         return self.client.delete_item(self.key(item_id, user_id))
 
-    def add_view(self, item_id, user_id, view_count, viewed_at):
+    def add_view(self, item_id, user_id, view_count, viewed_at, view_type=None):
         key = self.key(item_id, user_id)
         viewed_at_str = viewed_at.to_iso8601_string()
         query_kwargs = {
@@ -55,17 +56,29 @@ class ViewDynamo:
                 'lastViewedAt': viewed_at_str,
             },
         }
+
+        if view_type == ViewType.THUMBNAIL:
+            query_kwargs['Item']['thumbnailViewCount'] = view_count
+        if view_type == ViewType.FOCUS:
+            query_kwargs['Item']['focusViewCount'] = view_count
+
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:
             raise exceptions.ViewAlreadyExists(self.item_type, item_id, user_id) from err
 
-    def increment_view_count(self, item_id, user_id, view_count, viewed_at):
+    def increment_view_count(self, item_id, user_id, view_count, viewed_at, view_type=None):
         query_kwargs = {
             'Key': self.key(item_id, user_id),
             'UpdateExpression': 'ADD viewCount :vc SET lastViewedAt = :lva',
             'ExpressionAttributeValues': {':vc': view_count, ':lva': viewed_at.to_iso8601_string()},
         }
+
+        if view_type == ViewType.THUMBNAIL:
+            query_kwargs['UpdateExpression'] = 'ADD viewCount :vc, thumbnailViewCount :vc SET lastViewedAt = :lva'
+        if view_type == ViewType.FOCUS:
+            query_kwargs['UpdateExpression'] = 'ADD viewCount :vc, focusViewCount :vc SET lastViewedAt = :lva'
+
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:

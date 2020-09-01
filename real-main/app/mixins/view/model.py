@@ -32,18 +32,18 @@ class ViewModelMixin:
         else:
             return ViewedStatus.NOT_VIEWED
 
-    def record_view_count(self, user_id, view_count, viewed_at=None):
+    def record_view_count(self, user_id, view_count, viewed_at=None, view_type=None):
         viewed_at = viewed_at or pendulum.now('utc')
         is_first_view_for_user = False
         view_item = self.view_dynamo.get_view(self.id, user_id)
         if view_item:
-            self.view_dynamo.increment_view_count(self.id, user_id, view_count, viewed_at)
+            self.view_dynamo.increment_view_count(self.id, user_id, view_count, viewed_at, view_type)
         else:
             try:
-                self.view_dynamo.add_view(self.id, user_id, view_count, viewed_at)
+                self.view_dynamo.add_view(self.id, user_id, view_count, viewed_at, view_type)
             except ViewAlreadyExists:
                 # we lost a race condition to add the view, so still need to record our data
-                self.view_dynamo.increment_view_count(self.id, user_id, view_count, viewed_at)
+                self.view_dynamo.increment_view_count(self.id, user_id, view_count, viewed_at, view_type)
             else:
                 is_first_view_for_user = True
         return is_first_view_for_user
