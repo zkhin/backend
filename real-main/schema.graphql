@@ -113,7 +113,9 @@ type Mutation {
     sharingDisabled: Boolean,
     verificationHidden: Boolean,
     languageCode: String,
-    themeCode: String
+    themeCode: String,
+    birthday: AWSDate,
+    gender: UserGender
   ): User
 
   # Various one-off user property setters
@@ -329,11 +331,18 @@ input NotificationInput {
   userChatsWithUnviewedMessagesCount: Int
 }
 
+enum UserGender {
+  MALE
+  FEMALE
+}
+
 type User {
 
   # public info readable by all logged-in users, including blocked users
   userId: ID!
   username: String!
+  birthday: AWSDate
+  gender: UserGender
 
   # public info, readable by all logged-in non-blocked users
   userStatus: UserStatus
