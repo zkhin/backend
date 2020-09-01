@@ -220,6 +220,8 @@ def test_set_user_details_doesnt_exist(user_dynamo):
 def test_set_user_details(user_dynamo):
     user_id = 'my-user-id'
     username = 'my-username'
+    birthday = pendulum.from_format('1900-01-01', 'YYYY-MM-DD').to_iso8601_string()
+    gender = 'MALE'
 
     user_dynamo.add_user('other-id-1', 'noise-1', 'cog-noise-1')
     expected_base_item = user_dynamo.add_user(user_id, username)
@@ -243,6 +245,8 @@ def test_set_user_details(user_dynamo):
         likes_disabled=True,
         sharing_disabled=True,
         verification_hidden=True,
+        birthday=birthday,
+        gender=gender,
     )
     expected = {
         **expected_base_item,
@@ -259,6 +263,8 @@ def test_set_user_details(user_dynamo):
             'likesDisabled': True,
             'sharingDisabled': True,
             'verificationHidden': True,
+            'birthday': birthday,
+            'gender': gender,
         },
     }
     assert resp == expected
