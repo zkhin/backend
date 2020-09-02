@@ -10,22 +10,28 @@ from app.handlers.appsync import dispatch, routes  # noqa: E402 isort:skip
 @pytest.fixture
 def cognito_authed_event():
     yield {
-        'field': 'Type.field',
+        'info': {
+            'parentTypeName': 'Type',
+            'fieldName': 'field',
+        },
         'arguments': ['arg1', 'arg2'],
         'identity': {'cognitoIdentityId': '42-42'},
         'source': {'anotherField': 42},
-        'headers': {'x-real-version': '1.2.3(456)'},
+        'request': {'headers': {'x-real-version': '1.2.3(456)'}},
     }
 
 
 @pytest.fixture
 def api_key_authed_event():
     yield {
-        'field': 'Type.field',
+        'info': {
+            'parentTypeName': 'Type',
+            'fieldName': 'field',
+        },
         'arguments': ['arg1', 'arg2'],
         'identity': {},
         'source': {'anotherField': 42},
-        'headers': {},
+        'request': {'headers': {}},
     }
 
 
@@ -39,47 +45,67 @@ def setup_one_route():
 
 
 def test_unknown_field_raises_exception(setup_one_route, cognito_authed_event):
-    cognito_authed_event['field'] = 'Type.unknownField'
+    cognito_authed_event['info']['fieldName'] = 'unknownField'
     with pytest.raises(Exception, match='No handler for field `Type.unknownField` found'):
         dispatch(cognito_authed_event, {})
 
 
 def test_basic_success(setup_one_route, cognito_authed_event):
     assert dispatch(cognito_authed_event, {}) == {
-        'success': {
+        'data': {
             'caller_user_id': '42-42',
             'arguments': ['arg1', 'arg2'],
-            'kwargs': {'source': {'anotherField': 42}, 'context': {}, 'client': {'version': '1.2.3(456)'}},
+            'kwargs': {
+                'source': {'anotherField': 42},
+                'context': {},
+                'client': {'version': '1.2.3(456)'},
+                'event': cognito_authed_event,
+            },
         },
     }
 
 
 def test_no_source(setup_one_route, cognito_authed_event):
-    cognito_authed_event['source'] = None
+    del cognito_authed_event['source']
     assert dispatch(cognito_authed_event, {}) == {
-        'success': {
+        'data': {
             'caller_user_id': '42-42',
             'arguments': ['arg1', 'arg2'],
-            'kwargs': {'source': None, 'context': {}, 'client': {'version': '1.2.3(456)'}},
+            'kwargs': {
+                'source': {},
+                'context': {},
+                'client': {'version': '1.2.3(456)'},
+                'event': cognito_authed_event,
+            },
         },
     }
 
 
 def test_api_key_authenticated(setup_one_route, api_key_authed_event):
     assert dispatch(api_key_authed_event, {}) == {
-        'success': {
+        'data': {
             'caller_user_id': None,
             'arguments': ['arg1', 'arg2'],
-            'kwargs': {'source': {'anotherField': 42}, 'context': {}, 'client': {}},
+            'kwargs': {
+                'source': {'anotherField': 42},
+                'context': {},
+                'client': {},
+                'event': api_key_authed_event,
+            },
         },
     }
 
 
 def test_context_passed(setup_one_route, api_key_authed_event):
     assert dispatch(api_key_authed_event, {'foo': 'bar'}) == {
-        'success': {
+        'data': {
             'caller_user_id': None,
             'arguments': ['arg1', 'arg2'],
-            'kwargs': {'source': {'anotherField': 42}, 'context': {'foo': 'bar'}, 'client': {}},
+            'kwargs': {
+                'source': {'anotherField': 42},
+                'context': {'foo': 'bar'},
+                'client': {},
+                'event': api_key_authed_event,
+            },
         },
     }
