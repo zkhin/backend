@@ -4230,10 +4230,10 @@ semver@^7.3.2:
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.3.2.tgz#604962b052b81ed0786aae84389ffba70ffd3938"
   integrity sha512-OrOb32TeeambH6UrhtShmF7CRDqhL6/5XpPNp2DuRH6+9QLw/orhp72j87v8Qa1ScDkvrrBNpZcDejAirJmfXQ==
 
-serverless-plugin-git-variables@^3.4.0:
-  version "3.5.0"
-  resolved "https://registry.yarnpkg.com/serverless-plugin-git-variables/-/serverless-plugin-git-variables-3.5.0.tgz#fda0771eecd8136899dbe6eaa8d3fd191e189214"
-  integrity sha512-NrI3m6w/LKsUIlCrigzrpN7z4TZKQWbLyOwK898mrMzRPWEUn8c/NYwj/5KPA7zYiGkhe9On8n7bsSqyqpL8Mw==
+serverless-plugin-git-variables@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/serverless-plugin-git-variables/-/serverless-plugin-git-variables-4.0.0.tgz#efa6ef69b8e1ba38c0e91a9ce174987059be29a3"
+  integrity sha512-r7MMsnfzvZ0sMfaFAz8GXUml/uZhZU87TlS5+exHIjqlLVVTBe4GK+/cxJzET2UnPwcaA1O1fs/deMV37G7lIw==
   dependencies:
     babel-runtime "6.23.0"
 
