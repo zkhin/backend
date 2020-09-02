@@ -693,6 +693,14 @@ def test_update_last_post_view_at(user_dynamo, caplog):
     assert caplog.records[0].levelname == 'WARNING'
     assert all(x in caplog.records[0].msg for x in ['Failed to update lastPostViewAt', user_id_2])
 
+    # set it with view type
+    user_id_3 = str(uuid4())
+    user_dynamo.add_user(user_id_3, str(uuid4())[:8])
+    user_item = user_dynamo.update_last_post_view_at(user_id_3, None, 'FOCUS')
+    assert user_dynamo.get_user(user_id_3) == user_item
+    assert 'lastPostViewAt' in user_item
+    assert 'lastPostFocusViewAt' in user_item
+
 
 def test_add_delete_user_deleted(user_dynamo, caplog):
     # verify starting state

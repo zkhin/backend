@@ -8,8 +8,8 @@ import PIL.Image
 
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
-from app.mixins.view.model import ViewModelMixin
 from app.mixins.view.enums import ViewType
+from app.mixins.view.model import ViewModelMixin
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserException

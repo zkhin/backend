@@ -65,6 +65,8 @@ def test_record_and_get_views(model, user2, user3):
     assert view_item['lastViewedAt'] > first_viewed_at
 
     # record views by the other user too, check their viewed status also changed
-    model.record_view_count(user3.id, 3)
+    model.record_view_count(user3.id, 3, None, 'FOCUS')
     assert model.get_viewed_status(user3.id) == ViewedStatus.VIEWED
-    assert model.view_dynamo.get_view(model.id, user3.id)
+    view_item = model.view_dynamo.get_view(model.id, user3.id)
+    assert view_item['viewCount'] == 3
+    assert view_item['focusViewCount'] == 3

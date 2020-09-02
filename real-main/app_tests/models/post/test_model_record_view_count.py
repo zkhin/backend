@@ -216,3 +216,20 @@ def test_verified_image_posts_originality_determines_trending(post_manager, user
     # verify those trending points went to the original post & user
     assert post.refresh_trending_item().trending_score == 1 + 2 + 2
     assert user.refresh_trending_item().trending_score == 1 + 1
+
+
+def test_posts_trend_with_view_type(post_manager, user, user2):
+    now = pendulum.parse('2020-06-09T00:00:00Z')  # exact begining of day so post gets exactly one free trending
+    post = post_manager.add_post(user, str(uuid.uuid4()), PostType.TEXT_ONLY, text='t', now=now)
+    assert post.type == PostType.TEXT_ONLY
+    assert post.trending_score == 1
+    assert user.trending_score is None
+
+    # record a view, verify that boosts trending score
+    viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
+    post.record_view_count(user2.id, 4, viewed_at=viewed_at, view_type='FOCUS')
+    assert post.trending_score == 1 + 4
+    assert post.refresh_trending_item().trending_score == 1 + 4
+    assert user.refresh_trending_item()
+    assert pendulum.parse(user.trending_item['lastDeflatedAt']) == viewed_at
+    assert user.trending_score == 2
