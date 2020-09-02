@@ -3,21 +3,29 @@ from unittest import mock
 
 import pytest
 
-from app.models.block.exceptions import AlreadyBlocked, NotBlocked
+from app.models.block.exceptions import AlreadyBlocked, BlockException, NotBlocked
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import PostType
+from app.models.user.enums import UserStatus
 
 
 @pytest.fixture
 def blocker_user(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 blocked_user = blocker_user
 blocker_user_2 = blocker_user
 blocked_user_2 = blocker_user
+
+
+def test_cant_block_anonymous_user(block_manager, blocker_user, blocked_user):
+    blocked_user.item['userStatus'] = UserStatus.ANONYMOUS
+    assert blocked_user.status == UserStatus.ANONYMOUS
+    with pytest.raises(BlockException, match='with status'):
+        block_manager.block(blocker_user, blocked_user)
 
 
 def test_block_unfollows(block_manager, follower_manager, blocker_user, blocked_user):

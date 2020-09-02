@@ -8,12 +8,13 @@ import pytest
 from app.mixins.view.enums import ViewedStatus
 from app.models.chat.enums import ChatType
 from app.models.chat.exceptions import ChatException
+from app.models.user.enums import UserStatus
 
 
 @pytest.fixture
 def user1(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
@@ -31,6 +32,16 @@ def test_cant_add_direct_chat_blocked(chat_manager, block_manager, user1, user2)
 
     with pytest.raises(ChatException, match='has been blocked'):
         chat_manager.add_direct_chat(chat_id, user2.id, user1.id)
+
+
+def test_cant_add_direct_chat_anonymous(chat_manager, block_manager, user1, user2):
+    # set user2 up as anonymous
+    user2.dynamo.set_user_status(user2.id, UserStatus.ANONYMOUS)
+    assert user2.refresh_item().status == UserStatus.ANONYMOUS
+
+    chat_id = 'cid'
+    with pytest.raises(ChatException, match='with status'):
+        chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
 
 
 def test_cant_add_direct_chat_with_self(chat_manager, user1):

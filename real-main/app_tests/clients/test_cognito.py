@@ -1,11 +1,11 @@
-import uuid
 from unittest.mock import call
+from uuid import uuid4
 
 import pytest
 
 
 @pytest.mark.skip(reason='moto appears to not support CUSTOM_AUTH AuthFlow for admin_initiate_auth')
-def test_get_user_pool_id_token(cognito_client):
+def test_get_user_pool_tokens(cognito_client):
     pass
 
 
@@ -19,8 +19,26 @@ def test_list_unconfirmed_user_pool_entries(cognito_client):
     pass
 
 
-def test_create_verified_user_pool_entry(cognito_client):
-    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())
+def test_create_user_pool_entry_no_verified_email(cognito_client):
+    user_id, username = str(uuid4()), str(uuid4())
+
+    # check they aren't there
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UserNotFoundException):
+        cognito_client.get_user_attributes(user_id)
+
+    # create them, check they are there
+    cognito_client.create_user_pool_entry(user_id, username)
+    attrs = cognito_client.get_user_attributes(user_id)
+    assert len(attrs) == 1
+    assert attrs['preferred_username'] == username
+
+    # verify we can't create them again, even with a diff username
+    with pytest.raises(cognito_client.user_pool_client.exceptions.UsernameExistsException):
+        cognito_client.create_user_pool_entry(user_id, username)
+
+
+def test_create_user_pool_entry_with_verified_email(cognito_client):
+    user_id, username = str(uuid4()), str(uuid4())
     email = f'{username}-test@real.app'
 
     # check they aren't there
@@ -28,7 +46,7 @@ def test_create_verified_user_pool_entry(cognito_client):
         cognito_client.get_user_attributes(user_id)
 
     # create them, check they are there
-    cognito_client.create_verified_user_pool_entry(user_id, username, email)
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=email)
     attrs = cognito_client.get_user_attributes(user_id)
     assert len(attrs) == 3
     assert attrs['email'] == email
@@ -41,7 +59,7 @@ def test_create_verified_user_pool_entry(cognito_client):
 
     # verify we can't create them again
     with pytest.raises(cognito_client.user_pool_client.exceptions.UsernameExistsException):
-        cognito_client.create_verified_user_pool_entry(user_id, username, email)
+        cognito_client.create_user_pool_entry(user_id, username, verified_email=email)
 
 
 def test_set_and_get_user_attributes(cognito_client):

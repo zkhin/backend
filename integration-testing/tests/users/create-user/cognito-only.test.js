@@ -17,7 +17,8 @@ describe('cognito-only user', () => {
   afterEach(async () => {
     if (client) await client.mutate({mutation: mutations.resetUser})
     if (accessToken) await cognito.userPoolClient.deleteUser({AccessToken: accessToken}).promise()
-    // no way to delete ourselves from identity pool without developer credentials
+    // no way to directly delete ourselves from identity pool without developer credentials
+    // although the dynamo stream will do it after a successful Mutation.resetUser()
   })
 
   test('Mutation.createCognitoOnlyUser fails if identity pool id and user pool "username" dont match', async () => {

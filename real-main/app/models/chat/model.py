@@ -4,6 +4,7 @@ import pendulum
 
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
+from app.models.user.enums import UserStatus
 
 from .enums import ChatType
 from .exceptions import ChatException
@@ -70,9 +71,15 @@ class Chat(ViewModelMixin, FlagModelMixin):
         users = []
         for user_id in set(user_ids):
 
-            # make sure the user exists
+            # make sure the user exists, is ACTIVE
             user = self.user_manager.get_user(user_id)
             if not user:
+                logger.warning(f'Cannot add non-existent user `{user_id}` to group chat `{self.id}`')
+                continue
+            if user.status != UserStatus.ACTIVE:
+                logger.warning(
+                    f'Refusing to add user `{user.id}` with status `{user.status}` to group chat `{self.id}`'
+                )
                 continue
 
             if added_by_user.id is not None:

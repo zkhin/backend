@@ -4,6 +4,7 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+let anonClient, anonUserId, anonUsername
 const imageData1 = misc.generateRandomJpeg(8, 8)
 const imageData2 = misc.generateRandomJpeg(8, 8)
 const imageData1B64 = new Buffer.from(imageData1).toString('base64')
@@ -16,9 +17,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Report post views', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
@@ -98,6 +102,35 @@ test('Cannot report post views if we are disabled', async () => {
   await expect(
     ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+test('Anonymous user can report post views', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  ;({client: anonClient, userId: anonUserId, username: anonUsername} = await cognito.getAnonymousAppSyncLogin())
+
+  // we add a post
+  const postId = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: imageData1B64}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.postStatus).toBe('COMPLETED')
+    })
+
+  // anonymous user reports a view of the post
+  await anonClient
+    .mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
+    .then(({data}) => expect(data.reportPostViews).toBe(true))
+
+  // check the anonymous user shows up in the post views
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.viewedByCount).toBe(1)
+    expect(post.viewedBy.items).toHaveLength(1)
+    expect(post.viewedBy.items[0].userId).toBe(anonUserId)
+    expect(post.viewedBy.items[0].username).toBe(anonUsername)
+  })
 })
 
 test('Post.viewedStatus', async () => {

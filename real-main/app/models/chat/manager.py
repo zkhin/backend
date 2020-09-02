@@ -7,6 +7,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
+from app.models.user.enums import UserStatus
 
 from .dynamo import ChatDynamo, ChatMemberDynamo
 from .enums import ChatType
@@ -76,6 +77,11 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             raise ChatException(
                 f'Chat already exists between user `{created_by_user_id}` and user `{with_user_id}`',
             )
+
+        # can't chat with non-ACTIVE users
+        with_user = self.user_manager.get_user(with_user_id)
+        if with_user.status != UserStatus.ACTIVE:
+            raise ChatException(f'Cannot open direct chat with user with status `{with_user.status}`')
 
         transacts = [
             self.dynamo.transact_add(

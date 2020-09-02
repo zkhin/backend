@@ -4,6 +4,7 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+let anonClient
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -13,9 +14,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Add a comments', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
@@ -98,8 +102,9 @@ test('Cant add comments to post that doesnt exist', async () => {
   ).rejects.toThrow(/ClientError: Post .* does not exist$/)
 })
 
-test('Cant add comments if our user is disabled', async () => {
+test('Cant add comments if user is disabled or anonymous', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
 
   // we add a post
   const postId = uuidv4()
@@ -114,6 +119,11 @@ test('Cant add comments if our user is disabled', async () => {
   // check we cannot comment
   let variables = {commentId: uuidv4(), postId, text: 'no way'}
   await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
+
+  // check anonymous user can't comment
+  await expect(anonClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
 })

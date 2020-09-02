@@ -14,8 +14,10 @@ def users(user_manager, cognito_client):
     "Us and them"
     our_user_id, our_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
     their_user_id, their_username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(our_user_id, our_username, f'{our_username}@real.app')
-    cognito_client.create_verified_user_pool_entry(their_user_id, their_username, f'{their_username}@real.app')
+    cognito_client.create_user_pool_entry(our_user_id, our_username, verified_email=f'{our_username}@real.app')
+    cognito_client.create_user_pool_entry(
+        their_user_id, their_username, verified_email=f'{their_username}@real.app'
+    )
     our_user = user_manager.create_cognito_only_user(our_user_id, our_username)
     their_user = user_manager.create_cognito_only_user(their_user_id, their_username)
     yield (our_user, their_user)

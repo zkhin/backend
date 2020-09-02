@@ -37,9 +37,18 @@ class UserDynamo:
         return self.client.delete_item(self.pk(user_id))
 
     def add_user(
-        self, user_id, username, full_name=None, email=None, phone=None, placeholder_photo_code=None, now=None
+        self,
+        user_id,
+        username,
+        full_name=None,
+        email=None,
+        phone=None,
+        placeholder_photo_code=None,
+        status=None,
+        now=None,
     ):
         now = now or pendulum.now('utc')
+        assert status is None or status in UserStatus._ALL, f'Invalid user status: `{status}`'
         query_kwargs = {
             'Item': {
                 'schemaVersion': 11,
@@ -61,6 +70,8 @@ class UserDynamo:
             query_kwargs['Item']['email'] = email
         if phone:
             query_kwargs['Item']['phoneNumber'] = phone
+        if status:
+            query_kwargs['Item']['userStatus'] = status
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:

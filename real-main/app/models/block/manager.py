@@ -1,10 +1,11 @@
 import logging
 
 from app import models
+from app.models.user.enums import UserStatus
 
 from .dynamo import BlockDynamo
 from .enums import BlockStatus
-from .exceptions import NotBlocked
+from .exceptions import BlockException, NotBlocked
 
 logger = logging.getLogger()
 
@@ -33,6 +34,9 @@ class BlockManager:
 
     def block(self, blocker_user, blocked_user):
         block_item = self.dynamo.add_block(blocker_user.id, blocked_user.id)
+
+        if blocked_user.status != UserStatus.ACTIVE:
+            raise BlockException(f'Cannot block user with status `{blocked_user.status}`')
 
         # force-unfollow them if we're following them
         follow = self.follower_manager.get_follow(blocker_user.id, blocked_user.id)

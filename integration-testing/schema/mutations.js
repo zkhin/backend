@@ -2,6 +2,20 @@ const gql = require('graphql-tag')
 
 const fragments = require('./fragments.js')
 
+module.exports.createAnonymousUser = gql`
+  mutation CreateAnonymousUser {
+    createAnonymousUser {
+      userId
+      username
+      fullName
+      email
+      phoneNumber
+      signedUpAt
+      userStatus
+    }
+  }
+`
+
 module.exports.createCognitoOnlyUser = gql`
   mutation CreateCognitoOnlyUser($username: String!, $fullName: String) {
     createCognitoOnlyUser(username: $username, fullName: $fullName) {

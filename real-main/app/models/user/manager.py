@@ -17,7 +17,6 @@ from .dynamo import UserContactAttributeDynamo, UserDynamo
 from .enums import UserStatus, UserSubscriptionLevel
 from .exceptions import UserAlreadyExists, UserValidationException
 from .model import User
-from .validate import UserValidate
 
 logger = logging.getLogger()
 
@@ -39,8 +38,11 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         's3_uploads',
         's3_placeholder_photos',
     ]
-    username_tag_regex = re.compile('@' + UserValidate.username_regex.pattern)
     item_type = 'user'
+
+    # username restrictions: same as other social networks
+    username_regex = re.compile('[a-zA-Z0-9_.]{3,30}')
+    username_tag_regex = re.compile('@' + username_regex.pattern)
 
     def __init__(self, clients, managers=None, placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY):
         super().__init__(clients, managers=managers)
@@ -63,7 +65,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo = UserDynamo(clients['dynamo'])
             self.email_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userEmail')
             self.phone_number_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userPhoneNumber')
-        self.validate = UserValidate()
         self.placeholder_photos_directory = placeholder_photos_directory
 
     @property
@@ -93,6 +94,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'follower_manager': getattr(self, 'follower_manager', None),
             'like_manager': getattr(self, 'like_manager', None),
             'post_manager': getattr(self, 'post_manager', None),
+            'user_manager': self,
         }
         return User(user_item, self.clients, **kwargs) if user_item else None
 
@@ -107,9 +109,60 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         codes = self.get_available_placeholder_photo_codes()
         return random.choice(codes) if codes else None
 
+    def generate_username(self):
+        # using the crockford base 32 character set'
+        chars = '0123456789abcdefghjkmnpqrstvwxyz'
+        return ''.join(random.choice(chars) for _ in range(12))
+
+    def validate_username(self, username):
+        if not username:
+            raise UserValidationException('Empty username')
+        matched_username = self.username_regex.match(username)  # matches only from beginging of string
+        if not matched_username or matched_username[0] != username:
+            raise UserValidationException(f'Username `{username}` does not validate')
+
+    def create_anonymous_user(self, user_id):
+        username = self.generate_username()
+        try:
+            self.validate_username(username)
+        except UserValidationException as err:
+            raise Exception(f'Auto-generated username `{username}` failed vaildation: {err}') from err
+
+        # set the user up in cognito, claims the username at the same time
+        try:
+            self.cognito_client.create_user_pool_entry(user_id, username)
+        except (
+            # Note: Cognito raises UsernameExistsException for more than just usernames.
+            self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
+            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+        ) as err:
+            # Not ideal: relying on cognito not to change these exact error messages.
+            if 'Already found an entry for the provided username' in str(err):
+                raise UserValidationException(f'Username `{username}` already taken') from err
+            if 'User account already exists' in str(err):
+                raise UserValidationException(f'An account for userId `{user_id}` already exists') from err
+            raise UserValidationException(str(err)) from err
+
+        tokens = {'cognito_token': self.cognito_client.get_user_pool_tokens(user_id)['IdToken']}
+        try:
+            self.cognito_client.link_identity_pool_entries(user_id, **tokens)
+        except Exception:
+            # try to clean up: remove the user from cognito
+            self.cognito_client.delete_user_pool_entry(user_id)
+            raise
+
+        # create new user in the DB, have them follow the real user if they exist
+        photo_code = self.get_random_placeholder_photo_code()
+        item = self.dynamo.add_user(
+            user_id, username, placeholder_photo_code=photo_code, status=UserStatus.ANONYMOUS
+        )
+        user = self.init_user(item)
+        self.follow_real_user(user)
+        return user
+
     def create_cognito_only_user(self, user_id, username, full_name=None):
         # try to claim the new username, will raise an validation exception if already taken
-        self.validate.username(username)
+        self.validate_username(username)
         full_name = None if full_name == '' else full_name  # treat empty string like null
 
         try:
@@ -161,7 +214,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         provider_client = self.clients[provider]
 
         # do operations that do not alter state first
-        self.validate.username(username)
+        self.validate_username(username)
         full_name = None if full_name == '' else full_name  # treat empty string like null
 
         try:
@@ -172,7 +225,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
         # set the user up in cognito, claims the username at the same time
         try:
-            self.cognito_client.create_verified_user_pool_entry(user_id, username, email)
+            self.cognito_client.create_user_pool_entry(user_id, username, verified_email=email)
         except (
             # Note: Cognito raises UsernameExistsException for more than just usernames.
             self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
@@ -188,7 +241,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             raise UserValidationException(str(err)) from err
 
         tokens = {
-            'cognito_token': self.cognito_client.get_user_pool_id_token(user_id),
+            'cognito_token': self.cognito_client.get_user_pool_tokens(user_id)['IdToken'],
             provider + '_token': token,
         }
         try:

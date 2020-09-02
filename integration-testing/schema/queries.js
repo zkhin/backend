@@ -294,6 +294,7 @@ module.exports.post = gql`
       viewedBy {
         items {
           userId
+          username
         }
       }
     }
@@ -515,6 +516,7 @@ module.exports.chatUsers = gql`
   query Chat($chatId: ID!, $excludeUserId: ID) {
     chat(chatId: $chatId) {
       chatId
+      usersCount
       users(excludeUserId: $excludeUserId) {
         items {
           userId

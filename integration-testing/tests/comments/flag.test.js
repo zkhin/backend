@@ -4,6 +4,7 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+let anonClient
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -14,9 +15,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Cant flag our own comment', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
@@ -83,9 +87,10 @@ test('Anybody can flag a comment of private user on post of public user', async 
   )
 })
 
-test('Cant flag a comment if we are disabled', async () => {
+test('Cant flag a comment if we are anonymous or disabled', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
 
   // they add a post
   const postId = uuidv4()
@@ -104,6 +109,11 @@ test('Cant flag a comment if we are disabled', async () => {
 
   // verify we can't flag their comment
   await expect(ourClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
+
+  // verify anonymous user can't flat their comment
+  await expect(anonClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
 })

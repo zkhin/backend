@@ -46,16 +46,19 @@ def test_add_user_maximal(user_dynamo):
     email = 'my-email'
     phone = 'my-phone'
     photo_code = 'red-cat'
+    status = UserStatus.ANONYMOUS
 
-    before = pendulum.now('utc')
+    now = pendulum.now('utc')
     item = user_dynamo.add_user(
-        user_id, username, full_name=full_name, email=email, phone=phone, placeholder_photo_code=photo_code
+        user_id,
+        username,
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        placeholder_photo_code=photo_code,
+        status=status,
+        now=now,
     )
-    after = pendulum.now('utc')
-
-    now = pendulum.parse(item['signedUpAt'])
-    assert before < now
-    assert after > now
 
     assert item == {
         'schemaVersion': 11,
@@ -65,6 +68,7 @@ def test_add_user_maximal(user_dynamo):
         'gsiA1SortKey': '-',
         'userId': user_id,
         'username': username,
+        'userStatus': UserStatus.ANONYMOUS,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
         'signedUpAt': now.to_iso8601_string(),
         'fullName': full_name,
@@ -72,6 +76,11 @@ def test_add_user_maximal(user_dynamo):
         'phoneNumber': phone,
         'placeholderPhotoCode': photo_code,
     }
+
+
+def test_add_user_bad_status(user_dynamo):
+    with pytest.raises(AssertionError):
+        user_dynamo.add_user('user-id', 'myUsername', status='not-a-status')
 
 
 def test_add_user_already_exists(user_dynamo):

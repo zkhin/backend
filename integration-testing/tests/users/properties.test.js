@@ -7,6 +7,7 @@ const uuidv4 = require('uuid/v4')
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 
+let anonClient
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -16,9 +17,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 describe('Read and write properties our our own profile', () => {
   // username is tested in the set-username.test.js
@@ -118,6 +122,13 @@ test('Disabled user cannot setUserDetails', async () => {
   await expect(client.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
+})
+
+test('Anonymous user cannot setUserDetails', async () => {
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
+  await expect(
+    anonClient.mutate({mutation: mutations.setUserDetails, variables: {bio: 'a dog'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 test('setUserDetails without any arguments returns an error', async () => {

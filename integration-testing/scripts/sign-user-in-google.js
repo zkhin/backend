@@ -18,12 +18,8 @@ prmt.start()
 const playgroundUrl = 'https://developers.google.com/oauthplayground/'
 const prmtSchema = {
   properties: {
-    accessToken: {
-      description: `Google access token with email scope (ie from ${playgroundUrl}, with GoogleOAuth2v2 API)`,
-      required: true,
-    },
     idToken: {
-      description: `Google id token (ie from ${playgroundUrl}, with GoogleOAuth2v2 API)`,
+      description: `Google id token with email scope (ie from ${playgroundUrl}, with GoogleOAuth2v2 API)`,
       required: true,
     },
     destination: {
@@ -32,7 +28,7 @@ const prmtSchema = {
   },
 }
 
-console.log('To generate Google access and id tokens for testing:')
+console.log('To generate a Google id token for testing:')
 console.log('  - you need developer access to the Google REAL app')
 console.log('  - go to `https://developers.google.com/oauthplayground/`')
 console.log('  - click the settings gear in the top-right corner')
@@ -43,7 +39,7 @@ console.log('  - in the box on the bottom left, where it says "Input your own sc
 console.log('  - click "Authorize APIs"')
 console.log('  - go through the authentication flow until you are back to the playground')
 console.log('  - click "Exchange authorization code for tokens"')
-console.log('  - in the response json on the right the id and access tokens will be displayed')
+console.log('  - in the response json on the right the id token will be displayed')
 
 // Prompt and get user input then display those data in console.
 prmt.get(prmtSchema, async (err, result) => {
@@ -55,7 +51,7 @@ prmt.get(prmtSchema, async (err, result) => {
   const output = JSON.stringify(
     {
       authProvider: 'GOOGLE',
-      tokens: {AccessToken: result.accessToken},
+      tokens: {IdToken: result.idToken},
       credentials: gqlCreds,
     },
     null,
@@ -65,9 +61,9 @@ prmt.get(prmtSchema, async (err, result) => {
   else console.log(output)
 })
 
-const generateGQLCredentials = async (accessToken) => {
+const generateGQLCredentials = async (idToken) => {
   const Logins = {}
-  Logins['accounts.google.com'] = accessToken
+  Logins['accounts.google.com'] = idToken
 
   // add the user to the identity pool
   const idResp = await cognitoIndentityPoolClient.getId({Logins}).promise()

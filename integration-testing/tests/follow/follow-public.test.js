@@ -4,6 +4,7 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+let anonClient, anonUserId
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -13,9 +14,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Follow & unfollow a public user', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
@@ -61,6 +65,21 @@ test('Cant follow someone if we are disabled', async () => {
   await expect(
     ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+test('Anonymous users cant follow or be followed', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+
+  // verify anon user can't follow us
+  await expect(
+    anonClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we can't follow them
+  await expect(
+    ourClient.mutate({mutation: mutations.followUser, variables: {userId: anonUserId}}),
+  ).rejects.toThrow(/ClientError: Cannot follow user with status `ANONYMOUS`/)
 })
 
 test('Cant unfollow someone if we are disabled', async () => {

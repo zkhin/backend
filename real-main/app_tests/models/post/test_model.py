@@ -34,7 +34,7 @@ grant_colors = [
 @pytest.fixture
 def user(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
@@ -44,7 +44,7 @@ user2 = user
 @pytest.fixture
 def real_user(user_manager, cognito_client):
     user_id = str(uuid.uuid4())
-    cognito_client.create_verified_user_pool_entry(user_id, 'real', 'real-test@real.app')
+    cognito_client.create_user_pool_entry(user_id, 'real', verified_email='real-test@real.app')
     yield user_manager.create_cognito_only_user(user_id, 'real')
 
 

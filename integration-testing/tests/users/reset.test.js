@@ -6,6 +6,7 @@ const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 const misc = require('../../utils/misc')
 
+let anonClient
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const AuthFlow = cognito.AuthFlow
@@ -17,9 +18,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test("resetUser really releases the user's username", async () => {
   const {client: ourClient, password: ourPassword} = await loginCache.getCleanLogin()
@@ -532,4 +536,12 @@ test('Delete a user disabled user', async () => {
   await theirClient
     .query({query: queries.user, variables: {userId: ourUserId}})
     .then(({data: {user}}) => expect(user).toBeNull())
+})
+
+test('Anonymous users cannot resetUser', async () => {
+  // There isn't a use case for this yet so for simplicity just disallowing it
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
+  await expect(anonClient.mutate({mutation: mutations.resetUser})).rejects.toThrow(
+    /ClientError: Cannot reset user with status `ANONYMOUS`/,
+  )
 })
