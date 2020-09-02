@@ -2,7 +2,7 @@ import logging
 from itertools import chain
 
 from app import models
-from app.models.user.enums import UserPrivacyStatus
+from app.models.user.enums import UserPrivacyStatus, UserStatus
 from app.utils import GqlNotificationType
 
 from .dynamo.base import FollowerDynamo
@@ -59,6 +59,9 @@ class FollowerManager:
 
     def request_to_follow(self, follower_user, followed_user):
         "Returns the status of the follow request"
+        if followed_user.status != UserStatus.ACTIVE:
+            raise FollowerException(f'Cannot follow user with status `{followed_user.status}`')
+
         if self.get_follow(follower_user.id, followed_user.id):
             raise FollowerAlreadyExists(follower_user.id, followed_user.id)
 

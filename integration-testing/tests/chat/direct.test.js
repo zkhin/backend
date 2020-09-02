@@ -7,14 +7,18 @@ const {mutations, queries} = require('../../schema')
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(2)
 
+let anonClient, anonUserId
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Create a direct chat', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
@@ -152,6 +156,27 @@ test('Cannot create a direct chat if we are disabled', async () => {
   await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
+})
+
+test('Anonymous users cannot create direct chats nor be added to one', async () => {
+  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+
+  // check anon user can't create direct chat
+  await expect(
+    anonClient.mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: theirUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'},
+    }),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // check normal user can't create direct chat with anon user
+  await expect(
+    theirClient.mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: anonUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'},
+    }),
+  ).rejects.toThrow(/ClientError: Cannot open direct chat with user with status `ANONYMOUS`/)
 })
 
 test('Cannot open direct chat with self', async () => {

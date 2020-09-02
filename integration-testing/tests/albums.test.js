@@ -6,6 +6,7 @@ const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')
 const {mutations, queries} = require('../schema')
 
+let anonClient
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -15,9 +16,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Add, read, and delete an album', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
@@ -89,6 +93,13 @@ test('Cannot add, edit or delete an album if we are disabled', async () => {
   await expect(ourClient.mutate({mutation: mutations.deleteAlbum, variables: {albumId}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
+})
+
+test('Anonymous user cannot add an album', async () => {
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
+  await expect(
+    anonClient.mutate({mutation: mutations.addAlbum, variables: {albumId: uuidv4(), name: 'name'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
 
 test('Add album with empty string description, treated as null', async () => {

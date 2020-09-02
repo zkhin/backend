@@ -196,6 +196,19 @@ const getAppSyncLogin = async (newUserPhone) => {
 }
 
 /**
+ * Generate an new anonymous user with a ready-to-go fully-initialized gql client.
+ **/
+const getAnonymousAppSyncLogin = async () => {
+  const {IdentityId} = await identityPoolClient.getId().promise()
+  const {Credentials} = await identityPoolClient.getCredentialsForIdentity({IdentityId}).promise()
+  const client = await getAppSyncClient(Credentials)
+  const {
+    data: {createAnonymousUser: user},
+  } = await client.mutate({mutation: mutations.createAnonymousUser})
+  return {client, userId: user.userId, username: user.username}
+}
+
+/**
  * A class to help each test file re-use the same logins, thus
  * speeding up the tests and reducing orphaned objects.
  */
@@ -241,6 +254,7 @@ module.exports = {
   // most common
   AppSyncLoginCache,
   getAppSyncLogin,
+  getAnonymousAppSyncLogin,
 
   // clients
   userPoolClient,

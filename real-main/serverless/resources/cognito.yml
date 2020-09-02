@@ -56,11 +56,9 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                Action:
-                  - appsync:GraphQL
-                Resource:
-                  # 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
-                  - !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
+                Action: appsync:GraphQL
+                # 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
+                Resource: !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
               # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
               - Effect: Allow
                 Action: mobiletargeting:PutEvents
@@ -85,6 +83,10 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
+              - Effect: Allow
+                Action: appsync:GraphQL
+                # 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
+                Resource: !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
               # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
               - Effect: Allow
                 Action: mobiletargeting:PutEvents

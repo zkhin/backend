@@ -1,6 +1,7 @@
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 
+let anonClient, anonUserId
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(2)
 
@@ -9,9 +10,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('User.blockedUsers, User.blockedStatus respond correctly to blocking and unblocking', async () => {
   // us and them
@@ -142,6 +146,21 @@ test('We cannot block a user if we are disabled', async () => {
   await expect(
     ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+test('Anonymous user cannot block or be blocked', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+
+  // verify anonymous user can't block us
+  await expect(
+    anonClient.mutate({mutation: mutations.blockUser, variables: {userId: ourUserId}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify we can't blcok anonymous user
+  await expect(
+    ourClient.mutate({mutation: mutations.blockUser, variables: {userId: anonUserId}}),
+  ).rejects.toThrow(/ClientError: Cannot block user with status `ANONYMOUS`/)
 })
 
 test('We cannot unblock a user if we are disabled', async () => {

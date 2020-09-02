@@ -17,17 +17,11 @@ prmt.start()
 
 const prmtSchema = {
   properties: {
-    idToken: {
-      description: 'Apple id token for REAL app with email scope',
-      required: true,
-    },
     destination: {
       description: 'Filename to write the results to? leave blank for stdout',
     },
   },
 }
-
-console.log('To generate an Apple ID token for our app... ask the frontend team for one?')
 
 // Prompt and get user input then display those data in console.
 prmt.get(prmtSchema, async (err, result) => {
@@ -35,11 +29,10 @@ prmt.get(prmtSchema, async (err, result) => {
     console.log(err)
     return 1
   }
-  const gqlCreds = await generateGQLCredentials(result.idToken)
+  const gqlCreds = await generateGQLCredentials()
   const output = JSON.stringify(
     {
-      authProvider: 'APPLE',
-      tokens: {IdToken: result.idToken},
+      authProvider: 'ANONYMOUS',
       credentials: gqlCreds,
     },
     null,
@@ -49,15 +42,8 @@ prmt.get(prmtSchema, async (err, result) => {
   else console.log(output)
 })
 
-const generateGQLCredentials = async (idToken) => {
-  const Logins = {}
-  Logins['appleid.apple.com'] = idToken
-
-  // add the user to the identity pool
-  const idResp = await cognitoIndentityPoolClient.getId({Logins}).promise()
-  const userId = idResp.IdentityId
-
-  // get credentials for appsync from the identity pool
-  const resp = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId: userId, Logins}).promise()
-  return resp.Credentials
+const generateGQLCredentials = async () => {
+  const {IdentityId} = await cognitoIndentityPoolClient.getId().promise()
+  const {Credentials} = await cognitoIndentityPoolClient.getCredentialsForIdentity({IdentityId}).promise()
+  return Credentials
 }

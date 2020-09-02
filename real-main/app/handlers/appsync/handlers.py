@@ -67,18 +67,36 @@ screen_manager = managers.get('screen') or models.ScreenManager(clients, manager
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
 
-def validate_caller(func):
-    "Decorator that inits a caller_user model and verifies the caller is ACTIVE"
+def validate_caller(*args, allowed_statuses=None):
+    """
+    Decorator that inits a caller_user model and verifies the caller has the correct status.
+    May be used in two ways:
 
-    def wrapper(caller_user_id, arguments, **kwargs):
-        caller_user = user_manager.get_user(caller_user_id)
-        if not caller_user:
-            raise ClientException(f'User `{caller_user_id}` does not exist')
-        if caller_user.status != UserStatus.ACTIVE:
-            raise ClientException(f'User `{caller_user_id}` is not ACTIVE')
-        return func(caller_user, arguments, **kwargs)
+     -  @validate_caller
+        def my_handler(caller_user, ...)
 
-    return wrapper
+     -  @validate_caller(allowed_statuses=[...])
+        def my_handler(caller_user, ...)
+
+    If not specified, `allowed_statuses` defaults to just UserStatus.ACTIVE.
+    """
+
+    def outer_wrapper(func):
+        def inner_wrapper(caller_user_id, arguments, **kwargs):
+            statuses = allowed_statuses or [UserStatus.ACTIVE]
+            caller_user = user_manager.get_user(caller_user_id)
+            if not caller_user:
+                raise ClientException(f'User `{caller_user_id}` does not exist')
+            if caller_user.status not in statuses:
+                raise ClientException(f'User `{caller_user_id}` is not ' + ' or '.join(statuses))
+            return func(caller_user, arguments, **kwargs)
+
+        return inner_wrapper
+
+    if args:
+        return outer_wrapper(args[0])
+    else:
+        return outer_wrapper
 
 
 def update_last_client(func):
@@ -90,6 +108,16 @@ def update_last_client(func):
         return func(caller_user, arguments, client=client, **kwargs)
 
     return wrapper
+
+
+@routes.register('Mutation.createAnonymousUser')
+def create_anonymous_user(caller_user_id, arguments, client=None, **kwargs):
+    try:
+        user = user_manager.create_anonymous_user(caller_user_id)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    user.set_last_client(client)
+    return user.serialize(caller_user_id)
 
 
 @routes.register('Mutation.createCognitoOnlyUser')
@@ -149,8 +177,44 @@ def create_google_user(caller_user_id, arguments, client=None, **kwargs):
     return user.serialize(caller_user_id)
 
 
+@routes.register('Mutation.linkAppleLogin')
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
+@update_last_client
+def link_apple_login(caller_user, arguments, **kwargs):
+    apple_token = arguments['appleIdToken']
+    try:
+        caller_user.link_federated_login('apple', apple_token)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    return caller_user.serialize(caller_user.id)
+
+
+@routes.register('Mutation.linkFacebookLogin')
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
+@update_last_client
+def link_facebook_login(caller_user, arguments, **kwargs):
+    facebook_token = arguments['facebookAccessToken']
+    try:
+        caller_user.link_federated_login('facebook', facebook_token)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    return caller_user.serialize(caller_user.id)
+
+
+@routes.register('Mutation.linkGoogleLogin')
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
+@update_last_client
+def link_google_login(caller_user, arguments, **kwargs):
+    google_id_token = arguments['googleIdToken']
+    try:
+        caller_user.link_federated_login('google', google_id_token)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    return caller_user.serialize(caller_user.id)
+
+
 @routes.register('Mutation.startChangeUserEmail')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 def start_change_user_email(caller_user, arguments, **kwargs):
     email = arguments['email']
@@ -162,20 +226,19 @@ def start_change_user_email(caller_user, arguments, **kwargs):
 
 
 @routes.register('Mutation.finishChangeUserEmail')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 def finish_change_user_email(caller_user, arguments, **kwargs):
-    access_token = arguments['cognitoAccessToken']
     code = arguments['verificationCode']
     try:
-        caller_user.finish_change_contact_attribute('email', access_token, code)
+        caller_user.finish_change_contact_attribute('email', code)
     except UserException as err:
         raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
 @routes.register('Mutation.startChangeUserPhoneNumber')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 def start_change_user_phone_number(caller_user, arguments, **kwargs):
     phone = arguments['phoneNumber']
@@ -187,13 +250,12 @@ def start_change_user_phone_number(caller_user, arguments, **kwargs):
 
 
 @routes.register('Mutation.finishChangeUserPhoneNumber')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 def finish_change_user_phone_number(caller_user, arguments, **kwargs):
-    access_token = arguments['cognitoAccessToken']
     code = arguments['verificationCode']
     try:
-        caller_user.finish_change_contact_attribute('phone', access_token, code)
+        caller_user.finish_change_contact_attribute('phone', code)
     except UserException as err:
         raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
@@ -311,6 +373,8 @@ def reset_user(caller_user_id, arguments, client=None, **kwargs):
     # resetUser may be called when user exists in cognito but not in dynamo
     user = user_manager.get_user(caller_user_id)
     if user:
+        if user.status not in (UserStatus.ACTIVE, UserStatus.DISABLED):
+            raise ClientException(f'Cannot reset user with status `{user.status}`')
         user.reset()
 
     if new_username:
@@ -897,7 +961,7 @@ def dislike_post(caller_user, arguments, **kwargs):
 
 
 @routes.register('Mutation.reportPostViews')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 def report_post_views(caller_user, arguments, **kwargs):
     post_ids = arguments['postIds']

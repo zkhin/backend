@@ -7,7 +7,7 @@ import pytest
 from app.models.follower.enums import FollowStatus
 from app.models.follower.exceptions import FollowerAlreadyExists, FollowerException
 from app.models.post.enums import PostType
-from app.models.user.enums import UserPrivacyStatus
+from app.models.user.enums import UserPrivacyStatus, UserStatus
 from app.utils import GqlNotificationType
 
 
@@ -16,8 +16,10 @@ def users(user_manager, cognito_client):
     "Us and them"
     our_user_id, our_username = str(uuid4()), str(uuid4())[:8]
     their_user_id, their_username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(our_user_id, our_username, f'{our_username}@real.app')
-    cognito_client.create_verified_user_pool_entry(their_user_id, their_username, f'{their_username}@real.app')
+    cognito_client.create_user_pool_entry(our_user_id, our_username, verified_email=f'{our_username}@real.app')
+    cognito_client.create_user_pool_entry(
+        their_user_id, their_username, verified_email=f'{their_username}@real.app'
+    )
     our_user = user_manager.create_cognito_only_user(our_user_id, our_username)
     their_user = user_manager.create_cognito_only_user(their_user_id, their_username)
     yield (our_user, their_user)
@@ -92,6 +94,18 @@ def test_request_to_follow_public_user(follower_manager, users):
     }
     ffs = follower_manager.dynamo.client.get_item(pk)
     assert ffs is None
+
+
+def test_cant_follow_anonymous_user(follower_manager, users):
+    # configure them as anonymous (in mem only)
+    our_user, their_user = users
+    their_user.item['userStatus'] = UserStatus.ANONYMOUS
+    assert their_user.status == UserStatus.ANONYMOUS
+
+    # verify we can't follow them
+    with pytest.raises(FollowerException, match='with status'):
+        follower_manager.request_to_follow(our_user, their_user)
+    assert follower_manager.get_follow(our_user.id, their_user.id) is None
 
 
 def test_request_to_follow_public_user_with_story(follower_manager, users, their_post):

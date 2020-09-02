@@ -1,3 +1,4 @@
+import logging
 import uuid
 from unittest import mock
 
@@ -5,12 +6,13 @@ import pendulum
 import pytest
 
 from app.models.chat.exceptions import ChatException
+from app.models.user.enums import UserStatus
 
 
 @pytest.fixture
 def user1(user_manager, cognito_client):
     user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
@@ -82,7 +84,7 @@ def test_edit_group_chat(group_chat, user1):
     ]
 
 
-def test_add(group_chat, user1, user2, user3, user4, user5, user6, user_manager, block_manager, cognito_client):
+def test_add(group_chat, user1, user2, user3, user4, user5, user6, user_manager, block_manager):
     group_chat.chat_message_manager = mock.Mock()
     now = pendulum.now('utc')
 
@@ -132,6 +134,40 @@ def test_add(group_chat, user1, user2, user3, user4, user5, user6, user_manager,
     # Note: comparing user instances doesn't work
     assert sorted(u.id for u in msg_mock.call_args.args[2]) == sorted([user3.id, user4.id])
     assert msg_mock.call_args.kwargs == {'now': now}
+
+
+def test_cant_add_anonymous_user_to_group_chat(group_chat, user1, user2, user3, caplog):
+    user2.dynamo.set_user_status(user2.id, UserStatus.ANONYMOUS)
+    assert user2.refresh_item().status == UserStatus.ANONYMOUS
+
+    # check starting members
+    assert group_chat.item['userCount'] == 1
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
+    assert member_user_ids == [user1.id]
+
+    # try to add anonymous user and an active user to the chat at same time,
+    # verify only the active user actually gets in
+    with caplog.at_level(logging.WARNING):
+        group_chat.add(user1, [user2.id, user3.id])
+    assert len(caplog.records) == 1
+    assert 'Refusing to add' in caplog.records[0].msg
+    assert user2.id in caplog.records[0].msg
+    assert user2.status in caplog.records[0].msg
+    assert group_chat.item['userCount'] == 2
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
+    assert sorted(member_user_ids) == sorted([user1.id, user3.id])
+
+    # try again to add anonymous user to chat, verify doesn't actually get in
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        group_chat.add(user1, [user2.id])
+    assert len(caplog.records) == 1
+    assert 'Refusing to add' in caplog.records[0].msg
+    assert user2.id in caplog.records[0].msg
+    assert user2.status in caplog.records[0].msg
+    assert group_chat.item['userCount'] == 2
+    member_user_ids = list(group_chat.member_dynamo.generate_user_ids_by_chat(group_chat.id))
+    assert sorted(member_user_ids) == sorted([user1.id, user3.id])
 
 
 def test_cant_add_to_non_group_chat(direct_chat):

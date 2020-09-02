@@ -21,8 +21,6 @@ describe.skip('google user', () => {
 
   afterEach(async () => {
     if (client) await client.mutate({mutation: mutations.resetUser})
-    // no way to delete ourselves from identity pool without an access token
-    // no way to delete ourselves from identity pool without developer credentials
   })
 
   test('Mutation.createGoogleUser success', async () => {

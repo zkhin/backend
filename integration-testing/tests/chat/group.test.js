@@ -8,14 +8,18 @@ const misc = require('../../utils/misc')
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(2)
 
+let anonClient, anonUserId
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Create and edit a group chat', async () => {
   const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
@@ -216,6 +220,50 @@ test('Cannot create, edit, add others to or leave a group chat if we are disable
   await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables: {chatId}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
+})
+
+test('Anonymous users cannot create nor get added to a group chat', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {userId: theirUserId} = await loginCache.getCleanLogin()
+  const {userId: otherUserId} = await loginCache.getCleanLogin()
+  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+
+  // verify anonymous user can't create group chat
+  const chatId = uuidv4()
+  await expect(
+    anonClient.mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId, userIds: [], messageId: uuidv4(), messageText: 'm1'},
+    }),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+
+  // verify if we create a group chat with an anonymous user, they actually don't get added
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId, userIds: [anonUserId, theirUserId], messageId: uuidv4(), messageText: 'm2'},
+    })
+    .then(({data: {createGroupChat: chat}}) => expect(chat.chatId).toBe(chatId))
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.chatUsers, variables: {chatId}}).then(({data: {chat}}) => {
+    expect(chat.chatId).toBe(chatId)
+    expect(chat.usersCount).toBe(2)
+    expect(chat.users.items).toHaveLength(2)
+    expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  })
+
+  // verify if we try to add the anonymous user to a group chat, they don't get added
+  await ourClient.mutate({
+    mutation: mutations.addToGroupChat,
+    variables: {chatId, userIds: [anonUserId, otherUserId]},
+  })
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.chatUsers, variables: {chatId}}).then(({data: {chat}}) => {
+    expect(chat.chatId).toBe(chatId)
+    expect(chat.usersCount).toBe(3)
+    expect(chat.users.items).toHaveLength(3)
+    expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
+  })
 })
 
 test('Exclude users from list of users in a chat', async () => {

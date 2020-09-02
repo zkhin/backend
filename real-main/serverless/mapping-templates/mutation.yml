@@ -1,4 +1,10 @@
 - type: Mutation
+  field: createAnonymousUser
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: createCognitoOnlyUser
   dataSource: LambdaDataSource
   request: Lambda.request.vtl
@@ -18,6 +24,24 @@
 
 - type: Mutation
   field: createGoogleUser
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
+  field: linkAppleLogin
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
+  field: linkFacebookLogin
+  dataSource: LambdaDataSource
+  request: Lambda.request.vtl
+  response: Lambda.response.vtl
+
+- type: Mutation
+  field: linkGoogleLogin
   dataSource: LambdaDataSource
   request: Lambda.request.vtl
   response: Lambda.response.vtl

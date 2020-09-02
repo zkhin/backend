@@ -28,7 +28,6 @@ if (process.argv.length != 3) {
 }
 
 const tokensCreds = JSON.parse(fs.readFileSync(process.argv[2]))
-const cognitoAccessToken = tokensCreds.tokens.AccessToken
 const authProvider = tokensCreds.authProvider
 
 const awsCredentials = new AWS.Credentials(
@@ -79,8 +78,8 @@ const startChangeUserEmail = gql`
 `
 
 const finishChangeUserEmail = gql`
-  mutation FinishChangeUserEmail($cognitoAccessToken: String!, $verificationCode: String!) {
-    finishChangeUserEmail(cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
+  mutation FinishChangeUserEmail($verificationCode: String!) {
+    finishChangeUserEmail(verificationCode: $verificationCode) {
       userId
       username
       email
@@ -101,8 +100,8 @@ const startChangeUserPhoneNumber = gql`
 `
 
 const finishChangeUserPhoneNumber = gql`
-  mutation FinishChangeUserPhoneNumber($cognitoAccessToken: String!, $verificationCode: String!) {
-    finishChangeUserPhoneNumber(cognitoAccessToken: $cognitoAccessToken, verificationCode: $verificationCode) {
+  mutation FinishChangeUserPhoneNumber($verificationCode: String!) {
+    finishChangeUserPhoneNumber(verificationCode: $verificationCode) {
       userId
       username
       email
@@ -122,6 +121,36 @@ const setUserDetails = gql`
       phoneNumber
       birthday
       gender
+    }
+  }
+`
+
+const linkAppleLogin = gql`
+  mutation LinkAppleLogin($appleIdToken: String!) {
+    linkAppleLogin(appleIdToken: $appleIdToken) {
+      userId
+      userStatus
+      email
+    }
+  }
+`
+
+const linkFacebookLogin = gql`
+  mutation LinkFacebookLogin($facebookAccessToken: String!) {
+    linkFacebookLogin(facebookAccessToken: $facebookAccessToken) {
+      userId
+      userStatus
+      email
+    }
+  }
+`
+
+const linkGoogleLogin = gql`
+  mutation LinkGoogleLogin($googleIdToken: String!) {
+    linkGoogleLogin(googleIdToken: $googleIdToken) {
+      userId
+      userStatus
+      email
     }
   }
 `
@@ -146,6 +175,7 @@ const dynamoServerError = gql`
 
 const main = async () => {
   const resp = await appsyncClient.query({query: queries.self})
+  //const resp = await appsyncClient.mutate({mutation: mutations.createAnonymousUser})
   /*
   const resp = await appsyncClient.mutate({
     mutation: mutations.createCognitoOnlyUser,
@@ -158,7 +188,7 @@ const main = async () => {
   })
   const resp = await appsyncClient.mutate({
     mutation: finishChangeUserEmail,
-    variables: {cognitoAccessToken, verificationCode: ''},
+    variables: {verificationCode: ''},
   })
   const resp = await appsyncClient.mutate({
     mutation: startChangeUserPhoneNumber,
@@ -166,7 +196,7 @@ const main = async () => {
   })
   const resp = await appsyncClient.mutate({
     mutation: finishChangeUserPhoneNumber,
-    variables: {cognitoAccessToken, verificationCode: ''},
+    variables: {verificationCode: ''},
   })
   */
   // log object to full depth https://stackoverflow.com/a/10729284

@@ -13,7 +13,7 @@ from app.utils import GqlNotificationType
 @pytest.fixture
 def user(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 

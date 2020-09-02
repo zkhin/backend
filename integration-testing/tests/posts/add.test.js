@@ -5,6 +5,7 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+let anonClient
 const imageBytes = misc.generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -13,9 +14,12 @@ jest.retryTimes(2)
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Add post no expiration', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
@@ -226,5 +230,12 @@ test('Disabled user cannot add a post', async () => {
   // verify we can't add a post
   await expect(
     ourClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}),
+  ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+test('Anonymous user cannot add a post', async () => {
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
+  await expect(
+    anonClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })

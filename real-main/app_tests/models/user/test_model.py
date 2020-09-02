@@ -18,22 +18,28 @@ from app.models.user.exceptions import (
 @pytest.fixture
 def user(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user2(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
 @pytest.fixture
 def user3(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_verified_user_pool_entry(user_id, username, f'{username}@real.app')
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def anonymous_user(user_manager):
+    with patch.object(user_manager.cognito_client, 'get_user_pool_tokens', return_value={'IdToken': 'id-token'}):
+        yield user_manager.create_anonymous_user(str(uuid4()))
 
 
 @pytest.fixture
@@ -198,7 +204,7 @@ def test_disable_enable_user_status(user, caplog):
     assert user.status == UserStatus.DISABLED
     assert user.refresh_item().status == UserStatus.DISABLED
 
-    # no op
+    # disable user
     user.disable()
     assert user.status == UserStatus.DISABLED
 
@@ -224,6 +230,27 @@ def test_disable_enable_user_status(user, caplog):
         user.enable()
     with pytest.raises(UserException, match='Cannot disable user .* in status'):
         user.disable()
+
+
+def test_disable_enable_user_status_anonymous_user(anonymous_user, caplog):
+    user = anonymous_user
+    assert user.refresh_item().status == UserStatus.ANONYMOUS
+
+    # no-op
+    assert user.enable().status == UserStatus.ANONYMOUS
+    assert user.refresh_item().status == UserStatus.ANONYMOUS
+
+    # disable user
+    assert user.disable().status == UserStatus.DISABLED
+    assert user.refresh_item().status == UserStatus.DISABLED
+
+    # no-op
+    assert user.disable().status == UserStatus.DISABLED
+    assert user.refresh_item().status == UserStatus.DISABLED
+
+    # enable user
+    assert user.enable().status == UserStatus.ANONYMOUS
+    assert user.refresh_item().status == UserStatus.ANONYMOUS
 
 
 def test_set_privacy_status_no_change(user):
@@ -305,11 +332,12 @@ def test_finish_change_email(user):
     new_email = 'go@go.com'
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
-    # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
+    # moto has not yet implemented verify_user_attribute, admin_delete_user_attributes, or admin_initiate_auth
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'AccessToken': 'access_token'})
     user.cognito_client.verify_user_attribute = Mock()
     user.cognito_client.clear_user_attribute = Mock()
 
-    user.finish_change_contact_attribute('email', 'access_token', 'verification_code')
+    user.finish_change_contact_attribute('email', 'verification_code')
     assert user.item['email'] == new_email
 
     attrs = user.cognito_client.get_user_attributes(user.id)
@@ -320,6 +348,24 @@ def test_finish_change_email(user):
         call('access_token', 'email', 'verification_code'),
     ]
     assert user.cognito_client.clear_user_attribute.mock_calls == [call(user.id, 'custom:unverified_email')]
+
+
+def test_finish_change_email_anonymous_user_becomes_active(anonymous_user):
+    # set up cognito like we have already started an email change
+    user = anonymous_user
+    new_email = 'go@go.com'
+    user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
+    assert user.refresh_item().status == UserStatus.ANONYMOUS
+
+    # moto has not yet implemented verify_user_attribute, admin_delete_user_attributes, or admin_initiate_auth
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'AccessToken': 'access_token'})
+    user.cognito_client.verify_user_attribute = Mock()
+    user.cognito_client.clear_user_attribute = Mock()
+
+    user.finish_change_contact_attribute('email', 'verification_code')
+    assert user.item == user.refresh_item().item
+    assert user.item['email'] == new_email
+    assert user.status == UserStatus.ACTIVE
 
 
 def test_start_change_phone(user):
@@ -351,11 +397,12 @@ def test_finish_change_phone(user):
     new_phone = '+567'
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_phone': new_phone})
 
-    # moto has not yet implemented verify_user_attribute or admin_delete_user_attributes
+    # moto has not yet implemented verify_user_attribute, admin_delete_user_attributes, or admin_initiate_auth
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'AccessToken': 'access_token'})
     user.cognito_client.verify_user_attribute = Mock()
     user.cognito_client.clear_user_attribute = Mock()
 
-    user.finish_change_contact_attribute('phone', 'access_token', 'verification_code')
+    user.finish_change_contact_attribute('phone', 'verification_code')
     assert user.item['phoneNumber'] == new_phone
 
     attrs = user.cognito_client.get_user_attributes(user.id)
@@ -398,10 +445,9 @@ def test_start_change_email_no_old_value(user_verified_phone):
 
 def test_finish_change_email_no_unverified_email(user):
     org_email = user.item['email']
-    access_token = {}
     verification_code = {}
     with pytest.raises(UserVerificationException):
-        user.finish_change_contact_attribute('email', access_token, verification_code)
+        user.finish_change_contact_attribute('email', verification_code)
     assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
     assert user.item['email'] == org_email
 
@@ -412,14 +458,14 @@ def test_finish_change_email_wrong_verification_code(user):
     org_email = user.item['email']
     user.cognito_client.set_user_attributes(user.id, {'custom:unverified_email': new_email})
 
-    # moto has not yet implemented verify_user_attribute
+    # moto has not yet implemented verify_user_attribute, admin_delete_user_attributes, or admin_initiate_auth
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'AccessToken': 'access_token'})
     exception = user.cognito_client.user_pool_client.exceptions.CodeMismatchException({}, None)
     user.cognito_client.user_pool_client.verify_user_attribute = Mock(side_effect=exception)
 
-    access_token = {}
     verification_code = {}
     with pytest.raises(UserVerificationException):
-        user.finish_change_contact_attribute('email', access_token, verification_code)
+        user.finish_change_contact_attribute('email', verification_code)
     assert user.cognito_client.get_user_attributes(user.id)['email'] == org_email
     assert user.item['email'] == org_email
 
@@ -729,3 +775,53 @@ def test_delete(user):
     user.delete()
     assert user.status == UserStatus.DELETING
     assert user.refresh_item().item is None
+
+
+def test_link_federated_login_bad_provider(user):
+    with pytest.raises(AssertionError, match='not-a-provider'):
+        user.link_federated_login('not-a-provider', 'token')
+
+
+def test_link_federated_login_normal_user(user):
+    # set up mocks, save state
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'IdToken': 'cognito-id-token'})
+    user.cognito_client.link_identity_pool_entries = Mock()
+    org_email = user.item['email']
+    assert user.status == UserStatus.ACTIVE
+
+    # call, verify final state
+    user.link_federated_login('google', 'google-id-token')
+    assert user.item == user.refresh_item().item
+    assert user.item['email'] == org_email
+    assert user.status == UserStatus.ACTIVE
+
+    # verify mock calls
+    assert user.cognito_client.get_user_pool_tokens.mock_calls == [call(user.id)]
+    assert user.cognito_client.link_identity_pool_entries.mock_calls == [
+        call(user.id, cognito_token='cognito-id-token', google_token='google-id-token')
+    ]
+
+
+def test_link_federated_login_anonymous_user(anonymous_user):
+    # set up mocks, save state
+    user = anonymous_user
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'IdToken': 'cognito-id-token'})
+    user.cognito_client.link_identity_pool_entries = Mock()
+    user.cognito_client.set_user_email = Mock()
+    user.clients['apple'].get_verified_email = Mock(return_value='xyz@email.com')
+    assert 'email' not in user.item
+    assert user.status == UserStatus.ANONYMOUS
+
+    # call, verify final state
+    user.link_federated_login('apple', 'apple-id-token')
+    assert user.item == user.refresh_item().item
+    assert user.item['email'] == 'xyz@email.com'
+    assert user.status == UserStatus.ACTIVE
+
+    # verify mock calls
+    assert user.cognito_client.get_user_pool_tokens.mock_calls == [call(user.id)]
+    assert user.cognito_client.link_identity_pool_entries.mock_calls == [
+        call(user.id, cognito_token='cognito-id-token', apple_token='apple-id-token')
+    ]
+    assert user.cognito_client.set_user_email.mock_calls == [call(user.id, 'xyz@email.com')]
+    assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]

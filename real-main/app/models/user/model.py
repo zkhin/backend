@@ -10,7 +10,6 @@ from app.utils import image_size
 
 from .enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
-from .validate import UserValidate
 
 logger = logging.getLogger()
 
@@ -42,6 +41,7 @@ class User(TrendingModelMixin):
         follower_manager=None,
         like_manager=None,
         post_manager=None,
+        user_manager=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
         frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
         **kwargs,
@@ -67,7 +67,8 @@ class User(TrendingModelMixin):
             self.like_manager = like_manager
         if post_manager:
             self.post_manager = post_manager
-        self.validate = UserValidate()
+        if user_manager:
+            self.user_manager = user_manager
         self.item = user_item
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
@@ -138,10 +139,13 @@ class User(TrendingModelMixin):
         return resp
 
     def enable(self):
-        if self.status == UserStatus.ACTIVE:
+        if self.status in (UserStatus.ACTIVE, UserStatus.ANONYMOUS):
             pass
         elif self.status == UserStatus.DISABLED:
-            self.item = self.dynamo.set_user_status(self.id, UserStatus.ACTIVE)
+            new_status = (
+                UserStatus.ACTIVE if 'email' in self.item or 'phoneNumber' in self.item else UserStatus.ANONYMOUS
+            )
+            self.item = self.dynamo.set_user_status(self.id, new_status)
         elif self.status == UserStatus.DELETING:
             raise UserException(f'Cannot enable user `{self.id}` in status `{self.status}`')
         else:
@@ -149,7 +153,7 @@ class User(TrendingModelMixin):
         return self
 
     def disable(self, forced_by=None):
-        if self.status == UserStatus.ACTIVE:
+        if self.status in (UserStatus.ACTIVE, UserStatus.ANONYMOUS):
             self.item = self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
             if forced_by:
                 # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
@@ -225,7 +229,7 @@ class User(TrendingModelMixin):
             return self
 
         # validate and claim the lowercased username in cognito
-        self.validate.username(username)
+        self.user_manager.validate_username(username)
         try:
             self.cognito_client.set_user_attributes(self.id, {'preferred_username': username.lower()})
         except self.cognito_client.user_pool_client.exceptions.AliasExistsException as err:
@@ -325,7 +329,7 @@ class User(TrendingModelMixin):
             self.cognito_client.set_user_attributes(self.id, attrs)
         return self
 
-    def finish_change_contact_attribute(self, attribute_name, access_token, verification_code):
+    def finish_change_contact_attribute(self, attribute_name, verification_code):
         assert attribute_name in CONTACT_ATTRIBUTE_NAMES
         names = CONTACT_ATTRIBUTE_NAMES[attribute_name]
 
@@ -335,9 +339,12 @@ class User(TrendingModelMixin):
         if not value:
             raise UserVerificationException(f'No unverified email found to validate for user `{self.id}`')
 
+        # cognito api requires an access token to do the verification, so sign in as the user
+        tokens = self.cognito_client.get_user_pool_tokens(self.id)
+
         # try to do the validation
         try:
-            self.cognito_client.verify_user_attribute(access_token, names['cognito'], verification_code)
+            self.cognito_client.verify_user_attribute(tokens['AccessToken'], names['cognito'], verification_code)
         except self.cognito_client.user_pool_client.exceptions.CodeMismatchException as err:
             raise UserVerificationException('Verification code is invalid') from err
 
@@ -349,6 +356,49 @@ class User(TrendingModelMixin):
         self.cognito_client.set_user_attributes(self.id, attrs)
         self.item = self.dynamo.set_user_details(self.id, **{names['short']: value})
         self.cognito_client.clear_user_attribute(self.id, f'custom:unverified_{names["short"]}')
+
+        # if we were an anonymous user, we're not anymore
+        if self.status == UserStatus.ANONYMOUS:
+            self.item = self.dynamo.set_user_status(self.id, UserStatus.ACTIVE)
+        return self
+
+    def link_federated_login(self, provider, token):
+        assert provider in ('apple', 'facebook', 'google'), f'Unrecognized identity provider `{provider}`'
+        provider_client = self.clients[provider]
+
+        # link the logins in the identity pool
+        tokens = {
+            'cognito_token': self.cognito_client.get_user_pool_tokens(self.id)['IdToken'],
+            provider + '_token': token,
+        }
+        self.cognito_client.link_identity_pool_entries(self.id, **tokens)
+
+        # if we don't already have an email, try to extract and set one from the token
+        if 'email' not in self.item:
+            try:
+                email = provider_client.get_verified_email(token).lower()
+            except ValueError as err:
+                logger.warning(str(err))
+                raise UserValidationException(str(err)) from err
+
+            # set the user up in cognito, claims the username at the same time
+            try:
+                self.cognito_client.set_user_email(self.id, email)
+            except (
+                # Note: Cognito raises UsernameExistsException for more than just usernames.
+                self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
+                self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+            ) as err:
+                # Not ideal: relying on cognito not to change these exact error messages.
+                if 'An account with the email already exists' in str(err):
+                    raise UserValidationException(f'Email `{email}` already taken') from err
+                raise UserValidationException(str(err)) from err
+            # only set email in dynamo if we were able to successfully set it in cognito
+            self.item = self.dynamo.set_user_details(self.id, email=email)
+
+        # if we were an anonymous user, we're not anymore
+        if self.status == UserStatus.ANONYMOUS:
+            self.item = self.dynamo.set_user_status(self.id, UserStatus.ACTIVE)
         return self
 
     def grant_subscription_bonus(self, now=None):

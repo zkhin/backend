@@ -4,6 +4,7 @@ const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
+let anonClient
 const imageBytes = misc.generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -13,9 +14,12 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 
 test('Cannot like/dislike posts that do not exist', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
@@ -67,6 +71,28 @@ test('Cannot like or dislike posts if we are disabled', async () => {
 
   // verify we can't dislike the second post
   await expect(ourClient.mutate({mutation: mutations.dislikePost, variables: {postId: postId2}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
+})
+
+test('Anonymous user cannot like or dislike posts', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  ;({client: anonClient} = await cognito.getAnonymousAppSyncLogin())
+
+  // we add a post
+  const postId = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.postStatus).toBe('COMPLETED')
+    })
+
+  // verify annoymous user can't like it
+  await expect(anonClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})).rejects.toThrow(
+    /ClientError: User .* is not ACTIVE/,
+  )
+  await expect(anonClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}})).rejects.toThrow(
     /ClientError: User .* is not ACTIVE/,
   )
 })

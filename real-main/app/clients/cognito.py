@@ -26,17 +26,19 @@ class CognitoClient:
         self.facebookLoginsKey = 'graph.facebook.com'
         self.appleLoginsKey = 'appleid.apple.com'
 
-    def create_verified_user_pool_entry(self, user_id, username, email):
-        self.user_pool_client.admin_create_user(
-            UserPoolId=self.user_pool_id,
-            Username=user_id,
-            MessageAction='SUPPRESS',
-            UserAttributes=[
-                {'Name': 'email', 'Value': email},
-                {'Name': 'email_verified', 'Value': 'true'},
+    def create_user_pool_entry(self, user_id, username, verified_email=None):
+        kwargs = {
+            'UserPoolId': self.user_pool_id,
+            'Username': user_id,
+            'UserAttributes': [
                 {'Name': 'preferred_username', 'Value': username.lower()},
             ],
-        )
+        }
+        if verified_email is not None:
+            kwargs['MessageAction'] = 'SUPPRESS'
+            kwargs['UserAttributes'].append({'Name': 'email', 'Value': verified_email})
+            kwargs['UserAttributes'].append({'Name': 'email_verified', 'Value': 'true'})
+        self.user_pool_client.admin_create_user(**kwargs)
         # If we don't set their password to something, cognito will put the account in
         # a FORCE_CHANGE_PASSWORD which does not allow them to reset their password, which
         # we use to allow users to add a password-based login to their account (assuming
@@ -48,14 +50,14 @@ class CognitoClient:
             Permanent=True,
         )
 
-    def get_user_pool_id_token(self, user_id):
+    def get_user_pool_tokens(self, user_id):
         resp = self.user_pool_client.admin_initiate_auth(
             UserPoolId=self.user_pool_id,
             ClientId=self.client_id,
             AuthFlow='CUSTOM_AUTH',
             AuthParameters={'USERNAME': user_id},
         )
-        return resp['AuthenticationResult']['IdToken']
+        return resp['AuthenticationResult']
 
     def link_identity_pool_entries(
         self, user_id, apple_token=None, cognito_token=None, facebook_token=None, google_token=None
@@ -76,6 +78,9 @@ class CognitoClient:
         if google_token:
             logins[self.googleLoginsKey] = google_token
         self.identity_pool_client.get_credentials_for_identity(IdentityId=user_id, Logins=logins)
+
+    def set_user_email(self, user_id, verified_email):
+        self.set_user_attributes(user_id, {'email': verified_email, 'email_verified': 'true'})
 
     def set_user_attributes(self, user_id, attrs):
         """
