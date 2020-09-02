@@ -4348,10 +4348,10 @@ semver@^7.3.2:
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.3.2.tgz#604962b052b81ed0786aae84389ffba70ffd3938"
   integrity sha512-OrOb32TeeambH6UrhtShmF7CRDqhL6/5XpPNp2DuRH6+9QLw/orhp72j87v8Qa1ScDkvrrBNpZcDejAirJmfXQ==
 
-serverless-plugin-aws-alerts@^1.4.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/serverless-plugin-aws-alerts/-/serverless-plugin-aws-alerts-1.5.0.tgz#2c646b245583ef6e3335f8d038d7b8b91e923e26"
-  integrity sha512-/zqcn39vwEHsVweVYx9wAA37XCQjoyTZJnSWOlhOZrggvevyRYF8u0lKueUoD1Z2M8HgYScPC62ESRNiEGKtSg==
+serverless-plugin-aws-alerts@^1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/serverless-plugin-aws-alerts/-/serverless-plugin-aws-alerts-1.6.1.tgz#433e0e781c6c49b29cb61f18bd72522beb06681e"
+  integrity sha512-ylw60cZkjDFtTR08eEKcIU5CHK0PD8TLmTERZ0V4Aoo7cDqT/a9Lr4Ke9U2yBabxrRRqCg1zzZ9QqtQL99YlZA==
   dependencies:
     lodash "^4.17.10"
 

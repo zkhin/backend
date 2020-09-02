@@ -10,6 +10,6 @@
   "devDependencies": {
     "@silvermine/serverless-plugin-cloudfront-lambda-edge": "^2.1.1",
     "serverless": "^1.63.0",
-    "serverless-plugin-git-variables": "^3.4.0"
+    "serverless-plugin-git-variables": "^4.0.0"
   }
 }
