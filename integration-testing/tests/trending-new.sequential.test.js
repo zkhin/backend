@@ -615,36 +615,23 @@ test('Report with FOCUS view type, order of posts in the trending index', async 
     .mutate({mutation: mutations.addPost, variables: {postId: postId2, postType: 'TEXT_ONLY', text: '2nd!'}})
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
-  // they view the first post, pause, then view the other
+  // they view the second post, pause, then view the other
   await theirClient.mutate({
     mutation: mutations.reportPostViews,
-    variables: {postIds: [postId1], viewType: 'THUMBNAIL'},
+    variables: {postIds: [postId2]},
   })
   await misc.sleep(1000)
-  await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
+  await otherClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
 
   // verify they show up in expected order in trending: most recently viewed should come first
   await misc.sleep(2000)
   await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
     expect(trendingPosts.items).toHaveLength(2)
     expect(trendingPosts.items[0].postId).toBe(postId2)
-    expect(trendingPosts.items[1].postId).toBe(postId1)
   })
 
-  // they record another view on the first post, verify that does _not_ change trending order
+  // they record another view on the first post with FOUCS view type
   await theirClient.mutate({
-    mutation: mutations.reportPostViews,
-    variables: {postIds: [postId2], viewType: 'THUMBNAIL'},
-  })
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(2)
-    expect(trendingPosts.items[0].postId).toBe(postId2)
-    expect(trendingPosts.items[1].postId).toBe(postId1)
-  })
-
-  // other records another view on the first post, verify that does change trending order
-  await otherClient.mutate({
     mutation: mutations.reportPostViews,
     variables: {postIds: [postId1], viewType: 'FOCUS'},
   })
