@@ -1,7 +1,7 @@
 - type: Card
   field: thumbnail
   dataSource: LambdaDataSource
-  request: Lambda.request.vtl
+  request: false
   response: Lambda.response.vtl
   caching:
     keys:

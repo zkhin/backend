@@ -1,11 +1,17 @@
 class ClientException(Exception):
     "Any error attributable to the graphql client"
 
-    def __init__(self, message, data=None, info=None):
-        self.message = message
-        self.data = data
+    def __init__(self, msg, info=None):
+        self.msg = msg
         self.info = info
         super().__init__()
 
     def __str__(self):
-        return self.message
+        return f'ClientError: {self.msg}'
+
+    def serialize(self):
+        return {
+            'type': 'ClientError',
+            'message': str(self),
+            'info': self.info,
+        }

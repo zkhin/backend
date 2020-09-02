@@ -1350,9 +1350,9 @@ def flag_chat_message(caller_user, arguments, **kwargs):
 
 
 @routes.register('Mutation.lambdaClientError')
-def lambda_client_error(caller_user_id, arguments, context=None, **kwargs):
+def lambda_client_error(caller_user_id, arguments, context=None, event=None, **kwargs):
     request_id = getattr(context, 'aws_request_id', None)
-    raise ClientException(f'Test of lambda client error, request `{request_id}`')
+    raise ClientException(f'Test of lambda client error, request `{request_id}`', info={'event': event})
 
 
 @routes.register('Mutation.lambdaServerError')
