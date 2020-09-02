@@ -16,7 +16,7 @@ if route_path:
 
 
 def get_client_details(event):
-    headers = event['headers']  # most of the request headers
+    headers = event['request']['headers']
     client = {
         'version': headers.get('x-real-version'),
         'device': headers.get('x-real-device'),
@@ -26,19 +26,18 @@ def get_client_details(event):
 
 
 def get_gql_details(event):
-    gql = {
-        'arguments': event['arguments'],
-        'field': event['field'],
-        'source': event.get('source'),
+    return {
+        'arguments': event.get('arguments') or {},
+        'field': event['info']['parentTypeName'] + '.' + event['info']['fieldName'],
+        'source': event.get('source') or {},
         'callerUserId': (event.get('identity') or {}).get('cognitoIdentityId'),
     }
-    return {k: v for k, v in gql.items() if v is not None}
 
 
 def event_to_extras(event):
     client = get_client_details(event)
     gql = get_gql_details(event)
-    return {'gq': gql, 'client': client}
+    return {'gql': gql, 'client': client}
 
 
 @handler_logging(event_to_extras=event_to_extras)
@@ -47,11 +46,8 @@ def dispatch(event, context):
     # it is a sin that python has no dictionary destructing asignment
     client = get_client_details(event)
     gql = get_gql_details(event)
-    field = gql.get('field')
-    caller_user_id = gql.get('callerUserId')
-    arguments = gql.get('arguments')
-    source = gql.get('source')
 
+    field = gql['field']
     handler = routes.get_handler(field)
     if not handler:
         # should not be able to get here
@@ -64,12 +60,16 @@ def dispatch(event, context):
         logger.info(f'Handling AppSync GQL resolution of `{field}`')
 
     try:
-        # Once support for direct-to-lambda resolvers lands, would be good to simplify this interface
-        # to match that. https://github.com/sid88in/serverless-appsync-plugin/pull/350
-        resp = handler(caller_user_id, arguments, source=source, context=context, client=client)
+        data = handler(
+            gql['callerUserId'],
+            gql['arguments'],
+            source=gql['source'],
+            context=context,
+            event=event,
+            client=client,
+        )
     except ClientException as err:
-        msg = 'ClientError: ' + str(err)
-        logger.warning(msg)
-        return {'error': {'message': msg, 'data': err.data, 'info': err.info}}
+        logger.warning(str(err))
+        return {'error': err.serialize()}
 
-    return {'success': resp}
+    return {'data': data}

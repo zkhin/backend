@@ -102,7 +102,7 @@
 - type: Post
   field: image
   dataSource: LambdaDataSource
-  request: Lambda.request.vtl
+  request: false
   response: Lambda.response.vtl
   caching:
     keys:
@@ -112,19 +112,19 @@
 - type: Post
   field: imageUploadUrl
   dataSource: LambdaDataSource
-  request: Lambda.request.vtl
+  request: false
   response: Lambda.response.vtl
 
 - type: Post
   field: video
   dataSource: LambdaDataSource
-  request: Lambda.request.vtl
+  request: false
   response: Lambda.response.vtl
 
 - type: Post
   field: videoUploadUrl
   dataSource: LambdaDataSource
-  request: Lambda.request.vtl
+  request: false
   response: Lambda.response.vtl
 
 - type: Post
