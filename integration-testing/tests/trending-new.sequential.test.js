@@ -628,6 +628,7 @@ test('Report with FOCUS view type, order of posts in the trending index', async 
   await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
     expect(trendingPosts.items).toHaveLength(2)
     expect(trendingPosts.items[0].postId).toBe(postId2)
+    expect(trendingPosts.items[1].postId).toBe(postId1)
   })
 
   // they record another view on the first post with FOUCS view type
