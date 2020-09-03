@@ -8,6 +8,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
+from app.mixins.view.enums import ViewType
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
 from app.utils import GqlNotificationType
@@ -366,3 +367,24 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if old_item:
             self.dynamo.decrement_viewed_by_count(post_id)
             self.user_manager.dynamo.decrement_post_viewed_by_count(post.user_id)
+
+    def on_post_view_change_update_trending(self, post_id, new_item, old_item=None):
+        now = pendulum.now('utc')
+        post = self.init_post(new_item)
+
+        new_focus_view_count = new_item.get('focusViewCount', 0)
+        old_focus_view_count = (old_item or {}).get('focusViewCount', 0)
+
+        new_view_count = new_item.get('viewCount', 0)
+        old_view_count = (old_item or {}).get('viewCount', 0)
+
+        new_thumbnail_view_count = new_view_count - new_focus_view_count
+        old_thumbnail_view_count = old_view_count - old_focus_view_count
+
+        if new_focus_view_count > 0 and old_focus_view_count == 0:
+            trending_kwargs = {'now': now, 'multiplier': post.get_trending_multiplier(ViewType.FOCUS)}
+            post.trending_increment_score(**trending_kwargs)
+
+        if new_thumbnail_view_count > 0 and old_thumbnail_view_count == 0:
+            trending_kwargs = {'now': now, 'multiplier': post.get_trending_multiplier()}
+            post.trending_increment_score(**trending_kwargs)
