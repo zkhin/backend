@@ -390,10 +390,13 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         new_thumbnail_view_count = new_view_count - new_focus_view_count
         old_thumbnail_view_count = old_view_count - old_focus_view_count
 
+        all_trending_kwargs = []
         if new_focus_view_count > 0 and old_focus_view_count == 0:
-            trending_kwargs = {'now': now, 'multiplier': post.get_trending_multiplier(ViewType.FOCUS)}
-            post.trending_increment_score(**trending_kwargs)
-
+            all_trending_kwargs.append({'now': now, 'multiplier': post.get_trending_multiplier(ViewType.FOCUS)})
         if new_thumbnail_view_count > 0 and old_thumbnail_view_count == 0:
-            trending_kwargs = {'now': now, 'multiplier': post.get_trending_multiplier()}
-            post.trending_increment_score(**trending_kwargs)
+            all_trending_kwargs.append({'now': now, 'multiplier': post.get_trending_multiplier()})
+
+        for trending_kwargs in all_trending_kwargs:
+            recorded = post.trending_increment_score(**trending_kwargs)
+            if recorded:
+                post.user.trending_increment_score(**trending_kwargs)
