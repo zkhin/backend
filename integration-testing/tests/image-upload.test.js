@@ -40,30 +40,35 @@ test('Uploading image sets width, height and colors', async () => {
 
   // upload an image post
   const postId = uuidv4()
-  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.image).toBeNull()
-  const uploadUrl = resp.data.addPost.imageUploadUrl
+  const uploadUrl = await client
+    .mutate({mutation: mutations.addPost, variables: {postId}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.image).toBeNull()
+      return post.imageUploadUrl
+    })
 
   // double check the image post
-  resp = await client.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.image).toBeNull()
+  await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.image).toBeNull()
+  })
 
   // upload the first of those images, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
   await misc.sleepUntilPostProcessed(client, postId)
 
   // check width, height and colors are now set
-  resp = await client.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.postStatus).toBe('COMPLETED')
-  expect(resp.data.post.image.height).toBe(imageHeight)
-  expect(resp.data.post.image.width).toBe(imageWidth)
-  expect(resp.data.post.image.colors).toHaveLength(5)
-  expect(resp.data.post.image.colors[0].r).toBeTruthy()
-  expect(resp.data.post.image.colors[0].g).toBeTruthy()
-  expect(resp.data.post.image.colors[0].b).toBeTruthy()
+  await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.postStatus).toBe('COMPLETED')
+    expect(post.image.height).toBe(imageHeight)
+    expect(post.image.width).toBe(imageWidth)
+    expect(post.image.colors).toHaveLength(5)
+    expect(post.image.colors[0].r).toBeTruthy()
+    expect(post.image.colors[0].g).toBeTruthy()
+    expect(post.image.colors[0].b).toBeTruthy()
+  })
 })
 
 test('Uploading png image results in error', async () => {
@@ -71,19 +76,23 @@ test('Uploading png image results in error', async () => {
 
   // create a pending image post
   const postId = uuidv4()
-  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('PENDING')
-  const uploadUrl = resp.data.addPost.imageUploadUrl
+  const uploadUrl = await client
+    .mutate({mutation: mutations.addPost, variables: {postId}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.postStatus).toBe('PENDING')
+      return post.imageUploadUrl
+    })
 
   // upload a png, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: pngHeaders, body: pngData})
   await misc.sleep(5000)
 
   // check that post ended up in an ERROR state
-  resp = await client.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.postStatus).toBe('ERROR')
+  await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.postStatus).toBe('ERROR')
+  })
 })
 
 test('Upload heic image', async () => {
@@ -91,48 +100,57 @@ test('Upload heic image', async () => {
 
   // create a pending image post
   const postId = uuidv4()
-  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('PENDING')
-  const uploadUrl = resp.data.addPost.imageUploadUrl
-  expect(uploadUrl).toContain('native.heic')
+  const uploadUrl = await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageFormat: 'HEIC'}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.postStatus).toBe('PENDING')
+      expect(post.imageUploadUrl).toContain('native.heic')
+      return post.imageUploadUrl
+    })
 
   // upload a heic, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: heicHeaders, body: heicImageData})
   await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 20 * 1000})
 
   // check that post completed and generated all thumbnails ok
-  resp = await client.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.postStatus).toBe('COMPLETED')
-  expect(resp.data.post.isVerified).toBe(true)
-  const image = resp.data.post.image
-  expect(image).toBeTruthy()
+  const image = await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.postStatus).toBe('COMPLETED')
+    expect(post.isVerified).toBe(true)
+    expect(post.image).toBeTruthy()
+    return post.image
+  })
 
   // check the native image size dims
-  let size = await requestImageSize(image.url)
-  expect(size.width).toBe(heicImageWidth)
-  expect(size.height).toBe(heicImageHeight)
+  await requestImageSize(image.url).then(({width, height}) => {
+    expect(width).toBe(heicImageWidth)
+    expect(height).toBe(heicImageHeight)
+  })
 
   // check the 64p image size dims
-  size = await requestImageSize(image.url64p)
-  expect(size.width).toBeLessThan(114)
-  expect(size.height).toBe(64)
+  await requestImageSize(image.url64p).then(({width, height}) => {
+    expect(width).toBeLessThan(114)
+    expect(height).toBe(64)
+  })
 
   // check the 480p image size dims
-  size = await requestImageSize(image.url480p)
-  expect(size.width).toBeLessThan(854)
-  expect(size.height).toBe(480)
+  await requestImageSize(image.url480p).then(({width, height}) => {
+    expect(width).toBeLessThan(854)
+    expect(height).toBe(480)
+  })
 
   // check the 1080p image size dims
-  size = await requestImageSize(image.url1080p)
-  expect(size.width).toBeLessThan(1920)
-  expect(size.height).toBe(1080)
+  await requestImageSize(image.url1080p).then(({width, height}) => {
+    expect(width).toBeLessThan(1920)
+    expect(height).toBe(1080)
+  })
 
   // check the 4k image size dims
-  size = await requestImageSize(image.url4k)
-  expect(size.width).toBeLessThan(3840)
-  expect(size.height).toBe(2160)
+  await requestImageSize(image.url4k).then(({width, height}) => {
+    expect(width).toBeLessThan(3840)
+    expect(height).toBe(2160)
+  })
 })
 
 test('Thumbnails built on successful upload', async () => {
@@ -140,43 +158,52 @@ test('Thumbnails built on successful upload', async () => {
 
   // create a pending image post
   const postId = uuidv4()
-  let resp = await client.mutate({mutation: mutations.addPost, variables: {postId}})
-  expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.postStatus).toBe('PENDING')
-  const uploadUrl = resp.data.addPost.imageUploadUrl
+  const uploadUrl = await client
+    .mutate({mutation: mutations.addPost, variables: {postId}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.postStatus).toBe('PENDING')
+      return post.imageUploadUrl
+    })
 
   // upload a big jpeg, give the s3 trigger a second to fire
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: bigImageData})
   await misc.sleep(5000) // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostProcessed(client, postId)
 
-  resp = await client.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  const image = resp.data.post.image
-  expect(image).toBeTruthy()
+  const image = await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.image).toBeTruthy()
+    return post.image
+  })
 
   // check the native image size dims
-  let size = await requestImageSize(image.url)
-  expect(size.width).toBe(bigImageWidth)
-  expect(size.height).toBe(bigImageHeight)
+  await requestImageSize(image.url).then(({width, height}) => {
+    expect(width).toBe(bigImageWidth)
+    expect(height).toBe(bigImageHeight)
+  })
 
   // check the 64p image size dims
-  size = await requestImageSize(image.url64p)
-  expect(size.width).toBe(114)
-  expect(size.height).toBeLessThan(64)
+  await requestImageSize(image.url64p).then(({width, height}) => {
+    expect(width).toBe(114)
+    expect(height).toBeLessThan(64)
+  })
 
   // check the 480p image size dims
-  size = await requestImageSize(image.url480p)
-  expect(size.width).toBe(854)
-  expect(size.height).toBeLessThan(480)
+  await requestImageSize(image.url480p).then(({width, height}) => {
+    expect(width).toBe(854)
+    expect(height).toBeLessThan(480)
+  })
 
   // check the 1080p image size dims
-  size = await requestImageSize(image.url1080p)
-  expect(size.width).toBe(1920)
-  expect(size.height).toBeLessThan(1080)
+  await requestImageSize(image.url1080p).then(({width, height}) => {
+    expect(width).toBe(1920)
+    expect(height).toBeLessThan(1080)
+  })
 
   // check the 4k image size dims
-  size = await requestImageSize(image.url4k)
-  expect(size.width).toBe(3840)
-  expect(size.height).toBeLessThan(2160)
+  await requestImageSize(image.url4k).then(({width, height}) => {
+    expect(width).toBe(3840)
+    expect(height).toBeLessThan(2160)
+  })
 })
