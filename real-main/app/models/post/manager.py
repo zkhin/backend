@@ -376,6 +376,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if not post or post.status != PostStatus.COMPLETED:
             return
 
+        # a user's views of their own post don't earning trending points
+        user_id = new_item['sortKey'].split('/')[1]
+        if post.user_id == user_id:
+            return
+
         new_focus_view_count = new_item.get('focusViewCount', 0)
         old_focus_view_count = (old_item or {}).get('focusViewCount', 0)
 

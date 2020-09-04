@@ -611,9 +611,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         # their view will be filtered out when looking at Post.viewedBy
         super().record_view_count(user_id, view_count, viewed_at=viewed_at, view_type=view_type)
 
-        if self.user_id == user_id:
-            return True  # post owner's views don't count for trending, etc.
-
         # If this is a non-original post, count this like a view of the original post as well
         if self.original_post_id != self.id:
             original_post = self.post_manager.get_post(self.original_post_id)
