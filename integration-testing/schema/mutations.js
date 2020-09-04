@@ -573,8 +573,8 @@ module.exports.dislikePost = gql`
 `
 
 module.exports.reportPostViews = gql`
-  mutation ReportPostViews($postIds: [ID!]!) {
-    reportPostViews(postIds: $postIds)
+  mutation ReportPostViews($postIds: [ID!]!, $viewType: ViewType) {
+    reportPostViews(postIds: $postIds, viewType: $viewType)
   }
 `
 
