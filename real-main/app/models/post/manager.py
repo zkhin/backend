@@ -370,7 +370,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
     def on_post_view_change_update_trending(self, post_id, new_item, old_item=None):
         now = pendulum.now('utc')
-        post = self.init_post(new_item)
+
+        # only COMPLETED posts should exist in trending
+        post = self.get_post(post_id)
+        if not post or post.status != PostStatus.COMPLETED:
+            return
 
         new_focus_view_count = new_item.get('focusViewCount', 0)
         old_focus_view_count = (old_item or {}).get('focusViewCount', 0)
