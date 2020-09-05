@@ -501,3 +501,22 @@ def test_on_post_view_add_delete_sync_viewed_by_counts(post_manager, post, caplo
     assert all(x in caplog.records[1].msg for x in ('Failed to decrement postViewedByCount', post.user_id))
     assert post.refresh_item().item['viewedByCount'] == 0
     assert post.user.refresh_item().item['postViewedByCount'] == 0
+
+
+def test_on_post_view_change_update_trending(post_manager, post, caplog):
+    assert post_manager.get_post(post.id)
+
+    item_post_owner = {'sortKey': f'view/{post.user_id}'}
+    new_item = {'sortKey': f'view/{uuid4()}', 'focusViewCount': 1}
+
+    post_manager.on_post_view_change_update_trending(post.id, new_item=item_post_owner)
+    trending_item = post_manager.trending_dynamo.get(post.id)
+    initial_score = float(trending_item.get('gsiA4SortKey'))
+    assert initial_score == pytest.approx(1 + 6 / 7, 0.1)
+    assert trending_item.get('gsiA4PartitionKey') == 'post/trending'
+
+    post_manager.on_post_view_change_update_trending(post.id, new_item=new_item)
+    trending_item = post_manager.trending_dynamo.get(post.id)
+    print(trending_item.get('gsiA4SortKey'))
+    assert float(trending_item.get('gsiA4SortKey')) == pytest.approx(initial_score * 3, 0.1)
+    assert trending_item.get('gsiA4PartitionKey') == 'post/trending'

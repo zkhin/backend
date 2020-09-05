@@ -47,7 +47,7 @@ def test_record_view_count_records_to_original_post_as_well(post, post2, user2):
     post.item['originalPostId'] = post2.id
     post.record_view_count(post.user_id, 1)
     assert post.view_dynamo.get_view(post.id, post.user_id)
-    assert post2.view_dynamo.get_view(post2.id, post.user_id) is None
+    assert post2.view_dynamo.get_view(post2.id, post.user_id)
 
     # verify a rando's view is recorded locally and goes up to the orginal
     assert post.view_dynamo.get_view(post.id, user2.id) is None
@@ -68,11 +68,11 @@ def test_text_only_posts_trend(post_manager, user, user2):
     # record a view, verify that boosts trending score
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
     post.record_view_count(user2.id, 4, viewed_at=viewed_at)
-    assert post.trending_score == 1 + 2
-    assert post.refresh_trending_item().trending_score == 1 + 2
+    assert post.trending_score == 1
+    assert post.refresh_trending_item().trending_score == 1
     assert user.refresh_trending_item()
-    assert pendulum.parse(user.trending_item['lastDeflatedAt']) == viewed_at
-    assert user.trending_score == 1
+    assert user.trending_item is None
+    assert user.trending_score is None
 
 
 def test_only_first_view_of_post_causes_trending(post_manager, user, user2, user3):
@@ -85,8 +85,8 @@ def test_only_first_view_of_post_causes_trending(post_manager, user, user2, user
     # record a view, verify that boosts trending score
     org_post_trending_score = post.trending_score
     post.record_view_count(user2.id, 4)
-    assert post.refresh_trending_item().trending_score > org_post_trending_score
-    assert user.refresh_trending_item().trending_score is not None
+    assert post.refresh_trending_item().trending_score >= org_post_trending_score
+    assert user.refresh_trending_item().trending_score is None
 
     # record another view by the same user, verify trending scores don't change
     org_post_trending_score = post.trending_score
@@ -99,8 +99,8 @@ def test_only_first_view_of_post_causes_trending(post_manager, user, user2, user
     org_post_trending_score = post.trending_score
     org_user_trending_score = post.user.trending_score
     post.record_view_count(user3.id, 2)
-    assert post.refresh_trending_item().trending_score > org_post_trending_score
-    assert user.refresh_trending_item().trending_score > org_user_trending_score
+    assert post.refresh_trending_item().trending_score >= org_post_trending_score
+    assert user.refresh_trending_item().trending_score is None
 
 
 def test_non_verified_image_posts_trend_with_lower_multiplier(post_manager, user, user2, image_data_b64):
@@ -124,9 +124,9 @@ def test_non_verified_image_posts_trend_with_lower_multiplier(post_manager, user
     # record a view, verify adds to trending
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
     post.record_view_count(user2.id, 4, viewed_at=viewed_at)
-    assert post.trending_score == 0.5 + 1
-    assert post.refresh_trending_item().trending_score == 0.5 + 1
-    assert user.refresh_trending_item().trending_score == 0.5  # includes an extra deflation compared to post
+    assert post.trending_score == 0.5
+    assert post.refresh_trending_item().trending_score == 0.5
+    assert user.refresh_trending_item().trending_score is None
 
 
 def test_text_only_posts_trend_with_full_multiplier(post_manager, user, user2):
@@ -143,9 +143,9 @@ def test_text_only_posts_trend_with_full_multiplier(post_manager, user, user2):
     # record a view, verify adds to trending
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
     post.record_view_count(user2.id, 4, viewed_at=viewed_at)
-    assert post.trending_score == 2 + 1
-    assert post.refresh_trending_item().trending_score == 2 + 1
-    assert user.refresh_trending_item().trending_score == 1  # includes an extra deflation compared to post
+    assert post.trending_score == 1
+    assert post.refresh_trending_item().trending_score == 1
+    assert user.refresh_trending_item().trending_score is None  # includes an extra deflation compared to post
 
 
 def test_posts_from_subscriber_trend_with_boosted_multiplier(post_manager, user, user2):
@@ -163,9 +163,9 @@ def test_posts_from_subscriber_trend_with_boosted_multiplier(post_manager, user,
     # record a view, verify adds to trending
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
     post.record_view_count(user2.id, 4, viewed_at=viewed_at)
-    assert post.trending_score == 8 + 4
-    assert post.refresh_trending_item().trending_score == 8 + 4
-    assert user.refresh_trending_item().trending_score == 4  # includes an extra deflation compared to post
+    assert post.trending_score == 4
+    assert post.refresh_trending_item().trending_score == 4
+    assert user.refresh_trending_item().trending_score is None  # includes an extra deflation compared to post
 
 
 def test_verified_image_posts_originality_determines_trending(post_manager, user, image_data_b64, user2, user3):
@@ -184,11 +184,11 @@ def test_verified_image_posts_originality_determines_trending(post_manager, user
     # record a view, verify that boosts trending score
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
     post.record_view_count(user2.id, 4, viewed_at=viewed_at)
-    assert post.trending_score == 1 + 2
-    assert post.refresh_trending_item().trending_score == 1 + 2
+    assert post.trending_score == 1
+    assert post.refresh_trending_item().trending_score == 1
     assert user.refresh_trending_item()
-    assert pendulum.parse(user.trending_item['lastDeflatedAt']) == viewed_at
-    assert user.trending_score == 1
+    assert user.trending_item is None
+    assert user.trending_score is None
 
     # other user adds a non-orginal copy of the first post
     now = pendulum.parse('2020-06-09T12:00:00Z')
@@ -203,8 +203,8 @@ def test_verified_image_posts_originality_determines_trending(post_manager, user
     assert user2.refresh_trending_item().trending_score is None
 
     # verify no affect on original post, user - yet
-    assert post.refresh_trending_item().trending_score == 1 + 2
-    assert user.refresh_trending_item().trending_score == 1
+    assert post.refresh_trending_item().trending_score == 1
+    assert user.refresh_trending_item().trending_score is None
 
     # record a view on that copy by a third user
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # 12 hours forward for original post
@@ -214,8 +214,8 @@ def test_verified_image_posts_originality_determines_trending(post_manager, user
     assert user2.refresh_trending_item().trending_score is None
 
     # verify those trending points went to the original post & user
-    assert post.refresh_trending_item().trending_score == 1 + 2 + 2
-    assert user.refresh_trending_item().trending_score == 1 + 1
+    assert post.refresh_trending_item().trending_score == 1
+    assert user.refresh_trending_item().trending_score is None
 
 
 def test_posts_trend_with_view_type(post_manager, user, user2):
@@ -228,8 +228,8 @@ def test_posts_trend_with_view_type(post_manager, user, user2):
     # record a view, verify that boosts trending score
     viewed_at = pendulum.parse('2020-06-10T00:00:00Z')  # exactly one day forward
     post.record_view_count(user2.id, 4, viewed_at=viewed_at, view_type='FOCUS')
-    assert post.trending_score == 1 + 4
-    assert post.refresh_trending_item().trending_score == 1 + 4
+    assert post.trending_score == 1
+    assert post.refresh_trending_item().trending_score == 1
     assert user.refresh_trending_item()
-    assert pendulum.parse(user.trending_item['lastDeflatedAt']) == viewed_at
-    assert user.trending_score == 2
+    assert user.trending_item is None
+    assert user.trending_score is None
