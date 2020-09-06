@@ -6,6 +6,7 @@ import pendulum
 from app import clients, models
 from app.mixins.flag.enums import FlagStatus
 from app.mixins.flag.exceptions import FlagException
+from app.mixins.view.enums import ViewType
 from app.models.album.exceptions import AlbumException
 from app.models.appstore.exceptions import AppStoreException
 from app.models.block.enums import BlockStatus
@@ -965,7 +966,7 @@ def dislike_post(caller_user, arguments, **kwargs):
 @update_last_client
 def report_post_views(caller_user, arguments, **kwargs):
     post_ids = arguments['postIds']
-    view_type = arguments.get('viewType')
+    view_type = arguments.get('viewType', ViewType.THUMBNAIL)
     if len(post_ids) == 0:
         raise ClientException('A minimum of 1 post id must be reported')
     if len(post_ids) > 100:

@@ -875,5 +875,8 @@ def test_get_trending_multiplier(post):
     post.user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
     assert post.get_trending_multiplier() == 2
 
-    post.user.item['viewType'] = ViewType.FOCUS
-    assert post.get_trending_multiplier() == 2
+    post.item['viewType'] = ViewType.FOCUS
+    assert post.get_trending_multiplier(view_type=ViewType.FOCUS) == 4
+
+    post.item['viewType'] = ViewType.THUMBNAIL
+    assert post.get_trending_multiplier(view_type=ViewType.THUMBNAIL) == 2

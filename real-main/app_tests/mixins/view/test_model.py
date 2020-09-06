@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.mixins.view.enums import ViewedStatus
+from app.mixins.view.enums import ViewedStatus, ViewType
 from app.models.post.enums import PostType
 
 
@@ -65,8 +65,24 @@ def test_record_and_get_views(model, user2, user3):
     assert view_item['lastViewedAt'] > first_viewed_at
 
     # record views by the other user too, check their viewed status also changed
-    model.record_view_count(user3.id, 3, None, 'FOCUS')
+    model.record_view_count(user3.id, 3)
     assert model.get_viewed_status(user3.id) == ViewedStatus.VIEWED
-    view_item = model.view_dynamo.get_view(model.id, user3.id)
+    assert model.view_dynamo.get_view(model.id, user3.id)
+
+
+def test_record_view_count_with_view_type(post, user2, user3):
+    # record views with focus view type, check their viewed status also changed
+    post.record_view_count(user3.id, 3, None, ViewType.FOCUS)
+    assert post.get_viewed_status(user3.id) == ViewedStatus.VIEWED
+    view_item = post.view_dynamo.get_view(post.id, user3.id)
     assert view_item['viewCount'] == 3
     assert view_item['focusViewCount'] == 3
+    assert view_item.get('thumbnailViewCount', 0) == 0
+
+    # record views with thumbnail view type, check their viewed status also changed
+    post.record_view_count(user2.id, 3, None, ViewType.THUMBNAIL)
+    assert post.get_viewed_status(user2.id) == ViewedStatus.VIEWED
+    view_item = post.view_dynamo.get_view(post.id, user2.id)
+    assert view_item['viewCount'] == 3
+    assert view_item['thumbnailViewCount'] == 3
+    assert view_item.get('focusViewCount', 0) == 0

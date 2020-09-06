@@ -615,7 +615,7 @@ test('Report with FOCUS view type, order of posts in the trending index', async 
     .mutate({mutation: mutations.addPost, variables: {postId: postId2, postType: 'TEXT_ONLY', text: '2nd!'}})
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
-  // they view the second post, pause, then view the other
+  // they view the second post, pause, then other view the same second post
   await theirClient.mutate({
     mutation: mutations.reportPostViews,
     variables: {postIds: [postId2]},
@@ -637,6 +637,7 @@ test('Report with FOCUS view type, order of posts in the trending index', async 
     variables: {postIds: [postId1], viewType: 'FOCUS'},
   })
   await misc.sleep(2000)
+  // verify the two posts have changed order in trending
   await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
     expect(trendingPosts.items).toHaveLength(2)
     expect(trendingPosts.items[0].postId).toBe(postId1)

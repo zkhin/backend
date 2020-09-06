@@ -693,13 +693,30 @@ def test_update_last_post_view_at(user_dynamo, caplog):
     assert caplog.records[0].levelname == 'WARNING'
     assert all(x in caplog.records[0].msg for x in ['Failed to update lastPostViewAt', user_id_2])
 
-    # set it with view type
+    # set it with focus view type
     user_id_3 = str(uuid4())
     user_dynamo.add_user(user_id_3, str(uuid4())[:8])
-    user_item = user_dynamo.update_last_post_view_at(user_id_3, None, 'FOCUS')
+    user_item = user_dynamo.get_user(user_id_3)
+    assert 'lastPostViewAt' not in user_item
+    assert 'lastPostFocusViewAt' not in user_item
+
+    # verify the lastPostViewAt and lastPostFocusViewAt are updated
+    now = pendulum.now('utc')
+    user_item = user_dynamo.update_last_post_view_at(user_id_3, now, 'FOCUS')
     assert user_dynamo.get_user(user_id_3) == user_item
-    assert 'lastPostViewAt' in user_item
-    assert 'lastPostFocusViewAt' in user_item
+    assert pendulum.parse(user_item['lastPostViewAt']) == now
+    assert pendulum.parse(user_item['lastPostFocusViewAt']) == now
+
+    # set it with thumbnail view type
+    user_id_4 = str(uuid4())
+    user_dynamo.add_user(user_id_4, str(uuid4())[:8])
+
+    # verify the lastPostViewAt is updated, but not lastPostFocusViewAt
+    now = pendulum.now('utc')
+    user_item = user_dynamo.update_last_post_view_at(user_id_4, now, 'THUMBNAIL')
+    assert user_dynamo.get_user(user_id_4) == user_item
+    assert pendulum.parse(user_item['lastPostViewAt']) == now
+    assert 'lastPostFocusViewAt' not in user_item
 
 
 def test_add_delete_user_deleted(user_dynamo, caplog):
