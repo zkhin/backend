@@ -2,6 +2,12 @@ const gql = require('graphql-tag')
 
 const fragments = require('./fragments.js')
 
+module.exports.usernameStatus = gql`
+  query UsernameStatus($username: String!) {
+    usernameStatus(username: $username)
+  }
+`
+
 module.exports.self = gql`
   query Self($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int, $albumsReverse: Boolean) {
     self {

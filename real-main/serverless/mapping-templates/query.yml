@@ -1,4 +1,8 @@
 - type: Query
+  field: usernameStatus
+  dataSource: DynamodbDataSource
+
+- type: Query
   field: self
   request: Query.self/before.request.vtl
   response: Query.self/after.response.vtl

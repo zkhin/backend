@@ -25,6 +25,9 @@ type Query {
   #   - not present on all queries that return paginated lists
   ####
 
+  # Check username availability
+  usernameStatus(username: String!): UsernameStatus!
+
   # The caller's user object, or throw an error
   self: User!
 
@@ -583,6 +586,12 @@ input ChatMessageNotificationInput {
   # Stringified JSON of the author's serialized representation
   #   - null for system messages or when caller has blocking relationship with author
   authorEncoded : String
+}
+
+enum UsernameStatus {
+  AVAILABLE
+  NOT_AVAILABLE
+  INVALID
 }
 
 enum UserStatus {
