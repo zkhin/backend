@@ -27,7 +27,6 @@ class Migration:
                 [
                     'begins_with(partitionKey, :pk_prefix)',
                     'begins_with(sortKey, :sk_prefix)',
-                    'attribute_not_exists(thumbnailViewCount)',
                 ]
             ),
             'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sk_prefix': 'view/'},
@@ -46,13 +45,18 @@ class Migration:
         view_count = pv.get('viewCount', 0)
         focus_view_count = pv.get('focusViewCount', 0)
         thumbnail_view_count = view_count - focus_view_count
+
+        if pv.get('thumbnailViewCount', 0) == thumbnail_view_count:
+            return
+
         kwargs = {
             'Key': {k: pv[k] for k in ('partitionKey', 'sortKey')},
-            'UpdateExpression': 'SET #vc = :vc, #fvc = :fvc, #tvc = :tvc',
+            'UpdateExpression': 'SET #tvc = :tvc',
             'ConditionExpression': ' AND '.join(
                 [
                     'attribute_exists(partitionKey)',
-                    'attribute_exists(viewCount)',
+                    '#vc = :vc',
+                    '#fvc = :fvc',
                 ]
             ),
             'ExpressionAttributeNames': {
