@@ -43,8 +43,8 @@ class Migration:
         post_id = pv['partitionKey'].split('/')[1]
         user_id = pv['sortKey'].split('/')[1]
         view_count = pv.get('viewCount', 0)
-        focus_view_count = pv.get('focusViewCount', 0)
-        thumbnail_view_count = view_count - focus_view_count
+        focus_view_count = pv.get('focusViewCount')
+        thumbnail_view_count = view_count - (focus_view_count or 0)
 
         if pv.get('thumbnailViewCount', 0) == thumbnail_view_count:
             return
@@ -56,21 +56,22 @@ class Migration:
                 [
                     'attribute_exists(partitionKey)',
                     '#vc = :vc',
-                    '#fvc = :fvc',
                 ]
             ),
             'ExpressionAttributeNames': {
                 '#vc': 'viewCount',
-                '#fvc': 'focusViewCount',
                 '#tvc': 'thumbnailViewCount',
             },
             'ExpressionAttributeValues': {
                 ':vc': view_count,
-                ':fvc': focus_view_count,
                 ':tvc': thumbnail_view_count,
             },
         }
-        logger.warning(f'Migrating thumbnailViewCount to post view for post `{post_id}` and user `{user_id}`')
+        if focus_view_count is not None:
+            kwargs['ConditionExpression'] += ' AND #fvc = :fvc'
+            kwargs['ExpressionAttributeNames']['#fvc'] = 'focusViewCount'
+            kwargs['ExpressionAttributeValues'][':fvc'] = focus_view_count
+        logger.warning(f'Migrating post view item post `{post_id}` and user `{user_id}`')
         self.dynamo_table.update_item(**kwargs)
 
 
