@@ -304,31 +304,34 @@ test('Report post views error conditions', async () => {
   )
 })
 
-test('Post views on duplicate posts are viewed post and original post', async () => {
+test('Post views on duplicate posts are recorded on viewed post and original post', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
-  // we add an image post
-  const ourPostId = uuidv4()
-  let variables = {postId: ourPostId, imageData: imageData1B64, takenInReal: true}
-
-  await ourClient.mutate({mutation: mutations.addPost, variables}).then(({data: {addPost}}) => {
-    expect(addPost.postId).toBe(ourPostId)
-    expect(addPost.postStatus).toBe('COMPLETED')
-    expect(addPost.originalPost.postId).toBe(ourPostId)
-  })
-  await misc.sleep(2000) // dynamo
-
-  // they add an image post that's a duplicate of ours
-  const theirPostId = uuidv4()
-  variables = {postId: theirPostId, imageData: imageData1B64, takenInReal: true}
-
-  await theirClient.mutate({mutation: mutations.addPost, variables}).then(({data: {addPost}}) => {
-    expect(addPost.postId).toBe(theirPostId)
-    expect(addPost.postStatus).toBe('COMPLETED')
-    expect(addPost.originalPost.postId).toBe(ourPostId)
-  })
+  // we add an image post, they add a post that's a duplicate of ours
+  const [ourPostId, theirPostId] = [uuidv4(), uuidv4()]
+  await ourClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: ourPostId, imageData: imageData1B64, takenInReal: true},
+    })
+    .then(({data: {addPost}}) => {
+      expect(addPost.postId).toBe(ourPostId)
+      expect(addPost.postStatus).toBe('COMPLETED')
+      expect(addPost.originalPost.postId).toBe(ourPostId)
+    })
+  await misc.sleep(2000)
+  await theirClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: theirPostId, imageData: imageData1B64, takenInReal: true},
+    })
+    .then(({data: {addPost}}) => {
+      expect(addPost.postId).toBe(theirPostId)
+      expect(addPost.postStatus).toBe('COMPLETED')
+      expect(addPost.originalPost.postId).toBe(ourPostId)
+    })
 
   // verify the original post is our post on both posts, and there are no views on either post
   await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
@@ -336,7 +339,6 @@ test('Post views on duplicate posts are viewed post and original post', async ()
     expect(post.viewedByCount).toBe(0)
     expect(post.originalPost.postId).toBe(ourPostId)
   })
-
   await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(theirPostId)
     expect(post.viewedByCount).toBe(0)
@@ -344,9 +346,8 @@ test('Post views on duplicate posts are viewed post and original post', async ()
   })
 
   // other records one post view on their post
+  // verify that shows up as a view on both posts
   await otherClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [theirPostId]}})
-
-  // verify that showed up on their post
   await misc.sleep(2000)
   await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(theirPostId)
@@ -354,8 +355,6 @@ test('Post views on duplicate posts are viewed post and original post', async ()
     expect(post.viewedBy.items).toHaveLength(1)
     expect(post.viewedBy.items[0].userId).toBe(otherUserId)
   })
-
-  // verify that also showed up on our post
   await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(ourPostId)
     expect(post.viewedByCount).toBe(1)
@@ -364,17 +363,12 @@ test('Post views on duplicate posts are viewed post and original post', async ()
   })
 
   // verify both of our users also recored a view
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(1)
-  })
-  await theirClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(1)
-  })
+  await ourClient.query({query: queries.self}).then(({data: {self}}) => expect(self.postViewedByCount).toBe(1))
+  await theirClient.query({query: queries.self}).then(({data: {self}}) => expect(self.postViewedByCount).toBe(1))
 
   // they record a view on their own post
+  // verify it is not recorded as a view on their post, but does get recorded on the original post
   await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [theirPostId]}})
-
-  // verify that did not get recorded as a view on their post
   await misc.sleep(2000)
   await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(theirPostId)
@@ -382,19 +376,17 @@ test('Post views on duplicate posts are viewed post and original post', async ()
     expect(post.viewedBy.items).toHaveLength(1)
     expect(post.viewedBy.items[0].userId).toBe(otherUserId)
   })
-
-  // verify that did not get recorded as a view on our post
   await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(ourPostId)
-    expect(post.viewedByCount).toBe(1)
-    expect(post.viewedBy.items).toHaveLength(1)
+    expect(post.viewedByCount).toBe(2)
+    expect(post.viewedBy.items).toHaveLength(2)
     expect(post.viewedBy.items[0].userId).toBe(otherUserId)
+    expect(post.viewedBy.items[1].userId).toBe(theirUserId)
   })
 
   // we record a post view on their post
+  // verify it is not recorded as a view on their post, but does not get recorded on our post
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [theirPostId]}})
-
-  // verify it did get recorded on their post
   await misc.sleep(2000)
   await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(theirPostId)
@@ -403,13 +395,12 @@ test('Post views on duplicate posts are viewed post and original post', async ()
     expect(post.viewedBy.items[0].userId).toBe(otherUserId)
     expect(post.viewedBy.items[1].userId).toBe(ourUserId)
   })
-
-  // verify that did not get recorded as a view on our post
   await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(ourPostId)
-    expect(post.viewedByCount).toBe(1)
-    expect(post.viewedBy.items).toHaveLength(1)
+    expect(post.viewedByCount).toBe(2)
+    expect(post.viewedBy.items).toHaveLength(2)
     expect(post.viewedBy.items[0].userId).toBe(otherUserId)
+    expect(post.viewedBy.items[1].userId).toBe(theirUserId)
   })
 })
 
