@@ -163,3 +163,37 @@ def test_on_user_delete_unblock_all_blocks(block_manager, blocker_user, blocked_
     assert block_manager.dynamo.get_block(blocker_user.id, blocked_user_2.id) is None
     assert block_manager.dynamo.get_block(blocked_user.id, blocker_user.id) is None
     assert block_manager.dynamo.get_block(blocked_user_2.id, blocker_user.id) is None
+
+
+def test_on_user_blocked_sync_user_status(block_manager, blocker_user, blocked_user, blocker_user_2):
+    # configure and verify starting state
+    real_user = blocker_user_2
+    block_manager.user_manager._real_user_id = real_user.id
+    assert block_manager.user_manager.real_user_id == real_user.id
+    assert real_user.refresh_item().status == UserStatus.ACTIVE
+    assert blocker_user.refresh_item().status == UserStatus.ACTIVE
+    assert blocked_user.refresh_item().status == UserStatus.ACTIVE
+
+    # fire for blocking not by the real user, verify nothing changes
+    block_manager.block(blocker_user, blocked_user)
+    block_item = block_manager.dynamo.get_block(blocker_user.id, blocked_user.id)
+    assert block_item
+    block_manager.on_user_blocked_sync_user_status(blocked_user.id, new_item=block_item)
+    assert blocker_user.refresh_item().status == UserStatus.ACTIVE
+    assert blocked_user.refresh_item().status == UserStatus.ACTIVE
+
+    # fire for blocking by the real user, verify blocked is disabled but real user unaffected
+    block_manager.block(real_user, blocked_user)
+    block_item = block_manager.dynamo.get_block(real_user.id, blocked_user.id)
+    assert block_item
+    block_manager.on_user_blocked_sync_user_status(blocked_user.id, new_item=block_item)
+    assert real_user.refresh_item().status == UserStatus.ACTIVE
+    assert blocked_user.refresh_item().status == UserStatus.DISABLED
+
+    # fire for blocking the real user, verify nothing changes
+    block_manager.block(blocker_user, real_user)
+    block_item = block_manager.dynamo.get_block(blocker_user.id, real_user.id)
+    assert block_item
+    block_manager.on_user_blocked_sync_user_status(real_user.id, new_item=block_item)
+    assert blocker_user.refresh_item().status == UserStatus.ACTIVE
+    assert real_user.refresh_item().status == UserStatus.ACTIVE

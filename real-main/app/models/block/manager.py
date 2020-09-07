@@ -17,6 +17,7 @@ class BlockManager:
         self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
         self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
+        self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
         if 'dynamo' in clients:
@@ -69,3 +70,10 @@ class BlockManager:
         "Unblock everyone who the user has blocked, or has blocked the user"
         self.dynamo.delete_all_blocks_by_user(user_id)
         self.dynamo.delete_all_blocks_of_user(user_id)
+
+    def on_user_blocked_sync_user_status(self, user_id, new_item):
+        blocker_user_id = new_item['sortKey'].split('/')[1]
+        if blocker_user_id == self.user_manager.real_user_id:
+            user = self.user_manager.get_user(user_id)
+            if user:
+                user.disable(forced_by='blocked by REAL user')

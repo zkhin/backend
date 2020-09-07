@@ -33,40 +33,6 @@ def system_message(chat_message_manager, chat):
     yield chat_message_manager.add_system_message(chat.id, 'system lore')
 
 
-@pytest.mark.parametrize(
-    'method_name, check_method_name, log_pattern',
-    [
-        [
-            'sync_user_status_due_to_chat_messages',
-            'is_forced_disabling_criteria_met_by_chat_messages',
-            'due to chatMessages',
-        ],
-        ['sync_user_status_due_to_comments', 'is_forced_disabling_criteria_met_by_comments', 'due to comments'],
-        ['sync_user_status_due_to_posts', 'is_forced_disabling_criteria_met_by_posts', 'due to posts'],
-    ],
-)
-def test_sync_user_status_due_to(user_manager, user, method_name, check_method_name, log_pattern, caplog):
-    # test does not call
-    with patch.object(user, check_method_name, return_value=False):
-        with patch.object(user_manager, 'init_user', return_value=user):
-            with caplog.at_level(logging.WARNING):
-                getattr(user_manager, method_name)(user.id, user.item, user.item)
-    assert len(caplog.records) == 0
-    assert user.refresh_item().status == UserStatus.ACTIVE
-
-    # test does call
-    with patch.object(user, check_method_name, return_value=True):
-        with patch.object(user_manager, 'init_user', return_value=user):
-            with caplog.at_level(logging.WARNING):
-                getattr(user_manager, method_name)(user.id, user.item, user.item)
-    assert len(caplog.records) == 1
-    assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
-    assert user.id in caplog.records[0].msg
-    assert user.username in caplog.records[0].msg
-    assert log_pattern in caplog.records[0].msg
-    assert user.refresh_item().status == UserStatus.DISABLED
-
-
 def test_sync_elasticsearch(user_manager, user):
     with patch.object(user_manager, 'elasticsearch_client') as elasticsearch_client_mock:
         user_manager.sync_elasticsearch(user.id, {'username': 'spock'}, 'garbage')
