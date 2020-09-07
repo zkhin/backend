@@ -1,3 +1,8 @@
+/**
+ * This test suite cannot run in parrallel with others because it
+ * depends on global state - namely the 'real' user.
+ */
+
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -14,21 +19,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
-/* Waring: I don't play well with the other tests.
- *
- * We don't want a user with username 'real' to be present in the DB while the other
- * tests run, because all new & reset'd users will auto-follow them, throwing off the
- * expected state (number of followed, number of posts in feed, etc).
- *
- * As such, running this test in parrallel with other tests can cause the other tests
- * to mitakenly fail.
- *
- * Note that in the backend this depends on some user id's that are cached in-memory in
- * the lambda handler, so this test may mistakenly fail if run after other tests. Best
- * to run it right after doing a 'serverless deploy', which creates a new version of the
- * lambda handlers thus clearing the in-memory caches.
- */
 
 test('If the `real` or `ian` users flag a post, it should be immediately archived', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()

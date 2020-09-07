@@ -186,6 +186,7 @@ register(
     {'viewCount': 0},
 )
 register('post', 'view', ['INSERT', 'REMOVE'], post_manager.on_post_view_add_delete_sync_viewed_by_counts)
+register('user', 'blocker', ['INSERT'], block_manager.on_user_blocked_sync_user_status)
 register(
     'user',
     'follower',
@@ -240,21 +241,21 @@ register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.sync_user_status_due_to_chat_messages,
+    user_manager.on_user_chat_message_forced_deletion_sync_user_status,
     {'chatMessagesForcedDeletionCount': 0},
 )
 register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.sync_user_status_due_to_comments,
+    user_manager.on_user_comment_forced_deletion_sync_user_status,
     {'commentForcedDeletionCount': 0},
 )
 register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.sync_user_status_due_to_posts,
+    user_manager.on_user_post_forced_archiving_sync_user_status,
     {'postForcedArchivingCount': 0},
 )
 register(

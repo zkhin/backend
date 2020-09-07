@@ -1,3 +1,8 @@
+/**
+ * This test suite cannot run in parrallel with others because it
+ * depends on global state - namely the 'real' user.
+ */
+
 const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
@@ -12,16 +17,6 @@ beforeAll(async () => {
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
-
-/* Warning: I don't play well with the other tests.
- *
- * We don't want a user with username 'real' to be present in the DB while the other
- * tests run, because all new & reset'd users will auto-follow them, throwing off the
- * expected state (number of followed, number of posts in feed, etc).
- *
- * As such, running this test in parrallel with other tests can cause the other tests
- * to mitakenly fail.
- */
 
 test('new users auto-follow a user with username `real`, if they exist', async () => {
   // the real user has a random username at this point from the [before|after]_each methods
