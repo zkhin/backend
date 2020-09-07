@@ -369,8 +369,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.user_manager.dynamo.decrement_post_viewed_by_count(post.user_id)
 
     def on_post_view_change_update_trending(self, post_id, new_item, old_item=None):
-        now = pendulum.now('utc')
-
         # only COMPLETED posts should exist in trending
         post = self.get_post(post_id)
         if not post or post.status != PostStatus.COMPLETED:
@@ -390,6 +388,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         new_thumbnail_view_count = new_view_count - new_focus_view_count
         old_thumbnail_view_count = old_view_count - old_focus_view_count
 
+        now = pendulum.parse(new_item['lastViewedAt'])
         all_trending_kwargs = []
         if new_focus_view_count > 0 and old_focus_view_count == 0:
             all_trending_kwargs.append({'now': now, 'multiplier': post.get_trending_multiplier(ViewType.FOCUS)})
