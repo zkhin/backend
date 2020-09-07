@@ -5,7 +5,6 @@ import pendulum
 import stringcase
 
 from app.mixins.trending.model import TrendingModelMixin
-from app.models.block.enums import BlockStatus
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
