@@ -30,14 +30,14 @@ python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 boto3 = "^1.11.9"
-pytest = "^5.3.5"
+pytest = "^6.0.1"
 requests-mock = "^1.7.0"
 cryptography = "^2.8"
 requests-aws4auth = "^0.9"
 pillow = "^7.2.0"
 elasticsearch = "^7.5.1"
 pendulum = "^2.0.5"
-pytest-cov = "^2.8.1"
+pytest-cov = "2.10.1"
 colorthief = "^0.2.1"
 python-dotenv = "^0.12.0"
 gql = "^0.4.0"
@@ -55,3 +55,11 @@ pyjwt = "^1.7.1"
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 114
 disable = "C, R, import-error, attribute-defined-outside-init, fixme, no-name-in-module, unused-argument, logging-fstring-interpolation, no-member, super-init-not-called, protected-access, broad-except, unused-import, arguments-differ, redefined-outer-name, unsubscriptable-object"
+
+[tool.pytest.ini_options]
+addopts = "--cov app --cov migrations --cov-report html"
+env = [
+  "AWS_DEFAULT_REGION=us-east-1",
+  "AWS_XRAY_SDK_ENABLED=false",
+]
+filterwarnings = "ignore:the imp module is deprecated in favour of importlib.*:DeprecationWarning:boto:40"

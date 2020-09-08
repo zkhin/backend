@@ -50,6 +50,12 @@ jobs:
     - name: Test with pytest
       run: cd real-main && poetry run pytest -n auto app_tests migrations_tests
 
+    - name: Archive test coverage results
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage-report
+        path: real-main/htmlcov
+
   python-lint:
     runs-on: ubuntu-latest
     steps:
