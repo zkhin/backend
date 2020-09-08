@@ -4,6 +4,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
+from app.mixins.view.enums import ViewType
 from app.models.user.dynamo import UserDynamo
 from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
@@ -660,30 +661,42 @@ def test_generate_user_ids_by_subscription_level(user_dynamo):
     assert list(generate(DIAMOND)) == [user_id_1, user_id_2]
 
 
-def test_update_last_post_view_at(user_dynamo, caplog):
+@pytest.mark.parametrize('view_type', [None, ViewType.THUMBNAIL, ViewType.FOCUS])
+def test_update_last_post_view_at(user_dynamo, caplog, view_type):
     user_id = str(uuid4())
     user_dynamo.add_user(user_id, str(uuid4())[:8])
     assert 'lastPostViewAt' not in user_dynamo.get_user(user_id)
+    assert 'lastPostFocusViewAt' not in user_dynamo.get_user(user_id)
     ms = pendulum.duration(microseconds=1)
 
     # set it without specifying time exactly, verify
-    user_item = user_dynamo.update_last_post_view_at(user_id)
+    user_item = user_dynamo.update_last_post_view_at(user_id, view_type=view_type)
     assert user_dynamo.get_user(user_id) == user_item
     assert 'lastPostViewAt' in user_item
     now = pendulum.parse(user_item['lastPostViewAt'])
+    if view_type == ViewType.FOCUS:
+        assert user_item['lastPostFocusViewAt'] == user_item['lastPostViewAt']
+    else:
+        assert 'lastPostFocusViewAt' not in user_item
 
     # verify can't set it earlier time
     with caplog.at_level(logging.WARNING):
-        user_dynamo.update_last_post_view_at(user_id, now=(now - ms))
+        user_dynamo.update_last_post_view_at(user_id, now=(now - ms), view_type=view_type)
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
     assert all(x in caplog.records[0].msg for x in ['Failed to update lastPostViewAt', user_id])
 
     # verify can set it to a later time
-    user_item = user_dynamo.update_last_post_view_at(user_id, now=(now + ms))
+    user_item = user_dynamo.update_last_post_view_at(user_id, now=(now + ms), view_type=view_type)
     assert user_dynamo.get_user(user_id) == user_item
     assert pendulum.parse(user_item['lastPostViewAt']) == now + ms
+    if view_type == ViewType.FOCUS:
+        assert user_item['lastPostFocusViewAt'] == user_item['lastPostViewAt']
+    else:
+        assert 'lastPostFocusViewAt' not in user_item
 
+
+def test_update_last_post_view_at_user_dne(user_dynamo, caplog):
     # verify setting it on a user that DNE fails softly
     user_id_2 = str(uuid4())
     caplog.clear()

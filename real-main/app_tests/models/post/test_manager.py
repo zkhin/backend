@@ -5,6 +5,7 @@ import pendulum
 import pytest
 import stringcase
 
+from app.mixins.view.enums import ViewType
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.utils import image_size
@@ -558,3 +559,21 @@ def test_record_views(post_manager, user, user2, posts, caplog):
     assert post_manager.view_dynamo.get_view(post1.id, user2.id)['viewCount'] == 2
     assert post_manager.view_dynamo.get_view(post2.id, user2.id)['viewCount'] == 1
     assert user2.refresh_item().item['lastPostViewAt']
+
+    # record views of our post with focus view type
+    post_manager.record_views([post1.id, post2.id, post1.id], user2.id, None, ViewType.FOCUS)
+    assert post_manager.view_dynamo.get_view(post1.id, user2.id)['viewCount'] == 4
+    assert post_manager.view_dynamo.get_view(post2.id, user2.id)['viewCount'] == 2
+    assert post_manager.view_dynamo.get_view(post1.id, user2.id)['focusViewCount'] == 2
+    assert post_manager.view_dynamo.get_view(post2.id, user2.id)['focusViewCount'] == 1
+    assert user2.refresh_item().item['lastPostViewAt']
+    assert user2.refresh_item().item['lastPostFocusViewAt']
+
+    # record views of our post with thumbnail view type
+    post_manager.record_views([post1.id, post2.id], user.id, None, ViewType.THUMBNAIL)
+    assert post_manager.view_dynamo.get_view(post1.id, user.id)['viewCount'] == 2
+    assert post_manager.view_dynamo.get_view(post2.id, user.id)['viewCount'] == 2
+    assert post_manager.view_dynamo.get_view(post1.id, user.id)['thumbnailViewCount'] == 1
+    assert post_manager.view_dynamo.get_view(post2.id, user.id)['thumbnailViewCount'] == 1
+    assert user2.refresh_item().item['lastPostViewAt']
+    assert user2.refresh_item().item['lastPostFocusViewAt']

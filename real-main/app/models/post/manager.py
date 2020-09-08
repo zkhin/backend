@@ -8,6 +8,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
+from app.mixins.view.enums import ViewType
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
 from app.utils import GqlNotificationType
@@ -193,7 +194,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
         return post
 
-    def record_views(self, post_ids, user_id, viewed_at=None):
+    def record_views(self, post_ids, user_id, viewed_at=None, view_type=None):
         grouped_post_ids = dict(collections.Counter(post_ids))
         if not grouped_post_ids:
             return
@@ -204,10 +205,10 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             if not post:
                 logger.warning(f'Cannot record view(s) by user `{user_id}` on DNE post `{post_id}`')
                 continue
-            results.append(post.record_view_count(user_id, view_count, viewed_at=viewed_at))
+            results.append(post.record_view_count(user_id, view_count, viewed_at=viewed_at, view_type=view_type))
 
         if any(results):
-            self.user_manager.dynamo.update_last_post_view_at(user_id, now=viewed_at)
+            self.user_manager.dynamo.update_last_post_view_at(user_id, now=viewed_at, view_type=view_type)
 
     def delete_recently_expired_posts(self, now=None):
         "Delete posts that expired yesterday or today"
@@ -366,3 +367,35 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if old_item:
             self.dynamo.decrement_viewed_by_count(post_id)
             self.user_manager.dynamo.decrement_post_viewed_by_count(post.user_id)
+
+    def on_post_view_change_update_trending(self, post_id, new_item, old_item=None):
+        # only COMPLETED posts should exist in trending
+        post = self.get_post(post_id)
+        if not post or post.status != PostStatus.COMPLETED:
+            return
+
+        # a user's views of their own post don't earning trending points
+        user_id = new_item['sortKey'].split('/')[1]
+        if post.user_id == user_id:
+            return
+
+        new_focus_view_count = new_item.get('focusViewCount', 0)
+        old_focus_view_count = (old_item or {}).get('focusViewCount', 0)
+
+        new_view_count = new_item.get('viewCount', 0)
+        old_view_count = (old_item or {}).get('viewCount', 0)
+
+        new_thumbnail_view_count = new_view_count - new_focus_view_count
+        old_thumbnail_view_count = old_view_count - old_focus_view_count
+
+        now = pendulum.parse(new_item['lastViewedAt'])
+        all_trending_kwargs = []
+        if new_focus_view_count > 0 and old_focus_view_count == 0:
+            all_trending_kwargs.append({'now': now, 'multiplier': post.get_trending_multiplier(ViewType.FOCUS)})
+        if new_thumbnail_view_count > 0 and old_thumbnail_view_count == 0:
+            all_trending_kwargs.append({'now': now, 'multiplier': post.get_trending_multiplier()})
+
+        for trending_kwargs in all_trending_kwargs:
+            recorded = post.trending_increment_score(**trending_kwargs)
+            if recorded:
+                post.user.trending_increment_score(**trending_kwargs)

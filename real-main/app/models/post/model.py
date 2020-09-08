@@ -8,6 +8,7 @@ import PIL.Image
 
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.trending.model import TrendingModelMixin
+from app.mixins.view.enums import ViewType
 from app.mixins.view.model import ViewModelMixin
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus, UserSubscriptionLevel
@@ -601,39 +602,31 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
         return super().flag(user)
 
-    def record_view_count(self, user_id, view_count, viewed_at=None):
+    def record_view_count(self, user_id, view_count, viewed_at=None, view_type=None):
         if self.status != PostStatus.COMPLETED:
             logger.warning(f'Cannot record views by user `{user_id}` on non-COMPLETED post `{self.id}`')
             return False
 
         # record user's view of their own post, but don't increment any counters about it
         # their view will be filtered out when looking at Post.viewedBy
-        is_new_view = super().record_view_count(user_id, view_count, viewed_at=viewed_at)
-
-        if self.user_id == user_id:
-            return True  # post owner's views don't count for trending, etc.
-
-        # only a user's first view a of a post counts for trending
-        if is_new_view:
-            trending_kwargs = {'now': viewed_at, 'multiplier': self.get_trending_multiplier()}
-            recorded = self.trending_increment_score(**trending_kwargs)
-            if recorded:
-                self.user.trending_increment_score(**trending_kwargs)
+        super().record_view_count(user_id, view_count, viewed_at=viewed_at, view_type=view_type)
 
         # If this is a non-original post, count this like a view of the original post as well
         if self.original_post_id != self.id:
             original_post = self.post_manager.get_post(self.original_post_id)
             if original_post:
-                original_post.record_view_count(user_id, view_count, viewed_at=viewed_at)
+                original_post.record_view_count(user_id, view_count, viewed_at=viewed_at, view_type=view_type)
 
         return True
 
-    def get_trending_multiplier(self):
+    def get_trending_multiplier(self, view_type=None):
         multiplier = 1
         if self.is_verified is False:  # note that non-image posts have is_verified value of None
             multiplier /= 2
         if self.user.subscription_level == UserSubscriptionLevel.DIAMOND:
             multiplier *= 4
+        if view_type == ViewType.FOCUS:
+            multiplier *= 2
         return multiplier
 
     def trending_increment_score(self, now=None, **kwargs):

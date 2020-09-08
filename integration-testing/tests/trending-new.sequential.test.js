@@ -22,6 +22,7 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
+  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 
 beforeEach(async () => await loginCache.clean())
@@ -598,5 +599,59 @@ test('Only first view of a post counts for trending', async () => {
     expect(trendingPosts.items).toHaveLength(2)
     expect(trendingPosts.items[0].postId).toBe(postId1)
     expect(trendingPosts.items[1].postId).toBe(postId2)
+  })
+})
+
+test('Report with FOCUS view type, order of posts in the trending index', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: other1Client} = await loginCache.getCleanLogin()
+  const {client: other2Client} = await loginCache.getCleanLogin()
+  const {client: other3Client} = await loginCache.getCleanLogin()
+
+  // we add three posts, with sleeps so we have determinant trending order
+  const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'first!'}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
+  await misc.sleep(1000)
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, postType: 'TEXT_ONLY', text: '2nd!'}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
+  await misc.sleep(1000)
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId3, postType: 'TEXT_ONLY', text: '3rd!'}})
+    .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
+
+  // other1 & other2 view the second post
+  await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
+  await other2Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
+
+  // verify trending order
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(3)
+    expect(trendingPosts.items[0].postId).toBe(postId2)
+    expect(trendingPosts.items[1].postId).toBe(postId3)
+    expect(trendingPosts.items[2].postId).toBe(postId1)
+  })
+
+  // other3 FOCUS views the first post and THUMBNAIL views the third
+  await other3Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1], viewType: 'FOCUS'},
+  })
+  await other3Client.mutate({
+    mutation: mutations.reportPostViews,
+    variables: {postIds: [postId1], viewType: 'THUMBNAIL'},
+  })
+
+  // verify the new trending order. Post that got the FOCUS view has jumped ahead of post2
+  // while the post that got the THUMBNAIL view didn't get enough points to do so
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(3)
+    expect(trendingPosts.items[0].postId).toBe(postId1)
+    expect(trendingPosts.items[1].postId).toBe(postId2)
+    expect(trendingPosts.items[2].postId).toBe(postId3)
   })
 })

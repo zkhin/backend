@@ -7,6 +7,7 @@ from unittest import mock
 import pendulum
 import pytest
 
+from app.mixins.view.enums import ViewType
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.post.model import Post
@@ -873,3 +874,8 @@ def test_get_trending_multiplier(post):
 
     post.user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
     assert post.get_trending_multiplier() == 2
+
+    # THUMBNAIL views get the same as the default, FOCUS views get a 2x boost
+    default = post.get_trending_multiplier()
+    assert post.get_trending_multiplier(view_type=ViewType.THUMBNAIL) == default
+    assert post.get_trending_multiplier(view_type=ViewType.FOCUS) == default * 2

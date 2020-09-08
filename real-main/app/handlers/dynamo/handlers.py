@@ -186,6 +186,7 @@ register(
     {'viewCount': 0},
 )
 register('post', 'view', ['INSERT', 'REMOVE'], post_manager.on_post_view_add_delete_sync_viewed_by_counts)
+register('post', 'view', ['INSERT', 'MODIFY'], post_manager.on_post_view_change_update_trending)
 register('user', 'blocker', ['INSERT'], block_manager.on_user_blocked_sync_user_status)
 register(
     'user',

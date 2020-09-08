@@ -267,7 +267,7 @@ class UserDynamo:
             query_kwargs['ExpressionAttributeValues'][':mea'] = max_expires_at.to_iso8601_string()
         return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
 
-    def update_last_post_view_at(self, user_id, now=None):
+    def update_last_post_view_at(self, user_id, now=None, view_type=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': self.pk(user_id),
@@ -275,6 +275,10 @@ class UserDynamo:
             'ConditionExpression': 'NOT lastPostViewAt > :lpva',
             'ExpressionAttributeValues': {':lpva': now.to_iso8601_string()},
         }
+
+        if view_type == 'FOCUS':
+            query_kwargs['UpdateExpression'] = 'SET lastPostViewAt = :lpva, lastPostFocusViewAt = :lpva'
+
         failure_warning = f'Failed to update lastPostViewAt for user `{user_id}`'
         return self.client.update_item(query_kwargs, failure_warning=failure_warning)
 

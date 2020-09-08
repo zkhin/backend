@@ -3,3 +3,10 @@ class ViewedStatus:
     VIEWED = 'VIEWED'
 
     _ALL = (NOT_VIEWED, VIEWED)
+
+
+class ViewType:
+    THUMBNAIL = 'THUMBNAIL'
+    FOCUS = 'FOCUS'
+
+    _ALL = (THUMBNAIL, FOCUS)
