@@ -7,7 +7,7 @@ from app import clients, models
 from app.handlers import xray
 from app.logging import LogLevelContext, handler_logging
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserStatus
+from app.models.user.enums import UserStatus, UserSubscriptionLevel
 
 from .dispatch import DynamoDispatch
 
@@ -295,6 +295,13 @@ register(
     ['INSERT', 'MODIFY', 'REMOVE'],
     user_manager.on_user_phone_number_change_update_subitem,
     {'phoneNumber': None},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    card_manager.on_user_subscription_level_change_update_card,
+    {'subscriptionLevel': UserSubscriptionLevel.BASIC},
 )
 register('user', 'profile', ['REMOVE'], album_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_receipts)
