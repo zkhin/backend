@@ -452,6 +452,11 @@ def test_on_user_subscription_level_change_update_card(card_manager, user):
     template = templates.UserSubscriptionLevelTemplate(user.id)
     assert card_manager.get_card(template.card_id) is None
 
+    # change to basic level, process, check card is not created
+    user.item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
+    card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id) is None
+
     # change to diamond level, process, check card created
     user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
     card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item)

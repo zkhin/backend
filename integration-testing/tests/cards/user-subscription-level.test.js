@@ -1,22 +1,17 @@
-/* eslint-env jest */
-
-// the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
-global.WebSocket = require('ws')
-
 const cognito = require('../../utils/cognito')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
-  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test('Card message triggers cannot be called from external graphql client', async () => {
+test('User subscription level card: generating, format', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // we give ourselves some free diamond
@@ -26,16 +21,16 @@ test('Card message triggers cannot be called from external graphql client', asyn
       expect(user.userId).toBe(ourUserId)
       expect(user.subscriptionLevel).toBe('DIAMOND')
     })
+  await misc.sleep(2000)
 
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
     expect(user.cardCount).toBe(1)
     expect(user.cards.items).toHaveLength(1)
     let card = user.cards.items[0]
-    expect(card.cardId).toBeTruthy()
     expect(card.cardId).toBe(`${ourUserId}:USER_SUBSCRIPTION_LEVEL`)
     expect(card.title).toBe('Welcome to Diamond')
     expect(card.subTitle).toBe('Enjoy exclusive perks of being a subscriber')
-    expect(card.action).toBe('https://real.app/diamond/')
+    expect(card.action).toBe('https://real.app/diamond')
   })
 })
