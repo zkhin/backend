@@ -1,3 +1,4 @@
+import imghdr
 import io
 
 import PIL.Image
@@ -52,14 +53,15 @@ class CachedImage:
                 heif_file.mode, heif_file.size, heif_file.data, 'raw', heif_file.mode, heif_file.stride
             )
         elif self.content_type == 'image/jpeg':
+            file_type = imghdr.what(fh)
+            if file_type is None:
+                raise PostException(f'Unable to recognize file type of uploaded file for post `{self.post_id}`')
+            if file_type != 'jpeg':
+                raise PostException(f'File of type `{file_type}` for uploaded jpeg image post `{self.post_id}`')
             try:
                 self._image = PIL.ImageOps.exif_transpose(PIL.Image.open(fh))
-            except PostException:
-                raise
             except Exception as err:
-                raise PostException(
-                    f'Unable to decode native jpeg data for post `{self.post_id}`: {err}'
-                ) from err
+                raise PostException(f'Unable to decode jpeg data for post `{self.post_id}`: {err}') from err
         else:
             raise PostException(f'Unrecognized content-type `{self.content_type}`')
 

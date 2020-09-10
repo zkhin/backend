@@ -329,7 +329,7 @@ def test_add_image_post_with_image_data_processing_error(user, post_manager, gra
     assert post.item['postedByUserId'] == user.id
     assert post.item['postedAt'] == now.to_iso8601_string()
     assert post.item['postStatus'] == PostStatus.ERROR
-    assert post.item['postStatusReason'].startswith('Unable to decode native jpeg data for post')
+    assert post.item['postStatusReason'].startswith('Unable to recognize file type of uploaded file for post ')
     assert post.id in post.item['postStatusReason']
 
 
