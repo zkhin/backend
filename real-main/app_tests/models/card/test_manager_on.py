@@ -445,6 +445,7 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
 
+
 def test_on_user_subscription_level_change_update_card(card_manager, user):
     # check starting state
     assert 'subscriptionLevel' not in user.item

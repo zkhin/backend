@@ -147,7 +147,7 @@ class RequestedFollowersCardTemplate(CardTemplate):
 
 
 class UserSubscriptionLevelTemplate(CardTemplate):
-    
+
     action = 'https://real.app/diamond/'
     notify_user_after = pendulum.duration(hours=24)
 
