@@ -8,6 +8,7 @@ import pytest
 from app.models.card import templates
 from app.models.card.enums import CardNotificationType
 from app.models.post.enums import PostType
+from app.models.user.enums import UserSubscriptionLevel
 
 
 @pytest.fixture
@@ -442,4 +443,22 @@ def test_on_post_viewed_by_count_change_update_card(card_manager, post, user):
     old_item = post.item.copy()
     post.item['viewedByCount'] = 7
     card_manager.on_post_viewed_by_count_change_update_card(post.id, new_item=post.item, old_item=old_item)
+    assert card_manager.get_card(template.card_id) is None
+
+def test_on_user_subscription_level_change_update_card(card_manager, user):
+    # check starting state
+    assert 'subscriptionLevel' not in user.item
+    template = templates.UserSubscriptionLevelTemplate(user.id)
+    assert card_manager.get_card(template.card_id) is None
+
+    # change to diamond level, process, check card created
+    user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
+    card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id)
+
+    # change from diamond to basic level, process, check card deleted
+    old_item = user.item.copy()
+    user.item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
+    old_item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
+    card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
