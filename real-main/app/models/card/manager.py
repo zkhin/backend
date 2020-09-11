@@ -4,6 +4,7 @@ from functools import partialmethod
 import pendulum
 
 from app import models
+from app.models.user.enums import UserSubscriptionLevel
 
 from . import templates
 from .appsync import CardAppSync
@@ -128,6 +129,22 @@ class CardManager:
         if cnt > 0:
             self.add_or_update_card(card_template)
         else:
+            self.dynamo.delete_card(card_template.card_id)
+
+    def on_user_subscription_level_change_update_card(self, user_id, new_item, old_item=None):
+        new_subscription_level = new_item.get('subscriptionLevel', UserSubscriptionLevel.BASIC)
+        old_subscription_level = (old_item or {}).get('subscriptionLevel', UserSubscriptionLevel.BASIC)
+
+        card_template = templates.UserSubscriptionLevelTemplate(user_id)
+        if (
+            new_subscription_level == UserSubscriptionLevel.DIAMOND
+            and old_subscription_level != UserSubscriptionLevel.DIAMOND
+        ):
+            self.add_or_update_card(card_template)
+        elif (
+            new_subscription_level != UserSubscriptionLevel.DIAMOND
+            and old_subscription_level == UserSubscriptionLevel.DIAMOND
+        ):
             self.dynamo.delete_card(card_template.card_id)
 
     on_user_followers_requested_count_change_sync_card = partialmethod(

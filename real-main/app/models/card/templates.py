@@ -144,3 +144,19 @@ class RequestedFollowersCardTemplate(CardTemplate):
         self.card_id = self.get_card_id(user_id)
         cnt = requested_followers_count
         self.title = f'You have {cnt} pending follow request{"s" if cnt > 1 else ""}'
+
+
+class UserSubscriptionLevelTemplate(CardTemplate):
+
+    action = 'https://real.app/diamond'
+    notify_user_after = pendulum.duration(hours=24)
+
+    @staticmethod
+    def get_card_id(user_id):
+        return f'{user_id}:USER_SUBSCRIPTION_LEVEL'
+
+    def __init__(self, user_id):
+        super().__init__(user_id)
+        self.card_id = self.get_card_id(user_id)
+        self.title = 'Welcome to Diamond'
+        self.sub_title = 'Enjoy exclusive perks of being a subscriber'
