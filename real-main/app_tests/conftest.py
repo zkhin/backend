@@ -129,6 +129,11 @@ def elasticsearch_client():
 
 
 @pytest.fixture
+def appstore_client():
+    yield mock.Mock(clients.AppStoreClient())
+
+
+@pytest.fixture
 def apple_client():
     yield mock.Mock(clients.AppleClient())
 
@@ -177,8 +182,8 @@ def album_manager(dynamo_client, s3_uploads_client, cloudfront_client):
 
 
 @pytest.fixture
-def appstore_manager(dynamo_client):
-    yield models.AppStoreManager({'dynamo': dynamo_client})
+def appstore_manager(appstore_client, dynamo_client):
+    yield models.AppStoreManager({'appstore': appstore_client, 'dynamo': dynamo_client})
 
 
 @pytest.fixture

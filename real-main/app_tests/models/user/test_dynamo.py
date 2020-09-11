@@ -572,7 +572,7 @@ def test_grant_and_clear_subscription(user_dynamo):
     # Note that this raises the wrong exception upon user DNE, but this isn't really an issue in
     # the app because when this method is called the user has already been verified to exist.
     with pytest.raises(UserAlreadyGrantedSubscription):
-        user_dynamo.grant_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, expires_at)
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, expires_at)
     assert user_dynamo.get_user(user_id) is None
 
     # verify can't clear subscription from user that DNE
@@ -591,16 +591,18 @@ def test_grant_and_clear_subscription(user_dynamo):
 
     # verify we can't grant basic subscriptions
     with pytest.raises(AssertionError, match='BASIC'):
-        user_dynamo.grant_subscription(user_id, UserSubscriptionLevel.BASIC, granted_at, expires_at)
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.BASIC, granted_at, expires_at)
     assert user_dynamo.get_user(user_id) == user_item
 
     # verify we can't grant non-expiring subscriptions
-    with pytest.raises(AssertionError, match='must expire'):
-        user_dynamo.grant_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, None)
+    with pytest.raises(AssertionError, match='expire'):
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, None)
     assert user_dynamo.get_user(user_id) == user_item
 
     # verify we can do a normal grant
-    new_user_item = user_dynamo.grant_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, expires_at)
+    new_user_item = user_dynamo.update_subscription(
+        user_id, UserSubscriptionLevel.DIAMOND, granted_at, expires_at
+    )
     assert user_dynamo.get_user(user_id) == new_user_item
     assert new_user_item == {
         **user_item,
@@ -614,7 +616,7 @@ def test_grant_and_clear_subscription(user_dynamo):
     # verify we cannot re-grant ourselves more subscription after granting once
     new_expires_at = expires_at + pendulum.duration(days=4)
     with pytest.raises(UserAlreadyGrantedSubscription):
-        user_dynamo.grant_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, new_expires_at)
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, new_expires_at)
     assert user_dynamo.get_user(user_id) == new_user_item
 
     # clear the subscription, verify result, verify idempotent
@@ -629,8 +631,43 @@ def test_grant_and_clear_subscription(user_dynamo):
 
     # check that we can't re-grant ourselves another bonus subscription
     with pytest.raises(UserAlreadyGrantedSubscription):
-        user_dynamo.grant_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, new_expires_at)
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND, granted_at, new_expires_at)
     assert user_dynamo.get_user(user_id) == new_user_item
+
+
+def test_update_subscription_not_a_grant(user_dynamo):
+    user_id = str(uuid4())
+
+    # Verify can't update subscription for user that DNE
+    # Note that this raises the wrong exception upon user DNE, but this isn't really an issue in
+    # the app because when this method is called the user has already been verified to exist.
+    with pytest.raises(UserAlreadyGrantedSubscription):
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND)
+
+    # verify we can't use this to go down to BASIC - use clear_subscription for that
+    with pytest.raises(AssertionError, match='BASIC'):
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.BASIC)
+
+    # verify we can't set an expires_at for non-grants: all non-grants auto-renew
+    with pytest.raises(AssertionError, match='expire'):
+        user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND, expires_at=pendulum.now('utc'))
+
+    # create the user item
+    user_item = user_dynamo.add_user(user_id, str(uuid4())[:8])
+    assert user_dynamo.get_user(user_id) == user_item
+    assert 'subscriptionLevel' not in user_item
+    assert 'subscriptionGrantedAt' not in user_item
+    assert 'subscriptionExpiresAt' not in user_item
+    assert 'gsiK1PartitionKey' not in user_item
+    assert 'gsiK1SortKey' not in user_item
+
+    # success case
+    user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND)
+    assert user_dynamo.get_user(user_id) == {**user_item, 'subscriptionLevel': UserSubscriptionLevel.DIAMOND}
+
+    # check idempotent
+    user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND)
+    assert user_dynamo.get_user(user_id) == {**user_item, 'subscriptionLevel': UserSubscriptionLevel.DIAMOND}
 
 
 def test_generate_user_ids_by_subscription_level(user_dynamo):
@@ -647,9 +684,9 @@ def test_generate_user_ids_by_subscription_level(user_dynamo):
     now = pendulum.now('utc')
     expires_at_1 = now + pendulum.duration(hours=1)
     expires_at_2 = now + pendulum.duration(hours=2)
-    user_dynamo.grant_subscription(user_id_1, DIAMOND, now, expires_at_1)
-    user_dynamo.grant_subscription(user_id_2, DIAMOND, now, expires_at_2)
-    user_dynamo.grant_subscription(user_id_3, 'distraction', now, expires_at_1)
+    user_dynamo.update_subscription(user_id_1, DIAMOND, now, expires_at_1)
+    user_dynamo.update_subscription(user_id_2, DIAMOND, now, expires_at_2)
+    user_dynamo.update_subscription(user_id_3, 'distraction', now, expires_at_1)
 
     # test generate none, one, two, all
     generate = user_dynamo.generate_user_ids_by_subscription_level

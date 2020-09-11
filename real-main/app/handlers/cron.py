@@ -52,6 +52,13 @@ def deflate_trending_posts(event, context):
 
 
 @handler_logging
+def update_appstore_subscriptions(event, context):
+    cnt = appstore_manager.update_subscriptions()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'AppStore subscriptions updated: {cnt}')
+
+
+@handler_logging
 def garbage_collect_albums(event, context):
     cnt = album_manager.garbage_collect()
     with LogLevelContext(logger, logging.INFO):

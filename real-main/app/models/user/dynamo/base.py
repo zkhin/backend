@@ -211,27 +211,37 @@ class UserDynamo:
         }
         return self.client.update_item(query_kwargs)
 
-    def grant_subscription(self, user_id, sub_level, sub_granted_at, sub_expires_at):
-        assert sub_level != UserSubscriptionLevel.BASIC, "Cannot grant BASIC subscriptions"
-        assert sub_expires_at, "Subscription grants must expire"
+    def update_subscription(self, user_id, level, granted_at=None, expires_at=None):
+        assert level != UserSubscriptionLevel.BASIC, "Cannot grant BASIC subscriptions"
+        assert (granted_at is None) == (expires_at is None), "Subscriptions expire iff they are granted"
         query_kwargs = {
             'Key': self.pk(user_id),
-            'UpdateExpression': 'SET #sl = :sl, #sga = :sga, #sea = :sea, #gsipk = :gsipk, #gsisk = :sea',
-            'ConditionExpression': 'attribute_not_exists(#sga)',  # each user gets max one subscription grant
-            'ExpressionAttributeNames': {
-                '#sl': 'subscriptionLevel',
-                '#sea': 'subscriptionExpiresAt',
-                '#sga': 'subscriptionGrantedAt',
-                '#gsipk': 'gsiK1PartitionKey',
-                '#gsisk': 'gsiK1SortKey',
-            },
-            'ExpressionAttributeValues': {
-                ':sl': sub_level,
-                ':sga': sub_granted_at.to_iso8601_string(),
-                ':sea': sub_expires_at.to_iso8601_string(),
-                ':gsipk': f'user/{sub_level}',
-            },
+            'UpdateExpression': 'SET #sl = :sl',
+            'ExpressionAttributeNames': {'#sl': 'subscriptionLevel'},
+            'ExpressionAttributeValues': {':sl': level},
         }
+        if granted_at is not None:
+            query_kwargs['UpdateExpression'] += ', #sga = :sga'
+            # each user gets max one subscription grant
+            query_kwargs['ConditionExpression'] = 'attribute_not_exists(#sga)'
+            query_kwargs['ExpressionAttributeNames'].update({'#sga': 'subscriptionGrantedAt'})
+            query_kwargs['ExpressionAttributeValues'].update({':sga': granted_at.to_iso8601_string()})
+        if expires_at is not None:
+            query_kwargs['UpdateExpression'] += ', #sea = :sea, #gsipk = :gsipk, #gsisk = :sea'
+            query_kwargs['ExpressionAttributeNames'].update(
+                {
+                    '#sea': 'subscriptionExpiresAt',
+                    '#gsipk': 'gsiK1PartitionKey',
+                    '#gsisk': 'gsiK1SortKey',
+                }
+            )
+            query_kwargs['ExpressionAttributeValues'].update(
+                {
+                    ':sl': level,
+                    ':sea': expires_at.to_iso8601_string(),
+                    ':gsipk': f'user/{level}',
+                }
+            )
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:

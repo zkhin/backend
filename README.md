@@ -60,6 +60,7 @@ _Once per deployment_
 - A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
 - Credentials to access the post verification API must be added. Reference the environment variable in serverless.yml for required format. Talk to the backend team lead to get a set of credentials.
 - Google OAuth Client Ids must be added. These are available from our google app's profile on the [google app console](https://console.developers.google.com/) and have format `{"ios": "***", "web": "***", ...}`. Reference the environment variable in serverless.yml for the proper naming.
+- The [Apple AppStore Shared Secret](https://developer.apple.com/documentation/appstorereceipts/requestbody) must be added in order to process & verify appstore receipts. Reference the environment variable in serverless.yml for the proper naming.
 
 #### SES
 

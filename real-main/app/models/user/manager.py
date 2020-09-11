@@ -9,6 +9,7 @@ import pendulum
 from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
+from app.models.appstore.enums import AppStoreSubscriptionStatus
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
@@ -462,3 +463,9 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 logger.warning(f'No cognito user pool entry found when deleting user `{user_id}`')
             # TODO: catch 404 error & log warning
             self.cognito_client.delete_identity_pool_entry(user_id)
+
+    def on_appstore_sub_status_change_update_subscription(self, original_transaction_id, new_item, old_item=None):
+        if new_item['status'] == AppStoreSubscriptionStatus.ACTIVE:
+            self.dynamo.update_subscription(new_item['userId'], UserSubscriptionLevel.DIAMOND)
+        else:
+            self.dynamo.clear_subscription(new_item['userId'])

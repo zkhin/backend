@@ -22,6 +22,8 @@ provider:
     AWS_ACCOUNT_ID: '#{AWS::AccountId}'
 
     APPSYNC_GRAPHQL_URL: '#{GraphQlApi.GraphQLUrl}'
+    APPLE_BUNDLE_ID: 'app.real.mobile'
+    APPSTORE_SHARED_SECRET: ${ssm:/aws/reference/secretsmanager/AppstoreSharedSecret-1~true}
     DYNAMO_TABLE: ${self:provider.stackName}
     DYNAMO_FEED_TABLE: real-${self:provider.stage}-feed
     ELASTICSEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
@@ -448,6 +450,18 @@ functions:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
       - schedule: 'rate(1 minute)'
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  updateAppStoreSubscriptions:
+    name: ${self:provider.stackName}-updateAppStoreSubscriptions
+    handler: app.handlers.cron.update_appstore_subscriptions
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 hour)'
     alarms:
       - functionErrors
       - functionThrottles

@@ -30,7 +30,7 @@ clients = {
 
 managers = {}
 album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
-appstore_manager = managers.get('appstore_receipt') or models.AppStoreManager(clients, managers=managers)
+appstore_manager = managers.get('appstore') or models.AppStoreManager(clients, managers=managers)
 block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
@@ -61,8 +61,13 @@ register(
 register('album', '-', ['REMOVE'], album_manager.on_album_delete_delete_album_art)
 register('album', '-', ['REMOVE'], post_manager.on_album_delete_remove_posts)
 register('album', '-', ['REMOVE'], user_manager.on_album_delete_update_album_count)
-# TODO: enable once receipt to auto-verify receipts upon upload
-# register('appStoreReceipt', '-', ['INSERT'], appstore_manager.on_receipt_add_verify)
+register(
+    'appStoreSub',
+    '-',
+    ['INSERT', 'MODIFY'],
+    user_manager.on_appstore_sub_status_change_update_subscription,
+    {'status': None},
+)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
 register('card', '-', ['INSERT'], user_manager.on_card_add_increment_count)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)
@@ -304,7 +309,7 @@ register(
     {'subscriptionLevel': UserSubscriptionLevel.BASIC},
 )
 register('user', 'profile', ['REMOVE'], album_manager.on_user_delete_delete_all_by_user)
-register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_receipts)
+register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], block_manager.on_user_delete_unblock_all_blocks)
 register('user', 'profile', ['REMOVE'], card_manager.on_user_delete_delete_cards)
 register('user', 'profile', ['REMOVE'], chat_manager.on_user_delete_delete_flags)

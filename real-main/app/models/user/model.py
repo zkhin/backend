@@ -404,5 +404,7 @@ class User(TrendingModelMixin):
     def grant_subscription_bonus(self, now=None):
         now = now or pendulum.now('utc')
         expires_at = now + self.subscription_bonus_duration
-        self.item = self.dynamo.grant_subscription(self.id, UserSubscriptionLevel.DIAMOND, now, expires_at)
+        self.item = self.dynamo.update_subscription(
+            self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at
+        )
         return self

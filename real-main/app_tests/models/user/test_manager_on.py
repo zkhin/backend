@@ -4,8 +4,9 @@ from uuid import uuid4
 
 import pytest
 
+from app.models.appstore.enums import AppStoreSubscriptionStatus
 from app.models.post.enums import PostStatus, PostType
-from app.models.user.enums import UserStatus
+from app.models.user.enums import UserStatus, UserSubscriptionLevel
 from app.utils import image_size
 
 
@@ -411,3 +412,36 @@ def test_on_criteria_sync_user_status(user_manager, user, method_name, check_met
     assert user.username in caplog.records[0].msg
     assert log_pattern in caplog.records[0].msg
     assert user.refresh_item().status == UserStatus.DISABLED
+
+
+def test_on_appstore_sub_status_change_update_subscription(user_manager, user):
+    assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
+
+    # simulate adding a new appstore subscription
+    new_item = {'userId': user.id, 'status': AppStoreSubscriptionStatus.ACTIVE}
+    user_manager.on_appstore_sub_status_change_update_subscription(str(uuid4()), new_item=new_item)
+    assert user.refresh_item().subscription_level == UserSubscriptionLevel.DIAMOND
+
+    # simulate that subscription expiring
+    old_item = new_item
+    new_item = {'userId': user.id, 'status': AppStoreSubscriptionStatus.EXPIRED}
+    user_manager.on_appstore_sub_status_change_update_subscription(
+        str(uuid4()), new_item=new_item, old_item=old_item
+    )
+    assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
+
+    # simulate them re-starting the subscription
+    old_item = new_item
+    new_item = {'userId': user.id, 'status': AppStoreSubscriptionStatus.ACTIVE}
+    user_manager.on_appstore_sub_status_change_update_subscription(
+        str(uuid4()), new_item=new_item, old_item=old_item
+    )
+    assert user.refresh_item().subscription_level == UserSubscriptionLevel.DIAMOND
+
+    # simulate them cancelling the subscription
+    old_item = new_item
+    new_item = {'userId': user.id, 'status': AppStoreSubscriptionStatus.CANCELLED}
+    user_manager.on_appstore_sub_status_change_update_subscription(
+        str(uuid4()), new_item=new_item, old_item=old_item
+    )
+    assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
