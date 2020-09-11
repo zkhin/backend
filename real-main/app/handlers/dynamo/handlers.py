@@ -341,8 +341,7 @@ def process_records(event, context):
         with LogLevelContext(logger, logging.INFO):
             logger.info(f'{name}: `{pk}` / `{sk}` starting processing')
 
-        # we still have some pks in an old (& deprecated) format with more than one item_id in the pk
-        pk_prefix, item_id = pk.split('/')[:2]
+        pk_prefix, item_id = pk.split('/')
         sk_prefix = sk.split('/')[0]
 
         item_kwargs = {k: v for k, v in {'new_item': new_item, 'old_item': old_item}.items() if v}
