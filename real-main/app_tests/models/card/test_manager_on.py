@@ -458,13 +458,14 @@ def test_on_user_subscription_level_change_update_card(card_manager, user):
     assert card_manager.get_card(template.card_id) is None
 
     # change to diamond level, process, check card created
+    old_item = user.item.copy()
+    old_item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
     user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
-    card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item)
+    card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
 
     # change from diamond to basic level, process, check card deleted
     old_item = user.item.copy()
     user.item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
-    old_item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
     card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
