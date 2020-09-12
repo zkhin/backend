@@ -4,7 +4,7 @@ from functools import partialmethod
 import pendulum
 
 from app import models
-from app.models.user.enums import UserSubscriptionLevel
+from app.models.user.enums import UserStatus, UserSubscriptionLevel
 
 from . import templates
 from .appsync import CardAppSync
@@ -145,6 +145,23 @@ class CardManager:
             new_subscription_level != UserSubscriptionLevel.DIAMOND
             and old_subscription_level == UserSubscriptionLevel.DIAMOND
         ):
+            self.dynamo.delete_card(card_template.card_id)
+
+    def on_user_change_update_photo_card(self, user_id, new_item, old_item=None):
+        new_photo_post_id = new_item.get('photoPostId')
+        old_photo_post_id = (old_item or {}).get('photoPostId')
+
+        new_user_status = new_item.get('userStatus')
+        old_user_status = (old_item or {}).get('userStatus')
+
+        card_template = templates.AddProfilePhotoCardTemplate(user_id)
+        if (
+            new_user_status == UserStatus.ACTIVE
+            and not new_photo_post_id
+            and (not old_item or (old_item and old_user_status == UserStatus.ANONYMOUS))
+        ):
+            self.add_or_update_card(card_template)
+        elif new_photo_post_id and not old_photo_post_id:
             self.dynamo.delete_card(card_template.card_id)
 
     on_user_followers_requested_count_change_sync_card = partialmethod(
