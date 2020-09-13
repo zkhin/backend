@@ -163,7 +163,6 @@ class UserSubscriptionLevelTemplate(CardTemplate):
 
 
 class AddProfilePhotoCardTemplate(CardTemplate):
-
     @staticmethod
     def get_card_id(user_id):
         return f'{user_id}:ADD_PROFILE_PHOTO'
