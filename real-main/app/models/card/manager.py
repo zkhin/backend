@@ -148,20 +148,20 @@ class CardManager:
             self.dynamo.delete_card(card_template.card_id)
 
     def on_user_change_update_photo_card(self, user_id, new_item, old_item=None):
-        new_photo_post_id = new_item.get('photoPostId')
-        old_photo_post_id = (old_item or {}).get('photoPostId')
+        new_has_photo = 'photoPostId' in new_item
+        old_has_photo = 'photoPostId' in (old_item or {})
 
-        new_user_status = new_item.get('userStatus')
-        old_user_status = (old_item or {}).get('userStatus')
+        new_user_status = new_item.get('userStatus', UserStatus.ACTIVE)
+        old_user_status = old_item.get('userStatus', UserStatus.ACTIVE) if old_item else None
 
         card_template = templates.AddProfilePhotoCardTemplate(user_id)
         if (
-            new_user_status == UserStatus.ACTIVE
-            and not new_photo_post_id
-            and (not old_item or (old_item and old_user_status == UserStatus.ANONYMOUS))
+            not new_has_photo
+            and new_user_status == UserStatus.ACTIVE
+            and old_user_status in (None, UserStatus.ANONYMOUS)
         ):
             self.add_or_update_card(card_template)
-        elif new_photo_post_id and not old_photo_post_id:
+        if new_has_photo and not old_has_photo:
             self.dynamo.delete_card(card_template.card_id)
 
     on_user_followers_requested_count_change_sync_card = partialmethod(
