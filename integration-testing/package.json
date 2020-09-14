@@ -58,7 +58,7 @@
     "generate-password": "^1.5.0",
     "graphql-tag": "^2.10.3",
     "http-aws-es": "^6.0.0",
-    "isomorphic-fetch": "^2.2.1",
+    "isomorphic-fetch": "https://github.com/matthew-andrews/isomorphic-fetch.git#49280e6",
     "jest": "^26.0.1",
     "jest-circus": "^26.3.0",
     "jpeg-js": "^0.4.1",
