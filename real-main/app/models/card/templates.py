@@ -160,3 +160,15 @@ class UserSubscriptionLevelTemplate(CardTemplate):
         self.card_id = self.get_card_id(user_id)
         self.title = 'Welcome to Diamond'
         self.sub_title = 'Enjoy exclusive perks of being a subscriber'
+
+
+class AddProfilePhotoCardTemplate(CardTemplate):
+    @staticmethod
+    def get_card_id(user_id):
+        return f'{user_id}:ADD_PROFILE_PHOTO'
+
+    def __init__(self, user_id):
+        super().__init__(user_id)
+        self.card_id = self.get_card_id(user_id)
+        self.action = f'https://real.app/user/{user_id}/settings/photo'
+        self.title = 'Add a profile photo'

@@ -8,7 +8,7 @@ import pytest
 from app.models.card import templates
 from app.models.card.enums import CardNotificationType
 from app.models.post.enums import PostType
-from app.models.user.enums import UserSubscriptionLevel
+from app.models.user.enums import UserStatus, UserSubscriptionLevel
 
 
 @pytest.fixture
@@ -469,3 +469,46 @@ def test_on_user_subscription_level_change_update_card(card_manager, user):
     user.item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
     card_manager.on_user_subscription_level_change_update_card(user.id, new_item=user.item, old_item=old_item)
     assert card_manager.get_card(template.card_id) is None
+
+
+def test_on_user_change_update_photo_card_scenario1(card_manager, user):
+    # check starting state
+    assert 'userStatus' not in user.item
+    template = templates.AddProfilePhotoCardTemplate(user.id)
+    assert card_manager.get_card(template.card_id) is None
+
+    # user status to active with photoPostId, process, check card is not created
+    user.item['userStatus'] = UserStatus.ACTIVE
+    user.item['photoPostId'] = str(uuid4())
+    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id) is None
+
+    # user status to active without photoPostId and , process, check card is created
+    del user.item['photoPostId']
+    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id)
+
+    # add profile photo, process, check card deleted
+    old_item = user.item.copy()
+    user.item['photoPostId'] = str(uuid4())
+    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item, old_item=old_item)
+    assert card_manager.get_card(template.card_id) is None
+
+
+def test_on_user_change_update_photo_card_scenario2(card_manager, user):
+    # check starting state
+    assert 'userStatus' not in user.item
+    template = templates.AddProfilePhotoCardTemplate(user.id)
+    assert card_manager.get_card(template.card_id) is None
+
+    # create ANONYMOUS user, check card is not created
+    user.item['userStatus'] = UserStatus.ANONYMOUS
+    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id) is None
+
+    # modify user status to ACTIVE without photoPostId, process, check card is created
+    assert 'photoPostId' not in user.item
+    old_item = user.item.copy()
+    user.item['userStatus'] = UserStatus.ACTIVE
+    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item, old_item=old_item)
+    assert card_manager.get_card(template.card_id)

@@ -29,7 +29,11 @@ test('PostRepost card generation and format, fullfilling card', async () => {
 
   // check we have no cards
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 
   // they add an image post, same image as ours - ie a repost
   const postId = uuidv4()
@@ -41,8 +45,8 @@ test('PostRepost card generation and format, fullfilling card', async () => {
   await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
     let card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toMatch(RegExp('^@.* reposted one of your posts'))
@@ -62,17 +66,27 @@ test('PostRepost card generation and format, fullfilling card', async () => {
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
 
   // we view our post, verify no change to cards
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [originalPostId]}})
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(1))
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(2)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  })
 
   // we view their post, verify card disappears
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 })
 
 test('PostRepost card deleted when post deleted', async () => {
@@ -94,7 +108,11 @@ test('PostRepost card deleted when post deleted', async () => {
 
   // verify a card was generated for us
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(1))
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(2)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  })
 
   // they delete their post
   await theirClient
@@ -103,5 +121,9 @@ test('PostRepost card deleted when post deleted', async () => {
 
   // verify our card disappears
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 })
