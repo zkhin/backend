@@ -49,10 +49,12 @@ test('PostViews card generation and format', async () => {
 
   // verify no card generated yet
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
   })
 
   // a sixth user views the post
@@ -60,11 +62,11 @@ test('PostViews card generation and format', async () => {
 
   // verify a card was generated, check format
   await misc.sleep(2000)
-  const cardId = await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    let card = data.self.cards.items[0]
+  const cardId = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    let card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have new views')
     expect(card.subTitle).toBeNull()
@@ -81,6 +83,8 @@ test('PostViews card generation and format', async () => {
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card.cardId
   })
 
@@ -94,9 +98,11 @@ test('PostViews card generation and format', async () => {
 
   // verify no card generated (card only generates once per post)
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
   })
 })

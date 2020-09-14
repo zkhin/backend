@@ -34,8 +34,8 @@ test('PostMention card generation and format for image post, fullfilling and dis
   await misc.sleep(2000)
   const cardId1 = await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(other1UserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
     let card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toMatch(RegExp('^@.* tagged you in a post'))
@@ -55,14 +55,16 @@ test('PostMention card generation and format for image post, fullfilling and dis
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card.cardId
   })
 
   // verify a card was generated for other2, check format
   await other2Client.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(other2UserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
     let card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toMatch(RegExp('^@.* tagged you in a post'))
@@ -82,25 +84,43 @@ test('PostMention card generation and format for image post, fullfilling and dis
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
 
   // we view our post, verify no change to cards
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(1))
-  await other2Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(1))
+  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(2)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  })
+  await other2Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(2)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  })
 
   // other1 dismisses the card, verify gone
   await other1Client.mutate({mutation: mutations.deleteCard, variables: {cardId: cardId1}}).then(({data}) => {
     expect(data.deleteCard.cardId).toBe(cardId1)
   })
   await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 
   // other2 views the post, verify card disappears
   await other2Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
   await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 })
 
 test('PostMention card generation for editing text-only post, post deletion', async () => {
@@ -121,8 +141,8 @@ test('PostMention card generation for editing text-only post, post deletion', as
   await misc.sleep(2000)
   await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(other1UserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
     let card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toMatch(RegExp('^@.* tagged you in a post'))
@@ -132,8 +152,15 @@ test('PostMention card generation for editing text-only post, post deletion', as
     expect(card.action).toContain(ourUserId)
     expect(card.action).toContain(postId)
     expect(card.thumbnail).toBeNull()
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
-  await other2Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await other2Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 
   // we edit the text on the post to now tag the other user
   await ourClient
@@ -145,11 +172,15 @@ test('PostMention card generation for editing text-only post, post deletion', as
 
   // verify first card still exists, and a card was generated for other2, check format
   await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(1))
+  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(2)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  })
   await other2Client.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(other2UserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
     let card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toMatch(RegExp('^@.* tagged you in a post'))
@@ -159,6 +190,8 @@ test('PostMention card generation for editing text-only post, post deletion', as
     expect(card.action).toContain(ourUserId)
     expect(card.action).toContain(postId)
     expect(card.thumbnail).toBeNull()
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
 
   // we delete our post, verify the two cards disappear
@@ -166,6 +199,14 @@ test('PostMention card generation for editing text-only post, post deletion', as
     .mutate({mutation: mutations.deletePost, variables: {postId}})
     .then(({data}) => expect(data.deletePost.postStatus).toBe('DELETING'))
   await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
-  await other2Client.query({query: queries.self}).then(({data: {self: user}}) => expect(user.cardCount).toBe(0))
+  await other1Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
+  await other2Client.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.cardCount).toBe(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  })
 })

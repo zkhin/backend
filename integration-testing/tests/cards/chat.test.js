@@ -49,10 +49,12 @@ test('Unread chat message card with correct format', async () => {
     })
     .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
   })
 
   // they add a message to the chat, verify a card was generated for their chat message, has correct format
@@ -60,16 +62,18 @@ test('Unread chat message card with correct format', async () => {
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'lore ipsum'}})
     .then(({data}) => expect(data.addChatMessage.messageId).toBeTruthy())
   await misc.sleep(2000)
-  const card1 = await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    const card = data.self.cards.items[0]
+  const card1 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    const card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 chat with new messages')
     expect(card.subTitle).toBeNull()
     expect(card.action).toBe('https://real.app/chat/')
     expect(card.thumbnail).toBeNull()
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card
   })
   const {thumbnail: card1Thumbnail, ...card1ExcludingThumbnail} = card1
@@ -94,11 +98,13 @@ test('Unread chat message card with correct format', async () => {
     })
     .then(({data}) => expect(data.addChatMessage.messageId).toBeTruthy())
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    expect(data.self.cards.items[0].title).toBe('You have 1 chat with new messages')
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    expect(user.cards.items[0].title).toBe('You have 1 chat with new messages')
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
 
   // they open up a group chat with us, verify our card title changes
@@ -110,16 +116,18 @@ test('Unread chat message card with correct format', async () => {
     })
     .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId2))
   await misc.sleep(2000)
-  const card2 = await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    const card = data.self.cards.items[0]
+  const card2 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    const card = user.cards.items[0]
     expect(card.title).toBe('You have 2 chats with new messages')
     const {title: cardTitle, ...cardOtherFields} = card
     const {title: card1Title, ...card1OtherFields} = card1
     expect(cardTitle).not.toBe(card1Title)
     expect(cardOtherFields).toEqual(card1OtherFields)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card
   })
   const {thumbnail: card2Thumbnail, ...card2ExcludingThumbnail} = card2
@@ -139,11 +147,13 @@ test('Unread chat message card with correct format', async () => {
   // we report to have viewed one of the chats, verify our card title has changed back to original
   await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    expect(data.self.cards.items[0]).toEqual(card1)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    expect(user.cards.items[0]).toEqual(card1)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
 
   // verify subscription fired correctly with that changed card
@@ -161,10 +171,12 @@ test('Unread chat message card with correct format', async () => {
   await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId2]}})
   // verify the card has disappeared
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
   })
 
   // verify subscription fired correctly for card deletion

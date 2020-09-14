@@ -46,10 +46,12 @@ test('Requested followers card with correct format, subscription notifications',
     .then(({data}) => expect(data.setUserDetails.privacyStatus).toBe('PRIVATE'))
 
   // verify we have no cards
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
   })
 
   // other1 requests to follow us
@@ -59,15 +61,17 @@ test('Requested followers card with correct format, subscription notifications',
 
   // verify a card was generated for their follow request, with correct format
   await misc.sleep(2000)
-  const card1 = await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    const card = data.self.cards.items[0]
+  const card1 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    const card = user.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 pending follow request')
     expect(card.subTitle).toBeNull()
     expect(card.action).toBe('https://real.app/chat/')
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card
   })
   const {thumbnail: card1Thumbnail, ...card1ExcludingThumbnail} = card1
@@ -91,16 +95,18 @@ test('Requested followers card with correct format, subscription notifications',
 
   // verify the card has changed title
   await misc.sleep(2000)
-  const card2 = await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    const card = data.self.cards.items[0]
+  const card2 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    const card = user.cards.items[0]
     expect(card.title).toBe('You have 2 pending follow requests')
     const {title: cardTitle, ...cardOtherFields} = card
     const {title: card1Title, ...card1OtherFields} = card1
     expect(cardTitle).not.toBe(card1Title)
     expect(cardOtherFields).toEqual(card1OtherFields)
+    // second card is the 'Add a profile photo'
+    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card
   })
   const {thumbnail: card2Thumbnail, ...card2ExcludingThumbnail} = card2
@@ -124,11 +130,11 @@ test('Requested followers card with correct format, subscription notifications',
 
   // verify the card now matches the original card again
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(1)
-    expect(data.self.cards.items).toHaveLength(1)
-    expect(data.self.cards.items[0]).toEqual(card1)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
+    expect(user.cards.items[0]).toEqual(card1)
   })
 
   // verify subscription fired correctly with that changed card
@@ -149,10 +155,12 @@ test('Requested followers card with correct format, subscription notifications',
 
   // verify the card has disappeared
   await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data}) => {
-    expect(data.self.userId).toBe(ourUserId)
-    expect(data.self.cardCount).toBe(0)
-    expect(data.self.cards.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    // first card is the 'Add a profile photo'
+    expect(user.cards.items[0].title).toBe('Add a profile photo')
   })
 
   // verify subscription fired correctly for card deletion

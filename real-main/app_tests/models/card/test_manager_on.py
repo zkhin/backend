@@ -508,6 +508,7 @@ def test_on_user_change_update_photo_card_scenario2(card_manager, user):
 
     # modify user status to ACTIVE without photoPostId, process, check card is created
     assert 'photoPostId' not in user.item
+    old_item = user.item.copy()
     user.item['userStatus'] = UserStatus.ACTIVE
-    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item)
+    card_manager.on_user_change_update_photo_card(user.id, new_item=user.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
