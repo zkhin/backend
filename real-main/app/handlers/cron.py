@@ -15,8 +15,9 @@ USER_NOTIFICATIONS_ONLY_USERNAMES = os.environ.get('USER_NOTIFICATIONS_ONLY_USER
 logger = logging.getLogger()
 xray.patch_all()
 
+secrets_manager_client = clients.SecretsManagerClient()
 clients = {
-    'appstore': clients.AppStoreClient(),
+    'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'dynamo': clients.DynamoClient(),
     'cognito': clients.CognitoClient(),
     'pinpoint': clients.PinpointClient(),

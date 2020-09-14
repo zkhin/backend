@@ -1,10 +1,5 @@
 # https://developer.apple.com/documentation/appstorereceipts
-import os
-
 import requests
-
-APPLE_BUNDLE_ID = os.environ.get('APPLE_BUNDLE_ID')
-APPSTORE_SHARED_SECRET = os.environ.get('APPSTORE_SHARED_SECRET')
 
 
 class AppStoreClientException(Exception):
@@ -12,11 +7,22 @@ class AppStoreClientException(Exception):
 
 
 class AppStoreClient:
-    def __init__(self, bundle_id=APPLE_BUNDLE_ID, shared_secret=APPSTORE_SHARED_SECRET):
-        self.bundle_id = bundle_id
-        self.shared_secret = shared_secret
+    def __init__(self, appstore_params_getter):
+        self.appstore_params_getter = appstore_params_getter
         self.url_production = 'https://buy.itunes.apple.com/verifyReceipt'
         self.url_sandbox = 'https://sandbox.itunes.apple.com/verifyReceipt'
+
+    @property
+    def bundle_id(self):
+        if not hasattr(self, '_appstore_params'):
+            self._appstore_params = self.appstore_params_getter()
+        return self._appstore_params['bundleId']
+
+    @property
+    def shared_secret(self):
+        if not hasattr(self, '_appstore_params'):
+            self._appstore_params = self.appstore_params_getter()
+        return self._appstore_params['sharedSecret']
 
     def verify_receipt(self, receipt_data_b64, exclude_old_transactions=False):
         req_body = {

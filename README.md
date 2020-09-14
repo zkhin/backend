@@ -57,10 +57,13 @@ Pinpoint must be manually configured to send Apple Push notifications. After fir
 
 _Once per deployment_
 
+- Credentials to access the post verification API must be added. Reference the environment variable in `serverless.yml` for required format. Talk to the backend team lead to get a set of credentials.
+
+_Once per AWS Account_
+
 - A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
-- Credentials to access the post verification API must be added. Reference the environment variable in serverless.yml for required format. Talk to the backend team lead to get a set of credentials.
-- Google OAuth Client Ids must be added. These are available from our google app's profile on the [google app console](https://console.developers.google.com/) and have format `{"ios": "***", "web": "***", ...}`. Reference the environment variable in serverless.yml for the proper naming.
-- The [Apple AppStore Shared Secret](https://developer.apple.com/documentation/appstorereceipts/requestbody) must be added in order to process & verify appstore receipts. Reference the environment variable in serverless.yml for the proper naming.
+- Google OAuth Client Ids must be added to support logging in with google auth. These client ids are available from our google app's profile on the [google app console](https://console.developers.google.com/). The secret value must be a json map with keys `ios` and `web`, while the secret name must match the environment variable defined in `serverless.yml`.
+- The Apple AppStore parameters must be added in order to process & verify appstore receipts. The secret value must be a json map with keys `bundleId` and [`sharedSecret`](https://developer.apple.com/documentation/appstorereceipts/requestbody), while the secret name must match the environment variable defined in `serverless.yml`. Talk to the frontend team lead to get the values for these parameters.
 
 #### SES
 

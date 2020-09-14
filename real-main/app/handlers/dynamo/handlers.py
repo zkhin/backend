@@ -17,8 +17,9 @@ S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 logger = logging.getLogger()
 xray.patch_all()
 
+secrets_manager_client = clients.SecretsManagerClient()
 clients = {
-    'appstore': clients.AppStoreClient(),
+    'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'appsync': clients.AppSyncClient(),
     'cognito': clients.CognitoClient(),
     'dynamo': clients.DynamoClient(),

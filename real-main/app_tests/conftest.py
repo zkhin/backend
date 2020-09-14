@@ -130,7 +130,7 @@ def elasticsearch_client():
 
 @pytest.fixture
 def appstore_client():
-    yield mock.Mock(clients.AppStoreClient())
+    yield mock.Mock(clients.AppStoreClient(lambda: {'bundleId': '-', 'sharedSecret': '-'}))
 
 
 @pytest.fixture

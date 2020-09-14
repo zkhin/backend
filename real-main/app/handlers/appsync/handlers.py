@@ -39,7 +39,7 @@ xray.patch_all()
 secrets_manager_client = clients.SecretsManagerClient()
 clients = {
     'apple': clients.AppleClient(),
-    'appstore': clients.AppStoreClient(),
+    'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'appsync': clients.AppSyncClient(),
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': clients.CognitoClient(),

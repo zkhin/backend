@@ -22,8 +22,6 @@ provider:
     AWS_ACCOUNT_ID: '#{AWS::AccountId}'
 
     APPSYNC_GRAPHQL_URL: '#{GraphQlApi.GraphQLUrl}'
-    APPLE_BUNDLE_ID: 'app.real.mobile'
-    APPSTORE_SHARED_SECRET: ${ssm:/aws/reference/secretsmanager/AppstoreSharedSecret-1~true}
     DYNAMO_TABLE: ${self:provider.stackName}
     DYNAMO_FEED_TABLE: real-${self:provider.stage}-feed
     ELASTICSEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
@@ -46,6 +44,7 @@ provider:
     S3_PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
     S3_UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}
 
+    SECRETSMANAGER_APPLE_APPSTORE_PARAMS_NAME: AppleAppstoreParams-1
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
