@@ -172,3 +172,18 @@ class AddProfilePhotoCardTemplate(CardTemplate):
         self.card_id = self.get_card_id(user_id)
         self.action = f'https://real.app/user/{user_id}/settings/photo'
         self.title = 'Add a profile photo'
+
+
+class AnonymousUserUpsellCardTemplate(CardTemplate):
+
+    notify_user_after = pendulum.duration(hours=24)
+
+    @staticmethod
+    def get_card_id(user_id):
+        return f'{user_id}:ANONYMOUS_USER_UPSELL'
+
+    def __init__(self, user_id):
+        super().__init__(user_id)
+        self.card_id = self.get_card_id(user_id)
+        self.action = f'https://real.app/signup/{user_id}'
+        self.title = 'Reserve your username & sign up!'

@@ -164,6 +164,16 @@ class CardManager:
         if new_has_photo and not old_has_photo:
             self.dynamo.delete_card(card_template.card_id)
 
+    def on_user_change_update_anonymous_upsell_card(self, user_id, new_item, old_item=None):
+        new_user_status = new_item.get('userStatus')
+        old_user_status = (old_item or {}).get('userStatus')
+
+        card_template = templates.AnonymousUserUpsellCardTemplate(user_id)
+        if not old_item and new_user_status == UserStatus.ANONYMOUS:
+            self.add_or_update_card(card_template)
+        if old_user_status == UserStatus.ANONYMOUS and new_user_status != UserStatus.ANONYMOUS:
+            self.dynamo.delete_card(card_template.card_id)
+
     on_user_followers_requested_count_change_sync_card = partialmethod(
         on_user_count_change_sync_card,
         'followersRequestedCount',
