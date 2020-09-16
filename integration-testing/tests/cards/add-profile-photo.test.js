@@ -31,7 +31,10 @@ test('New anonymous users do not get the add profile photo card', async () => {
     expect(user.userId).toBe(anonUserId)
     expect(user.email).toBeNull()
     expect(user.userStatus).toBe('ANONYMOUS')
-    expect(user.cards.items.length).toBe(0)
+    expect(user.cardCount).toBe(1)
+    expect(user.cards.items).toHaveLength(1)
+    let card = user.cards.items[0]
+    expect(card.title).toBe('Reserve your username & sign up!')
   })
 })
 
