@@ -22,7 +22,7 @@ from app.models.like.enums import LikeStatus
 from app.models.like.exceptions import LikeException
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
-from app.models.user.enums import UserStatus
+from app.models.user.enums import UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserException
 from app.utils import image_size
 
@@ -281,6 +281,10 @@ def set_user_details(caller_user, arguments, **kwargs):
     verification_hidden = arguments.get('verificationHidden')
     birthday = arguments.get('birthday')
     gender = arguments.get('gender')
+    current_location = arguments.get('currentLocation')
+    match_age_range = arguments.get('matchAgeRange')
+    match_genders = arguments.get('matchGenders')
+    match_location_radius = arguments.get('matchLocationRadius')
 
     args = (
         username,
@@ -298,6 +302,10 @@ def set_user_details(caller_user, arguments, **kwargs):
         view_counts_hidden,
         birthday,
         gender,
+        current_location,
+        match_age_range,
+        match_genders,
+        match_location_radius,
     )
     if all(v is None for v in args):
         raise ClientException('Called without any arguments... probably not what you intended?')
@@ -321,6 +329,31 @@ def set_user_details(caller_user, arguments, **kwargs):
     if privacy_status is not None:
         caller_user.set_privacy_status(privacy_status)
 
+    if current_location is not None:
+        latitude = current_location.get('latitude')
+        longitude = current_location.get('longitude')
+        accuracy = current_location.get('accuracy')
+
+        if latitude > 90 and latitude < -90:
+            raise ClientException('Latitude should be in [-90, 90]')
+        if longitude > 180 and longitude < -180:
+            raise ClientException('Longitude should be in [-180, 180]')
+        if accuracy < 0:
+            raise ClientException('Accuracy should be greater than or equal to zero')
+
+    if match_age_range is not None:
+        min = match_age_range.get('min')
+        max = match_age_range.get('max')
+
+        if min > max or min < 18 or max > 100:
+            raise ClientException('Invalid matchAgeRange')
+
+    if match_location_radius is not None:
+        if match_location_radius < 15:
+            raise ClientException('MatchLocationRadius should be greater than or equal to 15')
+        if caller_user.subscription_level == UserSubscriptionLevel.BASIC and match_location_radius > 100:
+            raise ClientException('MatchLocationRadius should be less than or equal to 100')
+
     # update the simple properties
     caller_user.update_details(
         full_name=full_name,
@@ -335,6 +368,10 @@ def set_user_details(caller_user, arguments, **kwargs):
         verification_hidden=verification_hidden,
         birthday=birthday,
         gender=gender,
+        current_location=current_location,
+        match_age_range=match_age_range,
+        match_genders=match_genders,
+        match_location_radius=match_location_radius,
     )
     return caller_user.serialize(caller_user.id)
 

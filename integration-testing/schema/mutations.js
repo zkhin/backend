@@ -125,6 +125,10 @@ module.exports.setUserDetails = gql`
     $username: String
     $birthday: AWSDate
     $gender: UserGender
+    $currentLocation: LocationInput
+    $matchAgeRange: AgeRangeInput
+    $matchGenders: [UserGender!]
+    $matchLocationRadius: Int
   ) {
     setUserDetails(
       bio: $bio
@@ -133,6 +137,10 @@ module.exports.setUserDetails = gql`
       username: $username
       birthday: $birthday
       gender: $gender
+      currentLocation: $currentLocation
+      matchAgeRange: $matchAgeRange
+      matchGenders: $matchGenders
+      matchLocationRadius: $matchLocationRadius
     ) {
       userId
       username
@@ -143,6 +151,10 @@ module.exports.setUserDetails = gql`
       }
       birthday
       gender
+      currentLocation
+      matchAgeRange
+      matchGenders
+      matchLocationRadius
     }
   }
   ${fragments.image}
