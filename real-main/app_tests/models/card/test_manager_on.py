@@ -512,3 +512,26 @@ def test_on_user_change_update_photo_card_scenario2(card_manager, user):
     user.item['userStatus'] = UserStatus.ACTIVE
     card_manager.on_user_change_update_photo_card(user.id, new_item=user.item, old_item=old_item)
     assert card_manager.get_card(template.card_id)
+
+
+def test_on_user_change_update_anonymous_upsell_card(card_manager, user):
+    # check starting state
+    assert 'userStatus' not in user.item
+    template = templates.AnonymousUserUpsellCardTemplate(user.id)
+    assert card_manager.get_card(template.card_id) is None
+
+    # create ACTIVE user, check card is not created
+    user.item['userStatus'] = UserStatus.ACTIVE
+    card_manager.on_user_change_update_anonymous_upsell_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id) is None
+
+    # create ANONYMOUS user, check card is created
+    user.item['userStatus'] = UserStatus.ANONYMOUS
+    card_manager.on_user_change_update_anonymous_upsell_card(user.id, new_item=user.item)
+    assert card_manager.get_card(template.card_id)
+
+    # modify user status to ACTIVE, process, check card is deleted
+    old_item = user.item.copy()
+    user.item['userStatus'] = UserStatus.ACTIVE
+    card_manager.on_user_change_update_anonymous_upsell_card(user.id, new_item=user.item, old_item=old_item)
+    assert card_manager.get_card(template.card_id) is None
