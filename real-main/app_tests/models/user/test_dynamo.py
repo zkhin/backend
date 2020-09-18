@@ -1,6 +1,6 @@
 import logging
-from uuid import uuid4
 from decimal import Decimal
+from uuid import uuid4
 
 import pendulum
 import pytest
@@ -262,10 +262,10 @@ def test_set_user_details(user_dynamo):
         verification_hidden=True,
         birthday=birthday,
         gender=gender,
-        current_location = current_location,
-        match_age_range = match_age_range,
-        match_genders = match_genders,
-        match_location_radius = match_location_radius,
+        current_location=current_location,
+        match_age_range=match_age_range,
+        match_genders=match_genders,
+        match_location_radius=match_location_radius,
     )
     expected = {
         **expected_base_item,

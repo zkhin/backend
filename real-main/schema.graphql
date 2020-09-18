@@ -865,12 +865,12 @@ type PaginatedAlbums {
 }
 
 type AgeRange {
-  mix: Int
+  min: Int
   max: Int
 }
 
 input AgeRangeInput {
-  mix: Int
+  min: Int
   max: Int
 }
 

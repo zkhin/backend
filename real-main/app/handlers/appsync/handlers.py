@@ -1,5 +1,6 @@
 import logging
 import os
+from decimal import Decimal
 
 import pendulum
 
@@ -330,16 +331,18 @@ def set_user_details(caller_user, arguments, **kwargs):
         caller_user.set_privacy_status(privacy_status)
 
     if current_location is not None:
-        latitude = current_location.get('latitude')
-        longitude = current_location.get('longitude')
-        accuracy = current_location.get('accuracy')
+        latitude = Decimal(str(current_location.get('latitude')))
+        longitude = Decimal(str(current_location.get('longitude')))
+        accuracy = Decimal(str(current_location.get('accuracy', 0)))
 
-        if latitude > 90 and latitude < -90:
+        if latitude > 90 or latitude < -90:
             raise ClientException('Latitude should be in [-90, 90]')
-        if longitude > 180 and longitude < -180:
+        if longitude > 180 or longitude < -180:
             raise ClientException('Longitude should be in [-180, 180]')
         if accuracy < 0:
             raise ClientException('Accuracy should be greater than or equal to zero')
+
+        current_location = {"latitude": latitude, "longitude": longitude, "accuracy": accuracy}
 
     if match_age_range is not None:
         min = match_age_range.get('min')

@@ -102,6 +102,17 @@ module.exports.self = gql`
       directChat {
         ...ChatFragment
       }
+      currentLocation {
+        latitude
+        longitude
+        accuracy
+      }
+      matchAgeRange {
+        min
+        max
+      }
+      matchGenders
+      matchLocationRadius
     }
   }
   ${fragments.album}
