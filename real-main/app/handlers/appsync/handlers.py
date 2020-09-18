@@ -345,10 +345,10 @@ def set_user_details(caller_user, arguments, **kwargs):
         current_location = {"latitude": latitude, "longitude": longitude, "accuracy": accuracy}
 
     if match_age_range is not None:
-        min = match_age_range.get('min')
-        max = match_age_range.get('max')
+        minAge = match_age_range.get('min')
+        maxAge = match_age_range.get('max')
 
-        if min > max or min < 18 or max > 100:
+        if minAge > maxAge or minAge < 18 or maxAge > 100:
             raise ClientException('Invalid matchAgeRange')
 
     if match_location_radius is not None:
