@@ -12,7 +12,7 @@ const prmt = require('prompt')
 const request = require('request')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
-require('isomorphic-fetch')
+global.fetch = require('cross-fetch')
 
 dotenv.config()
 AWS.config = new AWS.Config()

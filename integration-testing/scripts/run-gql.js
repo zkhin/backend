@@ -12,7 +12,7 @@ const fs = require('fs')
 const gql = require('graphql-tag')
 const util = require('util')
 const uuidv4 = require('uuid/v4')
-require('isomorphic-fetch')
+global.fetch = require('cross-fetch')
 
 const {mutations, queries} = require('../schema')
 

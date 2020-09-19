@@ -10,12 +10,12 @@ const {ApolloLink} = require('apollo-link')
 const {createHttpLink} = require('apollo-link-http')
 const callerId = require('caller-id')
 const dotenv = require('dotenv')
+const fetch = require('cross-fetch')
 const jwtDecode = require('jwt-decode')
 const md5 = require('md5')
 const path = require('path')
 const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
-require('isomorphic-fetch')
 
 const {mutations} = require('../schema')
 const misc = require('./misc')
@@ -101,7 +101,7 @@ const getAppSyncClient = async (creds) => {
             ['x-real-system']: 'REAL Backend Integration Tests',
           },
         })),
-        createHttpLink({uri: appSyncConfig.url}),
+        createHttpLink({uri: appSyncConfig.url, fetch: fetch}),
       ]),
     }),
   }

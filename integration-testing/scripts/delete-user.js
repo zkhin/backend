@@ -5,7 +5,7 @@ const AWSAppSyncClient = require('aws-appsync').default
 const dotenv = require('dotenv')
 const fs = require('fs')
 const gql = require('graphql-tag')
-require('isomorphic-fetch')
+global.fetch = require('cross-fetch')
 
 dotenv.config()
 AWS.config = new AWS.Config()
