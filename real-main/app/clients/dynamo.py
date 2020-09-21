@@ -55,6 +55,8 @@ class DynamoClient:
         Order *not* maintained.
         """
         assert len(typed_keys) <= 100, "Max 100 items per batch get request"
+        if len(typed_keys) == 0:
+            return []
         kwargs = {'RequestItems': {self.table_name: {'Keys': typed_keys}}}
         if projection_expression:
             kwargs['RequestItems'][self.table_name]['ProjectionExpression'] = projection_expression

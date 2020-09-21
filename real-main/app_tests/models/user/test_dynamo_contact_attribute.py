@@ -51,3 +51,29 @@ def test_basic_add_get_delete(uca_dynamo):
     with pytest.raises(uca_dynamo.client.exceptions.ConditionalCheckFailedException):
         uca_dynamo.delete(attr_value_2, user_id)
     assert uca_dynamo.get(attr_value_2) == item_2
+
+
+def test_bach_get_user_ids(uca_dynamo):
+    # add two items
+    user_id_1, user_id_2 = str(uuid4()), str(uuid4())
+    attr_1, attr_2 = str(uuid4())[:8], str(uuid4())[:8]
+    uca_dynamo.add(attr_1, user_id_1)
+    uca_dynamo.add(attr_2, user_id_2)
+    assert uca_dynamo.get(attr_1)
+    assert uca_dynamo.get(attr_2)
+
+    # check batch get of none
+    assert uca_dynamo.batch_get_user_ids([]) == []
+    assert uca_dynamo.batch_get_user_ids([str(uuid4())]) == []
+
+    # check batch get of one
+    assert uca_dynamo.batch_get_user_ids([attr_1]) == [user_id_1]
+    assert uca_dynamo.batch_get_user_ids([str(uuid4()), attr_2]) == [user_id_2]
+
+    # check batch get of two
+    assert uca_dynamo.batch_get_user_ids([attr_1, attr_2]).sort() == [user_id_1, user_id_2].sort()
+    assert uca_dynamo.batch_get_user_ids([attr_2, attr_1, str(uuid4())]).sort() == [user_id_2, user_id_1].sort()
+
+    # check can handle duplicates
+    assert uca_dynamo.batch_get_user_ids([attr_1, attr_1]) == [user_id_1]
+    assert uca_dynamo.batch_get_user_ids([attr_1, attr_2, attr_1]).sort() == [user_id_1, user_id_2].sort()

@@ -1360,3 +1360,20 @@ def lambda_client_error(caller_user_id, arguments, context=None, event=None, **k
 def lambda_server_error(caller_user_id, arguments, context=None, **kwargs):
     request_id = getattr(context, 'aws_request_id', None)
     raise Exception(f'Test of lambda server error, request `{request_id}`')
+
+
+@routes.register('Query.findUsers')
+@validate_caller
+@update_last_client
+def find_users(caller_user, arguments, **kwargs):
+    emails = arguments['emails'] or []
+    phones = arguments['phoneNumbers'] or []
+
+    if not emails and not phones:
+        raise ClientException('Called without any arguments... probably not what you intended?')
+
+    if len(emails) + len(phones) > 100:
+        raise ClientException('Cannot submit more than 100 combined emails and phoneNumbers')
+
+    user_ids = user_manager.find_users(caller_user, emails=emails, phones=phones)
+    return {'items': user_ids}

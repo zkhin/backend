@@ -193,3 +193,18 @@ def test_requested_followers_card_template_titles(user):
 
     template = templates.RequestedFollowersCardTemplate(user.id, 42)
     assert template.title == 'You have 42 pending follow requests'
+
+
+def test_contact_joined_card_template(user, user2):
+    card_id = templates.ContactJoinedCardTemplate.get_card_id(user.id, user2.id)
+    assert card_id.split(':') == [user.id, 'CONTACT_JOINED', user2.id]
+
+    template = templates.ContactJoinedCardTemplate(user.id, user2.id, user2.username)
+    assert template.card_id == card_id
+    assert template.user_id == user.id
+    assert template.action == f'https://real.app/user/{user2.id}'
+    assert user2.username in template.title
+    assert ' joined REAL' in template.title
+    assert not template.only_usernames
+    assert not template.post_id
+    assert not template.comment_id

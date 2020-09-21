@@ -1,11 +1,13 @@
 const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')
-const {queries} = require('../schema')
+const {queries, mutations} = require('../schema')
+const uuidv4 = require('uuid/v4')
 
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(2)
 
 beforeAll(async () => {
+  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -44,7 +46,7 @@ test('Find users by email', async () => {
   } = await loginCache.getCleanLogin()
   const {userId: other1UserId, email: other1Email, username: other1Username} = await loginCache.getCleanLogin()
   const {userId: other2UserId, email: other2Email, username: other2Username} = await loginCache.getCleanLogin()
-  const cmp = (a, b) => a.userId < b.userId
+  const cmp = (a, b) => a.userId.localeCompare(b.userId)
 
   // how each user will appear in search results, based on our query
   const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
@@ -53,10 +55,9 @@ test('Find users by email', async () => {
 
   // find no users
   await misc.sleep(2000)
-  await ourClient.query({query: queries.findUsers}).then(({data: {findUsers}}) => {
-    expect(findUsers.items).toEqual([])
-    expect(findUsers.nextToken).toBe(null)
-  })
+  await expect(ourClient.query({query: queries.findUsers})).rejects.toThrow(
+    /Called without any arguments... probably not what you intended?/,
+  )
   await ourClient
     .query({query: queries.findUsers, variables: {emails: ['x' + ourEmail]}})
     .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([]))
@@ -86,7 +87,7 @@ test('Find users by phone, and by phone and email', async () => {
   const {userId: theirUserId, email: theirEmail, username: theirUsername} = await cognito.getAppSyncLogin(
     theirPhone,
   )
-  const cmp = (a, b) => a.userId < b.userId
+  const cmp = (a, b) => a.userId.localeCompare(b.userId)
 
   // how each user will appear in search results, based on our query
   const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
@@ -102,4 +103,85 @@ test('Find users by phone, and by phone and email', async () => {
   await ourClient
     .query({query: queries.findUsers, variables: {emails: [ourEmail, theirEmail], phoneNumbers: [theirPhone]}})
     .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, them].sort(cmp)))
+})
+
+test('Find Users sends cards to the users that were found', async () => {
+  const {
+    client: ourClient,
+    userId: ourUserId,
+    email: ourEmail,
+    username: ourUsername,
+  } = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId, email: otherEmail} = await loginCache.getCleanLogin()
+  const {
+    client: other1Client,
+    userId: other1UserId,
+    email: other1Email,
+    username: other1Username,
+  } = await loginCache.getCleanLogin()
+  const {client: other2Client, userId: other2UserId, email: other2Email} = await loginCache.getCleanLogin()
+  const randomEmail = `${uuidv4()}@real.app`
+  const other1 = {__typename: 'User', userId: other1UserId, username: other1Username}
+
+  // find One User
+  await ourClient
+    .query({query: queries.findUsers, variables: {emails: [other1Email, randomEmail]}})
+    .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([other1]))
+
+  // check called user has card
+  await misc.sleep(2000)
+  const cardId = await other1Client.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.userId).toBe(other1UserId)
+    const card = self.cards.items[0]
+    expect(card.cardId).toBe(`${other1UserId}:CONTACT_JOINED:${ourUserId}`)
+    expect(card.title).toBe(`${ourUsername} joined REAL`)
+    expect(card.subTitle).toBeNull()
+    expect(card.action).toBe(`https://real.app/user/${ourUserId}`)
+    return card.cardId
+  })
+
+  // dismiss the card
+  await other1Client
+    .mutate({mutation: mutations.deleteCard, variables: {cardId}})
+    .then(({data}) => expect(data.deleteCard.cardId).toBe(cardId))
+
+  // find different Users with new user
+  await ourClient
+    .query({query: queries.findUsers, variables: {emails: [ourEmail, other1Email, other2Email]}})
+    .then(({data: {findUsers}}) => {
+      expect(findUsers.items.map((item) => item.userId).sort()).toEqual(
+        [ourUserId, other1UserId, other2UserId].sort(),
+      )
+    })
+  // check first called user has card
+  await misc.sleep(2000)
+  await other1Client.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.userId).toBe(other1UserId)
+    expect(self.cards.items[0].cardId).toBe(`${other1UserId}:CONTACT_JOINED:${ourUserId}`)
+  })
+  // check second called user has card
+  await other2Client.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.userId).toBe(other2UserId)
+    expect(self.cards.items[0].cardId).toBe(`${other2UserId}:CONTACT_JOINED:${ourUserId}`)
+  })
+
+  // find different Users with other new user
+  await otherClient
+    .query({query: queries.findUsers, variables: {emails: [otherEmail, other1Email, other2Email]}})
+    .then(({data: {findUsers}}) => {
+      expect(findUsers.items.map((item) => item.userId).sort()).toEqual(
+        [otherUserId, other1UserId, other2UserId].sort(),
+      )
+    })
+  // check first called user has card
+  await misc.sleep(2000)
+  await other1Client.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.userId).toBe(other1UserId)
+    expect(self.cards.items[0].cardId).toBe(`${other1UserId}:CONTACT_JOINED:${otherUserId}`)
+  })
+  // check second called user has card
+  await other2Client.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.userId).toBe(other2UserId)
+    expect(self.cards.items[0].cardId).toBe(`${other2UserId}:CONTACT_JOINED:${otherUserId}`)
+  })
 })

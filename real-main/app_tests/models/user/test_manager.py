@@ -6,6 +6,7 @@ from unittest import mock
 import pendulum
 import pytest
 
+from app.models.follower.enums import FollowStatus
 from app.utils import GqlNotificationType
 
 
@@ -16,9 +17,27 @@ def cognito_only_user(user_manager, cognito_client):
     yield user_manager.create_cognito_only_user(user_id, username)
 
 
+@pytest.fixture
+def cognito_only_user_with_phone(user_manager, cognito_client):
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_user_pool_entry(user_id, username, verified_phone='+12125551212')
+    yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def cognito_only_user_with_email_and_phone(user_manager, cognito_client):
+    user_id, username = str(uuid.uuid4()), str(uuid.uuid4())[:8]
+    cognito_client.create_user_pool_entry(
+        user_id, username, verified_email=f'{username}@real.app', verified_phone='+12125551213'
+    )
+    yield user_manager.create_cognito_only_user(user_id, username)
+
+
 user1 = cognito_only_user
 user2 = cognito_only_user
 user3 = cognito_only_user
+user4 = cognito_only_user_with_phone
+user5 = cognito_only_user_with_email_and_phone
 
 
 @pytest.fixture
@@ -199,3 +218,63 @@ def test_fire_gql_subscription_chats_with_unviewed_messages_count(user_manager):
     assert isinstance(
         appsync_client_mock.fire_notification.call_args.kwargs['userChatsWithUnviewedMessagesCount'], int
     )
+
+
+def test_find_user_finds_correct_users(user_manager, user1, user2, user4, user5):
+    # Add contact attribute subitem for user2's email
+    user_manager.on_user_email_change_update_subitem(user2.id, new_item=user2.item)
+
+    # Add contact attribute subitem for user4's phone
+    user_manager.on_user_phone_number_change_update_subitem(user4.id, new_item=user4.item)
+
+    # Add contact attribute subitem for user5's phone & email
+    user_manager.on_user_email_change_update_subitem(user5.id, new_item=user5.item)
+    user_manager.on_user_phone_number_change_update_subitem(user5.id, new_item=user5.item)
+
+    # Check with None
+    assert user_manager.find_users(user1) == []
+
+    # Check with only email
+    emails = [user2.item['email'], user5.item['email']]
+    assert user_manager.find_users(user1, emails=emails).sort() == [user2.id, user5.id].sort()
+
+    # Check with only phone
+    phones = [user4.item['phoneNumber'], user5.item['phoneNumber']]
+    assert user_manager.find_users(user1, phones=phones).sort() == [user4.id, user5.id].sort()
+
+    # Check with phone & email
+    emails = [user2.item['email'], user5.item['email']]
+    phones = [user4.item['phoneNumber'], user5.item['phoneNumber']]
+    assert (
+        user_manager.find_users(user1, emails=emails, phones=phones).sort()
+        == [user2.id, user4.id, user5.id].sort()
+    )
+
+
+def test_find_user_add_cards_for_found_users_not_following(user_manager, user1, user2, user3, user5):
+    follower_manager = user_manager.follower_manager
+    card_manager = user_manager.card_manager
+
+    # Add contact attribute subitems for users emails
+    user_manager.on_user_email_change_update_subitem(user2.id, new_item=user2.item)
+    user_manager.on_user_email_change_update_subitem(user3.id, new_item=user3.item)
+    user_manager.on_user_email_change_update_subitem(user5.id, new_item=user5.item)
+
+    # verify user2, user3 and user5 don't have cards for user1 already
+    card_id2 = f'{user2.id}:CONTACT_JOINED:{user1.id}'
+    card_id3 = f'{user3.id}:CONTACT_JOINED:{user1.id}'
+    card_id5 = f'{user5.id}:CONTACT_JOINED:{user1.id}'
+    assert card_manager.get_card(card_id2) is None
+    assert card_manager.get_card(card_id3) is None
+    assert card_manager.get_card(card_id5) is None
+
+    # set up user3 to follow user1
+    follower_manager.request_to_follow(user3, user1)
+    assert follower_manager.get_follow_status(user3.id, user1.id) == FollowStatus.FOLLOWING
+
+    # user1 finds all three users using their email, verify users that are not following get cards
+    emails = [user3.item['email'], user5.item['email'], user2.item['email']]
+    assert user_manager.find_users(user1, emails=emails).sort() == [user2.id, user3.id, user5.id].sort()
+    assert card_manager.get_card(card_id2)
+    assert card_manager.get_card(card_id3) is None
+    assert card_manager.get_card(card_id5)

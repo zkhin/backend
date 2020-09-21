@@ -26,7 +26,7 @@ class CognitoClient:
         self.facebookLoginsKey = 'graph.facebook.com'
         self.appleLoginsKey = 'appleid.apple.com'
 
-    def create_user_pool_entry(self, user_id, username, verified_email=None):
+    def create_user_pool_entry(self, user_id, username, verified_email=None, verified_phone=None):
         kwargs = {
             'UserPoolId': self.user_pool_id,
             'Username': user_id,
@@ -38,6 +38,10 @@ class CognitoClient:
             kwargs['MessageAction'] = 'SUPPRESS'
             kwargs['UserAttributes'].append({'Name': 'email', 'Value': verified_email})
             kwargs['UserAttributes'].append({'Name': 'email_verified', 'Value': 'true'})
+        if verified_phone is not None:
+            kwargs['MessageAction'] = 'SUPPRESS'
+            kwargs['UserAttributes'].append({'Name': 'phone_number', 'Value': verified_phone})
+            kwargs['UserAttributes'].append({'Name': 'phone_number_verified', 'Value': 'true'})
         self.user_pool_client.admin_create_user(**kwargs)
         # If we don't set their password to something, cognito will put the account in
         # a FORCE_CHANGE_PASSWORD which does not allow them to reset their password, which

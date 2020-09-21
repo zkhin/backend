@@ -45,17 +45,7 @@ def anonymous_user(user_manager):
 @pytest.fixture
 def user_verified_phone(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
-    phone = '+12125551212'
-    cognito_client.user_pool_client.admin_create_user(
-        UserPoolId=cognito_client.user_pool_id,
-        Username=user_id,
-        MessageAction='SUPPRESS',
-        UserAttributes=[
-            {'Name': 'phone_number', 'Value': phone},
-            {'Name': 'phone_number_verified', 'Value': 'true'},
-            {'Name': 'preferred_username', 'Value': username.lower()},
-        ],
-    )
+    cognito_client.create_user_pool_entry(user_id, username, verified_phone='+12125551212')
     yield user_manager.create_cognito_only_user(user_id, username)
 
 

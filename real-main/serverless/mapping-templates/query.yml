@@ -30,12 +30,9 @@
 
 - type: Query
   field: findUsers
-  kind: PIPELINE
-  request: Query.findUsers/before.request.vtl
-  response: Query.findUsers/after.response.vtl
-  functions:
-    - Query.findUsers.batchGetByEmail
-    - Query.findUsers.batchGetByPhoneNumber
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl
 
 - type: Query
   field: post
