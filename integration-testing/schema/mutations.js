@@ -62,6 +62,15 @@ module.exports.createGoogleUser = gql`
   }
 `
 
+module.exports.setPassword = gql`
+  mutation SetPassword($encryptedPassword: String!) {
+    setUserPassword(encryptedPassword: $encryptedPassword) {
+      userId
+      username
+    }
+  }
+`
+
 module.exports.setUsername = gql`
   mutation SetUsername($username: String!) {
     setUserDetails(username: $username) {

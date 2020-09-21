@@ -2,9 +2,11 @@ import logging
 from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
+import botocore
 import pendulum
 import pytest
 
+from app.clients.cognito import InvalidEncryption
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import (
@@ -815,3 +817,21 @@ def test_link_federated_login_anonymous_user(anonymous_user):
     ]
     assert user.cognito_client.set_user_email.mock_calls == [call(user.id, 'xyz@email.com')]
     assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]
+
+
+def test_set_user_password_failures(user):
+    # it seems boto can raise multiple exceptions for invalid passwords
+    err = botocore.exceptions.ParamValidationError(report='foo')
+    with patch.object(user.cognito_client, 'set_user_password', side_effect=err):
+        with pytest.raises(UserValidationException, match='Invalid password'):
+            user.set_password('encryptedfoo')
+
+    err = user.cognito_client.user_pool_client.exceptions.InvalidPasswordException({}, 'bar')
+    with patch.object(user.cognito_client, 'set_user_password', side_effect=err):
+        with pytest.raises(UserValidationException, match='Invalid password'):
+            user.set_password('encryptedfoo')
+
+    err = InvalidEncryption()
+    with patch.object(user.cognito_client, 'set_user_password', side_effect=err):
+        with pytest.raises(UserException, match='Unable to decrypt'):
+            user.set_password('encryptedfoo')

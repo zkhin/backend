@@ -86,6 +86,11 @@ type Mutation {
   startChangeUserPhoneNumber(phoneNumber: AWSPhone!): User
   finishChangeUserPhoneNumber(verificationCode: String!): User
 
+  # Set the user's password
+  #   - the encryptedPassword parameter should be the user's new password, encrypted
+  #     using a REAL public key. See the integration tests for example usage.
+  setUserPassword(encryptedPassword: String!): User
+
   # Reset the caller's user account to its initial state (primarily for integration testing)
   #   - excluding cognito, all state associated with user is deleted - including followers, others's comments on our posts, etc
   #   - the user's preferred_username in congito will be deleted

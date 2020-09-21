@@ -48,6 +48,7 @@ provider:
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
+    SECRETSMANAGER_REAL_KEY_PAIR_NAME: RealKeyPair-1
 
   iamRoleStatements:
     - Effect: Allow

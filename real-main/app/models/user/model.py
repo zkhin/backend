@@ -1,9 +1,11 @@
 import logging
 import os
 
+import botocore
 import pendulum
 import stringcase
 
+from app.clients.cognito import InvalidEncryption
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
@@ -85,6 +87,17 @@ class User(TrendingModelMixin):
     @property
     def subscription_level(self):
         return self.item.get('subscriptionLevel', UserSubscriptionLevel.BASIC)
+
+    def set_password(self, encrypted_password):
+        try:
+            self.cognito_client.set_user_password(self.id, encrypted_password)
+        except InvalidEncryption as err:
+            raise UserException('Unable to decrypt encrypted password') from err
+        except (
+            botocore.exceptions.ParamValidationError,
+            self.cognito_client.user_pool_client.exceptions.InvalidPasswordException,
+        ) as err:
+            raise UserValidationException('Invalid password') from err
 
     def get_photo_path(self, size, photo_post_id=None):
         photo_post_id = photo_post_id or self.item.get('photoPostId')

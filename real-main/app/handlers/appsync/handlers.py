@@ -42,7 +42,7 @@ clients = {
     'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'appsync': clients.AppSyncClient(),
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
-    'cognito': clients.CognitoClient(),
+    'cognito': clients.CognitoClient(real_key_pair_getter=secrets_manager_client.get_real_key_pair),
     'dynamo': clients.DynamoClient(),
     'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
@@ -176,6 +176,18 @@ def create_google_user(caller_user_id, arguments, client=None, **kwargs):
         raise ClientException(str(err)) from err
     user.set_last_client(client)
     return user.serialize(caller_user_id)
+
+
+@routes.register('Mutation.setUserPassword')
+@validate_caller
+@update_last_client
+def set_user_password(caller_user, arguments, **kwargs):
+    encrypted_password = arguments['encryptedPassword']
+    try:
+        caller_user.set_password(encrypted_password)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    return caller_user.serialize(caller_user.id)
 
 
 @routes.register('Mutation.linkAppleLogin')

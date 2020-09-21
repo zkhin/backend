@@ -29,6 +29,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: setUserPassword
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: linkAppleLogin
   dataSource: LambdaDataSource
   request: false

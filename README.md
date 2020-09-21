@@ -64,6 +64,21 @@ _Once per AWS Account_
 - A CloudFront Key Pair must be generated and added. To do so, one must login to the AWS Console using the account's *root* credentials. See [Setting up CloudFront Signed URLs](#setting-up-cloudfront-signed-urls) for details.
 - Google OAuth Client Ids must be added to support logging in with google auth. These client ids are available from our google app's profile on the [google app console](https://console.developers.google.com/). The secret value must be a json map with keys `ios` and `web`, while the secret name must match the environment variable defined in `serverless.yml`.
 - The Apple AppStore parameters must be added in order to process & verify appstore receipts. The secret value must be a json map with keys `bundleId` and [`sharedSecret`](https://developer.apple.com/documentation/appstorereceipts/requestbody), while the secret name must match the environment variable defined in `serverless.yml`. Talk to the frontend team lead to get the values for these parameters.
+- A RSA Key Pair must be generated for internal use, namely for encrypting passwords when passed as arguments via GQL. To generate a key pair from the command line using [`openssl`](https://www.openssl.org/docs/man1.0.2/man1/openssl.html):
+
+  ```sh
+  openssl genrsa -out private-key.pem
+  openssl rsa -in private-key.pem -outform PEM -pubout -out public-key.pem
+  ```
+
+  The secret name must match the environment variable defined in `serverless.yml`, while the secret value should should be
+
+  ```json
+  {
+    "publicKey": "<cat public-key.pem | sed '1d;$d'>",
+    "privateKey": "<cat private-key.pem | sed '1d;$d'>"
+  }
+  ```
 
 #### SES
 
