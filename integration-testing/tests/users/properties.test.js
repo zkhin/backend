@@ -622,12 +622,6 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
     },
   })
 
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(userId)
-    expect(JSON.stringify(user.matchGenders)).toBe(JSON.stringify(matchGenders))
-    expect(user.matchLocationRadius).toBe(matchLocationRadius)
-  })
-
   // Set user age range
   await ourClient.mutate({
     mutation: mutations.setUserAgeRange,
@@ -635,12 +629,6 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
       min: matchAgeRange.min,
       max: matchAgeRange.max,
     },
-  })
-
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(userId)
-    expect(user.matchAgeRange.min).toBe(matchAgeRange.min)
-    expect(user.matchAgeRange.max).toBe(matchAgeRange.max)
   })
 
   // Set user current location
@@ -655,6 +643,10 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
 
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(userId)
+    expect(JSON.stringify(user.matchGenders)).toBe(JSON.stringify(matchGenders))
+    expect(user.matchLocationRadius).toBe(matchLocationRadius)
+    expect(user.matchAgeRange.min).toBe(matchAgeRange.min)
+    expect(user.matchAgeRange.max).toBe(matchAgeRange.max)
     expect(user.currentLocation.latitude).toBe(currentLocation.latitude)
     expect(user.currentLocation.longitude).toBe(currentLocation.longitude)
     expect(user.currentLocation.accuracy).toBe(currentLocation.accuracy)

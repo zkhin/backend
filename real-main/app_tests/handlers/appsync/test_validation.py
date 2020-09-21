@@ -5,9 +5,9 @@ import pytest
 
 from app.handlers.appsync.exceptions import ClientException
 from app.handlers.appsync.validation import (
-    validate_match_location_radius,
     validate_age_range,
     validate_current_location,
+    validate_match_location_radius,
 )
 from app.models.user.enums import UserSubscriptionLevel
 
