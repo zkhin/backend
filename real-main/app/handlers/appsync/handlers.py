@@ -30,6 +30,11 @@ from app.utils import image_size
 from .. import xray
 from . import routes
 from .exceptions import ClientException
+from .validation import (
+    validate_age_range,
+    validate_current_location,
+    validate_match_location_radius,
+)
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
@@ -335,27 +340,14 @@ def set_user_details(caller_user, arguments, **kwargs):
         longitude = Decimal(str(current_location.get('longitude')))
         accuracy = Decimal(str(current_location.get('accuracy', 0)))
 
-        if latitude > 90 or latitude < -90:
-            raise ClientException('Latitude should be in [-90, 90]')
-        if longitude > 180 or longitude < -180:
-            raise ClientException('Longitude should be in [-180, 180]')
-        if accuracy < 0:
-            raise ClientException('Accuracy should be greater than or equal to zero')
-
         current_location = {"latitude": latitude, "longitude": longitude, "accuracy": accuracy}
+        validate_current_location(current_location)
 
     if match_age_range is not None:
-        minAge = match_age_range.get('min')
-        maxAge = match_age_range.get('max')
-
-        if minAge > maxAge or minAge < 18 or maxAge > 100:
-            raise ClientException('Invalid matchAgeRange')
+        validate_age_range(match_age_range)
 
     if match_location_radius is not None:
-        if match_location_radius < 15:
-            raise ClientException('MatchLocationRadius should be greater than or equal to 15')
-        if caller_user.subscription_level == UserSubscriptionLevel.BASIC and match_location_radius > 100:
-            raise ClientException('MatchLocationRadius should be less than or equal to 100')
+        validate_match_location_radius(match_location_radius, caller_user)
 
     # update the simple properties
     caller_user.update_details(

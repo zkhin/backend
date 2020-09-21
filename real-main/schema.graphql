@@ -128,7 +128,7 @@ type Mutation {
     currentLocation: LocationInput,
     matchAgeRange: AgeRangeInput,
     matchGenders: [UserGender!],
-    matchLocationRadius: Int
+    matchLocationRadius: Int,
   ): User
 
   # Various one-off user property setters
