@@ -17,7 +17,7 @@ from app.utils import GqlNotificationType
 
 from .dynamo import UserContactAttributeDynamo, UserDynamo
 from .enums import UserStatus, UserSubscriptionLevel
-from .exceptions import UserAlreadyExists, UserValidationException
+from .exceptions import UserAlreadyExists, UserException, UserValidationException
 from .model import User
 
 logger = logging.getLogger()
@@ -148,10 +148,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         tokens = {'cognito_token': self.cognito_client.get_user_pool_tokens(user_id)['IdToken']}
         try:
             self.cognito_client.link_identity_pool_entries(user_id, **tokens)
-        except Exception:
+        except Exception as err:
             # try to clean up: remove the user from cognito
             self.cognito_client.delete_user_pool_entry(user_id)
-            raise
+            raise UserException(f'Failed to link identity pool entries: {err}') from err
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()
@@ -248,10 +248,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         }
         try:
             self.cognito_client.link_identity_pool_entries(user_id, **tokens)
-        except Exception:
+        except Exception as err:
             # try to clean up: remove the user from cognito
             self.cognito_client.delete_user_pool_entry(user_id)
-            raise
+            raise UserException(f'Failed to link identity pool entries: {err}') from err
 
         # create new user in the DB, have them follow the real user if they exist
         photo_code = self.get_random_placeholder_photo_code()

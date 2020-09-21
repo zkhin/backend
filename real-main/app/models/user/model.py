@@ -384,7 +384,10 @@ class User(TrendingModelMixin):
             'cognito_token': self.cognito_client.get_user_pool_tokens(self.id)['IdToken'],
             provider + '_token': token,
         }
-        self.cognito_client.link_identity_pool_entries(self.id, **tokens)
+        try:
+            self.cognito_client.link_identity_pool_entries(self.id, **tokens)
+        except Exception as err:
+            raise UserException(f'Failed to link identity pool entries: {err}') from err
 
         # if we don't already have an email, try to extract and set one from the token
         if 'email' not in self.item:
