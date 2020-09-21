@@ -605,6 +605,7 @@ test('User setUserAPNSToken', async () => {
 
 test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matchLocationRadius)', async () => {
   const {client: ourClient, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
 
   // set up another user in cognito, leave them as public
   const currentLocation = {latitude: 50.01, longitude: 50.01, accuracy: 50}
@@ -657,6 +658,15 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
     expect(user.currentLocation.latitude).toBe(currentLocation.latitude)
     expect(user.currentLocation.longitude).toBe(currentLocation.longitude)
     expect(user.currentLocation.accuracy).toBe(currentLocation.accuracy)
+  })
+
+  // check another user can't see values
+  await theirClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(userId)
+    expect(user.matchGenders).toBeNull()
+    expect(user.matchLocationRadius).toBeNull()
+    expect(user.currentLocation).toBeNull()
+    expect(user.matchAgeRange).toBeNull()
   })
 })
 
