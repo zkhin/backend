@@ -1,5 +1,4 @@
 from decimal import Decimal
-from uuid import uuid4
 
 import pytest
 
@@ -12,33 +11,24 @@ from app.handlers.appsync.validation import (
 from app.models.user.enums import UserSubscriptionLevel
 
 
-@pytest.fixture
-def user(user_manager, cognito_client):
-    user_id, username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
-    yield user_manager.create_cognito_only_user(user_id, username)
-
-
-def test_validate_match_location_radius(user):
+def test_validate_match_location_radius():
     valid_match_location_radius = Decimal('25')
     invalid_match_location_radius = Decimal('10')
 
     # Pass the validation
-    assert validate_match_location_radius(valid_match_location_radius, user) is True
+    assert validate_match_location_radius(valid_match_location_radius, UserSubscriptionLevel.BASIC) is True
 
-    user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
     valid_match_location_radius = Decimal('200')
-    assert validate_match_location_radius(valid_match_location_radius, user) is True
+    assert validate_match_location_radius(valid_match_location_radius, UserSubscriptionLevel.DIAMOND) is True
 
     # Raise client exception
     with pytest.raises(ClientException):
-        validate_match_location_radius(invalid_match_location_radius, user)
+        validate_match_location_radius(invalid_match_location_radius, UserSubscriptionLevel.DIAMOND)
 
-    user.item['subscriptionLevel'] = UserSubscriptionLevel.BASIC
     invalid_match_location_radius = Decimal('200')
 
     with pytest.raises(ClientException):
-        validate_match_location_radius(invalid_match_location_radius, user)
+        validate_match_location_radius(invalid_match_location_radius, UserSubscriptionLevel.BASIC)
 
 
 def test_validate_age_range():

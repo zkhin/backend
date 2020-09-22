@@ -1,6 +1,6 @@
-## email is private to the user themselves
+## private to the user themselves
 #if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
-  #return ()
+  #return
 #end
 
 {

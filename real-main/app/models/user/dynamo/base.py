@@ -1,5 +1,6 @@
 import collections
 import logging
+from decimal import BasicContext
 
 import pendulum
 from boto3.dynamodb.conditions import Key
@@ -171,6 +172,16 @@ class UserDynamo:
                     expression_attribute_values[f':{name}'] = value
                 else:
                     expression_actions['REMOVE'].append(name)
+
+        if current_location is not None:
+            latitude = BasicContext.create_decimal(current_location['latitude']).normalize()
+            longitude = BasicContext.create_decimal(current_location['longitude']).normalize()
+            accuracy = current_location.get('accuracy')
+
+            if accuracy is not None:
+                accuracy = BasicContext.create_decimal(accuracy).normalize()
+
+            current_location = {"latitude": latitude, "longitude": longitude, "accuracy": accuracy}
 
         process_attr('fullName', full_name)
         process_attr('bio', bio)

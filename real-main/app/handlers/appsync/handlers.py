@@ -1,6 +1,5 @@
 import logging
 import os
-from decimal import Decimal
 
 import pendulum
 
@@ -332,18 +331,13 @@ def set_user_details(caller_user, arguments, **kwargs):
         caller_user.set_privacy_status(privacy_status)
 
     if current_location is not None:
-        latitude = Decimal(str(current_location.get('latitude')))
-        longitude = Decimal(str(current_location.get('longitude')))
-        accuracy = Decimal(str(current_location.get('accuracy', 0)))
-
-        current_location = {"latitude": latitude, "longitude": longitude, "accuracy": accuracy}
         validate_current_location(current_location)
 
     if match_age_range is not None:
         validate_age_range(match_age_range)
 
     if match_location_radius is not None:
-        validate_match_location_radius(match_location_radius, caller_user)
+        validate_match_location_radius(match_location_radius, caller_user.subscription_level)
 
     # update the simple properties
     caller_user.update_details(
