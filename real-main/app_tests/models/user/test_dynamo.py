@@ -292,6 +292,15 @@ def test_set_user_details(user_dynamo):
     }
     assert resp == expected
 
+    # assert if accuracy is not set
+    current_location = {"latitude": Decimal('50'), "longitude": Decimal('50')}
+    resp = user_dynamo.set_user_details(
+        user_id,
+        current_location=current_location,
+    )
+    assert resp['currentLocation'] == current_location
+    assert resp['currentLocation'].get('accuracy') is None
+
 
 def test_set_user_details_delete_for_empty_string(user_dynamo):
     user_id = 'my-user-id'

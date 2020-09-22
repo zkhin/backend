@@ -174,14 +174,8 @@ class UserDynamo:
                     expression_actions['REMOVE'].append(name)
 
         if current_location is not None:
-            latitude = BasicContext.create_decimal(current_location['latitude']).normalize()
-            longitude = BasicContext.create_decimal(current_location['longitude']).normalize()
-            accuracy = current_location.get('accuracy')
-
-            if accuracy is not None:
-                accuracy = BasicContext.create_decimal(accuracy).normalize()
-
-            current_location = {"latitude": latitude, "longitude": longitude, "accuracy": accuracy}
+            for key in ('latitude', 'longitude'):
+                current_location[key] = BasicContext.create_decimal(current_location[key]).normalize()
 
         process_attr('fullName', full_name)
         process_attr('bio', bio)
