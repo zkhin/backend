@@ -8,7 +8,7 @@ const {mutations} = require('../../schema')
 let anonClient, anonUserId
 const loginCache = new cognito.AppSyncLoginCache()
 const AuthFlow = cognito.AuthFlow
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 const realPublicKeyPem = process.env.REAL_PUBLIC_KEY_PEM
 if (realPublicKeyPem === undefined) throw new Error('Env var REAL_PUBLIC_KEY_PEM must be defined')

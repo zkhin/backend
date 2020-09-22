@@ -4,7 +4,7 @@ const uuidv4 = require('uuid/v4')
 const cognito = require('../../../utils/cognito.js')
 const {mutations} = require('../../../schema')
 
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 describe('cognito-only user', () => {
   let client, accessToken

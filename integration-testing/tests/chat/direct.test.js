@@ -5,7 +5,7 @@ const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 let anonClient, anonUserId
 beforeAll(async () => {

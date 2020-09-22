@@ -11,7 +11,7 @@ const {mutations, queries} = require('../schema')
 const videoData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'sample.mov'))
 const videoHeaders = {'Content-Type': 'video/quicktime'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

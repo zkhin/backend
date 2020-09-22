@@ -3,7 +3,7 @@ const flipPromise = require('flip-promise').default
 const rp = require('request-promise-native')
 
 const cognito = require('../../utils/cognito')
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 dotenv.config()
 

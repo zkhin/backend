@@ -20,7 +20,7 @@ const grantBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 
 const grantData = new Buffer.from(grantBytes).toString('base64')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

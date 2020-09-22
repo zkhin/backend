@@ -4,7 +4,7 @@ const {queries, mutations} = require('../schema')
 
 let anonClient, anonUsername
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

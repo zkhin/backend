@@ -4,7 +4,7 @@ const misc = require('../../../utils/misc')
 const cognito = require('../../../utils/cognito')
 const {mutations, queries} = require('../../../schema')
 
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 let client, userId
 

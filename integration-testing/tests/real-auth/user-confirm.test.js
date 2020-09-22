@@ -3,7 +3,7 @@ const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 dotenv.config()
 

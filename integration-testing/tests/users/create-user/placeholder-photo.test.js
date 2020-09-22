@@ -9,7 +9,7 @@ const {mutations, queries} = require('../../../schema')
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())

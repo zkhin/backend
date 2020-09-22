@@ -3,7 +3,7 @@ const dotenv = require('dotenv')
 const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 
-jest.retryTimes(2)
+jest.retryTimes(1)
 dotenv.config()
 
 const cognitoClientId = process.env.COGNITO_TESTING_CLIENT_ID

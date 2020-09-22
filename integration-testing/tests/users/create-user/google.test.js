@@ -3,7 +3,7 @@ const rp = require('request-promise-native')
 const cognito = require('../../../utils/cognito.js')
 const {mutations} = require('../../../schema')
 
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 /* Run me as a one-off, as you'll have to get a valid google id token
  * for our app. Can be generated from https://developers.google.com/oauthplayground/

@@ -10,7 +10,7 @@ const imageData2 = misc.generateRandomJpeg(8, 8)
 const imageData1B64 = new Buffer.from(imageData1).toString('base64')
 const imageData2B64 = new Buffer.from(imageData2).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(2)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
