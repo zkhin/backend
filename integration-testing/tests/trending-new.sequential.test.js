@@ -25,7 +25,10 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 
-beforeEach(async () => await loginCache.clean())
+beforeEach(async () => {
+  await loginCache.clean()
+  await misc.sleep(2000) // give dynamo handlers time to clean up trending indexes
+})
 afterAll(async () => await loginCache.reset())
 
 test('Post lifecycle, visibility and trending', async () => {
@@ -70,7 +73,7 @@ test('Post lifecycle, visibility and trending', async () => {
   // they upload the image, completing their post
   await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
   await misc.sleepUntilPostProcessed(theirClient, postId1)
-  await misc.sleep(4000) // a bit more time for dynamo trending index converge
+  await misc.sleep(5000) // a bit more time for dynamo trending index converge
 
   // check that shows up in trending posts, their post should be on top
   await ourClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
@@ -125,139 +128,151 @@ test('Post lifecycle, visibility and trending', async () => {
     .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
 })
 
-test('Non-owner views contribute to trending, filter by viewedStatus, reset & delete clear trending', async () => {
-  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  const {client: theirClient, userId: theirUserId} = await cognito.getAppSyncLogin() // user is deleted in this test case
-  const {client: otherClient} = await loginCache.getCleanLogin()
-
-  // we add a post
-  const postId1 = uuidv4()
-  await ourClient
-    .mutate({
-      mutation: mutations.addPost,
-      variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
-    })
-    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
-
-  // they add a post
-  const postId2 = uuidv4()
-  await theirClient
-    .mutate({
-      mutation: mutations.addPost,
-      variables: {postId: postId2, postType: 'TEXT_ONLY', text: 'lore ipsum'},
-    })
-    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId2))
-
-  // both should show up in trending, in order with ours in the back
-  await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(2)
-    expect(trendingPosts.items[0].postId).toBe(postId2)
-    expect(trendingPosts.items[1].postId).toBe(postId1)
+describe('wrapper to ensure cleanup', () => {
+  let theirClient, theirUserId // user is deleted in this test case
+  beforeAll(async () => {
+    ;({client: theirClient, userId: theirUserId} = await cognito.getAppSyncLogin())
+  })
+  afterAll(async () => {
+    if (theirClient) await theirClient.mutate({mutation: mutations.deleteUser})
   })
 
-  // verify we can filter trending posts based on viewed status
-  await ourClient
-    .query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
-    .then(({data: {trendingPosts}}) => {
+  test('Non-owner views contribute to trending, filter by viewedStatus, reset & delete clear trending', async () => {
+    const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+    const {client: otherClient} = await loginCache.getCleanLogin()
+
+    // we add a post
+    const postId1 = uuidv4()
+    await ourClient
+      .mutate({
+        mutation: mutations.addPost,
+        variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
+      })
+      .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
+
+    // they add a post
+    await misc.sleep(1000) // ordering
+    const postId2 = uuidv4()
+    await theirClient
+      .mutate({
+        mutation: mutations.addPost,
+        variables: {postId: postId2, postType: 'TEXT_ONLY', text: 'lore ipsum'},
+      })
+      .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId2))
+
+    // both should show up in trending, in order with ours in the back
+    await misc.sleep(2000)
+    await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+      expect(trendingPosts.items).toHaveLength(2)
+      expect(trendingPosts.items[0].postId).toBe(postId2)
+      expect(trendingPosts.items[1].postId).toBe(postId1)
+    })
+
+    // verify we can filter trending posts based on viewed status
+    await ourClient
+      .query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
+      .then(({data: {trendingPosts}}) => {
+        expect(trendingPosts.items).toHaveLength(1)
+        expect(trendingPosts.items[0].postId).toBe(postId1)
+      })
+    await ourClient
+      .query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
+      .then(({data: {trendingPosts}}) => {
+        expect(trendingPosts.items).toHaveLength(1)
+        expect(trendingPosts.items[0].postId).toBe(postId2)
+      })
+
+    // trending users should be empty
+    await otherClient
+      .query({query: queries.trendingUsers})
+      .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
+
+    // we report to have viewed our own post
+    await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
+    await misc.sleep(2000)
+
+    // check no change in trending posts
+    await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+      expect(trendingPosts.items).toHaveLength(2)
+      expect(trendingPosts.items[0].postId).toBe(postId2)
+      expect(trendingPosts.items[1].postId).toBe(postId1)
+    })
+
+    // trending users should still be empty
+    await otherClient
+      .query({query: queries.trendingUsers})
+      .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
+
+    // they report to have viewed our post
+    await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
+    await misc.sleep(2000) // dynamo
+
+    // trending posts should have flipped order
+    await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+      expect(trendingPosts.items).toHaveLength(2)
+      expect(trendingPosts.items[0].postId).toBe(postId1)
+      expect(trendingPosts.items[1].postId).toBe(postId2)
+    })
+
+    // we should be in trending users
+    await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
+      expect(trendingUsers.items).toHaveLength(1)
+      expect(trendingUsers.items[0].userId).toBe(ourUserId)
+    })
+
+    // we report to have viewed our their post
+    await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
+    await misc.sleep(2000) // dynamo
+
+    // trending posts should have flipped order again
+    await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+      expect(trendingPosts.items).toHaveLength(2)
+      expect(trendingPosts.items[0].postId).toBe(postId2)
+      expect(trendingPosts.items[1].postId).toBe(postId1)
+    })
+
+    // we should both be in trending users
+    await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
+      expect(trendingUsers.items).toHaveLength(2)
+      expect(trendingUsers.items[0].userId).toBe(theirUserId)
+      expect(trendingUsers.items[1].userId).toBe(ourUserId)
+    })
+
+    // they delete themselves
+    await theirClient.mutate({mutation: mutations.deleteUser}).then(({data: {deleteUser: user}}) => {
+      expect(user.userId).toBe(theirUserId)
+      expect(user.userStatus).toBe('DELETING')
+      theirClient = null
+    })
+    await misc.sleep(2000) // dynamo
+
+    // verify their post has disappeared from trending
+    await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
       expect(trendingPosts.items).toHaveLength(1)
       expect(trendingPosts.items[0].postId).toBe(postId1)
     })
-  await ourClient
-    .query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
-    .then(({data: {trendingPosts}}) => {
-      expect(trendingPosts.items).toHaveLength(1)
-      expect(trendingPosts.items[0].postId).toBe(postId2)
+
+    // verify their user has disappeared from trending
+    await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
+      expect(trendingUsers.items).toHaveLength(1)
+      expect(trendingUsers.items[0].userId).toBe(ourUserId)
     })
 
-  // trending users should be empty
-  await otherClient
-    .query({query: queries.trendingUsers})
-    .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
+    // we reset ourselves
+    await ourClient
+      .mutate({mutation: mutations.resetUser})
+      .then(({data: {resetUser: user}}) => expect(user.userId).toBe(ourUserId))
 
-  // we report to have viewed our own post
-  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
-  await misc.sleep(2000)
+    // verify our post has disappeared from trending
+    await otherClient
+      .query({query: queries.trendingPosts})
+      .then(({data: {trendingPosts}}) => expect(trendingPosts.items).toHaveLength(0))
 
-  // check no change in trending posts
-  await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(2)
-    expect(trendingPosts.items[0].postId).toBe(postId2)
-    expect(trendingPosts.items[1].postId).toBe(postId1)
+    // verify our user has disappeared from trending
+    await otherClient
+      .query({query: queries.trendingUsers})
+      .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
   })
-
-  // trending users should still be empty
-  await otherClient
-    .query({query: queries.trendingUsers})
-    .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
-
-  // they report to have viewed our post
-  await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
-  await misc.sleep(2000) // dynamo
-
-  // trending posts should have flipped order
-  await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(2)
-    expect(trendingPosts.items[0].postId).toBe(postId1)
-    expect(trendingPosts.items[1].postId).toBe(postId2)
-  })
-
-  // we should be in trending users
-  await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
-    expect(trendingUsers.items).toHaveLength(1)
-    expect(trendingUsers.items[0].userId).toBe(ourUserId)
-  })
-
-  // we report to have viewed our their post
-  await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId2]}})
-  await misc.sleep(2000) // dynamo
-
-  // trending posts should have flipped order again
-  await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(2)
-    expect(trendingPosts.items[0].postId).toBe(postId2)
-    expect(trendingPosts.items[1].postId).toBe(postId1)
-  })
-
-  // we should both be in trending users
-  await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
-    expect(trendingUsers.items).toHaveLength(2)
-    expect(trendingUsers.items[0].userId).toBe(theirUserId)
-    expect(trendingUsers.items[1].userId).toBe(ourUserId)
-  })
-
-  // they delete themselves
-  await theirClient.mutate({mutation: mutations.deleteUser}).then(({data: {deleteUser: user}}) => {
-    expect(user.userId).toBe(theirUserId)
-    expect(user.userStatus).toBe('DELETING')
-  })
-  await misc.sleep(2000) // dynamo
-
-  // verify their post has disappeared from trending
-  await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
-    expect(trendingPosts.items).toHaveLength(1)
-    expect(trendingPosts.items[0].postId).toBe(postId1)
-  })
-
-  // verify their user has disappeared from trending
-  await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
-    expect(trendingUsers.items).toHaveLength(1)
-    expect(trendingUsers.items[0].userId).toBe(ourUserId)
-  })
-
-  // we reset ourselves
-  await ourClient
-    .mutate({mutation: mutations.resetUser})
-    .then(({data: {resetUser: user}}) => expect(user.userId).toBe(ourUserId))
-
-  // verify our post has disappeared from trending
-  await otherClient
-    .query({query: queries.trendingPosts})
-    .then(({data: {trendingPosts}}) => expect(trendingPosts.items).toHaveLength(0))
-
-  // verify our user has disappeared from trending
-  await otherClient
-    .query({query: queries.trendingUsers})
-    .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
 })
 
 test('Blocked, private post & user visibility of posts & users in trending', async () => {
