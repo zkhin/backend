@@ -192,5 +192,6 @@ module.exports.simpleUserFields = gql`
       min
       max
     }
+    datingStatus
   }
 `

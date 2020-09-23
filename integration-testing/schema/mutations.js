@@ -228,6 +228,15 @@ module.exports.setUserAgeRange = gql`
   }
 `
 
+module.exports.setUserDatingStatus = gql`
+  mutation SetUserDatingStatus($status: DatingStatus!) {
+    setUserDatingStatus(status: $status) {
+      userId
+      datingStatus
+    }
+  }
+`
+
 module.exports.updateUserContactInfo = gql`
   mutation SetUserContactInfo($accessToken: String!) {
     updateUserContactInfo(authProvider: COGNITO, accessToken: $accessToken) {

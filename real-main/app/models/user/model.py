@@ -444,3 +444,7 @@ class User(TrendingModelMixin):
             self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at
         )
         return self
+
+    def set_dating_status(self, status=None):
+        self.item = self.dynamo.set_user_dating_status(self.id, status)
+        return self

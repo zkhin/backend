@@ -442,3 +442,11 @@ class UserDynamo:
     def delete_user_deleted(self, user_id):
         key = {'partitionKey': f'user/{user_id}', 'sortKey': 'deleted'}
         return self.client.delete_item(key)
+
+    def set_user_dating_status(self, user_id, status):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'SET datingStatus = :ds',
+            'ExpressionAttributeValues': {':ds': status},
+        }
+        return self.client.update_item(query_kwargs)
