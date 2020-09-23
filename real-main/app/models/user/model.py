@@ -302,6 +302,10 @@ class User(TrendingModelMixin):
         verification_hidden=None,
         birthday=None,
         gender=None,
+        current_location=None,
+        match_age_range=None,
+        match_genders=None,
+        match_location_radius=None,
     ):
         "To delete details, set them to the empty string. Ex: `full_name=''`"
         kwargs = {k: v for k, v in locals().items() if k != 'self' and v is not None}

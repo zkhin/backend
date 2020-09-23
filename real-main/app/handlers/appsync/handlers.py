@@ -29,6 +29,7 @@ from app.utils import image_size
 from .. import xray
 from . import routes
 from .exceptions import ClientException
+from .validation import validate_age_range, validate_current_location, validate_match_location_radius
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
@@ -293,6 +294,10 @@ def set_user_details(caller_user, arguments, **kwargs):
     verification_hidden = arguments.get('verificationHidden')
     birthday = arguments.get('birthday')
     gender = arguments.get('gender')
+    current_location = arguments.get('currentLocation')
+    match_age_range = arguments.get('matchAgeRange')
+    match_genders = arguments.get('matchGenders')
+    match_location_radius = arguments.get('matchLocationRadius')
 
     args = (
         username,
@@ -310,6 +315,10 @@ def set_user_details(caller_user, arguments, **kwargs):
         view_counts_hidden,
         birthday,
         gender,
+        current_location,
+        match_age_range,
+        match_genders,
+        match_location_radius,
     )
     if all(v is None for v in args):
         raise ClientException('Called without any arguments... probably not what you intended?')
@@ -333,6 +342,15 @@ def set_user_details(caller_user, arguments, **kwargs):
     if privacy_status is not None:
         caller_user.set_privacy_status(privacy_status)
 
+    if current_location is not None:
+        validate_current_location(current_location)
+
+    if match_age_range is not None:
+        validate_age_range(match_age_range)
+
+    if match_location_radius is not None:
+        validate_match_location_radius(match_location_radius, caller_user.subscription_level)
+
     # update the simple properties
     caller_user.update_details(
         full_name=full_name,
@@ -347,6 +365,10 @@ def set_user_details(caller_user, arguments, **kwargs):
         verification_hidden=verification_hidden,
         birthday=birthday,
         gender=gender,
+        current_location=current_location,
+        match_age_range=match_age_range,
+        match_genders=match_genders,
+        match_location_radius=match_location_radius,
     )
     return caller_user.serialize(caller_user.id)
 

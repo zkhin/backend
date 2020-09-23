@@ -203,3 +203,23 @@
 - type: User
   field: directChat
   dataSource: DynamodbDataSource
+
+- type: User
+  field: currentLocation
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: matchAgeRange
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: matchGenders
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
+  field: matchLocationRadius
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl

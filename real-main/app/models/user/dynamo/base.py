@@ -1,5 +1,6 @@
 import collections
 import logging
+from decimal import BasicContext
 
 import pendulum
 from boto3.dynamodb.conditions import Key
@@ -155,6 +156,10 @@ class UserDynamo:
         verification_hidden=None,
         birthday=None,
         gender=None,
+        current_location=None,
+        match_age_range=None,
+        match_genders=None,
+        match_location_radius=None,
     ):
         "To ignore an attribute, leave it set to None. To delete an attribute, set it to the empty string."
         expression_actions = collections.defaultdict(list)
@@ -167,6 +172,10 @@ class UserDynamo:
                     expression_attribute_values[f':{name}'] = value
                 else:
                     expression_actions['REMOVE'].append(name)
+
+        if current_location is not None:
+            for key in ('latitude', 'longitude'):
+                current_location[key] = BasicContext.create_decimal(current_location[key]).normalize()
 
         process_attr('fullName', full_name)
         process_attr('bio', bio)
@@ -182,6 +191,10 @@ class UserDynamo:
         process_attr('verificationHidden', verification_hidden)
         process_attr('birthday', birthday)
         process_attr('gender', gender)
+        process_attr('currentLocation', current_location)
+        process_attr('matchAgeRange', match_age_range)
+        process_attr('matchGenders', match_genders)
+        process_attr('matchLocationRadius', match_location_radius)
 
         query_kwargs = {
             'Key': self.pk(user_id),

@@ -181,5 +181,16 @@ module.exports.simpleUserFields = gql`
     userStatus
     subscriptionLevel
     subscriptionExpiresAt
+    matchGenders
+    matchLocationRadius
+    currentLocation {
+      latitude
+      longitude
+      accuracy
+    }
+    matchAgeRange {
+      min
+      max
+    }
   }
 `

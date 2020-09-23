@@ -129,7 +129,11 @@ type Mutation {
     languageCode: String,
     themeCode: String,
     birthday: AWSDate,
-    gender: UserGender
+    gender: UserGender,
+    currentLocation: LocationInput,
+    matchAgeRange: AgeRangeInput,
+    matchGenders: [UserGender!],
+    matchLocationRadius: Int,
   ): User
 
   # Various one-off user property setters
@@ -392,6 +396,11 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
   subscriptionExpiresAt: AWSDateTime
+
+  currentLocation: Location
+  matchAgeRange: AgeRange
+  matchGenders: [UserGender!]
+  matchLocationRadius: Int
 
   # User's feed
   #   - private to the user themselves only
@@ -858,4 +867,26 @@ type Album {
 type PaginatedAlbums {
   items: [Album!]!
   nextToken: String
+}
+
+type AgeRange {
+  min: Int
+  max: Int
+}
+
+input AgeRangeInput {
+  min: Int
+  max: Int
+}
+
+type Location {
+  latitude: Float!
+  longitude: Float!
+  accuracy: Int
+}
+
+input LocationInput {
+  latitude: Float!
+  longitude: Float!
+  accuracy: Int
 }
