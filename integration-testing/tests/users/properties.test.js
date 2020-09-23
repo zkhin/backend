@@ -660,6 +660,20 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
     expect(user.currentLocation).toBeNull()
     expect(user.matchAgeRange).toBeNull()
   })
+
+  // update current location without accuracy, process and check if accuracy is null
+  await ourClient.mutate({
+    mutation: mutations.setUserCurrentLocation,
+    variables: {
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
+    },
+  })
+
+  await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(userId)
+    expect(user.currentLocation.accuracy).toBeNull()
+  })
 })
 
 test('Validate user properties(currentLocation, matchAgeRange, matchGenders, matchLocationRadius)', async () => {

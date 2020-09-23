@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 from uuid import uuid4
 
 import pendulum
@@ -233,10 +232,10 @@ def test_set_user_details(user_dynamo):
     username = 'my-username'
     birthday = pendulum.from_format('1900-01-01', 'YYYY-MM-DD').to_iso8601_string()
     gender = 'MALE'
-    current_location = {"latitude": Decimal('50'), "longitude": Decimal('50'), "accuracy": Decimal('50')}
-    match_age_range = {"min": Decimal('20'), "max": Decimal('50')}
+    current_location = {"latitude": 50.1, "longitude": 50.1, "accuracy": 50}
+    match_age_range = {"min": 20, "max": 50}
     match_genders = ['MALE', 'FEMALE']
-    match_location_radius = Decimal('15')
+    match_location_radius = 15
 
     user_dynamo.add_user('other-id-1', 'noise-1', 'cog-noise-1')
     expected_base_item = user_dynamo.add_user(user_id, username)
@@ -293,13 +292,12 @@ def test_set_user_details(user_dynamo):
     assert resp == expected
 
     # assert if accuracy is not set
-    current_location = {"latitude": Decimal('50'), "longitude": Decimal('50')}
+    current_location = {"latitude": 50, "longitude": 50}
     resp = user_dynamo.set_user_details(
         user_id,
         current_location=current_location,
     )
-    assert resp['currentLocation'] == current_location
-    assert resp['currentLocation'].get('accuracy') is None
+    assert 'accuracy' not in resp['currentLocation']
 
 
 def test_set_user_details_delete_for_empty_string(user_dynamo):
