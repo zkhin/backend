@@ -692,7 +692,7 @@ test('Validate user properties(currentLocation, matchAgeRange, matchGenders, mat
         matchLocationRadius: matchLocationRadius,
       },
     }),
-  ).rejects.toThrow(/ClientError: MatchLocationRadius should be greater than or equal to 15/)
+  ).rejects.toThrow(/ClientError: matchLocationRadius should be greater than or equal to 15/)
 
   // Validate user age range
   await expect(
@@ -714,7 +714,7 @@ test('Validate user properties(currentLocation, matchAgeRange, matchGenders, mat
         longitude: 50.01,
       },
     }),
-  ).rejects.toThrow('GraphQL error: ClientError: Latitude should be in [-90, 90]')
+  ).rejects.toThrow(/ClientError: latitude should be in \[-90, 90\]/)
 
   await expect(
     ourClient.mutate({
@@ -724,7 +724,7 @@ test('Validate user properties(currentLocation, matchAgeRange, matchGenders, mat
         longitude: currentLocation.longitude,
       },
     }),
-  ).rejects.toThrow('GraphQL error: ClientError: Longitude should be in [-180, 180]')
+  ).rejects.toThrow(/ClientError: longitude should be in \[-180, 180\]/)
 
   await expect(
     ourClient.mutate({
@@ -735,5 +735,5 @@ test('Validate user properties(currentLocation, matchAgeRange, matchGenders, mat
         accuracy: currentLocation.accuracy,
       },
     }),
-  ).rejects.toThrow(/ClientError: Accuracy should be greater than or equal to zero/)
+  ).rejects.toThrow(/ClientError: accuracy should be greater than or equal to zero/)
 })
