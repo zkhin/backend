@@ -446,5 +446,19 @@ class User(TrendingModelMixin):
         return self
 
     def set_dating_status(self, status=None):
+        required_fields = [
+            'fullName',
+            'photoPostId',
+            'gender',
+            'currentLocation',
+            'matchGenders',
+            'matchAgeRange',
+            'matchLocationRadius',
+        ]
+        for field in required_fields:
+            value = self.item.get(field)
+            if value is None:
+                raise UserException(f'`{field}` is required field')
+
         self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self

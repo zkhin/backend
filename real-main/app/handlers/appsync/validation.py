@@ -1,4 +1,4 @@
-from app.models.user.enums import UserStatus, UserSubscriptionLevel
+from app.models.user.enums import UserSubscriptionLevel
 
 from .exceptions import ClientException
 
@@ -31,26 +31,4 @@ def validate_current_location(current_location):
         raise ClientException('longitude should be in [-180, 180]')
     if accuracy is not None and accuracy < 0:
         raise ClientException('accuracy should be greater than or equal to zero')
-    return True
-
-
-def validate_dating_status_access_permission(user):
-    # TODO: missing age field
-    required_fields = [
-        'userStatus',
-        'fullName',
-        'photoPostId',
-        'gender',
-        'currentLocation',
-        'matchGenders',
-        'matchAgeRange',
-        'matchLocationRadius',
-    ]
-    for field in required_fields:
-        value = user.item.get(field)
-
-        if field == 'userStatus' and value is UserStatus.ANONYMOUS:
-            raise ClientException('ANONYMOUS user cannot update dating status')
-        if field != 'userStatus' and value is None:
-            raise ClientException(f'`{field}` is required field')
     return True

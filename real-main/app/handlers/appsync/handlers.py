@@ -29,12 +29,7 @@ from app.utils import image_size
 from .. import xray
 from . import routes
 from .exceptions import ClientException
-from .validation import (
-    validate_age_range,
-    validate_current_location,
-    validate_dating_status_access_permission,
-    validate_match_location_radius,
-)
+from .validation import validate_age_range, validate_current_location, validate_match_location_radius
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
@@ -410,12 +405,11 @@ def set_user_apns_token(caller_user, arguments, **kwargs):
 @validate_caller
 @update_last_client
 def set_user_dating_status(caller_user, arguments, **kwargs):
-    status = arguments.get('status')
-
-    user = user_manager.get_user(caller_user.id)
-    validate_dating_status_access_permission(user)
-
-    caller_user.set_dating_status(status)
+    status = arguments['status']
+    try:
+        caller_user.set_dating_status(status)
+    except UserException as err:
+        raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)
 
 
