@@ -1,7 +1,5 @@
 const fs = require('fs')
-const moment = require('moment')
 const path = require('path')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -24,89 +22,123 @@ afterEach(async () => {
   anonClient = null
 })
 
-// test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matchLocationRadius)', async () => {
-//   const {client: ourClient, userId} = await loginCache.getCleanLogin()
-//   const {client: theirClient} = await loginCache.getCleanLogin()
-
-//   // set up another user in cognito, leave them as public
-//   const currentLocation = {latitude: 50.01, longitude: 50.01, accuracy: 50}
-//   const matchAgeRange = {min: 20, max: 50}
-//   const matchGenders = ['MALE', 'FEMALE']
-//   const matchLocationRadius = 20
-
-//   // Set match genders and location radius
-//   await ourClient.mutate({
-//     mutation: mutations.setUserDetails,
-//     variables: {
-//       matchGenders: matchGenders,
-//       matchLocationRadius: matchLocationRadius,
-//     },
-//   })
-
-//   // Set user age range
-//   await ourClient.mutate({
-//     mutation: mutations.setUserAgeRange,
-//     variables: {
-//       min: matchAgeRange.min,
-//       max: matchAgeRange.max,
-//     },
-//   })
-
-//   // Set user current location
-//   await ourClient.mutate({
-//     mutation: mutations.setUserCurrentLocation,
-//     variables: {
-//       latitude: currentLocation.latitude,
-//       longitude: currentLocation.longitude,
-//       accuracy: currentLocation.accuracy,
-//     },
-//   })
-
-//   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-//     expect(user.userId).toBe(userId)
-//     expect(JSON.stringify(user.matchGenders)).toBe(JSON.stringify(matchGenders))
-//     expect(user.matchLocationRadius).toBe(matchLocationRadius)
-//     expect(user.matchAgeRange.min).toBe(matchAgeRange.min)
-//     expect(user.matchAgeRange.max).toBe(matchAgeRange.max)
-//     expect(user.currentLocation.latitude).toBe(currentLocation.latitude)
-//     expect(user.currentLocation.longitude).toBe(currentLocation.longitude)
-//     expect(user.currentLocation.accuracy).toBe(currentLocation.accuracy)
-//   })
-
-//   // check another user can't see values
-//   await theirClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
-//     expect(user.userId).toBe(userId)
-//     expect(user.matchGenders).toBeNull()
-//     expect(user.matchLocationRadius).toBeNull()
-//     expect(user.currentLocation).toBeNull()
-//     expect(user.matchAgeRange).toBeNull()
-//   })
-
-//   // update current location without accuracy, process and check if accuracy is null
-//   await ourClient.mutate({
-//     mutation: mutations.setUserCurrentLocation,
-//     variables: {
-//       latitude: currentLocation.latitude,
-//       longitude: currentLocation.longitude,
-//     },
-//   })
-
-//   await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
-//     expect(user.userId).toBe(userId)
-//     expect(user.currentLocation.accuracy).toBeNull()
-//   })
-// })
-
 test('Validate user dating status permission', async () => {
-  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: ourClient, userId} = await loginCache.getCleanLogin()
 
-  // Validate match location radius
+  // Validate user dating status permission
   await expect(
     ourClient.mutate({
       mutation: mutations.setUserDatingStatus,
       variables: {
-        status: true,
+        status: 'ENABLED',
       },
     }),
-  ).rejects.toThrow(/ClientError: Some of required user fields are not set/)
+  ).rejects.toThrow(/ClientError: `fullName` is required field/)
+
+  // Set fullName
+  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {fullName: 'Hunter S'}})
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {
+        status: 'ENABLED',
+      },
+    }),
+  ).rejects.toThrow(/ClientError: `photoPostId` is required field/)
+
+  // Set photoPostId
+  const postId = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await ourClient
+    .mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
+    .then(({data: {setUserDetails: user}}) => expect(user.photo.url).toBeTruthy())
+
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {
+        status: 'ENABLED',
+      },
+    }),
+  ).rejects.toThrow(/ClientError: `gender` is required field/)
+
+  // Set gender
+  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {gender: 'MALE'}})
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {
+        status: 'ENABLED',
+      },
+    }),
+  ).rejects.toThrow(/ClientError: `currentLocation` is required field/)
+
+  // Set currentLocation
+  await ourClient.mutate({
+    mutation: mutations.setUserCurrentLocation,
+    variables: {
+      latitude: 50.01,
+      longitude: 50.01,
+      accuracy: 20,
+    },
+  })
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {
+        status: 'ENABLED',
+      },
+    }),
+  ).rejects.toThrow(/ClientError: `matchGenders` is required field/)
+
+  // Set matchGenders
+  await ourClient.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      matchGenders: ['MALE', 'FEMALE'],
+    },
+  })
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {
+        status: 'ENABLED',
+      },
+    }),
+  ).rejects.toThrow(/ClientError: `matchAgeRange` is required field/)
+
+  // Set matchAgeRange
+  await ourClient.mutate({
+    mutation: mutations.setUserAgeRange,
+    variables: {
+      min: 20,
+      max: 50,
+    },
+  })
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {
+        status: 'ENABLED',
+      },
+    }),
+  ).rejects.toThrow(/ClientError: `matchLocationRadius` is required field/)
+
+  // Set matchLocationRadius
+  await ourClient.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      matchLocationRadius: 20,
+    },
+  })
+  // All required fields are fulfilled
+  await ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
+
+  // Check if the datingStatus field is ENABLED
+  await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(userId)
+    expect(user.datingStatus).toBe('ENABLED')
+  })
 })

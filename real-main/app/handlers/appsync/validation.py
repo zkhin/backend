@@ -35,25 +35,22 @@ def validate_current_location(current_location):
 
 
 def validate_dating_status_access_permission(user):
-    status = user.get('status')
-    full_name = user.get('fullName')
-    photo_post_id = user.get('photoPostId')
-    gender = user.get('gender')
-    current_location = user.get('currentLocation')
-    match_gender = user.get('matchGenders')
-    match_age_range = user.get('matchAgeRange')
-    match_location_radius = user.get('matchLocationRadius')
     # TODO: missing age field
+    required_fields = [
+        'userStatus',
+        'fullName',
+        'photoPostId',
+        'gender',
+        'currentLocation',
+        'matchGenders',
+        'matchAgeRange',
+        'matchLocationRadius'
+    ]
+    for field in required_fields:
+        value = user.item.get(field)
 
-    if not (
-        status is UserStatus.ANONYMOUS 
-        or full_name is None 
-        or photo_post_id is None 
-        or gender is None 
-        or current_location is None 
-        or match_gender is None
-        or match_age_range is None
-        or match_location_radius is None
-    ):
-        raise ClientException('Some of required user fields are not set')
+        if field == 'userStatus' and value is UserStatus.ANONYMOUS:
+            raise ClientException('ANONYMOUS user cannot update dating status')
+        if field != 'userStatus' and value is None:
+            raise ClientException(f'`{field}` is required field')
     return True
