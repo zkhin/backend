@@ -76,33 +76,45 @@ test('Find users by email', async () => {
     .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, other1, other2].sort(cmp)))
 })
 
-test('Find users by phone, and by phone and email', async () => {
-  const {
-    client: ourClient,
-    userId: ourUserId,
-    email: ourEmail,
-    username: ourUsername,
-  } = await loginCache.getCleanLogin()
+describe('wrapper to ensure cleanup', () => {
   const theirPhone = '+15105551011'
-  const {userId: theirUserId, email: theirEmail, username: theirUsername} = await cognito.getAppSyncLogin(
-    theirPhone,
-  )
-  const cmp = (a, b) => a.userId.localeCompare(b.userId)
+  let theirClient, theirUserId, theirUsername, theirEmail
+  beforeAll(async () => {
+    ;({
+      client: theirClient,
+      userId: theirUserId,
+      email: theirEmail,
+      username: theirUsername,
+    } = await cognito.getAppSyncLogin(theirPhone))
+  })
+  afterAll(async () => {
+    if (theirClient) await theirClient.mutate({mutation: mutations.deleteUser})
+  })
 
-  // how each user will appear in search results, based on our query
-  const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
-  const them = {__typename: 'User', userId: theirUserId, username: theirUsername}
+  test('Find users by phone, and by phone and email', async () => {
+    const {
+      client: ourClient,
+      userId: ourUserId,
+      email: ourEmail,
+      username: ourUsername,
+    } = await loginCache.getCleanLogin()
+    const cmp = (a, b) => a.userId.localeCompare(b.userId)
 
-  // find them by just phone
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.findUsers, variables: {phoneNumbers: [theirPhone]}})
-    .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([them]))
+    // how each user will appear in search results, based on our query
+    const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
+    const them = {__typename: 'User', userId: theirUserId, username: theirUsername}
 
-  // find us and them by phone and email, make sure they don't duplicate
-  await ourClient
-    .query({query: queries.findUsers, variables: {emails: [ourEmail, theirEmail], phoneNumbers: [theirPhone]}})
-    .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, them].sort(cmp)))
+    // find them by just phone
+    await misc.sleep(2000)
+    await ourClient
+      .query({query: queries.findUsers, variables: {phoneNumbers: [theirPhone]}})
+      .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([them]))
+
+    // find us and them by phone and email, make sure they don't duplicate
+    await ourClient
+      .query({query: queries.findUsers, variables: {emails: [ourEmail, theirEmail], phoneNumbers: [theirPhone]}})
+      .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, them].sort(cmp)))
+  })
 })
 
 test('Find Users sends cards to the users that were found', async () => {

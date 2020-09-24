@@ -258,167 +258,191 @@ test('Set and delete our profile photo, using postId', async () => {
   expect(resp.data.self.photo).toBeNull()
 })
 
-test('Read properties of another private user', async () => {
-  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-
-  // set up another user in cognito, mark them as private
-  const theirBio = 'keeping calm and carrying on'
-  const theirFullName = 'HG Wells'
+describe('wrapper to ensure cleanup', () => {
   const theirPhone = '+15105551000'
-  const {client: theirClient, userId: theirUserId, email: theirEmail} = await cognito.getAppSyncLogin(theirPhone)
-  let variables = {privacyStatus: 'PRIVATE'}
-  let resp = await theirClient.mutate({mutation: mutations.setUserPrivacyStatus, variables})
-  expect(resp.data.setUserDetails.privacyStatus).toBe('PRIVATE')
-  await theirClient.mutate({
-    mutation: mutations.setUserDetails,
-    variables: {bio: theirBio, fullName: theirFullName},
+  let theirClient, theirUserId, theirEmail
+  beforeAll(async () => {
+    ;({client: theirClient, userId: theirUserId, email: theirEmail} = await cognito.getAppSyncLogin(theirPhone))
+  })
+  afterAll(async () => {
+    if (theirClient) await theirClient.mutate({mutation: mutations.deleteUser})
   })
 
-  // verify they can see all their properties (make sure they're all set correctly)
-  resp = await theirClient.query({query: queries.self})
-  let user = resp.data.self
-  expect(user.followedStatus).toBe('SELF')
-  expect(user.followerStatus).toBe('SELF')
-  expect(user.privacyStatus).toBe('PRIVATE')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBe(theirBio)
-  expect(user.email).toBe(theirEmail)
-  expect(user.phoneNumber).toBe(theirPhone)
+  test('Read properties of another private user', async () => {
+    const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
-  // verify that we can only see info that is expected of a non-follower
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  user = resp.data.user
-  expect(user.followedStatus).toBe('NOT_FOLLOWING')
-  expect(user.followerStatus).toBe('NOT_FOLLOWING')
-  expect(user.privacyStatus).toBe('PRIVATE')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBeNull()
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // set up another user in cognito, mark them as private
+    const theirBio = 'keeping calm and carrying on'
+    const theirFullName = 'HG Wells'
+    await theirClient
+      .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+      .then(({data: {setUserDetails: user}}) => expect(user.privacyStatus).toBe('PRIVATE'))
+    await theirClient.mutate({
+      mutation: mutations.setUserDetails,
+      variables: {bio: theirBio, fullName: theirFullName},
+    })
 
-  // request to follow the user, verify we cannot see anything more
-  await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  user = resp.data.user
-  expect(user.followedStatus).toBe('REQUESTED')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBeNull()
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // verify they can see all their properties (make sure they're all set correctly)
+    await theirClient.query({query: queries.self}).then(({data: {self: user}}) => {
+      expect(user.followedStatus).toBe('SELF')
+      expect(user.followerStatus).toBe('SELF')
+      expect(user.privacyStatus).toBe('PRIVATE')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBe(theirBio)
+      expect(user.email).toBe(theirEmail)
+      expect(user.phoneNumber).toBe(theirPhone)
+    })
 
-  // verify we see the same thing if we access their user profile indirectly
-  resp = await ourClient.query({query: queries.ourFollowedUsers, variables: {followStatus: 'REQUESTED'}})
-  expect(resp.data.self.followedUsers.items).toHaveLength(1)
-  user = resp.data.self.followedUsers.items[0]
-  expect(user.followedStatus).toBe('REQUESTED')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBeNull()
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // verify that we can only see info that is expected of a non-follower
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.followedStatus).toBe('NOT_FOLLOWING')
+      expect(user.followerStatus).toBe('NOT_FOLLOWING')
+      expect(user.privacyStatus).toBe('PRIVATE')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBeNull()
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
 
-  // accept the user's follow request, verify we can see more
-  await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  user = resp.data.user
-  expect(user.followedStatus).toBe('FOLLOWING')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBe(theirBio)
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // request to follow the user, verify we cannot see anything more
+    await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.followedStatus).toBe('REQUESTED')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBeNull()
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
 
-  // verify we see the same thing if we access their user profile indirectly
-  resp = await ourClient.query({query: queries.ourFollowedUsers})
-  expect(resp.data.self.followedUsers.items).toHaveLength(1)
-  user = resp.data.self.followedUsers.items[0]
-  expect(user.followedStatus).toBe('FOLLOWING')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBe(theirBio)
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // verify we see the same thing if we access their user profile indirectly
+    await ourClient
+      .query({query: queries.ourFollowedUsers, variables: {followStatus: 'REQUESTED'}})
+      .then(({data: {self: user}}) => {
+        expect(user.followedUsers.items).toHaveLength(1)
+        expect(user.followedUsers.items[0].followedStatus).toBe('REQUESTED')
+        expect(user.followedUsers.items[0].fullName).toBe(theirFullName)
+        expect(user.followedUsers.items[0].bio).toBeNull()
+        expect(user.followedUsers.items[0].email).toBeNull()
+        expect(user.followedUsers.items[0].phoneNumber).toBeNull()
+      })
 
-  // now deny the user's follow request, verify we can see less
-  await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  user = resp.data.user
-  expect(user.followedStatus).toBe('DENIED')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBeNull()
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // accept the user's follow request, verify we can see more
+    await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.followedStatus).toBe('FOLLOWING')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBe(theirBio)
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
 
-  // verify we see the same thing if we access their user profile indirectly
-  resp = await ourClient.query({query: queries.ourFollowedUsers, variables: {followStatus: 'DENIED'}})
-  expect(resp.data.self.followedUsers.items).toHaveLength(1)
-  user = resp.data.self.followedUsers.items[0]
-  expect(user.followedStatus).toBe('DENIED')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBeNull()
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // verify we see the same thing if we access their user profile indirectly
+    await ourClient.query({query: queries.ourFollowedUsers}).then(({data: {self: user}}) => {
+      expect(user.followedUsers.items).toHaveLength(1)
+      expect(user.followedUsers.items[0].followedStatus).toBe('FOLLOWING')
+      expect(user.followedUsers.items[0].fullName).toBe(theirFullName)
+      expect(user.followedUsers.items[0].bio).toBe(theirBio)
+      expect(user.followedUsers.items[0].email).toBeNull()
+      expect(user.followedUsers.items[0].phoneNumber).toBeNull()
+    })
 
-  // now accept the user's follow request, and then unfollow them
-  await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
-  await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.followedStatus).toBe('NOT_FOLLOWING')
-  expect(resp.data.user.fullName).toBe(theirFullName)
-  expect(resp.data.user.bio).toBeNull()
-  expect(resp.data.user.email).toBeNull()
-  expect(resp.data.user.phoneNumber).toBeNull()
+    // now deny the user's follow request, verify we can see less
+    await theirClient.mutate({mutation: mutations.denyFollowerUser, variables: {userId: ourUserId}})
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.followedStatus).toBe('DENIED')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBeNull()
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
+
+    // verify we see the same thing if we access their user profile indirectly
+    await ourClient
+      .query({query: queries.ourFollowedUsers, variables: {followStatus: 'DENIED'}})
+      .then(({data: {self: user}}) => {
+        expect(user.followedUsers.items).toHaveLength(1)
+        expect(user.followedUsers.items[0].followedStatus).toBe('DENIED')
+        expect(user.followedUsers.items[0].fullName).toBe(theirFullName)
+        expect(user.followedUsers.items[0].bio).toBeNull()
+        expect(user.followedUsers.items[0].email).toBeNull()
+        expect(user.followedUsers.items[0].phoneNumber).toBeNull()
+      })
+
+    // now accept the user's follow request, and then unfollow them
+    await theirClient.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: ourUserId}})
+    await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.followedStatus).toBe('NOT_FOLLOWING')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBeNull()
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
+  })
 })
 
-test('Read properties of another public user', async () => {
-  const {client: ourClient} = await loginCache.getCleanLogin()
-
-  // set up another user in cognito, leave them as public
-  const theirBio = 'keeping calm and carrying on'
-  const theirFullName = 'HG Wells'
+describe('wrapper to ensure cleanup 2', () => {
   const theirPhone = '+14155551212'
-  const {client: theirClient, userId: theirUserId, email: theirEmail} = await cognito.getAppSyncLogin(theirPhone)
-  await theirClient.mutate({
-    mutation: mutations.setUserDetails,
-    variables: {bio: theirBio, fullName: theirFullName},
+  let theirClient, theirUserId, theirEmail
+  beforeAll(async () => {
+    ;({client: theirClient, userId: theirUserId, email: theirEmail} = await cognito.getAppSyncLogin(theirPhone))
+  })
+  afterAll(async () => {
+    if (theirClient) await theirClient.mutate({mutation: mutations.deleteUser})
   })
 
-  // verify they can see all their properties (make sure they're all set correctly)
-  let resp = await theirClient.query({query: queries.self})
-  let user = resp.data.self
-  expect(user.followedStatus).toBe('SELF')
-  expect(user.followerStatus).toBe('SELF')
-  expect(user.privacyStatus).toBe('PUBLIC')
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.bio).toBe(theirBio)
-  expect(user.email).toBe(theirEmail)
-  expect(user.phoneNumber).toBe(theirPhone)
+  test('Read properties of another public user', async () => {
+    const {client: ourClient} = await loginCache.getCleanLogin()
 
-  // verify that we can see info that is expected of a non-follower
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  user = resp.data.user
-  expect(user.followedStatus).toBe('NOT_FOLLOWING')
-  expect(user.followerStatus).toBe('NOT_FOLLOWING')
-  expect(user.privacyStatus).toBe('PUBLIC')
-  expect(user.bio).toBe(theirBio)
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // set up another user in cognito, leave them as public
+    const theirBio = 'keeping calm and carrying on'
+    const theirFullName = 'HG Wells'
+    await theirClient.mutate({
+      mutation: mutations.setUserDetails,
+      variables: {bio: theirBio, fullName: theirFullName},
+    })
 
-  // follow the user, and verify we still can't see stuff we shouldn't be able to
-  await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.email).toBeNull()
-  expect(resp.data.user.phoneNumber).toBeNull()
+    // verify they can see all their properties (make sure they're all set correctly)
+    await theirClient.query({query: queries.self}).then(({data: {self: user}}) => {
+      expect(user.followedStatus).toBe('SELF')
+      expect(user.followerStatus).toBe('SELF')
+      expect(user.privacyStatus).toBe('PUBLIC')
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.bio).toBe(theirBio)
+      expect(user.email).toBe(theirEmail)
+      expect(user.phoneNumber).toBe(theirPhone)
+    })
 
-  // verify we can't see anything more if we access their user profile indirectly
-  resp = await ourClient.query({query: queries.ourFollowedUsers})
-  expect(resp.data.self.followedUsers.items).toHaveLength(1)
-  user = resp.data.self.followedUsers.items[0]
-  expect(user.followedStatus).toBe('FOLLOWING')
-  expect(user.followerStatus).toBe('NOT_FOLLOWING')
-  expect(user.privacyStatus).toBe('PUBLIC')
-  expect(user.bio).toBe(theirBio)
-  expect(user.fullName).toBe(theirFullName)
-  expect(user.email).toBeNull()
-  expect(user.phoneNumber).toBeNull()
+    // verify that we can see info that is expected of a non-follower
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.followedStatus).toBe('NOT_FOLLOWING')
+      expect(user.followerStatus).toBe('NOT_FOLLOWING')
+      expect(user.privacyStatus).toBe('PUBLIC')
+      expect(user.bio).toBe(theirBio)
+      expect(user.fullName).toBe(theirFullName)
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
+
+    // follow the user, and verify we still can't see stuff we shouldn't be able to
+    await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
+    await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+      expect(user.email).toBeNull()
+      expect(user.phoneNumber).toBeNull()
+    })
+
+    // verify we can't see anything more if we access their user profile indirectly
+    await ourClient.query({query: queries.ourFollowedUsers}).then(({data: {self: user}}) => {
+      expect(user.followedUsers.items).toHaveLength(1)
+      expect(user.followedUsers.items[0].followedStatus).toBe('FOLLOWING')
+      expect(user.followedUsers.items[0].followerStatus).toBe('NOT_FOLLOWING')
+      expect(user.followedUsers.items[0].privacyStatus).toBe('PUBLIC')
+      expect(user.followedUsers.items[0].bio).toBe(theirBio)
+      expect(user.followedUsers.items[0].fullName).toBe(theirFullName)
+      expect(user.followedUsers.items[0].email).toBeNull()
+      expect(user.followedUsers.items[0].phoneNumber).toBeNull()
+    })
+  })
 })
 
 test('User language code - get, set, privacy', async () => {
