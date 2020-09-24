@@ -44,7 +44,7 @@ def validate_dating_status_access_permission(user):
         'currentLocation',
         'matchGenders',
         'matchAgeRange',
-        'matchLocationRadius'
+        'matchLocationRadius',
     ]
     for field in required_fields:
         value = user.item.get(field)

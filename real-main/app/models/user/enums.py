@@ -29,6 +29,7 @@ class UserGender:
 
     _ALL = (MALE, FEMALE)
 
+
 class UserDatingStatus:
     ENABLED = 'ENABLED'
     DISABLED = 'DISABLED'
