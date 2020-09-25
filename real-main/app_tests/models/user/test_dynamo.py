@@ -6,7 +6,7 @@ import pytest
 
 from app.mixins.view.enums import ViewType
 from app.models.user.dynamo import UserDynamo
-from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from app.models.user.enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
 
 
@@ -893,3 +893,16 @@ def test_generate_user_ids_by_birthday(user_dynamo):
     assert list(user_dynamo.generate_user_ids_by_birthday('09-09')) == []
     assert list(user_dynamo.generate_user_ids_by_birthday('02-29')) == [uid2]
     assert list(user_dynamo.generate_user_ids_by_birthday('12-31')).sort() == [uid1, uid3].sort()
+
+
+def test_set_user_dating_status(user_dynamo):
+    user_id = 'my-user-id'
+    username = 'my-username'
+
+    # create the user, verify user starts with PUBLIC
+    user_item = user_dynamo.add_user(user_id, username)
+
+    assert user_item.get('datingStatus') is None
+
+    user_item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
+    assert user_item['datingStatus'] == UserDatingStatus.ENABLED

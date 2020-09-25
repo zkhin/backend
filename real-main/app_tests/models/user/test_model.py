@@ -8,7 +8,7 @@ import pytest
 
 from app.clients.cognito import InvalidEncryption
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from app.models.user.enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import (
     UserAlreadyGrantedSubscription,
     UserException,
@@ -869,3 +869,43 @@ def test_set_user_password_failures(user):
     with patch.object(user.cognito_client, 'set_user_password', side_effect=err):
         with pytest.raises(UserException, match='Unable to decrypt'):
             user.set_password('encryptedfoo')
+
+
+def test_set_dating_status(user):
+    assert user.item.get('fullName') is None
+    with pytest.raises(UserException, match='fullName'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['fullName'] = 'HUNTER S'
+    assert user.item.get('photoPostId') is None
+    with pytest.raises(UserException, match='photoPostId'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['photoPostId'] = str(uuid4())
+    assert user.item.get('gender') is None
+    with pytest.raises(UserException, match='gender'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['gender'] = 'MALE'
+    assert user.item.get('currentLocation') is None
+    with pytest.raises(UserException, match='currentLocation'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['currentLocation'] = {"latitude": 50, "longitude": 50, "accuracy": 10}
+    assert user.item.get('matchGenders') is None
+    with pytest.raises(UserException, match='matchGenders'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['matchGenders'] = ['MALE', 'FEMALE']
+    assert user.item.get('matchAgeRange') is None
+    with pytest.raises(UserException, match='matchAgeRange'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['matchAgeRange'] = {"min": 20, "max": 50}
+    assert user.item.get('matchLocationRadius') is None
+    with pytest.raises(UserException, match='matchLocationRadius'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['matchLocationRadius'] = 15
+    user.set_dating_status(UserDatingStatus.ENABLED)
+    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
