@@ -154,7 +154,7 @@ module.exports.simpleUserFields = gql`
     bio
     email
     phoneNumber
-    birthday
+    dateOfBirth
     gender
     privacyStatus
     postCount

@@ -128,7 +128,7 @@ type Mutation {
     verificationHidden: Boolean,
     languageCode: String,
     themeCode: String,
-    birthday: AWSDate,
+    dateOfBirth: AWSDate,
     gender: UserGender,
     currentLocation: LocationInput,
     matchAgeRange: AgeRangeInput,
@@ -359,8 +359,6 @@ type User {
   # public info readable by all logged-in users, including blocked users
   userId: ID!
   username: String!
-  birthday: AWSDate
-  gender: UserGender
 
   # public info, readable by all logged-in non-blocked users
   userStatus: UserStatus
@@ -372,6 +370,8 @@ type User {
   signedUpAt: AWSDateTime
   photo: Image
   subscriptionLevel: SubscriptionLevel
+  dateOfBirth: AWSDate
+  gender: UserGender
 
   blockedStatus: BlockStatus!  # is the caller blocking them?
   blockerStatus: BlockStatus!  # are they blocking the caller?

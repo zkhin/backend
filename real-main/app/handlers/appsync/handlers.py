@@ -292,7 +292,7 @@ def set_user_details(caller_user, arguments, **kwargs):
     likes_disabled = arguments.get('likesDisabled')
     sharing_disabled = arguments.get('sharingDisabled')
     verification_hidden = arguments.get('verificationHidden')
-    birthday = arguments.get('birthday')
+    date_of_birth = arguments.get('dateOfBirth')
     gender = arguments.get('gender')
     current_location = arguments.get('currentLocation')
     match_age_range = arguments.get('matchAgeRange')
@@ -313,7 +313,7 @@ def set_user_details(caller_user, arguments, **kwargs):
         sharing_disabled,
         verification_hidden,
         view_counts_hidden,
-        birthday,
+        date_of_birth,
         gender,
         current_location,
         match_age_range,
@@ -363,7 +363,7 @@ def set_user_details(caller_user, arguments, **kwargs):
         likes_disabled=likes_disabled,
         sharing_disabled=sharing_disabled,
         verification_hidden=verification_hidden,
-        birthday=birthday,
+        date_of_birth=date_of_birth,
         gender=gender,
         current_location=current_location,
         match_age_range=match_age_range,

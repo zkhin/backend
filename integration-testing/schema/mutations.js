@@ -132,7 +132,7 @@ module.exports.setUserDetails = gql`
     $fullName: String
     $photoPostId: ID
     $username: String
-    $birthday: AWSDate
+    $dateOfBirth: AWSDate
     $gender: UserGender
     $matchGenders: [UserGender!]
     $matchLocationRadius: Int
@@ -142,7 +142,7 @@ module.exports.setUserDetails = gql`
       fullName: $fullName
       photoPostId: $photoPostId
       username: $username
-      birthday: $birthday
+      dateOfBirth: $dateOfBirth
       gender: $gender
       matchGenders: $matchGenders
       matchLocationRadius: $matchLocationRadius
@@ -154,7 +154,7 @@ module.exports.setUserDetails = gql`
       photo {
         ...ImageFragment
       }
-      birthday
+      dateOfBirth
       gender
       matchGenders
       matchLocationRadius

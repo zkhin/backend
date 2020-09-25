@@ -300,7 +300,7 @@ class User(TrendingModelMixin):
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
-        birthday=None,
+        date_of_birth=None,
         gender=None,
         current_location=None,
         match_age_range=None,

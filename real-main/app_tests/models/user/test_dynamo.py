@@ -230,7 +230,7 @@ def test_set_user_details_doesnt_exist(user_dynamo):
 def test_set_user_details(user_dynamo):
     user_id = 'my-user-id'
     username = 'my-username'
-    birthday = pendulum.from_format('1900-01-01', 'YYYY-MM-DD').to_iso8601_string()
+    date_of_birth = '1900-01-01'
     gender = 'MALE'
     current_location = {"latitude": 50.1, "longitude": 50.1, "accuracy": 50}
     match_age_range = {"min": 20, "max": 50}
@@ -259,7 +259,7 @@ def test_set_user_details(user_dynamo):
         likes_disabled=True,
         sharing_disabled=True,
         verification_hidden=True,
-        birthday=birthday,
+        date_of_birth=date_of_birth,
         gender=gender,
         current_location=current_location,
         match_age_range=match_age_range,
@@ -281,7 +281,7 @@ def test_set_user_details(user_dynamo):
             'likesDisabled': True,
             'sharingDisabled': True,
             'verificationHidden': True,
-            'birthday': birthday,
+            'dateOfBirth': date_of_birth,
             'gender': gender,
             'currentLocation': current_location,
             'matchAgeRange': match_age_range,

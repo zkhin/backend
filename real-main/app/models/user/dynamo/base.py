@@ -154,7 +154,7 @@ class UserDynamo:
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
-        birthday=None,
+        date_of_birth=None,
         gender=None,
         current_location=None,
         match_age_range=None,
@@ -189,7 +189,7 @@ class UserDynamo:
         process_attr('likesDisabled', likes_disabled)
         process_attr('sharingDisabled', sharing_disabled)
         process_attr('verificationHidden', verification_hidden)
-        process_attr('birthday', birthday)
+        process_attr('dateOfBirth', date_of_birth)
         process_attr('gender', gender)
         process_attr('currentLocation', current_location)
         process_attr('matchAgeRange', match_age_range)

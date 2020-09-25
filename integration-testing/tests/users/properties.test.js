@@ -1,5 +1,4 @@
 const fs = require('fs')
-const moment = require('moment')
 const path = require('path')
 const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
@@ -80,32 +79,32 @@ describe('Read and write properties our our own profile', () => {
     expect(resp.data.user.fullName).toBeNull()
   })
 
-  test('Birthday and Gender', async () => {
-    const birthday = moment().format('YYYY-MM-DD')
-    const anotherBirthday = '1900-01-01'
+  test('DateOfBirth and Gender', async () => {
+    const dateOfBirth = '2020-12-31'
+    const dateOfBirth2 = '1900-01-01'
     const {client, userId} = await loginCache.getCleanLogin()
 
     // check values start unset
     let resp = await client.query({query: queries.user, variables: {userId}})
-    expect(resp.data.user.birthday).toBeNull()
+    expect(resp.data.user.dateOfBirth).toBeNull()
     expect(resp.data.user.gender).toBeNull()
 
-    // Set values to current User
-    resp = await client.mutate({mutation: mutations.setUserDetails, variables: {birthday, gender: 'MALE'}})
-    expect(resp.data.setUserDetails.birthday).toBe(birthday)
+    // Set values to something, verify
+    resp = await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth, gender: 'MALE'}})
+    expect(resp.data.setUserDetails.dateOfBirth).toBe(dateOfBirth)
     expect(resp.data.setUserDetails.gender).toBe('MALE')
 
-    // Set another values to current User
+    // Set values to something else, verify
     resp = await client.mutate({
       mutation: mutations.setUserDetails,
-      variables: {birthday: anotherBirthday, gender: 'FEMALE'},
+      variables: {dateOfBirth: dateOfBirth2, gender: 'FEMALE'},
     })
-    expect(resp.data.setUserDetails.birthday).toBe(anotherBirthday)
+    expect(resp.data.setUserDetails.dateOfBirth).toBe(dateOfBirth2)
     expect(resp.data.setUserDetails.gender).toBe('FEMALE')
 
     // double check values were saved to DB
     resp = await client.query({query: queries.user, variables: {userId}})
-    expect(resp.data.user.birthday).toBe(anotherBirthday)
+    expect(resp.data.user.dateOfBirth).toBe(dateOfBirth2)
     expect(resp.data.user.gender).toBe('FEMALE')
   })
 })
