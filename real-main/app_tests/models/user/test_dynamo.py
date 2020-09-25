@@ -281,12 +281,14 @@ def test_set_user_details(user_dynamo):
             'likesDisabled': True,
             'sharingDisabled': True,
             'verificationHidden': True,
-            'dateOfBirth': date_of_birth,
             'gender': gender,
             'currentLocation': current_location,
             'matchAgeRange': match_age_range,
             'matchGenders': match_genders,
             'matchLocationRadius': match_location_radius,
+            'dateOfBirth': date_of_birth,
+            'gsiK2PartitionKey': 'userBirthday/01-01',
+            'gsiK2SortKey': '-',
         },
     }
     assert resp == expected
@@ -387,6 +389,38 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
         verification_hidden='',
     )
     assert resp == expected_base_item
+
+
+def test_set_user_details_date_of_birth(user_dynamo):
+    user_id, username = str(uuid4()), str(uuid4())[:8]
+
+    # create the user
+    item = user_dynamo.add_user(user_id, username)
+    assert user_dynamo.get_user(user_id) == item
+    assert 'dateOfBirth' not in item
+    assert 'gsiK2PartitionKey' not in item
+    assert 'gsiK2SortKey' not in item
+
+    # add a date of birth
+    item = user_dynamo.set_user_details(user_id, date_of_birth='1999-12-31')
+    assert user_dynamo.get_user(user_id) == item
+    assert item['dateOfBirth'] == '1999-12-31'
+    assert item['gsiK2PartitionKey'] == 'userBirthday/12-31'
+    assert item['gsiK2SortKey'] == '-'
+
+    # change date of birth
+    item = user_dynamo.set_user_details(user_id, date_of_birth='2001-05-05')
+    assert user_dynamo.get_user(user_id) == item
+    assert item['dateOfBirth'] == '2001-05-05'
+    assert item['gsiK2PartitionKey'] == 'userBirthday/05-05'
+    assert item['gsiK2SortKey'] == '-'
+
+    # remove date of birth
+    item = user_dynamo.set_user_details(user_id, date_of_birth='')
+    assert user_dynamo.get_user(user_id) == item
+    assert 'dateOfBirth' not in item
+    assert 'gsiK2PartitionKey' not in item
+    assert 'gsiK2SortKey' not in item
 
 
 def test_cant_set_privacy_status_to_random_string(user_dynamo):
@@ -810,3 +844,52 @@ def test_add_delete_user_deleted(user_dynamo, caplog):
     new_item = user_dynamo.add_user_deleted(user_id, now=deleted_at)
     assert user_dynamo.client.get_item(key) == new_item
     assert new_item == user_deleted_item
+
+
+def test_set_user_age(user_dynamo):
+    user_id = str(uuid4())
+
+    # can't set for user that DNE
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        user_dynamo.set_user_age(user_id, 23)
+
+    # add user to DB, verify starts without age
+    item = user_dynamo.add_user(user_id, user_id[:8])
+    assert user_dynamo.get_user(user_id) == item
+    assert 'age' not in item
+
+    # set it
+    item = user_dynamo.set_user_age(user_id, 24)
+    assert user_dynamo.get_user(user_id) == item
+    assert item['age'] == 24
+
+    # verify can't set it to a float that's not an int
+    with pytest.raises(AssertionError):
+        user_dynamo.set_user_age(user_id, 25.2)
+    assert user_dynamo.get_user(user_id) == item
+    assert item['age'] == 24
+
+    # verify can use a float that is equal to an int
+    item = user_dynamo.set_user_age(user_id, 26.0)
+    assert user_dynamo.get_user(user_id) == item
+    assert item['age'] == 26
+
+    # verify can remove it
+    item = user_dynamo.set_user_age(user_id, None)
+    assert user_dynamo.get_user(user_id) == item
+    assert 'age' not in item
+
+
+def test_generate_user_ids_by_birthday(user_dynamo):
+    uid1, uid2, uid3 = str(uuid4()), str(uuid4()), str(uuid4())
+    user_dynamo.add_user(uid1, uid1[:8])
+    user_dynamo.add_user(uid2, uid2[:8])
+    user_dynamo.add_user(uid3, uid3[:8])
+    user_dynamo.set_user_details(uid1, date_of_birth='1970-12-31')
+    user_dynamo.set_user_details(uid2, date_of_birth='2000-02-29')
+    user_dynamo.set_user_details(uid3, date_of_birth='2001-12-31')
+
+    # test generate none, one, two
+    assert list(user_dynamo.generate_user_ids_by_birthday('09-09')) == []
+    assert list(user_dynamo.generate_user_ids_by_birthday('02-29')) == [uid2]
+    assert list(user_dynamo.generate_user_ids_by_birthday('12-31')).sort() == [uid1, uid3].sort()

@@ -60,6 +60,13 @@ def update_appstore_subscriptions(event, context):
 
 
 @handler_logging
+def update_user_ages(event, context):
+    total_cnt, updated_cnt = user_manager.update_ages()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'User ages updated: {updated_cnt} out of {total_cnt}')
+
+
+@handler_logging
 def garbage_collect_albums(event, context):
     cnt = album_manager.garbage_collect()
     with LogLevelContext(logger, logging.INFO):

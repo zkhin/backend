@@ -262,6 +262,13 @@ register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
+    user_manager.on_user_date_of_birth_change_update_age,
+    {'dateOfBirth': None},
+)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
     user_manager.on_user_post_forced_archiving_sync_user_status,
     {'postForcedArchivingCount': 0},
 )

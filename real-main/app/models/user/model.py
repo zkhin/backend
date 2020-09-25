@@ -315,6 +315,22 @@ class User(TrendingModelMixin):
             self.item = self.dynamo.set_user_details(self.id, **kwargs)
         return self
 
+    def update_age(self, now=None):
+        """
+        Set the user's age, using `now` as current time.
+        Return value of True indicates the user's age was set/updated.
+        Return value of False indicates no update to the user's age was needed.
+        """
+        now = now or pendulum.now('utc')
+        if 'dateOfBirth' not in self.item:
+            age = None
+        else:
+            age = (now - pendulum.parse(self.item['dateOfBirth'])).years
+        if age != self.item.get('age'):
+            self.item = self.dynamo.set_user_age(self.id, age)
+            return True
+        return False
+
     def clear_photo_s3_objects(self):
         photo_dir_prefix = '/'.join([self.id, 'profile-photo', ''])
         self.s3_uploads_client.delete_objects_with_prefix(photo_dir_prefix)

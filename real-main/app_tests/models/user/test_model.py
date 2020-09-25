@@ -177,6 +177,40 @@ def test_delete_all_details(user):
     assert 'viewCountsHidden' not in user.item
 
 
+def test_update_age(user):
+    assert 'dateOfBirth' not in user.item
+    assert 'age' not in user.item
+    assert user.update_age() is False
+    assert 'age' not in user.item
+
+    user.update_details(date_of_birth='1990-07-01')
+    assert user.item['dateOfBirth'] == '1990-07-01'
+    assert 'age' not in user.item
+
+    # update age once
+    now = pendulum.parse('2020-06-30T04:03:05.2343Z')
+    assert user.update_age(now=now) is True
+    assert user.item['age'] == 29
+
+    # update age again
+    now = pendulum.parse('2020-07-01T04:03:05.2343Z')
+    assert user.update_age(now=now) is True
+    assert user.item['age'] == 30
+
+    # update age again, no update needed
+    now = pendulum.parse('2020-08-01T04:03:05.2343Z')
+    assert user.update_age(now=now) is False
+    assert user.item['age'] == 30
+
+    # delete the date of birth, then update age again
+    user.update_details(date_of_birth='')
+    assert 'dateOfBirth' not in user.item
+    assert 'age' in user.item
+
+    assert user.update_age(now=now) is True
+    assert 'age' not in user.item
+
+
 def test_disable_enable_user_status(user, caplog):
     assert user.status == UserStatus.ACTIVE
     assert 'userStatus' not in user.item

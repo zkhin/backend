@@ -444,6 +444,18 @@ functions:
       - functionErrors
       - functionThrottles
 
+  updateUserAges:
+    name: ${self:provider.stackName}-updateUserAges
+    handler: app.handlers.cron.update_user_ages
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(12 hours)'
+    alarms:
+      - functionErrors
+      - functionThrottles
+
   updateAppStoreSubscriptions:
     name: ${self:provider.stackName}-updateAppStoreSubscriptions
     handler: app.handlers.cron.update_appstore_subscriptions

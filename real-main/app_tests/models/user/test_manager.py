@@ -38,6 +38,7 @@ user2 = cognito_only_user
 user3 = cognito_only_user
 user4 = cognito_only_user_with_phone
 user5 = cognito_only_user_with_email_and_phone
+user6 = cognito_only_user
 
 
 @pytest.fixture
@@ -278,3 +279,42 @@ def test_find_user_add_cards_for_found_users_not_following(user_manager, user1, 
     assert card_manager.get_card(card_id2)
     assert card_manager.get_card(card_id3) is None
     assert card_manager.get_card(card_id5)
+
+
+def test_update_ages(user_manager, user1, user2, user3, user6):
+    # set birthdates for three of the users, leave one blank
+    user1.update_details(date_of_birth='1990-07-01')
+    user2.update_details(date_of_birth='2000-07-02')
+    user3.update_details(date_of_birth='2010-07-01')
+    assert 'age' not in user1.refresh_item().item
+    assert 'age' not in user2.refresh_item().item
+    assert 'age' not in user3.refresh_item().item
+    assert 'age' not in user6.refresh_item().item
+
+    now = pendulum.parse('2020-06-30T23:59:59Z')
+    assert user_manager.update_ages(now=now) == (0, 0)
+    assert 'age' not in user1.refresh_item().item
+    assert 'age' not in user2.refresh_item().item
+    assert 'age' not in user3.refresh_item().item
+    assert 'age' not in user6.refresh_item().item
+
+    now = pendulum.parse('2020-07-01T06:59:59Z')
+    assert user_manager.update_ages(now=now) == (2, 2)
+    assert user1.refresh_item().item['age'] == 30
+    assert 'age' not in user2.refresh_item().item
+    assert user3.refresh_item().item['age'] == 10
+    assert 'age' not in user6.refresh_item().item
+
+    now = pendulum.parse('2020-07-01T18:59:59Z')
+    assert user_manager.update_ages(now=now) == (2, 0)
+    assert user1.refresh_item().item['age'] == 30
+    assert 'age' not in user2.refresh_item().item
+    assert user3.refresh_item().item['age'] == 10
+    assert 'age' not in user6.refresh_item().item
+
+    now = pendulum.parse('2020-07-02T06:59:59Z')
+    assert user_manager.update_ages(now=now) == (1, 1)
+    assert user1.refresh_item().item['age'] == 30
+    assert user2.refresh_item().item['age'] == 20
+    assert user3.refresh_item().item['age'] == 10
+    assert 'age' not in user6.refresh_item().item

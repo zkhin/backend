@@ -453,6 +453,19 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         on_user_contact_attribute_change_update_subitem, 'phoneNumber', 'phone_number_dynamo'
     )
 
+    def on_user_date_of_birth_change_update_age(self, user_id, new_item, old_item=None):
+        self.init_user(new_item).update_age()
+
+    def update_ages(self, now=None):
+        now = now or pendulum.now('utc')
+        birthday = now.format('MM-DD')
+        total, updated = 0, 0
+        for user_id in self.dynamo.generate_user_ids_by_birthday(birthday):
+            user_updated = self.get_user(user_id).update_age(now=now)
+            updated += 1 if user_updated else 0
+            total += 1
+        return total, updated
+
     def on_user_delete_delete_cognito(self, user_id, old_item):
         old_status = old_item.get('userStatus', UserStatus.ACTIVE)
         # for resets (used by the integration test suite) we leave the user in cognito

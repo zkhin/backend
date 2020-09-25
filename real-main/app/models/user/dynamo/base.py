@@ -139,6 +139,16 @@ class UserDynamo:
         }
         return self.client.update_item(query_kwargs)
 
+    def set_user_age(self, user_id, age):
+        assert age is None or int(age) == age, f'Age is not an integer value: `{age}`'
+        query_kwargs = {'Key': self.pk(user_id)}
+        if age is None:
+            query_kwargs['UpdateExpression'] = 'REMOVE age'
+        else:
+            query_kwargs['UpdateExpression'] = 'SET age = :a'
+            query_kwargs['ExpressionAttributeValues'] = {':a': int(age)}
+        return self.client.update_item(query_kwargs)
+
     def set_user_details(
         self,
         user_id,
@@ -189,12 +199,22 @@ class UserDynamo:
         process_attr('likesDisabled', likes_disabled)
         process_attr('sharingDisabled', sharing_disabled)
         process_attr('verificationHidden', verification_hidden)
-        process_attr('dateOfBirth', date_of_birth)
         process_attr('gender', gender)
         process_attr('currentLocation', current_location)
         process_attr('matchAgeRange', match_age_range)
         process_attr('matchGenders', match_genders)
         process_attr('matchLocationRadius', match_location_radius)
+
+        process_attr('dateOfBirth', date_of_birth)
+        if date_of_birth is not None:
+            if date_of_birth != '':
+                expression_actions['SET'].append('gsiK2PartitionKey = :gsik2pk')
+                expression_actions['SET'].append('gsiK2SortKey = :gsik2sk')
+                expression_attribute_values[':gsik2pk'] = 'userBirthday/' + date_of_birth[5:]
+                expression_attribute_values[':gsik2sk'] = '-'
+            else:
+                expression_actions['REMOVE'].append('gsiK2PartitionKey')
+                expression_actions['REMOVE'].append('gsiK2SortKey')
 
         query_kwargs = {
             'Key': self.pk(user_id),
@@ -276,6 +296,16 @@ class UserDynamo:
             },
         }
         return self.client.update_item(query_kwargs)
+
+    def generate_user_ids_by_birthday(self, birthday):
+        "`birthday` should be a string in format MM-DD"
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiK2PartitionKey = :gsipk',
+            'ProjectionExpression': 'partitionKey',
+            'ExpressionAttributeValues': {':gsipk': f'userBirthday/{birthday}'},
+            'IndexName': 'GSI-K2',
+        }
+        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
 
     def generate_user_ids_by_subscription_level(self, sub_level, max_expires_at=None):
         assert sub_level != UserSubscriptionLevel.BASIC, "Cannot generate for BASIC subscriptions"

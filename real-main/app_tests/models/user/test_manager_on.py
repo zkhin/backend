@@ -445,3 +445,24 @@ def test_on_appstore_sub_status_change_update_subscription(user_manager, user):
         str(uuid4()), new_item=new_item, old_item=old_item
     )
     assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
+
+
+def test_on_user_date_of_birth_change_update_age(user_manager, user):
+    assert 'age' not in user.refresh_item().item
+
+    # fire simulating the creation of a user with a date of birth
+    user.update_details(date_of_birth='1992-04-26')
+    user_manager.on_user_date_of_birth_change_update_age(user.id, new_item=user.item)
+    assert 'age' in user.refresh_item().item
+
+    # fire simulating the editing of a user to remove date of birth
+    old_item = user.item.copy()
+    user.update_details(date_of_birth='')
+    user_manager.on_user_date_of_birth_change_update_age(user.id, new_item=user.item, old_item=old_item)
+    assert 'age' not in user.refresh_item().item
+
+    # fire simulating the editing of a user to change date of birth
+    old_item = user.item.copy()
+    user.update_details(date_of_birth='2020-01-01')
+    user_manager.on_user_date_of_birth_change_update_age(user.id, new_item=user.item, old_item=old_item)
+    assert 'age' in user.refresh_item().item
