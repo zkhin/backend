@@ -907,5 +907,14 @@ def test_set_dating_status(user):
         user.set_dating_status(UserDatingStatus.ENABLED)
 
     user.item['matchLocationRadius'] = 15
+    assert user.item.get('age') is None
+    with pytest.raises(UserException, match='age'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['age'] = 15
+    with pytest.raises(UserException, match='age'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['age'] = 30
     user.set_dating_status(UserDatingStatus.ENABLED)
     assert user.item['datingStatus'] == UserDatingStatus.ENABLED

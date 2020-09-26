@@ -101,6 +101,17 @@ test('Validate user dating status permission', async () => {
       matchLocationRadius: 20,
     },
   })
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `age` is required field/)
+
+  // Set age
+  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '2010-01-01'}})
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: age should be between 18 and 100 to enable dating/)
+
+  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '2000-01-01'}})
 
   await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
     expect(user.userId).toBe(userId)

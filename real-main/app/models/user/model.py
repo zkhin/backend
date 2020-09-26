@@ -454,11 +454,15 @@ class User(TrendingModelMixin):
             'matchGenders',
             'matchAgeRange',
             'matchLocationRadius',
+            'age',
         ]
         for field in required_fields:
             value = self.item.get(field)
             if value is None:
                 raise UserException(f'`{field}` is required field')
+            if field == 'age':
+                if value < 18 or value > 100:
+                    raise UserException('age should be between 18 and 100 to enable dating')
 
         self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self
