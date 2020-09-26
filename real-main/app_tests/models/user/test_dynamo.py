@@ -880,6 +880,29 @@ def test_set_user_age(user_dynamo):
     assert 'age' not in item
 
 
+def test_set_user_dating_status(user_dynamo):
+    user_id = str(uuid4())
+
+    # verify can't set for user that DNE
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
+
+    # add user to DB, verify starts without dating status
+    item = user_dynamo.add_user(user_id, user_id[:8])
+    assert user_dynamo.get_user(user_id) == item
+    assert 'datingStatus' not in item
+
+    # enable, verify
+    item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
+    assert user_dynamo.get_user(user_id) == item
+    assert item['datingStatus'] == UserDatingStatus.ENABLED
+
+    # disable, verify
+    item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.DISABLED)
+    assert user_dynamo.get_user(user_id) == item
+    assert 'datingStatus' not in item
+
+
 def test_generate_user_ids_by_birthday(user_dynamo):
     uid1, uid2, uid3 = str(uuid4()), str(uuid4()), str(uuid4())
     user_dynamo.add_user(uid1, uid1[:8])
@@ -893,16 +916,3 @@ def test_generate_user_ids_by_birthday(user_dynamo):
     assert list(user_dynamo.generate_user_ids_by_birthday('09-09')) == []
     assert list(user_dynamo.generate_user_ids_by_birthday('02-29')) == [uid2]
     assert list(user_dynamo.generate_user_ids_by_birthday('12-31')).sort() == [uid1, uid3].sort()
-
-
-def test_set_user_dating_status(user_dynamo):
-    user_id = 'my-user-id'
-    username = 'my-username'
-
-    # create the user, verify user starts with PUBLIC
-    user_item = user_dynamo.add_user(user_id, username)
-
-    assert user_item.get('datingStatus') is None
-
-    user_item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
-    assert user_item['datingStatus'] == UserDatingStatus.ENABLED

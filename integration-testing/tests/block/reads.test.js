@@ -71,6 +71,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.chatsWithUnviewedMessagesCount).toBe(0)
   expect(ourUserFull.commentsDisabled).toBe(false)
   expect(ourUserFull.dateOfBirth).toBe('2020-01-09')
+  expect(ourUserFull.datingStatus).toBe('DISABLED')
   expect(ourUserFull.directChat).toBeNull()
   expect(ourUserFull.email).toBeTruthy()
   expect(ourUserFull.feed.items).toHaveLength(1)
@@ -107,7 +108,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.userStatus).toBe('ACTIVE')
   expect(ourUserFull.verificationHidden).toBe(false)
   expect(ourUserFull.viewCountsHidden).toBe(false)
-  expect(ourUserFull.datingStatus).toBe('DISABLED')
 
   // verify they see only a absolutely minimal profile of us
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
@@ -132,6 +132,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.chatsWithUnviewedMessagesCount = null
   ourUserFull.commentsDisabled = null
   ourUserFull.dateOfBirth = null
+  ourUserFull.datingStatus = null
   ourUserFull.email = null
   ourUserFull.feed = null
   ourUserFull.followCountsHidden = null
@@ -166,7 +167,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.userStatus = null
   ourUserFull.verificationHidden = null
   ourUserFull.viewCountsHidden = null
-  ourUserFull.datingStatus = null
   expect(ourUserFull).toEqual(ourUserLimited)
 })
 

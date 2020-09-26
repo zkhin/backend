@@ -10,7 +10,7 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
 logger = logging.getLogger()
@@ -446,23 +446,27 @@ class User(TrendingModelMixin):
         return self
 
     def set_dating_status(self, status=None):
-        required_fields = [
-            'fullName',
-            'photoPostId',
-            'gender',
-            'currentLocation',
-            'matchGenders',
-            'matchAgeRange',
-            'matchLocationRadius',
-            'age',
-        ]
-        for field in required_fields:
-            value = self.item.get(field)
-            if value is None:
-                raise UserException(f'`{field}` is required field')
-            if field == 'age':
-                if value < 18 or value > 100:
-                    raise UserException('age should be between 18 and 100 to enable dating')
+        if status == self.item.get('datingStatus', UserDatingStatus.DISABLED):
+            return self
+
+        # bunch of validation required to enable dating, by spec
+        if status == UserDatingStatus.ENABLED:
+            required_fields = {
+                'fullName',
+                'photoPostId',
+                'gender',
+                'currentLocation',
+                'matchGenders',
+                'matchAgeRange',
+                'age',
+            }
+            if self.subscription_level == UserSubscriptionLevel.BASIC:
+                required_fields.add('matchLocationRadius')
+            if (missing := required_fields - set(self.item.keys())) :
+                raise UserException(f'`{missing}` required to enable dating')
+            age = self.item['age']
+            if age < 18 or age > 100:
+                raise UserException(f'age `{age}` must be between 18 and 100 to enable dating')
 
         self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self

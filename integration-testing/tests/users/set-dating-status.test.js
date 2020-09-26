@@ -3,6 +3,7 @@ const path = require('path')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
+const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
@@ -18,128 +19,315 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 afterEach(async () => {})
 
-test('Validate user dating status permission', async () => {
-  const {client: ourClient, userId} = await loginCache.getCleanLogin()
+test('Enable, disable dating as a BASIC user, privacy', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // Check if the new user's datingStatus is DISABLED
-  await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
-    expect(user.userId).toBe(userId)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.datingStatus).toBe('DISABLED')
+    expect(user.subscriptionLevel).toBe('BASIC')
   })
 
-  // Validate user dating status permission
+  // check they can't see our dating status
+  await theirClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.datingStatus).toBeNull())
+
+  // check we cannot enable dating without setting stuff
   await expect(
     ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `fullName` is required field/)
+  ).rejects.toThrow(/ClientError: .* required to enable dating/)
 
-  // Set fullName
-  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {fullName: 'Hunter S'}})
-  await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `photoPostId` is required field/)
-
-  // Set photoPostId
+  // we set all the stuff needed for dating
   const postId = uuidv4()
   await ourClient
     .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
     .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
-  await ourClient
-    .mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
-    .then(({data: {setUserDetails: user}}) => expect(user.photo.url).toBeTruthy())
-
-  await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `gender` is required field/)
-
-  // Set gender
-  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {gender: 'MALE'}})
-  await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `currentLocation` is required field/)
-
-  // Set currentLocation
-  await ourClient.mutate({
-    mutation: mutations.setUserCurrentLocation,
-    variables: {
-      latitude: 50.01,
-      longitude: 50.01,
-      accuracy: 20,
-    },
-  })
-  await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `matchGenders` is required field/)
-
-  // Set matchGenders
   await ourClient.mutate({
     mutation: mutations.setUserDetails,
     variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // enable dating, verify value saved
+  await ourClient
+    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
+    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await ourClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.datingStatus).toBe('ENABLED'))
+
+  // check another user still can't see our datingStatus
+  await theirClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.datingStatus).toBeNull())
+
+  // we disable dating, verify value saved
+  await ourClient
+    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'DISABLED'}})
+    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('DISABLED'))
+  await ourClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.datingStatus).toBe('DISABLED'))
+})
+
+test('FullName required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // set all the stuff needed for dating, except fullName
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      photoPostId: postId,
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'fullName'}` required to enable dating/)
+})
+
+test('Profile photo required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // set all the stuff needed for dating except a profile photo
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'photoPostId'}` required to enable dating/)
+})
+
+test('Gender required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // set all the stuff needed for dating, except gender
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'gender'}` required to enable dating/)
+})
+
+test('currentLocation required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // set all the stuff needed for dating, except currentLocation
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'currentLocation'}` required to enable dating/)
+})
+
+test('matchAgeRange required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // we set all the stuff needed for dating, except matchAgeRange
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'matchAgeRange'}` required to enable dating/)
+})
+
+test('matchGenders required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // we set all the stuff needed for dating, except matchGenders
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'matchGenders'}` required to enable dating/)
+})
+
+test('BASIC users require matchLocationRadius to enable dating, DIAMOND users do not', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // we set all the stuff needed for dating, except matchLocationRadius
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
     },
   })
-  await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `matchAgeRange` is required field/)
+  await misc.sleep(2000)
 
-  // Set matchAgeRange
-  await ourClient.mutate({
-    mutation: mutations.setUserAgeRange,
-    variables: {
-      min: 20,
-      max: 50,
-    },
-  })
+  // verify can't enable dating
   await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `matchLocationRadius` is required field/)
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'matchLocationRadius'}` required to enable dating/)
 
-  // Set matchLocationRadius
-  await ourClient.mutate({
+  // give ourselves some free DIAMOND
+  await client
+    .mutate({mutation: mutations.grantUserSubscriptionBonus})
+    .then(({data: {grantUserSubscriptionBonus: user}}) => expect(user.subscriptionLevel).toBe('DIAMOND'))
+
+  // verify now we can enable dating
+  await client
+    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
+    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+})
+
+test('Age required and must be in allowed age range for enabling dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // we set all the stuff needed for dating
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
     mutation: mutations.setUserDetails,
     variables: {
-      matchLocationRadius: 20,
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
     },
   })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
   await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `age` is required field/)
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'age'}` required to enable dating/)
 
-  // Set age
-  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '2010-01-01'}})
+  // set age, but too young
+  await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '2019-01-01'}})
+  await misc.sleep(2000)
   await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: age should be between 18 and 100 to enable dating/)
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: age .* must be between /)
 
-  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '2000-01-01'}})
+  // set age, but too old
+  await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '1900-01-01'}})
+  await misc.sleep(2000)
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: age .* must be between /)
 
-  await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
-    expect(user.userId).toBe(userId)
-    expect(user.datingStatus).toBe('DISABLED')
-  })
-  // All required fields are fulfilled and check if datingStatus is ENABLED
-  await ourClient
+  // set age to an allowed dating age
+  await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '1980-01-01'}})
+  await misc.sleep(2000)
+  await client
     .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => {
-      expect(user.datingStatus).toBe('ENABLED')
-    })
-
-  // check another user can't see datingStatus value
-  await theirClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
-    expect(user.userId).toBe(userId)
-    expect(user.datingStatus).toBeNull()
-  })
-
-  // datingStatus can be set to DISABLED
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'DISABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => {
-      expect(user.datingStatus).toBe('DISABLED')
-    })
-
-  // check another user can't see datingStatus value
-  await theirClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
-    expect(user.userId).toBe(userId)
-    expect(user.datingStatus).toBeNull()
-  })
+    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
 })
