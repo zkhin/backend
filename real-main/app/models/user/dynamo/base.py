@@ -446,7 +446,11 @@ class UserDynamo:
     def set_user_dating_status(self, user_id, status):
         query_kwargs = {
             'Key': self.pk(user_id),
-            'UpdateExpression': 'SET datingStatus = :ds',
-            'ExpressionAttributeValues': {':ds': status},
         }
+
+        if status == 'ENABLED':
+            query_kwargs['UpdateExpression'] = 'SET datingStatus = :ds'
+            query_kwargs['ExpressionAttributeValues'] = {':ds': status}
+        else:
+            query_kwargs['UpdateExpression'] = 'REMOVE datingStatus'
         return self.client.update_item(query_kwargs)

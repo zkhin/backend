@@ -107,6 +107,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.userStatus).toBe('ACTIVE')
   expect(ourUserFull.verificationHidden).toBe(false)
   expect(ourUserFull.viewCountsHidden).toBe(false)
+  expect(ourUserFull.datingStatus).toBe('DISABLED')
 
   // verify they see only a absolutely minimal profile of us
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
@@ -165,6 +166,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.userStatus = null
   ourUserFull.verificationHidden = null
   ourUserFull.viewCountsHidden = null
+  ourUserFull.datingStatus = null
   expect(ourUserFull).toEqual(ourUserLimited)
 })
 

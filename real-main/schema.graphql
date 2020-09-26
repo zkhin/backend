@@ -404,13 +404,12 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
   subscriptionExpiresAt: AWSDateTime
+  datingStatus: DatingStatus
 
   currentLocation: Location
   matchAgeRange: AgeRange
   matchGenders: [UserGender!]
   matchLocationRadius: Int
-
-  datingStatus: DatingStatus
 
   # User's feed
   #   - private to the user themselves only
