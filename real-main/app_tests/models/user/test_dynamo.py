@@ -6,7 +6,7 @@ import pytest
 
 from app.mixins.view.enums import ViewType
 from app.models.user.dynamo import UserDynamo
-from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from app.models.user.enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
 
 
@@ -878,6 +878,29 @@ def test_set_user_age(user_dynamo):
     item = user_dynamo.set_user_age(user_id, None)
     assert user_dynamo.get_user(user_id) == item
     assert 'age' not in item
+
+
+def test_set_user_dating_status(user_dynamo):
+    user_id = str(uuid4())
+
+    # verify can't set for user that DNE
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
+
+    # add user to DB, verify starts without dating status
+    item = user_dynamo.add_user(user_id, user_id[:8])
+    assert user_dynamo.get_user(user_id) == item
+    assert 'datingStatus' not in item
+
+    # enable, verify
+    item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
+    assert user_dynamo.get_user(user_id) == item
+    assert item['datingStatus'] == UserDatingStatus.ENABLED
+
+    # disable, verify
+    item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.DISABLED)
+    assert user_dynamo.get_user(user_id) == item
+    assert 'datingStatus' not in item
 
 
 def test_generate_user_ids_by_birthday(user_dynamo):

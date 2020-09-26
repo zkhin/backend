@@ -134,6 +134,8 @@ module.exports.setUserDetails = gql`
     $username: String
     $dateOfBirth: AWSDate
     $gender: UserGender
+    $currentLocation: LocationInput
+    $matchAgeRange: AgeRangeInput
     $matchGenders: [UserGender!]
     $matchLocationRadius: Int
   ) {
@@ -144,6 +146,8 @@ module.exports.setUserDetails = gql`
       username: $username
       dateOfBirth: $dateOfBirth
       gender: $gender
+      currentLocation: $currentLocation
+      matchAgeRange: $matchAgeRange
       matchGenders: $matchGenders
       matchLocationRadius: $matchLocationRadius
     ) {
@@ -224,6 +228,15 @@ module.exports.setUserAgeRange = gql`
         min
         max
       }
+    }
+  }
+`
+
+module.exports.setUserDatingStatus = gql`
+  mutation SetUserDatingStatus($status: DatingStatus!) {
+    setUserDatingStatus(status: $status) {
+      userId
+      datingStatus
     }
   }
 `

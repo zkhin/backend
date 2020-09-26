@@ -125,6 +125,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: setUserDatingStatus
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: followUser
   dataSource: LambdaDataSource
   request: false

@@ -141,6 +141,9 @@ type Mutation {
   setUserAcceptedEULAVersion(version: String!): User
   setUserAPNSToken(token: String!): User
 
+  # Enable/disable dating for a user
+  setUserDatingStatus(status: DatingStatus!): User
+
   # Follow or unfollow a user
   # If the user has a private profile, followUser will create a follow request
   followUser(userId: ID!): User
@@ -354,6 +357,11 @@ enum UserGender {
   FEMALE
 }
 
+enum DatingStatus {
+  ENABLED
+  DISABLED
+}
+
 type User {
 
   # public info readable by all logged-in users, including blocked users
@@ -396,6 +404,7 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
   subscriptionExpiresAt: AWSDateTime
+  datingStatus: DatingStatus
 
   currentLocation: Location
   matchAgeRange: AgeRange

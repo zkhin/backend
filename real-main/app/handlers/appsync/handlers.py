@@ -401,6 +401,18 @@ def set_user_apns_token(caller_user, arguments, **kwargs):
     return caller_user.serialize(caller_user.id)
 
 
+@routes.register('Mutation.setUserDatingStatus')
+@validate_caller
+@update_last_client
+def set_user_dating_status(caller_user, arguments, **kwargs):
+    status = arguments['status']
+    try:
+        caller_user.set_dating_status(status)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    return caller_user.serialize(caller_user.id)
+
+
 @routes.register('Mutation.resetUser')
 def reset_user(caller_user_id, arguments, client=None, **kwargs):
     new_username = arguments.get('newUsername') or None  # treat empty string like null

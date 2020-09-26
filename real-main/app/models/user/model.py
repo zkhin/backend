@@ -10,7 +10,7 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
 logger = logging.getLogger()
@@ -443,4 +443,30 @@ class User(TrendingModelMixin):
         self.item = self.dynamo.update_subscription(
             self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at
         )
+        return self
+
+    def set_dating_status(self, status=None):
+        if status == self.item.get('datingStatus', UserDatingStatus.DISABLED):
+            return self
+
+        # bunch of validation required to enable dating, by spec
+        if status == UserDatingStatus.ENABLED:
+            required_fields = {
+                'fullName',
+                'photoPostId',
+                'gender',
+                'currentLocation',
+                'matchGenders',
+                'matchAgeRange',
+                'age',
+            }
+            if self.subscription_level == UserSubscriptionLevel.BASIC:
+                required_fields.add('matchLocationRadius')
+            if (missing := required_fields - set(self.item.keys())) :
+                raise UserException(f'`{missing}` required to enable dating')
+            age = self.item['age']
+            if age < 18 or age > 100:
+                raise UserException(f'age `{age}` must be between 18 and 100 to enable dating')
+
+        self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self

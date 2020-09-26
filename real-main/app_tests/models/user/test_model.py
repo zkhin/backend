@@ -8,7 +8,7 @@ import pytest
 
 from app.clients.cognito import InvalidEncryption
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from app.models.user.enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import (
     UserAlreadyGrantedSubscription,
     UserException,
@@ -869,3 +869,100 @@ def test_set_user_password_failures(user):
     with patch.object(user.cognito_client, 'set_user_password', side_effect=err):
         with pytest.raises(UserException, match='Unable to decrypt'):
             user.set_password('encryptedfoo')
+
+
+def test_set_dating_status_enable_validation(user):
+    assert 'fullName' not in user.item
+    with pytest.raises(UserException, match='fullName'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['fullName'] = 'HUNTER S'
+    assert 'photoPostId' not in user.item
+    with pytest.raises(UserException, match='photoPostId'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['photoPostId'] = str(uuid4())
+    assert 'gender' not in user.item
+    with pytest.raises(UserException, match='gender'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['gender'] = 'MALE'
+    assert 'currentLocation' not in user.item
+    with pytest.raises(UserException, match='currentLocation'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['currentLocation'] = {'latitude': 50, 'longitude': 50, 'accuracy': 10}
+    assert 'matchGenders' not in user.item
+    with pytest.raises(UserException, match='matchGenders'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['matchGenders'] = ['MALE', 'FEMALE']
+    assert 'matchAgeRange' not in user.item
+    with pytest.raises(UserException, match='matchAgeRange'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['matchAgeRange'] = {'min': 20, 'max': 50}
+    assert 'matchLocationRadius' not in user.item
+    with pytest.raises(UserException, match='matchLocationRadius'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['matchLocationRadius'] = 15
+    assert 'age' not in user.item
+    with pytest.raises(UserException, match='age'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    # age must be in [18, 100]
+    for age in (17, 101):
+        user.item['age'] = age
+        with pytest.raises(UserException, match='age'):
+            user.set_dating_status(UserDatingStatus.ENABLED)
+    user.item['age'] = 30
+    user.set_dating_status(UserDatingStatus.ENABLED)
+    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
+
+
+def test_set_dating_status_match_location_radius_not_required_for_diamond(user):
+    # set all the required properties except matchLocationRadius, leave as BASIC
+    user.item.update(
+        {
+            'fullName': 'HUNTER S',
+            'photoPostId': str(uuid4()),
+            'gender': 'MALE',
+            'age': 30,
+            'currentLocation': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
+            'matchGenders': ['MALE', 'FEMALE'],
+            'matchAgeRange': {'min': 20, 'max': 50},
+        }
+    )
+    assert 'subscriptionLEvel' not in user.item
+    assert 'matchLocationRadius' not in user.item
+    with pytest.raises(UserException, match='matchLocationRadius'):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    user.item['subscriptionLevel'] = UserSubscriptionLevel.DIAMOND
+    user.set_dating_status(UserDatingStatus.ENABLED)
+    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
+
+
+def test_set_dating_status_no_op_and_disable(user):
+    # verify starting state, and that we fail validation to enable
+    assert 'datingStatus' not in user.item
+    with pytest.raises(UserException):
+        user.set_dating_status(UserDatingStatus.ENABLED)
+
+    # no-op set to disabled
+    user.set_dating_status(UserDatingStatus.DISABLED)
+    assert user.item == user.refresh_item().item
+    assert 'datingStatus' not in user.item
+
+    # verify no-op for enabling
+    user.dynamo.set_user_dating_status(user.id, UserDatingStatus.ENABLED)
+    assert user.refresh_item().item['datingStatus'] == UserDatingStatus.ENABLED
+    user.set_dating_status(UserDatingStatus.ENABLED)
+    assert user.item == user.refresh_item().item
+    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
+
+    # verify we can disable without going through validation
+    user.set_dating_status(UserDatingStatus.DISABLED)
+    assert user.item == user.refresh_item().item
+    assert 'datingStatus' not in user.item

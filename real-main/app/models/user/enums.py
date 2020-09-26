@@ -28,3 +28,10 @@ class UserGender:
     FEMALE = 'FEMALE'
 
     _ALL = (MALE, FEMALE)
+
+
+class UserDatingStatus:
+    ENABLED = 'ENABLED'
+    DISABLED = 'DISABLED'
+
+    _ALL = (ENABLED, DISABLED)

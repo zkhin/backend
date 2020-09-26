@@ -223,3 +223,8 @@
   field: matchLocationRadius
   dataSource: NoneDataSource
   response: PassThru.response.vtl
+
+- type: User
+  field: datingStatus
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
