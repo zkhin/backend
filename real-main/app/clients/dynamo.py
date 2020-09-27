@@ -20,12 +20,12 @@ class DynamoClient:
         self.table_name = table_name
 
         boto3_resource = boto3.resource('dynamodb')
+        self.table = (
+            boto3_resource.create_table(TableName=table_name, **create_table_schema)
+            if create_table_schema
+            else boto3_resource.Table(table_name)
+        )
 
-        if create_table_schema:
-            create_table_schema['TableName'] = table_name
-            boto3_resource.create_table(**create_table_schema)
-
-        self.table = boto3_resource.Table(table_name)
         self.boto3_client = boto3.client('dynamodb')
         self.exceptions = self.boto3_client.exceptions
 
