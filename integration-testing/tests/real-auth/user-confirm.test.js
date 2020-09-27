@@ -1,5 +1,5 @@
 const dotenv = require('dotenv')
-const rp = require('request-promise-native')
+const got = require('got')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -20,8 +20,10 @@ const uri = api_root + '/user/confirm'
 const headers = {'x-api-key': api_key}
 
 test('Cant confirm user that does not exist', async () => {
-  const qs = {userId: generateRandomUserId(), code: generateRandomConfirmationCode()}
-  await expect(rp.post({uri, headers, qs})).rejects.toThrow(/400 - .*User confirmation failed/)
+  const searchParams = {userId: generateRandomUserId(), code: generateRandomConfirmationCode()}
+  await got
+    .post(uri, {headers, searchParams, throwHttpErrors: false})
+    .then(({statusCode}) => expect(statusCode).toBe(400))
 })
 
 test('Cant confirm user with wrong confirmation code', async () => {
@@ -47,8 +49,10 @@ test('Cant confirm user with wrong confirmation code', async () => {
     })
     .promise()
 
-  const qs = {userId, code: generateRandomConfirmationCode()}
-  await expect(rp.post({uri, headers, qs})).rejects.toThrow(/400 - .*User confirmation failed/)
+  const searchParams = {userId, code: generateRandomConfirmationCode()}
+  await got
+    .post(uri, {headers, searchParams, throwHttpErrors: false})
+    .then(({statusCode}) => expect(statusCode).toBe(400))
 })
 
 test.skip('Confirm user success', async () => {

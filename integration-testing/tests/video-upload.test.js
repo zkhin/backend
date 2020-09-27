@@ -1,7 +1,8 @@
 const fs = require('fs')
+const got = require('got')
 const moment = require('moment')
 const path = require('path')
-const rp = require('request-promise-native')
+const tough = require('tough-cookie')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito')
@@ -36,7 +37,7 @@ test(
     expect(videoUploadUrl).toBeTruthy()
 
     // upload our video to that url
-    await rp.put({url: videoUploadUrl, headers: videoHeaders, body: videoData})
+    await got.put(videoUploadUrl, {headers: videoHeaders, body: videoData})
     await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the basic parts of the post is as we expect
@@ -52,11 +53,11 @@ test(
     expect(image.url1080p).toBeTruthy()
     expect(image.url480p).toBeTruthy()
     expect(image.url64p).toBeTruthy()
-    await rp.head({uri: image.url, simple: true})
-    await rp.head({uri: image.url4k, simple: true})
-    await rp.head({uri: image.url1080p, simple: true})
-    await rp.head({uri: image.url480p, simple: true})
-    await rp.head({uri: image.url64p, simple: true})
+    await got.head(image.url)
+    await got.head(image.url4k)
+    await got.head(image.url1080p)
+    await got.head(image.url480p)
+    await got.head(image.url64p)
 
     // verify the video part of the post is all good
     const videoUrl = resp.data.post.video.urlMasterM3U8
@@ -76,15 +77,15 @@ test(
     expect(videoUrl).toContain(cookies.path)
 
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
-    const jar = rp.jar()
+    const cookieJar = new tough.CookieJar()
     const expires = moment(cookies.expiresAt).toDate().toUTCString()
     const cookieProps = `Secure; Domain=${cookies.domain}; Path=${cookies.path}; Expires=${expires}`
-    jar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, videoUrl)
-    jar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, videoUrl)
-    jar.setCookie(`CloudFront-Key-Pair-Id=${cookies.keyPairId}; ${cookieProps}`, videoUrl)
+    cookieJar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, videoUrl)
+    cookieJar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, videoUrl)
+    cookieJar.setCookie(`CloudFront-Key-Pair-Id=${cookies.keyPairId}; ${cookieProps}`, videoUrl)
 
     // will error out if it fails
-    await rp.get({url: videoUrl, jar})
+    await got.get(videoUrl, {cookieJar})
 
     // make sure the cookies work for other urls that will be needed to play the video
     // note that the exact path here is dependent on the AWS MediaConvert settings
@@ -92,7 +93,7 @@ test(
       'video.m3u8',
       'video_Ott_Hls_Ts_Avc_Aac_16x9_1280x720p_30Hz_3500Kbps.m3u8',
     )
-    await rp.get({url: anotherUrl, jar})
+    await got.get(anotherUrl, {cookieJar})
   },
   90 * 1000,
 )
@@ -124,7 +125,7 @@ test(
     expect(videoUploadUrl).toBeTruthy()
 
     // upload our video to that url
-    await rp.put({url: videoUploadUrl, headers: videoHeaders, body: videoData})
+    await got.put(videoUploadUrl, {headers: videoHeaders, body: videoData})
     await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the appears as we expect

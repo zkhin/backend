@@ -1,5 +1,5 @@
+const got = require('got')
 const moment = require('moment')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito')
@@ -436,11 +436,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
       expect(album.art.url480p).toBeTruthy()
       expect(album.art.url64p).toBeTruthy()
       // check we can access the art urls. these will throw an error if response code is not 2XX
-      await rp.head({uri: album.art.url, simple: true})
-      await rp.head({uri: album.art.url4k, simple: true})
-      await rp.head({uri: album.art.url1080p, simple: true})
-      await rp.head({uri: album.art.url480p, simple: true})
-      await rp.head({uri: album.art.url64p, simple: true})
+      await got.head(album.art.url)
+      await got.head(album.art.url4k)
+      await got.head(album.art.url1080p)
+      await got.head(album.art.url480p)
+      await got.head(album.art.url64p)
       return album
     })
 
@@ -466,11 +466,11 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
       expect(album.art.url480p.split('?')[0]).not.toBe(albumNoPosts.art.url480p.split('?')[0])
       expect(album.art.url64p.split('?')[0]).not.toBe(albumNoPosts.art.url64p.split('?')[0])
       // check we can access those urls
-      await rp.head({uri: album.art.url, simple: true})
-      await rp.head({uri: album.art.url4k, simple: true})
-      await rp.head({uri: album.art.url1080p, simple: true})
-      await rp.head({uri: album.art.url480p, simple: true})
-      await rp.head({uri: album.art.url64p, simple: true})
+      await got.head(album.art.url)
+      await got.head(album.art.url4k)
+      await got.head(album.art.url1080p)
+      await got.head(album.art.url480p)
+      await got.head(album.art.url64p)
       return album
     })
 
@@ -520,10 +520,10 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     expect(album.art.url480p.split('?')[0]).not.toBe(albumOnePost.art.url480p.split('?')[0])
     expect(album.art.url64p.split('?')[0]).not.toBe(albumOnePost.art.url64p.split('?')[0])
     // check we can access those urls
-    await rp.head({uri: album.art.url, simple: true})
-    await rp.head({uri: album.art.url4k, simple: true})
-    await rp.head({uri: album.art.url1080p, simple: true})
-    await rp.head({uri: album.art.url480p, simple: true})
-    await rp.head({uri: album.art.url64p, simple: true})
+    await got.head(album.art.url)
+    await got.head(album.art.url4k)
+    await got.head(album.art.url1080p)
+    await got.head(album.art.url480p)
+    await got.head(album.art.url64p)
   })
 })

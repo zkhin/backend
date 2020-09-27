@@ -4,8 +4,8 @@
  * Any call to addPost() in general will affect the trending indexes.
  */
 
+const got = require('got')
 const uuidv4 = require('uuid/v4')
-const rp = require('request-promise-native')
 
 const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')
@@ -71,7 +71,7 @@ test('Post lifecycle, visibility and trending', async () => {
   })
 
   // they upload the image, completing their post
-  await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
+  await got.put(uploadUrl, {headers: jpgHeaders, body: imageData})
   await misc.sleepUntilPostProcessed(theirClient, postId1)
   await misc.sleep(5000) // a bit more time for dynamo trending index converge
 

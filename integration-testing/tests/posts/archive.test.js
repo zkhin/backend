@@ -1,6 +1,6 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -258,7 +258,7 @@ test('Post count reacts to user archiving posts', async () => {
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
 
   // upload the image for the post, verify post completes and count now goes up
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId2)
   await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId: postId2}}).then(({data: {post}}) => {

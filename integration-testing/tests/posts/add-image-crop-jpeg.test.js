@@ -1,8 +1,8 @@
 const exifReader = require('exif-reader')
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
 const requestImageSize = require('request-image-size')
-const rp = require('request-promise-native')
 const sharp = require('sharp')
 const uuidv4 = require('uuid/v4')
 
@@ -104,7 +104,7 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
       expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
-  await rp.put({url: uploadUrl, headers: jpegHeaders, body: jpegBytes})
+  await got.put(uploadUrl, {headers: jpegHeaders, body: jpegBytes})
   await misc.sleepUntilPostProcessed(client, postId1)
   // we check the post ended up in error state at the end of the test
 
@@ -191,7 +191,7 @@ test('Valid jpeg crop, upload via cloudfront', async () => {
       expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
-  await rp.put({url: uploadUrl, headers: jpegHeaders, body: jpegBytes})
+  await got.put(uploadUrl, {headers: jpegHeaders, body: jpegBytes})
   await misc.sleepUntilPostProcessed(client, postId)
 
   // retrieve the post object, check some image sizes
@@ -235,7 +235,7 @@ test('Valid jpeg crop, metadata preserved', async () => {
     })
 
   // get the exif data of the cropped image
-  const croppedBytes = await rp.get({uri: postImage.url, encoding: null})
+  const croppedBytes = await got.get(postImage.url).buffer()
   const newExif = await sharp(croppedBytes)
     .metadata()
     .then(({exif}) => exifReader(exif))

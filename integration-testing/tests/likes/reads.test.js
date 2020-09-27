@@ -1,4 +1,4 @@
-const rp = require('request-promise-native')
+const got = require('got')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -181,7 +181,7 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   const postId = uuidv4()
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
   const uploadUrl = resp.data.addPost.imageUploadUrl
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we anonymously like the post, they onymously like it

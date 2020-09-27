@@ -1,7 +1,7 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
 const requestImageSize = require('request-image-size')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../utils/cognito')
@@ -55,7 +55,7 @@ test('Uploading image sets width, height and colors', async () => {
   })
 
   // upload the first of those images, give the s3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: jpgHeaders, body: imageData})
+  await got.put(uploadUrl, {headers: jpgHeaders, body: imageData})
   await misc.sleepUntilPostProcessed(client, postId)
 
   // check width, height and colors are now set
@@ -85,7 +85,7 @@ test('Uploading png image results in error', async () => {
     })
 
   // upload a png, give the s3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: pngHeaders, body: pngData})
+  await got.put(uploadUrl, {headers: pngHeaders, body: pngData})
   await misc.sleep(5000)
 
   // check that post ended up in an ERROR state
@@ -110,7 +110,7 @@ test('Upload heic image', async () => {
     })
 
   // upload a heic, give the s3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: heicHeaders, body: heicImageData})
+  await got.put(uploadUrl, {headers: heicHeaders, body: heicImageData})
   await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 20 * 1000})
 
   // check that post completed and generated all thumbnails ok
@@ -167,7 +167,7 @@ test('Thumbnails built on successful upload', async () => {
     })
 
   // upload a big jpeg, give the s3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: jpgHeaders, body: bigImageData})
+  await got.put(uploadUrl, {headers: jpgHeaders, body: bigImageData})
   await misc.sleep(5000) // big jpeg, so takes at least a few seconds to process
   await misc.sleepUntilPostProcessed(client, postId)
 

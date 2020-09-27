@@ -1,6 +1,5 @@
 const dotenv = require('dotenv')
-const flipPromise = require('flip-promise').default
-const rp = require('request-promise-native')
+const got = require('got')
 
 const cognito = require('../../utils/cognito')
 jest.retryTimes(1)
@@ -23,49 +22,54 @@ beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
 const uri = api_root + '/username/status'
-const json = true
 const headers = {'x-api-key': api_key}
-let resp, qs
 
 test('Malformed requests fail', async () => {
   // No api key
-  resp = await flipPromise(rp.get({uri}))
-  expect(resp.statusCode).toBe(403)
-  expect(JSON.parse(resp.response.body)).toEqual({message: 'Forbidden'})
+  await got.get(uri, {throwHttpErrors: false}).then(({statusCode, body}) => {
+    expect(statusCode).toBe(403)
+    expect(JSON.parse(body)).toEqual({message: 'Forbidden'})
+  })
 
   // No username query param
-  resp = await flipPromise(rp.get({uri, headers}))
-  expect(resp.statusCode).toBe(400)
-  expect(JSON.parse(resp.response.body)).toEqual({message: 'Query parameter `username` is required'})
+  await got.get(uri, {throwHttpErrors: false, headers}).then(({statusCode, body}) => {
+    expect(statusCode).toBe(400)
+    expect(JSON.parse(body)).toEqual({message: 'Query parameter `username` is required'})
+  })
 })
 
 test('Invalid usernames', async () => {
   // too short
-  qs = {username: 'ab'}
-  resp = await rp.get({uri, headers, json, qs})
-  expect(resp).toEqual({status: 'INVALID'})
+  await got
+    .get(uri, {searchParams: {username: 'ab'}, headers})
+    .json()
+    .then((data) => expect(data).toEqual({status: 'INVALID'}))
 
   // bad char
-  qs = {username: 'aaa!aaa'}
-  resp = await rp.get({uri, headers, json, qs})
-  expect(resp).toEqual({status: 'INVALID'})
+  await got
+    .get(uri, {searchParams: {username: 'aaa!aaa'}, headers})
+    .json()
+    .then((data) => expect(data).toEqual({status: 'INVALID'}))
 
   // bad char
-  qs = {username: 'aaa-aaa'}
-  resp = await rp.get({uri, headers, json, qs})
-  expect(resp).toEqual({status: 'INVALID'})
+  await got
+    .get(uri, {searchParams: {username: 'aaa-aaa'}, headers})
+    .json()
+    .then((data) => expect(data).toEqual({status: 'INVALID'}))
 })
 
 test('Username availability', async () => {
   const {username: takenUsername} = await loginCache.getCleanLogin()
 
   // not available
-  qs = {username: takenUsername}
-  resp = await rp.get({uri, headers, json, qs})
-  expect(resp).toEqual({status: 'NOT_AVAILABLE'})
+  await got
+    .get(uri, {searchParams: {username: takenUsername}, headers})
+    .json()
+    .then((data) => expect(data).toEqual({status: 'NOT_AVAILABLE'}))
 
   // available
-  qs = {username: takenUsername + 'aa_cc'}
-  resp = await rp.get({uri, headers, json, qs})
-  expect(resp).toEqual({status: 'AVAILABLE'})
+  await got
+    .get(uri, {searchParams: {username: takenUsername + 'aa_cc'}, headers})
+    .json()
+    .then((data) => expect(data).toEqual({status: 'AVAILABLE'}))
 })

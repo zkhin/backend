@@ -55,8 +55,8 @@
     "eslint-plugin-jest": "^23.13.2",
     "eslint-plugin-prettier": "^3.1.3",
     "exif-reader": "^1.0.3",
-    "flip-promise": "^1.0.4",
     "generate-password": "^1.5.0",
+    "got": "^11.7.0",
     "graphql-tag": "^2.10.3",
     "http-aws-es": "^6.0.0",
     "jest": "^26.0.1",
@@ -67,10 +67,9 @@
     "moment": "^2.24.0",
     "prettier": "^2.0.5",
     "prompt": "^1.0.0",
-    "request": "^2.88.0",
     "request-image-size": "^2.1.0",
-    "request-promise-native": "^1.0.7",
     "sharp": "^0.25.2",
+    "tough-cookie": "^4.0.0",
     "uuid": "^3.4.0"
   }
 }

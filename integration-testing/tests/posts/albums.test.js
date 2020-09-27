@@ -1,5 +1,5 @@
+const got = require('got')
 const moment = require('moment')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -55,7 +55,7 @@ test('Create a posts in an album, album post ordering', async () => {
   expect(resp.data.addPost.postId).toBe(postId2)
   let uploadUrl = resp.data.addPost.imageUploadUrl
   let before = moment()
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId2)
 
   // check the album
@@ -143,7 +143,7 @@ test('Cant create post in or move post into an album thats not ours', async () =
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.album).toBeNull()
   let uploadUrl = resp.data.addPost.imageUploadUrl
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // verify neither we or them cannot move the post into their album
@@ -189,7 +189,7 @@ test('Adding a post with PENDING status does not affect Album.posts until COMPLE
   expect(resp.data.album.posts.items).toHaveLength(0)
 
   // upload the image, thus completing the post
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // verify the post is now COMPLETED

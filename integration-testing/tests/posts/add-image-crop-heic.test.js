@@ -1,7 +1,7 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
 const requestImageSize = require('request-image-size')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -15,7 +15,7 @@ const heicData = new Buffer.from(heicBytes).toString('base64')
 const heicHeaders = {'Content-Type': 'image/heic'}
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
+//jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -103,7 +103,7 @@ test('Invalid heic crops, upload via cloudfront', async () => {
       expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
-  await rp.put({url: uploadUrl, headers: heicHeaders, body: heicBytes})
+  await got.put(uploadUrl, {body: heicBytes, headers: heicHeaders})
   await misc.sleepUntilPostProcessed(client, postId1)
   // we check the post ended up in error state at the end of the test
 
@@ -201,7 +201,7 @@ test('Valid heic crop, upload via cloudfront', async () => {
       expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
-  await rp.put({url: uploadUrl, headers: heicHeaders, body: heicBytes})
+  await got.put(uploadUrl, {body: heicBytes, headers: heicHeaders})
   await misc.sleepUntilPostProcessed(client, postId)
 
   // retrieve the post object, check some image sizes

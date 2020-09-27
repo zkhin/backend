@@ -1,6 +1,6 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -242,11 +242,11 @@ test('Set and delete our profile photo, using postId', async () => {
   expect(image.url4k.split('?')[0]).toBe(resp.data.self.photo.url4k.split('?')[0])
 
   // check we can access those urls
-  await rp.head({uri: image.url, simple: true})
-  await rp.head({uri: image.url4k, simple: true})
-  await rp.head({uri: image.url1080p, simple: true})
-  await rp.head({uri: image.url480p, simple: true})
-  await rp.head({uri: image.url64p, simple: true})
+  await got.head(image.url)
+  await got.head(image.url4k)
+  await got.head(image.url1080p)
+  await got.head(image.url480p)
+  await got.head(image.url64p)
 
   // delete our photo
   resp = await client.mutate({mutation: mutations.setUserDetails, variables: {photoPostId: ''}})

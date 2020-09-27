@@ -1,4 +1,4 @@
-const rp = require('request-promise-native')
+const got = require('got')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -11,7 +11,7 @@ const imageBytes2 = misc.generateRandomJpeg(300, 200)
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const heicHeaders = {'Content-Type': 'image/heic'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
+//jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -48,7 +48,7 @@ test('Cant use jpeg data for an HEIC image', async () => {
   expect(uploadUrl).toBeTruthy()
 
   // upload some jpeg data pretending to be heic, let the s3 trigger fire
-  await rp.put({url: uploadUrl, headers: heicHeaders, body: imageData})
+  await got.put(uploadUrl, {headers: heicHeaders, body: imageData})
   await misc.sleep(3000)
 
   // check the post, make sure it error'd out
@@ -73,14 +73,14 @@ test('Add image post with image data directly included', async () => {
   expect(image.url).toBeTruthy()
 
   // verify we can access all of the urls
-  await rp.head({uri: image.url, simple: true})
-  await rp.head({uri: image.url4k, simple: true})
-  await rp.head({uri: image.url1080p, simple: true})
-  await rp.head({uri: image.url480p, simple: true})
-  await rp.head({uri: image.url64p, simple: true})
+  await got.head(image.url)
+  await got.head(image.url4k)
+  await got.head(image.url1080p)
+  await got.head(image.url480p)
+  await got.head(image.url64p)
 
   // check the data in the native image is correct
-  const s3ImageData = await rp.get({uri: image.url, encoding: null})
+  const s3ImageData = await got.get(image.url).buffer()
   expect(s3ImageData).toEqual(imageBytes)
 
   // double check everything saved to db correctly
@@ -112,7 +112,7 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   let uploadUrl = post.imageUploadUrl
 
   // upload the image, give S3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(client, postId)
 
   // add another image post with a different image
@@ -120,7 +120,7 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   variables = {postId: postId2}
   resp = await client.mutate({mutation: mutations.addPost, variables})
   uploadUrl = resp.data.addPost.imageUploadUrl
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes2})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes2})
   await misc.sleepUntilPostProcessed(client, postId2)
 
   // check the post has changed status and looks good
@@ -232,7 +232,7 @@ test('Add post setAsUserPhoto failures', async () => {
   expect(uploadUrl).toBeTruthy()
 
   // upload the image data that isn't a valid image, give it a long time to process
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: 'not-a-valid-image'})
+  await got.put(uploadUrl, {headers: imageHeaders, body: 'not-a-valid-image'})
   await misc.sleep(10 * 1000)
 
   // check that our profile photo has not changed
@@ -274,7 +274,7 @@ test('Add post setAsUserPhoto success', async () => {
   expect(uploadUrl).toBeTruthy()
 
   // upload the image data
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId2)
 
   // make sure dynamo converges

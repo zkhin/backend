@@ -4,16 +4,18 @@ const AWS = require('aws-sdk')
 const dotenv = require('dotenv')
 const moment = require('moment')
 const prmt = require('prompt')
-const rp = require('request-promise-native')
 const util = require('util')
 
 dotenv.config()
 
-const api_key = process.env.REAL_AUTH_API_KEY
-if (api_key === undefined) throw new Error('Env var REAL_AUTH_API_KEY must be defined')
+const awsRegion = process.env.AWS_REGION
+if (awsRegion === undefined) throw new Error('Env var AWS_REGION must be defined')
 
-const api_root = process.env.REAL_AUTH_API_ROOT
-if (api_root === undefined) throw new Error('Env var REAL_AUTH_API_ROOT must be defined')
+const frontendCognitoClientId = process.env.COGNITO_FRONTEND_CLIENT_ID
+if (frontendCognitoClientId === undefined) throw new Error('Env var COGNITO_FRONTEND_CLIENT_ID must be defined')
+
+const identityPoolId = process.env.COGNITO_IDENTITY_POOL_ID
+if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL_ID must be defined')
 
 const pinpointAppId = process.env.PINPOINT_APPLICATION_ID
 
@@ -41,30 +43,29 @@ prmt.get(prmtSchema, async (err, result) => {
     console.log(err)
     return 1
   }
-  let creds = await confirmUser(result.userId, result.confirmationCode, result.pinpointEndpointId)
-  if (result.pinpointEndpointId) await trackWithPinpoint(result.pinpointEndpointId, result.userId, creds)
+  await confirmUser(result.userId, result.confirmationCode, result.pinpointEndpointId)
+  if (result.pinpointEndpointId) await trackWithPinpoint(result.pinpointEndpointId, result.userId)
 })
 
 const confirmUser = async (userId, confirmationCode) => {
-  // throws exception if code is incorrect
-  let resp = await rp.post({
-    uri: api_root + '/user/confirm',
-    headers: {'x-api-key': api_key},
-    json: true,
-    qs: {userId, code: confirmationCode},
-  })
+  await new AWS.CognitoIdentityServiceProvider({params: {ClientId: frontendCognitoClientId, Region: awsRegion}})
+    .confirmSignUp({ConfirmationCode: confirmationCode, Username: userId})
+    .promise()
   console.log('User confirmed.')
-  return resp.credentials
 }
 
-const trackWithPinpoint = async (endpointId, userId, creds) => {
+const trackWithPinpoint = async (endpointId, userId) => {
   if (pinpointAppId === undefined) throw new Error('Env var PINPOINT_APPLICATION_ID must be defined')
-  const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
+
+  const credentials = await new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
+    .getCredentialsForIdentity({IdentityId: userId})
+    .promise()
+    .then(({Credentials: creds}) => new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken))
   const pinpoint = new AWS.Pinpoint({credentials, params: {ApplicationId: pinpointAppId}})
 
   // https://docs.aws.amazon.com/pinpoint/latest/developerguide/event-streams-data-app.html
   const eventType = '_userauth.sign_up'
-  let resp = await pinpoint
+  const resp = await pinpoint
     .putEvents({
       EventsRequest: {
         BatchItem: {

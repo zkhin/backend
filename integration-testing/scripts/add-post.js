@@ -5,12 +5,12 @@ const AWSAppSyncClient = require('aws-appsync').default
 const dotenv = require('dotenv')
 const fs = require('fs')
 const gql = require('graphql-tag')
+const got = require('got')
 const http = require('http')
 const moment = require('moment')
 const path = require('path')
 const prmt = require('prompt')
-const request = require('request')
-const rp = require('request-promise-native')
+const tough = require('tough-cookie')
 const uuidv4 = require('uuid/v4')
 global.fetch = require('cross-fetch')
 
@@ -197,15 +197,15 @@ prmt.get(prmtSchema, async (err, result) => {
     const post = resp.data.post
 
     // set up cookie jar if this is a video post
-    const jar = request.jar()
+    const cookieJar = new tough.CookieJar()
     if (post.postType === 'VIDEO') {
       const url = post.video.urlMasterM3U8
       const cookies = post.video.accessCookies
       const expires = moment(cookies.expiresAt).toDate().toUTCString()
       const cookieProps = `Secure; Domain=${cookies.domain}; Path=${cookies.path}; Expires=${expires}`
-      jar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, url)
-      jar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, url)
-      jar.setCookie(`CloudFront-Key-Pair-Id=${cookies.keyPairId}; ${cookieProps}`, url)
+      cookieJar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, url)
+      cookieJar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, url)
+      cookieJar.setCookie(`CloudFront-Key-Pair-Id=${cookies.keyPairId}; ${cookieProps}`, url)
     }
 
     process.stdout.write('Post successfully added.\n')
@@ -249,7 +249,7 @@ prmt.get(prmtSchema, async (err, result) => {
           process.stdout.write(`Proxing url '${req.url}'\n`)
           const filename = path.basename(req.url)
           const cfUrl = post.image[filename]
-          request.get(cfUrl).pipe(res)
+          got.stream(cfUrl).pipe(res)
         }
 
         // Proxying video files. Allows us to get around browser's same-origin policies as they apply to cookies
@@ -258,7 +258,7 @@ prmt.get(prmtSchema, async (err, result) => {
           const videoDir = path.dirname(post.video.urlMasterM3U8)
           const filename = path.basename(req.url)
           const cfUrl = `${videoDir}/${filename}`
-          request.get({url: cfUrl, jar}).pipe(res)
+          got.stream(cfUrl, {cookieJar}).pipe(res)
         }
       })
       .listen(port)
@@ -331,13 +331,7 @@ const getPost = gql`
 `
 
 const uploadMedia = async (obj, url) => {
-  const options = {
-    method: 'PUT',
-    url: url,
-    headers: {'Content-Type': 'image/jpeg'},
-    body: obj,
-  }
-  return rp.put(options)
+  return got.put(url, {body: obj, headers: {'Content-Type': 'image/jpeg'}})
 }
 
 const generateCognitoTokens = async (username, password) => {

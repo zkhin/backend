@@ -1,6 +1,6 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -41,7 +41,7 @@ test('Visiblity of post() and user.posts() for a public user', async () => {
   expect(uploadUrl).toBeTruthy()
 
   // upload the image, give S3 trigger a second to fire
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we should see the post

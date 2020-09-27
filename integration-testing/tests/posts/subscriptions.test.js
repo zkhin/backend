@@ -1,4 +1,4 @@
-const rp = require('request-promise-native')
+const got = require('got')
 const uuidv4 = require('uuid/v4')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
@@ -100,7 +100,7 @@ test('POST_COMPLETED notification triggers correctly posts', async () => {
   await misc.sleep(5 * 1000).then(() => expect(notificationsCount).toBe(0))
 
   // upload the image data to cloudfront
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
 
   // check we received a notification for that post
   await notifications.shift().then((notif) => {
@@ -168,7 +168,7 @@ test('POST_ERROR notification triggers correctly posts', async () => {
   await misc.sleep(5 * 1000).then(() => expect(notificationsCount).toBe(0))
 
   // upload some invalid image data to cloudfront
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: 'other-invalid-image-data'})
+  await got.put(uploadUrl, {headers: imageHeaders, body: 'other-invalid-image-data'})
 
   // check we received a notification for that post
   await notifications.shift().then((notif) => {
@@ -272,10 +272,10 @@ test('Format for COMPLETED message notifications', async () => {
   expect(uploadUrl2).toBeTruthy()
 
   // upload the images, sleep until the posts complete
-  await rp.put({url: uploadUrl1, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl1, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId1)
 
-  await rp.put({url: uploadUrl2, headers: imageHeaders, body: imageBytes})
+  await got.put(uploadUrl2, {headers: imageHeaders, body: imageBytes})
   await misc.sleepUntilPostProcessed(ourClient, postId2)
 
   // wait a bit more for messages to show up

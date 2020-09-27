@@ -1,6 +1,6 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../../utils/cognito.js')
@@ -65,11 +65,11 @@ test.skip('Mutation.createCognitoOnlyUser with placeholder photo in bucket works
   expect(resp['data']['self']['photo']['url4k']).toMatch(/.*\/4K\.jpg$/)
 
   // verify we can access the urls
-  await rp.head({uri: resp['data']['self']['photo']['url'], simple: true})
-  await rp.head({uri: resp['data']['self']['photo']['url4k'], simple: true})
-  await rp.head({uri: resp['data']['self']['photo']['url1080p'], simple: true})
-  await rp.head({uri: resp['data']['self']['photo']['url480p'], simple: true})
-  await rp.head({uri: resp['data']['self']['photo']['url64p'], simple: true})
+  await got.head(resp['data']['self']['photo']['url'])
+  await got.head(resp['data']['self']['photo']['url4k'])
+  await got.head(resp['data']['self']['photo']['url1080p'])
+  await got.head(resp['data']['self']['photo']['url480p'])
+  await got.head(resp['data']['self']['photo']['url64p'])
 
   // If you want to manually verify these urls, here they are
   //console.log(resp['data']['self']['photo']['url'])

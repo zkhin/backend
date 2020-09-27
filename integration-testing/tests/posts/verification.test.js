@@ -1,6 +1,6 @@
 const fs = require('fs')
+const got = require('got')
 const path = require('path')
-const rp = require('request-promise-native')
 const uuidv4 = require('uuid/v4')
 
 const cognito = require('../../utils/cognito')
@@ -37,7 +37,7 @@ test('Add image post passes verification', async () => {
   // upload the image
   let uploadUrl = post.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
-  await rp.put({url: uploadUrl, headers: imageHeaders, body: bigGrantData})
+  await got.put(uploadUrl, {headers: imageHeaders, body: bigGrantData})
   await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // check the post is now verified
