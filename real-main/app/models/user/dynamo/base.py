@@ -166,26 +166,28 @@ class UserDynamo:
         verification_hidden=None,
         date_of_birth=None,
         gender=None,
-        current_location=None,
+        location=None,
         match_age_range=None,
         match_genders=None,
         match_location_radius=None,
     ):
         "To ignore an attribute, leave it set to None. To delete an attribute, set it to the empty string."
         expression_actions = collections.defaultdict(list)
+        expression_attribute_names = {}
         expression_attribute_values = {}
 
         def process_attr(name, value):
             if value is not None:
+                expression_attribute_names[f'#{name}'] = name
                 if value != '':
-                    expression_actions['SET'].append(f'{name} = :{name}')
+                    expression_actions['SET'].append(f'#{name} = :{name}')
                     expression_attribute_values[f':{name}'] = value
                 else:
-                    expression_actions['REMOVE'].append(name)
+                    expression_actions['REMOVE'].append(f'#{name}')
 
-        if current_location is not None:
+        if location is not None:
             for key in ('latitude', 'longitude'):
-                current_location[key] = BasicContext.create_decimal(current_location[key]).normalize()
+                location[key] = BasicContext.create_decimal(location[key]).normalize()
 
         process_attr('fullName', full_name)
         process_attr('bio', bio)
@@ -200,7 +202,7 @@ class UserDynamo:
         process_attr('sharingDisabled', sharing_disabled)
         process_attr('verificationHidden', verification_hidden)
         process_attr('gender', gender)
-        process_attr('currentLocation', current_location)
+        process_attr('location', location)
         process_attr('matchAgeRange', match_age_range)
         process_attr('matchGenders', match_genders)
         process_attr('matchLocationRadius', match_location_radius)
@@ -220,6 +222,8 @@ class UserDynamo:
             'Key': self.pk(user_id),
             'UpdateExpression': ' '.join([f'{k} {", ".join(v)}' for k, v in expression_actions.items()]),
         }
+        if expression_attribute_names:
+            query_kwargs['ExpressionAttributeNames'] = expression_attribute_names
         if expression_attribute_values:
             query_kwargs['ExpressionAttributeValues'] = expression_attribute_values
 

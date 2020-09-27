@@ -232,8 +232,8 @@ def test_set_user_details(user_dynamo):
     username = 'my-username'
     date_of_birth = '1900-01-01'
     gender = 'MALE'
-    current_location = {"latitude": 50.1, "longitude": 50.1, "accuracy": 50}
-    match_age_range = {"min": 20, "max": 50}
+    location = {'latitude': 50.1, 'longitude': 50.1, 'accuracy': 50}
+    match_age_range = {'min': 20, 'max': 50}
     match_genders = ['MALE', 'FEMALE']
     match_location_radius = 15
 
@@ -261,7 +261,7 @@ def test_set_user_details(user_dynamo):
         verification_hidden=True,
         date_of_birth=date_of_birth,
         gender=gender,
-        current_location=current_location,
+        location=location,
         match_age_range=match_age_range,
         match_genders=match_genders,
         match_location_radius=match_location_radius,
@@ -282,7 +282,7 @@ def test_set_user_details(user_dynamo):
             'sharingDisabled': True,
             'verificationHidden': True,
             'gender': gender,
-            'currentLocation': current_location,
+            'location': location,
             'matchAgeRange': match_age_range,
             'matchGenders': match_genders,
             'matchLocationRadius': match_location_radius,
@@ -294,12 +294,12 @@ def test_set_user_details(user_dynamo):
     assert resp == expected
 
     # assert if accuracy is not set
-    current_location = {"latitude": 50, "longitude": 50}
+    location = {'latitude': 50, 'longitude': 50}
     resp = user_dynamo.set_user_details(
         user_id,
-        current_location=current_location,
+        location=location,
     )
-    assert 'accuracy' not in resp['currentLocation']
+    assert 'accuracy' not in resp['location']
 
 
 def test_set_user_details_delete_for_empty_string(user_dynamo):

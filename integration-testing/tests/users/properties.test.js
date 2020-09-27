@@ -626,42 +626,26 @@ test('User setUserAPNSToken', async () => {
   expect(resp.data.setUserAPNSToken.userId).toBe(userId)
 })
 
-test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matchLocationRadius)', async () => {
+test('Set and read properties(location, matchAgeRange, matchGenders, matchLocationRadius)', async () => {
   const {client: ourClient, userId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // set up another user in cognito, leave them as public
-  const currentLocation = {latitude: 50.01, longitude: 50.01, accuracy: 50}
+  const location = {latitude: 50.01, longitude: 50.01, accuracy: 50}
   const matchAgeRange = {min: 20, max: 50}
   const matchGenders = ['MALE', 'FEMALE']
   const matchLocationRadius = 20
 
   // Set match genders and location radius
-  await ourClient.mutate({
-    mutation: mutations.setUserDetails,
-    variables: {
-      matchGenders: matchGenders,
-      matchLocationRadius: matchLocationRadius,
-    },
-  })
+  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchGenders, matchLocationRadius}})
 
   // Set user age range
-  await ourClient.mutate({
-    mutation: mutations.setUserAgeRange,
-    variables: {
-      min: matchAgeRange.min,
-      max: matchAgeRange.max,
-    },
-  })
+  await ourClient.mutate({mutation: mutations.setUserAgeRange, variables: matchAgeRange})
 
-  // Set user current location
+  // Set user location
   await ourClient.mutate({
-    mutation: mutations.setUserCurrentLocation,
-    variables: {
-      latitude: currentLocation.latitude,
-      longitude: currentLocation.longitude,
-      accuracy: currentLocation.accuracy,
-    },
+    mutation: mutations.setUserLocation,
+    variables: {latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy},
   })
 
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
@@ -670,9 +654,9 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
     expect(user.matchLocationRadius).toBe(matchLocationRadius)
     expect(user.matchAgeRange.min).toBe(matchAgeRange.min)
     expect(user.matchAgeRange.max).toBe(matchAgeRange.max)
-    expect(user.currentLocation.latitude).toBe(currentLocation.latitude)
-    expect(user.currentLocation.longitude).toBe(currentLocation.longitude)
-    expect(user.currentLocation.accuracy).toBe(currentLocation.accuracy)
+    expect(user.location.latitude).toBe(location.latitude)
+    expect(user.location.longitude).toBe(location.longitude)
+    expect(user.location.accuracy).toBe(location.accuracy)
   })
 
   // check another user can't see values
@@ -680,83 +664,57 @@ test('Set and read properties(currentLocation, matchAgeRange, matchGenders, matc
     expect(user.userId).toBe(userId)
     expect(user.matchGenders).toBeNull()
     expect(user.matchLocationRadius).toBeNull()
-    expect(user.currentLocation).toBeNull()
+    expect(user.location).toBeNull()
     expect(user.matchAgeRange).toBeNull()
   })
 
-  // update current location without accuracy, process and check if accuracy is null
+  // update location without accuracy, process and check if accuracy is null
   await ourClient.mutate({
-    mutation: mutations.setUserCurrentLocation,
-    variables: {
-      latitude: currentLocation.latitude,
-      longitude: currentLocation.longitude,
-    },
+    mutation: mutations.setUserLocation,
+    variables: {latitude: location.latitude, longitude: location.longitude},
   })
 
   await ourClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
     expect(user.userId).toBe(userId)
-    expect(user.currentLocation.accuracy).toBeNull()
+    expect(user.location.accuracy).toBeNull()
   })
 })
 
-test('Validate user properties(currentLocation, matchAgeRange, matchGenders, matchLocationRadius)', async () => {
+test('Validate user properties(location, matchAgeRange, matchGenders, matchLocationRadius)', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
-
-  // set up another user in cognito, leave them as public
-  const currentLocation = {latitude: 100, longitude: 200, accuracy: -10}
+  const location = {latitude: 100, longitude: 200, accuracy: -10}
   const matchAgeRange = {min: 100, max: 50}
   const matchLocationRadius = 10
 
   // Validate match location radius
   await expect(
-    ourClient.mutate({
-      mutation: mutations.setUserDetails,
-      variables: {
-        matchLocationRadius: matchLocationRadius,
-      },
-    }),
+    ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchLocationRadius}}),
   ).rejects.toThrow(/ClientError: matchLocationRadius should be greater than or equal to 15/)
 
   // Validate user age range
-  await expect(
-    ourClient.mutate({
-      mutation: mutations.setUserAgeRange,
-      variables: {
-        min: matchAgeRange.min,
-        max: matchAgeRange.max,
-      },
-    }),
-  ).rejects.toThrow(/ClientError: Invalid matchAgeRange/)
+  await expect(ourClient.mutate({mutation: mutations.setUserAgeRange, variables: matchAgeRange})).rejects.toThrow(
+    /ClientError: Invalid matchAgeRange/,
+  )
 
-  // Validate user current location
+  // Validate user location
   await expect(
     ourClient.mutate({
-      mutation: mutations.setUserCurrentLocation,
-      variables: {
-        latitude: currentLocation.latitude,
-        longitude: 50.01,
-      },
+      mutation: mutations.setUserLocation,
+      variables: {latitude: location.latitude, longitude: 50.01},
     }),
   ).rejects.toThrow(/ClientError: latitude should be in \[-90, 90\]/)
 
   await expect(
     ourClient.mutate({
-      mutation: mutations.setUserCurrentLocation,
-      variables: {
-        latitude: 50.01,
-        longitude: currentLocation.longitude,
-      },
+      mutation: mutations.setUserLocation,
+      variables: {latitude: 50.01, longitude: location.longitude},
     }),
   ).rejects.toThrow(/ClientError: longitude should be in \[-180, 180\]/)
 
   await expect(
     ourClient.mutate({
-      mutation: mutations.setUserCurrentLocation,
-      variables: {
-        longitude: 50.01,
-        latitude: 50.01,
-        accuracy: currentLocation.accuracy,
-      },
+      mutation: mutations.setUserLocation,
+      variables: {longitude: 50.01, latitude: 50.01, accuracy: location.accuracy},
     }),
   ).rejects.toThrow(/ClientError: accuracy should be greater than or equal to zero/)
 })

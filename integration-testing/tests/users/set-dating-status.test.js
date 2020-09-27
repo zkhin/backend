@@ -51,7 +51,7 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
       fullName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
@@ -95,7 +95,7 @@ test('FullName required to enable dating', async () => {
       dateOfBirth: '2000-01-01',
       photoPostId: postId,
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
@@ -119,7 +119,7 @@ test('Profile photo required to enable dating', async () => {
       dateOfBirth: '2000-01-01',
       fullName: 'Hunter S',
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
@@ -147,7 +147,7 @@ test('Gender required to enable dating', async () => {
       dateOfBirth: '2000-01-01',
       fullName: 'Hunter S',
       photoPostId: postId,
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
@@ -161,10 +161,10 @@ test('Gender required to enable dating', async () => {
   ).rejects.toThrow(/ClientError: `{'gender'}` required to enable dating/)
 })
 
-test('currentLocation required to enable dating', async () => {
+test('location required to enable dating', async () => {
   const {client} = await loginCache.getCleanLogin()
 
-  // set all the stuff needed for dating, except currentLocation
+  // set all the stuff needed for dating, except location
   const postId = uuidv4()
   await client
     .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
@@ -186,7 +186,7 @@ test('currentLocation required to enable dating', async () => {
   // verify can't enable dating
   await expect(
     client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'currentLocation'}` required to enable dating/)
+  ).rejects.toThrow(/ClientError: `{'location'}` required to enable dating/)
 })
 
 test('matchAgeRange required to enable dating', async () => {
@@ -204,7 +204,7 @@ test('matchAgeRange required to enable dating', async () => {
       fullName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
     },
@@ -232,7 +232,7 @@ test('matchGenders required to enable dating', async () => {
       fullName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchLocationRadius: 50,
     },
@@ -260,7 +260,7 @@ test('BASIC users require matchLocationRadius to enable dating, DIAMOND users do
       fullName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
     },
@@ -297,7 +297,7 @@ test('Age required and must be in allowed age range for enabling dating', async 
       fullName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
-      currentLocation: {latitude: 50.01, longitude: 50.01, accuracy: 20},
+      location: {latitude: 50.01, longitude: 50.01, accuracy: 20},
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,

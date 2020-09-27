@@ -134,7 +134,7 @@ module.exports.setUserDetails = gql`
     $username: String
     $dateOfBirth: AWSDate
     $gender: UserGender
-    $currentLocation: LocationInput
+    $location: LocationInput
     $matchAgeRange: AgeRangeInput
     $matchGenders: [UserGender!]
     $matchLocationRadius: Int
@@ -146,7 +146,7 @@ module.exports.setUserDetails = gql`
       username: $username
       dateOfBirth: $dateOfBirth
       gender: $gender
-      currentLocation: $currentLocation
+      location: $location
       matchAgeRange: $matchAgeRange
       matchGenders: $matchGenders
       matchLocationRadius: $matchLocationRadius
@@ -207,11 +207,11 @@ module.exports.setUserMentalHealthSettings = gql`
   }
 `
 
-module.exports.setUserCurrentLocation = gql`
-  mutation SetUserCurrentLocation($latitude: Float!, $longitude: Float!, $accuracy: Int) {
-    setUserDetails(currentLocation: {latitude: $latitude, longitude: $longitude, accuracy: $accuracy}) {
+module.exports.setUserLocation = gql`
+  mutation SetUserLocation($latitude: Float!, $longitude: Float!, $accuracy: Int) {
+    setUserDetails(location: {latitude: $latitude, longitude: $longitude, accuracy: $accuracy}) {
       userId
-      currentLocation {
+      location {
         latitude
         longitude
         accuracy

@@ -20,10 +20,10 @@ def validate_age_range(match_age_range):
     return True
 
 
-def validate_current_location(current_location):
-    latitude = current_location['latitude']
-    longitude = current_location['longitude']
-    accuracy = current_location.get('accuracy')
+def validate_location(location):
+    latitude = location['latitude']
+    longitude = location['longitude']
+    accuracy = location.get('accuracy')
 
     if latitude > 90 or latitude < -90:
         raise ClientException('latitude should be in [-90, 90]')

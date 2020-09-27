@@ -29,7 +29,7 @@ from app.utils import image_size
 from .. import xray
 from . import routes
 from .exceptions import ClientException
-from .validation import validate_age_range, validate_current_location, validate_match_location_radius
+from .validation import validate_age_range, validate_location, validate_match_location_radius
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
@@ -294,7 +294,7 @@ def set_user_details(caller_user, arguments, **kwargs):
     verification_hidden = arguments.get('verificationHidden')
     date_of_birth = arguments.get('dateOfBirth')
     gender = arguments.get('gender')
-    current_location = arguments.get('currentLocation')
+    location = arguments.get('location')
     match_age_range = arguments.get('matchAgeRange')
     match_genders = arguments.get('matchGenders')
     match_location_radius = arguments.get('matchLocationRadius')
@@ -315,7 +315,7 @@ def set_user_details(caller_user, arguments, **kwargs):
         view_counts_hidden,
         date_of_birth,
         gender,
-        current_location,
+        location,
         match_age_range,
         match_genders,
         match_location_radius,
@@ -342,8 +342,8 @@ def set_user_details(caller_user, arguments, **kwargs):
     if privacy_status is not None:
         caller_user.set_privacy_status(privacy_status)
 
-    if current_location is not None:
-        validate_current_location(current_location)
+    if location is not None:
+        validate_location(location)
 
     if match_age_range is not None:
         validate_age_range(match_age_range)
@@ -365,7 +365,7 @@ def set_user_details(caller_user, arguments, **kwargs):
         verification_hidden=verification_hidden,
         date_of_birth=date_of_birth,
         gender=gender,
-        current_location=current_location,
+        location=location,
         match_age_range=match_age_range,
         match_genders=match_genders,
         match_location_radius=match_location_radius,

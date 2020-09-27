@@ -130,7 +130,7 @@ type Mutation {
     themeCode: String,
     dateOfBirth: AWSDate,
     gender: UserGender,
-    currentLocation: LocationInput,
+    location: LocationInput,
     matchAgeRange: AgeRangeInput,
     matchGenders: [UserGender!],
     matchLocationRadius: Int,
@@ -404,9 +404,8 @@ type User {
   sharingDisabled: Boolean
   verificationHidden: Boolean
   subscriptionExpiresAt: AWSDateTime
+  location: Location
   datingStatus: DatingStatus
-
-  currentLocation: Location
   matchAgeRange: AgeRange
   matchGenders: [UserGender!]
   matchLocationRadius: Int

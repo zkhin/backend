@@ -183,7 +183,7 @@ module.exports.simpleUserFields = gql`
     subscriptionExpiresAt
     matchGenders
     matchLocationRadius
-    currentLocation {
+    location {
       latitude
       longitude
       accuracy

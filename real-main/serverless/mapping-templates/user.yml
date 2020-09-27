@@ -205,7 +205,7 @@
   dataSource: DynamodbDataSource
 
 - type: User
-  field: currentLocation
+  field: location 
   dataSource: NoneDataSource
   response: PassThru.response.vtl
 

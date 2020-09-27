@@ -887,11 +887,11 @@ def test_set_dating_status_enable_validation(user):
         user.set_dating_status(UserDatingStatus.ENABLED)
 
     user.item['gender'] = 'MALE'
-    assert 'currentLocation' not in user.item
-    with pytest.raises(UserException, match='currentLocation'):
+    assert 'location' not in user.item
+    with pytest.raises(UserException, match='location'):
         user.set_dating_status(UserDatingStatus.ENABLED)
 
-    user.item['currentLocation'] = {'latitude': 50, 'longitude': 50, 'accuracy': 10}
+    user.item['location'] = {'latitude': 50, 'longitude': 50, 'accuracy': 10}
     assert 'matchGenders' not in user.item
     with pytest.raises(UserException, match='matchGenders'):
         user.set_dating_status(UserDatingStatus.ENABLED)
@@ -929,7 +929,7 @@ def test_set_dating_status_match_location_radius_not_required_for_diamond(user):
             'photoPostId': str(uuid4()),
             'gender': 'MALE',
             'age': 30,
-            'currentLocation': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
+            'location': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
             'matchGenders': ['MALE', 'FEMALE'],
             'matchAgeRange': {'min': 20, 'max': 50},
         }

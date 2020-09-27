@@ -302,7 +302,7 @@ class User(TrendingModelMixin):
         verification_hidden=None,
         date_of_birth=None,
         gender=None,
-        current_location=None,
+        location=None,
         match_age_range=None,
         match_genders=None,
         match_location_radius=None,
@@ -454,11 +454,11 @@ class User(TrendingModelMixin):
             required_fields = {
                 'fullName',
                 'photoPostId',
-                'gender',
-                'currentLocation',
-                'matchGenders',
-                'matchAgeRange',
                 'age',
+                'gender',
+                'location',
+                'matchAgeRange',
+                'matchGenders',
             }
             if self.subscription_level == UserSubscriptionLevel.BASIC:
                 required_fields.add('matchLocationRadius')
