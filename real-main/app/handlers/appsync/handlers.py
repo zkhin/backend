@@ -115,11 +115,11 @@ def update_last_client(func):
 @routes.register('Mutation.createAnonymousUser')
 def create_anonymous_user(caller_user_id, arguments, client=None, **kwargs):
     try:
-        user = user_manager.create_anonymous_user(caller_user_id)
+        user, cognito_tokens = user_manager.create_anonymous_user(caller_user_id)
     except UserException as err:
         raise ClientException(str(err)) from err
     user.set_last_client(client)
-    return user.serialize(caller_user_id)
+    return cognito_tokens
 
 
 @routes.register('Mutation.createCognitoOnlyUser')

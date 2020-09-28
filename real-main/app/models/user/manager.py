@@ -145,9 +145,9 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 raise UserValidationException(f'An account for userId `{user_id}` already exists') from err
             raise UserValidationException(str(err)) from err
 
-        tokens = {'cognito_token': self.cognito_client.get_user_pool_tokens(user_id)['IdToken']}
+        tokens = self.cognito_client.get_user_pool_tokens(user_id)
         try:
-            self.cognito_client.link_identity_pool_entries(user_id, **tokens)
+            self.cognito_client.link_identity_pool_entries(user_id, cognito_token=tokens['IdToken'])
         except Exception as err:
             # try to clean up: remove the user from cognito
             self.cognito_client.delete_user_pool_entry(user_id)
@@ -160,7 +160,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         )
         user = self.init_user(item)
         self.follow_real_user(user)
-        return user
+        return user, tokens
 
     def create_cognito_only_user(self, user_id, username, full_name=None):
         # try to claim the new username, will raise an validation exception if already taken

@@ -15,16 +15,18 @@ def real_user(user_manager, cognito_client):
 
 
 def test_create_anonymous_user_success(user_manager, real_user):
-    cognito_token = 'cog-token'
+    cognito_id_token = 'cog-token'
+    cognito_tokens = {'IdToken': cognito_id_token}
     user_id = str(uuid4())
 
     # set up our mocks to behave correctly
     user_manager.cognito_client.create_user_pool_entry = mock.Mock()
-    user_manager.cognito_client.get_user_pool_tokens = mock.Mock(return_value={'IdToken': cognito_token})
+    user_manager.cognito_client.get_user_pool_tokens = mock.Mock(return_value=cognito_tokens)
     user_manager.cognito_client.link_identity_pool_entries = mock.Mock()
 
     # create the user, check it is as expected
-    user = user_manager.create_anonymous_user(user_id)
+    user, tokens = user_manager.create_anonymous_user(user_id)
+    assert tokens == cognito_tokens
     assert user.id == user_id
     username = user.item['username']
     user_manager.validate_username(username)  # throws exception on failure
@@ -39,7 +41,7 @@ def test_create_anonymous_user_success(user_manager, real_user):
     assert user_manager.cognito_client.link_identity_pool_entries.mock_calls == [
         mock.call(
             user_id,
-            cognito_token=cognito_token,
+            cognito_token=cognito_id_token,
         ),
     ]
 

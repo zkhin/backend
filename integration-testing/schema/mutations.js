@@ -5,13 +5,11 @@ const fragments = require('./fragments.js')
 module.exports.createAnonymousUser = gql`
   mutation CreateAnonymousUser {
     createAnonymousUser {
-      userId
-      username
-      fullName
-      email
-      phoneNumber
-      signedUpAt
-      userStatus
+      AccessToken
+      ExpiresIn
+      TokenType
+      RefreshToken
+      IdToken
     }
   }
 `

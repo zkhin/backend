@@ -41,7 +41,8 @@ def user3(user_manager, cognito_client):
 @pytest.fixture
 def anonymous_user(user_manager):
     with patch.object(user_manager.cognito_client, 'get_user_pool_tokens', return_value={'IdToken': 'id-token'}):
-        yield user_manager.create_anonymous_user(str(uuid4()))
+        user, _ = user_manager.create_anonymous_user(str(uuid4()))
+        yield user
 
 
 @pytest.fixture

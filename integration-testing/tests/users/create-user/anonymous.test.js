@@ -22,30 +22,32 @@ afterEach(async () => {
 test('Mutation.createAnonymousUser success', async () => {
   // pick a random username, register it, check all is good!
   const before = moment().toISOString()
-  const username = await client
+  const after = await client
     .mutate({mutation: mutations.createAnonymousUser})
-    .then(({data: {createAnonymousUser: user}}) => {
+    .then(({data: {createAnonymousUser: cognitoTokens}}) => {
       const after = moment().toISOString()
-      expect(user.userId).toBe(userId)
-      expect(user.username).toBeTruthy()
-      expect(user.email).toBeNull()
-      expect(user.phoneNumber).toBeNull()
-      expect(user.fullName).toBeNull()
-      expect(user.userStatus).toBe('ANONYMOUS')
-      expect(before <= user.signedUpAt).toBe(true)
-      expect(after >= user.signedUpAt).toBe(true)
-      return user.username
+      expect(cognitoTokens.AccessToken).toBeTruthy()
+      expect(cognitoTokens.ExpiresIn).toBeGreaterThan(0)
+      expect(cognitoTokens.TokenType).toBe('Bearer')
+      expect(cognitoTokens.RefreshToken).toBeTruthy()
+      expect(cognitoTokens.IdToken).toBeTruthy()
+      return after
     })
 
   // check that user really stuck in DB
   await client.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(userId)
-    expect(user.username).toBe(username)
+    expect(user.username).toBeTruthy()
+    expect(user.email).toBeNull()
+    expect(user.phoneNumber).toBeNull()
+    expect(user.fullName).toBeNull()
     expect(user.userStatus).toBe('ANONYMOUS')
+    expect(before <= user.signedUpAt).toBe(true)
+    expect(after >= user.signedUpAt).toBe(true)
   })
   await client.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
     expect(user.userId).toBe(userId)
-    expect(user.username).toBe(username)
+    expect(user.username).toBeTruthy()
     expect(user.userStatus).toBe('ANONYMOUS')
   })
 
@@ -60,9 +62,8 @@ test('Mutation.createAnonymousUser success', async () => {
 
 test('Calling Mutation.createAnonymousUser with user that already exists is a ClientError', async () => {
   // create a user
-  await client
-    .mutate({mutation: mutations.createAnonymousUser})
-    .then(({data: {createAnonymousUser: user}}) => expect(user.userId).toBe(userId))
+  await client.mutate({mutation: mutations.createAnonymousUser})
+  await client.query({query: queries.self}).then(({data: {self}}) => expect(self.userId).toBe(userId))
 
   // try to create the user again, should fail with ClientError
   await expect(client.mutate({mutation: mutations.createAnonymousUser})).rejects.toThrow(

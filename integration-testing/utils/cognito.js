@@ -17,7 +17,7 @@ const path = require('path')
 const pwdGenerator = require('generate-password')
 const uuidv4 = require('uuid/v4')
 
-const {mutations} = require('../schema')
+const {mutations, queries} = require('../schema')
 const misc = require('./misc')
 
 dotenv.config()
@@ -202,9 +202,8 @@ const getAnonymousAppSyncLogin = async () => {
   const {IdentityId} = await identityPoolClient.getId().promise()
   const {Credentials} = await identityPoolClient.getCredentialsForIdentity({IdentityId}).promise()
   const client = await getAppSyncClient(Credentials)
-  const {
-    data: {createAnonymousUser: user},
-  } = await client.mutate({mutation: mutations.createAnonymousUser})
+  await client.mutate({mutation: mutations.createAnonymousUser})
+  const user = await client.query({query: queries.self}).then(({data: {self}}) => self)
   return {client, userId: user.userId, username: user.username}
 }
 

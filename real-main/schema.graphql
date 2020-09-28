@@ -67,7 +67,7 @@ type Query {
 
 type Mutation {
   # Set up a new user account
-  createAnonymousUser: User
+  createAnonymousUser: CognitoTokens!
   createCognitoOnlyUser(username: String!, fullName: String): User
   createAppleUser(username: String!, fullName: String, appleIdToken: String!): User
   createFacebookUser(username: String!, fullName: String, facebookAccessToken: String!): User
@@ -897,4 +897,12 @@ input LocationInput {
   latitude: Float!
   longitude: Float!
   accuracy: Int
+}
+
+type CognitoTokens {
+  AccessToken: String!
+  ExpiresIn: Int!
+  TokenType: String!
+  RefreshToken: String!
+  IdToken: String!
 }
