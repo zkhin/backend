@@ -181,6 +181,7 @@ module.exports.simpleUserFields = gql`
     userStatus
     subscriptionLevel
     subscriptionExpiresAt
+    lastFoundUsers
     matchGenders
     matchLocationRadius
     location {

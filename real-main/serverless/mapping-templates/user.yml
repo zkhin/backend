@@ -228,3 +228,8 @@
   field: datingStatus
   dataSource: NoneDataSource
   response: PassThru.response.vtl
+
+- type: User
+  field: lastFoundUsers
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl

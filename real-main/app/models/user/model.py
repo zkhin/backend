@@ -470,3 +470,8 @@ class User(TrendingModelMixin):
 
         self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self
+
+    def update_last_found_time(self, now=None):
+        now = now or pendulum.now('utc')
+        self.dynamo.set_user_last_found_time(self.id, now)
+        return self

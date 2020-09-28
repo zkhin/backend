@@ -916,3 +916,25 @@ def test_generate_user_ids_by_birthday(user_dynamo):
     assert list(user_dynamo.generate_user_ids_by_birthday('09-09')) == []
     assert list(user_dynamo.generate_user_ids_by_birthday('02-29')) == [uid2]
     assert list(user_dynamo.generate_user_ids_by_birthday('12-31')).sort() == [uid1, uid3].sort()
+
+
+def test_set_user_last_found_time(user_dynamo):
+    user_id = 'my-user-id'
+    username = 'my-username'
+    now = pendulum.now('utc')
+
+    expected_base_item = user_dynamo.add_user(user_id, username)
+    assert expected_base_item['userId'] == user_id
+
+    # Check set_user_last_found_time without Specific Time
+    before = pendulum.now('utc')
+    resp = user_dynamo.set_user_last_found_time(user_id)
+    after = pendulum.now('utc')
+
+    assert before < pendulum.parse(resp['lastFoundUsers']) < after
+
+    # Check set_user_last_found_time with Specific Time
+    resp = user_dynamo.set_user_last_found_time(user_id, now)
+    current_time = now.to_iso8601_string()
+
+    assert current_time == resp['lastFoundUsers']

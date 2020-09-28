@@ -1,10 +1,11 @@
+const moment = require('moment')
 const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')
 const {queries, mutations} = require('../schema')
 const uuidv4 = require('uuid/v4')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
+jest.retryTimes(2)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -76,45 +77,33 @@ test('Find users by email', async () => {
     .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, other1, other2].sort(cmp)))
 })
 
-describe('wrapper to ensure cleanup', () => {
+test('Find users by phone, and by phone and email', async () => {
+  const {
+    client: ourClient,
+    userId: ourUserId,
+    email: ourEmail,
+    username: ourUsername,
+  } = await loginCache.getCleanLogin()
   const theirPhone = '+15105551011'
-  let theirClient, theirUserId, theirUsername, theirEmail
-  beforeAll(async () => {
-    ;({
-      client: theirClient,
-      userId: theirUserId,
-      email: theirEmail,
-      username: theirUsername,
-    } = await cognito.getAppSyncLogin(theirPhone))
-  })
-  afterAll(async () => {
-    if (theirClient) await theirClient.mutate({mutation: mutations.deleteUser})
-  })
+  const {userId: theirUserId, email: theirEmail, username: theirUsername} = await cognito.getAppSyncLogin(
+    theirPhone,
+  )
+  const cmp = (a, b) => a.userId.localeCompare(b.userId)
 
-  test('Find users by phone, and by phone and email', async () => {
-    const {
-      client: ourClient,
-      userId: ourUserId,
-      email: ourEmail,
-      username: ourUsername,
-    } = await loginCache.getCleanLogin()
-    const cmp = (a, b) => a.userId.localeCompare(b.userId)
+  // how each user will appear in search results, based on our query
+  const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
+  const them = {__typename: 'User', userId: theirUserId, username: theirUsername}
 
-    // how each user will appear in search results, based on our query
-    const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
-    const them = {__typename: 'User', userId: theirUserId, username: theirUsername}
+  // find them by just phone
+  await misc.sleep(2000)
+  await ourClient
+    .query({query: queries.findUsers, variables: {phoneNumbers: [theirPhone]}})
+    .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([them]))
 
-    // find them by just phone
-    await misc.sleep(2000)
-    await ourClient
-      .query({query: queries.findUsers, variables: {phoneNumbers: [theirPhone]}})
-      .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([them]))
-
-    // find us and them by phone and email, make sure they don't duplicate
-    await ourClient
-      .query({query: queries.findUsers, variables: {emails: [ourEmail, theirEmail], phoneNumbers: [theirPhone]}})
-      .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, them].sort(cmp)))
-  })
+  // find us and them by phone and email, make sure they don't duplicate
+  await ourClient
+    .query({query: queries.findUsers, variables: {emails: [ourEmail, theirEmail], phoneNumbers: [theirPhone]}})
+    .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, them].sort(cmp)))
 })
 
 test('Find Users sends cards to the users that were found', async () => {
@@ -195,5 +184,48 @@ test('Find Users sends cards to the users that were found', async () => {
   await other2Client.query({query: queries.self}).then(({data: {self}}) => {
     expect(self.userId).toBe(other2UserId)
     expect(self.cards.items[0].cardId).toBe(`${other2UserId}:CONTACT_JOINED:${otherUserId}`)
+  })
+})
+
+test('Find users and check lastFoundUsers', async () => {
+  const {
+    client: ourClient,
+    userId: ourUserId,
+    email: ourEmail,
+    username: ourUsername,
+  } = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {userId: other1UserId, email: other1Email, username: other1Username} = await loginCache.getCleanLogin()
+  const {userId: other2UserId, email: other2Email, username: other2Username} = await loginCache.getCleanLogin()
+  const cmp = (a, b) => a.userId.localeCompare(b.userId)
+
+  // how each user will appear in search results, based on our query
+  const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
+  const other1 = {__typename: 'User', userId: other1UserId, username: other1Username}
+  const other2 = {__typename: 'User', userId: other2UserId, username: other2Username}
+
+  // Check initialize of lastFoundUsers
+  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.lastFoundUsers).toBeNull()
+  })
+
+  // Run the findUsers Query
+  let before = moment().toISOString()
+  await ourClient
+    .query({query: queries.findUsers, variables: {emails: [ourEmail, other1Email, other2Email]}})
+    .then(({data: {findUsers}}) => expect(findUsers.items.sort(cmp)).toEqual([us, other1, other2].sort(cmp)))
+  let after = moment().toISOString()
+
+  // Then check lastFoundUsers timestamp
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
+    expect(before <= self.lastFoundUsers).toBe(true)
+    expect(after >= self.lastFoundUsers).toBe(true)
+  })
+
+  // check another user can't see lastFoundUsers
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.lastFoundUsers).toBeNull()
   })
 })
