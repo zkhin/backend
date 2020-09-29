@@ -230,6 +230,6 @@
   response: PassThru.response.vtl
 
 - type: User
-  field: lastFoundUsers
+  field: lastFoundUsersAt
   dataSource: NoneDataSource
   response: PassThru.response.vtl

@@ -497,7 +497,7 @@ type User {
   directChat: Chat
 
   # last timestamp which call findUsers
-  lastFoundUsers: AWSDateTime
+  lastFoundUsersAt: AWSDateTime
 }
 
 type PaginatedUsers {

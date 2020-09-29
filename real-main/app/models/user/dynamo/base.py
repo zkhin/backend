@@ -149,13 +149,13 @@ class UserDynamo:
             query_kwargs['ExpressionAttributeValues'] = {':a': int(age)}
         return self.client.update_item(query_kwargs)
 
-    def set_user_last_found_time(self, user_id, now=None):
+    def set_user_last_found_users_at(self, user_id, now=None):
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': self.pk(user_id),
+            'UpdateExpression': 'SET lastFoundUsersAt = :ps',
+            'ExpressionAttributeValues': {':ps': now.to_iso8601_string()},
         }
-        query_kwargs['UpdateExpression'] = 'SET lastFoundUsers = :ps'
-        query_kwargs['ExpressionAttributeValues'] = {':ps': now.to_iso8601_string()}
 
         return self.client.update_item(query_kwargs)
 

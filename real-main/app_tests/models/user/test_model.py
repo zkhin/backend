@@ -853,17 +853,17 @@ def test_link_federated_login_anonymous_user(anonymous_user):
     assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]
 
 
-def test_update_last_found_time(user):
-    # Check update_last_found_time without Specific Time
+def test_update_last_found_users_at(user):
+    # Check update_last_found_users_at without Specific Time
     before = pendulum.now('utc')
-    user.update_last_found_time()
+    user.update_last_found_users_at()
     after = pendulum.now('utc')
-    assert before < pendulum.parse(user.refresh_item().item['lastFoundUsers']) < after
+    assert before < pendulum.parse(user.refresh_item().item['lastFoundUsersAt']) < after
 
-    # Check update_last_found_time with Specific Time
+    # Check update_last_found_users_at with Specific Time
     now = pendulum.now('utc')
-    user.update_last_found_time(now)
-    assert user.refresh_item().item['lastFoundUsers'] == now.to_iso8601_string()
+    user.update_last_found_users_at(now)
+    assert user.refresh_item().item['lastFoundUsersAt'] == now.to_iso8601_string()
 
 
 def test_set_user_password_failures(user):
