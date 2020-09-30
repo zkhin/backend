@@ -1,3 +1,4 @@
+const moment = require('moment')
 const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')
 const {queries, mutations} = require('../schema')
@@ -195,5 +196,45 @@ test('Find Users sends cards to the users that were found', async () => {
   await other2Client.query({query: queries.self}).then(({data: {self}}) => {
     expect(self.userId).toBe(other2UserId)
     expect(self.cards.items[0].cardId).toBe(`${other2UserId}:CONTACT_JOINED:${otherUserId}`)
+  })
+})
+
+test('Find users and check lastFoundUsersAt', async () => {
+  const {client: ourClient, userId: ourUserId, email: ourEmail} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+
+  // Check initialize of lastFoundUsersAt
+  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
+    expect(self.lastFoundUsersAt).toBeNull()
+  })
+
+  // Run the findUsers Query
+  let before = moment().toISOString()
+  await ourClient
+    .query({query: queries.findUsers, variables: {emails: [ourEmail]}})
+    .then(({data: {findUsers}}) => expect(findUsers.items.map((i) => i.userId)).toEqual([ourUserId]))
+  let after = moment().toISOString()
+
+  // Then check lastFoundUsersAt timestamp
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
+    expect(before <= self.lastFoundUsersAt).toBe(true)
+    expect(after >= self.lastFoundUsersAt).toBe(true)
+  })
+
+  // Check another user can't see lastFoundUsersAt
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.lastFoundUsersAt).toBeNull()
+  })
+
+  // Call findUsers again and check the lastFoundUsersAt is updated correctly
+  await ourClient
+    .query({query: queries.findUsers, variables: {emails: [ourEmail]}})
+    .then(({data: {findUsers}}) => expect(findUsers.items.map((i) => i.userId)).toEqual([ourUserId]))
+  await misc.sleep(2000)
+
+  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
+    expect(after <= self.lastFoundUsersAt).toBe(true)
   })
 })
