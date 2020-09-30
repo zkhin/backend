@@ -10,6 +10,8 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
+from .dynamo import UserContactAttributeDynamo
+
 from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
@@ -350,6 +352,12 @@ class User(TrendingModelMixin):
             names['cognito']: attribute_value,
             f'custom:unverified_{names["short"]}': attribute_value,
         }
+
+        # verify that new attribtue value is not used by other
+        attribute_dynamo = UserContactAttributeDynamo(self.dynamo, f'user{names["dynamo"].title()}')
+        if attribute_dynamo.key(attribute_value):
+            raise UserException(f'User {attribute_name} is already used by other')
+
         self.cognito_client.set_user_attributes(self.id, attrs)
 
         # then if we have a verified version for the user stored in dynamo, set their main property in
