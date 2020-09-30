@@ -11,7 +11,6 @@ from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
 from .dynamo import UserContactAttributeDynamo
-
 from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
