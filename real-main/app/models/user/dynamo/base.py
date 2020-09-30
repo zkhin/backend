@@ -156,7 +156,6 @@ class UserDynamo:
             'UpdateExpression': 'SET lastFoundUsersAt = :ps',
             'ExpressionAttributeValues': {':ps': now.to_iso8601_string()},
         }
-
         return self.client.update_item(query_kwargs)
 
     def set_user_details(

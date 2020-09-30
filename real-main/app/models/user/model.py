@@ -473,5 +473,5 @@ class User(TrendingModelMixin):
 
     def update_last_found_users_at(self, now=None):
         now = now or pendulum.now('utc')
-        self.dynamo.set_user_last_found_users_at(self.id, now)
+        self.dynamo.set_user_last_found_users_at(self.id, now=now)
         return self

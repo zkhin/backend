@@ -200,16 +200,8 @@ test('Find Users sends cards to the users that were found', async () => {
 })
 
 test('Find users and check lastFoundUsersAt', async () => {
-  const {
-    client: ourClient,
-    userId: ourUserId,
-    email: ourEmail,
-    username: ourUsername,
-  } = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, email: ourEmail} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
-
-  // how each user will appear in search results, based on our query
-  const us = {__typename: 'User', userId: ourUserId, username: ourUsername}
 
   // Check initialize of lastFoundUsersAt
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
@@ -220,7 +212,7 @@ test('Find users and check lastFoundUsersAt', async () => {
   let before = moment().toISOString()
   await ourClient
     .query({query: queries.findUsers, variables: {emails: [ourEmail]}})
-    .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([us]))
+    .then(({data: {findUsers}}) => expect(findUsers.items.map((i) => i.userId)).toEqual([ourUserId]))
   let after = moment().toISOString()
 
   // Then check lastFoundUsersAt timestamp
@@ -239,7 +231,8 @@ test('Find users and check lastFoundUsersAt', async () => {
   // Call findUsers again and check the lastFoundUsersAt is updated correctly
   await ourClient
     .query({query: queries.findUsers, variables: {emails: [ourEmail]}})
-    .then(({data: {findUsers}}) => expect(findUsers.items).toEqual([us]))
+    .then(({data: {findUsers}}) => expect(findUsers.items.map((i) => i.userId)).toEqual([ourUserId]))
+  await misc.sleep(2000)
 
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
     expect(after <= self.lastFoundUsersAt).toBe(true)

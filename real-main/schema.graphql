@@ -496,7 +496,7 @@ type User {
   #   - a user with whom caller has not exchanged direct messages
   directChat: Chat
 
-  # last timestamp which call findUsers
+  # when user last called findUsers
   lastFoundUsersAt: AWSDateTime
 }
 
