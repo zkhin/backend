@@ -96,6 +96,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             'follower_manager': getattr(self, 'follower_manager', None),
             'like_manager': getattr(self, 'like_manager', None),
             'post_manager': getattr(self, 'post_manager', None),
+            'email_dynamo': getattr(self, 'email_dynamo', None),
+            'phone_number_dynamo': getattr(self, 'phone_number_dynamo', None),
             'user_manager': self,
         }
         return User(user_item, self.clients, **kwargs) if user_item else None

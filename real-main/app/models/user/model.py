@@ -10,7 +10,6 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .dynamo import UserContactAttributeDynamo
 from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
@@ -45,6 +44,8 @@ class User(TrendingModelMixin):
         like_manager=None,
         post_manager=None,
         user_manager=None,
+        email_dynamo=None,
+        phone_number_dynamo=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
         frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
         **kwargs,
@@ -72,6 +73,10 @@ class User(TrendingModelMixin):
             self.post_manager = post_manager
         if user_manager:
             self.user_manager = user_manager
+        if email_dynamo:
+            self.email_dynamo = email_dynamo
+        if phone_number_dynamo:
+            self.phone_number_dynamo = phone_number_dynamo
         self.item = user_item
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
@@ -353,8 +358,7 @@ class User(TrendingModelMixin):
         }
 
         # verify that new attribtue value is not used by other
-        attribute_dynamo = UserContactAttributeDynamo(self.clients['dynamo'], f'user{names["dynamo"].title()}')
-        if attribute_dynamo.get(attribute_value) is not None:
+        if self.email_dynamo.get(attribute_value) or self.phone_number_dynamo.get(attribute_value):
             raise UserException(f'User {attribute_name} is already used by other')
 
         self.cognito_client.set_user_attributes(self.id, attrs)
