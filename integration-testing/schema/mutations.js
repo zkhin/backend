@@ -239,6 +239,28 @@ module.exports.setUserDatingStatus = gql`
   }
 `
 
+module.exports.startChangeUserEmail = gql`
+  mutation StartChangeUserEmail($email: AWSEmail!) {
+    startChangeUserEmail(email: $email) {
+      userId
+      username
+      email
+      phoneNumber
+    }
+  }
+`
+
+module.exports.startChangeUserPhoneNumber = gql`
+  mutation StartChangeUserPhoneNumber($phoneNumber: AWSPhone!) {
+    startChangeUserPhoneNumber(phoneNumber: $phoneNumber) {
+      userId
+      username
+      email
+      phoneNumber
+    }
+  }
+`
+
 module.exports.updateUserContactInfo = gql`
   mutation SetUserContactInfo($accessToken: String!) {
     updateUserContactInfo(authProvider: COGNITO, accessToken: $accessToken) {

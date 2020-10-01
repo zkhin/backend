@@ -20,8 +20,18 @@ CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOU
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
-    'email': {'short': 'email', 'cognito': 'email', 'dynamo': 'email'},
-    'phone': {'short': 'phone', 'cognito': 'phone_number', 'dynamo': 'phoneNumber'},
+    'email': {
+        'short': 'email',
+        'cognito': 'email',
+        'dynamo_attr': 'email',
+        'dynamo_client': 'email_dynamo',
+    },
+    'phone': {
+        'short': 'phone',
+        'cognito': 'phone_number',
+        'dynamo_attr': 'phoneNumber',
+        'dynamo_client': 'phone_number_dynamo',
+    },
 }
 
 
@@ -44,6 +54,8 @@ class User(TrendingModelMixin):
         like_manager=None,
         post_manager=None,
         user_manager=None,
+        email_dynamo=None,
+        phone_number_dynamo=None,
         placeholder_photos_directory=S3_PLACEHOLDER_PHOTOS_DIRECTORY,
         frontend_resources_domain=CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN,
         **kwargs,
@@ -71,6 +83,10 @@ class User(TrendingModelMixin):
             self.post_manager = post_manager
         if user_manager:
             self.user_manager = user_manager
+        if email_dynamo:
+            self.email_dynamo = email_dynamo
+        if phone_number_dynamo:
+            self.phone_number_dynamo = phone_number_dynamo
         self.item = user_item
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
@@ -340,7 +356,7 @@ class User(TrendingModelMixin):
         names = CONTACT_ATTRIBUTE_NAMES[attribute_name]
 
         # verify we actually need to do anything
-        old_value = self.item.get(names['dynamo'])
+        old_value = self.item.get(names['dynamo_attr'])
         if old_value == attribute_value:
             raise UserVerificationException(f'User {attribute_name} already set to `{attribute_value}`')
 
@@ -350,6 +366,12 @@ class User(TrendingModelMixin):
             names['cognito']: attribute_value,
             f'custom:unverified_{names["short"]}': attribute_value,
         }
+
+        # verify that new attribtue value is not used by other
+        contact_attr_dynamo = getattr(self, names['dynamo_client'])
+        if contact_attr_dynamo.get(attribute_value):
+            raise UserException(f'User {names["dynamo_attr"]} is already used by other')
+
         self.cognito_client.set_user_attributes(self.id, attrs)
 
         # then if we have a verified version for the user stored in dynamo, set their main property in
