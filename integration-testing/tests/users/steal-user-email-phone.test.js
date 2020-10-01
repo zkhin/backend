@@ -28,5 +28,5 @@ test('Steal user email and phoneNumber exception', async () => {
       mutation: mutations.startChangeUserPhoneNumber,
       variables: {phoneNumber: ourPhoneNumber},
     }),
-  ).rejects.toThrow(/GraphQL error: ClientError: User phone is already used by other/)
+  ).rejects.toThrow(/GraphQL error: ClientError: User phoneNumber is already used by other/)
 })

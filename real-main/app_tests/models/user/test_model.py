@@ -39,6 +39,15 @@ def user3(user_manager, cognito_client):
 
 
 @pytest.fixture
+def user_4_stream_updated(user_manager, cognito_client):
+    user_id, username = str(uuid4()), str(uuid4())[:8]
+    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
+    user = user_manager.create_cognito_only_user(user_id, username)
+    user_manager.on_user_email_change_update_subitem(user_id, new_item=user.item)
+    yield user
+
+
+@pytest.fixture
 def anonymous_user(user_manager):
     with patch.object(user_manager.cognito_client, 'get_user_pool_tokens', return_value={'IdToken': 'id-token'}):
         user, _ = user_manager.create_anonymous_user(str(uuid4()))
@@ -50,6 +59,15 @@ def user_verified_phone(user_manager, cognito_client):
     user_id, username = str(uuid4()), str(uuid4())[:8]
     cognito_client.create_user_pool_entry(user_id, username, verified_phone='+12125551212')
     yield user_manager.create_cognito_only_user(user_id, username)
+
+
+@pytest.fixture
+def user_1_verified_phone_stream_updated(user_manager, cognito_client):
+    user_id, username = str(uuid4()), str(uuid4())[:8]
+    cognito_client.create_user_pool_entry(user_id, username, verified_phone='+12125551333')
+    user = user_manager.create_cognito_only_user(user_id, username)
+    user_manager.on_user_phone_number_change_update_subitem(user_id, new_item=user.item)
+    yield user
 
 
 def test_refresh(user):
@@ -395,6 +413,15 @@ def test_finish_change_email_anonymous_user_becomes_active(anonymous_user):
     assert user.status == UserStatus.ACTIVE
 
 
+def test_start_change_phone_steal_other_one(user_1_verified_phone_stream_updated, user_verified_phone):
+    assert 'phoneNumber' in user_1_verified_phone_stream_updated.item
+    assert 'phoneNumber' in user_verified_phone.item
+
+    new_phone = user_1_verified_phone_stream_updated.item.get('phoneNumber')
+    with pytest.raises(UserException, match='User phoneNumber is already used by other'):
+        user_verified_phone.start_change_contact_attribute('phone', new_phone)
+
+
 def test_start_change_phone(user):
     prev_phone = '+123'
     user.item = user.dynamo.set_user_details(user.id, phone=prev_phone)
@@ -448,6 +475,15 @@ def test_start_change_email_same_as_existing(user):
 
     new_email = prev_email
     with pytest.raises(UserVerificationException):
+        user.start_change_contact_attribute('email', new_email)
+
+
+def test_start_change_email_steal_other_one(user_4_stream_updated, user):
+    assert 'email' in user_4_stream_updated.item
+    assert 'email' in user.item
+
+    new_email = user_4_stream_updated.item.get('email')
+    with pytest.raises(UserException, match='User email is already used by other'):
         user.start_change_contact_attribute('email', new_email)
 
 
