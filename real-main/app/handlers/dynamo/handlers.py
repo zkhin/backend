@@ -26,6 +26,7 @@ clients = {
     'dynamo_feed': clients.DynamoClient(table_name=DYNAMO_FEED_TABLE),
     'elasticsearch': clients.ElasticSearchClient(),
     'pinpoint': clients.PinpointClient(),
+    'real_dating': clients.RealDatingClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
 }
 
@@ -265,6 +266,7 @@ register(
     user_manager.on_user_date_of_birth_change_update_age,
     {'dateOfBirth': None},
 )
+register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.on_user_change_update_dating)
 register(
     'user',
     'profile',

@@ -16,7 +16,7 @@ from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
 
 from .dynamo import UserContactAttributeDynamo, UserDynamo
-from .enums import UserStatus, UserSubscriptionLevel
+from .enums import UserDatingStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserAlreadyExists, UserException, UserValidationException
 from .model import User
 
@@ -37,6 +37,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         'facebook',
         'google',
         'pinpoint',
+        'real_dating',
         's3_uploads',
         's3_placeholder_photos',
     ]
@@ -324,6 +325,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         self.dynamo.add_user_deleted(user_id)
         self.elasticsearch_client.delete_user(user_id)
         self.pinpoint_client.delete_user_endpoints(user_id)
+        self.real_dating_client.remove_user(user_id, fail_soft=True)
 
         user = self.init_user(old_item)
         user.clear_photo_s3_objects()
@@ -455,6 +457,28 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def on_user_date_of_birth_change_update_age(self, user_id, new_item, old_item=None):
         self.init_user(new_item).update_age()
+
+    def on_user_change_update_dating(self, user_id, new_item, old_item=None):
+        old_status = (old_item or {}).get('datingStatus', UserDatingStatus.DISABLED)
+        new_status = new_item.get('datingStatus', UserDatingStatus.DISABLED)
+
+        if new_status == UserDatingStatus.DISABLED and old_status == UserDatingStatus.ENABLED:
+            self.real_dating_client.remove_user(user_id)
+
+        if new_status == UserDatingStatus.ENABLED:
+            user = self.init_user(new_item)
+
+            # if the user profile no longer has all the attributes required for dating, auto-disable dating
+            try:
+                user.validate_can_enable_dating()
+            except UserException:
+                self.dynamo.set_user_dating_status(user_id, UserDatingStatus.DISABLED, fail_softly=True)
+                return
+
+            new_profile = user.generate_dating_profile()
+            old_profile = self.init_user(old_item).generate_dating_profile()
+            if old_status == UserDatingStatus.DISABLED or new_profile != old_profile:
+                self.real_dating_client.put_user(user_id, new_profile)
 
     def update_ages(self, now=None):
         now = now or pendulum.now('utc')

@@ -113,6 +113,12 @@ def test_on_user_delete_calls_pinpoint(user_manager, user):
     assert pinpoint_client_mock.mock_calls == [call.delete_user_endpoints(user.id)]
 
 
+def test_on_user_delete_calls_dating_project(user_manager, user):
+    with patch.object(user_manager, 'real_dating_client') as rdc_mock:
+        user_manager.on_user_delete(user.id, old_item=user.item)
+    assert rdc_mock.mock_calls == [call.remove_user(user.id, fail_soft=True)]
+
+
 def test_on_user_delete_adds_user_deleted_subitem(user_manager, user):
     key = {'partitionKey': f'user/{user.id}', 'sortKey': 'deleted'}
     assert user_manager.dynamo.client.get_item(key) is None
