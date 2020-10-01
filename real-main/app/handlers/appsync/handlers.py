@@ -1416,19 +1416,15 @@ def lambda_server_error(caller_user_id, arguments, context=None, **kwargs):
     raise Exception(f'Test of lambda server error, request `{request_id}`')
 
 
-@routes.register('Query.findUsers')
+@routes.register('Query.findContacts')
 @validate_caller
 @update_last_client
-def find_users(caller_user, arguments, **kwargs):
-    emails = arguments['emails'] or []
-    phones = arguments['phoneNumbers'] or []
+def find_contacts(caller_user, arguments, **kwargs):
+    contacts = arguments['contacts']
 
-    if not emails and not phones:
-        raise ClientException('Called without any arguments... probably not what you intended?')
+    if len(contacts) > 100:
+        raise ClientException('Cannot submit more than 100 contact inputs')
 
-    if len(emails) + len(phones) > 100:
-        raise ClientException('Cannot submit more than 100 combined emails and phoneNumbers')
-
-    user_ids = user_manager.find_users(caller_user, emails=emails, phones=phones)
+    found_contacts = user_manager.find_contacts(caller_user, contacts=contacts)
     caller_user.update_last_found_users_at(now=pendulum.now('utc'))
-    return {'items': user_ids}
+    return found_contacts

@@ -37,13 +37,8 @@ type Query {
   # Search users
   searchUsers(searchToken: String!, limit: Int, nextToken: String): PaginatedUsers!
 
-  # Find users
-  #   - accepts up to 100 total combined emails and/or phoneNumbers at a time
-  #   - returns a list of users that match one of the given emails or phoneNumbers,
-  #     so up to a max of 100 users will be returned
-  #   - users are not returned in any particular order
-  #   - in the response, PaginatedUsers.nextToken will always be null
-  findUsers(emails: [AWSEmail!], phoneNumbers: [AWSPhone!]): PaginatedUsers!
+  # max of 100 ContactInputs may be submitted at a time
+  findContacts(contacts: [ContactInput!]!): [FoundContact!]!
 
   # Globally trending users
   trendingUsers(limit: Int, nextToken: String): PaginatedUsers!
@@ -936,4 +931,15 @@ type CognitoTokens {
   TokenType: String!
   RefreshToken: String!
   IdToken: String!
+}
+
+input ContactInput {
+  contactId: ID!
+  emails: [AWSEmail!]
+  phones: [AWSPhone!]
+}
+
+type FoundContact {
+  contactId: ID!
+  user: User!
 }

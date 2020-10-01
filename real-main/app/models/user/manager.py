@@ -504,19 +504,27 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             # TODO: catch 404 error & log warning
             self.cognito_client.delete_identity_pool_entry(user_id)
 
-    def find_users(self, caller_user, emails=None, phones=None):
+    def find_contacts(self, caller_user, contacts):
         """
         Given a list of emails and a list of phones, return a list of user_ids of users
         in our system with those emails and phones.
         For each returned user_id that is not already following the user that called this
         method, create a card inviting them to follow.
         """
-        emails = emails or []
-        phones = phones or []
 
-        user_ids_from_emails = self.email_dynamo.batch_get_user_ids(emails)
-        user_ids_from_phones = self.phone_number_dynamo.batch_get_user_ids(phones)
-        user_ids = list(set(user_ids_from_emails + user_ids_from_phones))  # uniquify
+        found_contacts = []
+        user_ids = []
+        for contact in contacts:
+            emails = contact.get('emails', [])
+            phones = contact.get('phones', [])
+
+            user_ids_from_emails = self.email_dynamo.batch_get_user_ids(emails)
+            user_ids_from_phones = self.phone_number_dynamo.batch_get_user_ids(phones)
+            first_user_id = (user_ids_from_emails + user_ids_from_phones)[0]
+
+            if first_user_id:
+                found_contacts.append({'contactId': contact['contactId'], 'user': self.get_user(first_user_id)})
+                user_ids.append(first_user_id)
 
         for user_id in user_ids:
             follow_status = self.follower_manager.get_follow_status(user_id, caller_user.id)
@@ -524,7 +532,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 card_template = ContactJoinedCardTemplate(user_id, caller_user.id, caller_user.username)
                 self.card_manager.add_or_update_card(card_template)
 
-        return user_ids
+        return found_contacts
 
     def on_appstore_sub_status_change_update_subscription(self, original_transaction_id, new_item, old_item=None):
         if new_item['status'] == AppStoreSubscriptionStatus.ACTIVE:
