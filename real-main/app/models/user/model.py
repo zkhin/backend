@@ -20,8 +20,18 @@ CLOUDFRONT_FRONTEND_RESOURCES_DOMAIN = os.environ.get('CLOUDFRONT_FRONTEND_RESOU
 
 # annoying this needs to exist
 CONTACT_ATTRIBUTE_NAMES = {
-    'email': {'short': 'email', 'cognito': 'email', 'dynamo': 'email'},
-    'phone': {'short': 'phone', 'cognito': 'phone_number', 'dynamo': 'phoneNumber'},
+    'email': {
+        'short': 'email',
+        'cognito': 'email',
+        'dynamo_attr': 'email',
+        'dynamo_client': 'email_dynamo',
+    },
+    'phone': {
+        'short': 'phone',
+        'cognito': 'phone_number',
+        'dynamo_attr': 'phoneNumber',
+        'dynamo_client': 'phone_number_dynamo',
+    },
 }
 
 
@@ -346,7 +356,7 @@ class User(TrendingModelMixin):
         names = CONTACT_ATTRIBUTE_NAMES[attribute_name]
 
         # verify we actually need to do anything
-        old_value = self.item.get(names['dynamo'])
+        old_value = self.item.get(names['dynamo_attr'])
         if old_value == attribute_value:
             raise UserVerificationException(f'User {attribute_name} already set to `{attribute_value}`')
 
@@ -358,8 +368,9 @@ class User(TrendingModelMixin):
         }
 
         # verify that new attribtue value is not used by other
-        if self.email_dynamo.get(attribute_value) or self.phone_number_dynamo.get(attribute_value):
-            raise UserException(f'User {names["dynamo"]} is already used by other')
+        contact_attr_dynamo = getattr(self, names['dynamo_client'])
+        if contact_attr_dynamo.get(attribute_value):
+            raise UserException(f'User {names["dynamo_attr"]} is already used by other')
 
         self.cognito_client.set_user_attributes(self.id, attrs)
 
