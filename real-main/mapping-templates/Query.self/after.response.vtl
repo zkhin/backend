@@ -4,7 +4,7 @@
 
 ## raises an error if error self does not exist
 #if ($ctx.prev.result.isEmpty())
-  $util.error('User does not exist', 'ClientError')
+  $util.error('ClientError: User does not exist', 'ClientError')
 #end
 #set ($user = $ctx.prev.result[0])
 

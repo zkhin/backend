@@ -35,7 +35,7 @@ test('Query.self for user that does not exist', async () => {
   // verify system see us as not registered yet
   await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
     expect(errors).toHaveLength(1)
-    expect(errors[0].message).toEqual('User does not exist')
+    expect(errors[0].message).toEqual('ClientError: User does not exist')
     expect(data).toBeNull()
   })
 })

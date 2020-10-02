@@ -1,5 +1,5 @@
 #if ($ctx.args.limit < -1 or $ctx.args.limit > 100)
-  $util.error('Limit cannot be less than -1 or greater than 100', 'ClientError')
+  $util.error('ClientError: Limit cannot be less than -1 or greater than 100', 'ClientError')
 #end
 #if ($ctx.args.limit == -1)
   #set ($limit = 100)
@@ -10,7 +10,7 @@
 #set ($query = $ctx.args.searchToken.trim())
 
 #if ($query.isEmpty())
-  $util.error('Empty queries are not allowed', 'ClientError')
+  $util.error('ClientError: Empty queries are not allowed', 'ClientError')
 #end
 
 {

@@ -2,7 +2,7 @@
 #set ($userId = $ctx.args.userId)
 
 #if ($userId != $callerUserId)
-  $util.error('Cannot subscribe to notifications intended for another user', 'ClientError')
+  $util.error('ClientError: Cannot subscribe to notifications intended for another user', 'ClientError')
 #end
 
 {

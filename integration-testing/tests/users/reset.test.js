@@ -471,7 +471,7 @@ test('Can reset a disabled user', async () => {
   await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
     expect(data).toBeNull()
     expect(errors).toHaveLength(1)
-    expect(errors[0].message).toBe('User does not exist')
+    expect(errors[0].message).toBe('ClientError: User does not exist')
   })
 })
 
@@ -494,7 +494,7 @@ test('Delete a user', async () => {
   // check we no longer exist (but our GQL creds can't be revoked)
   await ourClient.query({query: queries.self, errorPolicy: 'all'}).then(({data, errors}) => {
     expect(errors).toHaveLength(1)
-    expect(errors[0]['message']).toBe('User does not exist')
+    expect(errors[0]['message']).toBe('ClientError: User does not exist')
     expect(data).toBeNull()
   })
 

@@ -37,7 +37,7 @@
   #if ($followStatus == 'REQUESTED')
     #set ($val = $ctx.source.followersRequestedCount)
   #else
-    $util.error("Cannot request followStatus of $followStatus", 'ClientError')
+    $util.error("ClientError: Cannot request followStatus of $followStatus", 'ClientError')
   #end
 
 #end
