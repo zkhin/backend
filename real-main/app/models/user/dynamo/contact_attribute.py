@@ -29,7 +29,7 @@ class UserContactAttributeDynamo:
     def batch_get_user_ids_attr_mapped(self, attrs):
         # dynamo can't handle duplicates
         typed_keys = [self.typed_key(attr) for attr in set(attrs)]
-        items = self.client.batch_get_items(typed_keys)
+        items = self.client.batch_get_items(typed_keys, projection_expression='partitionKey, userId')
         return {item['partitionKey']['S'].split('/')[1]: item['userId']['S'] for item in items}
 
     def add(self, attr, user_id):

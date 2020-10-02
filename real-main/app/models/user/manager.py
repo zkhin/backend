@@ -515,29 +515,23 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         found_contacts = []
         email_contacts, phone_contacts = {}, {}
         for contact in contacts:
-            for email in contact.get('emails', []):
-                email_contacts[email] = contact['contactId']
-            for phone in contact.get('phones', []):
-                phone_contacts[phone] = contact['contactId']
+            email_contacts.update({email: contact['contactId'] for email in contact.get('emails', [])})
+            phone_contacts.update({phone: contact['contactId'] for phone in contact.get('phones', [])})
 
-        user_ids_mapped_emails = self.email_dynamo.batch_get_user_ids_attr_mapped(email_contacts.keys())
-        user_ids_mapped_phones = self.phone_number_dynamo.batch_get_user_ids_attr_mapped(phone_contacts.keys())
-        user_ids_mapped_attrs = {**user_ids_mapped_emails, **user_ids_mapped_phones}
-        contact_ids_mapped_attrs = {**email_contacts, **phone_contacts}
+        email_to_user_id = self.email_dynamo.batch_get_user_ids_attr_mapped(email_contacts.keys())
+        phone_to_user_id = self.phone_number_dynamo.batch_get_user_ids_attr_mapped(phone_contacts.keys())
+        contact_attr_to_user_id = {**email_to_user_id, **phone_to_user_id}
+        contact_attr_to_contact_id = {**email_contacts, **phone_contacts}
 
-        user_ids_mapped_contact_ids = {}
-        for attr in user_ids_mapped_attrs.keys():
-            user_id = user_ids_mapped_attrs[attr]
-            contact_id = contact_ids_mapped_attrs[attr]
-            user_ids_mapped_contact_ids[contact_id] = user_id
+        contact_id_to_user_id = {}
+        for attr, user_id in contact_attr_to_user_id.items():
+            contact_id = contact_attr_to_contact_id[attr]
+            contact_id_to_user_id[contact_id] = user_id
 
         # sort dict by key(contact_id)
-        user_ids_mapped_contact_ids = {
-            k: user_ids_mapped_contact_ids[k] for k in sorted(user_ids_mapped_contact_ids)
-        }
+        contact_id_to_user_id = {k: contact_id_to_user_id[k] for k in sorted(contact_id_to_user_id)}
 
-        for contact_id in user_ids_mapped_contact_ids.keys():
-            user_id = user_ids_mapped_contact_ids[contact_id]
+        for contact_id, user_id in contact_id_to_user_id.items():
             found_contacts.append({'contactId': contact_id, 'user': self.get_user(user_id)})
 
             follow_status = self.follower_manager.get_follow_status(user_id, caller_user.id)
