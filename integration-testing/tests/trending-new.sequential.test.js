@@ -24,7 +24,6 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => {
   await loginCache.clean()
   await misc.sleep(2000) // give dynamo handlers time to clean up trending indexes
@@ -34,6 +33,12 @@ afterAll(async () => await loginCache.reset())
 test('Post lifecycle, visibility and trending', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
 
   // we add a text-only post
   const postId1 = uuidv4()
@@ -140,6 +145,12 @@ describe('wrapper to ensure cleanup', () => {
   test('Non-owner views contribute to trending, filter by viewedStatus, reset & delete clear trending', async () => {
     const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
     const {client: otherClient} = await loginCache.getCleanLogin()
+
+    // verify trending indexes start empty
+    await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+      expect(trendingPosts.items).toHaveLength(0)
+      expect(trendingUsers.items).toHaveLength(0)
+    })
 
     // we add a post
     const postId1 = uuidv4()
@@ -280,6 +291,12 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
   const {client: theirClient} = await loginCache.getCleanLogin()
   const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+
   // we add a post
   const postId1 = uuidv4()
   await ourClient
@@ -365,6 +382,12 @@ test('Blocked, private post & user visibility of posts & users in trending', asy
 test('Posts that fail verification get lower trending scores, can be filtered', async () => {
   const {client} = await loginCache.getCleanLogin()
 
+  // verify trending indexes start empty
+  await client.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+
   // we add a post that is not verified
   const postId0 = uuidv4()
   await client
@@ -432,6 +455,12 @@ test('Users with subscription get trending boost', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+
   // we give ourselves some free diamond
   await ourClient
     .mutate({mutation: mutations.grantUserSubscriptionBonus})
@@ -482,6 +511,12 @@ test('Views of non-original posts contribute to the original post & user in tren
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   const {client: otherClient} = await loginCache.getCleanLogin()
+
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
 
   // they add an image post that will pass verification
   const postId1 = uuidv4()
@@ -576,6 +611,12 @@ test('Only first view of a post counts for trending', async () => {
   const {client: theirClient} = await loginCache.getCleanLogin()
   const {client: otherClient} = await loginCache.getCleanLogin()
 
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
   await ourClient
@@ -622,6 +663,12 @@ test('Report with FOCUS view type, order of posts in the trending index', async 
   const {client: other1Client} = await loginCache.getCleanLogin()
   const {client: other2Client} = await loginCache.getCleanLogin()
   const {client: other3Client} = await loginCache.getCleanLogin()
+
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
 
   // we add three posts, with sleeps so we have determinant trending order
   const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]

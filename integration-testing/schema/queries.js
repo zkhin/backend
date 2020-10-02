@@ -464,6 +464,21 @@ module.exports.selfFeed = gql`
   }
 `
 
+module.exports.allTrending = gql`
+  query AllTrending {
+    trendingUsers {
+      items {
+        userId
+      }
+    }
+    trendingPosts {
+      items {
+        postId
+      }
+    }
+  }
+`
+
 module.exports.trendingUsers = gql`
   query TrendingUsers($limit: Int) {
     trendingUsers(limit: $limit) {
