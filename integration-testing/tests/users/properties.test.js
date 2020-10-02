@@ -685,6 +685,7 @@ test('Validate user properties(location, matchAgeRange, matchGenders, matchLocat
   const location = {latitude: 100, longitude: 200, accuracy: -10}
   const matchAgeRange = {min: 100, max: 50}
   const matchLocationRadius = 10
+  const matchGenders = []
 
   // Validate match location radius
   await expect(
@@ -717,4 +718,9 @@ test('Validate user properties(location, matchAgeRange, matchGenders, matchLocat
       variables: {longitude: 50.01, latitude: 50.01, accuracy: location.accuracy},
     }),
   ).rejects.toThrow(/ClientError: accuracy should be greater than or equal to zero/)
+
+  // Validate match genders
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchGenders}})).rejects.toThrow(
+    /ClientError: matchGenders cannot be empty/,
+  )
 })

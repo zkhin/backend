@@ -29,7 +29,12 @@ from app.utils import image_size
 from .. import xray
 from . import routes
 from .exceptions import ClientException
-from .validation import validate_age_range, validate_location, validate_match_location_radius
+from .validation import (
+    validate_age_range,
+    validate_location,
+    validate_match_genders,
+    validate_match_location_radius,
+)
 
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 S3_PLACEHOLDER_PHOTOS_BUCKET = os.environ.get('S3_PLACEHOLDER_PHOTOS_BUCKET')
@@ -350,6 +355,9 @@ def set_user_details(caller_user, arguments, **kwargs):
 
     if match_location_radius is not None:
         validate_match_location_radius(match_location_radius, caller_user.subscription_level)
+
+    if match_genders is not None:
+        validate_match_genders(match_genders)
 
     # update the simple properties
     caller_user.update_details(

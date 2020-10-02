@@ -1,7 +1,12 @@
 import pytest
 
 from app.handlers.appsync.exceptions import ClientException
-from app.handlers.appsync.validation import validate_age_range, validate_location, validate_match_location_radius
+from app.handlers.appsync.validation import (
+    validate_age_range,
+    validate_location,
+    validate_match_genders,
+    validate_match_location_radius,
+)
 from app.models.user.enums import UserSubscriptionLevel
 
 
@@ -93,3 +98,9 @@ def test_validate_location():
 
     with pytest.raises(ClientException, match='latitude'):
         validate_location(location)
+
+
+def test_validate_match_genders():
+    with pytest.raises(ClientException, match='matchGenders'):
+        validate_match_genders([])
+    assert validate_match_genders(['anything']) is True

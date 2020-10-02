@@ -32,3 +32,9 @@ def validate_location(location):
     if accuracy is not None and accuracy < 0:
         raise ClientException('accuracy should be greater than or equal to zero')
     return True
+
+
+def validate_match_genders(match_genders):
+    if not match_genders:
+        raise ClientException('matchGenders cannot be empty')
+    return True
