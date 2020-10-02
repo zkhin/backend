@@ -233,7 +233,7 @@ def test_find_user_finds_correct_users(user_manager, user1, user2, user4, user5)
     user_manager.on_user_phone_number_change_update_subitem(user5.id, new_item=user5.item)
 
     # Check with None
-    assert user_manager.find_contacts(user1, contacts=[{'contactId': str(uuid.uuid4())}]) == []
+    assert user_manager.find_contacts(user1, contacts=[{'contactId': str(uuid.uuid4())}]) == {}
 
     # Check with only email
     contacts = [
@@ -246,12 +246,11 @@ def test_find_user_finds_correct_users(user_manager, user1, user2, user4, user5)
             'emails': [user5.item['email']],
         },
     ]
+    response = {'id_contact_1': user2.id, 'id_contact_2': user5.id}
 
-    found_contacts = user_manager.find_contacts(user1, contacts=contacts)
-    assert found_contacts[0]['user'].id == user2.id
-    assert found_contacts[0]['contactId'] == 'id_contact_1'
-    assert found_contacts[1]['user'].id == user5.id
-    assert found_contacts[1]['contactId'] == 'id_contact_2'
+    contact_id_to_user_id = user_manager.find_contacts(user1, contacts=contacts)
+    for contact_id, user_id in contact_id_to_user_id.items():
+        assert response[contact_id] == user_id
 
     # Check with only phone
     contacts = [
@@ -264,11 +263,11 @@ def test_find_user_finds_correct_users(user_manager, user1, user2, user4, user5)
             'phones': [user5.item['phoneNumber']],
         },
     ]
-    found_contacts = user_manager.find_contacts(user1, contacts=contacts)
-    assert found_contacts[0]['user'].id == user4.id
-    assert found_contacts[0]['contactId'] == 'id_contact_1'
-    assert found_contacts[1]['user'].id == user5.id
-    assert found_contacts[1]['contactId'] == 'id_contact_2'
+    response = {'id_contact_1': user4.id, 'id_contact_2': user5.id}
+
+    contact_id_to_user_id = user_manager.find_contacts(user1, contacts=contacts)
+    for contact_id, user_id in contact_id_to_user_id.items():
+        assert response[contact_id] == user_id
 
     # Check with phone & email
     contacts = [
@@ -286,14 +285,11 @@ def test_find_user_finds_correct_users(user_manager, user1, user2, user4, user5)
             'phones': [user5.item['phoneNumber']],
         },
     ]
+    response = {'id_contact_1': user2.id, 'id_contact_2': user4.id, 'id_contact_3': user5.id}
 
-    found_contacts = user_manager.find_contacts(user1, contacts=contacts)
-    assert found_contacts[0]['user'].id == user2.id
-    assert found_contacts[0]['contactId'] == 'id_contact_1'
-    assert found_contacts[1]['user'].id == user4.id
-    assert found_contacts[1]['contactId'] == 'id_contact_2'
-    assert found_contacts[2]['user'].id == user5.id
-    assert found_contacts[2]['contactId'] == 'id_contact_3'
+    contact_id_to_user_id = user_manager.find_contacts(user1, contacts=contacts)
+    for contact_id, user_id in contact_id_to_user_id.items():
+        assert response[contact_id] == user_id
 
 
 def test_find_user_add_cards_for_found_users_not_following(user_manager, user1, user2, user3, user5):

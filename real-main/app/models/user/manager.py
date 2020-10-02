@@ -512,7 +512,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         method, create a card inviting them to follow.
         """
 
-        found_contacts = []
         email_contacts, phone_contacts = {}, {}
         for contact in contacts:
             email_contacts.update({email: contact['contactId'] for email in contact.get('emails', [])})
@@ -528,18 +527,13 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             contact_id = contact_attr_to_contact_id[attr]
             contact_id_to_user_id[contact_id] = user_id
 
-        # sort dict by key(contact_id)
-        contact_id_to_user_id = {k: contact_id_to_user_id[k] for k in sorted(contact_id_to_user_id)}
-
-        for contact_id, user_id in contact_id_to_user_id.items():
-            found_contacts.append({'contactId': contact_id, 'user': self.get_user(user_id)})
-
+        for user_id in contact_id_to_user_id.values():
             follow_status = self.follower_manager.get_follow_status(user_id, caller_user.id)
             if follow_status == FollowStatus.NOT_FOLLOWING:
                 card_template = ContactJoinedCardTemplate(user_id, caller_user.id, caller_user.username)
                 self.card_manager.add_or_update_card(card_template)
 
-        return found_contacts
+        return contact_id_to_user_id
 
     def on_appstore_sub_status_change_update_subscription(self, original_transaction_id, new_item, old_item=None):
         if new_item['status'] == AppStoreSubscriptionStatus.ACTIVE:

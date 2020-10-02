@@ -161,6 +161,7 @@ custom:
       - ${file(./serverless/mapping-templates/query.yml)}
       - ${file(./serverless/mapping-templates/subscription.yml)}
       - ${file(./serverless/mapping-templates/user.yml)}
+      - ${file(./serverless/mapping-templates/found-contact.yml)}
 
       - type: PaginatedChatMessages
         field: items
