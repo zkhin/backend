@@ -513,20 +513,33 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         """
 
         found_contacts = []
-        user_ids = []
+        email_contacts, phone_contacts = {}, {}
         for contact in contacts:
-            emails = contact.get('emails', [])
-            phones = contact.get('phones', [])
+            for email in contact.get('emails', []):
+                email_contacts[email] = contact['contactId']
+            for phone in contact.get('phones', []):
+                phone_contacts[phone] = contact['contactId']
 
-            user_ids_from_emails = self.email_dynamo.batch_get_user_ids(emails)
-            user_ids_from_phones = self.phone_number_dynamo.batch_get_user_ids(phones)
-            first_user_id = (user_ids_from_emails + user_ids_from_phones)[0]
+        user_ids_mapped_emails = self.email_dynamo.batch_get_user_ids_attr_mapped(email_contacts.keys())
+        user_ids_mapped_phones = self.phone_number_dynamo.batch_get_user_ids_attr_mapped(phone_contacts.keys())
+        user_ids_mapped_attrs = {**user_ids_mapped_emails, **user_ids_mapped_phones}
+        contact_ids_mapped_attrs = {**email_contacts, **phone_contacts}
 
-            if first_user_id:
-                found_contacts.append({'contactId': contact['contactId'], 'user': self.get_user(first_user_id)})
-                user_ids.append(first_user_id)
+        user_ids_mapped_contact_ids = {}
+        for attr in user_ids_mapped_attrs.keys():
+            user_id = user_ids_mapped_attrs[attr]
+            contact_id = contact_ids_mapped_attrs[attr]
+            user_ids_mapped_contact_ids[contact_id] = user_id
 
-        for user_id in user_ids:
+        # sort dict by key(contact_id)
+        user_ids_mapped_contact_ids = {
+            k: user_ids_mapped_contact_ids[k] for k in sorted(user_ids_mapped_contact_ids)
+        }
+
+        for contact_id in user_ids_mapped_contact_ids.keys():
+            user_id = user_ids_mapped_contact_ids[contact_id]
+            found_contacts.append({'contactId': contact_id, 'user': self.get_user(user_id)})
+
             follow_status = self.follower_manager.get_follow_status(user_id, caller_user.id)
             if follow_status == FollowStatus.NOT_FOLLOWING:
                 card_template = ContactJoinedCardTemplate(user_id, caller_user.id, caller_user.username)
