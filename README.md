@@ -111,13 +111,13 @@ Please talk to the backend team lead to get access to these stacks.
 
 #### `themes`
 
-_Required, must be deployed before real-main_
+_Required, must be deployed before `real-main`_
 
 The `themes` stack will create an S3 bucket, within which there is a subdirectory `placeholder-photos`. The integration tests in this repo expect that subdirectory to be empty.
 
 #### `dating`
 
-_Optional, no deployment order constraints_
+_Optional, must be deployed after `real-main`_
 
 Only required in order for dating-related operations and tests to work correctly.
 

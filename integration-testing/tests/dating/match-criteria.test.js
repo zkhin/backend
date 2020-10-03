@@ -189,7 +189,7 @@ test('Changing match criteria changes match status', async () => {
   // they adjust their location, check match disappears
   await theirClient.mutate({
     mutation: mutations.setUserDetails,
-    variables: {location: {latitude: -30, longitude: -30}},
+    variables: {location: {latitude: -30, longitude: -5}},
   })
   await misc.sleep(2000)
   await ourClient
@@ -202,7 +202,7 @@ test('Changing match criteria changes match status', async () => {
   // we adjust our location, check match reappears
   await ourClient.mutate({
     mutation: mutations.setUserDetails,
-    variables: {location: {latitude: -30, longitude: -30}},
+    variables: {location: {latitude: -30, longitude: -5}},
   })
   await misc.sleep(2000)
   await ourClient

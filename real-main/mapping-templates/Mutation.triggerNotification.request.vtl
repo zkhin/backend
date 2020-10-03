@@ -1,5 +1,5 @@
-#if (! $ctx.identity.username.startsWith('${lambdaRoleId}:'))
-  ## the error message format is diff here than other mapping templates b/c this is a mutation
+## off limits to cognito-authenticated clients
+#if (! $util.isNull($ctx.identity.cognitoIdentityId))
   $util.error('ClientError: Access denied', 'ClientError')
 #end
 
@@ -11,6 +11,7 @@ $util.toJson({
     'userId': $input.userId,
     'type': $input.type,
     'followedUserId': $input.followedUserId,
+    'matchUserId': $input.matchUserId,
     'postId': $input.postId,
     'userChatsWithUnviewedMessagesCount': $input.userChatsWithUnviewedMessagesCount
   }

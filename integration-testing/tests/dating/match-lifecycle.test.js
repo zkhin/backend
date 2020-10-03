@@ -164,32 +164,14 @@ test('POTENTIAL -> REJECTED & APPROVED', async () => {
     .then(({data: {addPost: post}}) => expect(post.postId).toBe(pid1))
   await ourClient.mutate({
     mutation: mutations.setUserDetails,
-    variables: {
-      fullName: 'Hunter S',
-      photoPostId: pid1,
-      gender: 'FEMALE',
-      location: {latitude: 30, longitude: 0},
-      dateOfBirth: '2000-01-01',
-      matchAgeRange: {min: 20, max: 30},
-      matchGenders: ['FEMALE'],
-      matchLocationRadius: 50,
-    },
+    variables: {...datingVariables, photoPostId: pid1},
   })
   await theirClient
     .mutate({mutation: mutations.addPost, variables: {postId: pid2, imageData: imageDataB64, takenInReal: true}})
     .then(({data: {addPost: post}}) => expect(post.postId).toBe(pid2))
   await theirClient.mutate({
     mutation: mutations.setUserDetails,
-    variables: {
-      fullName: 'Hunter S',
-      photoPostId: pid2,
-      gender: 'FEMALE',
-      location: {latitude: 30, longitude: 0},
-      dateOfBirth: '2000-01-01',
-      matchAgeRange: {min: 20, max: 30},
-      matchGenders: ['FEMALE'],
-      matchLocationRadius: 50,
-    },
+    variables: {...datingVariables, photoPostId: pid2},
   })
   await misc.sleep(2000)
   await ourClient

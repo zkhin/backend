@@ -315,6 +315,7 @@ type Notification {
   # Each of the following fields will be non-null only for some NotificationTypes,
   # exactly which is listed in the comments for the NotificationType
   followedUserId: ID
+  matchUserId: ID
   postId: ID
   userChatsWithUnviewedMessagesCount: Int
 }
@@ -331,6 +332,11 @@ type Notification {
 #   - fires when User.chatsWithUnviewedMessagesCount changes
 #   - Notification.userChatsWithUnviewedMessagesCount: the new value
 #
+# USER_DATING_MATCH_CHANGED
+#   - fires when a dating matches is added, removed or changes status
+#   - does not fire for changes in ordering for a user's matches
+#   - Notification.matchUserId: the id of the matched user
+#
 # USER_FEED_CHANGED
 #   - fires when the User's feed may have changed and should be refreshed
 #
@@ -343,6 +349,7 @@ enum NotificationType {
   POST_COMPLETED
   POST_ERROR
   USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED
+  USER_DATING_MATCH_CHANGED
   USER_FEED_CHANGED
   USER_FOLLOWED_USERS_WITH_STORIES_CHANGED
 }
@@ -352,6 +359,7 @@ input NotificationInput {
   userId: ID!  # user this notification is intended for
   type: NotificationType!
   followedUserId: ID
+  matchUserId: ID
   postId: ID
   userChatsWithUnviewedMessagesCount: Int
 }

@@ -147,7 +147,6 @@ custom:
       level: ERROR
     substitutions:
       dynamoTable: ${self:provider.environment.DYNAMO_TABLE}
-      lambdaRoleId: '#{IamRoleLambdaExecution.RoleId}'
       realUserId: ${self:provider.environment.REAL_USER_ID}
     xrayEnabled: true
 
@@ -378,6 +377,7 @@ custom:
         pattern: 'ERROR'
 
 resources:
+  - ${file(./serverless/resources/appsync.yml)}
   - ${file(./serverless/resources/cloud-watch.yml)}
   - ${file(./serverless/resources/cognito.yml)}
   - ${file(./serverless/resources/dynamo.yml)}
