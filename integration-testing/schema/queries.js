@@ -227,14 +227,14 @@ module.exports.searchUsers = gql`
   }
 `
 
-module.exports.findUsers = gql`
-  query FindUsers($emails: [AWSEmail!], $phoneNumbers: [AWSPhone!]) {
-    findUsers(emails: $emails, phoneNumbers: $phoneNumbers) {
-      items {
+module.exports.findContacts = gql`
+  query FindContacts($contacts: [ContactInput!]!) {
+    findContacts(contacts: $contacts) {
+      contactId
+      user {
         userId
         username
       }
-      nextToken
     }
   }
 `
