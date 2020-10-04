@@ -42,22 +42,27 @@ test('Cannot subscribe to other users notifications', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
-  // we both try to subscribe to their messages
+  // we try to subscribe to their notifications, should never get called
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
   // the subscription next() method is never triggered
-  const ourNotifications = []
-  const theirNotifications = []
   await ourClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}})
     .subscribe({
-      next: (resp) => ourNotifications.push(resp),
-      error: (resp) => console.log(resp),
+      next: (resp) => expect(`Subscription should not be called: ${resp}`).toBeNull(),
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
+
+  // they subscribe to their notifications
+  const theirHandlers = []
   const theirSub = await theirClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}})
     .subscribe({
-      next: (resp) => theirNotifications.push(resp),
-      error: (resp) => console.log(resp),
+      next: ({data: {onCardNotification: notification}}) => {
+        const handler = theirHandlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
   const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
@@ -75,14 +80,11 @@ test('Cannot subscribe to other users notifications', async () => {
     })
 
   // we comment on their post (thus generating a card)
+  let nextNotification = new Promise((resolve) => theirHandlers.push(resolve))
   await ourClient
     .mutate({mutation: mutations.addComment, variables: {commentId: uuidv4(), postId, text: 'lore!'}})
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
-
-  // wait for some messages to show up, ensure none did for us but one did for them
-  await misc.sleep(5000)
-  expect(ourNotifications).toHaveLength(0)
-  expect(theirNotifications).toHaveLength(1)
+  await nextNotification
 
   // we don't unsubscribe from our subscription because
   //  - it's not actually active, although I have yet to find a way to expect() that

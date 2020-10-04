@@ -22,25 +22,20 @@ test('Comment card format, subscription notifications', async () => {
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // we subscribe to our cards
-  const [resolvers, rejectors] = [[], []]
+  const handlers = []
   const sub = await ourClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: ourUserId}})
     .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
+      next: ({data: {onCardNotification: notification}}) => {
+        const handler = handlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
       },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  let nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we add a post
   const postId = uuidv4()
@@ -98,17 +93,14 @@ test('Comment card format, subscription notifications', async () => {
 
   // verify subscription fired correctly with that new card
   // Note that thumbnails are not included in subscription notifcations
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('ADDED')
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('ADDED')
     const {thumbnail, ...card1OtherFields} = card1
     expect(thumbnail).toBeTruthy()
-    expect(data.onCardNotification.card).toEqual(card1OtherFields)
+    expect(notification.card).toEqual(card1OtherFields)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // they comment again on the post
   await theirClient
@@ -133,17 +125,14 @@ test('Comment card format, subscription notifications', async () => {
   })
 
   // verify subscription fired correctly with that changed card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('EDITED')
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('EDITED')
     const {thumbnail, ...card2OtherFields} = card2
     expect(thumbnail).toBeTruthy()
-    expect(data.onCardNotification.card).toEqual(card2OtherFields)
+    expect(notification.card).toEqual(card2OtherFields)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we view that post
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
@@ -157,12 +146,12 @@ test('Comment card format, subscription notifications', async () => {
   })
 
   // verify subscription fired correctly for card deletion
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('DELETED')
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('DELETED')
     const {thumbnail, ...card2OtherFields} = card2
     expect(thumbnail).toBeTruthy()
-    expect(data.onCardNotification.card).toEqual(card2OtherFields)
+    expect(notification.card).toEqual(card2OtherFields)
   })
 
   // shut down the subscription

@@ -66,12 +66,11 @@ test('Cannot subscribe to other users messages', async () => {
   // verify we cannot subscribe to their messages
   // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
   // the subscription next() method is never triggered
-  const msgNotifications = []
   await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
     .subscribe({
-      next: (resp) => msgNotifications.push(resp),
-      error: (resp) => console.log(resp),
+      next: (resp) => expect(`Subscription should not be called: ${resp}`).toBeNull(),
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
 
   // they open up a chat with us
@@ -97,9 +96,8 @@ test('Cannot subscribe to other users messages', async () => {
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'ipsum'}})
     .then(({data: {addChatMessage: message}}) => expect(message.chat.chatId).toBe(chatId))
 
-  // wait for some messages to show up, ensure none did
+  // wait for some messages to show up, if they do test will fail
   await misc.sleep(5000)
-  expect(msgNotifications).toEqual([])
 
   // we don't unsubscribe from the subscription because
   //  - it's not actually active, although I have yet to find a way to expect() that
@@ -112,28 +110,50 @@ test('Messages in multiple chats fire', async () => {
   const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to chat messages
-  const ourMsgNotifications = []
+  const ourHandlers = []
   const ourSub = await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: ourUserId}})
-    .subscribe({next: ({data}) => ourMsgNotifications.push(data.onChatMessageNotification)})
+    .subscribe({
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = ourHandlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    })
   const ourSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
 
   // they subscribe to chat messages
-  const theirMsgNotifications = []
+  const theirHandlers = []
   const theirSub = await theirClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
-    .subscribe({next: ({data}) => theirMsgNotifications.push(data.onChatMessageNotification)})
+    .subscribe({
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = theirHandlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    })
   const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
 
   // other subscribes to chat messages
-  const otherMsgNotifications = []
+  const otherHandlers = []
   const otherSub = await otherClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: otherUserId}})
-    .subscribe({next: ({data}) => otherMsgNotifications.push(data.onChatMessageNotification)})
+    .subscribe({
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = otherHandlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    })
   const otherSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  await misc.sleep(2000) // let the subscriptions initialize
 
   // we open a direct chat with them
-  await misc.sleep(2000) // let the subscriptions initialize
+  let theirNextNotification = new Promise((resolve) => theirHandlers.push(resolve))
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
   await ourClient
     .mutate({
@@ -145,9 +165,13 @@ test('Messages in multiple chats fire', async () => {
       expect(data.createDirectChat.messages.items).toHaveLength(1)
       expect(data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
     })
+  await theirNextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId1)
+    expect(notification.message.authorUserId).toBe(ourUserId)
+  })
 
   // they post a message to the chat
-  await misc.sleep(1000) // notification ordering
+  let ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
   const messageId2 = uuidv4()
   await theirClient
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'm2'}})
@@ -155,19 +179,66 @@ test('Messages in multiple chats fire', async () => {
       expect(data.addChatMessage.chat.chatId).toBe(chatId)
       expect(data.addChatMessage.messageId).toBe(messageId2)
     })
+  await ourNextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId2)
+    expect(notification.message.authorUserId).toBe(theirUserId)
+  })
 
-  // other opens a group chat with all three of us
-  await misc.sleep(1000) // notification ordering
+  /* Use me to establish order among notifications */
+  const notificationCompare = (a, b) => {
+    const aTextReversed = a.message.text.split('').reverse().join('')
+    const bTextReversed = b.message.text.split('').reverse().join('')
+    return aTextReversed.localeCompare(bTextReversed)
+  }
+
+  // other opens a group chat with all three of us, verify we each receive two notifications
+  // where order is not guaranteed (though the messages in the chat are)
   const [chatId2, messageId3] = [uuidv4(), uuidv4()]
+  const ourNextTwoNotifications = new Promise((resolve) => {
+    let firstNotification
+    ourHandlers.push((notification) => (firstNotification = notification))
+    ourHandlers.push((notification) => resolve([firstNotification, notification]))
+  })
+  const theirNextTwoNotifications = new Promise((resolve) => {
+    let firstNotification
+    theirHandlers.push((notification) => (firstNotification = notification))
+    theirHandlers.push((notification) => resolve([firstNotification, notification]))
+  })
+  const otherNextTwoNotifications = new Promise((resolve) => {
+    let firstNotification
+    otherHandlers.push((notification) => (firstNotification = notification))
+    otherHandlers.push((notification) => resolve([firstNotification, notification]))
+  })
   await otherClient
     .mutate({
       mutation: mutations.createGroupChat,
       variables: {chatId: chatId2, userIds: [ourUserId, theirUserId], messageId: messageId3, messageText: 'm3'},
     })
     .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId2))
+  await ourNextTwoNotifications.then((notifications) => {
+    notifications.sort(notificationCompare)
+    expect(notifications[0].message.messageId).toBe(messageId3)
+    expect(notifications[0].message.authorUserId).toBe(otherUserId)
+    expect(notifications[1].message.text).toContain('added')
+    expect(notifications[1].message.authorUserId).toBeNull()
+  })
+  await theirNextTwoNotifications.then((notifications) => {
+    notifications.sort(notificationCompare)
+    expect(notifications[0].message.messageId).toBe(messageId3)
+    expect(notifications[0].message.authorUserId).toBe(otherUserId)
+    expect(notifications[1].message.text).toContain('added')
+    expect(notifications[1].message.authorUserId).toBeNull()
+  })
+  await otherNextTwoNotifications.then((notifications) => {
+    expect(notifications[0].message.text).toContain('created')
+    expect(notifications[0].message.authorUserId).toBeNull()
+    expect(notifications[1].message.text).toContain('added')
+    expect(notifications[1].message.authorUserId).toBeNull()
+  })
 
   // we post a message to the group chat
-  await misc.sleep(1000) // notification ordering
+  theirNextNotification = new Promise((resolve) => theirHandlers.push(resolve))
+  let otherNextNotification = new Promise((resolve) => otherHandlers.push(resolve))
   const messageId4 = uuidv4()
   await ourClient
     .mutate({
@@ -178,48 +249,14 @@ test('Messages in multiple chats fire', async () => {
       expect(data.addChatMessage.chat.chatId).toBe(chatId2)
       expect(data.addChatMessage.messageId).toBe(messageId4)
     })
-
-  // give all notifications a moment to show up
-  await misc.sleep(6000)
-
-  /* Use me to establish order among notifications */
-  const notificationCompare = (a, b) => {
-    const aTextReversed = a.message.text.split('').reverse().join('')
-    const bTextReversed = b.message.text.split('').reverse().join('')
-    return aTextReversed.localeCompare(bTextReversed)
-  }
-
-  // we should see all messages from chats we were in (except our own messages), order not guaranteed
-  ourMsgNotifications.sort(notificationCompare)
-  expect(ourMsgNotifications).toHaveLength(3)
-  expect(ourMsgNotifications[0].message.messageId).toBe(messageId2)
-  expect(ourMsgNotifications[0].message.authorUserId).toBe(theirUserId)
-  expect(ourMsgNotifications[1].message.messageId).toBe(messageId3)
-  expect(ourMsgNotifications[1].message.authorUserId).toBe(otherUserId)
-  expect(ourMsgNotifications[2].message.text).toContain('added')
-  expect(ourMsgNotifications[2].message.authorUserId).toBeNull()
-
-  // they should see all messages from chats they were in (except their own messages), order not guaranteed
-  theirMsgNotifications.sort(notificationCompare)
-  expect(theirMsgNotifications).toHaveLength(4)
-  expect(theirMsgNotifications[0].message.messageId).toBe(messageId1)
-  expect(theirMsgNotifications[0].message.authorUserId).toBe(ourUserId)
-  expect(theirMsgNotifications[1].message.messageId).toBe(messageId3)
-  expect(theirMsgNotifications[1].message.authorUserId).toBe(otherUserId)
-  expect(theirMsgNotifications[2].message.messageId).toBe(messageId4)
-  expect(theirMsgNotifications[2].message.authorUserId).toBe(ourUserId)
-  expect(theirMsgNotifications[3].message.text).toContain('added')
-  expect(theirMsgNotifications[3].message.authorUserId).toBeNull()
-
-  // other should see all messages from their chats (except their own), order not guaranteed
-  otherMsgNotifications.sort(notificationCompare)
-  expect(otherMsgNotifications).toHaveLength(3)
-  expect(otherMsgNotifications[0].message.messageId).toBe(messageId4)
-  expect(otherMsgNotifications[0].message.authorUserId).toBe(ourUserId)
-  expect(otherMsgNotifications[1].message.text).toContain('created')
-  expect(otherMsgNotifications[1].message.authorUserId).toBeNull()
-  expect(otherMsgNotifications[2].message.text).toContain('added')
-  expect(otherMsgNotifications[2].message.authorUserId).toBeNull()
+  await theirNextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId4)
+    expect(notification.message.authorUserId).toBe(ourUserId)
+  })
+  await otherNextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId4)
+    expect(notification.message.authorUserId).toBe(ourUserId)
+  })
 
   // shut down the subscriptions
   ourSub.unsubscribe()
@@ -247,30 +284,23 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
       expect(chat.messages.items[0].messageId).toBe(messageId1)
     })
 
-  // state that will allow us to create promises that resolve to the next notification from the subscription
-  const [resolvers, rejectors] = [[], []]
-
-  // set up a promise that will resolve to the first message received from the subscription
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  // we subscribe to our chat message notificaitons
+  const handlers = []
   const sub = await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: ourUserId}})
     .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = handlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
       },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
 
-  // they add a message to the chat
+  // they add a message to the chat, verify notification
+  let nextNotification = new Promise((resolve) => handlers.push(resolve))
   const [messageId2, text2] = [uuidv4(), `hi @${ourUsername}!`]
   const createdAt = await theirClient
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: text2}})
@@ -280,23 +310,21 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
       expect(message.createdAt).toBeTruthy()
       return message.createdAt
     })
-
-  // verify the subscription received the notification and in correct format
-  await nextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.userId).toBe(ourUserId)
-    expect(onChatMessageNotification.type).toBe('ADDED')
-    expect(onChatMessageNotification.message.messageId).toBe(messageId2)
-    expect(onChatMessageNotification.message.chat.chatId).toBe(chatId)
-    expect(onChatMessageNotification.message.authorUserId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author.userId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author.username).toBe(theirUsername)
-    expect(onChatMessageNotification.message.author.photo).toBeNull()
-    expect(onChatMessageNotification.message.text).toBe(text2)
-    expect(onChatMessageNotification.message.textTaggedUsers).toHaveLength(1)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].user.userId).toBe(ourUserId)
-    expect(onChatMessageNotification.message.createdAt).toBe(createdAt)
-    expect(onChatMessageNotification.message.lastEditedAt).toBeNull()
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('ADDED')
+    expect(notification.message.messageId).toBe(messageId2)
+    expect(notification.message.chat.chatId).toBe(chatId)
+    expect(notification.message.authorUserId).toBe(theirUserId)
+    expect(notification.message.author.userId).toBe(theirUserId)
+    expect(notification.message.author.username).toBe(theirUsername)
+    expect(notification.message.author.photo).toBeNull()
+    expect(notification.message.text).toBe(text2)
+    expect(notification.message.textTaggedUsers).toHaveLength(1)
+    expect(notification.message.textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
+    expect(notification.message.textTaggedUsers[0].user.userId).toBe(ourUserId)
+    expect(notification.message.createdAt).toBe(createdAt)
+    expect(notification.message.lastEditedAt).toBeNull()
   })
 
   // they add a post they will use as a profile photo
@@ -310,13 +338,8 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
     .mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
     .then(({data: {setUserDetails: user}}) => expect(user.photo.url).toBeTruthy())
 
-  // set up a promise for the next notification
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
-
-  // they edit their message to the chat
+  // they edit their message to the chat, verify notification
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
   const text3 = `this is @${theirUsername}!`
   const lastEditedAt = await theirClient
     .mutate({mutation: mutations.editChatMessage, variables: {messageId: messageId2, text: text3}})
@@ -326,52 +349,43 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
       expect(message.lastEditedAt).toBeTruthy()
       return message.lastEditedAt
     })
-
-  // verify the subscription received the notification and in correct format
-  await nextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.userId).toBe(ourUserId)
-    expect(onChatMessageNotification.type).toBe('EDITED')
-    expect(onChatMessageNotification.message.messageId).toBe(messageId2)
-    expect(onChatMessageNotification.message.chat.chatId).toBe(chatId)
-    expect(onChatMessageNotification.message.authorUserId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author.userId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author.username).toBe(theirUsername)
-    expect(onChatMessageNotification.message.author.photo.url64p).toBeTruthy()
-    expect(onChatMessageNotification.message.text).toBe(text3)
-    expect(onChatMessageNotification.message.textTaggedUsers).toHaveLength(1)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].user.userId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.createdAt).toBe(createdAt)
-    expect(onChatMessageNotification.message.lastEditedAt).toBe(lastEditedAt)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('EDITED')
+    expect(notification.message.messageId).toBe(messageId2)
+    expect(notification.message.chat.chatId).toBe(chatId)
+    expect(notification.message.authorUserId).toBe(theirUserId)
+    expect(notification.message.author.userId).toBe(theirUserId)
+    expect(notification.message.author.username).toBe(theirUsername)
+    expect(notification.message.author.photo.url64p).toBeTruthy()
+    expect(notification.message.text).toBe(text3)
+    expect(notification.message.textTaggedUsers).toHaveLength(1)
+    expect(notification.message.textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
+    expect(notification.message.textTaggedUsers[0].user.userId).toBe(theirUserId)
+    expect(notification.message.createdAt).toBe(createdAt)
+    expect(notification.message.lastEditedAt).toBe(lastEditedAt)
   })
 
-  // set up a promise for the next notification
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
-
-  // they delete their message to the chat
+  // they delete their message to the chat, verify notification
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
   await theirClient
     .mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId2}})
     .then(({data: {deleteChatMessage: message}}) => expect(message.messageId).toBe(messageId2))
-
-  // verify the subscription received the notificaiton and in correct format
-  await nextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.userId).toBe(ourUserId)
-    expect(onChatMessageNotification.type).toBe('DELETED')
-    expect(onChatMessageNotification.message.messageId).toBe(messageId2)
-    expect(onChatMessageNotification.message.chat.chatId).toBe(chatId)
-    expect(onChatMessageNotification.message.authorUserId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author.userId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author.username).toBe(theirUsername)
-    expect(onChatMessageNotification.message.author.photo.url64p).toBeTruthy()
-    expect(onChatMessageNotification.message.text).toBe(text3)
-    expect(onChatMessageNotification.message.textTaggedUsers).toHaveLength(1)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].user.userId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.createdAt).toBe(createdAt)
-    expect(onChatMessageNotification.message.lastEditedAt).toBe(lastEditedAt)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('DELETED')
+    expect(notification.message.messageId).toBe(messageId2)
+    expect(notification.message.chat.chatId).toBe(chatId)
+    expect(notification.message.authorUserId).toBe(theirUserId)
+    expect(notification.message.author.userId).toBe(theirUserId)
+    expect(notification.message.author.username).toBe(theirUsername)
+    expect(notification.message.author.photo.url64p).toBeTruthy()
+    expect(notification.message.text).toBe(text3)
+    expect(notification.message.textTaggedUsers).toHaveLength(1)
+    expect(notification.message.textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
+    expect(notification.message.textTaggedUsers[0].user.userId).toBe(theirUserId)
+    expect(notification.message.createdAt).toBe(createdAt)
+    expect(notification.message.lastEditedAt).toBe(lastEditedAt)
   })
 
   // shut down the subscription
@@ -394,77 +408,60 @@ test('Notifications for a group chat', async () => {
     .then(({data: {createGroupChat: chat}}) => expect(chat.chatId).toBe(chatId))
 
   // we initialize a subscription to new message notifications
-  const [resolvers, rejectors] = [[], []]
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  const handlers = []
   const sub = await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: ourUserId}})
     .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = handlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
       },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
 
-  // other1 adds a message to the chat
+  // other1 adds a message to the chat, verify notification
+  let nextNotification = new Promise((resolve) => handlers.push(resolve))
   const messageId2 = uuidv4()
   await other1Client
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'text 2'}})
     .then(({data: {addChatMessage: message}}) => expect(message.messageId).toBe(messageId2))
-
-  // verify we received the message
-  await nextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.message.messageId).toBe(messageId2)
-    expect(onChatMessageNotification.message.authorUserId).toBe(other1UserId)
-  })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
+  await nextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId2)
+    expect(notification.message.authorUserId).toBe(other1UserId)
   })
 
-  // we edit group name to trigger a system message
+  // we edit group name to trigger a system message, verify notification
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
   await ourClient
     .mutate({mutation: mutations.editGroupChat, variables: {chatId, name: 'new name'}})
     .then(({data: {editGroupChat: chat}}) => {
       expect(chat.chatId).toBe(chatId)
       expect(chat.name).toBe('new name')
     })
-
-  // verify we received the message
-  await nextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.message.messageId).toBeTruthy()
-    expect(onChatMessageNotification.message.text).toContain(ourUsername)
-    expect(onChatMessageNotification.message.text).toContain('changed the name of the group')
-    expect(onChatMessageNotification.message.text).toContain('"new name"')
-    expect(onChatMessageNotification.message.textTaggedUsers).toHaveLength(1)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].tag).toContain(ourUsername)
-    expect(onChatMessageNotification.message.textTaggedUsers[0].user.userId).toContain(ourUserId)
-    expect(onChatMessageNotification.message.authorUserId).toBeNull()
-    expect(onChatMessageNotification.message.author).toBeNull()
-  })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
+  await nextNotification.then((notification) => {
+    expect(notification.message.messageId).toBeTruthy()
+    expect(notification.message.text).toContain(ourUsername)
+    expect(notification.message.text).toContain('changed the name of the group')
+    expect(notification.message.text).toContain('"new name"')
+    expect(notification.message.textTaggedUsers).toHaveLength(1)
+    expect(notification.message.textTaggedUsers[0].tag).toContain(ourUsername)
+    expect(notification.message.textTaggedUsers[0].user.userId).toContain(ourUserId)
+    expect(notification.message.authorUserId).toBeNull()
+    expect(notification.message.author).toBeNull()
   })
 
-  // other2 adds a message to the chat
+  // other2 adds a message to the chat, verify notification
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
   const messageId3 = uuidv4()
   await other2Client
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId3, text: 'text 3'}})
     .then(({data: {addChatMessage: message}}) => expect(message.messageId).toBe(messageId3))
-
-  // verify we received the message
-  await nextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.message.messageId).toBe(messageId3)
-    expect(onChatMessageNotification.message.authorUserId).toBe(other2UserId)
+  await nextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId3)
+    expect(notification.message.authorUserId).toBe(other2UserId)
   })
 
   // shut down our subscription
@@ -499,52 +496,57 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
     })
 
   // they listen to message notifciations
-  let next, error
-  const theirNextNotification = new Promise((resolve, reject) => {
-    next = resolve
-    error = reject
-  })
+  const theirHandlers = []
   const theirSub = await theirClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
-    .subscribe({next, error})
+    .subscribe({
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = theirHandlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    })
   const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
 
-  // we add a message
+  // we add a message, verify they received notificaiton received without author
+  let theirNextNotification = new Promise((resolve) => theirHandlers.push(resolve))
   const messageId2 = uuidv4()
   await ourClient
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'lore'}})
     .then(({data: {addChatMessage: message}}) => expect(message.messageId).toBe(messageId2))
-
-  // verify they received a notifcation for our message with no author
-  await theirNextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.message.messageId).toBe(messageId2)
-    expect(onChatMessageNotification.message.authorUserId).toBe(ourUserId)
-    expect(onChatMessageNotification.message.author).toBeNull()
+  await theirNextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId2)
+    expect(notification.message.authorUserId).toBe(ourUserId)
+    expect(notification.message.author).toBeNull()
   })
 
   // we listen to notifciations
-  const ourNextNotification = new Promise((resolve, reject) => {
-    next = resolve
-    error = reject
-  })
+  const ourHandlers = []
   const ourSub = await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: ourUserId}})
-    .subscribe({next, error})
+    .subscribe({
+      next: ({data: {onChatMessageNotification: notification}}) => {
+        const handler = ourHandlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    })
   const ourSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
 
-  // they add a message
+  // they add a message, verify we receive notification without author
+  let ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
   const messageId3 = uuidv4()
   await theirClient
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId3, text: 'ipsum'}})
     .then(({data: {addChatMessage: chat}}) => expect(chat.messageId).toBe(messageId3))
-
-  // verify we received a notifcation for their message
-  await ourNextNotification.then(({data: {onChatMessageNotification}}) => {
-    expect(onChatMessageNotification.message.messageId).toBe(messageId3)
-    expect(onChatMessageNotification.message.authorUserId).toBe(theirUserId)
-    expect(onChatMessageNotification.message.author).toBeNull()
+  await ourNextNotification.then((notification) => {
+    expect(notification.message.messageId).toBe(messageId3)
+    expect(notification.message.authorUserId).toBe(theirUserId)
+    expect(notification.message.author).toBeNull()
   })
 
   // shut down the subscriptions

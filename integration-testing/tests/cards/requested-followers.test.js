@@ -20,25 +20,20 @@ test('Requested followers card with correct format, subscription notifications',
   const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we subscribe to our cards
-  const [resolvers, rejectors] = [[], []]
+  const handlers = []
   const sub = await ourClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: ourUserId}})
     .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
+      next: ({data: {onCardNotification: notification}}) => {
+        const handler = handlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
       },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  let nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we go private
   await ourClient
@@ -78,15 +73,12 @@ test('Requested followers card with correct format, subscription notifications',
   expect(card1Thumbnail).toBeNull()
 
   // verify subscription fired correctly with that new card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('ADDED')
-    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('ADDED')
+    expect(notification.card).toEqual(card1ExcludingThumbnail)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // other2 requests to follow us
   await other2Client
@@ -113,15 +105,12 @@ test('Requested followers card with correct format, subscription notifications',
   expect(card2Thumbnail).toBeNull()
 
   // verify subscription fired correctly with that changed card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('EDITED')
-    expect(data.onCardNotification.card).toEqual(card2ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('EDITED')
+    expect(notification.card).toEqual(card2ExcludingThumbnail)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // other1 gives up on following us
   await other1Client
@@ -138,15 +127,12 @@ test('Requested followers card with correct format, subscription notifications',
   })
 
   // verify subscription fired correctly with that changed card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('EDITED')
-    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('EDITED')
+    expect(notification.card).toEqual(card1ExcludingThumbnail)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we accept other2's follow request
   await ourClient
@@ -164,10 +150,10 @@ test('Requested followers card with correct format, subscription notifications',
   })
 
   // verify subscription fired correctly for card deletion
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('DELETED')
-    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('DELETED')
+    expect(notification.card).toEqual(card1ExcludingThumbnail)
   })
 
   // shut down the subscription

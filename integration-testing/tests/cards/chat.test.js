@@ -20,25 +20,20 @@ test('Unread chat message card with correct format', async () => {
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we subscribe to our cards
-  const [resolvers, rejectors] = [[], []]
+  const handlers = []
   const sub = await ourClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: ourUserId}})
     .subscribe({
-      next: (resp) => {
-        rejectors.pop()
-        resolvers.pop()(resp)
+      next: ({data: {onCardNotification: notification}}) => {
+        const handler = handlers.shift()
+        expect(handler).toBeDefined()
+        handler(notification)
       },
-      error: (resp) => {
-        resolvers.pop()
-        rejectors.pop()(resp)
-      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
-  let nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  let nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we start a direct chat with them, verify no card generated for the chat we created or that first message
   const chatId = uuidv4()
@@ -80,15 +75,12 @@ test('Unread chat message card with correct format', async () => {
   expect(card1Thumbnail).toBeNull()
 
   // verify subscription fired correctly with that new card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('ADDED')
-    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('ADDED')
+    expect(notification.card).toEqual(card1ExcludingThumbnail)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // they add another message to the chat, verify card title has not changed
   await ourClient
@@ -134,15 +126,12 @@ test('Unread chat message card with correct format', async () => {
   expect(card2Thumbnail).toBeNull()
 
   // verify subscription fired correctly with that changed card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('EDITED')
-    expect(data.onCardNotification.card).toEqual(card2ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('EDITED')
+    expect(notification.card).toEqual(card2ExcludingThumbnail)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we report to have viewed one of the chats, verify our card title has changed back to original
   await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
@@ -157,15 +146,12 @@ test('Unread chat message card with correct format', async () => {
   })
 
   // verify subscription fired correctly with that changed card
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('EDITED')
-    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('EDITED')
+    expect(notification.card).toEqual(card1ExcludingThumbnail)
   })
-  nextNotification = new Promise((resolve, reject) => {
-    resolvers.push(resolve)
-    rejectors.push(reject)
-  })
+  nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we report to have viewed the other chat, verify card has dissapeared
   await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId2]}})
@@ -180,10 +166,10 @@ test('Unread chat message card with correct format', async () => {
   })
 
   // verify subscription fired correctly for card deletion
-  await nextNotification.then(({data}) => {
-    expect(data.onCardNotification.userId).toBe(ourUserId)
-    expect(data.onCardNotification.type).toBe('DELETED')
-    expect(data.onCardNotification.card).toEqual(card1ExcludingThumbnail)
+  await nextNotification.then((notification) => {
+    expect(notification.userId).toBe(ourUserId)
+    expect(notification.type).toBe('DELETED')
+    expect(notification.card).toEqual(card1ExcludingThumbnail)
   })
 
   // shut down the subscription

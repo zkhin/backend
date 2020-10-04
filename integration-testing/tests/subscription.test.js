@@ -44,14 +44,23 @@ test('Cannot subscribe to other users notifications', async () => {
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // We both listen to notifictions on **our** user object
-  const ourNotifications = []
-  const theirNotifications = []
+  const ourHandlers = []
   const ourSub = await ourClient
     .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
-    .subscribe({next: (resp) => ourNotifications.push(resp)})
-  await theirClient
-    .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
-    .subscribe({next: (resp) => theirNotifications.push(resp)})
+    .subscribe({
+      next: ({data: {onNotification: notification}}) => {
+        if (notification.type === 'USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED') {
+          const handler = ourHandlers.shift()
+          expect(handler).toBeDefined()
+          handler(notification)
+        }
+      },
+      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    })
+  await theirClient.subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}}).subscribe({
+    next: (resp) => expect(`Should not be called: ${resp}`).toBeNull(),
+    error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+  })
   const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
   await misc.sleep(2000) // let the subscription initialize
 
@@ -65,16 +74,11 @@ test('Cannot subscribe to other users notifications', async () => {
     .then(({data: {createDirectChat: chat}}) => expect(chat.chatId).toBe(chatId))
 
   // they send a messsage to the chat, which will increment our User.chatsWithUnviewedMessagesCount
+  let nextNotification = new Promise((resolve) => ourHandlers.push(resolve))
   await theirClient
     .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'ipsum'}})
     .then(({data: {addChatMessage: message}}) => expect(message.chat.chatId).toBe(chatId))
-
-  // wait for notifications to show up, ensure we received one but they did not
-  await misc.sleep(5000)
-  expect(theirNotifications).toHaveLength(0)
-  expect(ourNotifications).toHaveLength(1)
-  expect(ourNotifications[0].data.onNotification.userId).toBe(ourUserId)
-  expect(ourNotifications[0].data.onNotification.type).toBeTruthy()
+  await nextNotification.then((notification) => expect(notification.userId).toBe(ourUserId))
 
   // we don't unsubscribe from the subscription because
   //  - it's not actually active, although I have yet to find a way to expect() that

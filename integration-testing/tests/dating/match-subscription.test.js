@@ -65,39 +65,44 @@ test(
       .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(o2UserId))
 
     // enable subscriptions for all users
-    const notificationResolvers = {our: [], o1: [], o2: []}
+    const ourHandlers = []
+    const o1Handlers = []
+    const o2Handlers = []
     const ourSub = await ourClient
       .subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}})
       .subscribe({
-        next: ({data}) => {
-          if (data.onNotification.type.startsWith('USER_DATING_')) {
-            const nextResolver = notificationResolvers.our.shift()
-            expect(nextResolver).toBeDefined()
-            nextResolver(data.onNotification)
+        next: ({data: {onNotification: notification}}) => {
+          if (notification.type.startsWith('USER_DATING_')) {
+            const handler = ourHandlers.shift()
+            expect(handler).toBeDefined()
+            handler(notification)
           }
         },
+        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
       })
     const o1Sub = await o1Client
       .subscribe({query: subscriptions.onNotification, variables: {userId: o1UserId}})
       .subscribe({
-        next: ({data}) => {
-          if (data.onNotification.type.startsWith('USER_DATING_')) {
-            const nextResolver = notificationResolvers.o1.shift()
-            expect(nextResolver).toBeDefined()
-            nextResolver(data.onNotification)
+        next: ({data: {onNotification: notification}}) => {
+          if (notification.type.startsWith('USER_DATING_')) {
+            const handler = o1Handlers.shift()
+            expect(handler).toBeDefined()
+            handler(notification)
           }
         },
+        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
       })
     const o2Sub = await o2Client
       .subscribe({query: subscriptions.onNotification, variables: {userId: o2UserId}})
       .subscribe({
-        next: ({data}) => {
-          if (data.onNotification.type.startsWith('USER_DATING_')) {
-            const nextResolver = notificationResolvers.o2.shift()
-            expect(nextResolver).toBeDefined()
-            nextResolver(data.onNotification)
+        next: ({data: {onNotification: notification}}) => {
+          if (notification.type.startsWith('USER_DATING_')) {
+            const handler = o2Handlers.shift()
+            expect(handler).toBeDefined()
+            handler(notification)
           }
         },
+        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
       })
     const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
     await misc.sleep(2000) // let the subscriptions initialize
@@ -107,119 +112,88 @@ test(
       .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
       .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
 
-    // set expected notifications, o1 enables dating, verify notifications
-    let notifications = Promise.all([
-      new Promise((resolve) => {
-        notificationResolvers.our.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(ourUserId)
-          expect(notification.matchUserId).toBe(o1UserId)
-          resolve()
-        })
-      }),
-      new Promise((resolve) => {
-        notificationResolvers.o1.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(o1UserId)
-          expect(notification.matchUserId).toBe(ourUserId)
-          resolve()
-        })
-      }),
-    ])
+    // o1 enables dating, verify notifications
+    let ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
+    let o1NextNotification = new Promise((resolve) => o1Handlers.push(resolve))
     await o1Client
       .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
       .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-    await notifications
+    await ourNextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(ourUserId)
+      expect(notification.matchUserId).toBe(o1UserId)
+    })
+    await o1NextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(o1UserId)
+      expect(notification.matchUserId).toBe(ourUserId)
+    })
 
-    // set expected notifications, o2 enables dating, verify notifications
-    notifications = Promise.all([
-      new Promise((resolve) => {
-        notificationResolvers.our.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(ourUserId)
-          expect(notification.matchUserId).toBe(o2UserId)
-          resolve()
-        })
-      }),
-      new Promise((resolve) => {
-        notificationResolvers.o2.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(o2UserId)
-          expect(notification.matchUserId).toBe(ourUserId)
-          resolve()
-        })
-      }),
-    ])
+    // o2 enables dating, verify notifications
+    ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
+    let o2NextNotification = new Promise((resolve) => o2Handlers.push(resolve))
     await o2Client
       .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
       .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-    await notifications
-
-    // set expected notifications, both o1 and o2 approve us, verify notifications
-    notifications = Promise.all([
-      new Promise((resolve) => {
-        notificationResolvers.o1.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(o1UserId)
-          expect(notification.matchUserId).toBe(ourUserId)
-          resolve()
-        })
-      }),
-      new Promise((resolve) => {
-        notificationResolvers.o2.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(o2UserId)
-          expect(notification.matchUserId).toBe(ourUserId)
-          resolve()
-        })
-      }),
-    ])
-    await o1Client.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-    await o2Client.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-    await notifications
-
-    // set expected notifications, we reject o1, verify notifications
-    notifications = new Promise((resolve) => {
-      notificationResolvers.our.push((notification) => {
-        expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-        expect(notification.userId).toBe(ourUserId)
-        expect(notification.matchUserId).toBe(o1UserId)
-        resolve()
-      })
+    await ourNextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(ourUserId)
+      expect(notification.matchUserId).toBe(o2UserId)
     })
+    await o2NextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(o2UserId)
+      expect(notification.matchUserId).toBe(ourUserId)
+    })
+
+    // o1 approves us, verify notifications
+    o1NextNotification = new Promise((resolve) => o1Handlers.push(resolve))
+    await o1Client.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
+    await o1NextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(o1UserId)
+      expect(notification.matchUserId).toBe(ourUserId)
+    })
+
+    // o2 approves us, verify notifications
+    o2NextNotification = new Promise((resolve) => o2Handlers.push(resolve))
+    await o2Client.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
+    await o2NextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(o2UserId)
+      expect(notification.matchUserId).toBe(ourUserId)
+    })
+
+    // we reject o1, verify notifications
+    ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
     await ourClient.mutate({mutation: mutations.rejectMatch, variables: {userId: o1UserId}})
-    await notifications
+    await ourNextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(ourUserId)
+      expect(notification.matchUserId).toBe(o1UserId)
+    })
 
     // set expected notifications, we approve o2, verify notifications
     // Note that we get two notifications, one for each status transition POTENTIAL -> APPROVED -> CONFIRMED
-    notifications = Promise.all([
-      new Promise((resolve) => {
-        notificationResolvers.our.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(ourUserId)
-          expect(notification.matchUserId).toBe(o2UserId)
-          resolve()
-        })
-      }),
-      new Promise((resolve) => {
-        notificationResolvers.our.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(ourUserId)
-          expect(notification.matchUserId).toBe(o2UserId)
-          resolve()
-        })
-      }),
-      new Promise((resolve) => {
-        notificationResolvers.o2.push((notification) => {
-          expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-          expect(notification.userId).toBe(o2UserId)
-          expect(notification.matchUserId).toBe(ourUserId)
-          resolve()
-        })
-      }),
-    ])
+    ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
+    let ourNextNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
+    o2NextNotification = new Promise((resolve) => o2Handlers.push(resolve))
     await ourClient.mutate({mutation: mutations.approveMatch, variables: {userId: o2UserId}})
-    await notifications
+    await ourNextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(ourUserId)
+      expect(notification.matchUserId).toBe(o2UserId)
+    })
+    await ourNextNextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(ourUserId)
+      expect(notification.matchUserId).toBe(o2UserId)
+    })
+    await o2NextNotification.then((notification) => {
+      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
+      expect(notification.userId).toBe(o2UserId)
+      expect(notification.matchUserId).toBe(ourUserId)
+    })
 
     // shut down the subscriptions
     ourSub.unsubscribe()
