@@ -146,45 +146,16 @@ test(
       expect(notification.matchUserId).toBe(ourUserId)
     })
 
-    // o1 approves us, verify notifications
-    o1NextNotification = new Promise((resolve) => o1Handlers.push(resolve))
+    // o1 & o2 approve us, we reject o1, no notifications
     await o1Client.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-    await o1NextNotification.then((notification) => {
-      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-      expect(notification.userId).toBe(o1UserId)
-      expect(notification.matchUserId).toBe(ourUserId)
-    })
-
-    // o2 approves us, verify notifications
-    o2NextNotification = new Promise((resolve) => o2Handlers.push(resolve))
     await o2Client.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-    await o2NextNotification.then((notification) => {
-      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-      expect(notification.userId).toBe(o2UserId)
-      expect(notification.matchUserId).toBe(ourUserId)
-    })
-
-    // we reject o1, verify notifications
-    ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
     await ourClient.mutate({mutation: mutations.rejectMatch, variables: {userId: o1UserId}})
-    await ourNextNotification.then((notification) => {
-      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-      expect(notification.userId).toBe(ourUserId)
-      expect(notification.matchUserId).toBe(o1UserId)
-    })
 
-    // set expected notifications, we approve o2, verify notifications
-    // Note that we get two notifications, one for each status transition POTENTIAL -> APPROVED -> CONFIRMED
+    // set expected notifications, we approve o2, verify notifications for transition to CONFIRMED
     ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
-    let ourNextNextNotification = new Promise((resolve) => ourHandlers.push(resolve))
     o2NextNotification = new Promise((resolve) => o2Handlers.push(resolve))
     await ourClient.mutate({mutation: mutations.approveMatch, variables: {userId: o2UserId}})
     await ourNextNotification.then((notification) => {
-      expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
-      expect(notification.userId).toBe(ourUserId)
-      expect(notification.matchUserId).toBe(o2UserId)
-    })
-    await ourNextNextNotification.then((notification) => {
       expect(notification.type).toBe('USER_DATING_MATCH_CHANGED')
       expect(notification.userId).toBe(ourUserId)
       expect(notification.matchUserId).toBe(o2UserId)
