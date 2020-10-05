@@ -520,7 +520,7 @@ type User {
   directChat: Chat
 
   # when user last called findUsers
-  lastFoundUsersAt: AWSDateTime
+  lastFoundContactsAt: AWSDateTime
 }
 
 type PaginatedUsers {

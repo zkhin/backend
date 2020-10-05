@@ -281,13 +281,13 @@ test('Find contacts sends cards to the users that were found', async () => {
   })
 })
 
-test('Find contacts and check lastFoundUsersAt', async () => {
+test('Find contacts and check lastFoundContactsAt', async () => {
   const {client: ourClient, userId: ourUserId, email: ourEmail} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
-  // Check initialize of lastFoundUsersAt
+  // Check initialize of lastFoundContactsAt
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.lastFoundUsersAt).toBeNull()
+    expect(self.lastFoundContactsAt).toBeNull()
   })
 
   // Run the findContacts Query
@@ -298,26 +298,26 @@ test('Find contacts and check lastFoundUsersAt', async () => {
     .then(({data: {findContacts}}) => expect(findContacts.map((i) => i.user.userId)).toEqual([ourUserId]))
   let after = moment().toISOString()
 
-  // Then check lastFoundUsersAt timestamp
+  // Then check lastFoundContactsAt timestamp
   await misc.sleep(2000)
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(before <= self.lastFoundUsersAt).toBe(true)
-    expect(after >= self.lastFoundUsersAt).toBe(true)
+    expect(before <= self.lastFoundContactsAt).toBe(true)
+    expect(after >= self.lastFoundContactsAt).toBe(true)
   })
 
-  // Check another user can't see lastFoundUsersAt
+  // Check another user can't see lastFoundContactsAt
   await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.userId).toBe(ourUserId)
-    expect(user.lastFoundUsersAt).toBeNull()
+    expect(user.lastFoundContactsAt).toBeNull()
   })
 
-  // Call findContacts again and check the lastFoundUsersAt is updated correctly
+  // Call findContacts again and check the lastFoundContactsAt is updated correctly
   await ourClient
     .query({query: queries.findContacts, variables: {contacts}})
     .then(({data: {findContacts}}) => expect(findContacts.map((i) => i.user.userId)).toEqual([ourUserId]))
   await misc.sleep(2000)
 
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(after <= self.lastFoundUsersAt).toBe(true)
+    expect(after <= self.lastFoundContactsAt).toBe(true)
   })
 })
