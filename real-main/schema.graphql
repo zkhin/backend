@@ -941,5 +941,5 @@ input ContactInput {
 
 type FoundContact {
   contactId: ID!
-  user: User!
+  user: User
 }

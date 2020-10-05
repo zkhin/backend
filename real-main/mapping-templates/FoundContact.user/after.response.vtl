@@ -8,15 +8,7 @@
 #set ($user = $ctx.prev.result[0])
 
 #if ($user.blockerStatus == 'BLOCKING')
-  ## we are blocked! we see only an absolute minimum profile
-  #set ($user = {
-    'userId': $user.userId,
-    'username': $user.username,
-    'blockedStatus': $user.blockedStatus,
-    'blockerStatus': $user.blockerStatus,
-    'followedStatus': $user.followedStatus,
-    'followerStatus': $user.followerStatus
-  })
+  #return
 #end
 
 $util.toJson($user)

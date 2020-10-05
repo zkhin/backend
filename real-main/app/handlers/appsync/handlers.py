@@ -1427,4 +1427,7 @@ def find_contacts(caller_user, arguments, **kwargs):
 
     contact_id_to_user_id = user_manager.find_contacts(caller_user, contacts=contacts)
     caller_user.update_last_found_contacts_at(now=pendulum.now('utc'))
-    return [{'contactId': contact_id, 'userId': user_id} for contact_id, user_id in contact_id_to_user_id.items()]
+    contact_ids = [contact['contactId'] for contact in contacts]
+    return [
+        {'contactId': contact_id, 'userId': contact_id_to_user_id.get(contact_id)} for contact_id in contact_ids
+    ]

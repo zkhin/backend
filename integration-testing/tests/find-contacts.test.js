@@ -49,6 +49,11 @@ test('Find users by email', async () => {
   const cmp = (a, b) => a.user.userId.localeCompare(b.user.userId)
 
   // how each user will appear in search results, based on our query
+  const nullUser = {
+    __typename: 'FoundContact',
+    contactId: 'contactId_1',
+    user: null,
+  }
   const us = {
     __typename: 'FoundContact',
     contactId: 'contactId_1',
@@ -70,7 +75,7 @@ test('Find users by email', async () => {
   let contacts = [{contactId: 'contactId_1', emails: ['x' + ourEmail]}]
   await ourClient
     .query({query: queries.findContacts, variables: {contacts}})
-    .then(({data: {findContacts}}) => expect(findContacts).toEqual([]))
+    .then(({data: {findContacts}}) => expect(findContacts).toEqual([nullUser]))
 
   // find one user
   contacts = [{contactId: 'contactId_2', emails: [other1Email]}]

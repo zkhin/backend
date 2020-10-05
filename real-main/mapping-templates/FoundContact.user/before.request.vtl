@@ -1,1 +1,4 @@
+#if ($util.isNull($ctx.source.userId))
+  #return
+#end
 $util.toJson([$ctx.source.userId])
