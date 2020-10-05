@@ -16,7 +16,6 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 

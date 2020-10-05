@@ -8,7 +8,6 @@ let anonClient, anonUserId
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => {
   if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})

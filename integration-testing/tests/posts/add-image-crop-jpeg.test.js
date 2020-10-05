@@ -15,17 +15,14 @@ const jpegWidth = 64
 const jpegBytes = misc.generateRandomJpeg(jpegWidth, jpegHeight)
 const jpegData = new Buffer.from(jpegBytes).toString('base64')
 const jpegHeaders = {'Content-Type': 'image/jpeg'}
-
 const grantBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantData = new Buffer.from(grantBytes).toString('base64')
-
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 

@@ -17,7 +17,6 @@ const loginCache = new cognito.AppSyncLoginCache()
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 

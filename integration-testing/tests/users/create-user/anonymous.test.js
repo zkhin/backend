@@ -7,14 +7,12 @@ const {mutations, queries} = require('../../../schema')
 jest.retryTimes(1)
 
 let client, userId
-
 beforeEach(async () => {
   const {IdentityId} = await cognito.identityPoolClient.getId().promise()
   const {Credentials} = await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId}).promise()
   client = await cognito.getAppSyncClient(Credentials)
   userId = IdentityId
 })
-
 afterEach(async () => {
   if (client) await client.mutate({mutation: mutations.deleteUser})
 })

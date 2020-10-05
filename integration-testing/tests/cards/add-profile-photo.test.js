@@ -7,7 +7,6 @@ const misc = require('../../utils/misc')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
@@ -15,7 +14,6 @@ let anonClient, anonUserId
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => {
   if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})

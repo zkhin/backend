@@ -11,13 +11,12 @@ const imageBytes2 = misc.generateRandomJpeg(300, 200)
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const heicHeaders = {'Content-Type': 'image/heic'}
 const loginCache = new cognito.AppSyncLoginCache()
-//jest.retryTimes(1)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 

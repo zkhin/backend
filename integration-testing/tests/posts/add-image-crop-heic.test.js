@@ -13,14 +13,12 @@ const heicWidth = 4032
 const heicBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'IMG_0265.HEIC'))
 const heicData = new Buffer.from(heicBytes).toString('base64')
 const heicHeaders = {'Content-Type': 'image/heic'}
-
 const loginCache = new cognito.AppSyncLoginCache()
-//jest.retryTimes(1)
+jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
