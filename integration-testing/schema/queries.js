@@ -234,6 +234,10 @@ module.exports.findContacts = gql`
       user {
         userId
         username
+        fullName
+        photo {
+          url
+        }
       }
     }
   }

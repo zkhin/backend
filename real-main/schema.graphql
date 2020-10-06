@@ -37,7 +37,11 @@ type Query {
   # Search users
   searchUsers(searchToken: String!, limit: Int, nextToken: String): PaginatedUsers!
 
-  # max of 100 ContactInputs may be submitted at a time
+  # Find contacts
+  #   - max of 100 ContactInputs may be submitted at a time
+  #   - there will be one FoundContact in the response for every ContactInput in the request
+  #   - for FoundContacts that were found, FoundContact.user will be the user that matched.
+  #   - for FoundContacts that were not found, FoundContact.user will be null
   findContacts(contacts: [ContactInput!]!): [FoundContact!]!
 
   # Globally trending users
