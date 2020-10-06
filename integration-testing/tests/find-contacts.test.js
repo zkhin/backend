@@ -38,6 +38,39 @@ test('Find contacts can handle duplicate emails', async () => {
   })
 })
 
+test('Cannot find user if they block us', async () => {
+  const {client: ourClient, userId: otherUserId} = await loginCache.getCleanLogin()
+  const {
+    client: theirClient,
+    userId: theirUserId,
+    email: theirEmail,
+    username: theirUsername,
+  } = await loginCache.getCleanLogin()
+  await misc.sleep(2000)
+
+  let contacts = [{contactId: 'contactId_1', emails: [theirEmail]}]
+  await ourClient.query({query: queries.findContacts, variables: {contacts}}).then(({data: {findContacts}}) => {
+    expect(findContacts).toHaveLength(1)
+    expect(findContacts[0].contactId).toBe('contactId_1')
+    expect(findContacts[0].user.userId).toBe(theirUserId)
+    expect(findContacts[0].user.username).toBe(theirUsername)
+  })
+
+  // they block us and verify that we cannot find them
+  await theirClient
+    .mutate({mutation: mutations.blockUser, variables: {userId: otherUserId}})
+    .then(({data: {blockUser: user}}) => {
+      expect(user.userId).toBe(otherUserId)
+      expect(user.blockedStatus).toBe('BLOCKING')
+    })
+
+  await ourClient.query({query: queries.findContacts, variables: {contacts}}).then(({data: {findContacts}}) => {
+    expect(findContacts).toHaveLength(1)
+    expect(findContacts[0].contactId).toBe('contactId_1')
+    expect(findContacts[0].user).toBeNull()
+  })
+})
+
 test('Find users by email', async () => {
   const {
     client: ourClient,

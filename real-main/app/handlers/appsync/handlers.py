@@ -1425,8 +1425,12 @@ def find_contacts(caller_user, arguments, **kwargs):
     if len(contacts) > 100:
         raise ClientException('Cannot submit more than 100 contact inputs')
 
-    contact_id_to_user_id = user_manager.find_contacts(caller_user, contacts=contacts)
-    caller_user.update_last_found_contacts_at(now=pendulum.now('utc'))
+    try:
+        contact_id_to_user_id = user_manager.find_contacts(caller_user, contacts)
+        caller_user.update_last_found_contacts_at(now=pendulum.now('utc'))
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
     contact_ids = [contact['contactId'] for contact in contacts]
     return [
         {'contactId': contact_id, 'userId': contact_id_to_user_id.get(contact_id)} for contact_id in contact_ids
