@@ -31,6 +31,7 @@ from . import routes
 from .exceptions import ClientException
 from .validation import (
     validate_age_range,
+    validate_date_of_birth,
     validate_location,
     validate_match_genders,
     validate_match_location_radius,
@@ -358,6 +359,9 @@ def set_user_details(caller_user, arguments, **kwargs):
 
     if match_genders is not None:
         validate_match_genders(match_genders)
+
+    if date_of_birth is not None:
+        validate_date_of_birth(date_of_birth)
 
     # update the simple properties
     caller_user.update_details(
