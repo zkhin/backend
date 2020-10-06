@@ -1,3 +1,5 @@
+import pendulum
+
 from app.models.user.enums import UserSubscriptionLevel
 
 from .exceptions import ClientException
@@ -37,4 +39,12 @@ def validate_location(location):
 def validate_match_genders(match_genders):
     if not match_genders:
         raise ClientException('matchGenders cannot be empty')
+    return True
+
+
+def validate_date_of_birth(date_of_birth):
+    try:
+        pendulum.parse(date_of_birth)
+    except pendulum.parsing.exceptions.ParserError as err:
+        raise ClientException('dateOfBirth contains timezone information') from err
     return True

@@ -3,6 +3,7 @@ import pytest
 from app.handlers.appsync.exceptions import ClientException
 from app.handlers.appsync.validation import (
     validate_age_range,
+    validate_date_of_birth,
     validate_location,
     validate_match_genders,
     validate_match_location_radius,
@@ -104,3 +105,17 @@ def test_validate_match_genders():
     with pytest.raises(ClientException, match='matchGenders'):
         validate_match_genders([])
     assert validate_match_genders(['anything']) is True
+
+
+def test_validate_date_of_birth():
+    with pytest.raises(ClientException, match='dateOfBirth'):
+        validate_date_of_birth('2020-01-01Z')
+
+    with pytest.raises(ClientException, match='dateOfBirth'):
+        validate_date_of_birth('1970-01-01-07:00')
+
+    with pytest.raises(ClientException, match='dateOfBirth'):
+        validate_date_of_birth('1970-01-01+05:30')
+
+    assert validate_date_of_birth('1970-01-01') is True
+    assert validate_date_of_birth('2020-12-31') is True

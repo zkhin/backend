@@ -79,6 +79,25 @@ describe('Read and write properties our our own profile', () => {
     expect(resp.data.user.fullName).toBeNull()
   })
 
+  test('Invalid dateOfBirth contains timezone information', async () => {
+    const {client} = await loginCache.getCleanLogin()
+
+    let dateOfBirth = '2020-01-01Z'
+    await expect(client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth}})).rejects.toThrow(
+      /ClientError: dateOfBirth contains timezone information/,
+    )
+
+    dateOfBirth = '1970-01-01-07:00'
+    await expect(client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth}})).rejects.toThrow(
+      /ClientError: dateOfBirth contains timezone information/,
+    )
+
+    dateOfBirth = '1970-01-01+05:30'
+    await expect(client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth}})).rejects.toThrow(
+      /ClientError: dateOfBirth contains timezone information/,
+    )
+  })
+
   test('DateOfBirth and Gender', async () => {
     const dateOfBirth = '2020-12-31'
     const dateOfBirth2 = '1900-01-01'
