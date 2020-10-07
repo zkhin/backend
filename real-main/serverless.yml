@@ -126,6 +126,10 @@ provider:
         - ${self:provider.environment.REAL_DATING_MATCH_STATUS_ARN}
 
 custom:
+  elasticSearchInstanceCount:
+    default: 2
+    dev: 1
+
   realDating:
     stackName: real-${self:provider.stage}-dating
     lambdaFunctionArnPrefix: 'arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:custom.realDating.stackName}'

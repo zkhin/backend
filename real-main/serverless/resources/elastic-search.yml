@@ -11,11 +11,11 @@ Resources:
         VolumeType: gp2
         VolumeSize: 10
       ElasticsearchClusterConfig:
-        InstanceType: t2.small.elasticsearch
-        InstanceCount: 2
+        InstanceType: t3.small.elasticsearch
+        InstanceCount: ${self:custom.elasticSearchInstanceCount.${self:provider.stage}, self:custom.elasticSearchInstanceCount.default}
         DedicatedMasterEnabled: false
         ZoneAwarenessEnabled: false
-      ElasticsearchVersion: 7.4
+      ElasticsearchVersion: 7.7
 
 Outputs:
 
