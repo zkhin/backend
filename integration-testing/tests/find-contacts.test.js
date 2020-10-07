@@ -34,7 +34,7 @@ test('Find contacts can handle duplicate emails', async () => {
     expect(findContacts[0].contactId).toBe('contactId')
     expect(findContacts[0].user.userId).toBe(userId)
     expect(findContacts[0].user.username).toBe(username)
-    expect(findContacts[0].user.photo).toBeTruthy()
+    expect(findContacts[0].user.subscriptionLevel).toBeTruthy()
   })
 })
 
@@ -54,6 +54,7 @@ test('Cannot find user if they block us', async () => {
     expect(findContacts[0].contactId).toBe('contactId_1')
     expect(findContacts[0].user.userId).toBe(theirUserId)
     expect(findContacts[0].user.username).toBe(theirUsername)
+    expect(findContacts[0].user.subscriptionLevel).toBeTruthy()
   })
 
   // they block us and verify that we cannot find them
@@ -97,6 +98,7 @@ test('Find users by email', async () => {
     expect(findContacts[0].contactId).toBe('contactId_2')
     expect(findContacts[0].user.userId).toBe(other1UserId)
     expect(findContacts[0].user.username).toBe(other1Username)
+    expect(findContacts[0].user.subscriptionLevel).toBeTruthy()
   })
 
   contacts = [{contactId: 'contactId_1', emails: [ourEmail, 'AA' + other1Email]}]
@@ -105,6 +107,7 @@ test('Find users by email', async () => {
     expect(findContacts[0].contactId).toBe('contactId_1')
     expect(findContacts[0].user.userId).toBe(ourUserId)
     expect(findContacts[0].user.username).toBe(ourUsername)
+    expect(findContacts[0].user.subscriptionLevel).toBeTruthy()
   })
 
   // find multiple users
