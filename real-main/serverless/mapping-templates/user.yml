@@ -238,6 +238,6 @@
   dataSource: DynamodbMatchesDataSource
 
 - type: User
-  field: lastFoundUsersAt
+  field: lastFoundContactsAt
   dataSource: NoneDataSource
   response: PassThru.response.vtl

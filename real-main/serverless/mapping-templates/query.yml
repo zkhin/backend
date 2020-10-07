@@ -29,7 +29,7 @@
   dataSource: DynamodbDataSource
 
 - type: Query
-  field: findUsers
+  field: findContacts
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl

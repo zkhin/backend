@@ -233,23 +233,63 @@ def test_find_user_finds_correct_users(user_manager, user1, user2, user4, user5)
     user_manager.on_user_phone_number_change_update_subitem(user5.id, new_item=user5.item)
 
     # Check with None
-    assert user_manager.find_users(user1) == []
+    assert user_manager.find_contacts(user1, contacts=[{'contactId': str(uuid.uuid4())}]) == {}
 
     # Check with only email
-    emails = [user2.item['email'], user5.item['email']]
-    assert user_manager.find_users(user1, emails=emails).sort() == [user2.id, user5.id].sort()
+    contacts = [
+        {
+            'contactId': 'id_contact_1',
+            'emails': [user2.item['email']],
+        },
+        {
+            'contactId': 'id_contact_2',
+            'emails': [user5.item['email']],
+        },
+    ]
+    response = {'id_contact_1': user2.id, 'id_contact_2': user5.id}
+
+    contact_id_to_user_id = user_manager.find_contacts(user1, contacts=contacts)
+    for contact_id, user_id in contact_id_to_user_id.items():
+        assert response[contact_id] == user_id
 
     # Check with only phone
-    phones = [user4.item['phoneNumber'], user5.item['phoneNumber']]
-    assert user_manager.find_users(user1, phones=phones).sort() == [user4.id, user5.id].sort()
+    contacts = [
+        {
+            'contactId': 'id_contact_1',
+            'phones': [user4.item['phoneNumber']],
+        },
+        {
+            'contactId': 'id_contact_2',
+            'phones': [user5.item['phoneNumber']],
+        },
+    ]
+    response = {'id_contact_1': user4.id, 'id_contact_2': user5.id}
+
+    contact_id_to_user_id = user_manager.find_contacts(user1, contacts=contacts)
+    for contact_id, user_id in contact_id_to_user_id.items():
+        assert response[contact_id] == user_id
 
     # Check with phone & email
-    emails = [user2.item['email'], user5.item['email']]
-    phones = [user4.item['phoneNumber'], user5.item['phoneNumber']]
-    assert (
-        user_manager.find_users(user1, emails=emails, phones=phones).sort()
-        == [user2.id, user4.id, user5.id].sort()
-    )
+    contacts = [
+        {
+            'contactId': 'id_contact_1',
+            'emails': [user2.item['email']],
+        },
+        {
+            'contactId': 'id_contact_2',
+            'phones': [user4.item['phoneNumber']],
+        },
+        {
+            'contactId': 'id_contact_3',
+            'emails': [user5.item['email']],
+            'phones': [user5.item['phoneNumber']],
+        },
+    ]
+    response = {'id_contact_1': user2.id, 'id_contact_2': user4.id, 'id_contact_3': user5.id}
+
+    contact_id_to_user_id = user_manager.find_contacts(user1, contacts=contacts)
+    for contact_id, user_id in contact_id_to_user_id.items():
+        assert response[contact_id] == user_id
 
 
 def test_find_user_add_cards_for_found_users_not_following(user_manager, user1, user2, user3, user5):
@@ -274,8 +314,21 @@ def test_find_user_add_cards_for_found_users_not_following(user_manager, user1, 
     assert follower_manager.get_follow_status(user3.id, user1.id) == FollowStatus.FOLLOWING
 
     # user1 finds all three users using their email, verify users that are not following get cards
-    emails = [user3.item['email'], user5.item['email'], user2.item['email']]
-    assert user_manager.find_users(user1, emails=emails).sort() == [user2.id, user3.id, user5.id].sort()
+    contacts = [
+        {
+            'contactId': 'id_contact_1',
+            'emails': [user2.item['email']],
+        },
+        {
+            'contactId': 'id_contact_2',
+            'emails': [user3.item['email']],
+        },
+        {
+            'contactId': 'id_contact_3',
+            'emails': [user5.item['email']],
+        },
+    ]
+    user_manager.find_contacts(user1, contacts=contacts)
     assert card_manager.get_card(card_id2)
     assert card_manager.get_card(card_id3) is None
     assert card_manager.get_card(card_id5)
