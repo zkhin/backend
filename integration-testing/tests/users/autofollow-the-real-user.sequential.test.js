@@ -5,33 +5,44 @@
 
 const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')
+const realUser = require('../../utils/real-user')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
+let realLogin
 jest.retryTimes(1)
 
 beforeAll(async () => {
-  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
+  realLogin = await realUser.getLogin()
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.reset())
+beforeEach(async () => {
+  await realUser.cleanLogin()
+  await loginCache.clean()
+})
+afterAll(async () => {
+  await realUser.resetLogin()
+  await loginCache.reset()
+})
 
 test('new users auto-follow a user with username `real`, if they exist', async () => {
-  // the real user has a random username at this point from the [before|after]_each methods
-  // create a new user. Should not auto-follow anyone
+  const {userId: realUserId} = realLogin
+
+  // create a new user. Should auto-follow the real user
   const {client, username} = await loginCache.getCleanLogin()
-  let resp = await client.query({query: queries.ourFollowedUsers})
-  expect(resp.data.self.followedUsers.items).toHaveLength(0)
+  await client.query({query: queries.ourFollowedUsers}).then(({data: {self: user}}) => {
+    expect(user.followedUsers.items).toHaveLength(1)
+    expect(user.followedUsers.items[0].userId).toBe(realUserId)
+  })
 
-  // set the real user's username to 'real', give dynamo a moment to sync
-  const {client: realClient, userId: realUserId} = await loginCache.getCleanLogin()
-  await realClient.mutate({mutation: mutations.setUsername, variables: {username: 'real'}})
+  // clear out the real user, causes its username to be dropped
+  await realUser.resetLogin()
   await misc.sleep(2000)
+  realLogin = null
 
-  // reset that user as a new user. Should auto-follow the real user
+  // reset that user as a new user. Now should not auto-follow the real user this time
   await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
-  resp = await client.query({query: queries.ourFollowedUsers})
-  expect(resp.data.self.followedUsers.items).toHaveLength(1)
-  expect(resp.data.self.followedUsers.items[0].userId).toBe(realUserId)
+  await client
+    .query({query: queries.ourFollowedUsers})
+    .then(({data: {self: user}}) => expect(user.followedUsers.items).toHaveLength(0))
 })

@@ -266,6 +266,9 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         return user
 
     def follow_real_user(self, user):
+        # This could be made more efficient by using the cached `self.real_user_id`.
+        # However, this method is rarely called and the integration tests benefit
+        # from being able to avoid values cached between runs.
         real_user = self.get_user_by_username('real')
         if real_user and real_user.id != user.id:
             self.follower_manager.request_to_follow(user, real_user)

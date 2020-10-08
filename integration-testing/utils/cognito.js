@@ -244,11 +244,15 @@ class AppSyncLoginCache {
 
   async reset() {
     // purposefully avoiding parallelism here so we can run more test suites in parrellel
-    for (const {login, timer} of this.cleanLogins) {
+    while (this.cleanLogins.length > 0) {
+      const {login, timer} = this.cleanLogins.pop()
       await timer
       await login.client.mutate({mutation: mutations.resetUser})
     }
-    for (const {client} of this.dirtyLogins) await client.mutate({mutation: mutations.resetUser})
+    while (this.dirtyLogins.length > 0) {
+      const {client} = this.dirtyLogins.pop()
+      await client.mutate({mutation: mutations.resetUser})
+    }
   }
 }
 
