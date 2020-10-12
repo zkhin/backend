@@ -621,6 +621,15 @@ functions:
       - functionThrottles
       - functionUsersForceDisabled
 
+  createDatingChat:
+    name: ${self:provider.stackName}-create-dating-chat
+    handler: app.handlers.api.create_dating_chat
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    alarms:
+      - functionErrors
+      - functionThrottles
+
 # keep this miminal for smaller packages and thus faster deployments
 package:
   exclude:
