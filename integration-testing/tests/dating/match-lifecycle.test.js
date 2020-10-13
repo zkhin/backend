@@ -144,6 +144,26 @@ test('POTENTIAL -> CONFIRMED', async () => {
     .query({query: queries.user, variables: {userId: ourUserId}})
     .then(({data: {user}}) => expect(user.matchStatus).toBe('CONFIRMED'))
 
+  // check if the group chat is created with our and their
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(ourUserId)
+    expect(user.cardCount).toBeGreaterThanOrEqual(1)
+    expect(user.chatCount).toBe(1)
+    expect(user.chatsWithUnviewedMessagesCount).toBe(1)
+    const card = user.cards.items[0]
+    expect(card.title).toBe('You have 1 chat with new messages')
+    expect(card.action).toBe('https://real.app/chat/')
+    const chat = user.chats.items[0]
+    expect(chat.chatType).toBe('GROUP')
+    expect(chat.name).toBe('You two matched!')
+    expect(chat.messageCount).toBe(3)
+    expect(chat.messagesCount).toBe(3)
+    expect(chat.userCount).toBe(2)
+    expect(chat.usersCount).toBe(2)
+    expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  })
+
   // check now they can't reject us, or re-approve us
   await expect(
     theirClient.mutate({mutation: mutations.rejectMatch, variables: {userId: ourUserId}}),
