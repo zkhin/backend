@@ -14,7 +14,7 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 beforeEach(async () => await loginCache.clean())
-afterAll(async () => await loginCache.reset())
+// afterAll(async () => await loginCache.reset())
 
 // generic dating criteria that matches itself
 const datingVariables = {
@@ -155,10 +155,9 @@ test('POTENTIAL -> CONFIRMED', async () => {
     expect(card.title).toBe('You have 1 chat with new messages')
     expect(card.action).toBe('https://real.app/chat/')
     const chat = user.chats.items[0]
-    expect(chat.chatType).toBe('GROUP')
-    expect(chat.name).toBe('You two matched!')
-    expect(chat.messageCount).toBe(3)
-    expect(chat.messagesCount).toBe(3)
+    expect(chat.chatType).toBe('DIRECT')
+    expect(chat.messageCount).toBe(1)
+    expect(chat.messagesCount).toBe(1)
     expect(chat.userCount).toBe(2)
     expect(chat.usersCount).toBe(2)
     expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())

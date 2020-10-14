@@ -1,8 +1,9 @@
 import logging
 
+import pendulum
+
 from app import clients, models
 from app.logging import LogLevelContext, handler_logging
-from app.models.chat_message.enums import ChatMessageNotificationType
 
 from . import xray
 
@@ -28,14 +29,14 @@ def create_dating_chat(event, context):
         logger.info('create_dating_chat() called')
 
     user_id = event['userId']
-    chat_id, user_ids, name = event['chatId'], event['userIds'], event.get('name')
-    message_id, message_text = event['messageId'], event['messageText']
+    chat_id = event['chatId']
+    match_user_id = event['matchUserId']
+    message_text = event['messageText']
 
-    caller_user = user_manager.get_user(user_id)
-    chat = chat_manager.add_group_chat(chat_id, caller_user, name=name)
-    chat.add(caller_user, user_ids)
-    message = chat_message_manager.add_chat_message(message_id, message_text, chat_id, user_id)
+    # Create direct chat with system message
+    now = pendulum.now('utc')
+    chat = chat_manager.add_direct_chat(chat_id, user_id, match_user_id, now=now)
+    chat_message_manager.add_system_message(chat_id, message_text, user_ids=[user_id, match_user_id], now=now)
 
-    message.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=user_ids)
     chat.refresh_item(strongly_consistent=True)
     return chat.item
