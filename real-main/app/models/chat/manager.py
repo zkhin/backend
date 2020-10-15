@@ -205,7 +205,9 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             self.real_dating_client.match_status(user_id, match_user_id)['Payload'].read().decode()
         )
         response_2 = json.loads(
-            self.real_dating_client.match_status(match_user_id, user_id)['Payload'].read().decode()
+            self.real_dating_client.match_status(user_id=match_user_id, match_user_id=user_id)['Payload']
+            .read()
+            .decode()
         )
         match_status_1 = response_1['status']
         match_status_2 = response_2['status']
