@@ -2,6 +2,7 @@ import uuid
 from unittest import mock
 
 import pytest
+from mock import patch
 
 from app.models.block.exceptions import AlreadyBlocked, BlockException, NotBlocked
 from app.models.like.enums import LikeStatus
@@ -80,7 +81,8 @@ def test_block_clears_likes(block_manager, blocker_user, blocked_user, post_mana
 def test_block_deletes_direct_chat(block_manager, blocker_user, blocked_user, chat_manager):
     # add a direct chat between the two users
     chat_id = 'cid'
-    chat_manager.add_direct_chat(chat_id, blocker_user.id, blocked_user.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        chat_manager.add_direct_chat(chat_id, blocker_user.id, blocked_user.id)
     assert chat_manager.get_direct_chat(blocker_user.id, blocked_user.id)
 
     # do the blocking

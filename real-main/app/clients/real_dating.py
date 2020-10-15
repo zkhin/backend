@@ -45,8 +45,8 @@ class RealDatingClient:
             logger.warning(f'Unable to remove user from real dating: {err}')
 
     def match_status(self, user_id, match_user_id):
-        self.boto3_client.invoke(
-            FunctionName=self.match_user_arn,
-            InvocationType='Event',  # async
+        return self.boto3_client.invoke(
+            FunctionName=self.match_status_arn,
+            # InvocationType='Event',  # async
             Payload=json.dumps({'userId': user_id, 'matchUserId': match_user_id}),
         )

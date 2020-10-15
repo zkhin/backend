@@ -1,9 +1,11 @@
 import collections
+import json
 import logging
 
 import pendulum
 
 from app import models
+from app.clients import RealDatingClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.view.manager import ViewManagerMixin
@@ -32,6 +34,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.clients = clients
+        self.real_dating_client = RealDatingClient()
         if 'dynamo' in clients:
             self.dynamo = ChatDynamo(clients['dynamo'])
             self.member_dynamo = ChatMemberDynamo(clients['dynamo'])
@@ -54,6 +57,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             'member_dynamo': getattr(self, 'member_dynamo', None),
             'view_dynamo': getattr(self, 'view_dynamo', None),
             'block_manager': self.block_manager,
+            'chat_manager': self,
             'chat_message_manager': self.chat_message_manager,
             'user_manager': self.user_manager,
         }
@@ -82,6 +86,10 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
         with_user = self.user_manager.get_user(with_user_id)
         if with_user.status != UserStatus.ACTIVE:
             raise ChatException(f'Cannot open direct chat with user with status `{with_user.status}`')
+
+        # can't add a chat if the match status is rejected/approved
+        if not self.validate_dating_match_chat(created_by_user_id, with_user_id):
+            raise ChatException('Cannot open direct chat with user without confirmed match')
 
         transacts = [
             self.dynamo.transact_add(
@@ -191,3 +199,21 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def on_chat_delete_delete_memberships(self, chat_id, old_item):
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             self.member_dynamo.delete(chat_id, user_id)
+
+    def validate_dating_match_chat(self, user_id, match_user_id):
+        response_1 = json.loads(
+            self.real_dating_client.match_status(user_id, match_user_id)['Payload'].read().decode()
+        )
+        response_2 = json.loads(
+            self.real_dating_client.match_status(match_user_id, user_id)['Payload'].read().decode()
+        )
+        match_status_1 = response_1['status']
+        match_status_2 = response_2['status']
+        blockChatExpiredAt = response_1['blockChatExpiredAt']
+
+        if match_status_1 != 'CONFIRMED' or match_status_2 != 'CONFIRMED':
+            if (
+                blockChatExpiredAt is not None and pendulum.parse(blockChatExpiredAt) > pendulum.now()
+            ):  # 30 days blocking chat
+                return False
+        return True
