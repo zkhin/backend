@@ -67,7 +67,7 @@ test('Cannot create direct/group chat if the match_status is not confirmed', asy
   const messageText = 'lore ipsum'
   let variables = {userId: theirUserId, chatId, messageId, messageText}
   await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
-    /ClientError: Cannot open direct chat with user without confirmed match/,
+    /ClientError: Cannot chat user viewed on dating unless it is a match/,
   )
 
   // we approve them, check statues
@@ -82,7 +82,7 @@ test('Cannot create direct/group chat if the match_status is not confirmed', asy
 
   // try to create direct chat
   await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
-    /ClientError: Cannot open direct chat with user without confirmed match/,
+    /ClientError: Cannot chat user viewed on dating unless it is a match/,
   )
 
   variables = {

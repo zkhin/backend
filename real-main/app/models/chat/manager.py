@@ -89,7 +89,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
 
         # can't add a chat if the match status is rejected/approved
         if not self.validate_dating_match_chat(created_by_user_id, with_user_id):
-            raise ChatException('Cannot open direct chat with user without confirmed match')
+            raise ChatException('Cannot chat user viewed on dating unless it is a match')
 
         transacts = [
             self.dynamo.transact_add(
