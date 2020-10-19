@@ -891,16 +891,22 @@ def test_set_user_dating_status(user_dynamo):
     item = user_dynamo.add_user(user_id, user_id[:8])
     assert user_dynamo.get_user(user_id) == item
     assert 'datingStatus' not in item
+    assert 'gsiA3PartitionKey' not in item
+    assert 'gsiA3SortKey' not in item
 
     # enable, verify
     item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
     assert user_dynamo.get_user(user_id) == item
     assert item['datingStatus'] == UserDatingStatus.ENABLED
+    assert item['gsiA3PartitionKey'] == 'userDisableDatingDate'
+    assert item['gsiA3SortKey']
 
     # disable, verify
     item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.DISABLED)
     assert user_dynamo.get_user(user_id) == item
     assert 'datingStatus' not in item
+    assert 'gsiA3PartitionKey' not in item
+    assert 'gsiA3SortKey' not in item
 
 
 def test_generate_user_ids_by_birthday(user_dynamo):
@@ -938,3 +944,52 @@ def test_set_user_last_found_contacts_at(user_dynamo):
     current_time = now.to_iso8601_string()
 
     assert current_time == resp['lastFoundContactsAt']
+
+
+def test_set_last_disable_dating_date(user_dynamo):
+    expired_at = (pendulum.now('utc') + pendulum.duration(days=30)).to_date_string()
+    user_id = str(uuid4())
+
+    # verify can't set for user that DNE
+    with pytest.raises(user_dynamo.client.exceptions.ConditionalCheckFailedException):
+        user_dynamo.set_last_disable_dating_date(user_id)
+
+    # add user to DB, verify starts without last disable dating date
+    item = user_dynamo.add_user(user_id, user_id[:8])
+    assert user_dynamo.get_user(user_id) == item
+    assert 'gsiA3PartitionKey' not in item
+    assert 'gsiA3SortKey' not in item
+
+    # set, verify
+    item = user_dynamo.set_last_disable_dating_date(user_id)
+    assert user_dynamo.get_user(user_id) == item
+    assert item['gsiA3PartitionKey'] == 'userDisableDatingDate'
+    assert item['gsiA3SortKey'] == expired_at
+
+
+def test_generate_user_ids_by_expired_dating(user_dynamo):
+    # add a few users
+    user_id_1, user_id_2, user_id_3 = str(uuid4()), str(uuid4()), str(uuid4())
+    user_dynamo.add_user(user_id_1, str(uuid4())[:8])
+    user_dynamo.add_user(user_id_2, str(uuid4())[:8])
+    user_dynamo.add_user(user_id_3, str(uuid4())[:8])
+
+    # give two of them unexpired date, give the third a expired date
+    
+    user_dynamo.set_last_disable_dating_date(user_id_1)
+    user_dynamo.set_last_disable_dating_date(user_id_2)
+    user_dynamo.set_last_disable_dating_date(user_id_3)
+
+    # test generate expired dating date user ids
+    generate = user_dynamo.generate_user_ids_by_expired_dating
+    now = pendulum.now('utc')
+    now_1 = now + pendulum.duration(days=1)
+    now_2 = now + pendulum.duration(days=10)
+    now_3 = now + pendulum.duration(days=30)
+    now_4 = now + pendulum.duration(days=32)
+
+    assert list(generate(now)) == []
+    assert list(generate(now_1)) == []
+    assert list(generate(now_2)) == []
+    assert list(generate(now_3)) == [user_id_1, user_id_2, user_id_3]
+    assert list(generate(now_4)) == [user_id_1, user_id_2, user_id_3]

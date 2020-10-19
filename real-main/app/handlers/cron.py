@@ -107,6 +107,13 @@ def clear_expired_user_subscriptions(event, context):
         logger.info(f'Expired user subscriptions cleared: {cnt}')
 
 
+@handler_logging
+def auto_disable_dating(event, context):
+    cnt = user_manager.clear_expired_dating_status()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Disabled user dating status: {cnt}')
+
+
 # TODO: enable to handle re-verification of apple receipts after temporary failures
 # @handler_logging
 # def verify_receipts(event, context):

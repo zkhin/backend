@@ -257,13 +257,28 @@ class UserDynamo:
         }
         return self.client.update_item(query_kwargs)
 
+    def set_last_disable_dating_date(self, user_id):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+            'UpdateExpression': 'SET gsiA3PartitionKey = :gsia3pk, gsiA3SortKey = :gsia3sk',
+            'ExpressionAttributeValues': {
+                ':gsia3pk': 'userDisableDatingDate',
+                ':gsia3sk': (pendulum.now('utc') + pendulum.duration(days=30)).to_date_string(),
+            },
+        }
+        return self.client.update_item(query_kwargs)
+
     def set_user_dating_status(self, user_id, status, fail_softly=False):
         query_kwargs = {'Key': self.pk(user_id)}
         if status == UserDatingStatus.DISABLED:
-            query_kwargs['UpdateExpression'] = 'REMOVE datingStatus'
+            query_kwargs['UpdateExpression'] = 'REMOVE datingStatus, gsiA3PartitionKey, gsiA3SortKey'
         else:
-            query_kwargs['UpdateExpression'] = 'SET datingStatus = :ds'
-            query_kwargs['ExpressionAttributeValues'] = {':ds': status}
+            query_kwargs['UpdateExpression'] = 'SET datingStatus = :ds, gsiA3PartitionKey = :gsia3pk, gsiA3SortKey = :gsia3sk'
+            query_kwargs['ExpressionAttributeValues'] = {
+                ':ds': status,
+                ':gsia3pk': 'userDisableDatingDate',
+                ':gsia3sk': (pendulum.now('utc') + pendulum.duration(days=30)).to_date_string(),
+            }
         failure_warning = 'User does not exist' if fail_softly else None
         return self.client.update_item(query_kwargs, failure_warning=failure_warning)
 
@@ -327,6 +342,19 @@ class UserDynamo:
             'ProjectionExpression': 'partitionKey',
             'ExpressionAttributeValues': {':gsipk': f'userBirthday/{birthday}'},
             'IndexName': 'GSI-K2',
+        }
+        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
+
+    def generate_user_ids_by_expired_dating(self, now=None):
+        now = now or pendulum.now('utc')
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiA3PartitionKey = :gsia3pk AND gsiA3SortKey <= :gsia3sk',
+            'ProjectionExpression': 'partitionKey',
+            'ExpressionAttributeValues': {
+                ':gsia3pk': 'userDisableDatingDate',
+                ':gsia3sk': now.to_date_string(),
+            },
+            'IndexName': 'GSI-A3',
         }
         return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
 

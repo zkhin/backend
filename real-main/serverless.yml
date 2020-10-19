@@ -630,6 +630,18 @@ functions:
       - functionErrors
       - functionThrottles
 
+  autoDisableDating:
+    name: ${self:provider.stackName}-autoDisableDating
+    handler: app.handlers.cron.auto_disable_dating
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 day)'
+    alarms:
+      - functionErrors
+      - functionThrottles
+
 # keep this miminal for smaller packages and thus faster deployments
 package:
   exclude:
