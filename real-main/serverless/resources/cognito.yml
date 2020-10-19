@@ -205,7 +205,7 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: false
-      PreventUserExistenceErrors: ENABLED
+      PreventUserExistenceErrors: LEGACY
       RefreshTokenValidity: 3650
       SupportedIdentityProviders:
         - COGNITO
