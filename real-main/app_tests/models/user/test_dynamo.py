@@ -975,7 +975,7 @@ def test_generate_user_ids_by_expired_dating(user_dynamo):
     user_dynamo.add_user(user_id_3, str(uuid4())[:8])
 
     # give two of them unexpired date, give the third a expired date
-    
+
     user_dynamo.set_last_disable_dating_date(user_id_1)
     user_dynamo.set_last_disable_dating_date(user_id_2)
     user_dynamo.set_last_disable_dating_date(user_id_3)

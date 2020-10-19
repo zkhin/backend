@@ -273,7 +273,9 @@ class UserDynamo:
         if status == UserDatingStatus.DISABLED:
             query_kwargs['UpdateExpression'] = 'REMOVE datingStatus, gsiA3PartitionKey, gsiA3SortKey'
         else:
-            query_kwargs['UpdateExpression'] = 'SET datingStatus = :ds, gsiA3PartitionKey = :gsia3pk, gsiA3SortKey = :gsia3sk'
+            query_kwargs[
+                'UpdateExpression'
+            ] = 'SET datingStatus = :ds, gsiA3PartitionKey = :gsia3pk, gsiA3SortKey = :gsia3sk'
             query_kwargs['ExpressionAttributeValues'] = {
                 ':ds': status,
                 ':gsia3pk': 'userDisableDatingDate',
