@@ -4,6 +4,7 @@ from unittest import mock
 
 import pendulum
 import pytest
+from mock import patch
 
 from app.models.block.enums import BlockStatus
 from app.models.chat_message.exceptions import ChatMessageException
@@ -37,7 +38,8 @@ def user3(user_manager, cognito_client):
 
 @pytest.fixture
 def chat(chat_manager, user1, user2):
-    yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
 
 
 @pytest.fixture
@@ -135,7 +137,8 @@ def test_trigger_notifications_user_ids(message, chat, user1, user2, user3, apps
 def test_trigger_notifications_group(chat_manager, chat_message_manager, user1, user2, user3, appsync_client):
     # user1 creates a group chat with everyone in it
     group_chat = chat_manager.add_group_chat('cid', user1)
-    group_chat.add(user1, [user2.id, user3.id])
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        group_chat.add(user1, [user2.id, user3.id])
 
     # user2 creates a message, trigger notificaitons on it
     message_id = 'mid'

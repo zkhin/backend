@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pendulum
 import pytest
+from mock import patch
 
 
 @pytest.fixture
@@ -16,7 +17,8 @@ user2 = user1
 
 @pytest.fixture
 def chat(chat_manager, user1, user2):
-    yield chat_manager.add_direct_chat(str(uuid4()), user1.id, user2.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        yield chat_manager.add_direct_chat(str(uuid4()), user1.id, user2.id)
 
 
 def test_sync_member_messages_unviewed_count(chat_manager, chat, user1, user2):

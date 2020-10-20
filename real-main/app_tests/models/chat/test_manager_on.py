@@ -19,7 +19,8 @@ user3 = user1
 
 @pytest.fixture
 def chat(chat_manager, user1, user2):
-    yield chat_manager.add_direct_chat(str(uuid4()), user1.id, user2.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        yield chat_manager.add_direct_chat(str(uuid4()), user1.id, user2.id)
 
 
 @pytest.fixture
@@ -238,14 +239,16 @@ def test_on_user_delete_leave_all_chats(chat_manager, user1, user2, user3):
     # user1 opens up direct chats with both of the other two users
     chat_id_1 = 'cid1'
     chat_id_2 = 'cid2'
-    chat_manager.add_direct_chat(chat_id_1, user1.id, user2.id)
-    chat_manager.add_direct_chat(chat_id_2, user1.id, user3.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        chat_manager.add_direct_chat(chat_id_1, user1.id, user2.id)
+        chat_manager.add_direct_chat(chat_id_2, user1.id, user3.id)
 
     # user1 sets up a group chat with only themselves in it, and another with user2
     chat_id_3 = 'cid3'
     chat_id_4 = 'cid4'
-    chat_manager.add_group_chat(chat_id_3, user1)
-    chat_manager.add_group_chat(chat_id_4, user1).add(user1, [user2.id])
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        chat_manager.add_group_chat(chat_id_3, user1)
+        chat_manager.add_group_chat(chat_id_4, user1).add(user1, [user2.id])
 
     # verify we see the chat and chat_memberships in the DB
     assert chat_manager.dynamo.get(chat_id_1)['userCount'] == 2

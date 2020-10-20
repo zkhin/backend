@@ -2,6 +2,7 @@ import json
 import uuid
 
 import pytest
+from mock import patch
 
 from app.models.chat_message.appsync import ChatMessageAppSync
 from app.models.post.enums import PostType
@@ -32,7 +33,8 @@ def user2(user_manager, cognito_client):
 
 @pytest.fixture
 def chat(chat_manager, user1, user2):
-    yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
 
 
 @pytest.fixture

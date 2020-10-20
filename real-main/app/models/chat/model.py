@@ -22,6 +22,7 @@ class Chat(ViewModelMixin, FlagModelMixin):
         dynamo=None,
         member_dynamo=None,
         block_manager=None,
+        chat_manager=None,
         chat_message_manager=None,
         user_manager=None,
         **kwargs,
@@ -33,6 +34,8 @@ class Chat(ViewModelMixin, FlagModelMixin):
             self.member_dynamo = member_dynamo
         if block_manager:
             self.block_manager = block_manager
+        if chat_manager:
+            self.chat_manager = chat_manager
         if chat_message_manager:
             self.chat_message_manager = chat_message_manager
         if user_manager:
@@ -91,6 +94,9 @@ class Chat(ViewModelMixin, FlagModelMixin):
 
                 if self.block_manager.is_blocked(user_id, added_by_user.id):
                     continue  # can't add a user who is blocking you
+
+                if not self.chat_manager.validate_dating_match_chat(user_id, added_by_user.id):
+                    continue
 
             transacts = [
                 self.member_dynamo.transact_add(self.id, user_id, now=now),

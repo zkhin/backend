@@ -4,6 +4,7 @@ from unittest import mock
 
 import pendulum
 import pytest
+from mock import patch
 
 from app.mixins.view.enums import ViewedStatus
 from app.models.chat.enums import ChatType
@@ -52,7 +53,8 @@ def test_cant_add_direct_chat_with_self(chat_manager, user1):
 
 def test_cant_add_direct_chat_already_exists(chat_manager, user1, user2):
     # add the chat
-    chat_manager.add_direct_chat('cid3', user1.id, user2.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        chat_manager.add_direct_chat('cid3', user1.id, user2.id)
 
     # verify can't add it again, even with new chat id
     with pytest.raises(ChatException, match='already exists'):
@@ -66,7 +68,8 @@ def test_add_direct_chat(chat_manager, user1, user2):
 
     # add the chat, verify it looks ok
     chat_id = 'cid'
-    chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id, now=now)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id, now=now)
     assert chat.id == chat_id
     assert chat.type == ChatType.DIRECT
     assert chat.item['createdAt'] == now.to_iso8601_string()
@@ -145,7 +148,8 @@ def test_record_views(chat_manager, user1, user2, user3, caplog):
     assert chat_id in caplog.records[0].msg
     assert user1.id in caplog.records[0].msg
 
-    chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
+    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
+        chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
     assert chat.get_viewed_status(user1.id) == ViewedStatus.NOT_VIEWED
     assert chat.get_viewed_status(user2.id) == ViewedStatus.NOT_VIEWED
     assert chat.get_viewed_status(user3.id) == ViewedStatus.NOT_VIEWED
