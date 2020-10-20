@@ -251,6 +251,11 @@ class User(TrendingModelMixin):
             self.item = self.dynamo.set_last_client(self.id, client)
         return self
 
+    def set_last_disable_dating_date(self):
+        if self.item.get('datingStatus') == 'ENABLED':
+            self.item = self.dynamo.set_last_disable_dating_date(self.id)
+        return self
+
     def update_username(self, username):
         old_username = self.item['username']
         if old_username == username:

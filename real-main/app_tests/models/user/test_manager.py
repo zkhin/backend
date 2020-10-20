@@ -7,6 +7,7 @@ import pendulum
 import pytest
 
 from app.models.follower.enums import FollowStatus
+from app.models.user.enums import UserDatingStatus
 from app.utils import GqlNotificationType
 
 
@@ -371,3 +372,39 @@ def test_update_ages(user_manager, user1, user2, user3, user6):
     assert user2.refresh_item().item['age'] == 20
     assert user3.refresh_item().item['age'] == 10
     assert 'age' not in user6.refresh_item().item
+
+
+def test_clear_expired_dating_status(user_manager, user1, user2, user3):
+    # set last dating date
+    user1.item['datingStatus'] = UserDatingStatus.ENABLED
+    user2.item['datingStatus'] = UserDatingStatus.ENABLED
+    user3.item['datingStatus'] = UserDatingStatus.ENABLED
+    user1.set_last_disable_dating_date()
+    user2.set_last_disable_dating_date()
+    user3.set_last_disable_dating_date()
+
+    assert user1.refresh_item().item['gsiA3SortKey']
+    assert user2.refresh_item().item['gsiA3SortKey']
+    assert user3.refresh_item().item['gsiA3SortKey']
+
+    now = pendulum.now('utc')
+    assert user_manager.clear_expired_dating_status(now=now) == 0
+    assert user1.refresh_item().item['gsiA3SortKey']
+    assert user2.refresh_item().item['gsiA3SortKey']
+    assert user3.refresh_item().item['gsiA3SortKey']
+
+    now = pendulum.now('utc') + pendulum.duration(days=29)
+    assert user_manager.clear_expired_dating_status(now=now) == 0
+    assert user1.refresh_item().item['gsiA3SortKey']
+    assert user2.refresh_item().item['gsiA3SortKey']
+    assert user3.refresh_item().item['gsiA3SortKey']
+
+    # after 30 days, dating status set to disable
+    now = pendulum.now('utc') + pendulum.duration(days=30)
+    assert user_manager.clear_expired_dating_status(now=now) == 3
+    assert 'datingStatus' not in user1.refresh_item().item
+    assert 'datingStatus' not in user2.refresh_item().item
+    assert 'datingStatus' not in user3.refresh_item().item
+    assert 'gsiA3SortKey' not in user1.refresh_item().item
+    assert 'gsiA3SortKey' not in user2.refresh_item().item
+    assert 'gsiA3SortKey' not in user3.refresh_item().item

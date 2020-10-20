@@ -118,6 +118,17 @@ def update_last_client(func):
     return wrapper
 
 
+def update_last_disable_dating_date(func):
+    "Decorator that updates User's last disable dating date if as needed"
+
+    def wrapper(caller_user, arguments, **kwargs):
+        if caller_user:
+            caller_user.set_last_disable_dating_date()
+        return func(caller_user, arguments, **kwargs)
+
+    return wrapper
+
+
 @routes.register('Mutation.createAnonymousUser')
 def create_anonymous_user(caller_user_id, arguments, client=None, **kwargs):
     try:
@@ -188,6 +199,7 @@ def create_google_user(caller_user_id, arguments, client=None, **kwargs):
 @routes.register('Mutation.setUserPassword')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def set_user_password(caller_user, arguments, **kwargs):
     encrypted_password = arguments['encryptedPassword']
     try:
@@ -200,6 +212,7 @@ def set_user_password(caller_user, arguments, **kwargs):
 @routes.register('Mutation.linkAppleLogin')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def link_apple_login(caller_user, arguments, **kwargs):
     apple_token = arguments['appleIdToken']
     try:
@@ -212,6 +225,7 @@ def link_apple_login(caller_user, arguments, **kwargs):
 @routes.register('Mutation.linkFacebookLogin')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def link_facebook_login(caller_user, arguments, **kwargs):
     facebook_token = arguments['facebookAccessToken']
     try:
@@ -224,6 +238,7 @@ def link_facebook_login(caller_user, arguments, **kwargs):
 @routes.register('Mutation.linkGoogleLogin')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def link_google_login(caller_user, arguments, **kwargs):
     google_id_token = arguments['googleIdToken']
     try:
@@ -236,6 +251,7 @@ def link_google_login(caller_user, arguments, **kwargs):
 @routes.register('Mutation.startChangeUserEmail')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def start_change_user_email(caller_user, arguments, **kwargs):
     email = arguments['email']
     try:
@@ -248,6 +264,7 @@ def start_change_user_email(caller_user, arguments, **kwargs):
 @routes.register('Mutation.finishChangeUserEmail')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def finish_change_user_email(caller_user, arguments, **kwargs):
     code = arguments['verificationCode']
     try:
@@ -260,6 +277,7 @@ def finish_change_user_email(caller_user, arguments, **kwargs):
 @routes.register('Mutation.startChangeUserPhoneNumber')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def start_change_user_phone_number(caller_user, arguments, **kwargs):
     phone = arguments['phoneNumber']
     try:
@@ -272,6 +290,7 @@ def start_change_user_phone_number(caller_user, arguments, **kwargs):
 @routes.register('Mutation.finishChangeUserPhoneNumber')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def finish_change_user_phone_number(caller_user, arguments, **kwargs):
     code = arguments['verificationCode']
     try:
@@ -284,6 +303,7 @@ def finish_change_user_phone_number(caller_user, arguments, **kwargs):
 @routes.register('Mutation.setUserDetails')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def set_user_details(caller_user, arguments, **kwargs):
     username = arguments.get('username')
     full_name = arguments.get('fullName')
@@ -388,6 +408,7 @@ def set_user_details(caller_user, arguments, **kwargs):
 @routes.register('Mutation.setUserAcceptedEULAVersion')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def set_user_accepted_eula_version(caller_user, arguments, **kwargs):
     version = arguments['version']
 
@@ -402,6 +423,7 @@ def set_user_accepted_eula_version(caller_user, arguments, **kwargs):
 @routes.register('Mutation.setUserAPNSToken')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def set_user_apns_token(caller_user, arguments, **kwargs):
     token = arguments['token']
 
@@ -416,6 +438,7 @@ def set_user_apns_token(caller_user, arguments, **kwargs):
 @routes.register('Mutation.setUserDatingStatus')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def set_user_dating_status(caller_user, arguments, **kwargs):
     status = arguments['status']
     try:
@@ -473,6 +496,7 @@ def delete_user(caller_user_id, arguments, client=None, **kwargs):
 @routes.register('Mutation.reportScreenViews')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def report_screen_views(caller_user, arguments, **kwargs):
     screens = arguments['screens']
     if len(screens) == 0:
@@ -488,6 +512,7 @@ def report_screen_views(caller_user, arguments, **kwargs):
 @routes.register('Mutation.grantUserSubscriptionBonus')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
     try:
         caller_user.grant_subscription_bonus()
@@ -526,6 +551,7 @@ def user_photo(caller_user_id, arguments, source=None, **kwargs):
 @routes.register('Mutation.followUser')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def follow_user(caller_user, arguments, **kwargs):
     follower_user = caller_user
     followed_user_id = arguments['userId']
@@ -552,6 +578,7 @@ def follow_user(caller_user, arguments, **kwargs):
 @routes.register('Mutation.unfollowUser')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def unfollow_user(caller_user, arguments, **kwargs):
     follower_user = caller_user
     followed_user_id = arguments['userId']
@@ -573,6 +600,7 @@ def unfollow_user(caller_user, arguments, **kwargs):
 @routes.register('Mutation.acceptFollowerUser')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def accept_follower_user(caller_user, arguments, **kwargs):
     followed_user = caller_user
     follower_user_id = arguments['userId']
@@ -594,6 +622,7 @@ def accept_follower_user(caller_user, arguments, **kwargs):
 @routes.register('Mutation.denyFollowerUser')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def deny_follower_user(caller_user, arguments, **kwargs):
     followed_user = caller_user
     follower_user_id = arguments['userId']
@@ -615,6 +644,7 @@ def deny_follower_user(caller_user, arguments, **kwargs):
 @routes.register('Mutation.blockUser')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def block_user(caller_user, arguments, **kwargs):
     blocker_user = caller_user
     blocked_user_id = arguments['userId']
@@ -639,6 +669,7 @@ def block_user(caller_user, arguments, **kwargs):
 @routes.register('Mutation.unblockUser')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def unblock_user(caller_user, arguments, **kwargs):
     blocker_user = caller_user
     blocked_user_id = arguments['userId']
@@ -663,6 +694,7 @@ def unblock_user(caller_user, arguments, **kwargs):
 @routes.register('Mutation.addPost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def add_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     post_type = arguments.get('postType') or PostType.IMAGE
@@ -780,6 +812,7 @@ def post_video_upload_url(caller_user_id, arguments, source=None, **kwargs):
 @routes.register('Mutation.editPost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     edit_kwargs = {
@@ -808,6 +841,7 @@ def edit_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.editPostAlbum')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_post_album(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     album_id = arguments.get('albumId') or None
@@ -830,6 +864,7 @@ def edit_post_album(caller_user, arguments, **kwargs):
 @routes.register('Mutation.editPostAlbumOrder')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_post_album_order(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     preceding_post_id = arguments.get('precedingPostId')
@@ -852,6 +887,7 @@ def edit_post_album_order(caller_user, arguments, **kwargs):
 @routes.register('Mutation.editPostExpiresAt')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_post_expires_at(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
     expires_at_str = arguments.get('expiresAt')
@@ -874,6 +910,7 @@ def edit_post_expires_at(caller_user, arguments, **kwargs):
 @routes.register('Mutation.flagPost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def flag_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -894,6 +931,7 @@ def flag_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.archivePost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def archive_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -915,6 +953,7 @@ def archive_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.deletePost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def delete_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -936,6 +975,7 @@ def delete_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.restoreArchivedPost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def restore_archived_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -957,6 +997,7 @@ def restore_archived_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.onymouslyLikePost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def onymously_like_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -977,6 +1018,7 @@ def onymously_like_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.anonymouslyLikePost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def anonymously_like_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -997,6 +1039,7 @@ def anonymously_like_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.dislikePost')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def dislike_post(caller_user, arguments, **kwargs):
     post_id = arguments['postId']
 
@@ -1022,6 +1065,7 @@ def dislike_post(caller_user, arguments, **kwargs):
 @routes.register('Mutation.reportPostViews')
 @validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
+@update_last_disable_dating_date
 def report_post_views(caller_user, arguments, **kwargs):
     post_ids = arguments['postIds']
     view_type = arguments.get('viewType', ViewType.THUMBNAIL)
@@ -1038,6 +1082,7 @@ def report_post_views(caller_user, arguments, **kwargs):
 @routes.register('Mutation.addComment')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def add_comment(caller_user, arguments, **kwargs):
     comment_id = arguments['commentId']
     post_id = arguments['postId']
@@ -1054,6 +1099,7 @@ def add_comment(caller_user, arguments, **kwargs):
 @routes.register('Mutation.deleteComment')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def delete_comment(caller_user, arguments, **kwargs):
     comment_id = arguments['commentId']
 
@@ -1072,6 +1118,7 @@ def delete_comment(caller_user, arguments, **kwargs):
 @routes.register('Mutation.flagComment')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def flag_comment(caller_user, arguments, **kwargs):
     comment_id = arguments['commentId']
 
@@ -1092,6 +1139,7 @@ def flag_comment(caller_user, arguments, **kwargs):
 @routes.register('Mutation.deleteCard')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def delete_card(caller_user, arguments, **kwargs):
     card_id = arguments['cardId']
 
@@ -1127,6 +1175,7 @@ def card_thumbnail(caller_user_id, arguments, source=None, **kwargs):
 @routes.register('Mutation.addAlbum')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def add_album(caller_user, arguments, **kwargs):
     album_id = arguments['albumId']
     name = arguments['name']
@@ -1143,6 +1192,7 @@ def add_album(caller_user, arguments, **kwargs):
 @routes.register('Mutation.editAlbum')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_album(caller_user, arguments, **kwargs):
     album_id = arguments['albumId']
     name = arguments.get('name')
@@ -1169,6 +1219,7 @@ def edit_album(caller_user, arguments, **kwargs):
 @routes.register('Mutation.deleteAlbum')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def delete_album(caller_user, arguments, **kwargs):
     album_id = arguments['albumId']
 
@@ -1202,6 +1253,7 @@ def album_art(caller_user_id, arguments, source=None, **kwargs):
 @routes.register('Mutation.createDirectChat')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def create_direct_chat(caller_user, arguments, **kwargs):
     chat_id, user_id = arguments['chatId'], arguments['userId']
     message_id, message_text = arguments['messageId'], arguments['messageText']
@@ -1225,6 +1277,7 @@ def create_direct_chat(caller_user, arguments, **kwargs):
 @routes.register('Mutation.createGroupChat')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def create_group_chat(caller_user, arguments, **kwargs):
     chat_id, user_ids, name = arguments['chatId'], arguments['userIds'], arguments.get('name')
     message_id, message_text = arguments['messageId'], arguments['messageText']
@@ -1244,6 +1297,7 @@ def create_group_chat(caller_user, arguments, **kwargs):
 @routes.register('Mutation.editGroupChat')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_group_chat(caller_user, arguments, **kwargs):
     chat_id = arguments['chatId']
     name = arguments.get('name')
@@ -1263,6 +1317,7 @@ def edit_group_chat(caller_user, arguments, **kwargs):
 @routes.register('Mutation.addToGroupChat')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def add_to_group_chat(caller_user, arguments, **kwargs):
     chat_id, user_ids = arguments['chatId'], arguments['userIds']
 
@@ -1281,6 +1336,7 @@ def add_to_group_chat(caller_user, arguments, **kwargs):
 @routes.register('Mutation.leaveGroupChat')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def leave_group_chat(caller_user, arguments, **kwargs):
     chat_id = arguments['chatId']
 
@@ -1299,6 +1355,7 @@ def leave_group_chat(caller_user, arguments, **kwargs):
 @routes.register('Mutation.reportChatViews')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def report_chat_views(caller_user, arguments, **kwargs):
     chat_ids = arguments['chatIds']
     if len(chat_ids) == 0:
@@ -1314,6 +1371,7 @@ def report_chat_views(caller_user, arguments, **kwargs):
 @routes.register('Mutation.flagChat')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def flag_chat(caller_user, arguments, **kwargs):
     chat_id = arguments['chatId']
 
@@ -1334,6 +1392,7 @@ def flag_chat(caller_user, arguments, **kwargs):
 @routes.register('Mutation.addChatMessage')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def add_chat_message(caller_user, arguments, **kwargs):
     chat_id, message_id, text = arguments['chatId'], arguments['messageId'], arguments['text']
 
@@ -1353,6 +1412,7 @@ def add_chat_message(caller_user, arguments, **kwargs):
 @routes.register('Mutation.editChatMessage')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def edit_chat_message(caller_user, arguments, **kwargs):
     message_id, text = arguments['messageId'], arguments['text']
 
@@ -1372,6 +1432,7 @@ def edit_chat_message(caller_user, arguments, **kwargs):
 @routes.register('Mutation.deleteChatMessage')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def delete_chat_message(caller_user, arguments, **kwargs):
     message_id = arguments['messageId']
 
@@ -1391,6 +1452,7 @@ def delete_chat_message(caller_user, arguments, **kwargs):
 @routes.register('Mutation.flagChatMessage')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def flag_chat_message(caller_user, arguments, **kwargs):
     message_id = arguments['messageId']
 
@@ -1423,6 +1485,7 @@ def lambda_server_error(caller_user_id, arguments, context=None, **kwargs):
 @routes.register('Query.findContacts')
 @validate_caller
 @update_last_client
+@update_last_disable_dating_date
 def find_contacts(caller_user, arguments, **kwargs):
     contacts = arguments['contacts']
 

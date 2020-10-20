@@ -495,6 +495,14 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             total += 1
         return total, updated
 
+    def clear_expired_dating_status(self, now=None):
+        now = now or pendulum.now('utc')
+        updated = 0
+        for user_id in self.dynamo.generate_user_ids_by_expired_dating(now=now):
+            user_updated = self.dynamo.set_user_dating_status(user_id, UserDatingStatus.DISABLED)
+            updated += 1 if user_updated else 0
+        return updated
+
     def on_user_delete_delete_cognito(self, user_id, old_item):
         old_status = old_item.get('userStatus', UserStatus.ACTIVE)
         # for resets (used by the integration test suite) we leave the user in cognito

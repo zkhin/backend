@@ -1078,3 +1078,25 @@ def test_generate_dating_profile(user):
     }
     user.item.update(profile)
     assert user.generate_dating_profile() == profile
+
+
+def test_set_last_disable_dating_date(user):
+    assert 'datingStatus' not in user.refresh_item().item
+    user.dynamo = Mock(wraps=user.dynamo)
+
+    # don't set if the dating status is not ENABLED
+    with patch.object(user, 'dynamo', Mock(wraps=user.dynamo)) as dynamo_mock:
+        user.set_last_disable_dating_date()
+    assert len(dynamo_mock.mock_calls) == 0
+    assert user.item == user.refresh_item().item
+    assert 'gsiA3PartitionKey' not in user.item
+    assert 'gsiA3SortKey' not in user.item
+
+    # set it, verify
+    user.item['datingStatus'] = UserDatingStatus.ENABLED
+    with patch.object(user, 'dynamo', Mock(wraps=user.dynamo)) as dynamo_mock:
+        user.set_last_disable_dating_date()
+    assert len(dynamo_mock.mock_calls) == 1
+    assert user.item == user.refresh_item().item
+    assert user.item['gsiA3PartitionKey'] == 'userDisableDatingDate'
+    assert user.item['gsiA3SortKey']
