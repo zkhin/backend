@@ -426,6 +426,17 @@ class User(TrendingModelMixin):
         assert provider in ('apple', 'facebook', 'google'), f'Unrecognized identity provider `{provider}`'
         provider_client = self.clients[provider]
 
+        # extract email from the token first
+        try:
+            email = provider_client.get_verified_email(token).lower()
+        except ValueError as err:
+            logger.warning(str(err))
+            raise UserValidationException(str(err)) from err
+
+        # verify that new email value is not used by other
+        if self.email_dynamo.get(email):
+            raise UserException('User federated login email is already used by other')
+
         # link the logins in the identity pool
         tokens = {
             'cognito_token': self.cognito_client.get_user_pool_tokens(self.id)['IdToken'],
@@ -436,14 +447,8 @@ class User(TrendingModelMixin):
         except Exception as err:
             raise UserException(f'Failed to link identity pool entries: {err}') from err
 
-        # if we don't already have an email, try to extract and set one from the token
+        # if we don't already have an email, set one from the token
         if 'email' not in self.item:
-            try:
-                email = provider_client.get_verified_email(token).lower()
-            except ValueError as err:
-                logger.warning(str(err))
-                raise UserValidationException(str(err)) from err
-
             # set the user up in cognito, claims the username at the same time
             try:
                 self.cognito_client.set_user_email(self.id, email)
