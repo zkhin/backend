@@ -14,7 +14,7 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 beforeEach(async () => await loginCache.clean())
-// afterAll(async () => await loginCache.reset())
+afterAll(async () => await loginCache.reset())
 
 // generic dating criteria that matches itself
 const datingVariables = {
