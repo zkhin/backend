@@ -494,7 +494,7 @@ def delete_user(caller_user_id, arguments, client=None, **kwargs):
 
 
 @routes.register('Mutation.reportScreenViews')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 @update_last_disable_dating_date
 def report_screen_views(caller_user, arguments, **kwargs):
