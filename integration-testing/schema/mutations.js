@@ -394,6 +394,7 @@ module.exports.addPost = gql`
     $verificationHidden: Boolean
     $setAsUserPhoto: Boolean
     $crop: CropInput
+    $keywords: [String!]
   ) {
     addPost(
       postId: $postId
@@ -414,6 +415,7 @@ module.exports.addPost = gql`
       sharingDisabled: $sharingDisabled
       verificationHidden: $verificationHidden
       setAsUserPhoto: $setAsUserPhoto
+      keywords: $keywords
     ) {
       postId
       postedAt
@@ -461,6 +463,7 @@ module.exports.addPost = gql`
       verificationHidden
       hasNewCommentActivity
       flagStatus
+      keywords
     }
   }
   ${fragments.comment}
@@ -476,6 +479,7 @@ module.exports.editPost = gql`
     $likesDisabled: Boolean
     $sharingDisabled: Boolean
     $verificationHidden: Boolean
+    $keywords: [String!]
   ) {
     editPost(
       postId: $postId
@@ -484,6 +488,7 @@ module.exports.editPost = gql`
       likesDisabled: $likesDisabled
       sharingDisabled: $sharingDisabled
       verificationHidden: $verificationHidden
+      keywords: $keywords
     ) {
       postId
       postStatus
@@ -504,6 +509,7 @@ module.exports.editPost = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
+      keywords
     }
   }
   ${fragments.textTaggedUser}

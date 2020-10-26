@@ -239,3 +239,30 @@ test('Anonymous user cannot add a post', async () => {
     anonClient.mutate({mutation: mutations.addPost, variables: {postId: uuidv4(), imageData}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 })
+
+test('Add post with keywords attribute', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+
+  const postId = uuidv4()
+  const keywords = ['mine', 'bird', 'tea']
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData, keywords}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId)
+      expect(post.postType).toBe('IMAGE')
+      expect(post.postStatus).toBe('COMPLETED')
+      expect(post.expiresAt).toBeNull()
+      expect(post.originalPost.postId).toBe(postId)
+      expect(post.keywords.sort()).toEqual(keywords.sort())
+    })
+
+  await misc.sleep(2000) // dynamo
+  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
+    expect(post.postId).toBe(postId)
+    expect(post.postType).toBe('IMAGE')
+    expect(post.postStatus).toBe('COMPLETED')
+    expect(post.expiresAt).toBeNull()
+    expect(post.originalPost.postId).toBe(postId)
+    expect(post.keywords.sort()).toEqual(keywords.sort())
+  })
+})

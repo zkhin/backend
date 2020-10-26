@@ -88,6 +88,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
+        keywords=None,
         set_as_user_photo=None,
         now=None,
     ):
@@ -161,6 +162,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
             album_id=album_id,
+            keywords=keywords,
             set_as_user_photo=set_as_user_photo,
         )
         post = self.init_post(post_item)
@@ -246,6 +248,22 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             logger.warning(f'Deleting expired post with pk ({post_pk["partitionKey"]}, {post_pk["sortKey"]})')
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
+
+    def find_posts(self, keywords):
+        post_id_to_keyword_matched_cnt = {}
+        for post_item in self.dynamo.generate_posts_keywords_not_null():
+            post_keywords = post_item.get('keywords', [])
+            post_id = post_item['postId']
+            matched_cnt = len(list(set(post_keywords) & set(keywords)))
+
+            if matched_cnt > 0:
+                post_id_to_keyword_matched_cnt[post_id] = matched_cnt
+        # sort post ids by matched keywords count
+        post_id_to_keyword_matched_cnt = {
+            k: v
+            for k, v in sorted(post_id_to_keyword_matched_cnt.items(), key=lambda item: item[1], reverse=True)
+        }
+        return list(post_id_to_keyword_matched_cnt.keys())
 
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):

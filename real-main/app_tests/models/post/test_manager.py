@@ -577,3 +577,32 @@ def test_record_views(post_manager, user, user2, posts, caplog):
     assert post_manager.view_dynamo.get_view(post2.id, user.id)['thumbnailViewCount'] == 1
     assert user2.refresh_item().item['lastPostViewAt']
     assert user2.refresh_item().item['lastPostFocusViewAt']
+
+
+def test_add_post_with_keywords_attribute(post_manager, user):
+    # create a post behind the scenes
+    post_id = 'pid'
+    keywords = ['bird', 'mine', 'tea']
+    post_manager.add_post(user, post_id, PostType.TEXT_ONLY, text='t', keywords=keywords)
+
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['keywords'].sort() == keywords.sort()
+
+
+def test_find_posts(post_manager, user):
+    # create a post behind the scenes
+    post_id_1 = 'pid1'
+    post_id_2 = 'pid2'
+    post_id_3 = 'pid3'
+    keywords_1 = ['bird', 'mine', 'tea']
+    keywords_2 = ['shirt', 'mine', 'tea', 'animal']
+    keywords_3 = ['mine', 'here', 'shirt']
+
+    post_manager.add_post(user, post_id_1, PostType.TEXT_ONLY, text='t', keywords=keywords_1)
+    post_manager.add_post(user, post_id_2, PostType.TEXT_ONLY, text='t', keywords=keywords_2)
+    post_manager.add_post(user, post_id_3, PostType.TEXT_ONLY, text='t', keywords=keywords_3)
+
+    keywords = ['mine', 'shirt', 'animal']
+    post_ids = post_manager.find_posts(keywords)
+    assert post_ids == [post_id_2, post_id_3, post_id_1]

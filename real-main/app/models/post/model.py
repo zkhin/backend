@@ -460,8 +460,9 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
+        keywords=None,
     ):
-        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden]
+        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, keywords]
         if all(v is None for v in args):
             raise PostException('Empty edit requested')
 
@@ -477,6 +478,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
+            keywords=keywords,
         )
         return self
 
