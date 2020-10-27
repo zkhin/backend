@@ -334,6 +334,12 @@ class User(TrendingModelMixin):
         kwargs = {k: v for k, v in kwargs.items() if v != self.item.get(stringcase.camelcase(k), '')}
         if kwargs:
             self.item = self.dynamo.set_user_details(self.id, **kwargs)
+
+        # disable dating status if not validated
+        try:
+            self.validate_can_enable_dating()
+        except UserException:
+            return self.set_dating_status(UserDatingStatus.DISABLED)
         return self
 
     def update_age(self, now=None):

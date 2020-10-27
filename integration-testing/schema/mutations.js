@@ -160,6 +160,7 @@ module.exports.setUserDetails = gql`
       gender
       matchGenders
       matchLocationRadius
+      datingStatus
     }
   }
   ${fragments.image}

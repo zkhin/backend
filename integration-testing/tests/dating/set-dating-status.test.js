@@ -330,3 +330,51 @@ test('Age required and must be in allowed age range for enabling dating', async 
     .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
     .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
 })
+
+test('Enable dating and remove required fields, check dating is DISABLED', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+
+  // Check if the new user's datingStatus is DISABLED
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.datingStatus).toBe('DISABLED')
+    expect(user.subscriptionLevel).toBe('BASIC')
+  })
+
+  // we set all the stuff needed for dating
+  const postId = uuidv4()
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await ourClient.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // enable dating, verify value saved
+  await ourClient
+    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
+    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await ourClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.datingStatus).toBe('ENABLED'))
+
+  // remove photoPostId, check dating status is disabled in the response
+  await ourClient
+    .mutate({mutation: mutations.setUserDetails, variables: {photoPostId: ''}})
+    .then(({data: {setUserDetails: user}}) => {
+      expect(user.datingStatus).toBe('DISABLED')
+    })
+  await ourClient
+    .query({query: queries.user, variables: {userId: ourUserId}})
+    .then(({data: {user}}) => expect(user.datingStatus).toBe('DISABLED'))
+})
