@@ -250,7 +250,14 @@ def like_manager(dynamo_client):
 
 
 @pytest.fixture
-def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_client, post_verification_client):
+def post_manager(
+    appsync_client,
+    dynamo_client,
+    s3_uploads_client,
+    cloudfront_client,
+    post_verification_client,
+    elasticsearch_client,
+):
     yield models.PostManager(
         {
             'appsync': appsync_client,
@@ -258,6 +265,7 @@ def post_manager(appsync_client, dynamo_client, s3_uploads_client, cloudfront_cl
             's3_uploads': s3_uploads_client,
             'cloudfront': cloudfront_client,
             'post_verification': post_verification_client,
+            'elasticsearch': elasticsearch_client,
         }
     )
 

@@ -315,7 +315,7 @@ module.exports.post = gql`
 `
 
 module.exports.findPosts = gql`
-  query FindPosts($keywords: [String!]!) {
+  query FindPosts($keywords: String!) {
     findPosts(keywords: $keywords) {
       postId
       postType

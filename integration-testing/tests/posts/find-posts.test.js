@@ -53,11 +53,19 @@ test('Add post with keywords attribute', async () => {
     })
 
   await misc.sleep(2000) // dynamo
-  keywords = ['shirt', 'bug', 'mine', 'bird']
+  keywords = 'shirt'
   // Find posts by keywords
   await ourClient.query({query: queries.findPosts, variables: {keywords}}).then(({data: {findPosts: posts}}) => {
-    expect(posts).toHaveLength(3)
-    expect(posts.map((post) => post.postId)).toEqual([postId3, postId1, postId2])
-    expect(posts.map((post) => post.postedBy.userId)).toEqual([theirUserId, ourUserId, theirUserId])
+    expect(posts).toHaveLength(1)
+    expect(posts.map((post) => post.postId)).toEqual([postId3])
+    expect(posts.map((post) => post.postedBy.userId)).toEqual([theirUserId])
+  })
+
+  keywords = 'shirt min'
+  // Find posts by keywords
+  await ourClient.query({query: queries.findPosts, variables: {keywords}}).then(({data: {findPosts: posts}}) => {
+    expect(posts).toHaveLength(2)
+    expect(posts.map((post) => post.postId).sort()).toEqual([postId1, postId3].sort())
+    expect(posts.map((post) => post.postedBy.userId).sort()).toEqual([ourUserId, theirUserId].sort())
   })
 })

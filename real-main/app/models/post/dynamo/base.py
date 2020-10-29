@@ -72,21 +72,6 @@ class PostDynamo:
         }
         return self.client.generate_all_scan(query_kwargs)
 
-    def generate_posts_keywords_not_null(self):
-        query_kwargs = {
-            'FilterExpression': ' AND '.join(
-                [
-                    'begins_with(partitionKey, :pk_prefix)',
-                    'sortKey = :sk',
-                    'postStatus = :ps',
-                    'attribute_exists(keywords)',
-                ]
-            ),
-            'ExpressionAttributeValues': {':pk_prefix': 'post/', ':sk': '-', ':ps': PostStatus.COMPLETED},
-        }
-
-        return self.client.generate_all_scan(query_kwargs)
-
     def add_pending_post(
         self,
         posted_by_user_id,

@@ -40,6 +40,8 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         self.clients = clients
         if 'appsync' in clients:
             self.appsync = PostAppSync(clients['appsync'])
+        if 'elasticsearch' in clients:
+            self.elasticsearch_client = clients['elasticsearch']
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
             self.image_dynamo = PostImageDynamo(clients['dynamo'])
@@ -250,20 +252,22 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.init_post(post_item).delete()
 
     def find_posts(self, keywords):
-        post_id_to_keyword_matched_cnt = {}
-        for post_item in self.dynamo.generate_posts_keywords_not_null():
-            post_keywords = post_item.get('keywords', [])
-            post_id = post_item['postId']
-            matched_cnt = len(list(set(post_keywords) & set(keywords)))
-
-            if matched_cnt > 0:
-                post_id_to_keyword_matched_cnt[post_id] = matched_cnt
-        # sort post ids by matched keywords count
-        post_id_to_keyword_matched_cnt = {
-            k: v
-            for k, v in sorted(post_id_to_keyword_matched_cnt.items(), key=lambda item: item[1], reverse=True)
+        query = {
+            'bool': {
+                'should': [
+                    {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
+                    {'match': {'keywords': {'query': keywords, 'boost': 2}}},
+                ],
+            }
         }
-        return list(post_id_to_keyword_matched_cnt.keys())
+        search_result = self.elasticsearch_client.query_posts(query)
+        post_ids = []
+
+        for hit in search_result['hits']['hits']:
+            source = hit.get('_source')
+            if source is not None:
+                post_ids.append(source['postId'])
+        return post_ids
 
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
@@ -417,3 +421,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             recorded = post.trending_increment_score(**trending_kwargs)
             if recorded:
                 post.user.trending_increment_score(**trending_kwargs)
+
+    def on_post_delete(self, post_id, old_item):
+        self.elasticsearch_client.delete_post(post_id)
+
+    def sync_elasticsearch(self, post_id, new_item, old_item=None):
+        self.elasticsearch_client.put_post(post_id, new_item['keywords'])

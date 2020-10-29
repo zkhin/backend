@@ -692,50 +692,6 @@ def test_generate_expired_post_pks_with_scan(post_dynamo):
     assert expired_posts[1]['sortKey'] == post2['sortKey']
 
 
-def test_generate_posts_keywords_not_null(post_dynamo):
-    user_id = 'uid'
-
-    # we add post
-    post_id = 'pid_1'
-    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', text='lore ipsum', keywords=['mine'])
-
-    # should return empty because it's not completed yet
-    assert [p for p in post_dynamo.generate_posts_keywords_not_null()] == []
-
-    # complete the post
-    post_dynamo.set_post_status(post_item, PostStatus.COMPLETED)
-
-    # should return one post
-    assert [p['postId'] for p in post_dynamo.generate_posts_keywords_not_null()] == [post_id]
-
-    # we add another post
-    post_id_2 = 'pid2'
-    post_item = post_dynamo.add_pending_post(user_id, post_id_2, 'ptype', text='lore ipsum', keywords=['shirt'])
-
-    # should return one post
-    assert [p['postId'] for p in post_dynamo.generate_posts_keywords_not_null()] == [post_id]
-
-    # complete the post
-    post_dynamo.set_post_status(post_item, PostStatus.COMPLETED)
-
-    # should return two posts
-    assert [p['postId'] for p in post_dynamo.generate_posts_keywords_not_null()].sort() == [
-        post_id,
-        post_id_2,
-    ].sort()
-
-    # we add another post without keywords
-    post_id_3 = 'pid3'
-    post_item = post_dynamo.add_pending_post(user_id, post_id_3, 'ptype', text='lore ipsum')
-    post_dynamo.set_post_status(post_item, PostStatus.COMPLETED)
-
-    # should return two posts
-    assert [p['postId'] for p in post_dynamo.generate_posts_keywords_not_null()].sort() == [
-        post_id,
-        post_id_2,
-    ].sort()
-
-
 def test_set_last_unviewed_comment_at(post_dynamo):
     user_id = 'uid'
     post_id = 'pid'

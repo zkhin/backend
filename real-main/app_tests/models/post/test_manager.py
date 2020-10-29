@@ -1,5 +1,6 @@
 import logging
 import uuid
+from unittest.mock import call, patch
 
 import pendulum
 import pytest
@@ -591,18 +592,22 @@ def test_add_post_with_keywords_attribute(post_manager, user):
 
 
 def test_find_posts(post_manager, user):
-    # create a post behind the scenes
-    post_id_1 = 'pid1'
-    post_id_2 = 'pid2'
-    post_id_3 = 'pid3'
-    keywords_1 = ['bird', 'mine', 'tea']
-    keywords_2 = ['shirt', 'mine', 'tea', 'animal']
-    keywords_3 = ['mine', 'here', 'shirt']
+    keywords = 'bird'
+    query = {
+        'bool': {
+            'should': [
+                {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
+                {'match': {'keywords': {'query': keywords, 'boost': 2}}},
+            ],
+        }
+    }
 
-    post_manager.add_post(user, post_id_1, PostType.TEXT_ONLY, text='t', keywords=keywords_1)
-    post_manager.add_post(user, post_id_2, PostType.TEXT_ONLY, text='t', keywords=keywords_2)
-    post_manager.add_post(user, post_id_3, PostType.TEXT_ONLY, text='t', keywords=keywords_3)
+    with patch.object(post_manager, 'elasticsearch_client') as elasticsearch_client_mock:
+        post_manager.find_posts(keywords)
 
-    keywords = ['mine', 'shirt', 'animal']
-    post_ids = post_manager.find_posts(keywords)
-    assert post_ids == [post_id_2, post_id_3, post_id_1]
+    assert elasticsearch_client_mock.mock_calls == [
+        call.query_posts(query),
+        call.query_posts().__getitem__('hits'),
+        call.query_posts().__getitem__().__getitem__('hits'),
+        call.query_posts().__getitem__().__getitem__().__iter__(),
+    ]

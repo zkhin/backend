@@ -51,6 +51,7 @@ clients = {
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': clients.CognitoClient(real_key_pair_getter=secrets_manager_client.get_real_key_pair),
     'dynamo': clients.DynamoClient(),
+    'elasticsearch': clients.ElasticSearchClient(),
     'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
     'pinpoint': clients.PinpointClient(),
@@ -1512,7 +1513,7 @@ def find_contacts(caller_user, arguments, **kwargs):
 @update_last_client
 @update_last_disable_dating_date
 def find_posts(caller_user, arguments, **kwargs):
-    keywords = list(set(arguments['keywords']))
+    keywords = arguments['keywords']
 
     try:
         post_ids = post_manager.find_posts(keywords)

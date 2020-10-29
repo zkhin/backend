@@ -53,7 +53,7 @@ type Query {
   post(postId: ID!): Post
 
   # Find posts by keywords
-  findPosts(keywords: [String!]!): [Post]
+  findPosts(keywords: String!): [Post]
 
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
