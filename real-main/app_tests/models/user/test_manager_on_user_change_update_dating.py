@@ -90,8 +90,8 @@ def test_on_user_change_update_dating_disables_dating_if_dating_validation_fails
     user.update_details(full_name='')
     with pytest.raises(UserException, match='fullName'):
         user.validate_can_enable_dating()
-    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
+    assert 'datingStatus' not in user.refresh_item().item
     with patch.object(user_manager, 'real_dating_client') as rdc_mock:
         user_manager.on_user_change_update_dating(user.id, new_item=user.item, old_item=old_item)
-    assert rdc_mock.mock_calls == []
+    assert rdc_mock.mock_calls == [call.remove_user(user.id)]
     assert 'datingStatus' not in user.refresh_item().item
