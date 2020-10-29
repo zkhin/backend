@@ -86,6 +86,7 @@ class PostDynamo:
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
+        keywords=None,
         set_as_user_photo=None,
     ):
         posted_at = posted_at or pendulum.now('utc')
@@ -136,6 +137,8 @@ class PostDynamo:
             item['verificationHidden'] = verification_hidden
         if set_as_user_photo is not None:
             item['setAsUserPhoto'] = set_as_user_photo
+        if keywords is not None:
+            item['keywords'] = list(set(keywords))  # remove duplicates
         return self.client.add_item({'Item': item})
 
     def increment_flag_count(self, post_id):
@@ -206,10 +209,11 @@ class PostDynamo:
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
+        keywords=None,
     ):
         assert any(
             k is not None
-            for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden)
+            for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, keywords)
         ), 'Action-less post edit requested'
 
         exp_actions = collections.defaultdict(list)
@@ -246,6 +250,10 @@ class PostDynamo:
         if verification_hidden is not None:
             exp_actions['SET'].append('verificationHidden = :vd')
             exp_values[':vd'] = verification_hidden
+
+        if keywords is not None:
+            exp_actions['SET'].append('keywords = :kw')
+            exp_values[':kw'] = list(set(keywords))  # remove duplicates
 
         update_query_kwargs = {
             'Key': self.pk(post_id),

@@ -51,6 +51,7 @@ clients = {
     'cloudfront': clients.CloudFrontClient(secrets_manager_client.get_cloudfront_key_pair),
     'cognito': clients.CognitoClient(real_key_pair_getter=secrets_manager_client.get_real_key_pair),
     'dynamo': clients.DynamoClient(),
+    'elasticsearch': clients.ElasticSearchClient(),
     'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
     'pinpoint': clients.PinpointClient(),
@@ -706,6 +707,7 @@ def add_post(caller_user, arguments, **kwargs):
     likes_disabled = arguments.get('likesDisabled')
     sharing_disabled = arguments.get('sharingDisabled')
     verification_hidden = arguments.get('verificationHidden')
+    keywords = arguments.get('keywords')
 
     lifetime_iso = arguments.get('lifetime')
     if lifetime_iso:
@@ -731,6 +733,7 @@ def add_post(caller_user, arguments, **kwargs):
             likes_disabled=likes_disabled,
             sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
+            keywords=keywords,
             set_as_user_photo=set_as_user_photo,
         )
     except PostException as err:
@@ -821,6 +824,7 @@ def edit_post(caller_user, arguments, **kwargs):
         'likes_disabled': arguments.get('likesDisabled'),
         'sharing_disabled': arguments.get('sharingDisabled'),
         'verification_hidden': arguments.get('verificationHidden'),
+        'keywords': arguments.get('keywords'),
     }
 
     post = post_manager.get_post(post_id)
@@ -1502,3 +1506,22 @@ def find_contacts(caller_user, arguments, **kwargs):
     return [
         {'contactId': contact_id, 'userId': contact_id_to_user_id.get(contact_id)} for contact_id in contact_ids
     ]
+
+
+@routes.register('Query.findPosts')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def find_posts(caller_user, arguments, **kwargs):
+    keywords = arguments['keywords']
+
+    try:
+        post_ids = post_manager.find_posts(keywords)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
+    posts = []
+    for post_id in post_ids:
+        post = post_manager.get_post(post_id)
+        posts.append(post.serialize(post.user.id))
+    return posts

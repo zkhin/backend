@@ -1,5 +1,6 @@
 import logging
 import uuid
+from unittest.mock import call, patch
 
 import pendulum
 import pytest
@@ -577,3 +578,36 @@ def test_record_views(post_manager, user, user2, posts, caplog):
     assert post_manager.view_dynamo.get_view(post2.id, user.id)['thumbnailViewCount'] == 1
     assert user2.refresh_item().item['lastPostViewAt']
     assert user2.refresh_item().item['lastPostFocusViewAt']
+
+
+def test_add_post_with_keywords_attribute(post_manager, user):
+    # create a post behind the scenes
+    post_id = 'pid'
+    keywords = ['bird', 'mine', 'tea']
+    post_manager.add_post(user, post_id, PostType.TEXT_ONLY, text='t', keywords=keywords)
+
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['keywords'].sort() == keywords.sort()
+
+
+def test_find_posts(post_manager, user):
+    keywords = 'bird'
+    query = {
+        'bool': {
+            'should': [
+                {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
+                {'match': {'keywords': {'query': keywords, 'boost': 2}}},
+            ],
+        }
+    }
+
+    with patch.object(post_manager, 'elasticsearch_client') as elasticsearch_client_mock:
+        post_manager.find_posts(keywords)
+
+    assert elasticsearch_client_mock.mock_calls == [
+        call.query_posts(query),
+        call.query_posts().__getitem__('hits'),
+        call.query_posts().__getitem__().__getitem__('hits'),
+        call.query_posts().__getitem__().__getitem__().__iter__(),
+    ]

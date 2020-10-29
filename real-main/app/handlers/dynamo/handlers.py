@@ -167,6 +167,7 @@ register('post', '-', ['MODIFY'], user_manager.on_post_status_change_sync_counts
 register('post', '-', ['REMOVE'], card_manager.on_post_delete_delete_cards)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_flags)
 register('post', '-', ['REMOVE'], post_manager.on_item_delete_delete_views)
+register('post', '-', ['REMOVE'], post_manager.on_post_delete)
 register(
     'post',
     '-',
@@ -174,6 +175,7 @@ register(
     album_manager.on_post_album_change_update_counts_and_timestamps,
     {'albumId': None, 'gsiK3SortKey': -1},  # all non-completed posts are given rank of -1
 )
+register('post', '-', ['INSERT', 'MODIFY'], post_manager.sync_elasticsearch, {'keywords': None})
 register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)

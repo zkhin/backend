@@ -69,6 +69,7 @@ def test_add_pending_post_with_options(post_dynamo):
     expires_at = pendulum.now('utc')
     text = 'lore @ipsum'
     text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
+    keywords = ['bird', 'mine', 'tea', 'bird']
 
     post_item = post_dynamo.add_pending_post(
         user_id,
@@ -84,6 +85,7 @@ def test_add_pending_post_with_options(post_dynamo):
         verification_hidden=True,
         album_id=album_id,
         set_as_user_photo=True,
+        keywords=keywords,
     )
 
     # retrieve post, check format
@@ -116,6 +118,7 @@ def test_add_pending_post_with_options(post_dynamo):
         'sharingDisabled': False,
         'verificationHidden': True,
         'setAsUserPhoto': True,
+        'keywords': list(set(keywords)),
     }
 
 

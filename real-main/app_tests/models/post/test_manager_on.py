@@ -501,3 +501,15 @@ def test_on_post_view_add_delete_sync_viewed_by_counts(post_manager, post, caplo
     assert all(x in caplog.records[1].msg for x in ('Failed to decrement postViewedByCount', post.user_id))
     assert post.refresh_item().item['viewedByCount'] == 0
     assert post.user.refresh_item().item['postViewedByCount'] == 0
+
+
+def test_on_post_delete(post_manager, post):
+    with patch.object(post_manager, 'elasticsearch_client') as elasticsearch_client_mock:
+        post_manager.on_post_delete(post.id, post.refresh_item().item)
+    assert elasticsearch_client_mock.mock_calls == [call.delete_post(post.id)]
+
+
+def test_sync_elasticsearch(post_manager, post):
+    with patch.object(post_manager, 'elasticsearch_client') as elasticsearch_client_mock:
+        post_manager.sync_elasticsearch(post.id, {'keywords': ['spock']})
+    assert elasticsearch_client_mock.mock_calls == [call.put_post(post.id, ['spock'])]

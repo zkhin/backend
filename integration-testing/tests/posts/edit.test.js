@@ -39,6 +39,14 @@ test('Edit post', async () => {
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.text).toBe(text)
 
+  // add some keywords
+  const keywords = ['mine', 'bird', 'tea']
+  await ourClient
+    .mutate({mutation: mutations.editPost, variables: {postId, keywords}})
+    .then(({data: {editPost: post}}) => {
+      expect(post.keywords.sort()).toEqual(keywords.sort())
+    })
+
   // go back to no text
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, text: ''}})
   expect(resp.data.editPost.text).toBeNull()

@@ -78,3 +78,9 @@
     - ChatMemberships.batchGet
     - Query.chat.transform
     - Chats.batchGet
+
+- type: Query
+  field: findPosts
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl

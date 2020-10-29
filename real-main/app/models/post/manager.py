@@ -40,6 +40,8 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         self.clients = clients
         if 'appsync' in clients:
             self.appsync = PostAppSync(clients['appsync'])
+        if 'elasticsearch' in clients:
+            self.elasticsearch_client = clients['elasticsearch']
         if 'dynamo' in clients:
             self.dynamo = PostDynamo(clients['dynamo'])
             self.image_dynamo = PostImageDynamo(clients['dynamo'])
@@ -88,6 +90,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         likes_disabled=None,
         sharing_disabled=None,
         verification_hidden=None,
+        keywords=None,
         set_as_user_photo=None,
         now=None,
     ):
@@ -161,6 +164,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
             album_id=album_id,
+            keywords=keywords,
             set_as_user_photo=set_as_user_photo,
         )
         post = self.init_post(post_item)
@@ -246,6 +250,24 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             logger.warning(f'Deleting expired post with pk ({post_pk["partitionKey"]}, {post_pk["sortKey"]})')
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
+
+    def find_posts(self, keywords):
+        query = {
+            'bool': {
+                'should': [
+                    {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
+                    {'match': {'keywords': {'query': keywords, 'boost': 2}}},
+                ],
+            }
+        }
+        search_result = self.elasticsearch_client.query_posts(query)
+        post_ids = []
+
+        for hit in search_result['hits']['hits']:
+            source = hit.get('_source')
+            if source is not None:
+                post_ids.append(source['postId'])
+        return post_ids
 
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
@@ -399,3 +421,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             recorded = post.trending_increment_score(**trending_kwargs)
             if recorded:
                 post.user.trending_increment_score(**trending_kwargs)
+
+    def on_post_delete(self, post_id, old_item):
+        self.elasticsearch_client.delete_post(post_id)
+
+    def sync_elasticsearch(self, post_id, new_item, old_item=None):
+        self.elasticsearch_client.put_post(post_id, new_item['keywords'])

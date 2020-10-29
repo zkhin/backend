@@ -305,12 +305,31 @@ module.exports.post = gql`
           username
         }
       }
+      keywords
     }
   }
   ${fragments.comment}
   ${fragments.image}
   ${fragments.textTaggedUser}
   ${fragments.video}
+`
+
+module.exports.findPosts = gql`
+  query FindPosts($keywords: String!) {
+    findPosts(keywords: $keywords) {
+      postId
+      postType
+      postStatus
+      postedAt
+      postedBy {
+        userId
+        postCount
+        blockerStatus
+        followedStatus
+      }
+      keywords
+    }
+  }
 `
 
 module.exports.postsThree = gql`

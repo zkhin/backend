@@ -363,6 +363,11 @@ def test_set(post, user):
     assert post.item.get('sharingDisabled', False) is True
     assert post.item.get('verificationHidden', False) is False
 
+    # set keywords
+    keywords = ['bird', 'tea', 'mine']
+    post.set(keywords=keywords)
+    assert post.item['keywords'].sort() == keywords.sort()
+
 
 def test_set_cant_create_contentless_post(post_manager, post):
     org_text = post.item['text']
