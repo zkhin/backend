@@ -251,14 +251,18 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             post_item = self.dynamo.client.get_item(post_pk)
             self.init_post(post_item).delete()
 
-    def find_posts(self, keywords):
+    def find_posts(self, keywords, limit, next_token):
         query = {
-            'bool': {
-                'should': [
-                    {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
-                    {'match': {'keywords': {'query': keywords, 'boost': 2}}},
-                ],
-            }
+            'from': next_token,
+            'size': limit,
+            'query': {
+                'bool': {
+                    'should': [
+                        {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
+                        {'match': {'keywords': {'query': keywords, 'boost': 2}}},
+                    ],
+                }
+            },
         }
         search_result = self.elasticsearch_client.query_posts(query)
         post_ids = []
@@ -267,7 +271,18 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             source = hit.get('_source')
             if source is not None:
                 post_ids.append(source['postId'])
-        return post_ids
+
+        if post_ids:
+            available_total = search_result['hits']['total']['value']
+            next_covers_to = len(search_result['hits']['hits']) + int(next_token)
+
+            if available_total > next_covers_to:
+                next_token = next_covers_to
+
+        return {
+            'nextToken': str(next_token),
+            'items': post_ids,
+        }
 
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):

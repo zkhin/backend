@@ -45,7 +45,7 @@ class ElasticSearchClient:
     def query_posts(self, query):
         "`query` should be dict-like structure that can be serialized to json"
         url = f'https://{self.domain}/posts/_search'
-        resp = requests.post(url, auth=self.awsauth, data=json.dumps({'query': query}), headers=self.headers)
+        resp = requests.post(url, auth=self.awsauth, data=json.dumps(query), headers=self.headers)
         if resp.status_code != 200:
             logging.warning(f'ElasticSearch: Recieved non-200 response of {resp.status_code} when querying posts')
         return resp.json()

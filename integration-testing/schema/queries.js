@@ -317,17 +317,20 @@ module.exports.post = gql`
 module.exports.findPosts = gql`
   query FindPosts($keywords: String!) {
     findPosts(keywords: $keywords) {
-      postId
-      postType
-      postStatus
-      postedAt
-      postedBy {
-        userId
-        postCount
-        blockerStatus
-        followedStatus
+      items {
+        postId
+        postType
+        postStatus
+        postedAt
+        postedBy {
+          userId
+          postCount
+          blockerStatus
+          followedStatus
+        }
+        keywords
       }
-      keywords
+      nextToken
     }
   }
 `
