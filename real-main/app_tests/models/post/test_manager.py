@@ -593,17 +593,23 @@ def test_add_post_with_keywords_attribute(post_manager, user):
 
 def test_find_posts(post_manager, user):
     keywords = 'bird'
+    limit = 20
+    next_token = 0
     query = {
-        'bool': {
-            'should': [
-                {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
-                {'match': {'keywords': {'query': keywords, 'boost': 2}}},
-            ],
-        }
+        'from': next_token,
+        'size': limit,
+        'query': {
+            'bool': {
+                'should': [
+                    {'match_bool_prefix': {'keywords': {'query': keywords, 'boost': 2}}},
+                    {'match': {'keywords': {'query': keywords, 'boost': 2}}},
+                ],
+            }
+        },
     }
 
     with patch.object(post_manager, 'elasticsearch_client') as elasticsearch_client_mock:
-        post_manager.find_posts(keywords)
+        post_manager.find_posts(keywords, limit, next_token)
 
     assert elasticsearch_client_mock.mock_calls == [
         call.query_posts(query),

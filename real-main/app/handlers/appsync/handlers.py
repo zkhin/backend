@@ -1513,15 +1513,17 @@ def find_contacts(caller_user, arguments, **kwargs):
 @update_last_client
 @update_last_disable_dating_date
 def find_posts(caller_user, arguments, **kwargs):
-    keywords = arguments['keywords']
+    keywords = arguments['keywords'].strip()
+    limit = arguments.get('limit', 20)
+    limit = 100 if limit <= 0 else limit
+    next_token = arguments.get('nextToken', 0)
+
+    if not keywords:
+        raise ClientException('Empty queries are not allowed')
 
     try:
-        post_ids = post_manager.find_posts(keywords)
+        paginated_posts = post_manager.find_posts(keywords, limit, next_token)
     except UserException as err:
         raise ClientException(str(err)) from err
 
-    posts = []
-    for post_id in post_ids:
-        post = post_manager.get_post(post_id)
-        posts.append(post.serialize(post.user.id))
-    return posts
+    return paginated_posts
