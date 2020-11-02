@@ -84,3 +84,9 @@
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl
+
+- type: Query
+  field: similarPosts
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl

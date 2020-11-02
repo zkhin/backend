@@ -1519,7 +1519,31 @@ def find_posts(caller_user, arguments, **kwargs):
     next_token = arguments.get('nextToken', 0)
 
     if not keywords:
-        raise ClientException('Empty queries are not allowed')
+        raise ClientException('Empty keywords are not allowed')
+
+    try:
+        paginated_posts = post_manager.find_posts(keywords, limit, next_token)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
+    return paginated_posts
+
+
+@routes.register('Query.similarPosts')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def similar_posts(caller_user, arguments, **kwargs):
+    post_id = arguments['postId']
+    limit = arguments.get('limit', 20)
+    limit = 100 if limit <= 0 else limit
+    next_token = arguments.get('nextToken', 0)
+
+    keywords = post_manager.get_post(post_id).item.get('keywords', [])
+    keywords = ' '.join(keywords)
+
+    if not keywords:
+        raise ClientException('Empty keywords are not allowed')
 
     try:
         paginated_posts = post_manager.find_posts(keywords, limit, next_token)

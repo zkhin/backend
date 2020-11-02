@@ -25,8 +25,8 @@ test('Add post with keywords attribute', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
-  const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]
-  let keywords = ['mine', 'bird', 'tea']
+  const [postId1, postId2, postId3, postId4] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
+  let keywords = ['mine', 'bird']
 
   // Add three posts
   await ourClient
@@ -36,7 +36,7 @@ test('Add post with keywords attribute', async () => {
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
 
-  keywords = ['tea', 'bird', 'here']
+  keywords = ['tea', 'here']
   await theirClient
     .mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData, keywords}})
     .then(({data: {addPost: post}}) => {
@@ -52,24 +52,32 @@ test('Add post with keywords attribute', async () => {
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
 
+  keywords = []
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId4, imageData, keywords}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId4)
+      expect(post.keywords).toEqual(keywords)
+    })
+
   await misc.sleep(2000) // dynamo
-  keywords = 'shirt'
-  await ourClient.query({query: queries.findPosts, variables: {keywords}}).then(({data: {findPosts: posts}}) => {
-    expect(posts.items).toHaveLength(1)
-    expect(posts.items.map((post) => post.postId)).toEqual([postId3])
-    expect(posts.items.map((post) => post.postedBy.userId)).toEqual([theirUserId])
-  })
+  await ourClient
+    .query({query: queries.similarPosts, variables: {postId: postId1}})
+    .then(({data: {similarPosts: posts}}) => {
+      expect(posts.items).toHaveLength(2)
+      expect(posts.items.map((post) => post.postId).sort()).toEqual([postId1, postId3].sort())
+      expect(posts.items.map((post) => post.postedBy.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+    })
 
-  keywords = 'shirt min'
-  await ourClient.query({query: queries.findPosts, variables: {keywords}}).then(({data: {findPosts: posts}}) => {
-    expect(posts.items).toHaveLength(2)
-    expect(posts.items.map((post) => post.postId).sort()).toEqual([postId1, postId3].sort())
-    expect(posts.items.map((post) => post.postedBy.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  })
+  await ourClient
+    .query({query: queries.similarPosts, variables: {postId: postId2}})
+    .then(({data: {similarPosts: posts}}) => {
+      expect(posts.items).toHaveLength(2)
+      expect(posts.items.map((post) => post.postId).sort()).toEqual([postId2, postId3].sort())
+      expect(posts.items.map((post) => post.postedBy.userId).sort()).toEqual([theirUserId, theirUserId])
+    })
 
-  // find with empty keywords
-  keywords = '  '
-  await expect(ourClient.query({query: queries.findPosts, variables: {keywords}})).rejects.toThrow(
+  await expect(ourClient.query({query: queries.similarPosts, variables: {postId: postId4}})).rejects.toThrow(
     /ClientError: Empty keywords are not allowed/,
   )
 })

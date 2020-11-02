@@ -265,14 +265,20 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             },
         }
         search_result = self.elasticsearch_client.query_posts(query)
-        post_ids = []
+        post_id_to_trending_score = {}
+        sorted_post_ids = []
 
         for hit in search_result['hits']['hits']:
             source = hit.get('_source')
             if source is not None:
-                post_ids.append(source['postId'])
+                post_id = source['postId']
+                trending_score = self.get_post(source['postId']).trending_score
+                post_id_to_trending_score[post_id] = trending_score
 
-        if post_ids:
+        if post_id_to_trending_score:
+            # sort post ids by trending weight
+            sorted_post_ids = sorted(post_id_to_trending_score, key=post_id_to_trending_score.get, reverse=True)
+
             available_total = search_result['hits']['total']['value']
             next_covers_to = len(search_result['hits']['hits']) + int(next_token)
 
@@ -281,7 +287,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
         return {
             'nextToken': str(next_token),
-            'items': post_ids,
+            'items': sorted_post_ids,
         }
 
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
