@@ -55,6 +55,11 @@ type Query {
   # Find posts by keywords
   findPosts(keywords: String!, limit: Int, nextToken: String): PaginatedPosts!
 
+  # Find similar posts
+  #   - find keywords matched posts
+  #   - return order by trending score
+  similarPosts(postId: ID!, limit: Int, nextToken: String): PaginatedPosts!
+
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
 
