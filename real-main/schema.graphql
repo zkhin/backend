@@ -138,9 +138,11 @@ type Mutation {
     dateOfBirth: AWSDate,
     gender: UserGender,
     location: LocationInput,
+    height: Int,  # unit is cm
     matchAgeRange: AgeRangeInput,
     matchGenders: [UserGender!],
     matchLocationRadius: Int,
+    matchHeightRange: HeightRangeInput,
   ): User
 
   # Various one-off user property setters
@@ -434,10 +436,12 @@ type User {
   verificationHidden: Boolean
   subscriptionExpiresAt: AWSDateTime
   location: Location
+  height: Int
   datingStatus: DatingStatus
   matchAgeRange: AgeRange
   matchGenders: [UserGender!]
   matchLocationRadius: Int
+  matchHeightRange: HeightRange
 
   # User's dating matches
   #   - private to the user themselves only
@@ -924,6 +928,16 @@ type AgeRange {
 }
 
 input AgeRangeInput {
+  min: Int
+  max: Int
+}
+
+type HeightRange {
+  min: Int
+  max: Int
+}
+
+input HeightRangeInput {
   min: Int
   max: Int
 }

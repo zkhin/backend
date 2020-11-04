@@ -23,9 +23,11 @@ const datingVariables = {
   gender: 'FEMALE',
   location: {latitude: 30, longitude: 50}, // different from that used in other test suites
   dateOfBirth: '2000-01-01',
+  height: 170,
   matchAgeRange: {min: 20, max: 30},
   matchGenders: ['FEMALE'],
   matchLocationRadius: 50,
+  matchHeightRange: {min: 150, max: 200},
 }
 
 test('Cannot create direct/group chat if the match_status is not confirmed', async () => {

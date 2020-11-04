@@ -180,6 +180,7 @@ module.exports.simpleUserFields = gql`
     signedUpAt
     userStatus
     subscriptionLevel
+    height
     subscriptionExpiresAt
     lastFoundContactsAt
     matchGenders
@@ -190,6 +191,10 @@ module.exports.simpleUserFields = gql`
       accuracy
     }
     matchAgeRange {
+      min
+      max
+    }
+    matchHeightRange {
       min
       max
     }

@@ -32,9 +32,11 @@ def test_on_user_change_update_dating_calls_dating_project_correctly(user_manage
         date_of_birth='2000-01-01',
         gender=UserGender.FEMALE,
         location={'latitude': 45, 'longitude': -120},
+        height=170,
         match_age_range={'min': 20, 'max': 30},
         match_genders=[UserGender.FEMALE, UserGender.MALE],
         match_location_radius=50,
+        match_height_range={'min': 150, 'max': 200},
     )
     user.update_age(now=pendulum.parse('2020-02-02T00:00:00Z'))
     with patch.object(user_manager, 'real_dating_client') as rdc_mock:
@@ -76,9 +78,11 @@ def test_on_user_change_update_dating_disables_dating_if_dating_validation_fails
         date_of_birth='2000-01-01',
         gender=UserGender.FEMALE,
         location={'latitude': 45, 'longitude': -120},
+        height=170,
         match_age_range={'min': 20, 'max': 30},
         match_genders=[UserGender.FEMALE, UserGender.MALE],
         match_location_radius=50,
+        match_height_range={'min': 150, 'max': 200},
     )
     user.update_age(now=pendulum.parse('2020-02-02T00:00:00Z'))
     user.validate_can_enable_dating()  # verify does not throw
