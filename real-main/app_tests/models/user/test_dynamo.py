@@ -233,9 +233,11 @@ def test_set_user_details(user_dynamo):
     date_of_birth = '1900-01-01'
     gender = 'MALE'
     location = {'latitude': 50.1, 'longitude': 50.1, 'accuracy': 50}
+    height = 180
     match_age_range = {'min': 20, 'max': 50}
     match_genders = ['MALE', 'FEMALE']
     match_location_radius = 15
+    match_height_range = {'min': 150, 'max': 200}
 
     user_dynamo.add_user('other-id-1', 'noise-1', 'cog-noise-1')
     expected_base_item = user_dynamo.add_user(user_id, username)
@@ -262,9 +264,11 @@ def test_set_user_details(user_dynamo):
         date_of_birth=date_of_birth,
         gender=gender,
         location=location,
+        height=height,
         match_age_range=match_age_range,
         match_genders=match_genders,
         match_location_radius=match_location_radius,
+        match_height_range=match_height_range,
     )
     expected = {
         **expected_base_item,
@@ -283,9 +287,11 @@ def test_set_user_details(user_dynamo):
             'verificationHidden': True,
             'gender': gender,
             'location': location,
+            'height': height,
             'matchAgeRange': match_age_range,
             'matchGenders': match_genders,
             'matchLocationRadius': match_location_radius,
+            'matchHeightRange': match_height_range,
             'dateOfBirth': date_of_birth,
             'gsiK2PartitionKey': 'userBirthday/01-01',
             'gsiK2SortKey': '-',

@@ -51,9 +51,11 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -95,9 +97,11 @@ test('FullName required to enable dating', async () => {
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -119,9 +123,11 @@ test('Profile photo required to enable dating', async () => {
       fullName: 'Hunter S',
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -147,9 +153,11 @@ test('Gender required to enable dating', async () => {
       fullName: 'Hunter S',
       photoPostId: postId,
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -175,9 +183,11 @@ test('location required to enable dating', async () => {
       fullName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -204,8 +214,10 @@ test('matchAgeRange required to enable dating', async () => {
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -232,8 +244,10 @@ test('matchGenders required to enable dating', async () => {
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -260,8 +274,10 @@ test('BASIC users require matchLocationRadius to enable dating, DIAMOND users do
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -297,9 +313,11 @@ test('Age required and must be in allowed age range for enabling dating', async 
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -353,9 +371,11 @@ test('Enable dating and remove required fields, check dating is DISABLED', async
       photoPostId: postId,
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
       matchAgeRange: {min: 20, max: 50},
       matchGenders: ['MALE', 'FEMALE'],
       matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
     },
   })
   await misc.sleep(2000)
@@ -377,4 +397,64 @@ test('Enable dating and remove required fields, check dating is DISABLED', async
   await ourClient
     .query({query: queries.user, variables: {userId: ourUserId}})
     .then(({data: {user}}) => expect(user.datingStatus).toBe('DISABLED'))
+})
+
+test('Height required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // set all the stuff needed for dating, except gender
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      gender: 'MALE',
+      photoPostId: postId,
+      location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      matchAgeRange: {min: 20, max: 50},
+      matchGenders: ['MALE', 'FEMALE'],
+      matchLocationRadius: 50,
+      matchHeightRange: {min: 150, max: 200},
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'height'}` required to enable dating/)
+})
+
+test('matchHeightRange required to enable dating', async () => {
+  const {client} = await loginCache.getCleanLogin()
+
+  // we set all the stuff needed for dating, except matchAgeRange
+  const postId = uuidv4()
+  await client
+    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  await client.mutate({
+    mutation: mutations.setUserDetails,
+    variables: {
+      dateOfBirth: '2000-01-01',
+      fullName: 'Hunter S',
+      photoPostId: postId,
+      gender: 'MALE',
+      location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
+      height: 170,
+      matchGenders: ['MALE', 'FEMALE'],
+      matchAgeRange: {min: 20, max: 50},
+      matchLocationRadius: 50,
+    },
+  })
+  await misc.sleep(2000)
+
+  // verify can't enable dating
+  await expect(
+    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: `{'matchHeightRange'}` required to enable dating/)
 })

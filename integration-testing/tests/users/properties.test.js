@@ -743,3 +743,55 @@ test('Validate user properties(location, matchAgeRange, matchGenders, matchLocat
     /ClientError: matchGenders cannot be empty/,
   )
 })
+
+test('Set and read properties(height, matchHeightRange)', async () => {
+  const {client: ourClient, userId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+
+  // set up another user in cognito, leave them as public
+  const height = 170
+  const matchHeightRange = {min: 150, max: 200}
+
+  // Set height and match height range
+  await ourClient.mutate({mutation: mutations.setUserDetails, variables: {height, matchHeightRange}})
+
+  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(userId)
+    expect(user.height).toBe(height)
+    expect(user.matchHeightRange.min).toBe(matchHeightRange.min)
+    expect(user.matchHeightRange.max).toBe(matchHeightRange.max)
+  })
+
+  // check another user can't see values
+  await theirClient.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
+    expect(user.userId).toBe(userId)
+    expect(user.height).toBe(height)
+    expect(user.matchHeightRange).toBeNull()
+  })
+})
+
+test('Validate user properties(height, matchHeightRange)', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const height = 100
+  let matchHeightRange = {min: 129, max: 230}
+
+  // Validate height
+  await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {height}})).rejects.toThrow(
+    /ClientError: Invalid height/,
+  )
+
+  // Validate matchHeightRange
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
+  ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
+
+  matchHeightRange = {min: 140, max: 251}
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
+  ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
+
+  matchHeightRange = {min: 170, max: 150}
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
+  ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
+})

@@ -225,6 +225,11 @@
   response: PassThru.response.vtl
 
 - type: User
+  field: matchHeightRange
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
   field: datingStatus
   dataSource: NoneDataSource
   response: PassThru.response.vtl

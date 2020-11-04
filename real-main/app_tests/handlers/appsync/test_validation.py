@@ -4,6 +4,8 @@ from app.handlers.appsync.exceptions import ClientException
 from app.handlers.appsync.validation import (
     validate_age_range,
     validate_date_of_birth,
+    validate_height,
+    validate_height_range,
     validate_location,
     validate_match_genders,
     validate_match_location_radius,
@@ -119,3 +121,41 @@ def test_validate_date_of_birth():
 
     assert validate_date_of_birth('1970-01-01') is True
     assert validate_date_of_birth('2020-12-31') is True
+
+
+def test_validate_height():
+    with pytest.raises(ClientException, match='height'):
+        validate_height(100)
+
+    with pytest.raises(ClientException, match='height'):
+        validate_height(300)
+
+    assert validate_height(150) is True
+    assert validate_height(190) is True
+    assert validate_height(250) is True
+
+
+def test_validate_height_range():
+    valid_match_height_range_1 = {'min': 150, 'max': 200}
+    valid_match_height_range_2 = {'min': 130, 'max': 250}
+    invalid_match_height_range_1 = {'min': 170, 'max': 150}
+    invalid_match_height_range_2 = {'min': 129, 'max': 190}
+    invalid_match_height_range_3 = {'min': 130, 'max': 251}
+    invalid_match_height_range_4 = {'min': 129, 'max': 251}
+
+    # Pass the validation
+    assert validate_height_range(valid_match_height_range_1) is True
+    assert validate_height_range(valid_match_height_range_2) is True
+
+    # Raise client exception
+    with pytest.raises(ClientException, match='matchHeightRange'):
+        validate_height_range(invalid_match_height_range_1)
+
+    with pytest.raises(ClientException, match='matchHeightRange'):
+        validate_height_range(invalid_match_height_range_2)
+
+    with pytest.raises(ClientException, match='matchHeightRange'):
+        validate_height_range(invalid_match_height_range_3)
+
+    with pytest.raises(ClientException, match='matchHeightRange'):
+        validate_height_range(invalid_match_height_range_4)

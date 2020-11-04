@@ -32,6 +32,8 @@ from .exceptions import ClientException
 from .validation import (
     validate_age_range,
     validate_date_of_birth,
+    validate_height,
+    validate_height_range,
     validate_location,
     validate_match_genders,
     validate_match_location_radius,
@@ -322,9 +324,11 @@ def set_user_details(caller_user, arguments, **kwargs):
     date_of_birth = arguments.get('dateOfBirth')
     gender = arguments.get('gender')
     location = arguments.get('location')
+    height = arguments.get('height')
     match_age_range = arguments.get('matchAgeRange')
     match_genders = arguments.get('matchGenders')
     match_location_radius = arguments.get('matchLocationRadius')
+    match_height_range = arguments.get('matchHeightRange')
 
     args = (
         username,
@@ -343,9 +347,11 @@ def set_user_details(caller_user, arguments, **kwargs):
         date_of_birth,
         gender,
         location,
+        height,
         match_age_range,
         match_genders,
         match_location_radius,
+        match_height_range,
     )
     if all(v is None for v in args):
         raise ClientException('Called without any arguments... probably not what you intended?')
@@ -381,6 +387,12 @@ def set_user_details(caller_user, arguments, **kwargs):
     if match_genders is not None:
         validate_match_genders(match_genders)
 
+    if height is not None:
+        validate_height(height)
+
+    if match_height_range is not None:
+        validate_height_range(match_height_range)
+
     if date_of_birth is not None:
         validate_date_of_birth(date_of_birth)
 
@@ -399,9 +411,11 @@ def set_user_details(caller_user, arguments, **kwargs):
         date_of_birth=date_of_birth,
         gender=gender,
         location=location,
+        height=height,
         match_age_range=match_age_range,
         match_genders=match_genders,
         match_location_radius=match_location_radius,
+        match_height_range=match_height_range,
     )
     return caller_user.serialize(caller_user.id)
 

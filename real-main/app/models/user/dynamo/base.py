@@ -176,9 +176,11 @@ class UserDynamo:
         date_of_birth=None,
         gender=None,
         location=None,
+        height=None,
         match_age_range=None,
         match_genders=None,
         match_location_radius=None,
+        match_height_range=None,
     ):
         "To ignore an attribute, leave it set to None. To delete an attribute, set it to the empty string."
         expression_actions = collections.defaultdict(list)
@@ -212,9 +214,11 @@ class UserDynamo:
         process_attr('verificationHidden', verification_hidden)
         process_attr('gender', gender)
         process_attr('location', location)
+        process_attr('height', height)
         process_attr('matchAgeRange', match_age_range)
         process_attr('matchGenders', match_genders)
         process_attr('matchLocationRadius', match_location_radius)
+        process_attr('matchHeightRange', match_height_range)
 
         process_attr('dateOfBirth', date_of_birth)
         if date_of_birth is not None:

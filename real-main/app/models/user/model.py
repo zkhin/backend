@@ -324,9 +324,11 @@ class User(TrendingModelMixin):
         date_of_birth=None,
         gender=None,
         location=None,
+        height=None,
         match_age_range=None,
         match_genders=None,
         match_location_radius=None,
+        match_height_range=None,
     ):
         "To delete details, set them to the empty string. Ex: `full_name=''`"
         kwargs = {k: v for k, v in locals().items() if k != 'self' and v is not None}
@@ -488,9 +490,11 @@ class User(TrendingModelMixin):
             'age',
             'gender',
             'location',
+            'height',
             'matchAgeRange',
             'matchGenders',
             'matchLocationRadius',
+            'matchHeightRange',
             'serviceLevel',
         }
         return {
@@ -506,8 +510,10 @@ class User(TrendingModelMixin):
             'age',
             'gender',
             'location',
+            'height',
             'matchAgeRange',
             'matchGenders',
+            'matchHeightRange',
         }
         if self.subscription_level == UserSubscriptionLevel.BASIC:
             required_fields.add('matchLocationRadius')

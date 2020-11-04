@@ -48,3 +48,18 @@ def validate_date_of_birth(date_of_birth):
     except pendulum.parsing.exceptions.ParserError as err:
         raise ClientException('dateOfBirth contains timezone information') from err
     return True
+
+
+def validate_height(height):
+    if height < 130 or height > 250:
+        raise ClientException('Invalid height')
+    return True
+
+
+def validate_height_range(match_height_range):
+    minHeight = match_height_range.get('min')
+    maxHeight = match_height_range.get('max')
+
+    if minHeight > maxHeight or minHeight < 130 or maxHeight > 250:
+        raise ClientException('Invalid matchHeightRange')
+    return True
