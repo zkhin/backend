@@ -423,6 +423,10 @@ def test_start_change_phone_steal_other_one(user_1_verified_phone_stream_updated
     assert 'phoneNumber' in user_1_verified_phone_stream_updated.item
     assert 'phoneNumber' in user_verified_phone.item
 
+    user_verified_phone.cognito_client.list_verified_contact_users = Mock(
+        return_value=[{'Username': user_1_verified_phone_stream_updated.id}]
+    )
+
     new_phone = user_1_verified_phone_stream_updated.item.get('phoneNumber')
     with pytest.raises(UserException, match='User phoneNumber is already used by other'):
         user_verified_phone.start_change_contact_attribute('phone', new_phone)
@@ -487,6 +491,8 @@ def test_start_change_email_same_as_existing(user):
 def test_start_change_email_steal_other_one(user_4_stream_updated, user):
     assert 'email' in user_4_stream_updated.item
     assert 'email' in user.item
+
+    user.cognito_client.list_verified_contact_users = Mock(return_value=[{'Username': user_4_stream_updated.id}])
 
     new_email = user_4_stream_updated.item.get('email')
     with pytest.raises(UserException, match='User email is already used by other'):
