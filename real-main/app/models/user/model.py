@@ -383,7 +383,8 @@ class User(TrendingModelMixin):
         # verify that new attribtue value is not used by other
         contact_attr_dynamo = getattr(self, names['dynamo_client'])
         if contact_attr_dynamo.get(attribute_value):
-            raise UserException(f'User {names["dynamo_attr"]} is already used by other')
+            if self.cognito_client.list_verified_contact_users(names['cognito'], attribute_value):
+                raise UserException(f'User {names["dynamo_attr"]} is already used by other')
 
         self.cognito_client.set_user_attributes(self.id, attrs)
 

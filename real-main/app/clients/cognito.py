@@ -172,6 +172,17 @@ class CognitoClient:
             user_items.append(user_item)
         return user_items
 
+    def list_verified_contact_users(self, attribute_name, attribute_value):
+        filter_query = f'{attribute_name} = "{attribute_value}" AND {attribute_name}_verified = "true"'
+        boto_resp = self.user_pool_client.list_users(UserPoolId=self.user_pool_id, Filter=filter_query)
+
+        user_items = []
+        for resp_item in boto_resp['Users']:
+            user_item = {ua['Name']: ua['Value'] for ua in resp_item['Attributes']}
+            user_item['Username'] = resp_item['Username']
+            user_items.append(user_item)
+        return user_items
+
     def delete_user_pool_entry(self, user_id):
         self.user_pool_client.admin_delete_user(UserPoolId=self.user_pool_id, Username=user_id)
 
