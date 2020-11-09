@@ -56,7 +56,7 @@ class CachedImage:
             file_type = imghdr.what(fh)
             if file_type is None:
                 raise PostException(f'Unable to recognize file type of uploaded file for post `{self.post_id}`')
-            if file_type != 'jpeg':
+            if file_type != 'jpeg' and file_type != 'png':
                 raise PostException(f'File of type `{file_type}` for uploaded jpeg image post `{self.post_id}`')
             try:
                 self._image = PIL.ImageOps.exif_transpose(PIL.Image.open(fh))
@@ -148,7 +148,7 @@ class CachedImage:
                         if v is not None
                     }
                     try:
-                        self._image.save(fh, **kwargs)
+                        self._image.convert('RGB').save(fh, **kwargs)
                     except Exception as err:
                         raise PostException(f'Unable to save pil image for post `{self.post_id}`: {err}') from err
                     fh.seek(0)
