@@ -899,6 +899,7 @@ def test_set_user_dating_status(user_dynamo):
     assert 'datingStatus' not in item
     assert 'gsiA3PartitionKey' not in item
     assert 'gsiA3SortKey' not in item
+    assert 'userDisableDatingDate' not in item
 
     # enable, verify
     item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.ENABLED)
@@ -906,13 +907,18 @@ def test_set_user_dating_status(user_dynamo):
     assert item['datingStatus'] == UserDatingStatus.ENABLED
     assert item['gsiA3PartitionKey'] == 'userDisableDatingDate'
     assert item['gsiA3SortKey']
+    assert 'userDisableDatingDate' not in item
 
     # disable, verify
+    before = pendulum.now('utc')
     item = user_dynamo.set_user_dating_status(user_id, UserDatingStatus.DISABLED)
+    after = pendulum.now('utc')
+
     assert user_dynamo.get_user(user_id) == item
     assert 'datingStatus' not in item
     assert 'gsiA3PartitionKey' not in item
     assert 'gsiA3SortKey' not in item
+    assert before < pendulum.parse(item['userDisableDatingDate']) < after
 
 
 def test_generate_user_ids_by_birthday(user_dynamo):

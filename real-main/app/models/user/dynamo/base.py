@@ -275,7 +275,10 @@ class UserDynamo:
     def set_user_dating_status(self, user_id, status, fail_softly=False):
         query_kwargs = {'Key': self.pk(user_id)}
         if status == UserDatingStatus.DISABLED:
-            query_kwargs['UpdateExpression'] = 'REMOVE datingStatus, gsiA3PartitionKey, gsiA3SortKey'
+            query_kwargs[
+                'UpdateExpression'
+            ] = 'REMOVE datingStatus, gsiA3PartitionKey, gsiA3SortKey SET userDisableDatingDate = :now'
+            query_kwargs['ExpressionAttributeValues'] = {':now': pendulum.now('utc').to_iso8601_string()}
         else:
             query_kwargs[
                 'UpdateExpression'

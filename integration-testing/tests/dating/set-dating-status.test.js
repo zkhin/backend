@@ -26,6 +26,7 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.datingStatus).toBe('DISABLED')
     expect(user.subscriptionLevel).toBe('BASIC')
+    expect(user.userDisableDatingDate).toBeNull()
   })
 
   // check they can't see our dating status
@@ -77,9 +78,10 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
   await ourClient
     .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'DISABLED'}})
     .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('DISABLED'))
-  await ourClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.datingStatus).toBe('DISABLED'))
+  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.datingStatus).toBe('DISABLED')
+    expect(user.userDisableDatingDate).toBeDefined()
+  })
 })
 
 test('FullName required to enable dating', async () => {

@@ -539,6 +539,9 @@ type User {
 
   # when user last called findUsers
   lastFoundContactsAt: AWSDateTime
+
+  # when the dating status is set from enabled to disabled
+  userDisableDatingDate: AWSDateTime
 }
 
 type PaginatedUsers {

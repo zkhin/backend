@@ -183,6 +183,7 @@ module.exports.simpleUserFields = gql`
     height
     subscriptionExpiresAt
     lastFoundContactsAt
+    userDisableDatingDate
     matchGenders
     matchLocationRadius
     location {
