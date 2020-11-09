@@ -72,30 +72,6 @@ test('Uploading image sets width, height and colors', async () => {
   })
 })
 
-// test('Uploading png image results in error', async () => {
-//   const {client} = await loginCache.getCleanLogin()
-
-//   // create a pending image post
-//   const postId = uuidv4()
-//   const uploadUrl = await client
-//     .mutate({mutation: mutations.addPost, variables: {postId}})
-//     .then(({data: {addPost: post}}) => {
-//       expect(post.postId).toBe(postId)
-//       expect(post.postStatus).toBe('PENDING')
-//       return post.imageUploadUrl
-//     })
-
-//   // upload a png, give the s3 trigger a second to fire
-//   await got.put(uploadUrl, {headers: pngHeaders, body: pngData})
-//   await misc.sleep(5000)
-
-//   // check that post ended up in an ERROR state
-//   await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-//     expect(post.postId).toBe(postId)
-//     expect(post.postStatus).toBe('ERROR')
-//   })
-// })
-
 test('Uploading png image', async () => {
   const {client} = await loginCache.getCleanLogin()
 
