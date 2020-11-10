@@ -66,7 +66,8 @@ class TrendingDynamo:
         assert isinstance(expected_score, Decimal), 'Boto uses decimals for numbers'
         assert isinstance(new_score, Decimal), 'Boto uses decimals for numbers'
         assert new_score >= 0, 'Score cannot be negative'
-        assert expected_score > new_score, 'New score must be less than existing score'
+        # expected_score == new_score means they are all zero
+        assert expected_score >= new_score, 'New score must be less than or equal to existing score'
         query_kwargs = {
             'Key': self.pk(item_id),
             'UpdateExpression': 'SET gsiA4SortKey = :ns, lastDeflatedAt = :lda',

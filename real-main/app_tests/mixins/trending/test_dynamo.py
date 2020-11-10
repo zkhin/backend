@@ -114,7 +114,7 @@ def test_deflate_score_failures(trending_dynamo):
         trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(-1), yesterday, now)
 
     # verify can't deflate to more than our score
-    with pytest.raises(AssertionError, match='less than existing'):
+    with pytest.raises(AssertionError, match='less than'):
         trending_dynamo.deflate_score(item_id, Decimal(5), Decimal(6), yesterday, now)
 
     # verify can't deflate trending that DNE
