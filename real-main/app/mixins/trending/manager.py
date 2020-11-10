@@ -44,7 +44,6 @@ class TrendingManagerMixin:
         current_score = trending_item['gsiA4SortKey']
         if current_score == 0:
             logging.warning(f'Trending for item `{self.item_type}:{item_id}` already has score of zero')
-            return False
 
         now = now or pendulum.now('utc')
         last_deflation_at = pendulum.parse(trending_item['lastDeflatedAt'])

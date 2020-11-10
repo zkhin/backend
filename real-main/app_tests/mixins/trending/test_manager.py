@@ -82,7 +82,7 @@ def test_trending_deflate_item_already_has_score_of_zero(manager, caplog):
     with caplog.at_level(logging.WARNING):
         deflated = manager.trending_deflate_item(item)
     assert deflated is False
-    assert len(caplog.records) == 1
+    assert len(caplog.records) == 2
     assert manager.item_type in caplog.records[0].msg
     assert item_id in caplog.records[0].msg
     assert 'already has score of zero' in caplog.records[0].msg
