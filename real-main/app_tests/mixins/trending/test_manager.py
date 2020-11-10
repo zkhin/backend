@@ -90,6 +90,25 @@ def test_trending_deflate_item_already_has_score_of_zero(manager, caplog):
 
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
+def test_trending_deflate_item_score_of_zero_update_deflated_at(manager, caplog):
+    # add a trending item
+    created_at = pendulum.parse('2020-06-07T12:00:00Z')
+    item_id, item_score = str(uuid4()), Decimal(0)
+    item = manager.trending_dynamo.add(item_id, item_score, now=created_at)
+    assert pendulum.parse(item['lastDeflatedAt']) == created_at
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(0))
+
+    # do the deflation, next day
+    now = pendulum.parse('2020-06-08T18:00:00Z')
+    with caplog.at_level(logging.WARNING):
+        deflated = manager.trending_deflate_item(item, now=now)
+    assert deflated is True
+    item = manager.trending_dynamo.get(item_id)
+    assert pendulum.parse(item['lastDeflatedAt']) == now
+    assert item['gsiA4SortKey'] == pytest.approx(Decimal(0))
+
+
+@pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_deflate_item_no_recursion(manager, caplog):
     # add a trending item
     created_at = pendulum.parse('2020-06-07T12:00:00Z')
