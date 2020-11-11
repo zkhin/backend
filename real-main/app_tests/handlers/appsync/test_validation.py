@@ -15,7 +15,7 @@ from app.models.user.enums import UserSubscriptionLevel
 
 def test_validate_match_location_radius():
     # Case 1
-    match_location_radius = 14
+    match_location_radius = 4
 
     with pytest.raises(ClientException, match='matchLocationRadius'):
         validate_match_location_radius(match_location_radius, UserSubscriptionLevel.BASIC)
@@ -24,7 +24,7 @@ def test_validate_match_location_radius():
         validate_match_location_radius(match_location_radius, UserSubscriptionLevel.DIAMOND)
 
     # Case 2
-    match_location_radius = 15
+    match_location_radius = 5
 
     assert validate_match_location_radius(match_location_radius, UserSubscriptionLevel.BASIC) is True
     assert validate_match_location_radius(match_location_radius, UserSubscriptionLevel.DIAMOND) is True

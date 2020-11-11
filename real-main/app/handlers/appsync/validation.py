@@ -6,8 +6,8 @@ from .exceptions import ClientException
 
 
 def validate_match_location_radius(match_location_radius, subscription_level):
-    if match_location_radius < 15:
-        raise ClientException('matchLocationRadius should be greater than or equal to 15')
+    if match_location_radius < 5:
+        raise ClientException('matchLocationRadius should be greater than or equal to 5')
     if subscription_level == UserSubscriptionLevel.BASIC and match_location_radius > 100:
         raise ClientException('matchLocationRadius should be less than or equal to 100')
     return True

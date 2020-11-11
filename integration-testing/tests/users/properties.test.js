@@ -703,13 +703,13 @@ test('Validate user properties(location, matchAgeRange, matchGenders, matchLocat
   const {client: ourClient} = await loginCache.getCleanLogin()
   const location = {latitude: 100, longitude: 200, accuracy: -10}
   const matchAgeRange = {min: 100, max: 50}
-  const matchLocationRadius = 10
+  const matchLocationRadius = 4
   const matchGenders = []
 
   // Validate match location radius
   await expect(
     ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchLocationRadius}}),
-  ).rejects.toThrow(/ClientError: matchLocationRadius should be greater than or equal to 15/)
+  ).rejects.toThrow(/ClientError: matchLocationRadius should be greater than or equal to 5/)
 
   // Validate user age range
   await expect(ourClient.mutate({mutation: mutations.setUserAgeRange, variables: matchAgeRange})).rejects.toThrow(
