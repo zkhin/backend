@@ -4,6 +4,8 @@ import logging
 import pendulum
 from boto3.dynamodb.conditions import Key
 
+from ..exceptions import FollowerAlreadyHasStatus
+
 logger = logging.getLogger()
 
 
@@ -37,7 +39,10 @@ class FollowerDynamo:
                 'followedUserId': followed_user_id,
             },
         }
-        return self.client.add_item(query_kwargs)
+        try:
+            return self.client.add_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise FollowerAlreadyHasStatus(follower_user_id, followed_user_id, follow_status) from err
 
     def update_following_status(self, follow_item, follow_status):
         key = {k: follow_item[k] for k in ('partitionKey', 'sortKey')}
