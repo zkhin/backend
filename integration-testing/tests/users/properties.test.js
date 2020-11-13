@@ -772,8 +772,8 @@ test('Set and read properties(height, matchHeightRange)', async () => {
 
 test('Validate user properties(height, matchHeightRange)', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
-  const height = 100
-  let matchHeightRange = {min: 129, max: 230}
+  const height = -10
+  let matchHeightRange = {min: -10, max: 230}
 
   // Validate height
   await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {height}})).rejects.toThrow(
@@ -785,7 +785,7 @@ test('Validate user properties(height, matchHeightRange)', async () => {
     ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
   ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
 
-  matchHeightRange = {min: 140, max: 251}
+  matchHeightRange = {min: 140, max: 276}
   await expect(
     ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
   ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
