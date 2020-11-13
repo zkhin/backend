@@ -5,6 +5,7 @@ import pytest
 
 from app.models.follower.dynamo.base import FollowerDynamo
 from app.models.follower.enums import FollowStatus
+from app.models.follower.exceptions import FollowerAlreadyHasStatus
 
 
 @pytest.fixture
@@ -65,7 +66,7 @@ def test_add_following_already_exists(follower_dynamo, user1, user2):
     follower_dynamo.add_following(user1.id, user2.id, FollowStatus.FOLLOWING)
 
     # try to add it again
-    with pytest.raises(follower_dynamo.client.exceptions.ConditionalCheckFailedException):
+    with pytest.raises(FollowerAlreadyHasStatus):
         follower_dynamo.add_following(user1.id, user2.id, FollowStatus.FOLLOWING)
 
 
