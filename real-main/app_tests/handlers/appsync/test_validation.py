@@ -125,7 +125,7 @@ def test_validate_date_of_birth():
 
 def test_validate_height():
     with pytest.raises(ClientException, match='height'):
-        validate_height(100)
+        validate_height(-1)
 
     with pytest.raises(ClientException, match='height'):
         validate_height(300)
@@ -139,9 +139,9 @@ def test_validate_height_range():
     valid_match_height_range_1 = {'min': 150, 'max': 200}
     valid_match_height_range_2 = {'min': 130, 'max': 250}
     invalid_match_height_range_1 = {'min': 170, 'max': 150}
-    invalid_match_height_range_2 = {'min': 129, 'max': 190}
-    invalid_match_height_range_3 = {'min': 130, 'max': 251}
-    invalid_match_height_range_4 = {'min': 129, 'max': 251}
+    invalid_match_height_range_2 = {'min': -10, 'max': 190}
+    invalid_match_height_range_3 = {'min': 130, 'max': 276}
+    invalid_match_height_range_4 = {'min': -10, 'max': 276}
 
     # Pass the validation
     assert validate_height_range(valid_match_height_range_1) is True
