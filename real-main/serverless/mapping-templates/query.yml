@@ -90,3 +90,9 @@
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl
+
+- type: Query
+  field: searchKeywords
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl

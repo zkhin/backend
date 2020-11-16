@@ -512,4 +512,7 @@ def test_on_post_delete(post_manager, post):
 def test_sync_elasticsearch(post_manager, post):
     with patch.object(post_manager, 'elasticsearch_client') as elasticsearch_client_mock:
         post_manager.sync_elasticsearch(post.id, {'keywords': ['spock']})
-    assert elasticsearch_client_mock.mock_calls == [call.put_post(post.id, ['spock'])]
+    assert elasticsearch_client_mock.mock_calls == [
+        call.put_post(post.id, ['spock']),
+        call.put_keyword(post.id, 'spock'),
+    ]

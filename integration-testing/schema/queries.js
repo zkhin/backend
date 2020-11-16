@@ -356,6 +356,12 @@ module.exports.similarPosts = gql`
   }
 `
 
+module.exports.searchKeywords = gql`
+  query SearchKeywords($keyword: String!) {
+    searchKeywords(keyword: $keyword)
+  }
+`
+
 module.exports.postsThree = gql`
   query Posts($postId1: ID!, $postId2: ID!, $postId3: ID!) {
     post1: post(postId: $postId1) {
