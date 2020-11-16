@@ -63,6 +63,9 @@ type Query {
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
 
+  # Search keywords for autocomplete
+  searchKeywords(keyword: String!): [String]!
+
   # A specific album
   #   - albums of a private user are private to only themselves and their followers
   album(albumId: ID!): Album

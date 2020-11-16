@@ -290,6 +290,28 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             'items': sorted_post_ids,
         }
 
+    def search_keywords(self, keyword):
+        query = {
+            'size': 20,
+            'query': {
+                'bool': {
+                    'should': [
+                        {'match_bool_prefix': {'keyword': {'query': keyword, 'boost': 2}}},
+                        {'match': {'keyword': {'query': keyword, 'boost': 2}}},
+                    ],
+                }
+            },
+        }
+        search_result = self.elasticsearch_client.query_keywords(query)
+        keywords = []
+
+        for hit in search_result['hits']['hits']:
+            source = hit.get('_source')
+            if source is not None:
+                keywords.append(source['keyword'])
+
+        return list(set(keywords))
+
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()
@@ -445,6 +467,18 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
     def on_post_delete(self, post_id, old_item):
         self.elasticsearch_client.delete_post(post_id)
+        # remove old keywords
+        keywords = old_item.get('keywords', [])
+        for k in keywords:
+            self.elasticsearch_client.delete_keyword(post_id, k)
 
     def sync_elasticsearch(self, post_id, new_item, old_item=None):
         self.elasticsearch_client.put_post(post_id, new_item['keywords'])
+        # remove old keywords
+        if old_item is not None and old_item['keywords'] is not None:
+            for k in old_item['keywords']:
+                self.elasticsearch_client.delete_keyword(post_id, k)
+        # add new keywords
+        keywords = new_item.get('keywords', [])
+        for k in keywords:
+            self.elasticsearch_client.put_keyword(post_id, k)

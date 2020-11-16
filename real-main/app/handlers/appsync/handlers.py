@@ -1565,3 +1565,17 @@ def similar_posts(caller_user, arguments, **kwargs):
         raise ClientException(str(err)) from err
 
     return paginated_posts
+
+
+@routes.register('Query.searchKeywords')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def search_keywords(caller_user, arguments, **kwargs):
+    keyword = arguments['keyword']
+    try:
+        keywords = post_manager.search_keywords(keyword)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
+    return keywords

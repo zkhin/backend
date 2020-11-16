@@ -50,6 +50,16 @@ class ElasticSearchClient:
             logging.warning(f'ElasticSearch: Recieved non-200 response of {resp.status_code} when querying posts')
         return resp.json()
 
+    def query_keywords(self, query):
+        "`query` should be dict-like structure that can be serialized to json"
+        url = f'https://{self.domain}/keywords/_search'
+        resp = requests.post(url, auth=self.awsauth, data=json.dumps(query), headers=self.headers)
+        if resp.status_code != 200:
+            logging.warning(
+                f'ElasticSearch: Recieved non-200 response of {resp.status_code} when querying keywords'
+            )
+        return resp.json()
+
     def build_user_url(self, user_id):
         return f'https://{self.domain}/users/_doc/{user_id}'
 
@@ -62,6 +72,13 @@ class ElasticSearchClient:
 
     def build_post_doc(self, post_id, keywords):
         doc = {'postId': post_id, 'keywords': ' '.join(keywords)}
+        return {k: v for k, v in doc.items() if v is not None}
+
+    def build_keyword_url(self, post_id, keyword):
+        return f'https://{self.domain}/keywords/_doc/{post_id}-{keyword}'
+
+    def build_keyword_doc(self, keyword):
+        doc = {'keyword': keyword}
         return {k: v for k, v in doc.items() if v is not None}
 
     def put_user(self, user_id, username, full_name):
@@ -93,3 +110,20 @@ class ElasticSearchClient:
         resp = requests.delete(url, auth=self.awsauth)
         if resp.status_code != 200:
             logging.warning(f'ElasticSearch: Recieved non-200 response of {resp.status_code} when deleting post')
+
+    def put_keyword(self, post_id, keyword):
+        doc = self.build_keyword_doc(keyword)
+        url = self.build_keyword_url(post_id, keyword)
+        logging.info(f'ElasticSearch: Putting keyword to index at `{url}` ' + json.dumps(doc))
+        resp = requests.put(url, auth=self.awsauth, json=doc, headers=self.headers)
+        if resp.status_code // 100 != 2:
+            logging.warning(f'ElasticSearch: Recieved non-2XX response of {resp.status_code} when adding keyword')
+
+    def delete_keyword(self, post_id, keyword):
+        url = self.build_keyword_url(post_id, keyword)
+        logging.info(f'ElasticSearch: Deleting keyword from index at `{url}`')
+        resp = requests.delete(url, auth=self.awsauth)
+        if resp.status_code != 200:
+            logging.warning(
+                f'ElasticSearch: Recieved non-200 response of {resp.status_code} when deleting keyword'
+            )
