@@ -181,6 +181,7 @@ class CognitoClient:
             user_item = {ua['Name']: ua['Value'] for ua in resp_item['Attributes']}
             user_item['Username'] = resp_item['Username']
             user_items.append(user_item)
+        logger.warning(f'Verified contact users `{user_items}`')
         return user_items
 
     def delete_user_pool_entry(self, user_id):
