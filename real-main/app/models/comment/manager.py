@@ -1,11 +1,14 @@
+import json
 import logging
 
 import pendulum
 
 from app import models
+from app.clients import RealDatingClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.models.follower.enums import FollowStatus
+from app.models.post.enums import PostType
 from app.models.user.enums import UserPrivacyStatus
 
 from .dynamo import CommentDynamo
@@ -28,6 +31,7 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
+        self.real_dating_client = RealDatingClient()
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
 
@@ -75,6 +79,11 @@ class CommentManager(FlagManagerMixin, ManagerBase):
                     msg = f'Post owner `{post.user_id}` is private and user `{user_id}` is not a follower'
                     raise CommentException(msg)
 
+            # can't add a comment if the match status is not CONFIRMED, only post type is IMAGE
+            if post.type == PostType.IMAGE:
+                if not self.validate_dating_match_comment(user_id, post.user_id):
+                    raise CommentException('Cannot add comment unless it is a confirmed match on dating')
+
         text_tags = self.user_manager.get_text_tags(text)
         comment_item = self.dynamo.add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now)
         return self.init_comment(comment_item)
@@ -102,3 +111,24 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         ):
             logger.warning(f'Force deleting comment `{comment_id}` from flagging')
             comment.delete(forced=True)
+
+    def validate_dating_match_comment(self, user_id, match_user_id):
+        response_1 = json.loads(
+            self.real_dating_client.match_status(user_id, match_user_id)['Payload'].read().decode()
+        )
+        response_2 = json.loads(
+            self.real_dating_client.match_status(user_id=match_user_id, match_user_id=user_id)['Payload']
+            .read()
+            .decode()
+        )
+        match_status_1 = response_1['status']
+        match_status_2 = response_2['status']
+        # we can reference blockChatExpiredAt to block adding comment
+        blockChatExpiredAt = response_1['blockChatExpiredAt']
+
+        if match_status_1 != 'CONFIRMED' or match_status_2 != 'CONFIRMED':
+            if (
+                blockChatExpiredAt is not None and pendulum.parse(blockChatExpiredAt) > pendulum.now()
+            ):  # 30 days blocking comment
+                return False
+        return True
