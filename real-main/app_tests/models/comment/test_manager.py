@@ -2,6 +2,7 @@ import uuid
 
 import pendulum
 import pytest
+from mock import patch
 
 from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType
@@ -22,6 +23,11 @@ user3 = user
 @pytest.fixture
 def post(post_manager, user):
     yield post_manager.add_post(user, 'pid', PostType.TEXT_ONLY, text='go go')
+
+
+@pytest.fixture
+def post_image(post_manager, user):
+    yield post_manager.add_post(user, 'pid_1', PostType.IMAGE)
 
 
 def test_add_comment(comment_manager, user, post):
@@ -101,6 +107,25 @@ def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, pos
     block_manager.unblock(commenter, user)
     comment = comment_manager.add_comment(comment_id, post.id, commenter.id, 't')
     assert comment.id == comment_id
+
+
+def test_can_comment_if_dating_is_matched(comment_manager, user, user2, post_image):
+    comment_id = 'cid'
+
+    with patch.object(comment_manager, 'validate_dating_match_comment', return_value=True):
+        comment = comment_manager.add_comment(comment_id, post_image.id, user2.id, 't')
+    assert comment.id == comment_id
+    assert comment.item['postId'] == post_image.id
+    assert comment.item['userId'] == user2.id
+    assert comment.item['text'] == 't'
+
+
+def test_cant_comment_if_dating_is_not_matched(comment_manager, user, user2, post_image):
+    comment_id = 'cid'
+
+    with patch.object(comment_manager, 'validate_dating_match_comment', return_value=False):
+        with pytest.raises(CommentException):
+            comment_manager.add_comment(comment_id, post_image.id, user2.id, 't')
 
 
 def test_non_follower_cant_comment_if_private_post_owner(comment_manager, user, post, follower_manager, user2):
