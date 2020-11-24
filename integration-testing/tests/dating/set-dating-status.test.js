@@ -82,6 +82,11 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
     expect(user.datingStatus).toBe('DISABLED')
     expect(user.userDisableDatingDate).toBeDefined()
   })
+
+  // we cannot re-enable dating within 3 hours
+  await expect(
+    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
+  ).rejects.toThrow(/ClientError: User cannot re-enable dating within 3 hours/)
 })
 
 test('FullName required to enable dating', async () => {
