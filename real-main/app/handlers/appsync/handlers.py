@@ -459,7 +459,7 @@ def set_user_dating_status(caller_user, arguments, **kwargs):
     try:
         caller_user.set_dating_status(status)
     except UserException as err:
-        raise ClientException(str(err)) from err
+        raise ClientException(str(err.args[0]), err.args[1]) from err
     return caller_user.serialize(caller_user.id)
 
 

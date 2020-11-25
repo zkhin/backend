@@ -11,6 +11,7 @@ from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
 from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .error_codes import UserDatingMissingError, UserDatingWrongError
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
 logger = logging.getLogger()
@@ -518,12 +519,17 @@ class User(TrendingModelMixin):
         if self.subscription_level == UserSubscriptionLevel.BASIC:
             required_fields.add('matchLocationRadius')
         if (missing := required_fields - set(self.item.keys())) :
-            raise UserException(f'`{missing}` required to enable dating')
+            raise UserException(
+                f'`{missing}` required to enable dating', [UserDatingMissingError[k].value for k in missing]
+            )
         age = self.item['age']
         if age < 18 or age > 100:
-            raise UserException(f'age `{age}` must be between 18 and 100 to enable dating')
+            raise UserException(
+                f'age `{age}` must be between 18 and 100 to enable dating',
+                UserDatingWrongError['minAge'].value if age < 18 else UserDatingWrongError['maxAge'].value,
+            )
         if self.item['matchGenders'] == []:
-            raise UserException('matchGenders cannot be empty')
+            raise UserException('matchGenders cannot be empty', UserDatingMissingError['matchGenders'].value)
 
     def set_dating_status(self, status):
         if status == self.item.get('datingStatus', UserDatingStatus.DISABLED):
