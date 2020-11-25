@@ -526,7 +526,7 @@ class User(TrendingModelMixin):
         if age < 18 or age > 100:
             raise UserException(
                 f'age `{age}` must be between 18 and 100 to enable dating',
-                UserDatingWrongError['minAge'].value if age < 18 else UserDatingWrongError['maxAge'].value,
+                UserDatingWrongError.MIN_AGE if age < 18 else UserDatingWrongError.MAX_AGE,
             )
         if self.item['matchGenders'] == []:
             raise UserException('matchGenders cannot be empty', UserDatingMissingError['matchGenders'].value)
@@ -545,7 +545,10 @@ class User(TrendingModelMixin):
                 user_disable_dating_date is not None
                 and (now - pendulum.parse(user_disable_dating_date)).hours < 3
             ):
-                raise UserException('User cannot re-enable dating within 3 hours')
+                raise UserException(
+                    'User cannot re-enable dating within 3 hours',
+                    UserDatingWrongError.THREE_HOUR_PERIOD,
+                )
 
         self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self

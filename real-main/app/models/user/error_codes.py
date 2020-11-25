@@ -11,8 +11,10 @@ class UserDatingMissingError(Enum):
     matchAgeRange = 'MISSING_MATCH_AGE_RANGE'
     matchGenders = 'MISSING_MATCH_GENDERS'
     matchHeightRange = 'MISSING_MATCH_HEIGHT_RANGE'
+    matchLocationRadius = 'MISSING_MATCH_LOCATION_RADIUS'
 
 
-class UserDatingWrongError(Enum):
-    minAge = 'WRONG_AGE_MIN'
-    maxAge = 'WRONG_AGE_MAX'
+class UserDatingWrongError:
+    MIN_AGE = 'WRONG_AGE_MIN'
+    MAX_AGE = 'WRONG_AGE_MAX'
+    THREE_HOUR_PERIOD = 'WRONG_THREE_HOUR_PERIOD'
