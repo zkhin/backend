@@ -107,6 +107,7 @@ register(
     card_manager.on_comment_text_tags_change_update_card,
     {'textTags': []},
 )
+register('comment', '-', ['INSERT', 'MODIFY'], comment_manager.on_comment_added_detect_bad_words)
 register('comment', '-', ['REMOVE'], card_manager.on_comment_delete_delete_cards)
 register('comment', '-', ['REMOVE'], comment_manager.on_item_delete_delete_flags)
 register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)

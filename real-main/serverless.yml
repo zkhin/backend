@@ -49,6 +49,7 @@ provider:
     S3_PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
     S3_PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
     S3_UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}
+    S3_BAD_WORDS_BUCKET: ${self:provider.profile}-bad-words-#{AWS::AccountId}
 
     SECRETSMANAGER_APPLE_APPSTORE_PARAMS_NAME: AppleAppstoreParams-1
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
@@ -91,6 +92,12 @@ provider:
       Action:
         - s3:ListBucket
       Resource: !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_PLACEHOLDER_PHOTOS_BUCKET}' ] ]
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_BAD_WORDS_BUCKET}' ] ]  # needed for 404's to work (via s3:ListBucket)
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_BAD_WORDS_BUCKET}', '/*' ] ]
     - Effect: Allow
       Action:
         - mediaconvert:CreateJob
