@@ -117,6 +117,20 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         text = new_item['text']
         comment = self.init_comment(new_item)
 
+        # if they are 2 way follow, skip bad words detection
+        post = self.post_manager.get_post(comment.post_id)
+        if comment.user_id != post.user_id:
+            follow = self.follower_manager.get_follow(comment.user_id, post.user_id)
+            follow_back = self.follower_manager.get_follow(post.user_id, comment.user_id)
+
+            if (
+                follow
+                and follow_back
+                and follow.status == FollowStatus.FOLLOWING
+                and follow_back.status == FollowStatus.FOLLOWING
+            ):
+                return
+
         # if detects bad words, force delete the comment
         bad_words_client = BadWordsClient()
         if bad_words_client.validate_bad_words_detection(text):
