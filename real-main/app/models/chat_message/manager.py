@@ -102,7 +102,7 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
             logger.warning(f'Force deleting chat message `{message_id}` from flagging')
             chat_message.delete(forced=True)
 
-    def on_chat_message_added_detect_bad_words(self, message_id, new_item):
+    def on_chat_message_changed_detect_bad_words(self, message_id, new_item, old_item=None):
         text = new_item['text']
         chat_message = self.init_chat_message(new_item)
 

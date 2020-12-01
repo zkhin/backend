@@ -110,27 +110,25 @@ test('Create a direct chat with bad word', async () => {
     expect(chat.messages.items).toHaveLength(1)
   })
 
-  // // edit the message, verify it's removed
-  // await ourClient
-  //   .mutate({mutation: mutations.editChatMessage, variables: {messageId, text: 'hello world skype'}})
-  //   .then(({data: {editChatMessage: chatMessage}}) => {
-  //     expect(chatMessage.messageId).toBe(messageId)
-  //     expect(chatMessage.text).toBe('hello world skype')
-  //     expect(chatMessage.chat.chatId).toBe(chatId)
-  //   })
+  // edit the message, verify it's removed
+  await ourClient
+    .mutate({mutation: mutations.editChatMessage, variables: {messageId, text: 'hello world skype'}})
+    .then(({data: {editChatMessage: chatMessage}}) => {
+      expect(chatMessage.messageId).toBe(messageId)
+      expect(chatMessage.text).toBe('hello world skype')
+      expect(chatMessage.chat.chatId).toBe(chatId)
+    })
 
-  // // verify the bad word chat is removed
-  // await misc.sleep(2000)
-  // await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
-  //   console.log(user.chatCount)
-  //   console.log(user.chats)
-  //   // expect(user.chatCount).toBe(1)
-  //   // expect(user.chats.items).toHaveLength(1)
-  //   // expect(user.chats.items[0].chatId).toBe(chatId)
-  // })
-  // await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
-  //   console.log(chat.messages)
-  //   expect(chat.chatId).toBe(chatId)
-  //   expect(chat.messages.items).toHaveLength(1)
-  // })
+  // verify the bad word chat is removed
+  await misc.sleep(2000)
+  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.chatCount).toBe(1)
+    expect(user.chats.items).toHaveLength(1)
+    expect(user.chats.items[0].chatId).toBe(chatId)
+    expect(user.chats.items[0].messageCount).toBe(0)
+  })
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
+    expect(chat.chatId).toBe(chatId)
+    expect(chat.message).toBeUndefined()
+  })
 })
