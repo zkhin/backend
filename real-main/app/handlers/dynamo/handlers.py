@@ -93,6 +93,7 @@ register('chat', 'member', ['REMOVE'], user_manager.on_chat_member_delete_update
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
 register('chatMessage', '-', ['INSERT'], chat_manager.on_chat_message_add)
 register('chatMessage', '-', ['INSERT'], user_manager.sync_chat_message_creation_count)
+register('chatMessage', '-', ['INSERT', 'MODIFY'], chat_message_manager.on_chat_message_added_detect_bad_words)
 register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_item_delete_delete_flags)
 register('chatMessage', '-', ['REMOVE'], user_manager.sync_chat_message_deletion_count)

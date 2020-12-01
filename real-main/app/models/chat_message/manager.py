@@ -4,6 +4,7 @@ import uuid
 import pendulum
 
 from app import models
+from app.clients import BadWordsClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 
@@ -99,6 +100,16 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         # force delete the chat_message?
         if chat_message.is_crowdsourced_forced_removal_criteria_met():
             logger.warning(f'Force deleting chat message `{message_id}` from flagging')
+            chat_message.delete(forced=True)
+
+    def on_chat_message_added_detect_bad_words(self, message_id, new_item):
+        text = new_item['text']
+        chat_message = self.init_chat_message(new_item)
+
+        # if detects bad words, force delete the chat message
+        bad_words_client = BadWordsClient()
+        if bad_words_client.validate_bad_words_detection(text):
+            logger.warning(f'Force deleting chat message `{message_id}` from detecting bad words')
             chat_message.delete(forced=True)
 
     def on_chat_delete_delete_messages(self, chat_id, old_item):
