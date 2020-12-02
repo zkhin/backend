@@ -24,6 +24,7 @@ class ChatMessage(FlagModelMixin):
         block_manager=None,
         chat_manager=None,
         user_manager=None,
+        follower_manager=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -34,6 +35,7 @@ class ChatMessage(FlagModelMixin):
         self.block_manager = block_manager
         self.chat_manager = chat_manager
         self.user_manager = user_manager
+        self.follower_manager = follower_manager
         # immutables
         self.id = item['messageId']
         self.chat_id = self.item['chatId']

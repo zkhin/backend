@@ -93,6 +93,7 @@ register('chat', 'member', ['REMOVE'], user_manager.on_chat_member_delete_update
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
 register('chatMessage', '-', ['INSERT'], chat_manager.on_chat_message_add)
 register('chatMessage', '-', ['INSERT'], user_manager.sync_chat_message_creation_count)
+register('chatMessage', '-', ['INSERT', 'MODIFY'], chat_message_manager.on_chat_message_changed_detect_bad_words)
 register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_item_delete_delete_flags)
 register('chatMessage', '-', ['REMOVE'], user_manager.sync_chat_message_deletion_count)
@@ -107,6 +108,7 @@ register(
     card_manager.on_comment_text_tags_change_update_card,
     {'textTags': []},
 )
+register('comment', '-', ['INSERT', 'MODIFY'], comment_manager.on_comment_added_detect_bad_words)
 register('comment', '-', ['REMOVE'], card_manager.on_comment_delete_delete_cards)
 register('comment', '-', ['REMOVE'], comment_manager.on_item_delete_delete_flags)
 register('comment', '-', ['REMOVE'], post_manager.on_comment_delete)

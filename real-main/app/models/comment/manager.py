@@ -4,7 +4,7 @@ import logging
 import pendulum
 
 from app import models
-from app.clients import RealDatingClient
+from app.clients import BadWordsClient, RealDatingClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.models.follower.enums import FollowStatus
@@ -32,6 +32,7 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
         self.real_dating_client = RealDatingClient()
+        # self.bad_words_client = BadWordsClient()
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
 
@@ -110,6 +111,30 @@ class CommentManager(FlagManagerMixin, ManagerBase):
             or comment.is_crowdsourced_forced_removal_criteria_met()
         ):
             logger.warning(f'Force deleting comment `{comment_id}` from flagging')
+            comment.delete(forced=True)
+
+    def on_comment_added_detect_bad_words(self, comment_id, new_item):
+        text = new_item['text']
+        comment = self.init_comment(new_item)
+
+        # if they are 2 way follow, skip bad words detection
+        post = self.post_manager.get_post(comment.post_id)
+        if comment.user_id != post.user_id:
+            follow = self.follower_manager.get_follow(comment.user_id, post.user_id)
+            follow_back = self.follower_manager.get_follow(post.user_id, comment.user_id)
+
+            if (
+                follow
+                and follow_back
+                and follow.status == FollowStatus.FOLLOWING
+                and follow_back.status == FollowStatus.FOLLOWING
+            ):
+                return
+
+        # if detects bad words, force delete the comment
+        bad_words_client = BadWordsClient()
+        if bad_words_client.validate_bad_words_detection(text):
+            logger.warning(f'Force deleting comment `{comment_id}` from detecting bad words')
             comment.delete(forced=True)
 
     def validate_dating_match_comment(self, user_id, match_user_id):

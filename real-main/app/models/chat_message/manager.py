@@ -4,8 +4,11 @@ import uuid
 import pendulum
 
 from app import models
+from app.clients import BadWordsClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
+from app.models.chat.enums import ChatType
+from app.models.follower.enums import FollowStatus
 
 from .appsync import ChatMessageAppSync
 from .dynamo import ChatMessageDynamo
@@ -26,6 +29,7 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         self.block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
         self.chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+        self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:
@@ -48,6 +52,7 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
             'block_manager': self.block_manager,
             'chat_manager': self.chat_manager,
             'user_manager': self.user_manager,
+            'follower_manager': self.follower_manager,
         }
         return ChatMessage(item, **kwargs)
 
@@ -101,6 +106,48 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
             logger.warning(f'Force deleting chat message `{message_id}` from flagging')
             chat_message.delete(forced=True)
 
+    def on_chat_message_changed_detect_bad_words(self, message_id, new_item, old_item=None):
+        text = new_item['text']
+        chat_message = self.init_chat_message(new_item)
+        chat = chat_message.chat
+
+        if chat_message.user_id is None:  # system message
+            return
+
+        user_ids = chat.member_dynamo.generate_user_ids_by_chat(chat.id)
+        if not self.should_process_bad_words_detection(chat.type, chat_message.user_id, user_ids):
+            return
+
+        # if detects bad words, force delete the chat message
+        bad_words_client = BadWordsClient()
+        if bad_words_client.validate_bad_words_detection(text):
+            logger.warning(f'Force deleting chat message `{message_id}` from detecting bad words')
+            chat_message.delete(forced=True)
+
     def on_chat_delete_delete_messages(self, chat_id, old_item):
         generator = self.dynamo.generate_chat_messages_by_chat(chat_id, pks_only=True)
         self.dynamo.client.batch_delete_items(generator)
+
+    def should_process_bad_words_detection(self, chat_type, chat_message_creator_id, user_ids):
+        # if direct chat and they are 2 way follow, skip
+        # if group chat and all users in the chat follow the user creating the message with the bad word, skip
+        for user_id in user_ids:
+            if user_id == chat_message_creator_id:
+                continue
+
+            follow = self.follower_manager.get_follow(user_id, chat_message_creator_id)
+            follow_back = self.follower_manager.get_follow(chat_message_creator_id, user_id)
+
+            if chat_type == ChatType.DIRECT:
+                if (
+                    follow
+                    and follow_back
+                    and follow.status == FollowStatus.FOLLOWING
+                    and follow_back.status == FollowStatus.FOLLOWING
+                ):
+                    return False
+            else:
+                if not follow or follow.status != FollowStatus.FOLLOWING:
+                    return True
+
+        return True if chat_type == ChatType.DIRECT else False

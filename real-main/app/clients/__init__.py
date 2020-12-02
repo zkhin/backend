@@ -2,6 +2,7 @@ __all__ = [
     'AppleClient',
     'AppStoreClient',
     'AppSyncClient',
+    'BadWordsClient',
     'CloudFrontClient',
     'CognitoClient',
     'DynamoClient',
@@ -18,6 +19,7 @@ __all__ = [
 from .apple import AppleClient
 from .appstore import AppStoreClient
 from .appsync import AppSyncClient
+from .bad_words import BadWordsClient
 from .cloudfront import CloudFrontClient
 from .cognito import CognitoClient
 from .dynamo import DynamoClient
