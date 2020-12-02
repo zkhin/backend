@@ -10,6 +10,8 @@ const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(1)
 
+const badWord = 'skype'
+
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -57,7 +59,7 @@ test('Add a comment with bad word', async () => {
 
   // they comment on the post with bad word, verify comment is removed
   const theirCommentId = uuidv4()
-  const theirText = 'lore ipsum skype'
+  const theirText = `lore ipsum ${badWord}`
   variables = {commentId: theirCommentId, postId, text: theirText}
   await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
     expect(comment.commentId).toBe(theirCommentId)
@@ -124,13 +126,13 @@ test('Two way follow, skip bad word detection', async () => {
 
   // they comment on the post with bad word, verify comment is added
   const theirCommentId = uuidv4()
-  const theirText = 'lore ipsum skype'
+  const theirText = `lore ipsum ${badWord}`
   variables = {commentId: theirCommentId, postId, text: theirText}
   await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
     expect(comment.commentId).toBe(theirCommentId)
   })
 
-  // check we see only our comment
+  // check we see all comments
   await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(postId)
