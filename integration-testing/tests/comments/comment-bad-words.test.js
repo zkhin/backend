@@ -10,7 +10,8 @@ const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(1)
 
-const badWord = 'skype'
+// https://github.com/real-social-media/bad_words/blob/master/bucket/bad_words.json
+const badWord = 'uoiFZP8bjS'
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
