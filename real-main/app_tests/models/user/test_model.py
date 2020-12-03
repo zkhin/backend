@@ -961,11 +961,11 @@ def test_validate_can_enable_dating_missing_attribute(user, attr):
             'age': 42,
             'gender': 'MALE',
             'location': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
-            'height': 170,
+            'height': 90,
             'matchGenders': ['FEMALE'],
             'matchAgeRange': {'min': 20, 'max': 50},
             'matchLocationRadius': 50,
-            'matchHeightRange': {'min': 130, 'max': 200},
+            'matchHeightRange': {'min': 50, 'max': 100},
         }
     )
     user.validate_can_enable_dating()
@@ -985,10 +985,10 @@ def test_validate_can_enable_dating_match_genders(user):
             'age': 42,
             'gender': 'MALE',
             'location': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
-            'height': 170,
+            'height': 90,
             'matchAgeRange': {'min': 20, 'max': 50},
             'matchLocationRadius': 50,
-            'matchHeightRange': {'min': 130, 'max': 200},
+            'matchHeightRange': {'min': 50, 'max': 100},
         }
     )
     assert 'matchGenders' not in user.item
@@ -1013,11 +1013,11 @@ def test_validate_can_enable_dating_age(user):
             'photoPostId': str(uuid4()),
             'gender': 'MALE',
             'location': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
-            'height': 170,
+            'height': 90,
             'matchGenders': ['MALE', 'FEMALE'],
             'matchAgeRange': {'min': 20, 'max': 50},
             'matchLocationRadius': 50,
-            'matchHeightRange': {'min': 130, 'max': 200},
+            'matchHeightRange': {'min': 50, 'max': 100},
         }
     )
     assert 'age' not in user.item
@@ -1044,10 +1044,10 @@ def test_validate_can_enable_dating_match_location_radius_not_required_for_diamo
             'gender': 'MALE',
             'age': 30,
             'location': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
-            'height': 170,
+            'height': 90,
             'matchGenders': ['MALE', 'FEMALE'],
             'matchAgeRange': {'min': 20, 'max': 50},
-            'matchHeightRange': {'min': 130, 'max': 200},
+            'matchHeightRange': {'min': 50, 'max': 100},
         }
     )
     assert 'subscriptionLEvel' not in user.item
@@ -1136,11 +1136,11 @@ def test_generate_dating_profile(user):
         'age': 30,
         'gender': UserGender.MALE,
         'location': {'latitude': 0, 'longitude': 0},
-        'height': 170,
+        'height': 90,
         'matchAgeRange': {'min': 20, 'max': 30},
         'matchGenders': [UserGender.MALE],
         'matchLocationRadius': 50,
-        'matchHeightRange': {'min': 130, 'max': 200},
+        'matchHeightRange': {'min': 50, 'max': 100},
         'serviceLevel': UserSubscriptionLevel.DIAMOND,
     }
     user.item.update(profile)

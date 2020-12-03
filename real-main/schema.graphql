@@ -141,7 +141,7 @@ type Mutation {
     dateOfBirth: AWSDate,
     gender: UserGender,
     location: LocationInput,
-    height: Int,  # unit is cm
+    height: Int,  # unit is inch
     matchAgeRange: AgeRangeInput,
     matchGenders: [UserGender!],
     matchLocationRadius: Int,
