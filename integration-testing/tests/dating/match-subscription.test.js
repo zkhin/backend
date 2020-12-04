@@ -22,11 +22,11 @@ afterAll(async () => await loginCache.reset())
 const datingVariables = {
   fullName: 'Hunter S',
   location: {latitude: 10, longitude: 10}, // different from that used in other test suites
-  height: 170,
+  height: 90,
   dateOfBirth: '2000-01-01',
   matchAgeRange: {min: 20, max: 30},
   matchLocationRadius: 50,
-  matchHeightRange: {min: 150, max: 200},
+  matchHeightRange: {min: 0, max: 110},
 }
 
 test(

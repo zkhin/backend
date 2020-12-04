@@ -233,11 +233,11 @@ def test_set_user_details(user_dynamo):
     date_of_birth = '1900-01-01'
     gender = 'MALE'
     location = {'latitude': 50.1, 'longitude': 50.1, 'accuracy': 50}
-    height = 180
+    height = 90
     match_age_range = {'min': 20, 'max': 50}
     match_genders = ['MALE', 'FEMALE']
     match_location_radius = 15
-    match_height_range = {'min': 150, 'max': 200}
+    match_height_range = {'min': 50, 'max': 110}
 
     user_dynamo.add_user('other-id-1', 'noise-1', 'cog-noise-1')
     expected_base_item = user_dynamo.add_user(user_id, username)

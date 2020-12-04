@@ -749,8 +749,8 @@ test('Set and read properties(height, matchHeightRange)', async () => {
   const {client: theirClient} = await loginCache.getCleanLogin()
 
   // set up another user in cognito, leave them as public
-  const height = 170
-  const matchHeightRange = {min: 150, max: 200}
+  const height = 90
+  const matchHeightRange = {min: 50, max: 110}
 
   // Set height and match height range
   await ourClient.mutate({mutation: mutations.setUserDetails, variables: {height, matchHeightRange}})
@@ -773,7 +773,7 @@ test('Set and read properties(height, matchHeightRange)', async () => {
 test('Validate user properties(height, matchHeightRange)', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const height = -10
-  let matchHeightRange = {min: -10, max: 230}
+  let matchHeightRange = {min: -10, max: 110}
 
   // Validate height
   await expect(ourClient.mutate({mutation: mutations.setUserDetails, variables: {height}})).rejects.toThrow(
@@ -785,12 +785,12 @@ test('Validate user properties(height, matchHeightRange)', async () => {
     ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
   ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
 
-  matchHeightRange = {min: 140, max: 276}
+  matchHeightRange = {min: 50, max: 118}
   await expect(
     ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
   ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)
 
-  matchHeightRange = {min: 170, max: 150}
+  matchHeightRange = {min: 110, max: 50}
   await expect(
     ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchHeightRange}}),
   ).rejects.toThrow(/ClientError: Invalid matchHeightRange/)

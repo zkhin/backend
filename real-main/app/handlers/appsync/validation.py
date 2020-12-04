@@ -51,7 +51,7 @@ def validate_date_of_birth(date_of_birth):
 
 
 def validate_height(height):
-    if height < 0 or height > 275:
+    if height < 0 or height > 117:
         raise ClientException('Invalid height')
     return True
 
@@ -60,6 +60,6 @@ def validate_height_range(match_height_range):
     minHeight = match_height_range.get('min')
     maxHeight = match_height_range.get('max')
 
-    if minHeight > maxHeight or minHeight < 0 or maxHeight > 275:
+    if minHeight > maxHeight or minHeight < 0 or maxHeight > 117:
         raise ClientException('Invalid matchHeightRange')
     return True

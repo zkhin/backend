@@ -22,11 +22,11 @@ const datingVariables = {
   gender: 'FEMALE',
   location: {latitude: 30, longitude: 0}, // different from that used in other test suites
   dateOfBirth: '2000-01-01',
-  height: 170,
+  height: 90,
   matchAgeRange: {min: 20, max: 30},
   matchGenders: ['FEMALE'],
   matchLocationRadius: 50,
-  matchHeightRange: {min: 150, max: 200},
+  matchHeightRange: {min: 0, max: 110},
 }
 
 test('We do not match ourselves', async () => {
