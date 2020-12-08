@@ -1058,7 +1058,7 @@ def test_generate_banned_user_by_contact_attr(user_dynamo, caplog):
     user_dynamo.add_user(user_id_2, str(uuid4())[:8])
     user_dynamo.add_user(user_id_3, str(uuid4())[:8])
 
-    # add banned user 
+    # add banned user
 
     user_dynamo.add_user_banned(user_id_1, 'abc-1', 'comments', email='abc1@test.com')
     user_dynamo.add_user_banned(user_id_2, 'abc-2', 'posts', phone='+1234567890')

@@ -99,6 +99,7 @@ const getAppSyncClient = async (creds) => {
             ['x-real-version']: '0.1.0',
             ['x-real-device']: 'TestingClient',
             ['x-real-system']: 'REAL Backend Integration Tests',
+            ['x-real-uid']: uuidv4().substring(24),
           },
         })),
         createHttpLink({uri: appSyncConfig.url, fetch: fetch}),
