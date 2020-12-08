@@ -190,6 +190,11 @@ class User(TrendingModelMixin):
                 logger.warning(
                     f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled due to {forced_by}'
                 )
+                # add force banned user email, phone, device_id, forced_by and it cannot be re-used while signup
+                email = self.item.get('email', None)
+                phone = self.item.get('phoneNumber', None)
+                device = self.item.get('lastClient', {}).get('device', None)
+                self.dynamo.add_user_banned(self.id, self.username, forced_by, email=email, phone=phone, device=device)
         elif self.status == UserStatus.DISABLED:
             pass
         elif self.status == UserStatus.DELETING:
