@@ -97,6 +97,11 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         message.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=user_ids)
         return message
 
+    def clear_chat_message_bad_words(self):
+        # scan for all chat messages and detect bad words
+        for message in self.dynamo.generate_all_chat_messages_by_scan():
+            self.on_chat_message_changed_detect_bad_words(message['messageId'], message)
+
     def on_flag_add(self, message_id, new_item):
         chat_message_item = self.dynamo.increment_flag_count(message_id)
         chat_message = self.init_chat_message(chat_message_item)

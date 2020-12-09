@@ -67,3 +67,10 @@ class ChatMessageDynamo:
         if pks_only:
             gen = ({'partitionKey': item['partitionKey'], 'sortKey': item['sortKey']} for item in gen)
         return gen
+
+    def generate_all_chat_messages_by_scan(self):
+        scan_kwargs = {
+            'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND sortKey = :sk_prefix',
+            'ExpressionAttributeValues': {':pk_prefix': 'chatMessage/', ':sk_prefix': '-'},
+        }
+        return self.client.generate_all_scan(scan_kwargs)

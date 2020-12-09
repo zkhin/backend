@@ -649,6 +649,18 @@ functions:
       - functionErrors
       - functionThrottles
 
+  detectBadWords:
+    name: ${self:provider.stackName}-detectBadWords
+    handler: app.handlers.cron.detect_bad_words
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 day)'
+    alarms:
+      - functionErrors
+      - functionThrottles
+
 # keep this miminal for smaller packages and thus faster deployments
 package:
   exclude:

@@ -147,6 +147,20 @@ def test_generate_chat_messages_by_chat(chat_message_dynamo):
     assert pks[1] == {'partitionKey': 'chatMessage/mid2', 'sortKey': '-'}
 
 
+def test_generate_all_chat_messages_by_scan(chat_message_dynamo):
+    message_id_1 = 'mid_1'
+    message_id_2 = 'mid_2'
+    message_id_3 = 'mid_3'
+
+    now = pendulum.now('utc')
+    chat_message_dynamo.add_chat_message(message_id_1, 'cid', 'uid', 'lore ipsum', [], now)
+    chat_message_dynamo.add_chat_message(message_id_2, 'cid', 'uid', 'lore ipsum', [], now)
+    chat_message_dynamo.add_chat_message(message_id_3, 'cid', 'uid', 'lore ipsum', [], now)
+
+    pks = [pk['partitionKey'].split('/')[1] for pk in chat_message_dynamo.generate_all_chat_messages_by_scan()]
+    assert pks == [message_id_1, message_id_2, message_id_3]
+
+
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
     [['increment_flag_count', 'decrement_flag_count', 'flagCount']],
