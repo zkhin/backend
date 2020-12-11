@@ -1005,3 +1005,75 @@ def test_generate_user_ids_by_expired_dating(user_dynamo):
     assert list(generate(now_2)) == []
     assert list(generate(now_3)) == [user_id_1, user_id_2, user_id_3]
     assert list(generate(now_4)) == [user_id_1, user_id_2, user_id_3]
+
+
+def test_add_user_banned(user_dynamo, caplog):
+    # verify starting state
+    user_id = str(uuid4())
+    key = {'partitionKey': f'user/{user_id}', 'sortKey': 'banned'}
+    assert user_dynamo.client.get_item(key) is None
+
+    # add the item, verify
+    before = pendulum.now('utc')
+    user_banned_item = user_dynamo.add_user_banned(user_id, 'abc', 'comments', email='abc@test.com')
+    after = pendulum.now('utc')
+    assert user_dynamo.client.get_item(key) == user_banned_item
+    banned_at = pendulum.parse(user_banned_item['bannedAt'])
+    assert user_banned_item == {
+        'partitionKey': f'user/{user_id}',
+        'sortKey': 'banned',
+        'schemaVersion': 0,
+        'userId': user_id,
+        'username': 'abc',
+        'bannedAt': banned_at.to_iso8601_string(),
+        'forcedBy': 'comments',
+        'gsiA1PartitionKey': 'email/abc@test.com',
+        'gsiA1SortKey': 'banned',
+    }
+    assert banned_at >= before
+    assert banned_at <= after
+
+    # verify can't add same subitem a second time
+    with caplog.at_level(logging.WARNING):
+        new_item = user_dynamo.add_user_banned(user_id, 'abc', 'comments')
+    assert new_item is None
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert all(x in caplog.records[0].msg for x in ['Failed to add UserBanned item', user_id])
+
+    # delete the subitem
+    new_item = user_dynamo.delete_user_banned(user_id)
+    assert new_item == user_banned_item
+    assert user_dynamo.client.get_item(key) is None
+
+    # verify deletes are idempotent
+    new_item = user_dynamo.delete_user_banned(user_id)
+    assert new_item is None
+    assert user_dynamo.client.get_item(key) is None
+
+
+def test_generate_banned_user_by_contact_attr(user_dynamo, caplog):
+    user_id_1, user_id_2, user_id_3 = str(uuid4()), str(uuid4()), str(uuid4())
+    user_dynamo.add_user(user_id_1, str(uuid4())[:8])
+    user_dynamo.add_user(user_id_2, str(uuid4())[:8])
+    user_dynamo.add_user(user_id_3, str(uuid4())[:8])
+
+    # add banned user
+
+    user_dynamo.add_user_banned(user_id_1, 'abc-1', 'comments', email='abc1@test.com')
+    user_dynamo.add_user_banned(user_id_2, 'abc-2', 'posts', phone='+1234567890')
+    user_dynamo.add_user_banned(user_id_3, 'abc-3', 'chatMessages', device='x-real-device-1')
+
+    user_ids = user_dynamo.generate_banned_user_by_contact_attr(email='abc1@test.com')
+    assert list(user_ids) == [user_id_1]
+    user_ids = user_dynamo.generate_banned_user_by_contact_attr(phone='+1234567890')
+    assert list(user_ids) == [user_id_2]
+    user_ids = user_dynamo.generate_banned_user_by_contact_attr(device='x-real-device-1')
+    assert list(user_ids) == [user_id_3]
+
+    user_ids = user_dynamo.generate_banned_user_by_contact_attr(device='x-real-device')
+    assert list(user_ids) == []
+    user_ids = user_dynamo.generate_banned_user_by_contact_attr(email='abc@test.com')
+    assert list(user_ids) == []
+    user_ids = user_dynamo.generate_banned_user_by_contact_attr(phone='1234567890')
+    assert list(user_ids) == []

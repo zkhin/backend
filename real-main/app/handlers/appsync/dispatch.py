@@ -21,6 +21,7 @@ def get_client_details(event):
         'version': headers.get('x-real-version'),
         'device': headers.get('x-real-device'),
         'system': headers.get('x-real-system'),
+        'uid': headers.get('x-real-uid'),
     }
     return {k: v for k, v in client.items() if v is not None}
 

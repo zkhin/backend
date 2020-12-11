@@ -61,6 +61,7 @@ We have no local secondary indexes.
 | `user/{userId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | `user/trending` | `{score}` |
 | `userEmail/{email}` | `-` | `0` | `userId` |
 | `userPhoneNumber/{phoneNumber}` | `-` | `0` | `userId` |
+| `user/{userId}` | `banned` | `0` | `userId`, `username`, `bannedAt`, `forcedBy` | `email/{email}` | `banned` | `phone/{phoneNumber}` | `banned` | `device/{device_id}` | `banned` |
 
 #### Notes
 

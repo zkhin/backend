@@ -502,3 +502,60 @@ class UserDynamo:
     def delete_user_deleted(self, user_id):
         key = {'partitionKey': f'user/{user_id}', 'sortKey': 'deleted'}
         return self.client.delete_item(key)
+
+    def add_user_banned(self, user_id, username, forced_by, email=None, phone=None, device=None, now=None):
+        now = now or pendulum.now('utc')
+        banned_at_str = now.to_iso8601_string()
+        item = {
+            'partitionKey': f'user/{user_id}',
+            'sortKey': 'banned',
+            'schemaVersion': 0,
+            'userId': user_id,
+            'username': username,
+            'bannedAt': banned_at_str,
+            'forcedBy': forced_by,
+        }
+        if email is not None:
+            item['gsiA1PartitionKey'] = f'email/{email}'
+            item['gsiA1SortKey'] = 'banned'
+        if phone is not None:
+            item['gsiA2PartitionKey'] = f'phone/{phone}'
+            item['gsiA2SortKey'] = 'banned'
+        if device is not None:
+            item['gsiA3PartitionKey'] = f'device/{device}'
+            item['gsiA3SortKey'] = 'banned'
+
+        try:
+            return self.client.add_item({'Item': item})
+        except self.client.exceptions.ConditionalCheckFailedException:
+            logger.warning(f'Failed to add UserBanned item for user `{user_id}`: already exists')
+
+    def delete_user_banned(self, user_id):
+        key = {'partitionKey': f'user/{user_id}', 'sortKey': 'banned'}
+        return self.client.delete_item(key)
+
+    def generate_banned_user_by_contact_attr(self, email=None, phone=None, device=None):
+        query_kwargs = {}
+        if email is not None:
+            query_kwargs = {
+                'KeyConditionExpression': 'gsiA1PartitionKey = :gsipk AND gsiA1SortKey = :gsisk',
+                'ProjectionExpression': 'partitionKey',
+                'ExpressionAttributeValues': {':gsipk': f'email/{email}', ':gsisk': 'banned'},
+                'IndexName': 'GSI-A1',
+            }
+        if phone is not None:
+            query_kwargs = {
+                'KeyConditionExpression': 'gsiA2PartitionKey = :gsipk AND gsiA2SortKey = :gsisk',
+                'ProjectionExpression': 'partitionKey',
+                'ExpressionAttributeValues': {':gsipk': f'phone/{phone}', ':gsisk': 'banned'},
+                'IndexName': 'GSI-A2',
+            }
+        if device is not None:
+            query_kwargs = {
+                'KeyConditionExpression': 'gsiA3PartitionKey = :gsipk AND gsiA3SortKey = :gsisk',
+                'ProjectionExpression': 'partitionKey',
+                'ExpressionAttributeValues': {':gsipk': f'device/{device}', ':gsisk': 'banned'},
+                'IndexName': 'GSI-A3',
+            }
+
+        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
