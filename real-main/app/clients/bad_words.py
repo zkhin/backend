@@ -20,10 +20,12 @@ class BadWordsClient:
             logger.warning(str(err))
             raise err
 
-        bad_words = json.loads(fh.read().decode())
+        data = json.loads(fh.read().decode())
+        bad_words = {word.lower(): '' for word in data.keys()}
         words = text.split(' ')
+
         for word in words:
-            if bad_words.get(word, None) == '':
+            if bad_words.get(word.lower(), None) == '':
                 return True
 
         return False
