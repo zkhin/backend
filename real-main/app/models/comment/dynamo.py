@@ -67,3 +67,10 @@ class CommentDynamo:
             'IndexName': 'GSI-A2',
         }
         return self.client.generate_all_query(query_kwargs)
+
+    def generate_all_comments_by_scan(self):
+        scan_kwargs = {
+            'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND sortKey = :sk_prefix',
+            'ExpressionAttributeValues': {':pk_prefix': 'comment/', ':sk_prefix': '-'},
+        }
+        return self.client.generate_all_scan(scan_kwargs)

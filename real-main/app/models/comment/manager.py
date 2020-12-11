@@ -89,6 +89,11 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         comment_item = self.dynamo.add_comment(comment_id, post_id, user_id, text, text_tags, commented_at=now)
         return self.init_comment(comment_item)
 
+    def clear_comment_bad_words(self):
+        # scan for all comment texts and detect bad words
+        for comment in self.dynamo.generate_all_comments_by_scan():
+            self.on_comment_added_detect_bad_words(comment['commentId'], comment)
+
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for comment_item in self.dynamo.generate_by_user(user_id):
             self.init_comment(comment_item).delete()

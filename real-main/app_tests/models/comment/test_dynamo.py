@@ -120,6 +120,22 @@ def test_generate_by_user(comment_dynamo):
     assert comment_items[1]['commentId'] == comment_id_2
 
 
+def test_generate_all_comments_by_scan(comment_dynamo):
+    user_id_1 = 'uid1'
+    user_id_2 = 'uid2'
+
+    comment_id_1 = 'cid1'
+    comment_id_2 = 'cid2'
+    comment_id_3 = 'cid3'
+
+    comment_dynamo.add_comment(comment_id_1, 'pid1', user_id_1, 't', [])
+    comment_dynamo.add_comment(comment_id_2, 'pid2', user_id_1, 't', [])
+    comment_dynamo.add_comment(comment_id_3, 'pid3', user_id_2, 't', [])
+
+    pks = [pk['partitionKey'].split('/')[1] for pk in comment_dynamo.generate_all_comments_by_scan()]
+    assert pks == [comment_id_1, comment_id_2, comment_id_3]
+
+
 @pytest.mark.parametrize(
     'incrementor_name, decrementor_name, attribute_name',
     [['increment_flag_count', 'decrement_flag_count', 'flagCount']],
