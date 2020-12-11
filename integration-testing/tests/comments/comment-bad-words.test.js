@@ -59,8 +59,15 @@ test('Add a comment with bad word', async () => {
   })
 
   // they comment on the post with bad word, verify comment is removed
-  const theirCommentId = uuidv4()
-  const theirText = `lore ipsum ${badWord}`
+  let theirCommentId = uuidv4()
+  let theirText = `lore ipsum ${badWord}`
+  variables = {commentId: theirCommentId, postId, text: theirText}
+  await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
+    expect(comment.commentId).toBe(theirCommentId)
+  })
+
+  theirCommentId = uuidv4()
+  theirText = `lore ipsum ${badWord.toLowerCase()}`
   variables = {commentId: theirCommentId, postId, text: theirText}
   await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
     expect(comment.commentId).toBe(theirCommentId)

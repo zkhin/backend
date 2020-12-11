@@ -114,11 +114,12 @@ test('Create a direct chat with bad word', async () => {
   })
 
   // edit the message, verify it's removed
+  const messageText3 = `msg ${badWord.toUpperCase()}`
   await ourClient
-    .mutate({mutation: mutations.editChatMessage, variables: {messageId, text: messageText2}})
+    .mutate({mutation: mutations.editChatMessage, variables: {messageId, text: messageText3}})
     .then(({data: {editChatMessage: chatMessage}}) => {
       expect(chatMessage.messageId).toBe(messageId)
-      expect(chatMessage.text).toBe(messageText2)
+      expect(chatMessage.text).toBe(messageText3)
       expect(chatMessage.chat.chatId).toBe(chatId)
     })
 
