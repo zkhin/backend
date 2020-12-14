@@ -127,6 +127,7 @@ type Mutation {
   setUserDetails(
     username: String,
     fullName: String,
+    displayName: String,
     bio: String,
     photoPostId: ID,  # must be refer to a completed image post
     privacyStatus: PrivacyStatus,
@@ -408,6 +409,7 @@ type User {
   followedStatus: FollowStatus!  # is the caller following them?
   followerStatus: FollowStatus!  # are they following the caller?
   fullName: String
+  displayName: String
   themeCode: String
   signedUpAt: AWSDateTime
   photo: Image

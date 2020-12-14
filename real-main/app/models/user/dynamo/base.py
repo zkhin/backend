@@ -162,6 +162,7 @@ class UserDynamo:
         self,
         user_id,
         full_name=None,
+        display_name=None,
         bio=None,
         language_code=None,
         theme_code=None,
@@ -201,6 +202,7 @@ class UserDynamo:
                 location[key] = BasicContext.create_decimal(location[key]).normalize()
 
         process_attr('fullName', full_name)
+        process_attr('displayName', display_name)
         process_attr('bio', bio)
         process_attr('languageCode', language_code)
         process_attr('themeCode', theme_code)

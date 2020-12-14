@@ -128,6 +128,7 @@ module.exports.setUserDetails = gql`
   mutation SetUserDetails(
     $bio: String
     $fullName: String
+    $displayName: String
     $photoPostId: ID
     $username: String
     $dateOfBirth: AWSDate
@@ -142,6 +143,7 @@ module.exports.setUserDetails = gql`
     setUserDetails(
       bio: $bio
       fullName: $fullName
+      displayName: $displayName
       photoPostId: $photoPostId
       username: $username
       dateOfBirth: $dateOfBirth
@@ -157,6 +159,7 @@ module.exports.setUserDetails = gql`
       username
       bio
       fullName
+      displayName
       photo {
         ...ImageFragment
       }
