@@ -16,6 +16,7 @@ const badWord = 'uoiFZP8bjS'
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
+  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
@@ -26,7 +27,8 @@ afterEach(async () => {
 
 test('Add comments with bad word - force banned', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, email: theirEmail, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient} = await loginCache.getCleanLogin()
 
   // we add a post
   const postId = uuidv4()
@@ -74,4 +76,17 @@ test('Add comments with bad word - force banned', async () => {
 
   // verify they are force disabled
   await theirClient.query({query: queries.self}).then(({data}) => expect(data.self.userStatus).toBe('DISABLED'))
+
+  // other tries to change email with banned email and it's also disabled
+  await theirClient.mutate({mutation: mutations.deleteUser}).then(({data: {deleteUser: user}}) => {
+    expect(user.userId).toBe(theirUserId)
+    expect(user.userStatus).toBe('DELETING')
+  })
+  await misc.sleep(2000)
+
+  await expect(
+    otherClient.mutate({mutation: mutations.startChangeUserEmail, variables: {email: theirEmail}}),
+  ).rejects.toThrow(/ClientError: User email is already banned and disabled/)
+
+  await otherClient.query({query: queries.self}).then(({data}) => expect(data.self.userStatus).toBe('DISABLED'))
 })

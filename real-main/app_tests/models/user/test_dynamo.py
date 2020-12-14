@@ -1071,15 +1071,15 @@ def test_generate_banned_user_by_contact_attr(user_dynamo, caplog):
     user_dynamo.add_user_banned(user_id_3, 'abc-3', 'chatMessages', device='x-real-device-1')
 
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(email='abc1@test.com')
-    assert list(user_ids) == [user_id_1]
+    assert user_ids == [user_id_1]
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(phone='+1234567890')
-    assert list(user_ids) == [user_id_2]
+    assert user_ids == [user_id_2]
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(device='x-real-device-1')
-    assert list(user_ids) == [user_id_3]
+    assert user_ids == [user_id_3]
 
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(device='x-real-device')
-    assert list(user_ids) == []
+    assert user_ids == []
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(email='abc@test.com')
-    assert list(user_ids) == []
+    assert user_ids == []
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(phone='1234567890')
-    assert list(user_ids) == []
+    assert user_ids == []
