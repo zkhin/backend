@@ -388,10 +388,30 @@ class User(TrendingModelMixin):
             f'custom:unverified_{names["short"]}': attribute_value,
         }
 
-        # verify that new attribtue value is not used by other
+        # verify that new attribute value is not used by other
         contact_attr_dynamo = getattr(self, names['dynamo_client'])
         if contact_attr_dynamo.get(attribute_value):
             raise UserException(f'User {names["dynamo_attr"]} is already used by other')
+
+        # verify that new attribute value & device id are not banned
+        device = self.item.get('lastClient', {}).get('uid', None)
+        if device and self.dynamo.generate_banned_user_by_contact_attr(device=device):
+            banned_email = attribute_value if attribute_name == 'email' else None
+            banned_phone = attribute_value if attribute_name == 'phone' else None
+
+            self.dynamo.add_user_banned(
+                self.id, self.item['username'], 'signUp', email=banned_email, phone=banned_phone
+            )
+            self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
+            raise UserException('User device is already banned')
+
+        if (
+            attribute_name == 'email' and self.dynamo.generate_banned_user_by_contact_attr(email=attribute_value)
+        ) or (
+            attribute_name == 'phone' and self.dynamo.generate_banned_user_by_contact_attr(phone=attribute_value)
+        ):
+            self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
+            raise UserException(f'User {names["dynamo_attr"]} is already banned and disabled')
 
         self.cognito_client.set_user_attributes(self.id, attrs)
 
