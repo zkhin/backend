@@ -1167,3 +1167,41 @@ def test_set_last_disable_dating_date(user):
     assert user.item == user.refresh_item().item
     assert user.item['gsiA3PartitionKey'] == 'userDisableDatingDate'
     assert user.item['gsiA3SortKey']
+
+
+def test_start_change_contact_attribute_banned_device(user):
+    client = {'uid': 'uuid-banned'}
+    user.dynamo.set_last_client(user.id, client)
+    user.refresh_item()
+    assert user.item['lastClient'] == client
+
+    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', device='uuid-banned')
+
+    # start the email change
+    new_email = 'go@go.com'
+    with pytest.raises(UserException, match='device'):
+        user.start_change_contact_attribute('email', new_email)
+
+    assert user.refresh_item().status == UserStatus.DISABLED
+
+
+def test_start_change_contact_attribute_banned_email(user, user2):
+    banned_email = 'go@go.com'
+    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', email=banned_email)
+
+    # start the email change
+    with pytest.raises(UserException, match='email'):
+        user2.start_change_contact_attribute('email', banned_email)
+
+    assert user2.refresh_item().status == UserStatus.DISABLED
+
+
+def test_start_change_contact_attribute_banned_phone(user, user2):
+    banned_phone = '+12125551212'
+    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', phone=banned_phone)
+
+    # start the email change
+    with pytest.raises(UserException, match='phone'):
+        user2.start_change_contact_attribute('phone', banned_phone)
+
+    assert user2.refresh_item().status == UserStatus.DISABLED

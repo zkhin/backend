@@ -558,4 +558,4 @@ class UserDynamo:
                 'IndexName': 'GSI-A3',
             }
 
-        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
+        return [key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs)]
