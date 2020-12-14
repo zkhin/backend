@@ -79,6 +79,28 @@ describe('Read and write properties our our own profile', () => {
     expect(resp.data.user.fullName).toBeNull()
   })
 
+  test('displayName', async () => {
+    const displayName = 'Hunter S.'
+    const {client, userId} = await loginCache.getCleanLogin()
+
+    let resp = await client.query({query: queries.user, variables: {userId}})
+    expect(resp.data.user.displayName).toBeNull()
+
+    // set to some custom values
+    resp = await client.mutate({mutation: mutations.setUserDetails, variables: {displayName}})
+    expect(resp.data.setUserDetails.displayName).toBe(displayName)
+
+    resp = await client.query({query: queries.user, variables: {userId}})
+    expect(resp.data.user.displayName).toBe(displayName)
+
+    // clear out the custom values
+    resp = await client.mutate({mutation: mutations.setUserDetails, variables: {displayName: ''}})
+    expect(resp.data.setUserDetails.displayName).toBeNull()
+
+    resp = await client.query({query: queries.user, variables: {userId}})
+    expect(resp.data.user.displayName).toBeNull()
+  })
+
   test('Invalid dateOfBirth contains timezone information', async () => {
     const {client} = await loginCache.getCleanLogin()
 

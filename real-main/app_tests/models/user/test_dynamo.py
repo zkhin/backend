@@ -250,6 +250,7 @@ def test_set_user_details(user_dynamo):
     resp = user_dynamo.set_user_details(
         user_id,
         full_name='f',
+        display_name='d',
         bio='b',
         language_code='l',
         theme_code='tc',
@@ -274,6 +275,7 @@ def test_set_user_details(user_dynamo):
         **expected_base_item,
         **{
             'fullName': 'f',
+            'displayName': 'd',
             'bio': 'b',
             'languageCode': 'l',
             'themeCode': 'tc',
@@ -320,6 +322,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
     resp = user_dynamo.set_user_details(
         user_id,
         full_name='f',
+        display_name='d',
         bio='b',
         language_code='l',
         theme_code='tc',
@@ -336,6 +339,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
         **expected_base_item,
         **{
             'fullName': 'f',
+            'displayName': 'd',
             'bio': 'b',
             'languageCode': 'l',
             'themeCode': 'tc',
@@ -364,6 +368,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
         **expected_base_item,
         **{
             'fullName': 'f',
+            'displayName': 'd',
             'bio': 'b',
             'languageCode': 'l',
             'themeCode': 'tc',
@@ -382,6 +387,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
     resp = user_dynamo.set_user_details(
         user_id,
         full_name='',
+        display_name='',
         bio='',
         language_code='',
         theme_code='',

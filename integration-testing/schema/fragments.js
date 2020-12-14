@@ -151,6 +151,7 @@ module.exports.simpleUserFields = gql`
   fragment SimpleUserFields on User {
     username
     fullName
+    displayName
     bio
     email
     phoneNumber

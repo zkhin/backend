@@ -310,6 +310,7 @@ def finish_change_user_phone_number(caller_user, arguments, **kwargs):
 def set_user_details(caller_user, arguments, **kwargs):
     username = arguments.get('username')
     full_name = arguments.get('fullName')
+    display_name = arguments.get('displayName')
     bio = arguments.get('bio')
     photo_post_id = arguments.get('photoPostId')
     privacy_status = arguments.get('privacyStatus')
@@ -333,6 +334,7 @@ def set_user_details(caller_user, arguments, **kwargs):
     args = (
         username,
         full_name,
+        display_name,
         bio,
         photo_post_id,
         privacy_status,
@@ -399,6 +401,7 @@ def set_user_details(caller_user, arguments, **kwargs):
     # update the simple properties
     caller_user.update_details(
         full_name=full_name,
+        display_name=display_name,
         bio=bio,
         language_code=language_code,
         theme_code=theme_code,

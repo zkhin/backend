@@ -320,6 +320,7 @@ class User(TrendingModelMixin):
     def update_details(
         self,
         full_name=None,
+        display_name=None,
         bio=None,
         language_code=None,
         theme_code=None,

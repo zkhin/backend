@@ -153,6 +153,7 @@ def test_update_with_existing_values_causes_no_update(user):
 def test_update_all_details(user):
     # check only privacy status is already set
     assert 'fullName' not in user.item
+    assert 'displayName' not in user.item
     assert 'bio' not in user.item
     assert 'languageCode' not in user.item
     assert 'themeCode' not in user.item
@@ -161,6 +162,7 @@ def test_update_all_details(user):
 
     user.update_details(
         full_name='f',
+        display_name='d',
         bio='b',
         language_code='de',
         theme_code='orange',
@@ -170,6 +172,7 @@ def test_update_all_details(user):
 
     # check the user.item has not been replaced
     assert user.item['fullName'] == 'f'
+    assert user.item['displayName'] == 'd'
     assert user.item['bio'] == 'b'
     assert user.item['languageCode'] == 'de'
     assert user.item['themeCode'] == 'orange'
@@ -181,6 +184,7 @@ def test_delete_all_details(user):
     # set some details
     user.update_details(
         full_name='f',
+        display_name='d',
         bio='b',
         language_code='de',
         theme_code='orange',
@@ -190,11 +194,18 @@ def test_delete_all_details(user):
 
     # delete those details, all except for privacyStatus which can't be deleted
     user.update_details(
-        full_name='', bio='', language_code='', theme_code='', follow_counts_hidden='', view_counts_hidden=''
+        full_name='',
+        display_name='',
+        bio='',
+        language_code='',
+        theme_code='',
+        follow_counts_hidden='',
+        view_counts_hidden='',
     )
 
     # check the delete made it through
     assert 'fullName' not in user.item
+    assert 'displayName' not in user.item
     assert 'bio' not in user.item
     assert 'languageCode' not in user.item
     assert 'themeCode' not in user.item
