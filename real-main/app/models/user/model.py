@@ -395,24 +395,7 @@ class User(TrendingModelMixin):
             raise UserException(f'User {names["dynamo_attr"]} is already used by other')
 
         # verify that new attribute value & device id are not banned
-        device = self.item.get('lastClient', {}).get('uid', None)
-        if device and self.dynamo.generate_banned_user_by_contact_attr(device=device):
-            banned_email = attribute_value if attribute_name == 'email' else None
-            banned_phone = attribute_value if attribute_name == 'phone' else None
-
-            self.dynamo.add_user_banned(
-                self.id, self.item['username'], 'signUp', email=banned_email, phone=banned_phone
-            )
-            self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
-            raise UserException('User device is already banned')
-
-        if (
-            attribute_name == 'email' and self.dynamo.generate_banned_user_by_contact_attr(email=attribute_value)
-        ) or (
-            attribute_name == 'phone' and self.dynamo.generate_banned_user_by_contact_attr(phone=attribute_value)
-        ):
-            self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
-            raise UserException(f'User {names["dynamo_attr"]} is already banned and disabled')
+        self.validate_banned_user(attribute_name, attribute_value)
 
         self.cognito_client.set_user_attributes(self.id, attrs)
 
@@ -473,6 +456,9 @@ class User(TrendingModelMixin):
         # verify that new email value is not used by other
         if self.email_dynamo.get(email):
             raise UserException('User federated login email is already used by other')
+
+        # verify that new email & device id are not banned
+        self.validate_banned_user('email', email)
 
         # link the logins in the identity pool
         tokens = {
@@ -585,3 +571,24 @@ class User(TrendingModelMixin):
         now = now or pendulum.now('utc')
         self.dynamo.set_user_last_found_contacts_at(self.id, now=now)
         return self
+
+    def validate_banned_user(self, attribute_name, attribute_value):
+        # verify that new attribute value & device id are not banned
+        device = self.item.get('lastClient', {}).get('uid', None)
+        if device and self.dynamo.generate_banned_user_by_contact_attr(device=device):
+            banned_email = attribute_value if attribute_name == 'email' else None
+            banned_phone = attribute_value if attribute_name == 'phone' else None
+
+            self.dynamo.add_user_banned(
+                self.id, self.item['username'], 'signUp', email=banned_email, phone=banned_phone
+            )
+            self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
+            raise UserException('User device is already banned')
+
+        if (
+            attribute_name == 'email' and self.dynamo.generate_banned_user_by_contact_attr(email=attribute_value)
+        ) or (
+            attribute_name == 'phone' and self.dynamo.generate_banned_user_by_contact_attr(phone=attribute_value)
+        ):
+            self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
+            raise UserException(f'User {attribute_name} is already banned and disabled')
