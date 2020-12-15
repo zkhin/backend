@@ -995,12 +995,15 @@ def test_set_user_password_failures(user):
             user.set_password('encryptedfoo')
 
 
-@pytest.mark.parametrize('attr', ['fullName', 'photoPostId', 'gender', 'location', 'matchAgeRange'])
+@pytest.mark.parametrize(
+    'attr', ['fullName', 'displayName', 'photoPostId', 'gender', 'location', 'matchAgeRange']
+)
 def test_validate_can_enable_dating_missing_attribute(user, attr):
     # set all the required properties, verify succeeds
     user.item.update(
         {
             'fullName': 'HUNTER S',
+            'displayName': 'HUNTER S',
             'photoPostId': str(uuid4()),
             'age': 42,
             'gender': 'MALE',
@@ -1025,6 +1028,7 @@ def test_validate_can_enable_dating_match_genders(user):
     user.item.update(
         {
             'fullName': 'HUNTER S',
+            'displayName': 'HUNTER S',
             'photoPostId': str(uuid4()),
             'age': 42,
             'gender': 'MALE',
@@ -1054,6 +1058,7 @@ def test_validate_can_enable_dating_age(user):
     user.item.update(
         {
             'fullName': 'HUNTER S',
+            'displayName': 'HUNTER S',
             'photoPostId': str(uuid4()),
             'gender': 'MALE',
             'location': {'latitude': 50, 'longitude': 50, 'accuracy': 10},
@@ -1084,6 +1089,7 @@ def test_validate_can_enable_dating_match_location_radius_not_required_for_diamo
     user.item.update(
         {
             'fullName': 'HUNTER S',
+            'displayName': 'HUNTER S',
             'photoPostId': str(uuid4()),
             'gender': 'MALE',
             'age': 30,

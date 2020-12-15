@@ -29,6 +29,7 @@ def test_on_user_change_update_dating_calls_dating_project_correctly(user_manage
     user.dynamo.set_user_photo_post_id(user.id, str(uuid4()))
     user.update_details(
         full_name='grant',
+        display_name='grant',
         date_of_birth='2000-01-01',
         gender=UserGender.FEMALE,
         location={'latitude': 45, 'longitude': -120},
@@ -75,6 +76,7 @@ def test_on_user_change_update_dating_disables_dating_if_dating_validation_fails
     user.dynamo.set_user_photo_post_id(user.id, str(uuid4()))
     user.update_details(
         full_name='grant',
+        display_name='grant',
         date_of_birth='2000-01-01',
         gender=UserGender.FEMALE,
         location={'latitude': 45, 'longitude': -120},

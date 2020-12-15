@@ -521,6 +521,7 @@ class User(TrendingModelMixin):
         # bunch of validation required to enable dating, by spec
         required_fields = {
             'fullName',
+            'displayName',
             'photoPostId',
             'age',
             'gender',
