@@ -931,6 +931,39 @@ def test_link_federated_login_steal_email(anonymous_user, user_4_stream_updated)
     assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]
 
 
+def test_link_federated_login_banned_user(anonymous_user, user_4_stream_updated):
+    new_email = 'go@go.com'
+    # set up mocks, save state
+    user = anonymous_user
+    user.cognito_client.get_user_pool_tokens = Mock(return_value={'IdToken': 'cognito-id-token'})
+    user.cognito_client.link_identity_pool_entries = Mock()
+    user.cognito_client.set_user_email = Mock()
+    user.clients['apple'].get_verified_email = Mock(return_value=new_email)
+    assert 'email' not in user.item
+    assert user.status == UserStatus.ANONYMOUS
+
+    # add banned user device
+    client = {'uid': 'uuid-banned'}
+    user.dynamo.set_last_client(user.id, client)
+    user.refresh_item()
+    assert user.item['lastClient'] == client
+
+    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', device='uuid-banned')
+
+    # call, verify final state
+    with pytest.raises(UserException, match='device is already banned'):
+        user.link_federated_login('apple', 'apple-id-token')
+    user.refresh_item()
+    assert 'email' not in user.item
+    assert user.status == UserStatus.DISABLED
+
+    # verify mock calls
+    assert user.cognito_client.get_user_pool_tokens.mock_calls == []
+    assert user.cognito_client.link_identity_pool_entries.mock_calls == []
+    assert user.cognito_client.set_user_email.mock_calls == []
+    assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]
+
+
 def test_update_last_found_contacts_at(user):
     # Check update_last_found_contacts_at without Specific Time
     before = pendulum.now('utc')
