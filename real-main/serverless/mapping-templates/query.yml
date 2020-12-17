@@ -96,3 +96,9 @@
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl
+
+- type: Query
+  field: swipedRightUsers
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl

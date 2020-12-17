@@ -47,6 +47,9 @@ type Query {
   # Globally trending users
   trendingUsers(limit: Int, nextToken: String): PaginatedUsers!
 
+  # Swiped-right users for only diamond user
+  swipedRightUsers: [User!]
+
   # A specific post
   #   - posts that do not have COMPLETED postStatus are private to only the post owner
   #   - posts of private users are private to only themselves and their followers
