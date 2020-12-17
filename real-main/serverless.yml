@@ -658,7 +658,12 @@ functions:
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
     events:
-      - schedule: 'rate(1 day)'
+      - s3:
+          bucket: ${self:provider.environment.S3_BAD_WORDS_BUCKET}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: /bad_words.json
+          existing: true
     alarms:
       - functionErrors
       - functionThrottles
