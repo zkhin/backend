@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -5,6 +6,7 @@ import botocore
 import pendulum
 import stringcase
 
+from app.clients import RealDatingClient
 from app.clients.cognito import InvalidEncryption
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
@@ -92,6 +94,7 @@ class User(TrendingModelMixin):
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
         self.frontend_resources_domain = frontend_resources_domain
+        self.real_dating_client = RealDatingClient()
 
     @property
     def username(self):
@@ -593,3 +596,11 @@ class User(TrendingModelMixin):
         ):
             self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
             raise UserException(f'User {attribute_name} is already banned and disabled')
+
+    def get_swiped_right_users(self):
+        # only diamond users can get swiped right users
+        if self.subscription_level != UserSubscriptionLevel.DIAMOND:
+            raise UserException('User subscription level is not diamond')
+
+        user_ids = json.loads(self.real_dating_client.swiped_right_users(self.id)['Payload'].read().decode())
+        return user_ids

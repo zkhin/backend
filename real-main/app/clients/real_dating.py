@@ -11,6 +11,7 @@ logger = logging.getLogger()
 PUT_USER_ARN = os.environ.get('REAL_DATING_PUT_USER_ARN')
 REMOVE_USER_ARN = os.environ.get('REAL_DATING_REMOVE_USER_ARN')
 MATCH_STATUS_ARN = os.environ.get('REAL_DATING_MATCH_STATUS_ARN')
+SWIPED_RIGHT_USERS_ARN = os.environ.get('REAL_DATING_SWIPED_RIGHT_USERS_ARN')
 
 
 class RealDatingClient:
@@ -19,11 +20,13 @@ class RealDatingClient:
         put_user_arn=PUT_USER_ARN,
         remove_user_arn=REMOVE_USER_ARN,
         match_status_arn=MATCH_STATUS_ARN,
+        swiped_right_users_arn=SWIPED_RIGHT_USERS_ARN,
     ):
         self.boto3_client = boto3.client('lambda')
         self.put_user_arn = put_user_arn
         self.remove_user_arn = remove_user_arn
         self.match_status_arn = match_status_arn
+        self.swiped_right_users_arn = swiped_right_users_arn
 
     def put_user(self, user_id, user_dating_profile):
         self.boto3_client.invoke(
@@ -49,4 +52,11 @@ class RealDatingClient:
             FunctionName=self.match_status_arn,
             # InvocationType='Event',  # async
             Payload=json.dumps({'userId': user_id, 'matchUserId': match_user_id}),
+        )
+
+    def swiped_right_users(self, user_id):
+        return self.boto3_client.invoke(
+            FunctionName=self.swiped_right_users_arn,
+            # InvocationType='Event',  # async
+            Payload=json.dumps({'userId': user_id}),
         )

@@ -638,3 +638,13 @@ module.exports.allMatchedUsersForUser = gql`
     }
   }
 `
+
+module.exports.swipedRightUsers = gql`
+  query SwipedRightUsers {
+    swipedRightUsers {
+      userId
+      ...SimpleUserFields
+    }
+  }
+  ${fragments.simpleUserFields}
+`

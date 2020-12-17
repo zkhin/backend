@@ -1582,3 +1582,22 @@ def search_keywords(caller_user, arguments, **kwargs):
         raise ClientException(str(err)) from err
 
     return keywords
+
+
+@routes.register('Query.swipedRightUsers')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def swiped_right_users(caller_user, arguments, **kwargs):
+    try:
+        user_ids = caller_user.get_swiped_right_users()
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
+    response = []
+    for user_id in user_ids:
+        user = user_manager.get_user(user_id)
+        if user:
+            response.append(user.serialize(caller_user.id))
+
+    return response

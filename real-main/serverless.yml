@@ -34,6 +34,7 @@ provider:
     REAL_DATING_PUT_USER_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-put-user
     REAL_DATING_REMOVE_USER_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-remove-user
     REAL_DATING_MATCH_STATUS_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-match-status
+    REAL_DATING_SWIPED_RIGHT_USERS_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-swiped-right-users
 
     USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, 'true'}
     USER_NOTIFICATIONS_ONLY_USERNAMES: ${env:USER_NOTIFICATIONS_ONLY_USERNAMES, ''}  # space-seperated list
@@ -131,6 +132,7 @@ provider:
         - ${self:provider.environment.REAL_DATING_PUT_USER_ARN}
         - ${self:provider.environment.REAL_DATING_REMOVE_USER_ARN}
         - ${self:provider.environment.REAL_DATING_MATCH_STATUS_ARN}
+        - ${self:provider.environment.REAL_DATING_SWIPED_RIGHT_USERS_ARN}
 
 custom:
   elasticSearchInstanceCount:
