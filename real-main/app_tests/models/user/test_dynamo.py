@@ -1083,3 +1083,29 @@ def test_generate_banned_user_by_contact_attr(user_dynamo, caplog):
     assert user_ids == []
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(phone='1234567890')
     assert user_ids == []
+
+
+def test_generate_dating_enabled_user_ids(user_dynamo):
+    user1_id = str(uuid4())
+    user2_id = str(uuid4())
+    user3_id = str(uuid4())
+
+    # add user to DB, verify starts without dating status
+    item = user_dynamo.add_user(user1_id, user1_id[:8])
+    assert user_dynamo.get_user(user1_id) == item
+    item = user_dynamo.add_user(user2_id, user2_id[:8])
+    assert user_dynamo.get_user(user2_id) == item
+    item = user_dynamo.add_user(user3_id, user3_id[:8])
+    assert user_dynamo.get_user(user3_id) == item
+
+    # enable, verify
+    user_dynamo.set_user_dating_status(user1_id, UserDatingStatus.ENABLED)
+    user_dynamo.set_user_dating_status(user2_id, UserDatingStatus.ENABLED)
+    user_dynamo.set_user_dating_status(user3_id, UserDatingStatus.ENABLED)
+
+    assert list(user_dynamo.generate_dating_enabled_user_ids()) == [user1_id, user2_id, user3_id]
+
+    # disable user3
+    user_dynamo.set_user_dating_status(user3_id, UserDatingStatus.DISABLED)
+
+    assert list(user_dynamo.generate_dating_enabled_user_ids()) == [user1_id, user2_id]

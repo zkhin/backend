@@ -7,7 +7,7 @@ import pendulum
 import pytest
 
 from app.models.follower.enums import FollowStatus
-from app.models.user.enums import UserDatingStatus
+from app.models.user.enums import UserDatingStatus, UserGender
 from app.utils import GqlNotificationType
 
 
@@ -408,3 +408,44 @@ def test_clear_expired_dating_status(user_manager, user1, user2, user3):
     assert 'gsiA3SortKey' not in user1.refresh_item().item
     assert 'gsiA3SortKey' not in user2.refresh_item().item
     assert 'gsiA3SortKey' not in user3.refresh_item().item
+
+
+def test_send_dating_matches_notification(user_manager, user1, user2):
+    # enable dating
+    user1.dynamo.set_user_photo_post_id(user1.id, str(uuid.uuid4()))
+    user1.update_details(
+        full_name='grant',
+        display_name='grant',
+        date_of_birth='2000-01-01',
+        gender=UserGender.FEMALE,
+        location={'latitude': 45, 'longitude': -120},
+        height=90,
+        match_age_range={'min': 20, 'max': 30},
+        match_genders=[UserGender.FEMALE, UserGender.MALE],
+        match_location_radius=50,
+        match_height_range={'min': 50, 'max': 110},
+    )
+    user1.update_age(now=pendulum.parse('2020-02-02T00:00:00Z'))
+    user1.set_dating_status(UserDatingStatus.ENABLED)
+
+    user2.dynamo.set_user_photo_post_id(user2.id, str(uuid.uuid4()))
+    user2.update_details(
+        full_name='grant',
+        display_name='grant',
+        date_of_birth='2000-01-01',
+        gender=UserGender.FEMALE,
+        location={'latitude': 45, 'longitude': -120},
+        height=90,
+        match_age_range={'min': 20, 'max': 30},
+        match_genders=[UserGender.FEMALE, UserGender.MALE],
+        match_location_radius=50,
+        match_height_range={'min': 50, 'max': 110},
+    )
+    user2.update_age(now=pendulum.parse('2020-02-02T00:00:00Z'))
+    user2.set_dating_status(UserDatingStatus.ENABLED)
+
+    card_manager = user_manager.card_manager
+    card_id1 = f'{user1.id}:USER_DATING_NEW_MATCHES'
+    card_id2 = f'{user2.id}:USER_DATING_NEW_MATCHES'
+    assert card_manager.get_card(card_id1) is None
+    assert card_manager.get_card(card_id2) is None

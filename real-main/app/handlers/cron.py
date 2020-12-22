@@ -124,6 +124,13 @@ def detect_bad_words(event, context):
         logger.info('Detect bad words in comments & chat messages')
 
 
+@handler_logging
+def send_dating_matches_notification(event, context):
+    cnt = user_manager.send_dating_matches_notification()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info(f'Sent dating matches push notification: {cnt}')
+
+
 # TODO: enable to handle re-verification of apple receipts after temporary failures
 # @handler_logging
 # def verify_receipts(event, context):
