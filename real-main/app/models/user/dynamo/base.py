@@ -382,6 +382,13 @@ class UserDynamo:
             query_kwargs['ExpressionAttributeValues'][':mea'] = max_expires_at.to_iso8601_string()
         return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
 
+    def generate_dating_enabled_user_ids(self):
+        scan_kwargs = {
+            'FilterExpression': 'begins_with(partitionKey, :pk_prefix) AND sortKey = :sk_prefix AND datingStatus = :status',
+            'ExpressionAttributeValues': {':pk_prefix': 'user/', ':sk_prefix': 'profile', ':status': 'ENABLED'},
+        }
+        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_scan(scan_kwargs))
+
     def update_last_post_view_at(self, user_id, now=None, view_type=None):
         now = now or pendulum.now('utc')
         query_kwargs = {

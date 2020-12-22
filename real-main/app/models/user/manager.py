@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -10,7 +11,7 @@ from app import models
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.appstore.enums import AppStoreSubscriptionStatus
-from app.models.card.templates import ContactJoinedCardTemplate
+from app.models.card.templates import ContactJoinedCardTemplate, UserNewDatingMatchesTemplate
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
@@ -551,3 +552,23 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.update_subscription(new_item['userId'], UserSubscriptionLevel.DIAMOND)
         else:
             self.dynamo.clear_subscription(new_item['userId'])
+
+    def send_dating_matches_notification(self):
+        """
+        Loops through all users with dating enabled, and of those users who have > 0 potential matches
+        (which they have not already rejected),
+        send them a in-app notification card: "You have new dating matches to review.".
+        This should become a push notification if the user does not dismiss the card for x hours.
+        """
+        total_cnt = 0
+        for user_id in self.dynamo.generate_dating_enabled_user_ids():
+            response = json.loads(
+                self.real_dating_client.get_user_matches_count(user_id=user_id)['Payload'].read().decode()
+            )
+            if response['count'] > 0:
+                # send push notification
+                card_template = UserNewDatingMatchesTemplate(user_id)
+                self.card_manager.add_or_update_card(card_template)
+                total_cnt += 1
+
+        return total_cnt

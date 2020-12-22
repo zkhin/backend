@@ -35,6 +35,7 @@ provider:
     REAL_DATING_REMOVE_USER_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-remove-user
     REAL_DATING_MATCH_STATUS_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-match-status
     REAL_DATING_SWIPED_RIGHT_USERS_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-swiped-right-users
+    REAL_DATING_GET_USER_MATCHES_COUNT_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-get-user-matches-count
 
     USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, 'true'}
     USER_NOTIFICATIONS_ONLY_USERNAMES: ${env:USER_NOTIFICATIONS_ONLY_USERNAMES, ''}  # space-seperated list
@@ -133,6 +134,7 @@ provider:
         - ${self:provider.environment.REAL_DATING_REMOVE_USER_ARN}
         - ${self:provider.environment.REAL_DATING_MATCH_STATUS_ARN}
         - ${self:provider.environment.REAL_DATING_SWIPED_RIGHT_USERS_ARN}
+        - ${self:provider.environment.REAL_DATING_GET_USER_MATCHES_COUNT_ARN}
 
 custom:
   elasticSearchInstanceCount:
@@ -664,6 +666,18 @@ functions:
           rules:
             - suffix: /bad_words.json
           existing: true
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+  sendDatingMatchesNotification:
+    name: ${self:provider.stackName}-sendDatingMatchesNotification
+    handler: app.handlers.cron.send_dating_matches_notification
+    timeout: 900
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - schedule: 'rate(1 day)'
     alarms:
       - functionErrors
       - functionThrottles
