@@ -36,7 +36,7 @@ test('Mutation.createAnonymousUser success', async () => {
   await client.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(userId)
     expect(user.username).toBeTruthy()
-    expect(user.username).toMatch(new RegExp(`^real_?`))
+    expect(user.username).toMatch(new RegExp(`^user_?`))
     expect(user.email).toBeNull()
     expect(user.phoneNumber).toBeNull()
     expect(user.fullName).toBeNull()
@@ -47,7 +47,7 @@ test('Mutation.createAnonymousUser success', async () => {
   await client.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
     expect(user.userId).toBe(userId)
     expect(user.username).toBeTruthy()
-    expect(user.username).toMatch(new RegExp(`^real_?`))
+    expect(user.username).toMatch(new RegExp(`^user_?`))
     expect(user.userStatus).toBe('ANONYMOUS')
   })
 
