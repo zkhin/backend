@@ -330,6 +330,7 @@ register(
     card_manager.on_user_change_update_anonymous_upsell_card,
     {'userStatus': UserStatus.ACTIVE},
 )
+register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.on_user_change_log_amplitude_event)
 register('user', 'profile', ['REMOVE'], album_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], block_manager.on_user_delete_unblock_all_blocks)

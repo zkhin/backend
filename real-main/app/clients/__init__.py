@@ -1,4 +1,5 @@
 __all__ = [
+    'AmplitudeClient',
     'AppleClient',
     'AppStoreClient',
     'AppSyncClient',
@@ -16,6 +17,7 @@ __all__ = [
     'S3Client',
     'SecretsManagerClient',
 ]
+from .amplitude import AmplitudeClient
 from .apple import AppleClient
 from .appstore import AppStoreClient
 from .appsync import AppSyncClient

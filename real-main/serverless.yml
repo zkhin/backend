@@ -59,6 +59,8 @@ provider:
     SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
     SECRETSMANAGER_REAL_KEY_PAIR_NAME: RealKeyPair-1
 
+    AMPLITUDE_API_KEY: ${env:AMPLITUDE_API_KEY, ''}
+
   iamRoleStatements:
     - Effect: Allow
       Action:

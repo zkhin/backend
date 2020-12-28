@@ -472,3 +472,9 @@ def test_on_user_date_of_birth_change_update_age(user_manager, user):
     user.update_details(date_of_birth='2020-01-01')
     user_manager.on_user_date_of_birth_change_update_age(user.id, new_item=user.item, old_item=old_item)
     assert 'age' in user.refresh_item().item
+
+
+def test_on_user_change_log_amplitude_event(user_manager, user):
+    with patch.object(user_manager, 'amplitude_client') as amplitude_client_mock:
+        user_manager.on_user_change_log_amplitude_event(user.id, new_item=user.item)
+    assert amplitude_client_mock.mock_calls == [call.send_event(user.id, user.item, None)]
