@@ -118,7 +118,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     def generate_username(self):
         # using the crockford base 32 character set'
         chars = '0123456789abcdefghjkmnpqrstvwxyz'
-        return ''.join(random.choice(chars) for _ in range(12))
+        return 'real_' + ''.join(random.choice(chars) for _ in range(12))
 
     def validate_username(self, username):
         if not username:
