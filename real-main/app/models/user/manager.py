@@ -8,6 +8,7 @@ from functools import partialmethod
 import pendulum
 
 from app import models
+from app.clients import AmplitudeClient
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.appstore.enums import AppStoreSubscriptionStatus
@@ -70,6 +71,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.email_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userEmail')
             self.phone_number_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userPhoneNumber')
         self.placeholder_photos_directory = placeholder_photos_directory
+        self.amplitude_client = AmplitudeClient()
 
     @property
     def real_user_id(self):
@@ -552,6 +554,9 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.update_subscription(new_item['userId'], UserSubscriptionLevel.DIAMOND)
         else:
             self.dynamo.clear_subscription(new_item['userId'])
+
+    def on_user_change_log_amplitude_event(self, user_id, new_item, old_item=None):
+        self.amplitude_client.send_event(user_id, new_item, old_item)
 
     def send_dating_matches_notification(self):
         """
