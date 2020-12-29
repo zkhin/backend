@@ -32,7 +32,7 @@ test('Grant a user a free diamond subscription', async () => {
   })
 
   // we give grant ourselves our subscription bonus
-  const subscriptionDuration = moment.duration(3, 'months')
+  const subscriptionDuration = moment.duration(1, 'months')
   const before = moment().add(subscriptionDuration).toISOString()
   const expiresAt = await ourClient
     .mutate({mutation: mutations.grantUserSubscriptionBonus})

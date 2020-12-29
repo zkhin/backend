@@ -42,7 +42,7 @@ class User(TrendingModelMixin):
 
     client_names = ['cloudfront', 'cognito', 'elasticsearch', 'dynamo', 'pinpoint', 's3_uploads']
     item_type = 'user'
-    subscription_bonus_duration = pendulum.duration(months=3)
+    subscription_bonus_duration = pendulum.duration(months=1)
 
     def __init__(
         self,
