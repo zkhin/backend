@@ -812,7 +812,7 @@ def test_grant_subscription_bonus(user):
     assert user.subscription_level == UserSubscriptionLevel.BASIC
     assert 'subscriptionGrantedAt' not in user.item
     assert 'subscriptionExpiresAt' not in user.item
-    sub_duration = pendulum.duration(months=3)
+    sub_duration = pendulum.duration(months=1)
 
     # grant a subscription
     before = pendulum.now('utc')

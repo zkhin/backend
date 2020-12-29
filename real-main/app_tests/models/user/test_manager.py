@@ -172,7 +172,7 @@ def test_username_tag_regex(user_manager):
 
 
 def test_clear_expired_subscriptions(user_manager, user1, user2, user3):
-    sub_duration = pendulum.duration(months=3)
+    sub_duration = pendulum.duration(months=1)
     ms = pendulum.duration(microseconds=1)
 
     # grant these users subscriptions that expire at different times, verify
