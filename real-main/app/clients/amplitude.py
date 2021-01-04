@@ -13,7 +13,7 @@ class AmplitudeClient:
         self.amplitude_logger = amplitude.AmplitudeLogger(api_key=api_key)
 
     def send_event(self, user_id, new_items, old_items=None):
-        event_type = f'{user_id}_UPDATE_USER' if old_items else f'{user_id}_CREATE_USER'
+        event_type = 'UPDATE_USER' if old_items else 'CREATE_USER'
         event_args = {
             'user_id': user_id,
             'event_type': event_type,
