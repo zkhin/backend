@@ -104,3 +104,18 @@ class AppStoreSubDynamo:
             'IndexName': 'GSI-A1',
         }
         return self.client.generate_all_query(query_kwargs)
+
+    def generate_keys_past_30_days(self, user_id, now=None):
+        now = now or pendulum.now('utc')
+        past_30_days = now - pendulum.duration(days=30)
+
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiA1PartitionKey = :pk AND gsiA1SortKey >= :sk',
+            'ExpressionAttributeValues': {
+                ':pk': f'appStoreSub/{user_id}',
+                ':sk': past_30_days.to_iso8601_string(),
+            },
+            'ProjectionExpression': 'partitionKey, sortKey',
+            'IndexName': 'GSI-A1',
+        }
+        return self.client.generate_all_query(query_kwargs)
