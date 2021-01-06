@@ -5,7 +5,7 @@ import pendulum
 import pytest
 
 from app.mixins.view.enums import ViewType
-from app.models.appstore.plan_mapped_price import PlanMappedPrice
+from app.models.appstore.enums import PlanMappedPrice
 from app.models.user.dynamo import UserDynamo
 from app.models.user.enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
