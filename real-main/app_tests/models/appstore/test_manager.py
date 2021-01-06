@@ -4,7 +4,7 @@ from uuid import uuid4
 import pendulum
 import pytest
 
-from app.models.appstore.enums import AppStoreSubscriptionStatus
+from app.models.appstore.enums import AppStoreSubscriptionStatus, PricePlan
 from app.models.appstore.exceptions import AppStoreException, AppStoreSubAlreadyExists
 
 
@@ -35,25 +35,26 @@ def test_add_receipt(appstore_manager, user):
         'original_transaction_id': original_transaction_id_2,
         'pending_renewal_info': {},
     }
+    price_plan = PricePlan.SUBSCRIPTION_DIAMOND
     assert appstore_manager.sub_dynamo.get(original_transaction_id_1) is None
     assert appstore_manager.sub_dynamo.get(original_transaction_id_2) is None
 
     # add one of the receipts, verify
     with patch.object(appstore_manager.appstore_client, 'verify_receipt', return_value=verify_1):
-        appstore_manager.add_receipt(receipt_data_1, user.id)
+        appstore_manager.add_receipt(receipt_data_1, price_plan, user.id)
     assert appstore_manager.sub_dynamo.get(original_transaction_id_1)
     assert appstore_manager.sub_dynamo.get(original_transaction_id_2) is None
 
     # add the other receipt, verify
     with patch.object(appstore_manager.appstore_client, 'verify_receipt', return_value=verify_2):
-        appstore_manager.add_receipt(receipt_data_2, user.id)
+        appstore_manager.add_receipt(receipt_data_2, price_plan, user.id)
     assert appstore_manager.sub_dynamo.get(original_transaction_id_1)
     assert appstore_manager.sub_dynamo.get(original_transaction_id_2)
 
     # verify can't double-add a receipt
     with pytest.raises(AppStoreSubAlreadyExists, match=original_transaction_id_2):
         with patch.object(appstore_manager.appstore_client, 'verify_receipt', return_value=verify_2):
-            appstore_manager.add_receipt(receipt_data_2, user.id)
+            appstore_manager.add_receipt(receipt_data_2, price_plan, user.id)
 
 
 def test_determine_status(appstore_manager):

@@ -1,10 +1,11 @@
 import logging
+from decimal import Decimal
 from unittest.mock import call, patch
 from uuid import uuid4
 
 import pytest
 
-from app.models.appstore.enums import AppStoreSubscriptionStatus
+from app.models.appstore.enums import AppStoreSubscriptionStatus, PricePlan
 from app.models.post.enums import PostStatus, PostType
 from app.models.user.enums import UserStatus, UserSubscriptionLevel
 from app.utils import image_size
@@ -451,6 +452,33 @@ def test_on_appstore_sub_status_change_update_subscription(user_manager, user):
         str(uuid4()), new_item=new_item, old_item=old_item
     )
     assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
+
+
+def test_on_appstore_sub_add(user_manager, user):
+    new_item = {'userId': user.id, 'status': AppStoreSubscriptionStatus.ACTIVE}
+    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
+    assert 'paidRealSoFar' not in user.refresh_item().item
+
+    new_item = {
+        'userId': user.id,
+        'status': AppStoreSubscriptionStatus.ACTIVE,
+        'pricePlan': PricePlan.SUBSCRIPTION_DIAMOND,
+    }
+    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
+    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99')
+
+    # 2nd call, verify it's doubled
+    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
+    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99') * 2
+
+    # add wrong price plan, verify it's not changed
+    new_item = {
+        'userId': user.id,
+        'status': AppStoreSubscriptionStatus.ACTIVE,
+        'pricePlan': 'WRONG_PLAN',
+    }
+    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
+    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99') * 2
 
 
 def test_on_user_date_of_birth_change_update_age(user_manager, user):

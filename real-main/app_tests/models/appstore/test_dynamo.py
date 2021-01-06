@@ -4,6 +4,7 @@ import pendulum
 import pytest
 
 from app.models.appstore.dynamo import AppStoreSubDynamo
+from app.models.appstore.enums import PricePlan
 from app.models.appstore.exceptions import AppStoreSubAlreadyExists
 
 
@@ -20,6 +21,7 @@ def test_add(appstore_sub_dynamo):
     original_receipt, latest_receipt = str(uuid4()), str(uuid4())
     latest_receipt_info = {'some': 'value'}
     pending_renewal_info = {'bunchOf': 'stuff'}
+    price_plan = PricePlan.SUBSCRIPTION_DIAMOND
     now = pendulum.now('utc')
     next_verification_at = now + pendulum.duration(hours=1)
     assert appstore_sub_dynamo.get(original_transaction_id) is None
@@ -35,6 +37,7 @@ def test_add(appstore_sub_dynamo):
         pending_renewal_info,
         next_verification_at,
         now=now,
+        price_plan=price_plan,
     )
     assert appstore_sub_dynamo.get(original_transaction_id) == item
     assert item == {
@@ -49,6 +52,7 @@ def test_add(appstore_sub_dynamo):
         'latestReceipt': latest_receipt,
         'latestReceiptInfo': latest_receipt_info,
         'pendingRenewalInfo': pending_renewal_info,
+        'pricePlan': price_plan,
         'gsiA1PartitionKey': f'appStoreSub/{user_id}',
         'gsiA1SortKey': now.to_iso8601_string(),
         'gsiK1PartitionKey': 'appStoreSub',

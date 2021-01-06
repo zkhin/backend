@@ -5,3 +5,9 @@ class AppStoreSubscriptionStatus:
     CANCELLED = 'CANCELLED'
 
     _ALL = (ACTIVE, EXPIRED, CANCELLED)
+
+
+class PricePlan:
+    SUBSCRIPTION_DIAMOND = 'SUBSCRIPTION_DIAMOND'
+
+    _ALL = SUBSCRIPTION_DIAMOND

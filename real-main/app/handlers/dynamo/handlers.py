@@ -70,6 +70,7 @@ register(
     user_manager.on_appstore_sub_status_change_update_subscription,
     {'status': None},
 )
+register('appStoreSub', '-', ['INSERT'], user_manager.on_appstore_sub_add)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
 register('card', '-', ['INSERT'], user_manager.on_card_add_increment_count)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)

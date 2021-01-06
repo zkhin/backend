@@ -23,7 +23,7 @@ class AppStoreManager:
         if 'dynamo' in clients:
             self.sub_dynamo = AppStoreSubDynamo(clients['dynamo'])
 
-    def add_receipt(self, receipt, user_id):
+    def add_receipt(self, receipt, price_plan, user_id):
         now = pendulum.now('utc')
         # purposely letting any app store client exceptions propogate up to top level so backend alerts fire
         parsed = self.appstore_client.verify_receipt(receipt, exclude_old_transactions=False)
@@ -37,6 +37,7 @@ class AppStoreManager:
             latest_receipt_info=parsed['latest_receipt_info'],
             pending_renewal_info=parsed['pending_renewal_info'],
             next_verification_at=now + self.verification_period,
+            price_plan=price_plan,
             now=now,
         )
 

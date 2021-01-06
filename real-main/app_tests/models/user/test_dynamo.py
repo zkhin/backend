@@ -5,6 +5,7 @@ import pendulum
 import pytest
 
 from app.mixins.view.enums import ViewType
+from app.models.appstore.plan_mapped_price import PlanMappedPrice
 from app.models.user.dynamo import UserDynamo
 from app.models.user.enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from app.models.user.exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
@@ -1109,3 +1110,17 @@ def test_generate_dating_enabled_user_ids(user_dynamo):
     user_dynamo.set_user_dating_status(user3_id, UserDatingStatus.DISABLED)
 
     assert list(user_dynamo.generate_dating_enabled_user_ids()) == [user1_id, user2_id]
+
+
+def test_increment_paid_real_so_far(user_dynamo):
+    user_id = str(uuid4())
+    user_dynamo.add_user(user_id, str(uuid4())[:8])
+    assert 'paidRealSoFar' not in user_dynamo.get_user(user_id)
+
+    price = PlanMappedPrice.SUBSCRIPTION_DIAMOND.value
+
+    new_item = user_dynamo.increment_paid_real_so_far(user_id, price)
+    assert new_item['paidRealSoFar'] == price
+
+    new_item = user_dynamo.increment_paid_real_so_far(user_id, price)
+    assert new_item['paidRealSoFar'] == price * 2

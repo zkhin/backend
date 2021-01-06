@@ -3,6 +3,8 @@ from uuid import uuid4
 
 import pytest
 
+from app.models.appstore.enums import PricePlan
+
 
 @pytest.fixture
 def user(user_manager, cognito_client):
@@ -31,9 +33,9 @@ def test_on_user_delete_delete_all_by_user(appstore_manager, user1, user2):
 
     # add one receipt by each user, verify exist
     with patch.object(appstore_manager.appstore_client, 'verify_receipt', return_value=verify_1):
-        appstore_manager.add_receipt(str(uuid4()), user1.id)
+        appstore_manager.add_receipt(str(uuid4()), PricePlan.SUBSCRIPTION_DIAMOND, user1.id)
     with patch.object(appstore_manager.appstore_client, 'verify_receipt', return_value=verify_2):
-        appstore_manager.add_receipt(str(uuid4()), user2.id)
+        appstore_manager.add_receipt(str(uuid4()), PricePlan.SUBSCRIPTION_DIAMOND, user2.id)
     assert len(list(appstore_manager.sub_dynamo.generate_keys_by_user(user1.id))) == 1
     assert len(list(appstore_manager.sub_dynamo.generate_keys_by_user(user2.id))) == 1
 
