@@ -1,9 +1,10 @@
 import logging
+from decimal import Decimal
 
 import pendulum
 
 from .dynamo import AppStoreSubDynamo
-from .enums import AppStoreSubscriptionStatus
+from .enums import AppStoreSubscriptionStatus, PlanMappedPrice
 from .exceptions import AppStoreException
 
 logger = logging.getLogger()
@@ -88,3 +89,13 @@ class AppStoreManager:
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         key_generator = self.sub_dynamo.generate_keys_by_user(user_id)
         self.sub_dynamo.client.batch_delete_items(key_generator)
+
+    def get_paid_real_past_30_days(self, user_id, now=None):
+        now = now or pendulum.now('utc')
+        paid_real_past_30_days = Decimal('0')
+        for key in self.sub_dynamo.generate_keys_past_30_days(user_id, now=now):
+            price_plan = self.sub_dynamo.client.get_item(key).get('pricePlan')
+
+            if price_plan and price_plan in PlanMappedPrice.__members__:
+                paid_real_past_30_days += PlanMappedPrice[price_plan].value
+        return paid_real_past_30_days
