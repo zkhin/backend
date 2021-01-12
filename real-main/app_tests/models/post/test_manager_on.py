@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from unittest.mock import call, patch
 from uuid import uuid4
 
@@ -516,3 +517,37 @@ def test_sync_elasticsearch(post_manager, post):
         call.put_post(post.id, ['spock']),
         call.put_keyword(post.id, 'spock'),
     ]
+
+
+def test_get_royalty_paid_and_posts_viewed_past_30_days(post_manager, user):
+    item_id1, item_id2, item_id3 = [str(uuid4()), str(uuid4()), str(uuid4())]
+    post_manager.view_dynamo.add_view(item_id1, user.id, 1, pendulum.now('utc'))
+    post_manager.view_dynamo.add_view(item_id2, user.id, 1, pendulum.now('utc'))
+    post_manager.view_dynamo.add_view(item_id3, user.id, 1, pendulum.now('utc') - pendulum.duration(days=31))
+    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [Decimal('0'), 2]
+
+    post_manager.view_dynamo.set_royalty_fee(item_id1, user.id, Decimal('0.99'))
+    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [Decimal('0.99'), 2]
+    post_manager.view_dynamo.set_royalty_fee(item_id2, user.id, Decimal('0.99'))
+    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [2 * Decimal('0.99'), 2]
+
+    post_manager.view_dynamo.set_royalty_fee(item_id3, user.id, Decimal('0.99'))
+    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [2 * Decimal('0.99'), 2]
+
+
+def test_on_post_view_calculate_royalty_fee(post_manager, post, user, user2):
+    item_id1, item_id2, item_id3 = [str(uuid4()), str(uuid4()), str(uuid4())]
+    post_manager.view_dynamo.add_view(item_id1, user2.id, 1, pendulum.now('utc'))
+    post_manager.view_dynamo.add_view(item_id2, user2.id, 2, pendulum.now('utc'))
+    post_manager.view_dynamo.add_view(post.id, user2.id, 1, pendulum.now('utc'))
+    post_manager.view_dynamo.add_view(item_id3, user2.id, 1, pendulum.now('utc') - pendulum.duration(days=31))
+
+    item_other_user = {'partitionKey': f'post/{post.id}', 'sortKey': f'view/{user2.id}', 'viewCount': 1}
+    user.grant_subscription_bonus()
+    user2.grant_subscription_bonus()
+
+    with patch.object(post_manager.appstore_manager, 'get_paid_real_past_30_days', return_value=Decimal('0.5')):
+        post_manager.on_post_view_calculate_royalty_fee(post.id, item_other_user)
+        post_view_item = post_manager.view_dynamo.get_view(post.id, user2.id)
+        assert post_view_item['royaltyFee'] == Decimal('0.09375')
+        assert user.refresh_item().item['wallet'] == Decimal('0.09375')

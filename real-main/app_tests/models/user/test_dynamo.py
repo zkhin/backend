@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from uuid import uuid4
 
 import pendulum
@@ -1124,3 +1125,19 @@ def test_increment_paid_real_so_far(user_dynamo):
 
     new_item = user_dynamo.increment_paid_real_so_far(user_id, price)
     assert new_item['paidRealSoFar'] == price * 2
+
+
+def test_increment_wallet(user_dynamo):
+    user_id = str(uuid4())
+    user_dynamo.add_user(user_id, str(uuid4())[:8])
+    assert 'wallet' not in user_dynamo.get_user(user_id)
+
+    amount_to_pay = Decimal('0.99')
+    new_item = user_dynamo.increment_wallet(user_id, amount_to_pay)
+    assert new_item['wallet'] == amount_to_pay
+
+    new_item = user_dynamo.increment_wallet(user_id, amount_to_pay)
+    assert new_item['wallet'] == amount_to_pay * 2
+
+    with pytest.raises(AssertionError):
+        user_dynamo.increment_wallet(user_id, 0.99)
