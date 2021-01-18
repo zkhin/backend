@@ -35,6 +35,7 @@ We have no local secondary indexes.
 | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount`, `rankCount`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` | | | | | | | `album` | `{deleteAt}` |
 | `appStoreSub/{originalTransactionId}` | `-` | `0` | `userId`, `status`, `createdAt`, `lastVerificationAt`, `originalReceipt`, `latestReceipt`, `latestReceiptInfo`, `pendingRenewalInfo`, `pricePlan` | `appStoreSub/{userId}` | `{createdAt}` | | | | | | | `appStoreSub` | `{nextVerificationAt}` |
+| `transaction/{transactionId}` | `-` | `0` | `userId`, `status`, `createdAt`, `originalTransactionId`, `latestReceiptInfo`, `pendingRenewalInfo`, `price` | `transaction/{userId}` | `{createdAt}` | | | | | | | | |
 | `card/{cardId}` | `-` | `0` | `title`, `subTitle`, `action`, `postId`, `commentId` | `user/{userId}` | `card/{createdAt}` | `card/{postId}` | `{userId}` | `card/{commentId}` | `-` | | | `card` | `{notifyUserAt}/{userId}` |
 | `chat/{chatId}` | `-` | `0` | `chatId`, `chatType`, `name`, `createdByUserId`, `createdAt`, `lastMessageActivityAt`, `flagCount`, `messagesCount`, `userCount` | `chat/{userId1}/{userId2}` | `-` |
 | `chat/{chatId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | | | `flag/{userId}` | `chat` |

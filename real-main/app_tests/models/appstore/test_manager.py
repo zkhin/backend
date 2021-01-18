@@ -196,15 +196,15 @@ def test_get_paid_real_past_30_days(appstore_manager, user1, user2):
     # add subscriptions for the two users directly to dynamo
     now, ten_days = pendulum.now('utc'), pendulum.duration(days=10)
     otid1, otid2, otid3 = str(uuid4()), str(uuid4()), str(uuid4())
-    price_plan = PricePlan.SUBSCRIPTION_DIAMOND
-    appstore_manager.sub_dynamo.add(otid1, user2.id, '-', 'or1', '-', '-', '-', now, now - ten_days, price_plan)
-    appstore_manager.sub_dynamo.add(otid2, user1.id, '-', 'or2', '-', '-', '-', now, now, price_plan)
-    appstore_manager.sub_dynamo.add(otid3, user2.id, '-', 'or3', '-', '-', '-', now, now + ten_days, price_plan)
+    price = Decimal('0.99')
+    appstore_manager.sub_dynamo.add_transaction(otid1, user2.id, '-', 'or1', '-', '-', price, now - ten_days)
+    appstore_manager.sub_dynamo.add_transaction(otid2, user1.id, '-', 'or2', '-', '-', price, now)
+    appstore_manager.sub_dynamo.add_transaction(otid3, user2.id, '-', 'or3', '-', '-', price, now + ten_days)
 
     # get paid real past 30 days
-    assert appstore_manager.get_paid_real_past_30_days(user1.id) == Decimal('0.99')
+    assert appstore_manager.get_paid_real_past_30_days(user1.id) == price
     assert appstore_manager.get_paid_real_past_30_days(user1.id, now + 4 * ten_days) == Decimal('0')
-    assert appstore_manager.get_paid_real_past_30_days(user1.id, now + 3 * ten_days) == Decimal('0.99')
-    assert appstore_manager.get_paid_real_past_30_days(user2.id, now) == 2 * Decimal('0.99')
-    assert appstore_manager.get_paid_real_past_30_days(user2.id, now - ten_days) == 2 * Decimal('0.99')
-    assert appstore_manager.get_paid_real_past_30_days(user2.id, now + 3 * ten_days) == Decimal('0.99')
+    assert appstore_manager.get_paid_real_past_30_days(user1.id, now + 3 * ten_days) == price
+    assert appstore_manager.get_paid_real_past_30_days(user2.id, now) == 2 * price
+    assert appstore_manager.get_paid_real_past_30_days(user2.id, now - ten_days) == 2 * price
+    assert appstore_manager.get_paid_real_past_30_days(user2.id, now + 3 * ten_days) == price

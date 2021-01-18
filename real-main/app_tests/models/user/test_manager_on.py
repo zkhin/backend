@@ -454,30 +454,21 @@ def test_on_appstore_sub_status_change_update_subscription(user_manager, user):
     assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
 
 
-def test_on_appstore_sub_add(user_manager, user):
-    new_item = {'userId': user.id, 'status': AppStoreSubscriptionStatus.ACTIVE}
-    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
-    assert 'paidRealSoFar' not in user.refresh_item().item
+def test_on_appstore_transaction_add(user_manager, user):
+    new_item = {'userId': user.id, 'status': 0}
+    user_manager.on_appstore_transaction_add(str(uuid4()), new_item=new_item)
+    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0')
 
     new_item = {
         'userId': user.id,
-        'status': AppStoreSubscriptionStatus.ACTIVE,
-        'pricePlan': PricePlan.SUBSCRIPTION_DIAMOND,
+        'status': 0,
+        'price': Decimal('0.99'),
     }
-    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
+    user_manager.on_appstore_transaction_add(str(uuid4()), new_item=new_item)
     assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99')
 
     # 2nd call, verify it's doubled
-    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
-    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99') * 2
-
-    # add wrong price plan, verify it's not changed
-    new_item = {
-        'userId': user.id,
-        'status': AppStoreSubscriptionStatus.ACTIVE,
-        'pricePlan': 'WRONG_PLAN',
-    }
-    user_manager.on_appstore_sub_add(str(uuid4()), new_item=new_item)
+    user_manager.on_appstore_transaction_add(str(uuid4()), new_item=new_item)
     assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99') * 2
 
 

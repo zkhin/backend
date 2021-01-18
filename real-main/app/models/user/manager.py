@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import logging
 import os
@@ -555,14 +556,12 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         else:
             self.dynamo.clear_subscription(new_item['userId'])
 
-    def on_appstore_sub_add(self, original_transaction_id, new_item):
+    def on_appstore_transaction_add(self, transaction_id, new_item):
         status = new_item.get('status', None)
-        if status == AppStoreSubscriptionStatus.ACTIVE:
-            # increase paid_real_so_far according to price plan
-            price_plan = new_item.get('pricePlan', None)
-
-            if price_plan and price_plan in PlanMappedPrice.__members__:
-                self.dynamo.increment_paid_real_so_far(new_item['userId'], PlanMappedPrice[price_plan].value)
+        if status == 0:
+            # increase paid_real_so_far according to price
+            price = new_item.get('price', Decimal('0'))
+            self.dynamo.increment_paid_real_so_far(new_item['userId'], price)
 
     def on_user_change_log_amplitude_event(self, user_id, new_item, old_item=None):
         self.amplitude_client.send_event(user_id, new_item, old_item)

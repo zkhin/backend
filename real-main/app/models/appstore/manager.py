@@ -4,7 +4,7 @@ from decimal import Decimal
 import pendulum
 
 from .dynamo import AppStoreSubDynamo
-from .enums import AppStoreSubscriptionStatus, PlanMappedPrice
+from .enums import AppStoreSubscriptionStatus
 from .exceptions import AppStoreException
 
 logger = logging.getLogger()
@@ -93,9 +93,8 @@ class AppStoreManager:
     def get_paid_real_past_30_days(self, user_id, now=None):
         now = now or pendulum.now('utc')
         paid_real_past_30_days = Decimal('0')
-        for key in self.sub_dynamo.generate_keys_past_30_days(user_id, now=now):
-            price_plan = self.sub_dynamo.client.get_item(key).get('pricePlan')
+        for key in self.sub_dynamo.generate_transaction_keys_past_30_days(user_id, now=now):
+            price = self.sub_dynamo.client.get_item(key).get('price', Decimal('0'))
+            paid_real_past_30_days += price
 
-            if price_plan and price_plan in PlanMappedPrice.__members__:
-                paid_real_past_30_days += PlanMappedPrice[price_plan].value
         return paid_real_past_30_days
