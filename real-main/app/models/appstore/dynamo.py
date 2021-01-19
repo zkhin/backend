@@ -13,12 +13,15 @@ class AppStoreSubDynamo:
 
     def key(self, original_transaction_id):
         return {'partitionKey': f'appStoreSub/{original_transaction_id}', 'sortKey': '-'}
-    
+
     def transaction_key(self, transaction_id):
         return {'partitionKey': f'transaction/{transaction_id}', 'sortKey': '-'}
 
     def get(self, original_transaction_id, strongly_consistent=False):
         return self.client.get_item(self.key(original_transaction_id), ConsistentRead=strongly_consistent)
+
+    def get_transaction(self, transaction_id, strongly_consistent=False):
+        return self.client.get_item(self.transaction_key(transaction_id), ConsistentRead=strongly_consistent)
 
     def add(
         self,
@@ -31,7 +34,7 @@ class AppStoreSubDynamo:
         pending_renewal_info,
         next_verification_at,
         now=None,
-        price_plan=None,
+        price=None,
     ):
         now = now or pendulum.now('utc')
         item = {
@@ -50,8 +53,8 @@ class AppStoreSubDynamo:
             'gsiK1PartitionKey': 'appStoreSub',
             'gsiK1SortKey': next_verification_at.to_iso8601_string(),
         }
-        if price_plan:
-            item = {**item, 'pricePlan': price_plan}
+        if price:
+            item = {**item, 'price': price}
         try:
             self.client.add_item({'Item': item})
         except self.client.exceptions.ConditionalCheckFailedException as err:

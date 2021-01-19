@@ -119,7 +119,7 @@ type Mutation {
   reportScreenViews(screens: [String!]!): Boolean
 
   # After user initiates a in-app subscription with the apple app store, the receipt should be uploaded here
-  addAppStoreReceipt(receiptData: String!, plan: PricePlan!): Boolean
+  addAppStoreReceipt(receiptData: String!): Boolean
 
   # Let the user give themselves some free Diamond subscription
   grantUserSubscriptionBonus: User
@@ -560,10 +560,6 @@ type PaginatedUsers {
 enum SubscriptionLevel {
   BASIC
   DIAMOND
-}
-
-enum PricePlan {
-  SUBSCRIPTION_DIAMOND
 }
 
 type Card {

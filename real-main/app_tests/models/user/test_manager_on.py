@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.appstore.enums import AppStoreSubscriptionStatus, PricePlan
+from app.models.appstore.enums import AppStoreSubscriptionStatus
 from app.models.post.enums import PostStatus, PostType
 from app.models.user.enums import UserStatus, UserSubscriptionLevel
 from app.utils import image_size

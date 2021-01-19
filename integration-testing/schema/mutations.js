@@ -310,7 +310,7 @@ module.exports.grantUserSubscriptionBonus = gql`
 `
 
 module.exports.addAppStoreReceipt = gql`
-  mutation AddAppStoreReceipt($receiptData: String!, $plan: PricePlan!) {
+  mutation AddAppStoreReceipt($receiptData: String!) {
     addAppStoreReceipt(receiptData: $receiptData, plan: $plan)
   }
 `

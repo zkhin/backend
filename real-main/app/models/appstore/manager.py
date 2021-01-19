@@ -4,7 +4,7 @@ from decimal import Decimal
 import pendulum
 
 from .dynamo import AppStoreSubDynamo
-from .enums import AppStoreSubscriptionStatus
+from .enums import AppStoreSubscriptionStatus, PlanMappedPrice
 from .exceptions import AppStoreException
 
 logger = logging.getLogger()
@@ -24,11 +24,12 @@ class AppStoreManager:
         if 'dynamo' in clients:
             self.sub_dynamo = AppStoreSubDynamo(clients['dynamo'])
 
-    def add_receipt(self, receipt, price_plan, user_id):
+    def add_receipt(self, receipt, user_id):
         now = pendulum.now('utc')
         # purposely letting any app store client exceptions propogate up to top level so backend alerts fire
         parsed = self.appstore_client.verify_receipt(receipt, exclude_old_transactions=False)
         status = self.determine_status(parsed['latest_receipt_info'], now)
+        price = PlanMappedPrice.SUBSCRIPTION_DIAMOND  # TODO
         self.sub_dynamo.add(
             original_transaction_id=parsed['original_transaction_id'],
             user_id=user_id,
@@ -38,9 +39,27 @@ class AppStoreManager:
             latest_receipt_info=parsed['latest_receipt_info'],
             pending_renewal_info=parsed['pending_renewal_info'],
             next_verification_at=now + self.verification_period,
-            price_plan=price_plan,
+            price=price,
             now=now,
         )
+
+    def add_transaction(self, unified_receipt):
+        latest_receipt_info = unified_receipt['latest_receipt_info'][-1]
+        pending_renewal_info = unified_receipt['pending_renewal_info']
+        status = unified_receipt['status']
+        original_transaction_id = latest_receipt_info['original_transaction_id']
+        sub_item = self.sub_dynamo.get(original_transaction_id)
+
+        if sub_item and sub_item.get('userId') and sub_item.get('status') == AppStoreSubscriptionStatus.ACTIVE:
+            self.sub_dynamo.add_transaction(
+                transaction_id=latest_receipt_info['transaction_id'],
+                user_id=sub_item['userId'],
+                original_transaction_id=original_transaction_id,
+                status=status,
+                latest_receipt_info=latest_receipt_info,
+                pending_renewal_info=pending_renewal_info,
+                price=Decimal('0.99'),  # TODO
+            )
 
     def determine_status(self, receipt_info, now):
         cancelled_at, expires_at = (

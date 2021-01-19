@@ -4,7 +4,7 @@ import pendulum
 import pytest
 
 from app.models.appstore.dynamo import AppStoreSubDynamo
-from app.models.appstore.enums import PricePlan
+from app.models.appstore.enums import PlanMappedPrice
 from app.models.appstore.exceptions import AppStoreSubAlreadyExists
 
 
@@ -21,7 +21,7 @@ def test_add(appstore_sub_dynamo):
     original_receipt, latest_receipt = str(uuid4()), str(uuid4())
     latest_receipt_info = {'some': 'value'}
     pending_renewal_info = {'bunchOf': 'stuff'}
-    price_plan = PricePlan.SUBSCRIPTION_DIAMOND
+    price = PlanMappedPrice.SUBSCRIPTION_DIAMOND
     now = pendulum.now('utc')
     next_verification_at = now + pendulum.duration(hours=1)
     assert appstore_sub_dynamo.get(original_transaction_id) is None
@@ -37,7 +37,7 @@ def test_add(appstore_sub_dynamo):
         pending_renewal_info,
         next_verification_at,
         now=now,
-        price_plan=price_plan,
+        price=price,
     )
     assert appstore_sub_dynamo.get(original_transaction_id) == item
     assert item == {
@@ -52,7 +52,7 @@ def test_add(appstore_sub_dynamo):
         'latestReceipt': latest_receipt,
         'latestReceiptInfo': latest_receipt_info,
         'pendingRenewalInfo': pending_renewal_info,
-        'pricePlan': price_plan,
+        'price': price,
         'gsiA1PartitionKey': f'appStoreSub/{user_id}',
         'gsiA1SortKey': now.to_iso8601_string(),
         'gsiK1PartitionKey': 'appStoreSub',
@@ -153,10 +153,20 @@ def test_generate_transaction_keys_past_30_days(appstore_sub_dynamo):
     # test generate none, one and two
     assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 4 * ten_days)) == []
     assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 3 * ten_days)) == []
-    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 2 * ten_days)) == [key1]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 2 * ten_days)) == [
+        key1
+    ]
     assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now)) == [key1]
     assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now)) == [key3, key2]
-    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now - 3 * ten_days)) == [key3, key2]
-    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 4 * ten_days)) == [key2]
-    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 3 * ten_days)) == [key3, key2]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now - 3 * ten_days)) == [
+        key3,
+        key2,
+    ]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 4 * ten_days)) == [
+        key2
+    ]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 3 * ten_days)) == [
+        key3,
+        key2,
+    ]
     assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 5 * ten_days)) == []

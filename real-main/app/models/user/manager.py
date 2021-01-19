@@ -1,9 +1,9 @@
-from decimal import Decimal
 import json
 import logging
 import os
 import random
 import re
+from decimal import Decimal
 from functools import partialmethod
 
 import pendulum
@@ -12,7 +12,7 @@ from app import models
 from app.clients import AmplitudeClient
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
-from app.models.appstore.enums import AppStoreSubscriptionStatus, PlanMappedPrice
+from app.models.appstore.enums import AppStoreSubscriptionStatus
 from app.models.card.templates import ContactJoinedCardTemplate, UserNewDatingMatchesTemplate
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus

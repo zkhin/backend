@@ -25,7 +25,7 @@ test('Upload app store receipt data success', async () => {
   await ourClient
     .mutate({
       mutation: mutations.addAppStoreReceipt,
-      variables: {receiptData: validSandboxReceipt, plan: 'SUBSCRIPTION_DIAMOND'},
+      variables: {receiptData: validSandboxReceipt},
     })
     .then(({data}) => expect(data.addAppStoreReceipt).toBe(true))
 
@@ -54,7 +54,7 @@ test('Upload app store receipt data failures', async () => {
   await expect(
     ourClient.mutate({
       mutation: mutations.addAppStoreReceipt,
-      variables: {receiptData: 'not-valid-data', plan: 'SUBSCRIPTION_DIAMOND'},
+      variables: {receiptData: 'not-valid-data'},
     }),
   ).rejects.toThrow(/AppStore .* responded with status .* for receipt .*/)
 })

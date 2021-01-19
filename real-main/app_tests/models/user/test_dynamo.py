@@ -1118,7 +1118,7 @@ def test_increment_paid_real_so_far(user_dynamo):
     user_dynamo.add_user(user_id, str(uuid4())[:8])
     assert 'paidRealSoFar' not in user_dynamo.get_user(user_id)
 
-    price = PlanMappedPrice.SUBSCRIPTION_DIAMOND.value
+    price = PlanMappedPrice.SUBSCRIPTION_DIAMOND
 
     new_item = user_dynamo.increment_paid_real_so_far(user_id, price)
     assert new_item['paidRealSoFar'] == price

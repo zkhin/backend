@@ -1,5 +1,4 @@
 from decimal import Decimal
-from enum import Enum
 
 
 class AppStoreSubscriptionStatus:
@@ -17,5 +16,5 @@ class PricePlan:
     _ALL = SUBSCRIPTION_DIAMOND
 
 
-class PlanMappedPrice(Enum):
+class PlanMappedPrice:
     SUBSCRIPTION_DIAMOND = Decimal('0.99')
