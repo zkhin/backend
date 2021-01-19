@@ -544,9 +544,8 @@ def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
 @update_last_client
 def add_app_store_receipt(caller_user, arguments, **kwargs):
     receipt_data = arguments['receiptData']
-    price_plan = arguments['plan']
     try:
-        appstore_manager.add_receipt(receipt_data, price_plan, caller_user.id)
+        appstore_manager.add_receipt(receipt_data, caller_user.id)
     except AppStoreException as err:
         raise ClientException(str(err)) from err
     return True
