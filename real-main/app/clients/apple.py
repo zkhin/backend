@@ -1,4 +1,5 @@
 import json
+import os
 
 import jwt
 import requests
@@ -7,9 +8,11 @@ import requests
 # https://pyjwt.readthedocs.io/en/latest/usage.html
 # https://gist.github.com/davidhariri/b053787aabc9a8a9cc0893244e1549fe
 
+APPLE_AUDIENCE_ID = os.environ.get('APPLE_AUDIENCE_ID')
+
 
 class AppleClient:
-    def __init__(self, public_key_url='https://appleid.apple.com/auth/keys', audience='app.real.mobile'):
+    def __init__(self, public_key_url='https://appleid.apple.com/auth/keys', audience=APPLE_AUDIENCE_ID):
         self.public_key_url = public_key_url
         self.audience = audience
 
