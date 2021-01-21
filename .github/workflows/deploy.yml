@@ -1,0 +1,26 @@
+name: Deploy master branch
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  staging-deploy:
+    name: staging-deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: serverless install
+      run: |
+        yarn install
+        npx serverless config credentials --provider aws --key ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }} --secret ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+    - name: serverless deploy
+      run: yarn deploy --stage staging
