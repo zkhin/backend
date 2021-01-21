@@ -9,7 +9,6 @@ frameworkVersion: '>=1.0.0 <2.0.0'
 provider:
   name: aws
   logRetentionInDays: 7
-  profile: real-${self:provider.stage}
   runtime: python3.8
   stackName: real-${self:provider.stage}-main
   stage: ${opt:stage, 'dev'}
@@ -51,7 +50,7 @@ provider:
     S3_PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages
     S3_PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
     S3_UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}
-    S3_BAD_WORDS_BUCKET: ${self:provider.profile}-bad-words-#{AWS::AccountId}
+    S3_BAD_WORDS_BUCKET: real-${self:provider.stage}-bad-words-#{AWS::AccountId}
 
     SECRETSMANAGER_APPLE_APPSTORE_PARAMS_NAME: AppleAppstoreParams-1
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
