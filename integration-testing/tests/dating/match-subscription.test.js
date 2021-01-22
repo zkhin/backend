@@ -20,7 +20,6 @@ afterAll(async () => await loginCache.reset())
 
 // generic dating criteria that matches itself
 const datingVariables = {
-  fullName: 'Hunter S',
   displayName: 'Hunter S',
   location: {latitude: 10, longitude: 10}, // different from that used in other test suites
   height: 90,

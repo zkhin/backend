@@ -2,7 +2,6 @@ from enum import Enum
 
 
 class UserDatingMissingError(Enum):
-    fullName = 'MISSING_FULL_NAME'
     displayName = 'MISSING_DISPLAY_NAME'
     photoPostId = 'MISSING_PHOTO_POST_ID'
     age = 'MISSING_AGE'

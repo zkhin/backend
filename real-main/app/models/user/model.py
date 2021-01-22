@@ -523,7 +523,6 @@ class User(TrendingModelMixin):
     def validate_can_enable_dating(self):
         # bunch of validation required to enable dating, by spec
         required_fields = {
-            'fullName',
             'displayName',
             'photoPostId',
             'age',
