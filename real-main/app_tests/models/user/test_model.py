@@ -995,14 +995,11 @@ def test_set_user_password_failures(user):
             user.set_password('encryptedfoo')
 
 
-@pytest.mark.parametrize(
-    'attr', ['fullName', 'displayName', 'photoPostId', 'gender', 'location', 'matchAgeRange']
-)
+@pytest.mark.parametrize('attr', ['displayName', 'photoPostId', 'gender', 'location', 'matchAgeRange'])
 def test_validate_can_enable_dating_missing_attribute(user, attr):
     # set all the required properties, verify succeeds
     user.item.update(
         {
-            'fullName': 'HUNTER S',
             'displayName': 'HUNTER S',
             'photoPostId': str(uuid4()),
             'age': 42,

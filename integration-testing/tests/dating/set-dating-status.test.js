@@ -52,7 +52,6 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
           'MISSING_HEIGHT',
           'MISSING_MATCH_LOCATION_RADIUS',
           'MISSING_MATCH_HEIGHT_RANGE',
-          'MISSING_FULL_NAME',
           'MISSING_LOCATION',
           'MISSING_MATCH_GENDERS',
           'MISSING_DISPLAY_NAME',
@@ -69,7 +68,6 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -118,42 +116,6 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
     })
 })
 
-test('FullName required to enable dating', async () => {
-  const {client} = await loginCache.getCleanLogin()
-
-  // set all the stuff needed for dating, except fullName
-  const postId = uuidv4()
-  await client
-    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
-    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
-  await client.mutate({
-    mutation: mutations.setUserDetails,
-    variables: {
-      displayName: 'Hunter S',
-      dateOfBirth: '2000-01-01',
-      photoPostId: postId,
-      gender: 'MALE',
-      location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
-      height: 90,
-      matchAgeRange: {min: 20, max: 50},
-      matchGenders: ['MALE', 'FEMALE'],
-      matchLocationRadius: 50,
-      matchHeightRange: {min: 0, max: 110},
-    },
-  })
-  await misc.sleep(2000)
-
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'fullName'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_FULL_NAME'])
-  })
-})
-
 test('DisplayName required to enable dating', async () => {
   const {client} = await loginCache.getCleanLogin()
 
@@ -165,7 +127,6 @@ test('DisplayName required to enable dating', async () => {
   await client.mutate({
     mutation: mutations.setUserDetails,
     variables: {
-      fullName: 'Hunter S',
       dateOfBirth: '2000-01-01',
       photoPostId: postId,
       gender: 'MALE',
@@ -199,7 +160,6 @@ test('Profile photo required to enable dating', async () => {
     variables: {
       displayName: 'Hunter S',
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       gender: 'MALE',
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
       height: 90,
@@ -235,7 +195,6 @@ test('Gender required to enable dating', async () => {
     variables: {
       displayName: 'Hunter S',
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       photoPostId: postId,
       location: {latitude: 70.01, longitude: 70.01, accuracy: 20},
       height: 90,
@@ -270,7 +229,6 @@ test('location required to enable dating', async () => {
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -306,7 +264,6 @@ test('matchAgeRange required to enable dating', async () => {
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -342,7 +299,6 @@ test('matchGenders required to enable dating', async () => {
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -378,7 +334,6 @@ test('BASIC users require matchLocationRadius to enable dating, DIAMOND users do
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -423,7 +378,6 @@ test('Age required and must be in allowed age range for enabling dating', async 
   await client.mutate({
     mutation: mutations.setUserDetails,
     variables: {
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -497,7 +451,6 @@ test('Enable dating and remove required fields, check dating is DISABLED', async
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
@@ -542,7 +495,6 @@ test('Height required to enable dating', async () => {
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       gender: 'MALE',
       photoPostId: postId,
@@ -578,7 +530,6 @@ test('matchHeightRange required to enable dating', async () => {
     mutation: mutations.setUserDetails,
     variables: {
       dateOfBirth: '2000-01-01',
-      fullName: 'Hunter S',
       displayName: 'Hunter S',
       photoPostId: postId,
       gender: 'MALE',
