@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import uuid4
 
 import pendulum
@@ -109,3 +110,53 @@ def test_delete_view(view_dynamo):
     # delete a view that doesn't exist, should fail softly
     resp = view_dynamo.delete_view(item_id1, user_id1)
     assert resp is None
+
+
+def test_generate_keys_by_user_past_30_days(view_dynamo):
+    item_id1, user_id1 = [str(uuid4()), str(uuid4())]
+    item_id2, user_id2 = [str(uuid4()), str(uuid4())]
+    item_id3, item_id4 = [str(uuid4()), str(uuid4())]
+    item1 = view_dynamo.add_view(item_id1, user_id1, 1, pendulum.now('utc'))
+    item2 = view_dynamo.add_view(item_id2, user_id2, 1, pendulum.now('utc'))
+    item3 = view_dynamo.add_view(item_id3, user_id1, 1, pendulum.now('utc') - pendulum.duration(days=31))
+    item4 = view_dynamo.add_view(item_id4, user_id1, 1, pendulum.now('utc') - pendulum.duration(days=29))
+
+    key1 = {k: item1[k] for k in ('partitionKey', 'sortKey')}
+    key2 = {k: item2[k] for k in ('partitionKey', 'sortKey')}
+    key3 = {k: item3[k] for k in ('partitionKey', 'sortKey')}
+    key4 = {k: item4[k] for k in ('partitionKey', 'sortKey')}
+
+    assert view_dynamo.get_view(item_id1, user_id1) == item1
+    assert view_dynamo.get_view(item_id2, user_id2) == item2
+    assert view_dynamo.get_view(item_id3, user_id1) == item3
+    assert view_dynamo.get_view(item_id4, user_id1) == item4
+
+    assert list(view_dynamo.generate_keys_by_user_past_30_days(user_id1)) == [key4, key1]
+    assert list(view_dynamo.generate_keys_by_user_past_30_days(user_id2)) == [key2]
+    assert list(
+        view_dynamo.generate_keys_by_user_past_30_days(user_id1, pendulum.now('utc') - pendulum.duration(days=3))
+    ) == [key3, key4, key1]
+
+
+def test_set_royalty_fee(view_dynamo):
+    item_id1, user_id1 = [str(uuid4()), str(uuid4())]
+    item_id2, user_id2 = [str(uuid4()), str(uuid4())]
+
+    item1 = view_dynamo.add_view(item_id1, user_id1, 1, pendulum.now('utc'))
+    item2 = view_dynamo.add_view(item_id2, user_id2, 1, pendulum.now('utc'))
+
+    assert view_dynamo.get_view(item_id1, user_id1) == item1
+    assert view_dynamo.get_view(item_id2, user_id2) == item2
+    assert 'royaltyFee' not in item1
+    assert 'royaltyFee' not in item2
+
+    item1 = view_dynamo.set_royalty_fee(item_id1, user_id1, Decimal('0.99'))
+    assert item1['royaltyFee'] == Decimal('0.99')
+    item2 = view_dynamo.set_royalty_fee(item_id2, user_id2, Decimal('0.99'))
+    assert item2['royaltyFee'] == Decimal('0.99')
+
+    with pytest.raises(AssertionError):
+        view_dynamo.set_royalty_fee(item_id1, user_id1, 0.99)
+
+    item1 = view_dynamo.set_royalty_fee(item_id1, user_id1, Decimal('1.99'))
+    assert item1['royaltyFee'] == Decimal('1.99')

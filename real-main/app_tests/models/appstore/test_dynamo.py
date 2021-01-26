@@ -4,6 +4,7 @@ import pendulum
 import pytest
 
 from app.models.appstore.dynamo import AppStoreSubDynamo
+from app.models.appstore.enums import PlanMappedPrice
 from app.models.appstore.exceptions import AppStoreSubAlreadyExists
 
 
@@ -20,6 +21,7 @@ def test_add(appstore_sub_dynamo):
     original_receipt, latest_receipt = str(uuid4()), str(uuid4())
     latest_receipt_info = {'some': 'value'}
     pending_renewal_info = {'bunchOf': 'stuff'}
+    price = PlanMappedPrice.SUBSCRIPTION_DIAMOND
     now = pendulum.now('utc')
     next_verification_at = now + pendulum.duration(hours=1)
     assert appstore_sub_dynamo.get(original_transaction_id) is None
@@ -35,6 +37,7 @@ def test_add(appstore_sub_dynamo):
         pending_renewal_info,
         next_verification_at,
         now=now,
+        price=price,
     )
     assert appstore_sub_dynamo.get(original_transaction_id) == item
     assert item == {
@@ -49,6 +52,7 @@ def test_add(appstore_sub_dynamo):
         'latestReceipt': latest_receipt,
         'latestReceiptInfo': latest_receipt_info,
         'pendingRenewalInfo': pending_renewal_info,
+        'price': price,
         'gsiA1PartitionKey': f'appStoreSub/{user_id}',
         'gsiA1SortKey': now.to_iso8601_string(),
         'gsiK1PartitionKey': 'appStoreSub',
@@ -129,3 +133,40 @@ def test_generate_keys_by_user(appstore_sub_dynamo):
     assert list(appstore_sub_dynamo.generate_keys_by_user(str(uuid4()))) == []
     assert list(appstore_sub_dynamo.generate_keys_by_user(user_id1)) == [key1]
     assert list(appstore_sub_dynamo.generate_keys_by_user(user_id2)) == [key2, key3]
+
+
+def test_generate_transaction_keys_past_30_days(appstore_sub_dynamo):
+    now = pendulum.now('utc')
+    ten_days = pendulum.duration(days=10)
+    otid1, otid2, otid3 = str(uuid4()), str(uuid4()), str(uuid4())
+    user_id1, user_id2 = str(uuid4()), str(uuid4())
+    item1 = appstore_sub_dynamo.add_transaction(otid1, user_id1, '-', '-', '-', '-', '-', now=now - ten_days)
+    item2 = appstore_sub_dynamo.add_transaction(otid2, user_id2, '-', '-', '-', '-', '-', now=now + ten_days)
+    item3 = appstore_sub_dynamo.add_transaction(otid3, user_id2, '-', '-', '-', '-', '-', now=now)
+    key1 = {k: item1[k] for k in ('partitionKey', 'sortKey')}
+    key2 = {k: item2[k] for k in ('partitionKey', 'sortKey')}
+    key3 = {k: item3[k] for k in ('partitionKey', 'sortKey')}
+    assert appstore_sub_dynamo.client.get_item(key1) == item1
+    assert appstore_sub_dynamo.client.get_item(key2) == item2
+    assert appstore_sub_dynamo.client.get_item(key3) == item3
+
+    # test generate none, one and two
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 4 * ten_days)) == []
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 3 * ten_days)) == []
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now + 2 * ten_days)) == [
+        key1
+    ]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id1, now)) == [key1]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now)) == [key3, key2]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now - 3 * ten_days)) == [
+        key3,
+        key2,
+    ]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 4 * ten_days)) == [
+        key2
+    ]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 3 * ten_days)) == [
+        key3,
+        key2,
+    ]
+    assert list(appstore_sub_dynamo.generate_transaction_keys_past_30_days(user_id2, now + 5 * ten_days)) == []

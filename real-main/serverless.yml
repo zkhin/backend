@@ -684,6 +684,21 @@ functions:
       - functionErrors
       - functionThrottles
 
+  handleAppstoreServerNotification:
+    name: ${self:provider.stackName}-handleAppstoreServerNotification
+    handler: app.handlers.api.handle_appstore_server_notification
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - http:
+          path: appstore-server-notification
+          method: post
+          private: false
+    alarms:
+      - functionErrors
+      - functionThrottles
+    tracing: PassThrough
+
 # keep this miminal for smaller packages and thus faster deployments
 package:
   exclude:

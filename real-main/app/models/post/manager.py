@@ -1,6 +1,7 @@
 import collections
 import itertools
 import logging
+from decimal import Decimal
 
 import pendulum
 
@@ -11,6 +12,7 @@ from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.enums import ViewType
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
+from app.models.user.enums import UserSubscriptionLevel
 from app.utils import GqlNotificationType
 
 from .appsync import PostAppSync
@@ -25,6 +27,8 @@ logger = logging.getLogger()
 class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, ManagerBase):
 
     item_type = 'post'
+    app_store_fee_percent = Decimal('0.15')
+    real_fee_percent = Decimal('0.1')
 
     def __init__(self, clients, managers=None):
         super().__init__(clients, managers=managers)
@@ -36,6 +40,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         self.follower_manager = managers.get('follower') or models.FollowerManager(clients, managers=managers)
         self.like_manager = managers.get('like') or models.LikeManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
+        self.appstore_manager = managers.get('appstore') or models.AppStoreManager(clients, managers=managers)
 
         self.clients = clients
         if 'appsync' in clients:
@@ -482,3 +487,56 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         keywords = new_item.get('keywords', [])
         for k in keywords:
             self.elasticsearch_client.put_keyword(post_id, k)
+
+    def get_royalty_paid_and_posts_viewed_past_30_days(self, user_id):
+        now = pendulum.now('utc')
+        royalty_paid = Decimal('0')
+        posts_viewed_count = 0
+
+        for key in self.view_dynamo.generate_keys_by_user_past_30_days(user_id, now=now):
+            item_id = key['partitionKey'].split('/')[1]
+
+            post_view_item = self.view_dynamo.get_view(item_id, user_id)
+            royalty_paid += post_view_item.get('royaltyFee', Decimal('0'))
+            posts_viewed_count += post_view_item.get('viewCount', 0)
+
+        return [royalty_paid, posts_viewed_count]
+
+    def on_post_view_calculate_royalty_fee(self, post_id, new_item):
+        # only COMPLETED posts should run royalty payout alg
+        post = self.get_post(post_id)
+        if not post or post.status != PostStatus.COMPLETED:
+            return
+
+        item_id = new_item['partitionKey'].split('/')[1]
+        user_id = new_item['sortKey'].split('/')[1]
+        if post.user_id == user_id:
+            return
+
+        # that should be the first view
+        new_view_count = new_item.get('viewCount', 0)
+        if new_view_count != 1:
+            return
+
+        # both users(poster and viewer) should be diamond members
+        poster = post.user
+        viewer = self.user_manager.get_user(user_id)
+        if (
+            poster.subscription_level != UserSubscriptionLevel.DIAMOND
+            or viewer.subscription_level != UserSubscriptionLevel.DIAMOND
+        ):
+            return
+
+        (
+            royalty_paid_past_30_days,
+            posts_viewed_past_30_days,
+        ) = self.get_royalty_paid_and_posts_viewed_past_30_days(user_id)
+        paid_real_past_30_days = self.appstore_manager.get_paid_real_past_30_days(user_id)
+
+        if royalty_paid_past_30_days < paid_real_past_30_days:
+            fees = self.app_store_fee_percent + self.real_fee_percent
+            amount_to_pay = paid_real_past_30_days / posts_viewed_past_30_days * (Decimal('1.00') - fees)
+            # set amount_to_pay to this post view
+            self.view_dynamo.set_royalty_fee(item_id, user_id, amount_to_pay)
+            # add amount_to_pay to poster's wallet
+            poster.dynamo.increment_wallet(poster.id, amount_to_pay)

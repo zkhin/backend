@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import call, patch
 from uuid import uuid4
 
@@ -188,3 +189,55 @@ def test_update_subscription_change_status(appstore_manager, user):
         'lastVerificationAt': new_item['lastVerificationAt'],
         'gsiK1SortKey': new_item['gsiK1SortKey'],
     }
+
+
+def test_get_paid_real_past_30_days(appstore_manager, user1, user2):
+    # add subscriptions for the two users directly to dynamo
+    now, ten_days = pendulum.now('utc'), pendulum.duration(days=10)
+    otid1, otid2, otid3 = str(uuid4()), str(uuid4()), str(uuid4())
+    price = Decimal('0.99')
+    appstore_manager.sub_dynamo.add_transaction(otid1, user2.id, '-', 'or1', '-', '-', price, now - ten_days)
+    appstore_manager.sub_dynamo.add_transaction(otid2, user1.id, '-', 'or2', '-', '-', price, now)
+    appstore_manager.sub_dynamo.add_transaction(otid3, user2.id, '-', 'or3', '-', '-', price, now + ten_days)
+
+    # get paid real past 30 days
+    assert appstore_manager.get_paid_real_past_30_days(user1.id) == price
+    assert appstore_manager.get_paid_real_past_30_days(user1.id, now + 4 * ten_days) == Decimal('0')
+    assert appstore_manager.get_paid_real_past_30_days(user1.id, now + 3 * ten_days) == price
+    assert appstore_manager.get_paid_real_past_30_days(user2.id, now) == 2 * price
+    assert appstore_manager.get_paid_real_past_30_days(user2.id, now - ten_days) == 2 * price
+    assert appstore_manager.get_paid_real_past_30_days(user2.id, now + 3 * ten_days) == price
+
+
+def test_add_transaction(appstore_manager, user):
+    original_transaction_id, transaction_id = str(uuid4()), str(uuid4())
+    unified_receipt = {
+        'latest_receipt_info': [
+            {
+                'original_transaction_id': original_transaction_id,
+                'transaction_id': transaction_id,
+            }
+        ],
+        'pending_renewal_info': [],
+        'status': 0,
+    }
+    assert appstore_manager.sub_dynamo.get_transaction(transaction_id) is None
+    # add one transaction, verify
+    appstore_manager.add_transaction(unified_receipt)
+    assert appstore_manager.sub_dynamo.get_transaction(transaction_id) is None
+
+    appstore_manager.sub_dynamo.add(
+        original_transaction_id,
+        user.id,
+        AppStoreSubscriptionStatus.ACTIVE,
+        'or1',
+        '-',
+        '-',
+        '-',
+        pendulum.now('utc'),
+    )
+    appstore_manager.add_transaction(unified_receipt)
+
+    transaction = appstore_manager.sub_dynamo.get_transaction(transaction_id)
+    assert transaction['partitionKey'] == f'transaction/{transaction_id}'
+    assert transaction['userId'] == user.id

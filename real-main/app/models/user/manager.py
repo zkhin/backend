@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import re
+from decimal import Decimal
 from functools import partialmethod
 
 import pendulum
@@ -554,6 +555,13 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.update_subscription(new_item['userId'], UserSubscriptionLevel.DIAMOND)
         else:
             self.dynamo.clear_subscription(new_item['userId'])
+
+    def on_appstore_transaction_add(self, transaction_id, new_item):
+        status = new_item.get('status', None)
+        if status == 0:
+            # increase paid_real_so_far according to price
+            price = new_item.get('price', Decimal('0'))
+            self.dynamo.increment_paid_real_so_far(new_item['userId'], price)
 
     def on_user_change_log_amplitude_event(self, user_id, new_item, old_item=None):
         self.amplitude_client.send_event(user_id, new_item, old_item)

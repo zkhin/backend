@@ -1,4 +1,7 @@
 import logging
+from decimal import Decimal
+
+import pendulum
 
 from . import exceptions
 from .enums import ViewType
@@ -32,6 +35,21 @@ class ViewDynamo:
         query_kwargs = {
             'KeyConditionExpression': 'gsiA2PartitionKey = :pk',
             'ExpressionAttributeValues': {':pk': f'{self.item_type}View/{user_id}'},
+            'ProjectionExpression': 'partitionKey, sortKey',
+            'IndexName': 'GSI-A2',
+        }
+        return self.client.generate_all_query(query_kwargs)
+
+    def generate_keys_by_user_past_30_days(self, user_id, now=None):
+        now = now or pendulum.now('utc')
+        past_30_days = now - pendulum.duration(days=30)
+
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiA2PartitionKey = :pk AND gsiA2SortKey >= :sk',
+            'ExpressionAttributeValues': {
+                ':pk': f'{self.item_type}View/{user_id}',
+                ':sk': past_30_days.to_iso8601_string(),
+            },
             'ProjectionExpression': 'partitionKey, sortKey',
             'IndexName': 'GSI-A2',
         }
@@ -78,6 +96,19 @@ class ViewDynamo:
             query_kwargs['UpdateExpression'] = 'ADD viewCount :vc, thumbnailViewCount :vc SET lastViewedAt = :lva'
         if view_type == ViewType.FOCUS:
             query_kwargs['UpdateExpression'] = 'ADD viewCount :vc, focusViewCount :vc SET lastViewedAt = :lva'
+
+        try:
+            return self.client.update_item(query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise exceptions.ViewDoesNotExist(self.item_type, item_id, user_id) from err
+
+    def set_royalty_fee(self, item_id, user_id, royalty_fee):
+        assert isinstance(royalty_fee, Decimal), 'royalty_fee should be Decimal type'
+        query_kwargs = {
+            'Key': self.key(item_id, user_id),
+            'UpdateExpression': 'SET royaltyFee = :fee',
+            'ExpressionAttributeValues': {':fee': royalty_fee},
+        }
 
         try:
             return self.client.update_item(query_kwargs)
