@@ -1,7 +1,11 @@
 #set ($userIds = [])
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 #foreach($hit in $ctx.result.hits.hits)
   #set ($userId = $hit.get('_source').userId)
-  $util.qr($userIds.add($userId))
+  ## exclude caller in search results
+  #if ($userId != $callerUserId)
+    $util.qr($userIds.add($userId))
+  #end
 #end
 
 ## Int parsing in vtl https://stackoverflow.com/a/2156593
