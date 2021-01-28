@@ -7,6 +7,7 @@
 ##       doesn't work. Avoid: #set($item = arrayWithNulls[$index])
 
 ## retrieve the results of the query
+#set ($posts = [])
 #foreach ($post in $ctx.stash.posts)
   #if ($util.isNull($post.viewedStatus))
     #set ($index = $ctx.stash.postIdToIndex[$post.postId])
@@ -16,11 +17,7 @@
       $util.qr($post.put('viewedStatus', 'VIEWED'))
     #end
   #end
-#end
 
-## filter those results
-#set ($posts = [])
-#foreach ($post in $ctx.stash.posts)
   #if ($post.viewedStatus == $viewedStatus)
     $util.qr($posts.add($post))
   #end
