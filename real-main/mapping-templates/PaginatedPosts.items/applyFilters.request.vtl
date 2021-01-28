@@ -23,21 +23,21 @@
 #set ($ctx.stash.postIdToIndex = {})
 #set ($keys = [])
 
-#foreach ($post in $ctx.stash.posts)
-  #if ($util.isNull($post.viewedStatus))
-    #if ($post.postedByUserId == $callerUserId)
-      $util.qr($post.put('viewedStatus', 'VIEWED'))
-    #else
-      #if (! $ctx.stash.postIdToIndex.containsKey($post.postId))
-        $util.qr($ctx.stash.postIdToIndex.put($post.postId, $keys.size()))
-        $util.qr($keys.add({
-          'partitionKey': {'S': "post/$post.postId"},
-          'sortKey': {'S': "view/$callerUserId"}
-        }))
-      #end
-    #end
-  #end
-#end
+## #foreach ($post in $ctx.stash.posts)
+##  #if ($util.isNull($post.viewedStatus))
+##    #if ($post.postedByUserId == $callerUserId)
+##      $util.qr($post.put('viewedStatus', 'VIEWED'))
+##    #else
+##      #if (! $ctx.stash.postIdToIndex.containsKey($post.postId))
+##        $util.qr($ctx.stash.postIdToIndex.put($post.postId, $keys.size()))
+##        $util.qr($keys.add({
+##          'partitionKey': {'S': "post/$post.postId"},
+##          'sortKey': {'S': "view/$callerUserId"}
+##        }))
+##      #end
+##    #end
+##  #end
+## #end
 
 #if ($keys.isEmpty())
   #return ($ctx.stash.posts)
