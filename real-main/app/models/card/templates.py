@@ -19,7 +19,7 @@ class CardTemplate:
 class ChatCardTemplate(CardTemplate):
 
     action = 'https://real.app/chat/'
-    notify_user_after = pendulum.duration(minutes=5)
+    notify_user_after = pendulum.duration(seconds=5)
 
     @staticmethod
     def get_card_id(user_id):
