@@ -236,6 +236,13 @@ def test_add_transaction(appstore_manager, user):
         '-',
         pendulum.now('utc'),
     )
+
+    # add trial period, skip add transaction
+    unified_receipt['latest_receipt_info'][0]['is_trial_period'] = "true"
+    appstore_manager.add_transaction(unified_receipt)
+    assert appstore_manager.sub_dynamo.get_transaction(transaction_id) is None
+
+    unified_receipt['latest_receipt_info'][0]['is_trial_period'] = "false"
     appstore_manager.add_transaction(unified_receipt)
 
     transaction = appstore_manager.sub_dynamo.get_transaction(transaction_id)

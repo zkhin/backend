@@ -50,6 +50,10 @@ class AppStoreManager:
         original_transaction_id = latest_receipt_info['original_transaction_id']
         sub_item = self.sub_dynamo.get(original_transaction_id)
 
+        # if it's trial period, skip
+        if latest_receipt_info.get('is_trial_period') == "true":
+            return
+
         if sub_item and sub_item.get('userId') and sub_item.get('status') == AppStoreSubscriptionStatus.ACTIVE:
             self.sub_dynamo.add_transaction(
                 transaction_id=latest_receipt_info['transaction_id'],
