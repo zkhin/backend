@@ -25,7 +25,7 @@ afterAll(async () => {
   await loginCache.reset()
 })
 
-test('new users auto-follow a user with username `real`, if they exist', async () => {
+test.skip('new users auto-follow a user with username `real`, if they exist', async () => {
   const {userId: realUserId} = realLogin
 
   // create a new user. Should auto-follow the real user

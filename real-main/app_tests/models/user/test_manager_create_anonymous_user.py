@@ -45,11 +45,6 @@ def test_create_anonymous_user_success(user_manager, real_user):
         ),
     ]
 
-    # check we are following the real user
-    followeds = list(user.follower_manager.dynamo.generate_followed_items(user.id))
-    assert len(followeds) == 1
-    assert followeds[0]['followedUserId'] == real_user.id
-
 
 def test_create_anonymous_user_user_id_taken(user_manager):
     # configure cognito to respond as if user_id is already taken

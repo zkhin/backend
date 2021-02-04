@@ -166,7 +166,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             user_id, username, placeholder_photo_code=photo_code, status=UserStatus.ANONYMOUS
         )
         user = self.init_user(item)
-        self.follow_real_user(user)
         return user, tokens
 
     def create_cognito_only_user(self, user_id, username, full_name=None):
@@ -215,7 +214,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             raise
 
         user = self.init_user(item)
-        self.follow_real_user(user)
         return user
 
     def create_federated_user(self, provider, user_id, username, token, full_name=None):
@@ -266,7 +264,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             user_id, username, full_name=full_name, email=email, placeholder_photo_code=photo_code
         )
         user = self.init_user(item)
-        self.follow_real_user(user)
         return user
 
     def follow_real_user(self, user):

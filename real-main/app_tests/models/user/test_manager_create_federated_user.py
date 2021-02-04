@@ -50,11 +50,6 @@ def test_create_federated_user_success(user_manager, real_user, provider):
         mock.call(user_id, **call_kwargs)
     ]
 
-    # check we are following the real user
-    followeds = list(user.follower_manager.dynamo.generate_followed_items(user.id))
-    assert len(followeds) == 1
-    assert followeds[0]['followedUserId'] == real_user.id
-
 
 @pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
 def test_create_federated_user_user_id_taken(user_manager, provider):
