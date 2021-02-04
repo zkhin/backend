@@ -207,13 +207,3 @@ def test_create_cognito_only_user_follow_real_user_doesnt_exist(user_manager, co
     cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
     user = user_manager.create_cognito_only_user(user_id, username)
     assert list(user.follower_manager.dynamo.generate_followed_items(user.id)) == []
-
-
-def test_create_cognito_only_user_follow_real_user_if_exists(user_manager, cognito_client, real_user):
-    # create a user, verify follows real user
-    user_id, username = str(uuid4()), str(uuid4())[:8]
-    cognito_client.create_user_pool_entry(user_id, username, verified_email=f'{username}@real.app')
-    user = user_manager.create_cognito_only_user(user_id, username)
-    followeds = list(user.follower_manager.dynamo.generate_followed_items(user.id))
-    assert len(followeds) == 1
-    assert followeds[0]['followedUserId'] == real_user.id
