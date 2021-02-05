@@ -35,3 +35,10 @@ class UserDatingStatus:
     DISABLED = 'DISABLED'
 
     _ALL = (ENABLED, DISABLED)
+
+
+class WithdrawMethod:
+    EMAIL = 'EMAIL'
+    PHONE = 'PHONE'
+
+    _ALL = (EMAIL, PHONE)

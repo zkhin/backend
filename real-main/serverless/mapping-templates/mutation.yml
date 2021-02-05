@@ -406,3 +406,9 @@
   field: triggerPostNotification
   dataSource: NoneDataSource
   response: PassThru.response.vtl
+
+- type: Mutation
+  field: withdrawWallet
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl

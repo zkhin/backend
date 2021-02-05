@@ -1503,6 +1503,21 @@ def lambda_server_error(caller_user_id, arguments, context=None, **kwargs):
     raise Exception(f'Test of lambda server error, request `{request_id}`')
 
 
+@routes.register('Mutation.withdrawWallet')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def withdraw_wallet(caller_user, arguments, **kwargs):
+    amount_to_withdraw = arguments['amount']
+    method = arguments['method']
+    try:
+        caller_user.withdraw_wallet(amount_to_withdraw, method)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
+    return True
+
+
 @routes.register('Query.findContacts')
 @validate_caller
 @update_last_client

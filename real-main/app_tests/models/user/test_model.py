@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
@@ -14,6 +15,7 @@ from app.models.user.enums import (
     UserPrivacyStatus,
     UserStatus,
     UserSubscriptionLevel,
+    WithdrawMethod,
 )
 from app.models.user.exceptions import (
     UserAlreadyGrantedSubscription,
@@ -1252,3 +1254,21 @@ def test_start_change_contact_attribute_banned_phone(user, user2):
         user2.start_change_contact_attribute('phone', banned_phone)
 
     assert user2.refresh_item().status == UserStatus.DISABLED
+
+
+def test_withdraw_wallet(user):
+    user.dynamo.increment_wallet(user.id, Decimal('100'))
+    user.refresh_item()
+    assert user.item['wallet'] == Decimal('100')
+
+    with pytest.raises(UserException, match='withdraw less than 0'):
+        user.withdraw_wallet(-1, WithdrawMethod.EMAIL)
+
+    with pytest.raises(UserException, match='withdraw more than amount'):
+        user.withdraw_wallet(101, WithdrawMethod.EMAIL)
+
+    with pytest.raises(UserException, match='withdraw more than'):
+        user.withdraw_wallet(1001, WithdrawMethod.EMAIL)
+
+    with pytest.raises(UserException, match=f'confirmed {WithdrawMethod.PHONE}'):
+        user.withdraw_wallet(50, WithdrawMethod.PHONE)

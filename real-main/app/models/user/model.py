@@ -1,5 +1,6 @@
 import json
 import logging
+from decimal import Decimal
 import os
 
 import botocore
@@ -12,7 +13,13 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .enums import (
+    UserDatingStatus,
+    UserPrivacyStatus,
+    UserStatus,
+    UserSubscriptionLevel,
+    WithdrawMethod,
+)
 from .error_codes import UserDatingMissingError, UserDatingWrongError
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
@@ -36,6 +43,8 @@ CONTACT_ATTRIBUTE_NAMES = {
         'dynamo_client': 'phone_number_dynamo',
     },
 }
+
+MAX_WITHDRAWAL_AMOUNT = Decimal('1000')
 
 
 class User(TrendingModelMixin):
@@ -603,3 +612,22 @@ class User(TrendingModelMixin):
 
         user_ids = json.loads(self.real_dating_client.swiped_right_users(self.id)['Payload'].read().decode())
         return user_ids
+
+    def withdraw_wallet(self, amount_to_withdraw, method):
+        wallet_available_amount = self.item.get('wallet', Decimal('0'))
+        amount_to_withdraw = Decimal(str(amount_to_withdraw))
+
+        if amount_to_withdraw <= Decimal('0'):
+            raise UserException('Cannot withdraw less than 0 in wallet')
+
+        if amount_to_withdraw > wallet_available_amount:
+            raise UserException('Cannot withdraw more than amount in wallet')
+
+        if amount_to_withdraw > MAX_WITHDRAWAL_AMOUNT:
+            raise UserException(f'User cannot withdraw more than {MAX_WITHDRAWAL_AMOUNT}')
+
+        receiver = self.item.get('email') if method == WithdrawMethod.EMAIL else self.item.get('phoneNumber')
+        if not receiver:
+            raise UserException(f'You do not have confirmed {method}')
+
+        # send money to user's email or phone through Paypal

@@ -177,6 +177,9 @@ type Mutation {
   rejectMatch(userId: ID!): Boolean
   approveMatch(userId: ID!): Boolean
 
+  # Withdraw wallet
+  withdrawWallet(amount: Float!, method: WithdrawMethod!): Boolean
+
   # Add a Post
   #   - postId should be a random v4 uuid generated client-side
   #   - lifetime should be a ISO Duration string. Ex: 1 day: 'P1D', 1 week: 'P7D', 1 month: 'P1M', 1 year: 'P1Y'
@@ -398,6 +401,11 @@ enum MatchStatus {
   REJECTED
   APPROVED
   CONFIRMED
+}
+
+enum WithdrawMethod {
+  EMAIL
+  PHONE
 }
 
 type User {
