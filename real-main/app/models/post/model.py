@@ -377,8 +377,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             self.follower_manager.refresh_first_story(story_now=self.item)
 
         # give new posts a free bump into trending, but not their user
-        trending_kwargs = {'now': now, 'multiplier': self.get_trending_multiplier()}
-        self.trending_increment_score(**trending_kwargs)
+        # if poster's privacy status is PRIVATE, skip adding
+        if self.user.item.get('privacyStatus') != UserPrivacyStatus.PRIVATE:
+            trending_kwargs = {'now': now, 'multiplier': self.get_trending_multiplier()}
+            self.trending_increment_score(**trending_kwargs)
 
         # alert frontend
         self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)

@@ -12,7 +12,7 @@ from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.enums import ViewType
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
-from app.models.user.enums import UserSubscriptionLevel
+from app.models.user.enums import UserPrivacyStatus, UserSubscriptionLevel
 from app.utils import GqlNotificationType
 
 from .appsync import PostAppSync
@@ -440,8 +440,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
     def on_post_view_change_update_trending(self, post_id, new_item, old_item=None):
         # only COMPLETED posts should exist in trending
+        # poster privacy status should not be PRIVATE
         post = self.get_post(post_id)
         if not post or post.status != PostStatus.COMPLETED:
+            return
+        if post.user.item.get('privacyStatus') == UserPrivacyStatus.PRIVATE:
             return
 
         # a user's views of their own post don't earning trending points

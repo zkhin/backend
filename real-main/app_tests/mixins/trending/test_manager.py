@@ -158,12 +158,12 @@ def test_trending_deflate_item_with_recursion(manager, caplog):
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_delete_tail(manager):
-    assert manager.min_count_to_keep == 10 * 1000
+    assert manager.min_count_to_keep == 10 * 100
     assert manager.min_score_to_keep == 0.5
     manager.trending_dynamo.delete = Mock(wraps=manager.trending_dynamo.delete)
 
     # test none to delete
-    cnt = manager.trending_delete_tail(10000)
+    cnt = manager.trending_delete_tail(1000)
     assert cnt == 0
     assert manager.trending_dynamo.delete.mock_calls == []
 
@@ -171,7 +171,7 @@ def test_trending_delete_tail(manager):
     manager.trending_dynamo.delete.reset_mock()
     item1_id, item1_score = str(uuid4()), Decimal(0.25)
     manager.trending_dynamo.add(item1_id, item1_score)
-    cnt = manager.trending_delete_tail(10001)
+    cnt = manager.trending_delete_tail(1001)
     assert cnt == 1
     assert manager.trending_dynamo.delete.mock_calls == [call(item1_id, expected_score=item1_score)]
     assert manager.trending_dynamo.get(item1_id) is None
@@ -184,7 +184,7 @@ def test_trending_delete_tail(manager):
     manager.trending_dynamo.add(item1_id, item1_score)
     manager.trending_dynamo.add(item2_id, item2_score)
     manager.trending_dynamo.add(item3_id, item3_score)
-    cnt = manager.trending_delete_tail(10002)
+    cnt = manager.trending_delete_tail(1002)
     assert cnt == 2
     assert manager.trending_dynamo.delete.mock_calls == [
         call(item2_id, expected_score=item2_score),
@@ -203,7 +203,7 @@ def test_trending_delete_tail(manager):
     manager.trending_dynamo.add(item1_id, item1_score)
     manager.trending_dynamo.add(item2_id, item2_score)
     manager.trending_dynamo.add(item3_id, item3_score)
-    cnt = manager.trending_delete_tail(10003)
+    cnt = manager.trending_delete_tail(1003)
     assert cnt == 1
     assert manager.trending_dynamo.delete.mock_calls == [
         call(item2_id, expected_score=item2_score),
@@ -215,7 +215,7 @@ def test_trending_delete_tail(manager):
 
 @pytest.mark.parametrize('manager', pytest.lazy_fixture(['user_manager', 'post_manager']))
 def test_trending_delete_tail_race_condition(manager, caplog):
-    assert manager.min_count_to_keep == 10 * 1000
+    assert manager.min_count_to_keep == 10 * 100
     assert manager.min_score_to_keep == 0.5
     manager.trending_dynamo.delete = Mock(wraps=manager.trending_dynamo.delete)
 
@@ -235,7 +235,7 @@ def test_trending_delete_tail_race_condition(manager, caplog):
 
     # do the tail delete
     with caplog.at_level(logging.WARNING):
-        cnt = manager.trending_delete_tail(10002)
+        cnt = manager.trending_delete_tail(1002)
     assert cnt == 1
     assert len(caplog.records) == 1
     assert 'not deleting trending' in caplog.records[0].msg

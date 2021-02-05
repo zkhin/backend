@@ -12,7 +12,7 @@ class TrendingManagerMixin:
 
     score_inflation_per_day = 2
 
-    min_count_to_keep = 10 * 1000
+    min_count_to_keep = 10 * 100
     min_score_to_keep = 0.5
 
     def __init__(self, clients, managers=None):
