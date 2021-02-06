@@ -30,6 +30,39 @@ beforeEach(async () => {
 })
 afterAll(async () => await loginCache.reset())
 
+test('Poster privacy status is Private, should not add to trending', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+
+  // we go private
+  await ourClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data: {setUserDetails: user}}) => expect(user.privacyStatus).toBe('PRIVATE'))
+
+  // we add a text-only post
+  const postId1 = uuidv4()
+  await ourClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
+    })
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId1)
+      expect(post.postStatus).toBe('COMPLETED')
+    })
+
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+})
+
 test('Post lifecycle, visibility and trending', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()

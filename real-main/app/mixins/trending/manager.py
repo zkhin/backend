@@ -1,9 +1,12 @@
 import logging
+import os
 
 import pendulum
 
 from .dynamo import TrendingDynamo
 from .exceptions import TrendingDNEOrAttributeMismatch
+
+TRENDING_POST_MIN_COUNT_TO_KEEP = os.environ.get('TRENDING_POST_MIN_COUNT_TO_KEEP')
 
 logger = logging.getLogger()
 
@@ -12,7 +15,7 @@ class TrendingManagerMixin:
 
     score_inflation_per_day = 2
 
-    min_count_to_keep = 10 * 100
+    min_count_to_keep = int(TRENDING_POST_MIN_COUNT_TO_KEEP) if TRENDING_POST_MIN_COUNT_TO_KEEP else 10 * 100
     min_score_to_keep = 0.5
 
     def __init__(self, clients, managers=None):

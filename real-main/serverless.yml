@@ -60,6 +60,7 @@ provider:
 
     AMPLITUDE_API_KEY: ${env:AMPLITUDE_API_KEY, ''}
     APPLE_AUDIENCE_ID: ${env:AUTHENTICATION_PROVIDER_APPLEID, 'app.real.mobile'}
+    TRENDING_POST_MIN_COUNT_TO_KEEP: ${env:TRENDING_POST_MIN_COUNT_TO_KEEP, '1000'}
 
   iamRoleStatements:
     - Effect: Allow
