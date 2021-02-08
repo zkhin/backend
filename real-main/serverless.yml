@@ -161,7 +161,6 @@ custom:
     authenticationType: AWS_IAM
     caching:
       behavior: PER_RESOLVER_CACHING
-      type: 'LARGE_4X'
     logConfig:
       level: ERROR
     substitutions:
