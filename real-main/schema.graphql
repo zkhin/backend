@@ -64,7 +64,7 @@ type Query {
   similarPosts(postId: ID!, limit: Int, nextToken: String): PaginatedPosts!
 
   # Globally trending posts
-  trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
+  trendingPosts(limit: Int, nextToken: String): PaginatedTrendingPosts!
 
   # Search keywords for autocomplete
   searchKeywords(keyword: String!): [String]!
@@ -863,6 +863,12 @@ type Post {
 type PaginatedPosts {
   # Set the optional arguments to filter down the set of returned posts
   items(viewedStatus: ViewedStatus, isVerified: Boolean): [Post!]!
+  nextToken: String
+}
+
+type PaginatedTrendingPosts {
+  # Set the optional arguments to filter down the set of returned posts
+  items(isVerified: Boolean): [Post!]!
   nextToken: String
 }
 

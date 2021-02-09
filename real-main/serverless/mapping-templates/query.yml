@@ -53,6 +53,9 @@
 - type: Query
   field: trendingPosts
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.source.postId
 
 - type: Query
   field: album

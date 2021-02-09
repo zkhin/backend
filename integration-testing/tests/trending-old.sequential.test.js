@@ -212,6 +212,20 @@ describe('wrapper to ensure cleanup', () => {
       expect(trendingPosts.items[1].postId).toBe(postId1)
     })
 
+    // verify we can filter trending posts based on viewed status
+    await ourClient
+      .query({query: queries.trendingPosts, variables: {viewedStatus: 'VIEWED'}})
+      .then(({data: {trendingPosts}}) => {
+        expect(trendingPosts.items).toHaveLength(1)
+        expect(trendingPosts.items[0].postId).toBe(postId1)
+      })
+    await ourClient
+      .query({query: queries.trendingPosts, variables: {viewedStatus: 'NOT_VIEWED'}})
+      .then(({data: {trendingPosts}}) => {
+        expect(trendingPosts.items).toHaveLength(1)
+        expect(trendingPosts.items[0].postId).toBe(postId2)
+      })
+
     // trending users should be empty
     await otherClient
       .query({query: queries.trendingUsers})
@@ -303,6 +317,99 @@ describe('wrapper to ensure cleanup', () => {
       .query({query: queries.trendingUsers})
       .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
   })
+})
+
+test('Blocked, private post & user visibility of posts & users in trending', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
+
+  // verify trending indexes start empty
+  await ourClient.query({query: queries.allTrending}).then(({data: {trendingPosts, trendingUsers}}) => {
+    expect(trendingPosts.items).toHaveLength(0)
+    expect(trendingUsers.items).toHaveLength(0)
+  })
+
+  // we add a post
+  const postId1 = uuidv4()
+  await ourClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId1, postType: 'TEXT_ONLY', text: 'lore ipsum'},
+    })
+    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId1))
+
+  // they report to have viewed our post
+  await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
+  await misc.sleep(2000) // dynamo
+
+  // they see our post in trending
+  await theirClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(1)
+    expect(trendingPosts.items[0].postId).toBe(postId1)
+  })
+
+  // they see our user in trending
+  await theirClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
+    expect(trendingUsers.items).toHaveLength(1)
+    expect(trendingUsers.items[0].userId).toBe(ourUserId)
+  })
+
+  // other starts following us
+  await otherClient
+    .mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
+    .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
+
+  // we go private
+  await ourClient
+    .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
+    .then(({data: {setUserDetails: user}}) => {
+      expect(user.userId).toBe(ourUserId)
+      expect(user.privacyStatus).toBe('PRIVATE')
+    })
+  await misc.sleep(2000) // dynamo
+
+  // verify they don't see our post in trending anymore
+  await theirClient
+    .query({query: queries.trendingPosts})
+    .then(({data: {trendingPosts}}) => expect(trendingPosts.items).toHaveLength(0))
+
+  // they see still see our user in trending
+  await theirClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
+    expect(trendingUsers.items).toHaveLength(1)
+    expect(trendingUsers.items[0].userId).toBe(ourUserId)
+  })
+
+  // verify other, who is following us, sees our post in trending
+  await otherClient.query({query: queries.trendingPosts}).then(({data: {trendingPosts}}) => {
+    expect(trendingPosts.items).toHaveLength(1)
+    expect(trendingPosts.items[0].postId).toBe(postId1)
+  })
+
+  // other also sees our user in trending
+  await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
+    expect(trendingUsers.items).toHaveLength(1)
+    expect(trendingUsers.items[0].userId).toBe(ourUserId)
+  })
+
+  // we block other
+  await ourClient
+    .mutate({mutation: mutations.blockUser, variables: {userId: otherUserId}})
+    .then(({data: {blockUser: user}}) => {
+      expect(user.userId).toBe(otherUserId)
+      expect(user.blockedStatus).toBe('BLOCKING')
+    })
+  await misc.sleep(2000) // dynamo
+
+  // verify other no longer sees our post in trending
+  await otherClient
+    .query({query: queries.trendingPosts})
+    .then(({data: {trendingPosts}}) => expect(trendingPosts.items).toHaveLength(0))
+
+  // verify other no longer sees our user in trending
+  await otherClient
+    .query({query: queries.trendingUsers})
+    .then(({data: {trendingUsers}}) => expect(trendingUsers.items).toHaveLength(0))
 })
 
 test('Posts that fail verification get lower trending scores, can be filtered', async () => {

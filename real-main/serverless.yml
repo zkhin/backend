@@ -60,6 +60,7 @@ provider:
 
     AMPLITUDE_API_KEY: ${env:AMPLITUDE_API_KEY, ''}
     APPLE_AUDIENCE_ID: ${env:AUTHENTICATION_PROVIDER_APPLEID, 'app.real.mobile'}
+    TRENDING_POST_MIN_COUNT_TO_KEEP: ${env:TRENDING_POST_MIN_COUNT_TO_KEEP, '1000'}
 
   iamRoleStatements:
     - Effect: Allow
@@ -231,6 +232,18 @@ custom:
           - Users.filterBy.blockerStatus
           - Users.batchGet.followedStatus
           - Users.filterBy.followedStatus
+      
+      - type: PaginatedTrendingPosts
+        field: items
+        request: PaginatedTrendingPosts.items/before.request.vtl
+        response: PaginatedTrendingPosts.items/after.response.vtl  # temp copy of Users.endPipeline
+        kind: PIPELINE
+        functions:
+          - Posts.batchGet
+          - Posts.filterBy.postStatus
+          - PaginatedPosts.items.applyFilters
+          - Users.beginPipeline
+          - Users.batchGet
 
       - type: PaginatedUsers
         field: items
