@@ -12,6 +12,9 @@
 ## build a map from userId to user object
 #set ($userIdToUser = {})
 #foreach ($user in $ctx.prev.result)
+  ## hard-coded to set blockerStatus and followedStatus
+  $util.qr($user.put('blockerStatus', 'NOT_BLOCKING'))
+  $util.qr($user.put('followedStatus', 'NOT_FOLLOWING'))
   $util.qr($userIdToUser.put($user.userId, $user))
 #end
 

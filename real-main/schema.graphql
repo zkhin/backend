@@ -868,7 +868,7 @@ type PaginatedPosts {
 
 type PaginatedTrendingPosts {
   # Set the optional arguments to filter down the set of returned posts
-  items(isVerified: Boolean): [Post!]!
+  items(viewedStatus: ViewedStatus, isVerified: Boolean): [Post!]!
   nextToken: String
 }
 
