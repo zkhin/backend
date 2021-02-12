@@ -542,8 +542,8 @@ module.exports.trendingUsers = gql`
 `
 
 module.exports.trendingPosts = gql`
-  query TrendingPosts($viewedStatus: ViewedStatus, $limit: Int, $isVerified: Boolean) {
-    trendingPosts(limit: $limit) {
+  query TrendingPosts($viewedStatus: ViewedStatus, $limit: Int, $isVerified: Boolean, $nextToken: String = null) {
+    trendingPosts(limit: $limit, nextToken: $nextToken) {
       items(viewedStatus: $viewedStatus, isVerified: $isVerified) {
         postId
         postedBy {
@@ -554,6 +554,7 @@ module.exports.trendingPosts = gql`
         }
         viewedStatus
       }
+      nextToken
     }
   }
 `
