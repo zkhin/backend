@@ -55,7 +55,7 @@
   dataSource: DynamodbDataSource
   caching:
     keys:
-      - $context.source.postId
+      - $context.source.items
 
 - type: Query
   field: album

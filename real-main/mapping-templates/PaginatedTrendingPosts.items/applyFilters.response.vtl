@@ -5,10 +5,4 @@
 ## Note: trying to #set() a variable to a computed null value
 ##       doesn't work. Avoid: #set($item = arrayWithNulls[$index])
 
-## retrieve the results of the query
-#set ($posts = [])
-#foreach ($post in $ctx.stash.posts)
-  $util.qr($posts.add($post))
-#end
-
-$util.toJson($posts)
+$util.toJson($ctx.stash.posts)
