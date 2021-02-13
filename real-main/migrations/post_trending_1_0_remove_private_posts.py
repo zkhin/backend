@@ -25,8 +25,6 @@ class Migration:
             if privacy_status == 'PRIVATE':
                 logger.warning(f'Post `{post_pk}`: deleting trending')
                 self.delete_post_trending(post_pk)
-            else:
-                logger.warning(f'Post `{post_pk}`: leaving trending')
 
     def generate_trending_post_pks(self):
         query_kwargs = {
