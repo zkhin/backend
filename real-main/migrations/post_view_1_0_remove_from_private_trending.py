@@ -26,8 +26,8 @@ class Migration:
             if poster.get('privacyStatus') == 'PRIVATE':
                 for view_sk in self.generate_post_view_records_sks(post_id):
                     user_id = view_sk.split('/')[1]
-                    following = self.get_following(user_id, posted_by_user_id)
-                    if following and following['Item'].get('followStatus') == 'FOLLOWING':
+                    following_item = self.get_following(user_id, posted_by_user_id).get('Item')
+                    if following_item and following_item.get('followStatus') == 'FOLLOWING':
                         continue
 
                     logger.warning(f'Post `{post_pk}` User `user/{user_id}`: deleting view record')
