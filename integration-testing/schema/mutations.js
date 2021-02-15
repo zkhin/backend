@@ -191,6 +191,15 @@ module.exports.setUserThemeCode = gql`
   }
 `
 
+module.exports.setAnonymousThemeCode = gql`
+  mutation SetAnonymousThemeCode($themeCode: String!) {
+    setAnonymousThemeCode(themeCode: $themeCode) {
+      userId
+      themeCode
+    }
+  }
+`
+
 module.exports.setUserMentalHealthSettings = gql`
   mutation SetUserCommentsDisabled(
     $commentsDisabled: Boolean

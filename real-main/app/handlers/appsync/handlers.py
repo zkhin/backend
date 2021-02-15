@@ -423,6 +423,18 @@ def set_user_details(caller_user, arguments, **kwargs):
     return caller_user.serialize(caller_user.id)
 
 
+@routes.register('Mutation.setAnonymousThemeCode')
+@validate_caller(allowed_statuses=[UserStatus.ANONYMOUS])
+@update_last_client
+@update_last_disable_dating_date
+def set_anonymous_theme_code(caller_user, arguments, **kwargs):
+    theme_code = arguments['themeCode']
+
+    # update the user theme code
+    caller_user.update_details(theme_code=theme_code)
+    return caller_user.serialize(caller_user.id)
+
+
 @routes.register('Mutation.setUserAcceptedEULAVersion')
 @validate_caller
 @update_last_client

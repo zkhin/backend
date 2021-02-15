@@ -152,6 +152,8 @@ type Mutation {
     matchHeightRange: HeightRangeInput,
   ): User
 
+  setAnonymousThemeCode(themeCode: String!): User
+
   # Various one-off user property setters
   # Set to the empty string to delete a property
   setUserAcceptedEULAVersion(version: String!): User
