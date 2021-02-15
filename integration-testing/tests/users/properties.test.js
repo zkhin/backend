@@ -6,7 +6,7 @@ const uuidv4 = require('uuid/v4')
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 
-let anonClient
+let anonClient, anonUserId
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -522,6 +522,31 @@ test('User theme code - get, set, privacy', async () => {
   // This is necessary because profile pics are planned to have some styling based on chosen theme
   resp = await theirClient.query({query: queries.user, variables: {userId}})
   expect(resp.data.user.themeCode).toBe('green.orange')
+})
+
+test('Anonymous theme code - get, set', async () => {
+  const {client} = await loginCache.getCleanLogin()
+  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+
+  // we cannot change theme code with setAnonymousTheme mutation
+  await expect(
+    client.mutate({mutation: mutations.setAnonymousThemeCode, variables: {themeCode: 'green.orange'}}),
+  ).rejects.toThrow(/ClientError: User .* is not ANONYMOUS/)
+
+  await client.query({query: queries.user, variables: {userId: anonUserId}}).then(({data: {user}}) => {
+    expect(user.themeCode).toBe('black.green')
+  })
+
+  // anonymous change theme code
+  await anonClient
+    .mutate({mutation: mutations.setAnonymousThemeCode, variables: {themeCode: 'green.orange'}})
+    .then(({data: {setAnonymousThemeCode: user}}) => {
+      expect(user.themeCode).toBe('green.orange')
+    })
+
+  await client.query({query: queries.user, variables: {userId: anonUserId}}).then(({data: {user}}) => {
+    expect(user.themeCode).toBe('green.orange')
+  })
 })
 
 test('User accepted EULA version - get, set, privacy', async () => {

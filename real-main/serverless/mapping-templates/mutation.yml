@@ -113,6 +113,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: setAnonymousThemeCode
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: setUserAcceptedEULAVersion
   dataSource: LambdaDataSource
   request: false
