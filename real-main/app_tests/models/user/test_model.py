@@ -1141,39 +1141,6 @@ def test_set_dating_status(user):
     assert user.item == user.refresh_item().item
 
 
-def test_enable_dating_status_with_last_disable_dating_date(user):
-    assert 'datingStatus' not in user.item
-
-    # verify set to disabled when disabled is no-op
-    with patch.object(user, 'dynamo') as mock_dynamo:
-        user.set_dating_status(UserDatingStatus.DISABLED)
-    assert mock_dynamo.mock_calls == []
-    assert 'datingStatus' not in user.refresh_item().item
-
-    # verify enabling success case
-    with patch.object(user, 'validate_can_enable_dating'):
-        user.set_dating_status(UserDatingStatus.ENABLED)
-    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
-    assert user.item == user.refresh_item().item
-
-    # disable dating status
-    user.set_dating_status(UserDatingStatus.DISABLED)
-    assert 'datingStatus' not in user.item
-    assert 'userDisableDatingDate' in user.item
-
-    # try to enable dating, verify failed
-    user.item['userDisableDatingDate'] = (pendulum.now('utc') - pendulum.duration(hours=2)).to_iso8601_string()
-    with patch.object(user, 'validate_can_enable_dating'):
-        with pytest.raises(UserException):
-            user.set_dating_status(UserDatingStatus.ENABLED)
-
-    # try to enable dating, verify success
-    user.item['userDisableDatingDate'] = (pendulum.now('utc') - pendulum.duration(hours=3)).to_iso8601_string()
-    with patch.object(user, 'validate_can_enable_dating'):
-        user.set_dating_status(UserDatingStatus.ENABLED)
-    assert user.item['datingStatus'] == UserDatingStatus.ENABLED
-
-
 def test_generate_dating_profile(user):
     # minimal profile
     assert user.generate_dating_profile() == {'serviceLevel': UserSubscriptionLevel.BASIC}

@@ -119,11 +119,6 @@ test('Enable & disable dating changes match status', async () => {
   await theirClient
     .query({query: queries.user, variables: {userId: ourUserId}})
     .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
-
-  // we enable dating, check matches are back
-  await expect(
-    ourClient.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: User cannot re-enable dating within 3 hours/)
 })
 
 test('Changing match criteria changes match status', async () => {
