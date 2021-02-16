@@ -554,19 +554,6 @@ class User(TrendingModelMixin):
         if status == UserDatingStatus.ENABLED:
             self.validate_can_enable_dating()
 
-            # don't allow users to enable dating if they disabled it within 3 hours
-            now = pendulum.now('utc')
-            user_disable_dating_date = self.item.get('userDisableDatingDate')
-
-            if (
-                user_disable_dating_date is not None
-                and (now - pendulum.parse(user_disable_dating_date)).hours < 3
-            ):
-                raise UserException(
-                    'User cannot re-enable dating within 3 hours',
-                    [UserDatingWrongError.THREE_HOUR_PERIOD],
-                )
-
         self.item = self.dynamo.set_user_dating_status(self.id, status)
         return self
 
