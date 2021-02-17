@@ -9,6 +9,7 @@ import pytest
 from app.clients.cognito import InvalidEncryption
 from app.models.follower.enums import FollowStatus
 from app.models.user.enums import (
+    SubscriptionGrantCode,
     UserDatingStatus,
     UserGender,
     UserPrivacyStatus,
@@ -822,6 +823,7 @@ def test_grant_subscription_bonus(user):
     assert user.subscription_level == UserSubscriptionLevel.DIAMOND
     assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
     assert before + sub_duration < pendulum.parse(user.item['subscriptionExpiresAt']) < after + sub_duration
+    assert 'subscriptionGrantCode' not in user.item
 
     # clear it (as if it expired)
     user.item = user.dynamo.clear_subscription(user.id)
@@ -829,6 +831,35 @@ def test_grant_subscription_bonus(user):
     assert user.subscription_level == UserSubscriptionLevel.BASIC
     assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
     assert 'subscriptionExpiresAt' not in user.item
+
+    # verify can't grant it again
+    with pytest.raises(UserAlreadyGrantedSubscription):
+        user.grant_subscription_bonus()
+
+
+def test_grant_subscription_bonus_grant_code(user):
+    assert user.subscription_level == UserSubscriptionLevel.BASIC
+    assert 'subscriptionGrantedAt' not in user.item
+    assert 'subscriptionExpiresAt' not in user.item
+    sub_duration = pendulum.duration(years=5)
+
+    # grant a subscription
+    before = pendulum.now('utc')
+    user.grant_subscription_bonus(SubscriptionGrantCode.FREE_FOR_LIFE)
+    after = pendulum.now('utc')
+    assert user.item == user.refresh_item().item
+    assert user.subscription_level == UserSubscriptionLevel.DIAMOND
+    assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
+    assert before + sub_duration < pendulum.parse(user.item['subscriptionExpiresAt']) < after + sub_duration
+    assert user.item['subscriptionGrantCode'] == SubscriptionGrantCode.FREE_FOR_LIFE
+
+    # clear it (as if it expired)
+    user.item = user.dynamo.clear_subscription(user.id)
+    assert user.item == user.refresh_item().item
+    assert user.subscription_level == UserSubscriptionLevel.BASIC
+    assert before < pendulum.parse(user.item['subscriptionGrantedAt']) < after
+    assert 'subscriptionExpiresAt' not in user.item
+    assert 'subscriptionGrantCode' not in user.item
 
     # verify can't grant it again
     with pytest.raises(UserAlreadyGrantedSubscription):

@@ -12,7 +12,7 @@ from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.enums import ViewType
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
-from app.models.user.enums import UserPrivacyStatus, UserSubscriptionLevel
+from app.models.user.enums import SubscriptionGrantCode, UserPrivacyStatus, UserSubscriptionLevel
 from app.utils import GqlNotificationType
 
 from .appsync import PostAppSync
@@ -527,6 +527,13 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if (
             poster.subscription_level != UserSubscriptionLevel.DIAMOND
             or viewer.subscription_level != UserSubscriptionLevel.DIAMOND
+        ):
+            return
+
+        # both users(poster and viewer) should not be FREE_FOR_LIFE diamond user
+        if (
+            poster.item.get('subscriptionGrantCode') == SubscriptionGrantCode.FREE_FOR_LIFE
+            or viewer.item.get('subscriptionGrantCode') == SubscriptionGrantCode.FREE_FOR_LIFE
         ):
             return
 

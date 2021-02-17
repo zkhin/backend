@@ -35,3 +35,9 @@ class UserDatingStatus:
     DISABLED = 'DISABLED'
 
     _ALL = (ENABLED, DISABLED)
+
+
+class SubscriptionGrantCode:
+    FREE_FOR_LIFE = 'FREE_FOR_LIFE'
+
+    _ALL = FREE_FOR_LIFE

@@ -122,7 +122,7 @@ type Mutation {
   addAppStoreReceipt(receiptData: String!): Boolean
 
   # Let the user give themselves some free Diamond subscription
-  grantUserSubscriptionBonus: User
+  grantUserSubscriptionBonus(grantCode: SubscriptionGrantCode): User
 
   # Set optional user details.
   # Only the specified arguments will be set.
@@ -562,6 +562,10 @@ type PaginatedUsers {
 enum SubscriptionLevel {
   BASIC
   DIAMOND
+}
+
+enum SubscriptionGrantCode {
+  FREE_FOR_LIFE
 }
 
 type Card {

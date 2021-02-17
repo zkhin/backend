@@ -309,8 +309,8 @@ module.exports.deleteUser = gql`
 `
 
 module.exports.grantUserSubscriptionBonus = gql`
-  mutation GrantUserSubscriptionBonus {
-    grantUserSubscriptionBonus {
+  mutation GrantUserSubscriptionBonus($grantCode: SubscriptionGrantCode) {
+    grantUserSubscriptionBonus(grantCode: $grantCode) {
       userId
       subscriptionLevel
       subscriptionExpiresAt
