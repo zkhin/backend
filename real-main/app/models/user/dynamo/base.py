@@ -293,7 +293,7 @@ class UserDynamo:
         failure_warning = 'User does not exist' if fail_softly else None
         return self.client.update_item(query_kwargs, failure_warning=failure_warning)
 
-    def update_subscription(self, user_id, level, granted_at=None, expires_at=None):
+    def update_subscription(self, user_id, level, granted_at=None, expires_at=None, grant_code=None):
         assert level != UserSubscriptionLevel.BASIC, "Cannot grant BASIC subscriptions"
         assert (granted_at is None) == (expires_at is None), "Subscriptions expire iff they are granted"
         query_kwargs = {
@@ -324,6 +324,10 @@ class UserDynamo:
                     ':gsipk': f'user/{level}',
                 }
             )
+        if grant_code is not None:
+            query_kwargs['UpdateExpression'] += ', #sgc = :sgc'
+            query_kwargs['ExpressionAttributeNames'].update({'#sgc': 'subscriptionGrantCode'})
+            query_kwargs['ExpressionAttributeValues'].update({':sgc': grant_code})
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:
@@ -336,12 +340,13 @@ class UserDynamo:
         # to record that this user has used up their free subscription bonus
         query_kwargs = {
             'Key': self.pk(user_id),
-            'UpdateExpression': 'REMOVE #sl, #sea, #gsipk, #gsisk',
+            'UpdateExpression': 'REMOVE #sl, #sea, #gsipk, #gsisk, #sgc',
             'ExpressionAttributeNames': {
                 '#sl': 'subscriptionLevel',
                 '#sea': 'subscriptionExpiresAt',
                 '#gsipk': 'gsiK1PartitionKey',
                 '#gsisk': 'gsiK1SortKey',
+                '#sgc': 'subscriptionGrantCode',
             },
         }
         return self.client.update_item(query_kwargs)

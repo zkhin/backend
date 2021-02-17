@@ -544,8 +544,9 @@ def report_screen_views(caller_user, arguments, **kwargs):
 @update_last_client
 @update_last_disable_dating_date
 def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
+    grant_code = arguments.get('grantCode')
     try:
-        caller_user.grant_subscription_bonus()
+        caller_user.grant_subscription_bonus(grant_code)
     except UserException as err:
         raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)

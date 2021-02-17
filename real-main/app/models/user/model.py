@@ -12,7 +12,7 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .enums import SubscriptionGrantCode, UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .error_codes import UserDatingMissingError, UserDatingWrongError
 from .exceptions import UserException, UserValidationException, UserVerificationException
 
@@ -36,6 +36,8 @@ CONTACT_ATTRIBUTE_NAMES = {
         'dynamo_client': 'phone_number_dynamo',
     },
 }
+
+SUBSCRIPTION_GRANT_DURATION = {SubscriptionGrantCode.FREE_FOR_LIFE: pendulum.duration(years=5)}
 
 
 class User(TrendingModelMixin):
@@ -495,11 +497,14 @@ class User(TrendingModelMixin):
             self.item = self.dynamo.set_user_status(self.id, UserStatus.ACTIVE)
         return self
 
-    def grant_subscription_bonus(self, now=None):
+    def grant_subscription_bonus(self, grant_code=None, now=None):
         now = now or pendulum.now('utc')
-        expires_at = now + self.subscription_bonus_duration
+        if grant_code == SubscriptionGrantCode.FREE_FOR_LIFE:
+            expires_at = now + SUBSCRIPTION_GRANT_DURATION[grant_code]
+        else:
+            expires_at = now + self.subscription_bonus_duration
         self.item = self.dynamo.update_subscription(
-            self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at
+            self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at, grant_code=grant_code
         )
         return self
 
