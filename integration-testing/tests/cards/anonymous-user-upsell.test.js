@@ -35,7 +35,7 @@ test('New anonymous users do get the user upsell card', async () => {
 
   // verify that new anonymous user do not get this card
   await misc.sleep(2000)
-  await anonClient.query({query: queries.self}).then(({data: {self: user}}) => {
+  const cardId = await anonClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(anonUserId)
     expect(user.email).toBeNull()
     expect(user.userStatus).toBe('ANONYMOUS')
@@ -46,5 +46,10 @@ test('New anonymous users do get the user upsell card', async () => {
     expect(card.title).toBe('Reserve your username & sign up!')
     expect(card.action).toBe(`https://real.app/signup/${anonUserId}`)
     expect(card.cardId).toBe(`${anonUserId}:ANONYMOUS_USER_UPSELL`)
+    return card.cardId
   })
+  // anonymous could dismiss the card
+  await anonClient
+    .mutate({mutation: mutations.deleteCard, variables: {cardId}})
+    .then(({data}) => expect(data.deleteCard.cardId).toBe(cardId))
 })

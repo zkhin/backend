@@ -1171,7 +1171,7 @@ def flag_comment(caller_user, arguments, **kwargs):
 
 
 @routes.register('Mutation.deleteCard')
-@validate_caller
+@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
 @update_last_client
 @update_last_disable_dating_date
 def delete_card(caller_user, arguments, **kwargs):
