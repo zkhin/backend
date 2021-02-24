@@ -519,7 +519,7 @@ class User(TrendingModelMixin):
         promotion_type = type_and_duration.get('type')
         duration = type_and_duration.get('duration')
 
-        if type != 'Diamond':
+        if promotion_type != 'Diamond':
             raise UserException(f'User `{self.id}` - Promotion type is not DIAMOND')
 
         grant_code = None
