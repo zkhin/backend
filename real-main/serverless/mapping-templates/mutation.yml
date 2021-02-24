@@ -101,6 +101,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: redeemPromotion
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: addAppStoreReceipt
   dataSource: LambdaDataSource
   request: false

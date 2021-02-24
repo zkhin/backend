@@ -552,6 +552,19 @@ def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
     return caller_user.serialize(caller_user.id)
 
 
+@routes.register('Mutation.redeemPromotion')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def redeem_promotion(caller_user, arguments, **kwargs):
+    promotion_code = arguments['code']
+    try:
+        caller_user.grant_subscription_with_promotion_code(promotion_code)
+    except UserException as err:
+        raise ClientException(str(err)) from err
+    return caller_user.serialize(caller_user.id)
+
+
 @routes.register('Mutation.addAppStoreReceipt')
 @validate_caller
 @update_last_client

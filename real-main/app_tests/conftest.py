@@ -154,6 +154,11 @@ def real_dating_client():
 
 
 @pytest.fixture
+def redeem_promotion_client():
+    yield mock.Mock(clients.RedeemPromotionClient())
+
+
+@pytest.fixture
 def pinpoint_client():
     yield mock.Mock(clients.PinpointClient(app_id='my-app-id'))
 

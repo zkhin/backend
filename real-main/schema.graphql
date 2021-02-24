@@ -124,6 +124,9 @@ type Mutation {
   # Let the user give themselves some free Diamond subscription
   grantUserSubscriptionBonus(grantCode: SubscriptionGrantCode): User
 
+  # If the promotion code is valid, give the user free real diamond for x months depending on the promotion & duration
+  redeemPromotion(code: String!): User
+
   # Set optional user details.
   # Only the specified arguments will be set.
   # To delete an String/ID argument, set it to the empty string (ie bio="").

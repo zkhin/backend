@@ -51,6 +51,7 @@ provider:
     S3_PLACEHOLDER_PHOTOS_DIRECTORY: 'placeholder-photos'
     S3_UPLOADS_BUCKET: ${self:provider.stackName}-uploadsbucket-#{AWS::AccountId}
     S3_BAD_WORDS_BUCKET: real-${self:provider.stage}-bad-words-#{AWS::AccountId}
+    S3_PROMO_CODES_BUCKET: real-${self:provider.stage}-promo-codes-#{AWS::AccountId}
 
     SECRETSMANAGER_APPLE_APPSTORE_PARAMS_NAME: AppleAppstoreParams-1
     SECRETSMANAGER_CLOUDFRONT_KEY_PAIR_NAME: CloudFrontKeyPair-1
@@ -103,6 +104,12 @@ provider:
       Resource:
         - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_BAD_WORDS_BUCKET}' ] ]  # needed for 404's to work (via s3:ListBucket)
         - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_BAD_WORDS_BUCKET}', '/*' ] ]
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_PROMO_CODES_BUCKET}' ] ]  # needed for 404's to work (via s3:ListBucket)
+        - !Join [ '', [ 'arn:aws:s3:::', '${self:provider.environment.S3_PROMO_CODES_BUCKET}', '/*' ] ]
     - Effect: Allow
       Action:
         - mediaconvert:CreateJob

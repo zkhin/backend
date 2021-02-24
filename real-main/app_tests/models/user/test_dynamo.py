@@ -1141,3 +1141,20 @@ def test_increment_wallet(user_dynamo):
 
     with pytest.raises(AssertionError):
         user_dynamo.increment_wallet(user_id, 0.99)
+
+
+def test_add_user_promoted_record(user_dynamo):
+    user_id = str(uuid4())
+    promotion_code = 'promotion_code'
+    promotion_type = 'Diamond'
+    granted_at = pendulum.now('utc')
+    expires_at = pendulum.now('utc')
+    item = user_dynamo.add_user_promoted_record(user_id, promotion_code, promotion_type, granted_at, expires_at)
+
+    assert item['userId'] == user_id
+    assert item['promotionCode'] == promotion_code
+    assert item['type'] == promotion_type
+    assert item['grantedAt'] == granted_at.to_iso8601_string()
+    assert item['expiresAt'] == expires_at.to_iso8601_string()
+    assert item['gsiA1PartitionKey'] == 'userPromoted'
+    assert item['gsiA1SortKey'] == granted_at.to_iso8601_string()
