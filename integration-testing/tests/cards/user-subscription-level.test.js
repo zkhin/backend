@@ -109,4 +109,9 @@ test('Promote user subscription level with promotion code', async () => {
     // second card is the 'Add a profile photo'
     expect(user.cards.items[1].title).toBe('Add a profile photo')
   })
+
+  // we try to use redeem promotion code twice
+  await expect(
+    ourClient.mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode1}}),
+  ).rejects.toThrow(/ClientError: User .* has already granted themselves a subscription bonus/)
 })
