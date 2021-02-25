@@ -6,7 +6,7 @@ import botocore
 import pendulum
 import stringcase
 
-from app.clients import RealDatingClient
+from app.clients import RealDatingClient, RedeemPromotionClient
 from app.clients.cognito import InvalidEncryption
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
@@ -97,6 +97,7 @@ class User(TrendingModelMixin):
         self.placeholder_photos_directory = placeholder_photos_directory
         self.frontend_resources_domain = frontend_resources_domain
         self.real_dating_client = RealDatingClient()
+        self.redeem_promotion_client = RedeemPromotionClient()
 
     @property
     def username(self):
@@ -505,6 +506,40 @@ class User(TrendingModelMixin):
             expires_at = now + self.subscription_bonus_duration
         self.item = self.dynamo.update_subscription(
             self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at, grant_code=grant_code
+        )
+        return self
+
+    def grant_subscription_with_promotion_code(self, promotion_code=None, now=None):
+        type_and_duration = self.redeem_promotion_client.get_promo_information(promotion_code)
+
+        if not type_and_duration:
+            raise UserException(f'User `{self.id}` - Promotion code is not valid')
+
+        now = now or pendulum.now('utc')
+        promotion_type = type_and_duration.get('type')
+        duration = type_and_duration.get('duration')
+
+        if promotion_type != 'Diamond':
+            raise UserException(f'User `{self.id}` - Promotion type is not DIAMOND')
+
+        grant_code = None
+        if duration == SubscriptionGrantCode.FREE_FOR_LIFE:
+            grant_code = SubscriptionGrantCode.FREE_FOR_LIFE
+            expires_at = now + SUBSCRIPTION_GRANT_DURATION[grant_code]
+        else:
+            expires_at = now + pendulum.duration(months=int(duration))
+
+        self.item = self.dynamo.update_subscription(
+            self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at, grant_code=grant_code
+        )
+
+        # store user promotion code record
+        self.dynamo.add_user_promoted_record(
+            user_id=self.id,
+            promotion_code=promotion_code,
+            promotion_type=promotion_type,
+            granted_at=now,
+            expires_at=expires_at,
         )
         return self
 

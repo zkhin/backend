@@ -1250,3 +1250,20 @@ def test_start_change_contact_attribute_banned_phone(user, user2):
         user2.start_change_contact_attribute('phone', banned_phone)
 
     assert user2.refresh_item().status == UserStatus.DISABLED
+
+
+def test_grant_subscription_with_promotion_code(user):
+    user.redeem_promotion_client.get_promo_information = Mock(
+        return_value={
+            'type': 'Diamond',
+            'duration': 'FREE_FOR_LIFE',
+        }
+    )
+    user.grant_subscription_with_promotion_code('test_code')
+
+    assert user.item == user.refresh_item().item
+    assert user.subscription_level == UserSubscriptionLevel.DIAMOND
+    assert user.item['subscriptionGrantCode'] == SubscriptionGrantCode.FREE_FOR_LIFE
+
+    with pytest.raises(UserAlreadyGrantedSubscription):
+        user.grant_subscription_with_promotion_code('test_code1')

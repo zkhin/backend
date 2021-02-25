@@ -601,3 +601,22 @@ class UserDynamo:
             }
 
         return [key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs)]
+
+    def add_user_promoted_record(self, user_id, promotion_code, promotion_type, granted_at, expires_at):
+        item = {
+            'partitionKey': f'user/{user_id}',
+            'sortKey': 'redeem',
+            'schemaVersion': 0,
+            'userId': user_id,
+            'promotionCode': promotion_code,
+            'type': promotion_type,
+            'grantedAt': granted_at.to_iso8601_string(),
+            'expiresAt': expires_at.to_iso8601_string(),
+            'gsiA1PartitionKey': 'userPromoted',
+            'gsiA1SortKey': granted_at.to_iso8601_string(),
+        }
+
+        try:
+            return self.client.add_item({'Item': item})
+        except self.client.exceptions.ConditionalCheckFailedException:
+            logger.warning(f'Failed to add UserPromoted item for user `{user_id}`: already exists')

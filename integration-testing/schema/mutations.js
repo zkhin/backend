@@ -318,6 +318,16 @@ module.exports.grantUserSubscriptionBonus = gql`
   }
 `
 
+module.exports.redeemPromotion = gql`
+  mutation RedeemPromotion($code: String!) {
+    redeemPromotion(code: $code) {
+      userId
+      subscriptionLevel
+      subscriptionExpiresAt
+    }
+  }
+`
+
 module.exports.addAppStoreReceipt = gql`
   mutation AddAppStoreReceipt($receiptData: String!) {
     addAppStoreReceipt(receiptData: $receiptData)
