@@ -119,7 +119,7 @@
   response: Lambda.response.vtl
 
 - type: Mutation
-  field: setAnonymousThemeCode
+  field: setThemeCode
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl

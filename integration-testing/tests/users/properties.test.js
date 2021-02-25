@@ -506,13 +506,13 @@ test('User theme code - get, set, privacy', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
-  // we should default to 'black.green'
+  // we should default to null
   let resp = await client.query({query: queries.user, variables: {userId}})
-  expect(resp.data.user.themeCode).toBe('black.green')
+  expect(resp.data.user.themeCode).toBeNull()
 
   // we change our theme code
-  resp = await client.mutate({mutation: mutations.setUserThemeCode, variables: {themeCode: 'green.orange'}})
-  expect(resp.data.setUserDetails.themeCode).toBe('green.orange')
+  resp = await client.mutate({mutation: mutations.setThemeCode, variables: {themeCode: 'green.orange'}})
+  expect(resp.data.setThemeCode.themeCode).toBe('green.orange')
 
   // we go to private
   resp = await client.mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
@@ -528,19 +528,14 @@ test('Anonymous theme code - get, set', async () => {
   const {client} = await loginCache.getCleanLogin()
   ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
 
-  // we cannot change theme code with setAnonymousTheme mutation
-  await expect(
-    client.mutate({mutation: mutations.setAnonymousThemeCode, variables: {themeCode: 'green.orange'}}),
-  ).rejects.toThrow(/ClientError: User .* is not ANONYMOUS/)
-
   await client.query({query: queries.user, variables: {userId: anonUserId}}).then(({data: {user}}) => {
-    expect(user.themeCode).toBe('black.green')
+    expect(user.themeCode).toBeNull()
   })
 
   // anonymous change theme code
   await anonClient
-    .mutate({mutation: mutations.setAnonymousThemeCode, variables: {themeCode: 'green.orange'}})
-    .then(({data: {setAnonymousThemeCode: user}}) => {
+    .mutate({mutation: mutations.setThemeCode, variables: {themeCode: 'green.orange'}})
+    .then(({data: {setThemeCode: user}}) => {
       expect(user.themeCode).toBe('green.orange')
     })
 

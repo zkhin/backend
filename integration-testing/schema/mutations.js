@@ -182,18 +182,9 @@ module.exports.setUserLanguageCode = gql`
   }
 `
 
-module.exports.setUserThemeCode = gql`
-  mutation SetUserThemeCode($themeCode: String) {
-    setUserDetails(themeCode: $themeCode) {
-      userId
-      themeCode
-    }
-  }
-`
-
-module.exports.setAnonymousThemeCode = gql`
-  mutation SetAnonymousThemeCode($themeCode: String!) {
-    setAnonymousThemeCode(themeCode: $themeCode) {
+module.exports.setThemeCode = gql`
+  mutation SetThemeCode($themeCode: String!) {
+    setThemeCode(themeCode: $themeCode) {
       userId
       themeCode
     }
