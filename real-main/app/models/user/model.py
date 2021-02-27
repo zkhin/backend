@@ -13,8 +13,13 @@ from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
 from .enums import SubscriptionGrantCode, UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
-from .error_codes import UserDatingMissingError, UserDatingWrongError
-from .exceptions import UserException, UserValidationException, UserVerificationException
+from .error_codes import PromotionCodeError, UserDatingMissingError, UserDatingWrongError
+from .exceptions import (
+    UserAlreadyGrantedSubscription,
+    UserException,
+    UserValidationException,
+    UserVerificationException,
+)
 
 logger = logging.getLogger()
 
@@ -513,7 +518,7 @@ class User(TrendingModelMixin):
         type_and_duration = self.redeem_promotion_client.get_promo_information(promotion_code)
 
         if not type_and_duration:
-            raise UserException(f'User `{self.id}` - Promotion code is not valid')
+            raise UserException(f'User `{self.id}` - Promotion code is not valid', [PromotionCodeError.NOT_VALID])
 
         now = now or pendulum.now('utc')
         promotion_type = type_and_duration.get('type')
@@ -529,9 +534,19 @@ class User(TrendingModelMixin):
         else:
             expires_at = now + pendulum.duration(months=int(duration))
 
-        self.item = self.dynamo.update_subscription(
-            self.id, UserSubscriptionLevel.DIAMOND, granted_at=now, expires_at=expires_at, grant_code=grant_code
-        )
+        try:
+            self.item = self.dynamo.update_subscription(
+                self.id,
+                UserSubscriptionLevel.DIAMOND,
+                granted_at=now,
+                expires_at=expires_at,
+                grant_code=grant_code,
+            )
+        except UserAlreadyGrantedSubscription as err:
+            raise UserException(
+                f'User `{self.id}` has already granted themselves a subscription bonus',
+                [PromotionCodeError.ALREADY_GRANTED],
+            ) from err
 
         # store user promotion code record
         self.dynamo.add_user_promoted_record(
