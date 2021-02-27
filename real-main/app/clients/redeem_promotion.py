@@ -20,5 +20,7 @@ class RedeemPromotionClient:
             logger.warning(str(err))
             raise err
 
-        promo_codes = json.loads(fh.read().decode())
-        return promo_codes.get(promotion_code)
+        data = json.loads(fh.read().decode())
+        promo_codes = {key.lower(): data[key] for key in data.keys()}
+
+        return promo_codes.get(promotion_code.lower())

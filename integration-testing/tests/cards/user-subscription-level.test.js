@@ -7,8 +7,10 @@ const loginCache = new cognito.AppSyncLoginCache()
 // https://github.com/real-social-media/promo_codes/blob/master/bucket/promo_codes.json
 const promotionCode1 = 'zayar_test'
 const promotionCode2 = 'ianmcLoughlin'
+const promotionCode3 = 'Zayar_test'
 
 beforeAll(async () => {
+  loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
@@ -80,6 +82,7 @@ test('Promote user level with invalid promotion code', async () => {
 test('Promote user subscription level with promotion code', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   // we redeem promotion with 6 month promotion code
   await ourClient
@@ -93,6 +96,15 @@ test('Promote user subscription level with promotion code', async () => {
     .mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode2}})
     .then(({data: {redeemPromotion: user}}) => {
       expect(user.userId).toBe(theirUserId)
+      expect(user.subscriptionLevel).toBe('DIAMOND')
+    })
+  await misc.sleep(2000)
+
+  // other redeem promotion with free for life promotion code, not case sensitive
+  await otherClient
+    .mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode3}})
+    .then(({data: {redeemPromotion: user}}) => {
+      expect(user.userId).toBe(otherUserId)
       expect(user.subscriptionLevel).toBe('DIAMOND')
     })
   await misc.sleep(2000)
