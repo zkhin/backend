@@ -542,11 +542,11 @@ class User(TrendingModelMixin):
                 expires_at=expires_at,
                 grant_code=grant_code,
             )
-        except UserAlreadyGrantedSubscription:
+        except UserAlreadyGrantedSubscription as err:
             raise UserException(
                 f'User `{self.id}` has already granted themselves a subscription bonus',
                 [PromotionCodeError.ALREADY_GRANTED],
-            )
+            ) from err
 
         # store user promotion code record
         self.dynamo.add_user_promoted_record(

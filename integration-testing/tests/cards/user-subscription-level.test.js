@@ -77,6 +77,13 @@ test('Promote user level with invalid promotion code', async () => {
   await expect(
     ourClient.mutate({mutation: mutations.redeemPromotion, variables: {code: invalidPromotionCode}}),
   ).rejects.toThrow(/ClientError: User .* - Promotion code is not valid/)
+
+  // verify the correct error codes are returned
+  await ourClient
+    .mutate({mutation: mutations.redeemPromotion, variables: {code: invalidPromotionCode}})
+    .catch((err) => {
+      expect(err.graphQLErrors[0].errorInfo).toEqual(['NOT_VALID'])
+    })
 })
 
 test('Promote user subscription level with promotion code', async () => {
