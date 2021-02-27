@@ -18,3 +18,8 @@ class UserDatingWrongError:
     MIN_AGE = 'WRONG_AGE_MIN'
     MAX_AGE = 'WRONG_AGE_MAX'
     THREE_HOUR_PERIOD = 'WRONG_THREE_HOUR_PERIOD'
+
+
+class PromotionCodeError:
+    NOT_VALID = 'NOT_VALID'
+    ALREADY_GRANTED = 'ALREADY_GRANTED'

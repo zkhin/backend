@@ -1265,5 +1265,5 @@ def test_grant_subscription_with_promotion_code(user):
     assert user.subscription_level == UserSubscriptionLevel.DIAMOND
     assert user.item['subscriptionGrantCode'] == SubscriptionGrantCode.FREE_FOR_LIFE
 
-    with pytest.raises(UserAlreadyGrantedSubscription):
+    with pytest.raises(UserException):
         user.grant_subscription_with_promotion_code('test_code1')

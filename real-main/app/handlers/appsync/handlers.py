@@ -561,7 +561,7 @@ def redeem_promotion(caller_user, arguments, **kwargs):
     try:
         caller_user.grant_subscription_with_promotion_code(promotion_code)
     except UserException as err:
-        raise ClientException(str(err)) from err
+        raise ClientException(str(err.args[0]), err.args[1] if len(err.args) > 1 else []) from err
     return caller_user.serialize(caller_user.id)
 
 
