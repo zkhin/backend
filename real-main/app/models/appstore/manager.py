@@ -44,7 +44,7 @@ class AppStoreManager:
         )
 
     def add_transaction(self, unified_receipt):
-        latest_receipt_info = unified_receipt['latest_receipt_info'][-1]
+        latest_receipt_info = unified_receipt['latest_receipt_info'][0]
         pending_renewal_info = unified_receipt['pending_renewal_info']
         status = unified_receipt['status']
         original_transaction_id = latest_receipt_info['original_transaction_id']
