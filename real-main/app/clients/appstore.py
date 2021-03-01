@@ -68,7 +68,7 @@ class AppStoreClient:
         "Pull out and isolate the fields we care about"
         return {
             'latest_receipt': resp_body['latest_receipt'],
-            'latest_receipt_info': resp_body['latest_receipt_info'][-1],
+            'latest_receipt_info': resp_body['latest_receipt_info'][0],
             'original_transaction_id': resp_body['latest_receipt_info'][-1]['original_transaction_id'],
             'pending_renewal_info': resp_body['pending_renewal_info'],
         }
