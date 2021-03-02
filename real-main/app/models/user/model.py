@@ -532,7 +532,7 @@ class User(TrendingModelMixin):
             grant_code = SubscriptionGrantCode.FREE_FOR_LIFE
             expires_at = now + SUBSCRIPTION_GRANT_DURATION[grant_code]
         else:
-            expires_at = now + pendulum.duration(months=int(duration))
+            expires_at = now + pendulum.duration(days=float(duration))
 
         try:
             self.item = self.dynamo.update_subscription(
