@@ -234,7 +234,7 @@ def test_set_is_verified_minimal(pending_image_post):
             image_format=None,
             original_format=None,
             taken_in_real=None,
-            origional_metadata=None
+            origional_metadata=None,
         )
     ]
 
