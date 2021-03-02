@@ -516,7 +516,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             image_format=self.image_item.get('imageFormat'),
             original_format=self.image_item.get('originalFormat'),
             taken_in_real=self.image_item.get('takenInReal'),
-            origional_metadata = self.image_item,
+            origional_metadata=self.image_item,
         )
         hidden = self.item.get('verificationHidden', False)
         self.item = self.dynamo.set_is_verified(self.id, is_verified, hidden=hidden)
