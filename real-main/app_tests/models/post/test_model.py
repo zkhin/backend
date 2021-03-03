@@ -248,13 +248,13 @@ def test_set_is_verified_maximal(pending_image_post):
     post.image_item['originalFormat'] = 'oo'
     post.image_item['takenInReal'] = False
     post.item['verificationHidden'] = True
+    post.image_item['origional_metadata'] = False
 
     # do the call, check final state
     post.set_is_verified()
     assert post.item == post.refresh_item().item
     assert post.item['isVerified'] is True
     assert post.item['isVerifiedHiddenValue'] is False
-
     # check mock called correctly
     assert post.post_verification_client.mock_calls == [
         mock.call.verify_image(
