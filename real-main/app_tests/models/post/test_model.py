@@ -227,7 +227,6 @@ def test_set_is_verified_minimal(pending_image_post):
     assert post.item['isVerified'] is True
     assert 'isVerifiedHiddenValue' not in post.item
 
-    # check mock called correctly
 
 def test_set_is_verified_maximal(pending_image_post):
     # check initial state and configure mock
@@ -238,15 +237,13 @@ def test_set_is_verified_maximal(pending_image_post):
     post.image_item['originalFormat'] = 'oo'
     post.image_item['takenInReal'] = False
     post.item['verificationHidden'] = True
-    post.image_item['origional_metadata'] = False
 
     # do the call, check final state
     post.set_is_verified()
-    post.image_item['origional_metadata'] = False
     assert post.item == post.refresh_item().item
     assert post.item['isVerified'] is True
     assert post.item['isVerifiedHiddenValue'] is False
-    # check mock called correctly
+
 
 def test_set_expires_at(post):
     # add a post without an expires at
