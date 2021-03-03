@@ -1,5 +1,5 @@
 import requests
-
+import json
 
 class PostVerificationClient:
     def __init__(self, api_creds_getter):
@@ -28,7 +28,7 @@ class PostVerificationClient:
         if taken_in_real:
             data['metadata']['takenInReal'] = taken_in_real
         if origional_metadata:
-            data['metadata']['origional_metadata'] = origional_metadata
+            data['metadata']['origional_metadata'] = json.dumps(origional_metadata)
         # synchronous for now. Note this generally runs in an async env already: an s3-object-created handler
         resp = requests.post(api_url, headers=headers, json=data)
         if resp.status_code != 200:
