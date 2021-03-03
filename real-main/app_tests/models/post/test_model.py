@@ -252,6 +252,7 @@ def test_set_is_verified_maximal(pending_image_post):
 
     # do the call, check final state
     post.set_is_verified()
+    post.image_item['origional_metadata'] = False
     assert post.item == post.refresh_item().item
     assert post.item['isVerified'] is True
     assert post.item['isVerifiedHiddenValue'] is False
