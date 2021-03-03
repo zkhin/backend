@@ -1,5 +1,5 @@
 import requests
-import json
+
 
 class PostVerificationClient:
     def __init__(self, api_creds_getter):
