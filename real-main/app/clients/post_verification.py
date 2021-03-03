@@ -11,7 +11,9 @@ class PostVerificationClient:
             self._api_creds = self.api_creds_getter()
         return self._api_creds
 
-    def verify_image(self, image_url, image_format=None, original_format=None, taken_in_real=None, origional_metadata=None):
+    def verify_image(
+        self, image_url, image_format=None, original_format=None, taken_in_real=None, origional_metadata=None
+    ):
         headers = {'x-api-key': self.api_creds['key']}
         api_url = self.api_creds['root'] + 'verify/image'
 
