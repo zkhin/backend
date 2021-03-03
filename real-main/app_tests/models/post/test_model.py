@@ -262,7 +262,6 @@ def test_set_is_verified_maximal(pending_image_post):
             image_format='ii',
             original_format='oo',
             taken_in_real=False,
-            taken_in_real=False,
         )
     ]
 
