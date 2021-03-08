@@ -22,7 +22,8 @@ from app.models.like.enums import LikeStatus
 from app.models.like.exceptions import LikeException
 from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
-from app.models.user.enums import UserStatus
+from app.models.user.enums import UserStatus, UserSubscriptionLevel
+from app.models.user.error_codes import PromotionCodeError
 from app.models.user.exceptions import UserException
 from app.utils import image_size
 
@@ -544,6 +545,10 @@ def report_screen_views(caller_user, arguments, **kwargs):
 @update_last_client
 @update_last_disable_dating_date
 def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
+    if caller_user.subscription_level == UserSubscriptionLevel.DIAMOND:
+        raise ClientException(
+            f'User `{caller_user.id}` is already on DIAMOND', [PromotionCodeError.ALREADY_DIAMOND]
+        )
     grant_code = arguments.get('grantCode')
     try:
         caller_user.grant_subscription_bonus(grant_code)
@@ -557,6 +562,10 @@ def grant_user_subscription_bonus(caller_user, arguments, **kwargs):
 @update_last_client
 @update_last_disable_dating_date
 def redeem_promotion(caller_user, arguments, **kwargs):
+    if caller_user.subscription_level == UserSubscriptionLevel.DIAMOND:
+        raise ClientException(
+            f'User `{caller_user.id}` is already on DIAMOND', [PromotionCodeError.ALREADY_DIAMOND]
+        )
     promotion_code = arguments['code']
     try:
         caller_user.grant_subscription_with_promotion_code(promotion_code)

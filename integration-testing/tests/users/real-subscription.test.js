@@ -54,7 +54,7 @@ test('Grant a user a free diamond subscription', async () => {
 
   // check we can't re-grant ourselves another subscription bonus
   await expect(ourClient.mutate({mutation: mutations.grantUserSubscriptionBonus})).rejects.toThrow(
-    /ClientError: User `.*` has already granted themselves a subscription bonus/,
+    /ClientError: User `.*` is already on DIAMOND/,
   )
 
   // check our subscription is as expected

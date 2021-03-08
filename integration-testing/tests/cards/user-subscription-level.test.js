@@ -132,5 +132,5 @@ test('Promote user subscription level with promotion code', async () => {
   // we try to use redeem promotion code twice
   await expect(
     ourClient.mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode1}}),
-  ).rejects.toThrow(/ClientError: User .* has already granted themselves a subscription bonus/)
+  ).rejects.toThrow(/ClientError: User .* is already on DIAMOND/)
 })

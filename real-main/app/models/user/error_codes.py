@@ -23,3 +23,4 @@ class UserDatingWrongError:
 class PromotionCodeError:
     NOT_VALID = 'NOT_VALID'
     ALREADY_GRANTED = 'ALREADY_GRANTED'
+    ALREADY_DIAMOND = 'ALREADY_DIAMOND'
