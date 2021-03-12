@@ -351,6 +351,7 @@ register('user', 'profile', ['REMOVE'], post_manager.on_user_delete_delete_views
 register('user', 'profile', ['REMOVE'], screen_manager.on_user_delete_delete_views)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete)
 register('user', 'profile', ['REMOVE'], user_manager.on_user_delete_delete_cognito)
+register('screen', 'view', ['INSERT', 'MODIFY'], screen_manager.on_view_log_amplitude_event)
 
 
 @handler_logging
