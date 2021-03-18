@@ -20,13 +20,20 @@ class PostImageDynamo:
         return self.client.delete_item(self.pk(post_id))
 
     def set_initial_attributes(
-        self, post_id, crop=None, image_format=None, original_format=None, taken_in_real=None
+        self,
+        post_id,
+        crop=None,
+        image_format=None,
+        original_format=None,
+        taken_in_real=None,
+        rotate=None,
     ):
         attributes = {
             'crop': crop,
             'imageFormat': image_format,
             'originalFormat': original_format,
             'takenInReal': taken_in_real,
+            'rotate': rotate,
         }
         attributes = {k: v for k, v in attributes.items() if v is not None}
         if not attributes:

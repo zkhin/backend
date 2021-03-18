@@ -207,3 +207,70 @@ def test_process_image_upload_success_heic_with_noop_crop(pending_post, s3_uploa
 
     # check the heic image was _not_ deleted because the crop matched the image dimensions exactly
     assert s3_uploads_client.exists(native_path)
+
+
+def test_process_image_upload_failed_heic_with_invalid_rotate(pending_post, s3_uploads_client, heic_data):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    post.image_item['imageFormat'] = 'HEIC'
+    post.image_item['crop'] = {'upperLeft': {'x': 4, 'y': 2}, 'lowerRight': {'x': 102, 'y': 104}}
+    post.image_item['rotate'] = 91
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
+    assert s3_uploads_client.exists(native_path)
+
+    # mock out a bunch of methods
+    post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
+    post.set_colors = mock.Mock(wraps=post.set_colors)
+    post.set_is_verified = mock.Mock(wraps=post.set_is_verified)
+    post.set_checksum = mock.Mock(wraps=post.set_checksum)
+    post.complete = mock.Mock(wraps=post.complete)
+
+    with pytest.raises(PostException, match='Invalid rotate angle'):
+        pending_post.process_image_upload()
+    assert pending_post.item['postStatus'] == PostStatus.PROCESSING
+    assert pending_post.refresh_item().item['postStatus'] == PostStatus.PROCESSING
+
+
+def test_process_image_upload_success_heic_with_crop_rotate(pending_post, s3_uploads_client, heic_data):
+    post = pending_post
+    assert post.item['postStatus'] == PostStatus.PENDING
+    post.image_item['imageFormat'] = 'HEIC'
+    post.image_item['crop'] = {'upperLeft': {'x': 4, 'y': 2}, 'lowerRight': {'x': 102, 'y': 104}}
+    post.image_item['rotate'] = 90
+
+    # put some data in the mocked s3
+    native_path = post.get_image_path(image_size.NATIVE_HEIC)
+    s3_uploads_client.put_object(native_path, heic_data, 'image/heic')
+    assert s3_uploads_client.exists(native_path)
+
+    # mock out a bunch of methods
+    post.native_jpeg_cache.flush = mock.Mock(wraps=post.native_jpeg_cache.flush)
+    post.build_image_thumbnails = mock.Mock(wraps=post.build_image_thumbnails)
+    post.set_height_and_width = mock.Mock(wraps=post.set_height_and_width)
+    post.set_colors = mock.Mock(wraps=post.set_colors)
+    post.set_is_verified = mock.Mock(wraps=post.set_is_verified)
+    post.set_checksum = mock.Mock(wraps=post.set_checksum)
+    post.complete = mock.Mock(wraps=post.complete)
+
+    now = pendulum.now('utc')
+    post.process_image_upload(now=now)
+
+    # check the mocks were called correctly
+    assert post.native_jpeg_cache.flush.mock_calls == [mock.call()]
+    assert post.build_image_thumbnails.mock_calls == [mock.call()]
+    assert post.set_height_and_width.mock_calls == [mock.call()]
+    assert post.set_colors.mock_calls == [mock.call()]
+    assert post.set_is_verified.mock_calls == [mock.call()]
+    assert post.set_checksum.mock_calls == [mock.call()]
+    assert post.complete.mock_calls == [mock.call(now=now)]
+
+    # check the heic image was deleted because of the crop
+    assert not s3_uploads_client.exists(native_path)
+
+    assert post.item['postStatus'] == PostStatus.COMPLETED
+    assert post.refresh_item().item['postStatus'] == PostStatus.COMPLETED

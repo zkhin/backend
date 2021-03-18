@@ -766,6 +766,8 @@ input ImageInput {
 
   # Instruct the backend to crop off some of the image
   crop: CropInput
+  # Rotated angle
+  rotate: Int
 }
 
 input CropInput {

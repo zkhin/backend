@@ -430,7 +430,7 @@ functions:
   appSyncDispatch:
     name: ${self:provider.stackName}-appSyncDispatch
     handler: app.handlers.appsync.dispatch
-    timeout: 10
+    timeout: 100
     tracing: PassThrough  # already initiated by appsync
     layers:
       - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
