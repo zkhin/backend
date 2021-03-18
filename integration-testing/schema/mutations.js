@@ -412,6 +412,7 @@ module.exports.addPost = gql`
     $verificationHidden: Boolean
     $setAsUserPhoto: Boolean
     $crop: CropInput
+    $rotate: Int
     $keywords: [String!]
   ) {
     addPost(
@@ -426,6 +427,7 @@ module.exports.addPost = gql`
         originalMetadata: $originalMetadata
         imageData: $imageData
         crop: $crop
+        rotate: $rotate
       }
       lifetime: $lifetime
       commentsDisabled: $commentsDisabled

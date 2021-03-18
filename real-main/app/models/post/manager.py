@@ -126,6 +126,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                         raise PostException(
                             f'Image crop lowerRight.{coord} must be strictly greater than upperLeft.{coord}',
                         )
+            if image_input and (rotate := image_input.get('rotate')):
+                if rotate % 90 != 0:
+                    raise PostException(f'Invalid rotate angle - {rotate}')
         else:
             raise Exception(f'Invalid PostType `{post_type}`')
 
@@ -185,6 +188,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 'image_format': image_input.get('imageFormat'),
                 'original_format': image_input.get('originalFormat'),
                 'taken_in_real': image_input.get('takenInReal'),
+                'rotate': image_input.get('rotate'),
             }
             post._image_item = self.image_dynamo.set_initial_attributes(post_id, **image_attributes)
 

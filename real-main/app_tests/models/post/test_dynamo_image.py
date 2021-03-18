@@ -48,7 +48,12 @@ def test_set_initial_attributes(post_image_dynamo, post_id, core_item):
     # verify we can set all attributes, including an overwrite
     crop = {'upperLeft': {'x': 1, 'y': 2}, 'lowerRight': {'x': 3, 'y': 4}}
     item = post_image_dynamo.set_initial_attributes(
-        post_id, crop=crop, image_format='if', original_format='of', taken_in_real=True
+        post_id,
+        crop=crop,
+        image_format='if',
+        original_format='of',
+        taken_in_real=True,
+        rotate=90,
     )
     assert item.pop('crop') == crop
     assert item.pop('imageFormat') == 'if'
@@ -56,6 +61,7 @@ def test_set_initial_attributes(post_image_dynamo, post_id, core_item):
     assert item.pop('takenInReal') is True
     assert item.pop('height') == 4
     assert item.pop('width') == 10
+    assert item.pop('rotate') == 90
     assert item == core_item
 
 

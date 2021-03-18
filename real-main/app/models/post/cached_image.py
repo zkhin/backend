@@ -1,11 +1,14 @@
 import imghdr
 import io
+import logging
 
 import PIL.Image
 import PIL.ImageOps
 import pyheif
 
 from .exceptions import PostException
+
+logger = logging.getLogger()
 
 
 class CachedImage:
@@ -116,6 +119,22 @@ class CachedImage:
             self._image = self.readonly_image.crop((ul_x, ul_y, lr_x, lr_y))
         except Exception as err:
             raise PostException(f'Unable to crop image for post `{self.id}`: {err}') from err
+
+        self._data = None
+        self.is_synced = False
+        return self
+
+    def rotate(self, rotate):
+        if rotate % 90 != 0:
+            raise PostException('Invalid rotate angle')
+
+        try:
+            self._image = self.readonly_image.rotate(
+                angle=float(rotate), expand=True
+            )  # clockwise around its centre
+        except Exception as err:
+            logger.warning(str(err))
+            raise PostException('Unable to rotate image') from err
 
         self._data = None
         self.is_synced = False

@@ -278,6 +278,9 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if image_data:
             source_cached_image.set_data(io.BytesIO(base64.b64decode(image_data)))
 
+        if rotate := self.image_item.get('rotate'):
+            source_cached_image.rotate(rotate)
+
         if crop := self.image_item.get('crop'):
             source_cached_image.crop(crop)
 
