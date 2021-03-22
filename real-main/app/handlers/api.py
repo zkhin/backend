@@ -76,8 +76,8 @@ def send_amplitude_event(event, context):
     if body_str:
         amplitude_body = json.loads(body_str)
         user_id = amplitude_body.get('userId')
-        event_name = amplitude_body.get('eventName')
-        event_payload = amplitude_body.get('eventPayload')
+        event_name = amplitude_body.get('type')
+        event_payload = amplitude_body.get('payload')
 
         if user_id and event_name and event_payload:
             amplitude_client.attr_log_event(user_id, event_name, event_payload)
