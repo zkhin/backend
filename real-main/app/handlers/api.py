@@ -11,6 +11,7 @@ from . import xray
 logger = logging.getLogger()
 xray.patch_all()
 
+amplitude_client = clients.AmplitudeClient()
 secrets_manager_client = clients.SecretsManagerClient()
 clients = {
     'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
@@ -62,4 +63,27 @@ def handle_appstore_server_notification(event, context):
 
     return {
         'statusCode': 200,
+    }
+
+
+@handler_logging(event_to_extras=lambda event: {'event': event})
+def send_amplitude_event(event, context):
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('send_amplitude_event() called')
+
+    body_str = event.get('body')
+    status_code = 200
+    if body_str:
+        amplitude_body = json.loads(body_str)
+        user_id = amplitude_body.get('userId')
+        event_name = amplitude_body.get('eventName')
+        event_payload = amplitude_body.get('eventPayload')
+
+        if user_id and event_name and event_payload:
+            amplitude_client.attr_log_event(user_id, event_name, event_payload)
+        else:
+            status_code = 400
+
+    return {
+        'statusCode': status_code,
     }
