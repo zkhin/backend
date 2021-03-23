@@ -146,6 +146,9 @@ provider:
         - ${self:provider.environment.REAL_DATING_SWIPED_RIGHT_USERS_ARN}
         - ${self:provider.environment.REAL_DATING_GET_USER_MATCHES_COUNT_ARN}
 
+  apiKeys:
+    - ${self:provider.stackName}-apiKey1
+
 custom:
   elasticSearchInstanceCount:
     default: 2
@@ -718,6 +721,20 @@ functions:
       - functionErrors
       - functionThrottles
     tracing: PassThrough
+
+  sendAmplitudeEvent:
+    name: ${self:provider.stackName}-sendAmplitudeEvent
+    handler: app.handlers.api.send_amplitude_event
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - http:
+          path: amplitude/create
+          method: post
+          private: true
+    alarms:
+      - functionErrors
+      - functionThrottles
 
 # keep this miminal for smaller packages and thus faster deployments
 package:
