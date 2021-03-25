@@ -521,6 +521,9 @@ class User(TrendingModelMixin):
             raise UserException(f'User `{self.id}` - Promotion code is not valid', [PromotionCodeError.NOT_VALID])
 
         now = now or pendulum.now('utc')
+        if self.item.get('subscriptionGrantedAt') and self.item.get('subscriptionExpiresAt'):
+            now = pendulum.parse(self.item.get('subscriptionExpiresAt'))
+
         promotion_type = type_and_duration.get('type')
         duration = type_and_duration.get('duration')
 
@@ -541,6 +544,7 @@ class User(TrendingModelMixin):
                 granted_at=now,
                 expires_at=expires_at,
                 grant_code=grant_code,
+                promotion_code=promotion_code,
             )
         except UserAlreadyGrantedSubscription as err:
             raise UserException(
