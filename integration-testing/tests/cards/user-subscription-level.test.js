@@ -132,5 +132,51 @@ test('Promote user subscription level with promotion code', async () => {
   // we try to use redeem promotion code twice
   await expect(
     ourClient.mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode1}}),
-  ).rejects.toThrow(/ClientError: User .* is already on DIAMOND/)
+  ).rejects.toThrow(/ClientError: User .* has already granted themselves a subscription bonus/)
+})
+
+test('Grant subscription -> Redeem promotion per user', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+
+  // we give ourselves some free diamond
+  await ourClient
+    .mutate({mutation: mutations.grantUserSubscriptionBonus})
+    .then(({data: {grantUserSubscriptionBonus: user}}) => {
+      expect(user.userId).toBe(ourUserId)
+      expect(user.subscriptionLevel).toBe('DIAMOND')
+    })
+  await misc.sleep(2000)
+
+  await expect(ourClient.mutate({mutation: mutations.grantUserSubscriptionBonus})).rejects.toThrow(
+    /ClientError: User .* has already granted themselves a subscription bonus/,
+  )
+
+  await ourClient
+    .mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode3}})
+    .then(({data: {redeemPromotion: user}}) => {
+      expect(user.userId).toBe(ourUserId)
+      expect(user.subscriptionLevel).toBe('DIAMOND')
+    })
+  await misc.sleep(2000)
+
+  await expect(
+    ourClient.mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode1}}),
+  ).rejects.toThrow(/ClientError: User .* has already granted themselves a subscription bonus/)
+})
+
+test('Redeem promotion -> Grant subscription per user', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+
+  await ourClient
+    .mutate({mutation: mutations.redeemPromotion, variables: {code: promotionCode3}})
+    .then(({data: {redeemPromotion: user}}) => {
+      expect(user.userId).toBe(ourUserId)
+      expect(user.subscriptionLevel).toBe('DIAMOND')
+    })
+  await misc.sleep(2000)
+
+  // we give ourselves some free diamond
+  await expect(ourClient.mutate({mutation: mutations.grantUserSubscriptionBonus})).rejects.toThrow(
+    /ClientError: User .* has already granted themselves a subscription bonus/,
+  )
 })

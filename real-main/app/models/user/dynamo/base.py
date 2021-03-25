@@ -293,7 +293,9 @@ class UserDynamo:
         failure_warning = 'User does not exist' if fail_softly else None
         return self.client.update_item(query_kwargs, failure_warning=failure_warning)
 
-    def update_subscription(self, user_id, level, granted_at=None, expires_at=None, grant_code=None):
+    def update_subscription(
+        self, user_id, level, granted_at=None, expires_at=None, grant_code=None, promotion_code=None
+    ):
         assert level != UserSubscriptionLevel.BASIC, "Cannot grant BASIC subscriptions"
         assert (granted_at is None) == (expires_at is None), "Subscriptions expire iff they are granted"
         query_kwargs = {
@@ -328,6 +330,12 @@ class UserDynamo:
             query_kwargs['UpdateExpression'] += ', #sgc = :sgc'
             query_kwargs['ExpressionAttributeNames'].update({'#sgc': 'subscriptionGrantCode'})
             query_kwargs['ExpressionAttributeValues'].update({':sgc': grant_code})
+        if promotion_code is not None:
+            query_kwargs['UpdateExpression'] += ', #pc = :pc'
+            # each user gets max one promotion code
+            query_kwargs['ConditionExpression'] = 'attribute_not_exists(#pc)'
+            query_kwargs['ExpressionAttributeNames'].update({'#pc': 'promotionCode'})
+            query_kwargs['ExpressionAttributeValues'].update({':pc': promotion_code})
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:
