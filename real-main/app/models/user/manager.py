@@ -9,7 +9,7 @@ from functools import partialmethod
 import pendulum
 
 from app import models
-from app.clients import AmplitudeClient
+from app.clients import AmplitudeClient, SesClient
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.appstore.enums import AppStoreSubscriptionStatus
@@ -73,6 +73,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.phone_number_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userPhoneNumber')
         self.placeholder_photos_directory = placeholder_photos_directory
         self.amplitude_client = AmplitudeClient()
+        self.ses_client = SesClient()
 
     @property
     def real_user_id(self):
@@ -548,6 +549,19 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         return contact_id_to_user_id
 
     def on_appstore_sub_status_change_update_subscription(self, original_transaction_id, new_item, old_item=None):
+        old_status = old_item.get('status', None) if old_item else None
+        if (
+            old_status == AppStoreSubscriptionStatus.ACTIVE
+            and new_item['status'] != AppStoreSubscriptionStatus.ACTIVE
+        ):
+            email = self.get_user(new_item['userId']).item.get('email', None)
+            # send email notification
+            if email:
+                self.ses_client.send_email(
+                    recipients=[email],
+                    template_name='failed_appstore_subscription',
+                    subject='Failed appstore subscription',
+                )
         if new_item['status'] == AppStoreSubscriptionStatus.ACTIVE:
             self.dynamo.update_subscription(new_item['userId'], UserSubscriptionLevel.DIAMOND)
         else:
