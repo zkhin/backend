@@ -63,6 +63,9 @@ provider:
     APPLE_AUDIENCE_ID: ${env:AUTHENTICATION_PROVIDER_APPLEID, 'app.real.mobile'}
     TRENDING_POST_MIN_COUNT_TO_KEEP: ${env:TRENDING_POST_MIN_COUNT_TO_KEEP, '1000'}
 
+    SES_EMAIL_SENDER_ADDRESS: ${self:custom.sesSender.address}
+    SES_EMAIL_SENDER_ARN: ${self:custom.sesSender.arn}
+
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -145,6 +148,11 @@ provider:
         - ${self:provider.environment.REAL_DATING_MATCH_STATUS_ARN}
         - ${self:provider.environment.REAL_DATING_SWIPED_RIGHT_USERS_ARN}
         - ${self:provider.environment.REAL_DATING_GET_USER_MATCHES_COUNT_ARN}
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+        - ses:SendRawEmail
+      Resource: '*'
 
   apiKeys:
     - ${self:provider.stackName}-apiKey1
@@ -744,6 +752,7 @@ package:
     - app/**/*.py
     - mapping-templates/**
     - fonts/*.ttf
+    - email_templates/*.html
     - requirements.txt
     - schema.graphql
 

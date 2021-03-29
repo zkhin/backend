@@ -17,6 +17,7 @@ __all__ = [
     'RedeemPromotionClient',
     'S3Client',
     'SecretsManagerClient',
+    'SesClient',
 ]
 from .amplitude import AmplitudeClient
 from .apple import AppleClient
@@ -36,3 +37,4 @@ from .real_dating import RealDatingClient
 from .redeem_promotion import RedeemPromotionClient
 from .s3 import S3Client
 from .secretsmanager import SecretsManagerClient
+from .ses import SesClient
