@@ -260,7 +260,7 @@ def start_change_user_email(caller_user, arguments, **kwargs):
     try:
         caller_user.start_change_contact_attribute('email', email)
     except UserException as err:
-        raise ClientException(str(err)) from err
+        raise ClientException(str(err.args[0]), err.args[1] if len(err.args) > 1 else []) from err
     return caller_user.serialize(caller_user.id)
 
 
@@ -286,7 +286,7 @@ def start_change_user_phone_number(caller_user, arguments, **kwargs):
     try:
         caller_user.start_change_contact_attribute('phone', phone)
     except UserException as err:
-        raise ClientException(str(err)) from err
+        raise ClientException(str(err.args[0]), err.args[1] if len(err.args) > 1 else []) from err
     return caller_user.serialize(caller_user.id)
 
 
