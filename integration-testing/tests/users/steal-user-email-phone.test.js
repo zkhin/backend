@@ -29,4 +29,17 @@ test('Steal user email and phoneNumber exception', async () => {
       variables: {phoneNumber: ourPhoneNumber},
     }),
   ).rejects.toThrow(/GraphQL error: ClientError: User phoneNumber is already used by other/)
+
+  // Check error codes
+  await theirClient
+    .mutate({mutation: mutations.startChangeUserEmail, variables: {email: ourEmail}})
+    .catch((err) => {
+      expect(err.graphQLErrors[0].errorInfo).toEqual(['USER_ALREADY_EXISTS'])
+    })
+
+  await theirClient
+    .mutate({mutation: mutations.startChangeUserPhoneNumber, variables: {phoneNumber: ourPhoneNumber}})
+    .catch((err) => {
+      expect(err.graphQLErrors[0].errorInfo).toEqual(['USER_ALREADY_EXISTS'])
+    })
 })

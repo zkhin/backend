@@ -13,7 +13,7 @@ from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
 from .enums import SubscriptionGrantCode, UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
-from .error_codes import PromotionCodeError, UserDatingMissingError, UserDatingWrongError
+from .error_codes import PromotionCodeError, UserAuthError, UserDatingMissingError, UserDatingWrongError
 from .exceptions import (
     UserAlreadyGrantedSubscription,
     UserException,
@@ -403,7 +403,10 @@ class User(TrendingModelMixin):
         # verify that new attribute value is not used by other
         contact_attr_dynamo = getattr(self, names['dynamo_client'])
         if contact_attr_dynamo.get(attribute_value):
-            raise UserException(f'User {names["dynamo_attr"]} is already used by other')
+            raise UserException(
+                f'User {names["dynamo_attr"]} is already used by other',
+                [UserAuthError.USER_ALREADY_EXISTS],
+            )
 
         # verify that new attribute value & device id are not banned
         self.validate_banned_user(attribute_name, attribute_value)
