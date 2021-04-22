@@ -231,39 +231,55 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             logger.warning(str(err))
             raise UserValidationException(str(err)) from err
 
+        existing_item = self.email_dynamo.get(email)
+        existing_user_id = existing_item['userId'] if existing_item else None
+
         # set the user up in cognito, claims the username at the same time
-        try:
-            self.cognito_client.create_user_pool_entry(user_id, username, verified_email=email)
-        except (
-            # Note: Cognito raises UsernameExistsException for more than just usernames.
-            self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
-            self.cognito_client.user_pool_client.exceptions.AliasExistsException,
-        ) as err:
-            # Not ideal: relying on cognito not to change these exact error messages.
-            if 'Already found an entry for the provided username' in str(err):
-                raise UserValidationException(f'Username `{username}` already taken') from err
-            if 'An account with the email already exists' in str(err):
-                raise UserValidationException(f'Email `{email}` already taken') from err
-            if 'User account already exists' in str(err):
-                raise UserValidationException(f'An account for userId `{user_id}` already exists') from err
-            raise UserValidationException(str(err)) from err
+        if not existing_user_id:
+            try:
+                self.cognito_client.create_user_pool_entry(user_id, username, verified_email=email)
+            except (
+                # Note: Cognito raises UsernameExistsException for more than just usernames.
+                self.cognito_client.user_pool_client.exceptions.UsernameExistsException,
+                self.cognito_client.user_pool_client.exceptions.AliasExistsException,
+            ) as err:
+                # Not ideal: relying on cognito not to change these exact error messages.
+                if 'Already found an entry for the provided username' in str(err):
+                    raise UserValidationException(f'Username `{username}` already taken') from err
+                if 'An account with the email already exists' in str(err):
+                    raise UserValidationException(f'Email `{email}` already taken') from err
+                if 'User account already exists' in str(err):
+                    raise UserValidationException(f'An account for userId `{user_id}` already exists') from err
+                raise UserValidationException(str(err)) from err
 
         tokens = {
-            'cognito_token': self.cognito_client.get_user_pool_tokens(user_id)['IdToken'],
+            'cognito_token': self.cognito_client.get_user_pool_tokens(
+                existing_user_id if existing_user_id else user_id
+            )['IdToken'],
             provider + '_token': token,
         }
         try:
-            self.cognito_client.link_identity_pool_entries(user_id, **tokens)
+            self.cognito_client.link_identity_pool_entries(
+                existing_user_id if existing_user_id else user_id, **tokens
+            )
         except Exception as err:
             # try to clean up: remove the user from cognito
             self.cognito_client.delete_user_pool_entry(user_id)
             raise UserException(f'Failed to link identity pool entries: {err}') from err
 
-        # create new user in the DB, have them follow the real user if they exist
-        photo_code = self.get_random_placeholder_photo_code()
-        item = self.dynamo.add_user(
-            user_id, username, full_name=full_name, email=email, placeholder_photo_code=photo_code
-        )
+        # create new user in the DB if it is not recorded, have them follow the real user if they exist
+        if not existing_user_id:
+            photo_code = self.get_random_placeholder_photo_code()
+            item = self.dynamo.add_user(
+                user_id,
+                username,
+                full_name=full_name,
+                email=email,
+                placeholder_photo_code=photo_code,
+                status=UserStatus.ACTIVE,
+            )
+        else:
+            item = self.dynamo.get_user(existing_user_id)
         user = self.init_user(item)
         return user
 
