@@ -43,9 +43,9 @@ class Migration:
     def migrate_user(self, user):
         user_id = user['userId']
         logger.warning(f'User `{user_id}`: starting migration')
-        if (email := user.get('email')) :
+        if email := user.get('email'):
             self.pinpoint_update_endpoint(user_id, 'EMAIL', email)
-        if (phone := user.get('phoneNumber')) :
+        if phone := user.get('phoneNumber'):
             self.pinpoint_update_endpoint(user_id, 'SMS', phone)
         self.dynamo_update_user(user_id)
 

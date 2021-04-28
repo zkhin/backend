@@ -597,7 +597,7 @@ class User(TrendingModelMixin):
         }
         if self.subscription_level == UserSubscriptionLevel.BASIC:
             required_fields.add('matchLocationRadius')
-        if (missing := required_fields - set(self.item.keys())) :
+        if missing := required_fields - set(self.item.keys()):
             raise UserException(
                 f'`{missing}` required to enable dating', [UserDatingMissingError[k].value for k in missing]
             )
