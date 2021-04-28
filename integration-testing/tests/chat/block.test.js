@@ -226,7 +226,7 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   expect(resp.data.chat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 })
 
-test('Test create a group chat with two users that have a blocking relationship between them', async () => {
+test('A group chat with two users that have a blocking relationship between them', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
   const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
