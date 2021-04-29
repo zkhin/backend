@@ -23,6 +23,7 @@ aws-xray-sdk = "^2.5.0"
 stringcase = "^1.2.0"
 pyjwt = "^1.7.1"
 amplitude-python = "^0.13"
+requests-mock = "~1.8.0"
 
 [tool.poetry.dev-dependencies]
 

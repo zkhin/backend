@@ -237,8 +237,8 @@ requests = ">=2.12,<3"
 six = ">=1.10.0"
 
 [package.extras]
-dev = ["flake8 (==3.7.9)", "isort (<4.0.0)", "black (==19.10b0)", "mypy (==0.761)", "check-manifest (>=0.40,<1)", "coveralls (==1.11.1)", "pytest-cov (==2.8.1)", "mock (==3.0.5)", "vcrpy (==3.0.0)", "pytest (==5.4.1)", "pytest-asyncio (==0.11.0)"]
-test = ["coveralls (==1.11.1)", "pytest-cov (==2.8.1)", "mock (==3.0.5)", "vcrpy (==3.0.0)", "pytest (==5.4.1)", "pytest-asyncio (==0.11.0)"]
+dev = ["flake8 (==3.7.9)", "check-manifest (>=0.40,<1)", "coveralls (==1.11.1)", "pytest (==4.6.9)", "pytest-cov (==2.8.1)", "mock (==3.0.5)", "vcrpy (==3.0.0)"]
+test = ["coveralls (==1.11.1)", "pytest (==4.6.9)", "pytest-cov (==2.8.1)", "mock (==3.0.5)", "vcrpy (==3.0.0)"]
 
 [[package]]
 name = "graphql-core"
@@ -791,7 +791,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "04eddec3f8755eba3ec428797ec96a13ab4fbb85df8c9938ed5f7bfde5846f53"
+content-hash = "0c06287fdd1cd372eb7c963bf32066b38aa16c92e08a3d0a84f9953ff5b4a827"
 
 [metadata.files]
 amplitude-python = [
@@ -866,6 +866,7 @@ chardet = [
 ]
 colorama = [
     {file = "colorama-0.4.4-py2.py3-none-any.whl", hash = "sha256:9f47eda37229f68eee03b24b9748937c7dc3868f906e8ba69fbcbdd3bc5dc3e2"},
+    {file = "colorama-0.4.4.tar.gz", hash = "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b"},
 ]
 colorthief = [
     {file = "colorthief-0.2.1-py2.py3-none-any.whl", hash = "sha256:b04fc8ce5cf9c888768745e29cb19b7b688d5711af6fba26e8057debabec56b9"},
@@ -919,7 +920,6 @@ google-auth = [
     {file = "google_auth-1.13.1-py2.py3-none-any.whl", hash = "sha256:cab6c707e6ee20e567e348168a5c69dc6480384f777a9e5159f4299ad177dcc0"},
 ]
 gql = [
-    {file = "gql-0.4.0-py2.py3-none-any.whl", hash = "sha256:6ecbb91ec321f867b3c4a9ddd9bab09f7eacffd8c0f86b3bda7809b6feee3f95"},
     {file = "gql-0.4.0.tar.gz", hash = "sha256:259b0c66d8dfe61feb06fe45b57713da0fe2e5ca13fa500a1fafc9bf2f195e81"},
 ]
 graphql-core = [
@@ -1041,8 +1041,6 @@ pillow = [
     {file = "Pillow-7.2.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:5e51ee2b8114def244384eda1c82b10e307ad9778dac5c83fb0943775a653cd8"},
     {file = "Pillow-7.2.0-cp38-cp38-win32.whl", hash = "sha256:725aa6cfc66ce2857d585f06e9519a1cc0ef6d13f186ff3447ab6dff0a09bc7f"},
     {file = "Pillow-7.2.0-cp38-cp38-win_amd64.whl", hash = "sha256:a060cf8aa332052df2158e5a119303965be92c3da6f2d93b6878f0ebca80b2f6"},
-    {file = "Pillow-7.2.0-pp36-pypy36_pp73-macosx_10_10_x86_64.whl", hash = "sha256:9c87ef410a58dd54b92424ffd7e28fd2ec65d2f7fc02b76f5e9b2067e355ebf6"},
-    {file = "Pillow-7.2.0-pp36-pypy36_pp73-manylinux2010_x86_64.whl", hash = "sha256:e901964262a56d9ea3c2693df68bc9860b8bdda2b04768821e4c44ae797de117"},
     {file = "Pillow-7.2.0-pp36-pypy36_pp73-win32.whl", hash = "sha256:25930fadde8019f374400f7986e8404c8b781ce519da27792cbe46eabec00c4d"},
     {file = "Pillow-7.2.0.tar.gz", hash = "sha256:97f9e7953a77d5a70f49b9a48da7776dc51e9b738151b22dacf101641594a626"},
 ]
@@ -1091,7 +1089,6 @@ pygments = [
     {file = "Pygments-2.7.3.tar.gz", hash = "sha256:ccf3acacf3782cbed4a989426012f1c535c9a90d3a7fc3f16d231b9372d2b716"},
 ]
 pyheif = [
-    {file = "pyheif-0.5.1-cp36-cp36m-manylinux2014_armv7l.whl", hash = "sha256:5345bd60dd2f23df17f4baac2ca9ffd278aa15336f01cfd4584f89d513c1d500"},
     {file = "pyheif-0.5.1-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:6e998cd4730e7c091f1d84ce23902ab873afca3b1458552700c89dbe0a85e716"},
     {file = "pyheif-0.5.1-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:ee1f757bf097cfc00a26dac8ac14de754727c7df53dcc1d79fdc6e36d4b941fe"},
     {file = "pyheif-0.5.1-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:0c25951387bea808b50c09215ddf828cfb6d834ca7bec652151272e53a809288"},
