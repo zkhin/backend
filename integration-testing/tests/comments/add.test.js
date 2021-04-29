@@ -72,7 +72,7 @@ test('Add a comments', async () => {
   expect(resp.data.post.comments.items[1].text).toBe(theirText)
 })
 
-test('Verify commentIds cannot be re-used ', async () => {
+test('Verify commentIds cannot be re-used', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
