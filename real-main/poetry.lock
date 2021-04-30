@@ -1076,7 +1076,7 @@ requests = "*"
 
 [[package]]
 name = "requests-mock"
-version = "1.8.0"
+version = "1.9.2"
 description = "Mock out responses from the requests package"
 category = "dev"
 optional = false
@@ -1361,7 +1361,7 @@ testing = ["pathlib2", "contextlib2", "unittest2"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "9fe13e49cb9911108b8263e9d9d4ed7f3d198a327a0f89fa32840a519dd25b6a"
+content-hash = "c234e91cd6874d8a64099503bea732d1c4d99ec7cad21f5a59eb5478733fe7c3"
 
 [metadata.files]
 amplitude-python = [
@@ -1947,8 +1947,8 @@ requests-aws4auth = [
     {file = "requests_aws4auth-0.9-py2.py3-none-any.whl", hash = "sha256:e20e4941ccd5706973068f9214d40cb2e669461536b3a57b9ac824ae87744c2c"},
 ]
 requests-mock = [
-    {file = "requests-mock-1.8.0.tar.gz", hash = "sha256:e68f46844e4cee9d447150343c9ae875f99fa8037c6dcf5f15bf1fe9ab43d226"},
-    {file = "requests_mock-1.8.0-py2.py3-none-any.whl", hash = "sha256:11215c6f4df72702aa357f205cf1e537cffd7392b3e787b58239bde5fb3db53b"},
+    {file = "requests-mock-1.9.2.tar.gz", hash = "sha256:33296f228d8c5df11a7988b741325422480baddfdf5dd9318fd0eb40c3ed8595"},
+    {file = "requests_mock-1.9.2-py2.py3-none-any.whl", hash = "sha256:5c8ef0254c14a84744be146e9799dc13ebc4f6186058112d9aeed96b131b58e2"},
 ]
 requests-toolbelt = [
     {file = "requests-toolbelt-0.9.1.tar.gz", hash = "sha256:968089d4584ad4ad7c171454f0a5c6dac23971e9472521ea3b6d49d610aa6fc0"},
