@@ -25,7 +25,7 @@ To deploy each serverless stack, run `yarn deploy` in that stack's root director
 
 ### AWS Credentials
 
-By default, serverless will use aws credentials stored in the profile with name `real-{stage}` (ie: `real-dev`, `real-staging`, or `real-production`). This behavior can be overridden by using the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option.
+If the aws `default` profile exists in your `~/.aws/credentials`, serverless will use it. Else, you can use the [`--aws-profile`](https://serverless.com/framework/docs/providers/aws/guide/credentials/#using-aws-profiles) option or explicitly set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
 Serverless expects the AWS credentials to have `AdministratorAccess` policy attached.
 
