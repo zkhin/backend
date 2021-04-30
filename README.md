@@ -109,6 +109,14 @@ _Once per deployment_
 
 Please talk to the backend team lead to get access to these stacks.
 
+#### `bad-words`
+
+_Required, must be deployed before `real-main`_
+
+#### `promo-codes`
+
+_Required, must be deployed before `real-main`_
+
 #### `themes`
 
 _Required, must be deployed before `real-main`_
