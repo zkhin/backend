@@ -17,6 +17,7 @@ afterAll(async () => await loginCache.reset())
 test('Cards are private to user themselves', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+  await misc.sleep(1000)
 
   // verify we see our zero cards and count on self
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
@@ -47,6 +48,7 @@ test('Cards are private to user themselves', async () => {
 test('List cards', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+  await misc.sleep(1000)
 
   // verify list & count for no cards
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
@@ -117,7 +119,7 @@ test('Delete card, generate new card after deleting', async () => {
       variables: {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'},
     })
     .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
-  await misc.sleep(2000) // dynamo
+  await misc.sleep(3000) // dynamo
   const card = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
     expect(user.cardCount).toBe(2)

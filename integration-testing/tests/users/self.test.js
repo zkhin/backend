@@ -1,6 +1,7 @@
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')
 const loginCache = new cognito.AppSyncLoginCache()
+const misc = require('../../utils/misc')
 jest.retryTimes(1)
 
 beforeAll(async () => {
@@ -11,6 +12,7 @@ afterAll(async () => await loginCache.reset())
 
 test('Query.self for user that exists, matches Query.user', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  await misc.sleep(3000)
 
   const selfItem = await ourClient.query({query: queries.self}).then(({data}) => {
     expect(data.self.userId).toBe(ourUserId)
