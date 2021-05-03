@@ -37,18 +37,27 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we set some details on our profile
-  resp = await ourClient.mutate({
-    mutation: mutations.setUserDetails,
-    variables: {
-      photoPostId: postId,
-      bio: 'testing',
-      fullName: 'test test',
-      dateOfBirth: '2020-01-09',
-      gender: 'FEMALE',
-    },
-  })
-  variables = {version: 'v2020-01-01.1'}
-  resp = await ourClient.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables})
+  await ourClient
+    .mutate({
+      mutation: mutations.setUserDetails,
+      variables: {
+        photoPostId: postId,
+        bio: 'testing',
+        fullName: 'test test',
+        dateOfBirth: '2020-01-09',
+        gender: 'FEMALE',
+      },
+    })
+    .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(ourUserId))
+  await ourClient
+    .mutate({mutation: mutations.setThemeCode, variables: {themeCode: 'black.green'}})
+    .then(({data: {setThemeCode: user}}) => expect(user.themeCode).toBe('black.green'))
+  await ourClient
+    .mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: 'v2020-01-01.1'}})
+    .then(({data: {setUserAcceptedEULAVersion: user}}) => expect(user.acceptedEULAVersion).toBe('v2020-01-01.1'))
+
+  // let dynamo stream processor catch up
+  await misc.sleep(3000)
 
   // retrieve our user object
   resp = await ourClient.query({query: queries.self})
