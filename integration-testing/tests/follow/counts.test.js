@@ -93,7 +93,7 @@ test('Follow counts private user', async () => {
   // u1 requests to follow u2
   resp = await u1Client.mutate({mutation: mutations.followUser, variables: {userId: u2UserId}})
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000) // dynamo
   resp = await u2Client.query({query: queries.self})
   expect(resp.data.self.followerCount).toBe(0)
   expect(resp.data.self.followersCount).toBe(0)
@@ -137,7 +137,7 @@ test('Follow counts private user', async () => {
   // u2 now denies the follow request, counts go down
   resp = await u2Client.mutate({mutation: mutations.denyFollowerUser, variables: {userId: u1UserId}})
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
-  await misc.sleep(1000) // dynamo
+  await misc.sleep(2000) // dynamo
   resp = await u2Client.query({query: queries.self})
   expect(resp.data.self.followerCount).toBe(0)
   expect(resp.data.self.followersCount).toBe(0)
