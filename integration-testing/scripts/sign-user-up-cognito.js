@@ -6,7 +6,7 @@ const moment = require('moment')
 const prmt = require('prompt')
 const pwdGenerator = require('generate-password')
 const util = require('util')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 dotenv.config()
 

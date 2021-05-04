@@ -15,7 +15,7 @@ const jwtDecode = require('jwt-decode')
 const md5 = require('md5')
 const path = require('path')
 const pwdGenerator = require('generate-password')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 const {mutations, queries} = require('../schema')
 const misc = require('./misc')

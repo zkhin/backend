@@ -1,5 +1,5 @@
 const got = require('got')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 const cognito = require('../../utils/cognito')
 const misc = require('../../utils/misc')

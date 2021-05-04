@@ -1,7 +1,7 @@
 const fs = require('fs')
 const got = require('got')
 const path = require('path')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 const cognito = require('../../utils/cognito')
 const {mutations, queries} = require('../../schema')

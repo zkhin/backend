@@ -3,7 +3,7 @@ const got = require('got')
 const moment = require('moment')
 const path = require('path')
 const tough = require('tough-cookie')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')

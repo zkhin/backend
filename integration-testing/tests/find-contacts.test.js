@@ -2,7 +2,7 @@ const moment = require('moment')
 const cognito = require('../utils/cognito')
 const misc = require('../utils/misc')
 const {queries, mutations} = require('../schema')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 const loginCache = new cognito.AppSyncLoginCache()
 jest.retryTimes(1)

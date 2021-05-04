@@ -1,7 +1,7 @@
 const AWS = require('aws-sdk')
 const dotenv = require('dotenv')
 const pwdGenerator = require('generate-password')
-const uuidv4 = require('uuid/v4')
+const {v4: uuidv4} = require('uuid')
 
 jest.retryTimes(1)
 dotenv.config()
