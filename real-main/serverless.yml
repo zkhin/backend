@@ -180,7 +180,7 @@ custom:
     caching:
       behavior: PER_RESOLVER_CACHING
     logConfig:
-      level: ERROR
+      level: ALL
     substitutions:
       dynamoTable: ${self:provider.environment.DYNAMO_TABLE}
       realUserId: ${self:provider.environment.REAL_USER_ID}
