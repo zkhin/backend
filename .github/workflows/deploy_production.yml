@@ -6,22 +6,49 @@ on:
 
 jobs:
   production-deploy:
-    name: production-deploy
+    name: Deploy to production
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [12.x]
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-    - name: serverless install
-      run: |
-        cd real-main && yarn install
-    - name: serverless deploy
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.PRODUCTION_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY }}
-      run: cd real-main && yarn deploy --stage production
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: Load cached directories
+        uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.1.4
+
+      - name: Install packages real-lambda-layers
+        run: yarn install
+        working-directory: real-lambda-layers
+
+      - name: Install packages real-main
+        run: yarn install
+        working-directory: real-main
+
+      - name: Deploy real-lambda-layers
+        run: yarn deploy --stage production
+        working-directory: real-lambda-layers
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.PRODUCTION_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Deploy real-main
+        run: yarn deploy --stage production
+        working-directory: real-main
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.PRODUCTION_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY }}
