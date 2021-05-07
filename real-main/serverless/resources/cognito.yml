@@ -142,6 +142,27 @@ Resources:
         - Name: unverified_phone
           AttributeDataType: String
           Mutable: true
+        - Name: subscriber_until
+          AttributeDataType: String
+          Mutable: true
+        - Name: plan_id
+          AttributeDataType: String
+          Mutable: true
+        - Name: payment_status
+          AttributeDataType: String
+          Mutable: true
+        - Name: payment_attempts
+          AttributeDataType: Number
+          Mutable: true
+        - Name: seed
+          AttributeDataType: Number
+          Mutable: false
+        - Name: saved_prices
+          AttributeDataType: String
+          Mutable: true
+        - Name: promo
+          AttributeDataType: String
+          Mutable: true
 
   # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cognito-userpoolclient.html
   CognitoBackendUserPoolClient:
@@ -225,9 +246,15 @@ Resources:
       ReadAttributes:
         - email
         - phone_number
+        - custom:subscriber_until
+        - custom:plan_id
+        - custom:seed
+        - custom:saved_prices
+        - custom:promo
       WriteAttributes:
         - email
         - phone_number
+        - custom:seed
 
 Outputs:
 
