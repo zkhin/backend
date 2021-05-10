@@ -877,12 +877,6 @@ type PaginatedPosts {
   nextToken: String
 }
 
-type PaginatedTrendingPosts {
-  # Set the optional arguments to filter down the set of returned posts
-  items(viewedStatus: ViewedStatus, isVerified: Boolean): [Post!]!
-  nextToken: String
-}
-
 # DEPRECATED
 type PostNotification {
   userId: ID!  # user this notification is intended for
