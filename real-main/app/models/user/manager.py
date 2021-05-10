@@ -620,3 +620,13 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 total_cnt += 1
 
         return total_cnt
+
+    def on_user_jumio_response_update_id_verification_status(self, user_id, new_item, old_item=None):
+        jumio_response = new_item.get('jumioResponse', {})
+        if jumio_response.get('verificationStatus') == 'APPROVED_VERIFIED':
+            self.dynamo.set_id_verification_status(user_id, True)
+        else:
+            self.dynamo.set_id_verification_status(user_id, False)
+
+    def set_id_verification_callback(self, user_id, response):
+        self.dynamo.set_id_verification_callback(user_id, response)

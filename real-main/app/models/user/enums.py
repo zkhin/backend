@@ -41,3 +41,10 @@ class SubscriptionGrantCode:
     FREE_FOR_LIFE = 'FREE_FOR_LIFE'
 
     _ALL = FREE_FOR_LIFE
+
+
+class IdVerificationImageType:
+    JPEG = 'JPEG'
+    PNG = 'PNG'
+
+    _ALL = (JPEG, PNG)

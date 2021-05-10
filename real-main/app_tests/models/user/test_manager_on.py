@@ -520,3 +520,39 @@ def test_on_user_change_log_amplitude_event_user_edit(user_manager, user):
         call.build_event(user.id, 'UPDATE_USER_PRIVACYSTATUS', new_item),
         call.send_events(events),
     ]
+
+
+def test_on_user_jumio_response_update_id_verification_status(user_manager, user):
+    assert 'idVerificationStatus' not in user.item
+    assert 'jumioResponse' not in user.item
+
+    # set reponse
+    response_1 = {
+        'jumioIdScanReference': 'test_id_1',
+        'verificationStatus': 'APPROVED_VERIFIED',
+        'rejectReason': 'reason_1',
+    }
+    user_manager.set_id_verification_callback(user.id, response_1)
+    assert user.refresh_item().item['jumioResponse'] == response_1
+
+    user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
+    assert user.refresh_item().item['idVerificationStatus'] == True
+
+    # set reponse
+    response_2 = {
+        'jumioIdScanReference': 'test_id_1',
+        'verificationStatus': 'NOT_APPROVED_VERIFIED',
+        'rejectReason': 'reason_1',
+    }
+    user_manager.set_id_verification_callback(user.id, response_2)
+    assert user.refresh_item().item['jumioResponse'] == response_2
+
+    user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
+    assert 'idVerificationStatus' not in user.refresh_item().item
+    
+    # delete it
+    user_manager.set_id_verification_callback(user.id, None)
+    assert 'jumioResponse' not in user.refresh_item().item
+
+    user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
+    assert 'idVerificationStatus' not in user.refresh_item().item
