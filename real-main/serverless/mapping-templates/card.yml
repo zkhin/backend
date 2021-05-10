@@ -6,3 +6,4 @@
   caching:
     keys:
       - $context.source.postId
+    ttl: 3600

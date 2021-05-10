@@ -8,11 +8,23 @@
     - Users.batchGet.blockerStatus
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.textTags
 
 - type: Comment
   field: viewedStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId  # Comment.viewedStatus is post-wide, apparently
 
 - type: Comment
   field: flagStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.commentId

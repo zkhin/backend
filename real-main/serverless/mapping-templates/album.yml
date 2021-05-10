@@ -6,6 +6,7 @@
   caching:
     keys:
       - $context.source.artHash
+    ttl: 3600
 
 - type: Album
   field: postCount
@@ -15,3 +16,8 @@
 - type: Album
   field: posts
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.source.albumId

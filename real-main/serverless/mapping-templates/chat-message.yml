@@ -10,6 +10,10 @@
   kind: PIPELINE
   functions:
     - Chats.batchGet
+  caching:
+    keys:
+      - $context.source.chatId
+    ttl: 3600
 
 - type: ChatMessage
   field: textTaggedUsers
@@ -21,11 +25,23 @@
     - Users.batchGet.blockerStatus
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.textTags
 
 - type: ChatMessage
   field: viewedStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.chatId  # ChatMessage.viewedStatus is chat-wide, apparently
 
 - type: ChatMessage
   field: flagStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.messageId

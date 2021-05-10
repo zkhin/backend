@@ -179,6 +179,7 @@ custom:
     authenticationType: AWS_IAM
     caching:
       behavior: PER_RESOLVER_CACHING
+      ttl: 1
     logConfig:
       level: ALL
     substitutions:

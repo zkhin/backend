@@ -1,6 +1,9 @@
 - type: Query
   field: usernameStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.username
 
 - type: Query
   field: self
@@ -9,6 +12,9 @@
   kind: PIPELINE
   functions:
     - Users.batchGet
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
 
 - type: Query
   field: user
@@ -19,14 +25,27 @@
     - Users.batchGet
     - Users.batchGet.blockerStatus
     - Users.batchGet.followedStatus
+  caching:
+    keys:
+      - $context.args.userId
+      - $context.identity.cognitoIdentityId
 
 - type: Query
   field: searchUsers
   dataSource: ElasticSearchDataSource
+  caching:
+    keys:
+      - $context.args.searchToken
+      - $context.args.limit
+      - $context.args.nextToken
 
 - type: Query
   field: trendingUsers
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
 
 - type: Query
   field: findContacts
@@ -49,10 +68,18 @@
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus
     - Users.endPipeline
+  caching:
+    keys:
+      - $context.args.postId
+      - $context.identity.cognitoIdentityId
 
 - type: Query
   field: trendingPosts
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
 
 - type: Query
   field: album
@@ -68,6 +95,10 @@
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus
     - Users.endPipeline
+  caching:
+    keys:
+      - $context.args.albumId
+      - $context.identity.cognitoIdentityId
 
 - type: Query
   field: chat
@@ -78,6 +109,10 @@
     - ChatMemberships.batchGet
     - Query.chat.transform
     - Chats.batchGet
+  caching:
+    keys:
+      - $context.args.chatId
+      - $context.identity.cognitoIdentityId
 
 - type: Query
   field: findPosts

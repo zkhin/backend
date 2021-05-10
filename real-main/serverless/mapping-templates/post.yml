@@ -1,14 +1,26 @@
 - type: Post
   field: flagStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: likeStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: viewedStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: originalPost
@@ -25,6 +37,10 @@
     - Users.batchGet.followedStatus
     - Users.filterBy.followedStatus
     - Users.endPipeline
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: viewedByCount
@@ -34,6 +50,12 @@
 - type: Post
   field: viewedBy
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: commentsDisabled
@@ -68,6 +90,12 @@
 - type: Post
   field: onymouslyLikedBy
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: textTaggedUsers
@@ -79,6 +107,10 @@
     - Users.batchGet.blockerStatus
     - Users.filterBy.blockerStatus
     - Users.batchGet.followedStatus
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.textTags
 
 - type: Post
   field: commentCount
@@ -94,10 +126,20 @@
   field: comments
   dataSource: DynamodbDataSource
   response: PassThru.response.vtl
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.args.reverse
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
 
 - type: Post
   field: album
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.source.albumId
 
 - type: Post
   field: image
@@ -108,24 +150,40 @@
     keys:
       - $context.source.postId
       - $context.source.postStatus
+    ttl: 3600
 
 - type: Post
   field: imageUploadUrl
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
+      - $context.source.postStatus
 
 - type: Post
   field: video
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl
+  caching:
+    keys:
+      - $context.source.postId
+      - $context.source.postStatus
+    ttl: 3600
 
 - type: Post
   field: videoUploadUrl
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.postId
+      - $context.source.postStatus
 
 - type: Post
   field: hasNewCommentActivity

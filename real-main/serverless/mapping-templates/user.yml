@@ -6,10 +6,15 @@
   caching:
     keys:
       - $context.source.photoPostId
+    ttl: 3600
 
 - type: User
   field: followerStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: followCountsHidden
@@ -39,14 +44,34 @@
 - type: User
   field: followedUsers
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.followStatus
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: followedUsersWithStories
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: followerUsers
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.followStatus
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: postCount
@@ -121,6 +146,10 @@
 - type: User
   field: blockedStatus
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: viewCountsHidden
@@ -130,22 +159,54 @@
 - type: User
   field: feed
   dataSource: DynamodbFeedDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: stories
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: posts
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.postStatus
+      - $context.args.postType
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: postsWithUnviewedComments
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: postsByNewCommentActivity
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: postViewedByCount
@@ -157,16 +218,34 @@
   dataSource: DynamodbDataSource
   request: User.likedPosts.request.vtl
   response: User.likedPosts.response.vtl
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: anonymouslyLikedPosts
   dataSource: DynamodbDataSource
   request: User.likedPosts.request.vtl
   response: User.likedPosts.response.vtl
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: blockedUsers
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: cardCount
@@ -176,6 +255,12 @@
 - type: User
   field: cards
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: albumCount
@@ -185,6 +270,13 @@
 - type: User
   field: albums
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.args.reverse
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: chatCount
@@ -199,10 +291,20 @@
 - type: User
   field: chats
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: directChat
   dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: location 
@@ -237,10 +339,21 @@
 - type: User
   field: matchStatus
   dataSource: DynamodbMatchesDataSource
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: matchedUsers
   dataSource: DynamodbMatchesDataSource
+  caching:
+    keys:
+      - $context.args.matchStatus
+      - $context.args.limit
+      - $context.args.nextToken
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
 
 - type: User
   field: lastFoundContactsAt

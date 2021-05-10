@@ -7,3 +7,7 @@
     - Users.batchGet
     - Users.batchGet.blockerStatus
     - Users.batchGet.followedStatus
+  caching:
+    keys:
+      - $context.identity.cognitoIdentityId
+      - $context.source.userId
