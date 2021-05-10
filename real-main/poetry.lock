@@ -1,33 +1,10 @@
 [[package]]
-name = "amplitude-python"
-version = "0.13"
-description = ""
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-nose = "*"
-requests = "*"
-requests-mock = {version = "*", extras = ["fixture"]}
-testtools = "*"
-twine = "*"
-
-[[package]]
 name = "apipkg"
 version = "1.5"
 description = "apipkg: namespace control and lazy-import mechanism"
 category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-
-[[package]]
-name = "argparse"
-version = "1.4.0"
-description = "Python command-line parsing library"
-category = "dev"
-optional = false
-python-versions = "*"
 
 [[package]]
 name = "atomicwrites"
@@ -80,19 +57,6 @@ botocore = ">=1.11.3"
 future = "*"
 jsonpickle = "*"
 wrapt = "*"
-
-[[package]]
-name = "bleach"
-version = "3.2.1"
-description = "An easy safelist-based HTML-sanitizing tool."
-category = "dev"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-
-[package.dependencies]
-packaging = "*"
-six = ">=1.9.0"
-webencodings = "*"
 
 [[package]]
 name = "boto"
@@ -326,31 +290,6 @@ apipkg = ">=1.4"
 testing = ["pre-commit"]
 
 [[package]]
-name = "extras"
-version = "1.0.0"
-description = "Useful extra bits for Python - things that shold be in the standard library"
-category = "dev"
-optional = false
-python-versions = "*"
-
-[[package]]
-name = "fixtures"
-version = "3.0.0"
-description = "Fixtures, reusable state for writing clean tests and more."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-pbr = ">=0.11"
-six = "*"
-testtools = ">=0.9.22"
-
-[package.extras]
-docs = ["docutils"]
-test = ["mock"]
-
-[[package]]
 name = "future"
 version = "0.18.2"
 description = "Clean single-source support for Python 3 and 2"
@@ -437,17 +376,6 @@ description = "iniconfig: brain-dead simple config-ini parsing"
 category = "dev"
 optional = false
 python-versions = "*"
-
-[[package]]
-name = "jeepney"
-version = "0.6.0"
-description = "Low-level, pure Python DBus protocol wrapper."
-category = "dev"
-optional = false
-python-versions = ">=3.6"
-
-[package.extras]
-test = ["pytest", "pytest-trio", "pytest-asyncio", "testpath", "trio"]
 
 [[package]]
 name = "jinja2"
@@ -541,31 +469,6 @@ python-versions = "*"
 
 [package.dependencies]
 six = "*"
-
-[[package]]
-name = "keyring"
-version = "21.7.0"
-description = "Store and access your passwords safely."
-category = "dev"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-jeepney = {version = ">=0.4.2", markers = "sys_platform == \"linux\""}
-pywin32-ctypes = {version = "<0.1.0 || >0.1.0,<0.1.1 || >0.1.1", markers = "sys_platform == \"win32\""}
-SecretStorage = {version = ">=3.2", markers = "sys_platform == \"linux\""}
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
-testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "jaraco.test (>=3.2.0)", "pytest-black (>=0.3.7)", "pytest-mypy"]
-
-[[package]]
-name = "linecache2"
-version = "1.0.0"
-description = "Backports of the linecache module"
-category = "dev"
-optional = false
-python-versions = "*"
 
 [[package]]
 name = "markupsafe"
@@ -672,14 +575,6 @@ pyyaml = ["pyyaml"]
 scipy = ["scipy"]
 
 [[package]]
-name = "nose"
-version = "1.3.7"
-description = "nose extends unittest to make testing easier"
-category = "dev"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "packaging"
 version = "20.1"
 description = "Core utilities for Python packages"
@@ -690,14 +585,6 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 [package.dependencies]
 pyparsing = ">=2.0.2"
 six = "*"
-
-[[package]]
-name = "pbr"
-version = "5.5.1"
-description = "Python Build Reasonableness"
-category = "dev"
-optional = false
-python-versions = ">=2.6"
 
 [[package]]
 name = "pendulum"
@@ -718,17 +605,6 @@ description = "Python Imaging Library (Fork)"
 category = "dev"
 optional = false
 python-versions = ">=3.5"
-
-[[package]]
-name = "pkginfo"
-version = "1.6.1"
-description = "Query metadatdata from sdists / bdists / installed packages."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.extras]
-testing = ["nose", "coverage"]
 
 [[package]]
 name = "pluggy"
@@ -789,14 +665,6 @@ description = "C parser in Python"
 category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-
-[[package]]
-name = "pygments"
-version = "2.7.3"
-description = "Pygments is a syntax highlighting package written in Python."
-category = "dev"
-optional = false
-python-versions = ">=3.5"
 
 [[package]]
 name = "pyheif"
@@ -981,14 +849,6 @@ pycrypto = ["pycrypto (>=2.6.0,<2.7.0)", "pyasn1"]
 pycryptodome = ["pycryptodome (>=3.3.1,<4.0.0)", "pyasn1"]
 
 [[package]]
-name = "python-mimeparse"
-version = "1.6.0"
-description = "A module provides basic functions for parsing mime-type names and matching them against a list of media-ranges."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "pytz"
 version = "2020.1"
 description = "World timezone definitions, modern and historical"
@@ -1013,37 +873,12 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "pywin32-ctypes"
-version = "0.2.0"
-description = ""
-category = "dev"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "pyyaml"
 version = "5.3.1"
 description = "YAML parser and emitter for Python"
 category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-
-[[package]]
-name = "readme-renderer"
-version = "28.0"
-description = "readme_renderer is a library for rendering \"readme\" descriptions for Warehouse"
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-bleach = ">=2.1.0"
-docutils = ">=0.13.1"
-Pygments = ">=2.5.1"
-six = "*"
-
-[package.extras]
-md = ["cmarkgfm (>=0.2.0)"]
 
 [[package]]
 name = "requests"
@@ -1083,24 +918,12 @@ optional = false
 python-versions = "*"
 
 [package.dependencies]
-fixtures = {version = "*", optional = true, markers = "extra == \"fixture\""}
 requests = ">=2.3,<3"
 six = "*"
 
 [package.extras]
 fixture = ["fixtures"]
 test = ["fixtures", "mock", "purl", "pytest", "sphinx", "testrepository (>=0.0.18)", "testtools"]
-
-[[package]]
-name = "requests-toolbelt"
-version = "0.9.1"
-description = "A utility belt for advanced users of python-requests"
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-requests = ">=2.0.1,<3.0.0"
 
 [[package]]
 name = "responses"
@@ -1116,17 +939,6 @@ six = "*"
 
 [package.extras]
 tests = ["coverage (>=3.7.1,<5.0.0)", "pytest-cov", "pytest-localserver", "flake8", "pytest (>=4.6,<5.0)", "pytest"]
-
-[[package]]
-name = "rfc3986"
-version = "1.4.0"
-description = "Validating URI References per RFC 3986"
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.extras]
-idna2008 = ["idna"]
 
 [[package]]
 name = "rsa"
@@ -1157,18 +969,6 @@ python-versions = "*"
 
 [package.dependencies]
 botocore = ">=1.12.36,<2.0.0"
-
-[[package]]
-name = "secretstorage"
-version = "3.3.0"
-description = "Python bindings to FreeDesktop.org Secret Service API"
-category = "dev"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-cryptography = ">=2.0"
-jeepney = ">=0.6"
 
 [[package]]
 name = "six"
@@ -1202,86 +1002,12 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "testtools"
-version = "2.4.0"
-description = "Extensions to the Python standard library unit testing framework"
-category = "dev"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-
-[package.dependencies]
-extras = ">=1.0.0"
-fixtures = ">=1.3.0"
-pbr = ">=0.11"
-python-mimeparse = "*"
-six = ">=1.4.0"
-traceback2 = "*"
-unittest2 = ">=1.0.0"
-
-[package.extras]
-test = ["testresources", "testscenarios", "unittest2 (>=1.1.0)"]
-
-[[package]]
 name = "toml"
 version = "0.10.1"
 description = "Python Library for Tom's Obvious, Minimal Language"
 category = "dev"
 optional = false
 python-versions = "*"
-
-[[package]]
-name = "tqdm"
-version = "4.55.0"
-description = "Fast, Extensible Progress Meter"
-category = "dev"
-optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
-
-[package.extras]
-dev = ["py-make (>=0.1.0)", "twine", "wheel"]
-telegram = ["requests"]
-
-[[package]]
-name = "traceback2"
-version = "1.4.0"
-description = "Backports of the traceback module"
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-linecache2 = "*"
-
-[[package]]
-name = "twine"
-version = "3.3.0"
-description = "Collection of utilities for publishing packages on PyPI"
-category = "dev"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-colorama = ">=0.4.3"
-keyring = ">=15.1"
-pkginfo = ">=1.4.2"
-readme-renderer = ">=21.0"
-requests = ">=2.20"
-requests-toolbelt = ">=0.8.0,<0.9.0 || >0.9.0"
-rfc3986 = ">=1.4.0"
-tqdm = ">=4.14"
-
-[[package]]
-name = "unittest2"
-version = "1.1.0"
-description = "The new features in unittest backported to Python 2.4+."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-argparse = "*"
-six = ">=1.4"
-traceback2 = "*"
 
 [[package]]
 name = "urllib3"
@@ -1295,14 +1021,6 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
 brotli = ["brotlipy (>=0.6.0)"]
 secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "ipaddress"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
-
-[[package]]
-name = "webencodings"
-version = "0.5.1"
-description = "Character encoding aliases for legacy web content"
-category = "dev"
-optional = false
-python-versions = "*"
 
 [[package]]
 name = "websocket-client"
@@ -1361,19 +1079,12 @@ testing = ["pathlib2", "contextlib2", "unittest2"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "c234e91cd6874d8a64099503bea732d1c4d99ec7cad21f5a59eb5478733fe7c3"
+content-hash = "5c1d9af5918e192053fd90c29703465c24742ab3ab631c8227d4067843ef3942"
 
 [metadata.files]
-amplitude-python = [
-    {file = "amplitude-python-0.13.tar.gz", hash = "sha256:2e8b5259ce59fa3bc6893574cc6c1110a86d03be3892e78c0d1e003b73cac712"},
-]
 apipkg = [
     {file = "apipkg-1.5-py2.py3-none-any.whl", hash = "sha256:58587dd4dc3daefad0487f6d9ae32b4542b185e1c36db6993290e7c41ca2b47c"},
     {file = "apipkg-1.5.tar.gz", hash = "sha256:37228cda29411948b422fae072f57e31d3396d2ee1c9783775980ee9c9990af6"},
-]
-argparse = [
-    {file = "argparse-1.4.0-py2.py3-none-any.whl", hash = "sha256:c31647edb69fd3d465a847ea3157d37bed1f95f19760b11a47aa91c04b666314"},
-    {file = "argparse-1.4.0.tar.gz", hash = "sha256:62b089a55be1d8949cd2bc7e0df0bddb9e028faefc8c32038cc84862aefdd6e4"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.3.0-py2.py3-none-any.whl", hash = "sha256:03472c30eb2c5d1ba9227e4c2ca66ab8287fbfbbda3888aa93dc2e28fc6811b4"},
@@ -1391,10 +1102,6 @@ aws-sam-translator = [
 aws-xray-sdk = [
     {file = "aws-xray-sdk-2.5.0.tar.gz", hash = "sha256:8dfa785305fc8dc720d8d4c2ec6a58e85e467ddc3a53b1506a2ed8b5801c8fc7"},
     {file = "aws_xray_sdk-2.5.0-py2.py3-none-any.whl", hash = "sha256:ae57baeb175993bdbf31f83843e2c0958dd5aa8cb691ab5628aafb6ccc78a0fc"},
-]
-bleach = [
-    {file = "bleach-3.2.1-py2.py3-none-any.whl", hash = "sha256:9f8ccbeb6183c6e6cddea37592dfb0167485c1e3b13b3363bc325aa8bda3adbd"},
-    {file = "bleach-3.2.1.tar.gz", hash = "sha256:52b5919b81842b1854196eaae5ca29679a2f2e378905c346d3ca8227c2c66080"},
 ]
 boto = [
     {file = "boto-2.49.0-py2.py3-none-any.whl", hash = "sha256:147758d41ae7240dc989f0039f27da8ca0d53734be0eb869ef16e3adcfa462e8"},
@@ -1573,14 +1280,6 @@ execnet = [
     {file = "execnet-1.7.1-py2.py3-none-any.whl", hash = "sha256:d4efd397930c46415f62f8a31388d6be4f27a91d7550eb79bc64a756e0056547"},
     {file = "execnet-1.7.1.tar.gz", hash = "sha256:cacb9df31c9680ec5f95553976c4da484d407e85e41c83cb812aa014f0eddc50"},
 ]
-extras = [
-    {file = "extras-1.0.0-py2.py3-none-any.whl", hash = "sha256:f689f08df47e2decf76aa6208c081306e7bd472630eb1ec8a875c67de2366e87"},
-    {file = "extras-1.0.0.tar.gz", hash = "sha256:132e36de10b9c91d5d4cc620160a476e0468a88f16c9431817a6729611a81b4e"},
-]
-fixtures = [
-    {file = "fixtures-3.0.0-py2.py3-none-any.whl", hash = "sha256:2a551b0421101de112d9497fb5f6fd25e5019391c0fbec9bad591ecae981420d"},
-    {file = "fixtures-3.0.0.tar.gz", hash = "sha256:fcf0d60234f1544da717a9738325812de1f42c2fa085e2d9252d8fff5712b2ef"},
-]
 future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
 ]
@@ -1606,10 +1305,6 @@ importlib-metadata = [
 iniconfig = [
     {file = "iniconfig-1.0.1-py3-none-any.whl", hash = "sha256:80cf40c597eb564e86346103f609d74efce0f6b4d4f30ec8ce9e2c26411ba437"},
     {file = "iniconfig-1.0.1.tar.gz", hash = "sha256:e5f92f89355a67de0595932a6c6c02ab4afddc6fcdc0bfc5becd0d60884d3f69"},
-]
-jeepney = [
-    {file = "jeepney-0.6.0-py3-none-any.whl", hash = "sha256:aec56c0eb1691a841795111e184e13cad504f7703b9a64f63020816afa79a8ae"},
-    {file = "jeepney-0.6.0.tar.gz", hash = "sha256:7d59b6622675ca9e993a6bd38de845051d315f8b0c72cca3aef733a20b648657"},
 ]
 jinja2 = [
     {file = "Jinja2-2.11.2-py2.py3-none-any.whl", hash = "sha256:f0a4641d3cf955324a89c04f3d94663aa4d638abe8f733ecd3582848e1c37035"},
@@ -1640,14 +1335,6 @@ jsonschema = [
 ]
 junit-xml = [
     {file = "junit_xml-1.9-py2.py3-none-any.whl", hash = "sha256:ec5ca1a55aefdd76d28fcc0b135251d156c7106fa979686a4b48d62b761b4732"},
-]
-keyring = [
-    {file = "keyring-21.7.0-py3-none-any.whl", hash = "sha256:4c41ce4f6d1ee91d589a346699ef5a94ba3429603ac8f700cc0097644cdd6748"},
-    {file = "keyring-21.7.0.tar.gz", hash = "sha256:a144f7e1044c897c3976202af868cb0ac860f4d433d5d0f8e750fa1a2f0f0b50"},
-]
-linecache2 = [
-    {file = "linecache2-1.0.0-py2.py3-none-any.whl", hash = "sha256:e78be9c0a0dfcbac712fe04fbf92b96cddae80b1b842f24248214c8496f006ef"},
-    {file = "linecache2-1.0.0.tar.gz", hash = "sha256:4b26ff4e7110db76eeb6f5a7b64a82623839d595c2038eeda662f2a2db78e97c"},
 ]
 markupsafe = [
     {file = "MarkupSafe-1.1.1-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:09027a7803a62ca78792ad89403b1b7a73a01c8cb65909cd876f7fcebd79b161"},
@@ -1721,18 +1408,9 @@ networkx = [
     {file = "networkx-2.4-py3-none-any.whl", hash = "sha256:cdfbf698749a5014bf2ed9db4a07a5295df1d3a53bf80bf3cbd61edf9df05fa1"},
     {file = "networkx-2.4.tar.gz", hash = "sha256:f8f4ff0b6f96e4f9b16af6b84622597b5334bf9cae8cf9b2e42e7985d5c95c64"},
 ]
-nose = [
-    {file = "nose-1.3.7-py2-none-any.whl", hash = "sha256:dadcddc0aefbf99eea214e0f1232b94f2fa9bd98fa8353711dacb112bfcbbb2a"},
-    {file = "nose-1.3.7-py3-none-any.whl", hash = "sha256:9ff7c6cc443f8c51994b34a667bbcf45afd6d945be7477b52e97516fd17c53ac"},
-    {file = "nose-1.3.7.tar.gz", hash = "sha256:f1bffef9cbc82628f6e7d7b40d7e255aefaa1adb6a1b1d26c69a8b79e6208a98"},
-]
 packaging = [
     {file = "packaging-20.1-py2.py3-none-any.whl", hash = "sha256:170748228214b70b672c581a3dd610ee51f733018650740e98c7df862a583f73"},
     {file = "packaging-20.1.tar.gz", hash = "sha256:e665345f9eef0c621aa0bf2f8d78cf6d21904eef16a93f020240b704a57f1334"},
-]
-pbr = [
-    {file = "pbr-5.5.1-py2.py3-none-any.whl", hash = "sha256:b236cde0ac9a6aedd5e3c34517b423cd4fd97ef723849da6b0d2231142d89c00"},
-    {file = "pbr-5.5.1.tar.gz", hash = "sha256:5fad80b613c402d5b7df7bd84812548b2a61e9977387a80a5fc5c396492b13c9"},
 ]
 pendulum = [
     {file = "pendulum-2.1.0-cp27-cp27m-macosx_10_13_x86_64.whl", hash = "sha256:9eda38ff65b1f297d860d3f562480e048673fb4b81fdd5c8c55decb519b97ed2"},
@@ -1783,10 +1461,6 @@ pillow = [
     {file = "Pillow-7.2.0-pp36-pypy36_pp73-win32.whl", hash = "sha256:25930fadde8019f374400f7986e8404c8b781ce519da27792cbe46eabec00c4d"},
     {file = "Pillow-7.2.0.tar.gz", hash = "sha256:97f9e7953a77d5a70f49b9a48da7776dc51e9b738151b22dacf101641594a626"},
 ]
-pkginfo = [
-    {file = "pkginfo-1.6.1-py2.py3-none-any.whl", hash = "sha256:ce14d7296c673dc4c61c759a0b6c14bae34e34eb819c0017bb6ca5b7292c56e9"},
-    {file = "pkginfo-1.6.1.tar.gz", hash = "sha256:a6a4ac943b496745cec21f14f021bbd869d5e9b4f6ec06918cffea5a2f4b9193"},
-]
 pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},
     {file = "pluggy-0.13.1.tar.gz", hash = "sha256:15b2acde666561e1298d71b523007ed7364de07029219b604cf808bfa1c765b0"},
@@ -1830,10 +1504,6 @@ pyasn1-modules = [
 ]
 pycparser = [
     {file = "pycparser-2.19.tar.gz", hash = "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"},
-]
-pygments = [
-    {file = "Pygments-2.7.3-py3-none-any.whl", hash = "sha256:f275b6c0909e5dafd2d6269a656aa90fa58ebf4a74f8fcf9053195d226b24a08"},
-    {file = "Pygments-2.7.3.tar.gz", hash = "sha256:ccf3acacf3782cbed4a989426012f1c535c9a90d3a7fc3f16d231b9372d2b716"},
 ]
 pyheif = [
     {file = "pyheif-0.5.1-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:6e998cd4730e7c091f1d84ce23902ab873afca3b1458552700c89dbe0a85e716"},
@@ -1891,10 +1561,6 @@ python-jose = [
     {file = "python-jose-3.1.0.tar.gz", hash = "sha256:8484b7fdb6962e9d242cce7680469ecf92bda95d10bbcbbeb560cacdff3abfce"},
     {file = "python_jose-3.1.0-py2.py3-none-any.whl", hash = "sha256:1ac4caf4bfebd5a70cf5bd82702ed850db69b0b6e1d0ae7368e5f99ac01c9571"},
 ]
-python-mimeparse = [
-    {file = "python-mimeparse-1.6.0.tar.gz", hash = "sha256:76e4b03d700a641fd7761d3cd4fdbbdcd787eade1ebfac43f877016328334f78"},
-    {file = "python_mimeparse-1.6.0-py2.py3-none-any.whl", hash = "sha256:a295f03ff20341491bfe4717a39cd0a8cc9afad619ba44b77e86b0ab8a2b8282"},
-]
 pytz = [
     {file = "pytz-2020.1-py2.py3-none-any.whl", hash = "sha256:a494d53b6d39c3c6e44c3bec237336e14305e4f29bbf800b599253057fbb79ed"},
     {file = "pytz-2020.1.tar.gz", hash = "sha256:c35965d010ce31b23eeb663ed3cc8c906275d6be1a34393a1d73a41febf4a048"},
@@ -1917,10 +1583,6 @@ pywin32 = [
     {file = "pywin32-227-cp39-cp39-win32.whl", hash = "sha256:c054c52ba46e7eb6b7d7dfae4dbd987a1bb48ee86debe3f245a2884ece46e295"},
     {file = "pywin32-227-cp39-cp39-win_amd64.whl", hash = "sha256:f27cec5e7f588c3d1051651830ecc00294f90728d19c3bf6916e6dba93ea357c"},
 ]
-pywin32-ctypes = [
-    {file = "pywin32-ctypes-0.2.0.tar.gz", hash = "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942"},
-    {file = "pywin32_ctypes-0.2.0-py2.py3-none-any.whl", hash = "sha256:9dc2d991b3479cc2df15930958b674a48a227d5361d413827a4cfd0b5876fc98"},
-]
 pyyaml = [
     {file = "PyYAML-5.3.1-cp27-cp27m-win32.whl", hash = "sha256:74809a57b329d6cc0fdccee6318f44b9b8649961fa73144a98735b0aaf029f1f"},
     {file = "PyYAML-5.3.1-cp27-cp27m-win_amd64.whl", hash = "sha256:240097ff019d7c70a4922b6869d8a86407758333f02203e0fc6ff79c5dcede76"},
@@ -1934,10 +1596,6 @@ pyyaml = [
     {file = "PyYAML-5.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:95f71d2af0ff4227885f7a6605c37fd53d3a106fcab511b8860ecca9fcf400ee"},
     {file = "PyYAML-5.3.1.tar.gz", hash = "sha256:b8eac752c5e14d3eca0e6dd9199cd627518cb5ec06add0de9d32baeee6fe645d"},
 ]
-readme-renderer = [
-    {file = "readme_renderer-28.0-py2.py3-none-any.whl", hash = "sha256:267854ac3b1530633c2394ead828afcd060fc273217c42ac36b6be9c42cd9a9d"},
-    {file = "readme_renderer-28.0.tar.gz", hash = "sha256:6b7e5aa59210a40de72eb79931491eaf46fefca2952b9181268bd7c7c65c260a"},
-]
 requests = [
     {file = "requests-2.22.0-py2.py3-none-any.whl", hash = "sha256:9cf5292fcd0f598c671cfc1e0d7d1a7f13bb8085e9a590f48c010551dc6c4b31"},
     {file = "requests-2.22.0.tar.gz", hash = "sha256:11e007a8a2aa0323f5a921e9e6a2d7e4e67d9877e85773fba9ba6419025cbeb4"},
@@ -1950,17 +1608,9 @@ requests-mock = [
     {file = "requests-mock-1.9.2.tar.gz", hash = "sha256:33296f228d8c5df11a7988b741325422480baddfdf5dd9318fd0eb40c3ed8595"},
     {file = "requests_mock-1.9.2-py2.py3-none-any.whl", hash = "sha256:5c8ef0254c14a84744be146e9799dc13ebc4f6186058112d9aeed96b131b58e2"},
 ]
-requests-toolbelt = [
-    {file = "requests-toolbelt-0.9.1.tar.gz", hash = "sha256:968089d4584ad4ad7c171454f0a5c6dac23971e9472521ea3b6d49d610aa6fc0"},
-    {file = "requests_toolbelt-0.9.1-py2.py3-none-any.whl", hash = "sha256:380606e1d10dc85c3bd47bf5a6095f815ec007be7a8b69c878507068df059e6f"},
-]
 responses = [
     {file = "responses-0.10.14-py2.py3-none-any.whl", hash = "sha256:3d596d0be06151330cb230a2d630717ab20f7a81f205019481e206eb5db79915"},
     {file = "responses-0.10.14.tar.gz", hash = "sha256:1a78bc010b20a5022a2c0cb76b8ee6dc1e34d887972615ebd725ab9a166a4960"},
-]
-rfc3986 = [
-    {file = "rfc3986-1.4.0-py2.py3-none-any.whl", hash = "sha256:af9147e9aceda37c91a05f4deb128d4b4b49d6b199775fd2d2927768abdc8f50"},
-    {file = "rfc3986-1.4.0.tar.gz", hash = "sha256:112398da31a3344dc25dbf477d8df6cb34f9278a94fee2625d89e4514be8bb9d"},
 ]
 rsa = [
     {file = "rsa-4.0-py2.py3-none-any.whl", hash = "sha256:14ba45700ff1ec9eeb206a2ce76b32814958a98e372006c8fb76ba820211be66"},
@@ -1974,10 +1624,6 @@ s3transfer = [
     {file = "s3transfer-0.3.2-py2.py3-none-any.whl", hash = "sha256:2525bae2a530195576da53671bae8ca8c55ee8e33bc2225a65e804476611ea5a"},
     {file = "s3transfer-0.3.2.tar.gz", hash = "sha256:4924e10451cc37901945806423d16c2c2040a6530645a614ed87e995ccec764c"},
 ]
-secretstorage = [
-    {file = "SecretStorage-3.3.0-py3-none-any.whl", hash = "sha256:5c36f6537a523ec5f969ef9fad61c98eb9e017bc601d811e53aa25bece64892f"},
-    {file = "SecretStorage-3.3.0.tar.gz", hash = "sha256:30cfdef28829dad64d6ea1ed08f8eff6aa115a77068926bcc9f5225d5a3246aa"},
-]
 six = [
     {file = "six-1.14.0-py2.py3-none-any.whl", hash = "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"},
     {file = "six-1.14.0.tar.gz", hash = "sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a"},
@@ -1989,37 +1635,13 @@ sshpubkeys = [
 stringcase = [
     {file = "stringcase-1.2.0.tar.gz", hash = "sha256:48a06980661908efe8d9d34eab2b6c13aefa2163b3ced26972902e3bdfd87008"},
 ]
-testtools = [
-    {file = "testtools-2.4.0-py2.py3-none-any.whl", hash = "sha256:36ff4998177c7d32ffe5fed3d541cb9ee62618a3b8e745c55510698997774ba4"},
-    {file = "testtools-2.4.0.tar.gz", hash = "sha256:64c974a6cca4385d05f4bbfa2deca1c39ce88ede31c3448bee86a7259a9a61c8"},
-]
 toml = [
     {file = "toml-0.10.1-py2.py3-none-any.whl", hash = "sha256:bda89d5935c2eac546d648028b9901107a595863cb36bae0c73ac804a9b4ce88"},
     {file = "toml-0.10.1.tar.gz", hash = "sha256:926b612be1e5ce0634a2ca03470f95169cf16f939018233a670519cb4ac58b0f"},
 ]
-tqdm = [
-    {file = "tqdm-4.55.0-py2.py3-none-any.whl", hash = "sha256:0cd81710de29754bf17b6fee07bdb86f956b4fa20d3078f02040f83e64309416"},
-    {file = "tqdm-4.55.0.tar.gz", hash = "sha256:f4f80b96e2ceafea69add7bf971b8403b9cba8fb4451c1220f91c79be4ebd208"},
-]
-traceback2 = [
-    {file = "traceback2-1.4.0-py2.py3-none-any.whl", hash = "sha256:8253cebec4b19094d67cc5ed5af99bf1dba1285292226e98a31929f87a5d6b23"},
-    {file = "traceback2-1.4.0.tar.gz", hash = "sha256:05acc67a09980c2ecfedd3423f7ae0104839eccb55fc645773e1caa0951c3030"},
-]
-twine = [
-    {file = "twine-3.3.0-py3-none-any.whl", hash = "sha256:2f6942ec2a17417e19d2dd372fc4faa424c87ee9ce49b4e20c427eb00a0f3f41"},
-    {file = "twine-3.3.0.tar.gz", hash = "sha256:fcffa8fc37e8083a5be0728371f299598870ee1eccc94e9a25cef7b1dcfa8297"},
-]
-unittest2 = [
-    {file = "unittest2-1.1.0-py2.py3-none-any.whl", hash = "sha256:13f77d0875db6d9b435e1d4f41e74ad4cc2eb6e1d5c824996092b3430f088bb8"},
-    {file = "unittest2-1.1.0.tar.gz", hash = "sha256:22882a0e418c284e1f718a822b3b022944d53d2d908e1690b319a9d3eb2c0579"},
-]
 urllib3 = [
     {file = "urllib3-1.25.8-py2.py3-none-any.whl", hash = "sha256:2f3db8b19923a873b3e5256dc9c2dedfa883e33d87c690d9c7913e1f40673cdc"},
     {file = "urllib3-1.25.8.tar.gz", hash = "sha256:87716c2d2a7121198ebcb7ce7cccf6ce5e9ba539041cfbaeecfb641dc0bf6acc"},
-]
-webencodings = [
-    {file = "webencodings-0.5.1-py2.py3-none-any.whl", hash = "sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78"},
-    {file = "webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923"},
 ]
 websocket-client = [
     {file = "websocket_client-0.57.0-py2.py3-none-any.whl", hash = "sha256:0fc45c961324d79c781bab301359d5a1b00b13ad1b10415a4780229ef71a5549"},

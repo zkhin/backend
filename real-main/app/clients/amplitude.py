@@ -1,66 +1,48 @@
+import json
 import logging
-import os
-from decimal import Decimal
+import time
 
-import amplitude
+import requests
 
-AMPLITUDE_API_KEY = os.environ.get('AMPLITUDE_API_KEY')
+from app.utils import DecimalJsonEncoder
+
 logger = logging.getLogger()
+
+API_URL = 'https://api2.amplitude.com/2/httpapi'
+DISABLED = 'DISABLED'
 
 
 class AmplitudeClient:
-    ignore_attr_fields = [
-        'gsiA1PartitionKey',
-        'gsiA1SortKey',
-        'gsiA2PartitionKey',
-        'gsiA2SortKey',
-        'gsiA3PartitionKey',
-        'gsiA3SortKey',
-        'gsiK1PartitionKey',
-        'gsiK1SortKey',
-        'gsiK2PartitionKey',
-        'gsiK2SortKey',
-    ]
+    def __init__(self, api_key_getter):
+        self.api_key_getter = api_key_getter
+        self.session = requests.Session()
+        self.session.headers = {'Content-Type': 'application/json'}
+        self.session.hooks = {'response': lambda r, *args, **kwargs: r.raise_for_status()}
 
-    def __init__(self, api_key=AMPLITUDE_API_KEY):
-        self.amplitude_logger = amplitude.AmplitudeLogger(api_key=api_key)
+    @property
+    def api_key(self):
+        if not hasattr(self, '_api_key'):
+            self._api_key = self.api_key_getter()['apiKey']
+        return self._api_key
 
-    def send_event(self, user_id, new_items, old_items=None):
-        event_type = 'UPDATE_USER' if old_items else 'CREATE_USER'
-        if not old_items:
-            self.attr_log_event(user_id, event_type, new_items)
-        else:
-            for attr_name in list(set(list(new_items.keys()) + list(old_items.keys()))):
-                if attr_name in self.ignore_attr_fields:
-                    continue
-                new_value = new_items.get(attr_name)
-                old_value = old_items.get(attr_name)
-                if new_value != old_value:
-                    self.attr_log_event(user_id, f'{event_type}_{attr_name.upper()}', new_items)
-        return True
+    def log_event(self, user_id, event_type, event_properties):
+        event = self.build_event(user_id, event_type, event_properties)
+        self.send_events([event])
 
-    def attr_log_event(self, user_id, event_type, new_items):
-        event_args = {
+    def build_event(self, user_id, event_type, event_properties):
+        return {
             'user_id': user_id,
             'event_type': event_type,
-            'event_properties': {**new_items},
+            'event_properties': event_properties,
+            'time': int(time.time() * 1000),  # integer epoch time in milliseconds
         }
-        self.convert_decimal_to_float(event_args)
-        event = self.amplitude_logger.create_event(**event_args)
 
+    def send_events(self, events):
+        if self.api_key == DISABLED:
+            return
+        # https://developers.amplitude.com/docs/http-api-v2#uploadrequestbody
+        data = json.dumps({'api_key': self.api_key, 'events': events}, cls=DecimalJsonEncoder)
         try:
-            # send event to amplitude
-            self.amplitude_logger.log_event(event)
+            requests.post(API_URL, data=data)
         except Exception as err:
-            logger.warning(str(err))
-
-    def convert_decimal_to_float(self, source, parent_source=None, key=None):
-        if type(source) == dict:
-            for key in source:
-                self.convert_decimal_to_float(source[key], source, key)
-        elif type(source) == list:
-            for item in source:
-                self.convert_decimal_to_float(item, None, None)
-        elif type(source) == Decimal:
-            value = float(source)
-            parent_source[key] = value
+            logger.warning(f'Failed to send events to Amplitude: {err}')

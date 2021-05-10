@@ -3,7 +3,6 @@ import logging
 
 import pendulum
 
-from app.clients import AmplitudeClient
 from app.mixins.base import ManagerBase
 from app.mixins.view.manager import ViewManagerMixin
 
@@ -20,7 +19,8 @@ class ScreenManager(ViewManagerMixin, ManagerBase):
         super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['screen'] = self
-        self.amplitude_client = AmplitudeClient()
+        if 'amplitude' in clients:
+            self.amplitude_client = clients['amplitude']
 
     def init_screen(self, screen_name):
         view_dynamo = getattr(self, 'view_dynamo', None)
@@ -37,4 +37,4 @@ class ScreenManager(ViewManagerMixin, ManagerBase):
             'name': screen_name,
             'datetime': pendulum.now().to_iso8601_string(),
         }
-        self.amplitude_client.attr_log_event(user_id, event_type, event_items)
+        self.amplitude_client.log_event(user_id, event_type, event_items)

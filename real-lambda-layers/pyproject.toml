@@ -22,7 +22,6 @@ pyheif = "^0.5.1"
 aws-xray-sdk = "^2.5.0"
 stringcase = "^1.2.0"
 pyjwt = "^1.7.1"
-amplitude-python = "^0.13"
 
 [tool.poetry.dev-dependencies]
 

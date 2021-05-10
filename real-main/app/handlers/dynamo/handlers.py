@@ -19,6 +19,7 @@ xray.patch_all()
 
 secrets_manager_client = clients.SecretsManagerClient()
 clients = {
+    'amplitude': clients.AmplitudeClient(secrets_manager_client.get_amplitude_api_key),
     'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'appsync': clients.AppSyncClient(),
     'cognito': clients.CognitoClient(),

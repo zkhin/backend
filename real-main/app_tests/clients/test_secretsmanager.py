@@ -9,6 +9,7 @@ cloudfront_key_pair_name = 'KeyForCloudFront'
 post_verification_api_creds_name = 'KeyForPV'
 google_client_ids_name = 'KeyForGoogleClientIds'
 apple_appstore_params_name = 'KeyForAppleAppstoreParams'
+amplitude_api_key_name = 'KeyForAmplitudeApiKey'
 
 
 @pytest.fixture
@@ -19,6 +20,7 @@ def client():
             post_verification_api_creds_name=post_verification_api_creds_name,
             google_client_ids_name=google_client_ids_name,
             apple_appstore_params_name=apple_appstore_params_name,
+            amplitude_api_key_name=amplitude_api_key_name,
         )
 
 
@@ -113,3 +115,25 @@ def test_retrieve_apple_appstore_params(client):
     # test caching: remove the secret from the backend store, check again
     client.boto_client.delete_secret(SecretId=apple_appstore_params_name)
     assert client.get_apple_appstore_params() == value
+
+
+def test_retrieve_amplitude_params(client):
+    value = {
+        'apiKey': 'what.a.key',
+    }
+
+    # add the secret, then remove it
+    client.boto_client.create_secret(Name=amplitude_api_key_name, SecretString=json.dumps(value))
+    client.boto_client.delete_secret(SecretId=amplitude_api_key_name)
+
+    # secret is not in there - test we cannot retrieve it
+    with pytest.raises(client.exceptions.InvalidRequestException):
+        client.get_amplitude_api_key()
+
+    # restore the value in there, test we can retrieve it
+    client.boto_client.restore_secret(SecretId=amplitude_api_key_name)
+    assert client.get_amplitude_api_key() == value
+
+    # test caching: remove the secret from the backend store, check again
+    client.boto_client.delete_secret(SecretId=amplitude_api_key_name)
+    assert client.get_amplitude_api_key() == value

@@ -79,6 +79,7 @@ _Once per AWS Account_
     "privateKey": "<cat private-key.pem | sed '1d;$d'>"
   }
   ```
+- An Amplitude Api Key must be added in order to log events to [Amplitude](https://amplitude.com/). The secret name must match the environment variable defined in `serverless.yml` while the secret value must be a json object with one key `apiKey`. To disable the Amplitude integration, set the value of `apiKey` to `DISABLED`.
 
 #### SES
 

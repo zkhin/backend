@@ -9,7 +9,7 @@ from functools import partialmethod
 import pendulum
 
 from app import models
-from app.clients import AmplitudeClient, SesClient
+from app.clients import SesClient
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.appstore.enums import AppStoreSubscriptionStatus
@@ -31,6 +31,7 @@ S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTOR
 class UserManager(TrendingManagerMixin, ManagerBase):
 
     client_names = [
+        'amplitude',
         'apple',
         'appsync',
         'cloudfront',
@@ -72,7 +73,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.email_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userEmail')
             self.phone_number_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userPhoneNumber')
         self.placeholder_photos_directory = placeholder_photos_directory
-        self.amplitude_client = AmplitudeClient()
         self.ses_client = SesClient()
 
     @property
@@ -591,7 +591,15 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.increment_paid_real_so_far(new_item['userId'], price)
 
     def on_user_change_log_amplitude_event(self, user_id, new_item, old_item=None):
-        self.amplitude_client.send_event(user_id, new_item, old_item)
+        if old_item:
+            events = [
+                self.amplitude_client.build_event(user_id, f'UPDATE_USER_{key.upper()}', new_item)
+                for key in {**new_item, **old_item}.keys()
+                if not key.startswith('gsi') and new_item.get(key) != old_item.get(key)
+            ]
+        else:
+            events = [self.amplitude_client.build_event(user_id, 'CREATE_USER', new_item)]
+        self.amplitude_client.send_events(events)
 
     def send_dating_matches_notification(self):
         """

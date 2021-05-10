@@ -1,6 +1,6 @@
 import logging
 from decimal import Decimal
-from unittest.mock import call, patch
+from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
 import pytest
@@ -493,7 +493,30 @@ def test_on_user_date_of_birth_change_update_age(user_manager, user):
     assert 'age' in user.refresh_item().item
 
 
-def test_on_user_change_log_amplitude_event(user_manager, user):
+def test_on_user_change_log_amplitude_event_user_create(user_manager, user):
+    event = {}
     with patch.object(user_manager, 'amplitude_client') as amplitude_client_mock:
+        user_manager.amplitude_client.build_event = Mock(return_value=event)
         user_manager.on_user_change_log_amplitude_event(user.id, new_item=user.item)
-    assert amplitude_client_mock.mock_calls == [call.send_event(user.id, user.item, None)]
+    assert amplitude_client_mock.mock_calls == [
+        call.build_event(user.id, 'CREATE_USER', user.item),
+        call.send_events([event]),
+    ]
+
+
+def test_on_user_change_log_amplitude_event_user_edit(user_manager, user):
+    new_item = {
+        **user.item,
+        'gsiA1PartitionKey': 'shouldntbelogged',
+        'username': 'logme',
+        'privacyStatus': 'PRIVATE',
+    }
+    events = [{}, {}]
+    with patch.object(user_manager, 'amplitude_client') as amplitude_client_mock:
+        user_manager.amplitude_client.build_event = Mock(side_effect=events)
+        user_manager.on_user_change_log_amplitude_event(user.id, new_item=new_item, old_item=user.item)
+    assert amplitude_client_mock.mock_calls == [
+        call.build_event(user.id, 'UPDATE_USER_USERNAME', new_item),
+        call.build_event(user.id, 'UPDATE_USER_PRIVACYSTATUS', new_item),
+        call.send_events(events),
+    ]

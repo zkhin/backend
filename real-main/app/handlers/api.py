@@ -11,9 +11,10 @@ from . import xray
 logger = logging.getLogger()
 xray.patch_all()
 
-amplitude_client = clients.AmplitudeClient()
 secrets_manager_client = clients.SecretsManagerClient()
+amplitude_client = clients.AmplitudeClient(secrets_manager_client.get_amplitude_api_key)
 clients = {
+    'amplitude': amplitude_client,
     'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'appsync': clients.AppSyncClient(),
     'dynamo': clients.DynamoClient(),
@@ -80,7 +81,7 @@ def send_amplitude_event(event, context):
         event_payload = amplitude_body.get('payload')
 
         if user_id and event_name and event_payload:
-            amplitude_client.attr_log_event(user_id, event_name, event_payload)
+            amplitude_client.log_event(user_id, event_name, event_payload)
         else:
             status_code = 400
 

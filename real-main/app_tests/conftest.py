@@ -56,6 +56,11 @@ def heic_dims():
 
 
 @pytest.fixture
+def amplitude_client():
+    yield mock.Mock(clients.AmplitudeClient(lambda: {'apiKey': 'DISABLED'}))
+
+
+@pytest.fixture
 def appsync_client():
     yield mock.Mock(clients.AppSyncClient(appsync_graphql_url='my-graphql-url'))
 
@@ -282,6 +287,7 @@ def screen_manager(dynamo_client):
 
 @pytest.fixture
 def user_manager(
+    amplitude_client,
     appsync_client,
     cloudfront_client,
     dynamo_client,
@@ -297,6 +303,7 @@ def user_manager(
 ):
     yield models.UserManager(
         {
+            'amplitude': amplitude_client,
             'appsync': appsync_client,
             'cloudfront': cloudfront_client,
             'dynamo': dynamo_client,
