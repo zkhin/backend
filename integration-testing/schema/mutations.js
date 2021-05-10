@@ -914,22 +914,16 @@ module.exports.approveMatch = gql`
 
 module.exports.verifyId = gql`
   mutation VerifyId(
-    $frontsideImageData: String!,
-    $country: String!,
-    $idType: IdVerificationType!,
-    $imageType: IdVerificationImageType!,
+    $frontsideImageData: String!
+    $country: String!
+    $idType: IdVerificationType!
+    $imageType: IdVerificationImageType!
   ) {
-    verifyId(
-      frontsideImageData: $frontsideImageData,
-      country: $country,
-      idType: $idType,
-      imageType: $imageType,
-    ) {
+    verifyId(frontsideImageData: $frontsideImageData, country: $country, idType: $idType, imageType: $imageType) {
       userId
     }
   }
 `
-
 
 module.exports.triggerNotification = gql`
   mutation TriggerNotification($input: NotificationInput!) {

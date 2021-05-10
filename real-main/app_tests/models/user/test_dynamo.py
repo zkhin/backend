@@ -1203,7 +1203,7 @@ def test_set_id_verification_status(user_dynamo):
 
     # set it
     user_item = user_dynamo.set_id_verification_status(user_id, True)
-    assert user_item['idVerificationStatus'] == True
+    assert user_item['idVerificationStatus']
 
     # delete it
     user_item = user_dynamo.set_id_verification_status(user_id, False)

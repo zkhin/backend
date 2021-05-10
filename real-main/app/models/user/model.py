@@ -48,7 +48,15 @@ SUBSCRIPTION_GRANT_DURATION = {SubscriptionGrantCode.FREE_FOR_LIFE: pendulum.dur
 
 class User(TrendingModelMixin):
 
-    client_names = ['cloudfront', 'cognito', 'elasticsearch', 'dynamo', 'pinpoint', 's3_uploads', 'id_verification']
+    client_names = [
+        'cloudfront',
+        'cognito',
+        'elasticsearch',
+        'dynamo',
+        'pinpoint',
+        's3_uploads',
+        'id_verification',
+    ]
     item_type = 'user'
     subscription_bonus_duration = pendulum.duration(months=1)
 

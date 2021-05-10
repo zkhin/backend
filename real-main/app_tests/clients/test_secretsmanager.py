@@ -9,11 +9,8 @@ cloudfront_key_pair_name = 'KeyForCloudFront'
 post_verification_api_creds_name = 'KeyForPV'
 google_client_ids_name = 'KeyForGoogleClientIds'
 apple_appstore_params_name = 'KeyForAppleAppstoreParams'
-<<<<<<< HEAD
 amplitude_api_key_name = 'KeyForAmplitudeApiKey'
-=======
 id_verification_api_creds_name = 'KeyForIdVerification'
->>>>>>> Jumio Id Verification
 
 
 @pytest.fixture
@@ -24,11 +21,8 @@ def client():
             post_verification_api_creds_name=post_verification_api_creds_name,
             google_client_ids_name=google_client_ids_name,
             apple_appstore_params_name=apple_appstore_params_name,
-<<<<<<< HEAD
             amplitude_api_key_name=amplitude_api_key_name,
-=======
             id_verification_api_creds_name=id_verification_api_creds_name,
->>>>>>> Jumio Id Verification
         )
 
 

@@ -155,11 +155,15 @@ def google_client():
 
 @pytest.fixture
 def id_verification_client():
-    yield mock.Mock(clients.IdVerificationClient(lambda: {
-        'apiToken': 'api-token',
-        'secret': 'secret',
-        'callbackUrl': 'callback-url',
-    }))
+    yield mock.Mock(
+        clients.IdVerificationClient(
+            lambda: {
+                'apiToken': 'api-token',
+                'secret': 'secret',
+                'callbackUrl': 'callback-url',
+            }
+        )
+    )
 
 
 @pytest.fixture

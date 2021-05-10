@@ -45,14 +45,16 @@ class IdVerificationClient:
             'Authorization': f'Basic {self.api_token}',
         }
 
-        data = json.dumps({
-            'merchantIdScanReference': user_id,
-            'frontsideImage': frontside_image,
-            'country': country,
-            'idType': id_type,
-            'frontsideImageMimeType': mime_type,
-            'callbackUrl': f'{self.callback_url}/id-verification/{user_id}/callback',
-        })
+        data = json.dumps(
+            {
+                'merchantIdScanReference': user_id,
+                'frontsideImage': frontside_image,
+                'country': country,
+                'idType': id_type,
+                'frontsideImageMimeType': mime_type,
+                'callbackUrl': f'{self.callback_url}/id-verification/{user_id}/callback',
+            }
+        )
 
         resp = requests.post(API_URL, headers=headers, json=data)
         if resp.status_code != 200:

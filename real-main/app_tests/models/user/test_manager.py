@@ -461,7 +461,7 @@ def test_set_id_verification_callback(user_manager, user1):
     }
     user_manager.set_id_verification_callback(user1.id, response)
     assert user1.refresh_item().item['jumioResponse'] == response
-    
+
     # delete it
     user_manager.set_id_verification_callback(user1.id, None)
     assert 'jumioResponse' not in user1.refresh_item().item

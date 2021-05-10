@@ -1,10 +1,8 @@
 const fs = require('fs')
-const got = require('got')
 const path = require('path')
 
 const cognito = require('../../utils/cognito')
 const {mutations} = require('../../schema')
-const { hasUncaughtExceptionCaptureCallback } = require('process')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -20,12 +18,17 @@ afterAll(async () => await loginCache.reset())
 test('Id verification', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
 
-  await client.mutate({mutation: mutations.verifyId, variables: {
-    frontsideImageData: imageData,
-    country: 'USA',
-    idType: 'ID_CARD',
-    imageType: 'JPEG'
-  }}).then(({data: {verifyId: user}}) => {
-    expect(user.userId).toBe(userId)
-  })
+  await client
+    .mutate({
+      mutation: mutations.verifyId,
+      variables: {
+        frontsideImageData: imageData,
+        country: 'USA',
+        idType: 'ID_CARD',
+        imageType: 'JPEG',
+      },
+    })
+    .then(({data: {verifyId: user}}) => {
+      expect(user.userId).toBe(userId)
+    })
 })
