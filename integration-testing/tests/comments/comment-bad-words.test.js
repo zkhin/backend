@@ -33,7 +33,6 @@ test('Add a comment with bad word', async () => {
   let variables = {postId, imageData}
   await ourClient.mutate({mutation: mutations.addPost, variables}).then(({data: {addPost: post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(0)
     expect(post.commentsCount).toBe(0)
     expect(post.comments.items).toHaveLength(0)
   })
@@ -50,7 +49,6 @@ test('Add a comment with bad word', async () => {
   await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(1)
     expect(post.commentsCount).toBe(1)
     expect(post.comments.items).toHaveLength(1)
     expect(post.comments.items[0].commentId).toBe(ourCommentId)
@@ -77,7 +75,6 @@ test('Add a comment with bad word', async () => {
   await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(1)
     expect(post.commentsCount).toBe(1)
     expect(post.comments.items).toHaveLength(1)
     expect(post.comments.items[0].commentId).toBe(ourCommentId)
@@ -95,7 +92,6 @@ test('Two way follow, skip bad word detection', async () => {
   let variables = {postId, imageData}
   await ourClient.mutate({mutation: mutations.addPost, variables}).then(({data: {addPost: post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(0)
     expect(post.commentsCount).toBe(0)
     expect(post.comments.items).toHaveLength(0)
   })
@@ -112,7 +108,6 @@ test('Two way follow, skip bad word detection', async () => {
   await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(1)
     expect(post.commentsCount).toBe(1)
     expect(post.comments.items).toHaveLength(1)
     expect(post.comments.items[0].commentId).toBe(ourCommentId)
@@ -144,7 +139,6 @@ test('Two way follow, skip bad word detection', async () => {
   await misc.sleep(2000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(2)
     expect(post.commentsCount).toBe(2)
     expect(post.comments.items).toHaveLength(2)
     expect(post.comments.items[0].commentId).toBe(ourCommentId)

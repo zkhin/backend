@@ -48,12 +48,6 @@ def test_add_comment(comment_manager, user, post):
     assert comment.item['textTags'] == [{'tag': f'@{username}', 'userId': user.id}]
     assert comment.item['commentedAt'] == now.to_iso8601_string()
 
-    # check the post counter incremented, no new comment acitivy b/c the post owner commented
-    post.refresh_item()
-    assert post.item.get('hasNewCommentActivity', False) is False
-    user.refresh_item()
-    assert user.item.get('postHasNewCommentActivityCount', 0) == 0
-
 
 def test_add_comment_cant_reuse_ids(comment_manager, user, post):
     comment_id = 'cid'

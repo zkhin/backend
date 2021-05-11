@@ -16,7 +16,7 @@ from app.models.user.exceptions import UserException
 from app.utils import image_size
 
 from .cached_image import CachedImage
-from .enums import PostNotificationType, PostStatus, PostType
+from .enums import PostStatus, PostType
 from .exceptions import PostException
 from .text_image import generate_text_image
 
@@ -41,7 +41,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def __init__(
         self,
         item,
-        post_appsync=None,
         post_dynamo=None,
         post_image_dynamo=None,
         post_original_metadata_dynamo=None,
@@ -60,8 +59,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     ):
         super().__init__(**kwargs)
 
-        if post_appsync is not None:
-            self.appsync = post_appsync
         if post_dynamo is not None:
             self.dynamo = post_dynamo
         if post_image_dynamo is not None:
@@ -384,9 +381,6 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         if self.user.item.get('privacyStatus') != UserPrivacyStatus.PRIVATE:
             trending_kwargs = {'now': now, 'multiplier': self.get_trending_multiplier()}
             self.trending_increment_score(**trending_kwargs)
-
-        # alert frontend
-        self.appsync.trigger_notification(PostNotificationType.COMPLETED, self)
 
         return self
 

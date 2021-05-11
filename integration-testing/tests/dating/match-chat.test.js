@@ -98,7 +98,6 @@ test('Cannot create direct/group chat if the match_status is not confirmed', asy
   await ourClient
     .mutate({mutation: mutations.createGroupChat, variables})
     .then(({data: {createGroupChat: chat}}) => {
-      expect(chat.userCount).toBe(2)
       expect(chat.usersCount).toBe(2)
       expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
     })

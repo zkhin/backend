@@ -10,11 +10,9 @@ module.exports.chat = gql`
     createdAt
     lastMessageActivityAt
     flagStatus
-    messageCount
     messagesCount
     messagesViewedCount: messagesCount(viewedStatus: VIEWED)
     messagesUnviewedCount: messagesCount(viewedStatus: NOT_VIEWED)
-    userCount
     usersCount
     users {
       items {
@@ -162,9 +160,7 @@ module.exports.simpleUserFields = gql`
     followedStatus
     followerStatus
     followCountsHidden
-    followedCount
     followedsCount
-    followerCount
     followersCount
     followersRequestedCount: followersCount(followStatus: REQUESTED)
     languageCode

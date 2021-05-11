@@ -83,8 +83,8 @@ module.exports.setUserPrivacyStatus = gql`
     setUserDetails(privacyStatus: $privacyStatus) {
       userId
       privacyStatus
-      followedCount
-      followerCount
+      followedsCount
+      followersCount
     }
   }
 `
@@ -341,7 +341,7 @@ module.exports.followUser = gql`
     followUser(userId: $userId) {
       userId
       followedStatus
-      followerCount
+      followersCount
     }
   }
 `
@@ -351,7 +351,7 @@ module.exports.unfollowUser = gql`
     unfollowUser(userId: $userId) {
       userId
       followedStatus
-      followerCount
+      followersCount
     }
   }
 `
@@ -361,7 +361,7 @@ module.exports.acceptFollowerUser = gql`
     acceptFollowerUser(userId: $userId) {
       userId
       followerStatus
-      followedCount
+      followedsCount
     }
   }
 `
@@ -371,7 +371,7 @@ module.exports.denyFollowerUser = gql`
     denyFollowerUser(userId: $userId) {
       userId
       followerStatus
-      followedCount
+      followedsCount
     }
   }
 `
@@ -471,7 +471,6 @@ module.exports.addPost = gql`
         followedStatus
       }
       commentsDisabled
-      commentCount
       commentsCount
       comments {
         items {
@@ -481,7 +480,6 @@ module.exports.addPost = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
-      hasNewCommentActivity
       flagStatus
       keywords
     }
@@ -944,14 +942,6 @@ module.exports.triggerCardNotification = gql`
 module.exports.triggerChatMessageNotification = gql`
   mutation TriggerChatMessageNotification($input: ChatMessageNotificationInput!) {
     triggerChatMessageNotification(input: $input) {
-      userId
-    }
-  }
-`
-
-module.exports.triggerPostNotification = gql`
-  mutation TriggerPostNotification($input: PostNotificationInput!) {
-    triggerPostNotification(input: $input) {
       userId
     }
   }

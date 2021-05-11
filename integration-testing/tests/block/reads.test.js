@@ -84,10 +84,8 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.email).toBeTruthy()
   expect(ourUserFull.feed.items).toHaveLength(1)
   expect(ourUserFull.followCountsHidden).toBe(false)
-  expect(ourUserFull.followerCount).toBe(0)
   expect(ourUserFull.followersCount).toBe(0)
   expect(ourUserFull.followersRequestedCount).toBe(0)
-  expect(ourUserFull.followedCount).toBe(0)
   expect(ourUserFull.followedsCount).toBe(0)
   expect(ourUserFull.followerStatus).toBe('SELF')
   expect(ourUserFull.followedStatus).toBe('SELF')
@@ -105,7 +103,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.postCount).toBe(1)
   expect(ourUserFull.posts.items).toHaveLength(1)
   expect(ourUserFull.postsWithUnviewedComments.items).toHaveLength(0)
-  expect(ourUserFull.postsByNewCommentActivity.items).toHaveLength(0)
   expect(ourUserFull.postViewedByCount).toBe(0)
   expect(ourUserFull.privacyStatus).toBe('PUBLIC')
   expect(ourUserFull.sharingDisabled).toBe(false)
@@ -144,9 +141,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.email = null
   ourUserFull.feed = null
   ourUserFull.followCountsHidden = null
-  ourUserFull.followedCount = null
   ourUserFull.followedsCount = null
-  ourUserFull.followerCount = null
   ourUserFull.followersCount = null
   ourUserFull.followersRequestedCount = null
   ourUserFull.followedStatus = 'NOT_FOLLOWING'
@@ -164,7 +159,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.postCount = null
   ourUserFull.posts = null
   ourUserFull.postsWithUnviewedComments = null
-  ourUserFull.postsByNewCommentActivity = null
   ourUserFull.postViewedByCount = null
   ourUserFull.privacyStatus = null
   ourUserFull.sharingDisabled = null

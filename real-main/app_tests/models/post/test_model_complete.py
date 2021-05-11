@@ -101,11 +101,6 @@ def test_complete(post_manager, post_with_media, user_manager, appsync_client):
     # check correct calls happened to far-flung other managers
     assert post.follower_manager.mock_calls == []
 
-    # check the subscription was triggered
-    assert len(appsync_client.mock_calls) == 1
-    assert 'triggerPostNotification' in str(appsync_client.send.call_args.args[0])
-    assert appsync_client.send.call_args.args[1]['input']['postId'] == post.id
-
 
 def test_complete_with_expiration(post_manager, post_with_media_with_expiration, user_manager):
     post = post_with_media_with_expiration
@@ -216,7 +211,6 @@ def test_complete_with_set_as_user_photo(post_manager, user, post_with_media, po
 def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, post_set_as_user_photo, caplog):
     # set up mocks
     post_set_as_user_photo.user.update_photo = mock.Mock(side_effect=UserException('nope'))
-    post_set_as_user_photo.appsync.trigger_notification = mock.Mock()
 
     # complete the post with use_as_user_photo with an exception throw from setting the photo, and
     # verify the rest of the post completion completes correctly
@@ -226,7 +220,6 @@ def test_complete_with_set_as_user_photo_handles_exception(post_manager, user, p
     assert 'Unable to set user photo' in str(caplog.records[0])
 
     assert post_set_as_user_photo.user.update_photo.mock_calls == [mock.call(post_set_as_user_photo.id)]
-    assert len(post_set_as_user_photo.appsync.trigger_notification.mock_calls) == 1
 
 
 def test_which_posts_get_free_trending(post_manager, user, image_data_b64, grant_data_b64):

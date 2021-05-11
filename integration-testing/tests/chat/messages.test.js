@@ -62,7 +62,6 @@ test('Add messages to a direct chat', async () => {
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
-  expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messagesCount).toBe(4)
   expect(resp.data.chat.messagesViewedCount).toBe(2)
   expect(resp.data.chat.messagesUnviewedCount).toBe(2)
@@ -92,7 +91,6 @@ test('Add messages to a direct chat', async () => {
   resp = await theirClient.query({query: queries.chat, variables: {chatId, reverse: true}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
-  expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messagesCount).toBe(4)
   expect(resp.data.chat.messagesViewedCount).toBe(2)
   expect(resp.data.chat.messagesUnviewedCount).toBe(2)
@@ -130,7 +128,6 @@ test('Report chat views', async () => {
   await misc.sleep(2000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(2)
   expect(resp.data.chat.messagesCount).toBe(2)
   expect(resp.data.chat.messagesViewedCount).toBe(0)
   expect(resp.data.chat.messagesUnviewedCount).toBe(2)
@@ -147,7 +144,6 @@ test('Report chat views', async () => {
   await misc.sleep(2000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(2)
   expect(resp.data.chat.messagesCount).toBe(2)
   expect(resp.data.chat.messagesViewedCount).toBe(2)
   expect(resp.data.chat.messagesUnviewedCount).toBe(0)
@@ -167,7 +163,6 @@ test('Report chat views', async () => {
   await misc.sleep(2000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
   expect(resp.data.chat.messagesViewedCount).toBe(2)
   expect(resp.data.chat.messagesUnviewedCount).toBe(1)
@@ -186,7 +181,6 @@ test('Report chat views', async () => {
   await misc.sleep(2000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
   expect(resp.data.chat.messagesViewedCount).toBe(3)
   expect(resp.data.chat.messagesUnviewedCount).toBe(0)
@@ -201,7 +195,6 @@ test('Report chat views', async () => {
   // check all messages appear viewed for them, because they're athor of them all
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
   expect(resp.data.chat.messagesViewedCount).toBe(3)
   expect(resp.data.chat.messagesUnviewedCount).toBe(0)
@@ -266,7 +259,6 @@ test('Cant add a message to a chat we are not in', async () => {
   // check the chat and verify the rando's message didn't get saved
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(1)
   expect(resp.data.chat.messagesCount).toBe(1)
   expect(resp.data.chat.messages.items).toHaveLength(1)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageId)
@@ -309,7 +301,6 @@ test('Tag users in a chat message', async () => {
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
   expect(resp.data.chat.messages.items).toHaveLength(3)
   expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
@@ -421,7 +412,6 @@ test('Delete chat message', async () => {
   // check that the message has now dissapeared from the db
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messageCount).toBe(0)
   expect(resp.data.chat.messagesCount).toBe(0)
   expect(resp.data.chat.messagesViewedCount).toBe(0)
   expect(resp.data.chat.messagesUnviewedCount).toBe(0)

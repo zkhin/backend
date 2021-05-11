@@ -481,7 +481,6 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
     })
     .then(({data: {createGroupChat: chat}}) => {
       expect(chat.chatId).toBe(chatId)
-      expect(chat.userCount).toBe(2)
       expect(chat.usersCount).toBe(2)
       expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
     })

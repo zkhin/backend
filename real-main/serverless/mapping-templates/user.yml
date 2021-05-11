@@ -22,17 +22,7 @@
   response: PassThru.response.vtl
 
 - type: User
-  field: followedCount
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
-
-- type: User
   field: followedsCount
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
-
-- type: User
-  field: followerCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl
 
@@ -190,16 +180,6 @@
 
 - type: User
   field: postsWithUnviewedComments
-  dataSource: DynamodbDataSource
-  caching:
-    keys:
-      - $context.args.limit
-      - $context.args.nextToken
-      - $context.identity.cognitoIdentityId
-      - $context.source.userId
-
-- type: User
-  field: postsByNewCommentActivity
   dataSource: DynamodbDataSource
   caching:
     keys:

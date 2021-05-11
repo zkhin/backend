@@ -36,11 +36,6 @@ module.exports.self = gql`
           postId
         }
       }
-      postsByNewCommentActivity {
-        items {
-          postId
-        }
-      }
       anonymouslyLikedPosts(limit: $anonymouslyLikedPostsLimit) {
         items {
           postId
@@ -135,11 +130,6 @@ module.exports.user = gql`
         }
       }
       postsWithUnviewedComments {
-        items {
-          postId
-        }
-      }
-      postsByNewCommentActivity {
         items {
           postId
         }
@@ -278,7 +268,6 @@ module.exports.post = gql`
       likeStatus
       viewedStatus
       commentsDisabled
-      commentCount
       commentsCount
       commentsViewedCount: commentsCount(viewedStatus: VIEWED)
       commentsUnviewedCount: commentsCount(viewedStatus: NOT_VIEWED)
@@ -290,7 +279,6 @@ module.exports.post = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
-      hasNewCommentActivity
       onymousLikeCount
       anonymousLikeCount
       onymouslyLikedBy(limit: $onymouslyLikedByLimit) {

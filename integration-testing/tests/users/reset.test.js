@@ -310,7 +310,6 @@ test('resetUser deletes any comments we have added to posts', async () => {
   // check they can see our comment on the post
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
@@ -321,7 +320,6 @@ test('resetUser deletes any comments we have added to posts', async () => {
   // check the comment has disappeared
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentCount).toBe(0)
   expect(resp.data.post.commentsCount).toBe(0)
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
@@ -396,10 +394,8 @@ test('resetUser causes us to leave group chats', async () => {
   // check they see us and our chat message in the second group chat
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(2)
   expect(resp.data.chat.usersCount).toBe(2)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  expect(resp.data.chat.messageCount).toBe(3)
   expect(resp.data.chat.messagesCount).toBe(3)
   expect(resp.data.chat.messages.items).toHaveLength(3)
   expect(resp.data.chat.messages.items[0].authorUserId).toBeNull()
@@ -416,10 +412,8 @@ test('resetUser causes us to leave group chats', async () => {
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(1)
   expect(resp.data.chat.usersCount).toBe(1)
   expect(resp.data.chat.users.items.map((u) => u.userId)).toEqual([theirUserId])
-  expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messagesCount).toBe(4)
   expect(resp.data.chat.messages.items).toHaveLength(4)
   expect(resp.data.chat.messages.items[0].authorUserId).toBeNull()

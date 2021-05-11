@@ -156,7 +156,6 @@ test('Disable comments causes existing comments to disappear, then reappear when
   await misc.sleep(1000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.commentsDisabled).toBe(false)
-  expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
@@ -168,7 +167,6 @@ test('Disable comments causes existing comments to disappear, then reappear when
   // check that comment has disappeared
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.commentsDisabled).toBe(true)
-  expect(resp.data.post.commentCount).toBeNull()
   expect(resp.data.post.commentsCount).toBeNull()
   expect(resp.data.post.comments).toBeNull()
 
@@ -179,7 +177,6 @@ test('Disable comments causes existing comments to disappear, then reappear when
   // check that comment has re-appeared
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.commentsDisabled).toBe(false)
-  expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)

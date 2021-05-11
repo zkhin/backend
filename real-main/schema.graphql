@@ -314,7 +314,6 @@ type Mutation {
   triggerNotification(input: NotificationInput!): Notification!
   triggerCardNotification(input: CardNotificationInput!): CardNotification!
   triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
-  triggerPostNotification(input: PostNotificationInput!): PostNotification!  # DEPRECATED
 
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
@@ -334,9 +333,6 @@ type Subscription {
   #   - userId must be caller's own userId
   #   - does not fire for the caller's own messages
   onChatMessageNotification(userId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
-
-  # DEPRECATED: use onNotifcation with POST_COMPLETED and POST_ERROR NotificationTypes
-  onPostNotification(userId: ID!): PostNotification @aws_subscribe(mutations: ["triggerPostNotification"])
 }
 
 type Notification {
@@ -493,7 +489,6 @@ type User {
   #   - private to the user themselves
   #   - ordered with post with most recent comment first
   postsWithUnviewedComments(limit: Int, nextToken: String): PaginatedPosts
-  postsByNewCommentActivity(limit: Int, nextToken: String): PaginatedPosts  # DEPRECATED use postsWithUnviewedComments
 
   # User's notification cards
   #   - private to the user themselves
@@ -517,7 +512,6 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followedUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
-  followedCount: Int  # DEPRECATED: use followedsCount
   followedsCount: Int  # only counts users with followStatus = FOLLOWING
 
   # Users the user follows that have stories
@@ -531,7 +525,6 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followerUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
-  followerCount: Int # DEPRECATED: use followersCount
   followersCount(followStatus: FollowStatus = FOLLOWING): Int  # only supports FOLLOWING, REQUESTED (so far)
 
   # Users the user has blocked
@@ -624,11 +617,9 @@ type Chat {
   # Users: ordered by joinedAt, earliest first
   #   - excludeUserId will filter out any user with that userId from the results
   users(limit: Int, nextToken: String, excludeUserId: ID): PaginatedUsers!
-  userCount: Int!  # DEPRECATED: use usersCount
   usersCount: Int!
   # Messages: ordered by createdAt, earliest first by default
   messages(limit: Int, nextToken: String, reverse: Boolean): PaginatedChatMessages!
-  messageCount: Int!  # DEPRECATED: use messagesCount
   messagesCount(viewedStatus: ViewedStatus): Int!
 }
 
@@ -870,40 +861,14 @@ type Post {
   #   - null if comments are disabled
   #   - ordered by commentedAt, oldest comment first
   comments(limit: Int, nextToken: String, reverse: Boolean): PaginatedComments
-  commentCount: Int  # DEPRECATED: use commentsCount
   commentsCount(viewedStatus: ViewedStatus): Int  # Only post owner may set viewedStatus
   commentsDisabled: Boolean
-
-  # Have new comments appeared on the post since the last time a view of a comment was reported?
-  #   - private to post owner only
-  hasNewCommentActivity: Boolean  # DEPRECATED: use commentsCount(viewedStatus: NOT_VIEWED)
 }
 
 type PaginatedPosts {
   # Set the optional arguments to filter down the set of returned posts
   items(viewedStatus: ViewedStatus, isVerified: Boolean): [Post!]!
   nextToken: String
-}
-
-# DEPRECATED
-type PostNotification {
-  userId: ID!  # user this notification is intended for
-  type: PostNotificationType!
-  post: Post!
-}
-
-# DEPRECATED
-enum PostNotificationType {
-  COMPLETED
-}
-
-# DEPRECATED
-input PostNotificationInput {
-  userId: ID!  # user this notification is intended for
-  type: PostNotificationType!
-  postId: ID!
-  postStatus: PostStatus!
-  isVerified: Boolean
 }
 
 type TextTaggedUser {

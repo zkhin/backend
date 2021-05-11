@@ -35,7 +35,6 @@ test('Add comments with bad word - force banned', async () => {
   let variables = {postId, imageData}
   await ourClient.mutate({mutation: mutations.addPost, variables}).then(({data: {addPost: post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(0)
     expect(post.commentsCount).toBe(0)
     expect(post.comments.items).toHaveLength(0)
   })
@@ -52,7 +51,6 @@ test('Add comments with bad word - force banned', async () => {
   await misc.sleep(1000)
   await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(postId)
-    expect(post.commentCount).toBe(1)
     expect(post.commentsCount).toBe(1)
     expect(post.comments.items).toHaveLength(1)
     expect(post.comments.items[0].commentId).toBe(ourCommentId)
