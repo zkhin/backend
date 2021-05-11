@@ -538,10 +538,22 @@ def test_on_user_jumio_response_update_id_verification_status(user_manager, user
     user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
     assert user.refresh_item().item['idVerificationStatus'] == IdVerificationStatus.APPROVED
 
-    # set reponse
+    # set error reponse
     response_2 = {
         'jumioIdScanReference': 'test_id_1',
-        'verificationStatus': 'NOT_APPROVED_VERIFIED',
+        'verificationStatus': 'ERROR_NOT_READABLE_ID',
+        'rejectReason': 'reason_1',
+    }
+    user_manager.set_id_verification_callback(user.id, response_2)
+    assert user.refresh_item().item['jumioResponse'] == response_2
+
+    user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
+    assert user.refresh_item().item['idVerificationStatus'] == IdVerificationStatus.ERROR
+
+    # set denied reponse
+    response_2 = {
+        'jumioIdScanReference': 'test_id_1',
+        'verificationStatus': 'DENIED_FRAUD',
         'rejectReason': 'reason_1',
     }
     user_manager.set_id_verification_callback(user.id, response_2)

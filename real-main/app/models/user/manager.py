@@ -622,11 +622,15 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         return total_cnt
 
     def on_user_jumio_response_update_id_verification_status(self, user_id, new_item, old_item=None):
-        jumio_response = new_item.get('jumioResponse', {})
-        if jumio_response.get('verificationStatus') == 'APPROVED_VERIFIED':
-            self.dynamo.set_id_verification_status(user_id, IdVerificationStatus.APPROVED)
+        # https://github.com/Jumio/implementation-guides/blob/master/netverify/callback.md#parameters
+        jumio_status = new_item.get('jumioResponse', {}).get('verificationStatus')
+        if jumio_status == 'APPROVED_VERIFIED':
+            verification_status = IdVerificationStatus.APPROVED
+        elif jumio_status.startswith('DENIED_'):
+            verification_status = IdVerificationStatus.REJECTED
         else:
-            self.dynamo.set_id_verification_status(user_id, IdVerificationStatus.REJECTED)
+            verification_status = IdVerificationStatus.ERROR
+        self.dynamo.set_id_verification_status(user_id, verification_status)
 
     def set_id_verification_callback(self, user_id, response):
         self.dynamo.set_id_verification_callback(user_id, response)
