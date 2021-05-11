@@ -946,11 +946,3 @@ module.exports.triggerChatMessageNotification = gql`
     }
   }
 `
-
-module.exports.triggerPostNotification = gql`
-  mutation TriggerPostNotification($input: PostNotificationInput!) {
-    triggerPostNotification(input: $input) {
-      userId
-    }
-  }
-`

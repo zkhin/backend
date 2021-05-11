@@ -15,9 +15,3 @@
   dataSource: NoneDataSource
   request: Subscription.byUserId.request.vtl
   response: PassThru.response.vtl
-
-- type: Subscription
-  field: onPostNotification
-  dataSource: NoneDataSource
-  request: Subscription.byUserId.request.vtl
-  response: PassThru.response.vtl

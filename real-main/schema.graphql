@@ -314,7 +314,6 @@ type Mutation {
   triggerNotification(input: NotificationInput!): Notification!
   triggerCardNotification(input: CardNotificationInput!): CardNotification!
   triggerChatMessageNotification(input: ChatMessageNotificationInput!): ChatMessageNotification!
-  triggerPostNotification(input: PostNotificationInput!): PostNotification!  # DEPRECATED
 
   # These are for testing the error logging & alerting system.
   lambdaClientError(arg1: String, arg2: String): String
@@ -334,9 +333,6 @@ type Subscription {
   #   - userId must be caller's own userId
   #   - does not fire for the caller's own messages
   onChatMessageNotification(userId: ID!): ChatMessageNotification @aws_subscribe(mutations: ["triggerChatMessageNotification"])
-
-  # DEPRECATED: use onNotifcation with POST_COMPLETED and POST_ERROR NotificationTypes
-  onPostNotification(userId: ID!): PostNotification @aws_subscribe(mutations: ["triggerPostNotification"])
 }
 
 type Notification {
@@ -873,27 +869,6 @@ type PaginatedPosts {
   # Set the optional arguments to filter down the set of returned posts
   items(viewedStatus: ViewedStatus, isVerified: Boolean): [Post!]!
   nextToken: String
-}
-
-# DEPRECATED
-type PostNotification {
-  userId: ID!  # user this notification is intended for
-  type: PostNotificationType!
-  post: Post!
-}
-
-# DEPRECATED
-enum PostNotificationType {
-  COMPLETED
-}
-
-# DEPRECATED
-input PostNotificationInput {
-  userId: ID!  # user this notification is intended for
-  type: PostNotificationType!
-  postId: ID!
-  postStatus: PostStatus!
-  isVerified: Boolean
 }
 
 type TextTaggedUser {

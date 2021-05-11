@@ -15,7 +15,6 @@ from app.models.like.enums import LikeStatus
 from app.models.user.enums import SubscriptionGrantCode, UserPrivacyStatus, UserSubscriptionLevel
 from app.utils import GqlNotificationType
 
-from .appsync import PostAppSync
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
 from .enums import PostStatus, PostType
 from .exceptions import PostException
@@ -44,7 +43,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
         self.clients = clients
         if 'appsync' in clients:
-            self.appsync = PostAppSync(clients['appsync'])
+            self.appsync_client = clients['appsync']
         if 'elasticsearch' in clients:
             self.elasticsearch_client = clients['elasticsearch']
         if 'dynamo' in clients:
@@ -61,7 +60,6 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
     def init_post(self, post_item):
         kwargs = {
-            'post_appsync': getattr(self, 'appsync', None),
             'post_dynamo': getattr(self, 'dynamo', None),
             'post_image_dynamo': getattr(self, 'image_dynamo', None),
             'post_original_metadata_dynamo': getattr(self, 'original_metadata_dynamo', None),
@@ -407,11 +405,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         kwargs = {'postId': post_id}
 
         if new_post.status == PostStatus.ERROR:
-            self.appsync.client.fire_notification(new_post.user_id, GqlNotificationType.POST_ERROR, **kwargs)
+            self.appsync_client.fire_notification(new_post.user_id, GqlNotificationType.POST_ERROR, **kwargs)
 
         initial_statuses = (PostStatus.PENDING, PostStatus.PROCESSING)
         if new_post.status == PostStatus.COMPLETED and old_post.status in initial_statuses:
-            self.appsync.client.fire_notification(new_post.user_id, GqlNotificationType.POST_COMPLETED, **kwargs)
+            self.appsync_client.fire_notification(new_post.user_id, GqlNotificationType.POST_COMPLETED, **kwargs)
 
     def on_post_verification_hidden_change_update_is_verified(self, post_id, new_item, old_item=None):
         old_verif_hidden = (old_item or {}).get('verificationHidden', False)

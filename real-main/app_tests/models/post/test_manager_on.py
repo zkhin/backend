@@ -361,49 +361,49 @@ def test_on_post_status_change_fire_gql_notifications(post_manager, post, user):
     # transition from PENDING to PROCESSING, should not fire
     old_item = {**post.item, 'postStatus': PostStatus.PENDING}
     new_item = {**post.item, 'postStatus': PostStatus.PROCESSING}
-    with patch.object(post_manager, 'appsync') as appsync_mock:
+    with patch.object(post_manager, 'appsync_client') as appsync_mock:
         post_manager.on_post_status_change_fire_gql_notifications(post.id, new_item=new_item, old_item=old_item)
     assert appsync_mock.mock_calls == []
 
     # transition from PENDING to COMPLETED, should fire for completed
     old_item = {**post.item, 'postStatus': PostStatus.PENDING}
     new_item = {**post.item, 'postStatus': PostStatus.COMPLETED}
-    with patch.object(post_manager, 'appsync') as appsync_mock:
+    with patch.object(post_manager, 'appsync_client') as appsync_mock:
         post_manager.on_post_status_change_fire_gql_notifications(post.id, new_item=new_item, old_item=old_item)
     assert appsync_mock.mock_calls == [
-        call.client.fire_notification(user.id, GqlNotificationType.POST_COMPLETED, postId=post.id)
+        call.fire_notification(user.id, GqlNotificationType.POST_COMPLETED, postId=post.id)
     ]
 
     # transition from PROCESSING to COMPLETED, should fire for completed
     old_item = {**post.item, 'postStatus': PostStatus.PROCESSING}
     new_item = {**post.item, 'postStatus': PostStatus.COMPLETED}
-    with patch.object(post_manager, 'appsync') as appsync_mock:
+    with patch.object(post_manager, 'appsync_client') as appsync_mock:
         post_manager.on_post_status_change_fire_gql_notifications(post.id, new_item=new_item, old_item=old_item)
     assert appsync_mock.mock_calls == [
-        call.client.fire_notification(user.id, GqlNotificationType.POST_COMPLETED, postId=post.id)
+        call.fire_notification(user.id, GqlNotificationType.POST_COMPLETED, postId=post.id)
     ]
 
     # transition from COMPLETED to ARCHIVED, should not fire
     old_item = {**post.item, 'postStatus': PostStatus.COMPLETED}
     new_item = {**post.item, 'postStatus': PostStatus.ARCHIVED}
-    with patch.object(post_manager, 'appsync') as appsync_mock:
+    with patch.object(post_manager, 'appsync_client') as appsync_mock:
         post_manager.on_post_status_change_fire_gql_notifications(post.id, new_item=new_item, old_item=old_item)
     assert appsync_mock.mock_calls == []
 
     # transition from ARCHIVED to COMPLETED, should not fire
     old_item = {**post.item, 'postStatus': PostStatus.ARCHIVED}
     new_item = {**post.item, 'postStatus': PostStatus.COMPLETED}
-    with patch.object(post_manager, 'appsync') as appsync_mock:
+    with patch.object(post_manager, 'appsync_client') as appsync_mock:
         post_manager.on_post_status_change_fire_gql_notifications(post.id, new_item=new_item, old_item=old_item)
     assert appsync_mock.mock_calls == []
 
     # transition from anything to ERROR, should fire for error
     old_item = {**post.item, 'postStatus': 'anything'}
     new_item = {**post.item, 'postStatus': PostStatus.ERROR}
-    with patch.object(post_manager, 'appsync') as appsync_mock:
+    with patch.object(post_manager, 'appsync_client') as appsync_mock:
         post_manager.on_post_status_change_fire_gql_notifications(post.id, new_item=new_item, old_item=old_item)
     assert appsync_mock.mock_calls == [
-        call.client.fire_notification(user.id, GqlNotificationType.POST_ERROR, postId=post.id)
+        call.fire_notification(user.id, GqlNotificationType.POST_ERROR, postId=post.id)
     ]
 
 

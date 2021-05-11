@@ -42,17 +42,3 @@ module.exports.onChatMessageNotification = gql`
   }
   ${fragments.chatMessage}
 `
-
-module.exports.onPostNotification = gql`
-  subscription OnPostNotification($userId: ID!) {
-    onPostNotification(userId: $userId) {
-      userId
-      type
-      post {
-        postId
-        postStatus
-        isVerified
-      }
-    }
-  }
-`
