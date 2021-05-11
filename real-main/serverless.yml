@@ -62,7 +62,6 @@ provider:
     SECRETSMANAGER_ID_VERIFICATION_API_CREDS_NAME: IdVerificationAPICreds-1
 
     APPLE_AUDIENCE_ID: ${env:AUTHENTICATION_PROVIDER_APPLEID, 'app.real.mobile'}
-    TRENDING_POST_MIN_COUNT_TO_KEEP: ${env:TRENDING_POST_MIN_COUNT_TO_KEEP, '1000'}
 
     SES_EMAIL_SENDER_ADDRESS: ${self:custom.sesSender.address}
     SES_EMAIL_SENDER_ARN: ${self:custom.sesSender.arn}
