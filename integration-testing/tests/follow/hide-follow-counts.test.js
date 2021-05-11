@@ -19,9 +19,7 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
   // verify defaults
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
     expect(self.followCountsHidden).toBe(false)
-    expect(self.followerCount).toBe(0)
     expect(self.followersCount).toBe(0)
-    expect(self.followedCount).toBe(0)
     expect(self.followedsCount).toBe(0)
   })
   await ourClient
@@ -43,9 +41,7 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
   await misc.sleep(1000)
   await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.followCountsHidden).toBeNull()
-    expect(user.followerCount).toBe(1)
     expect(user.followersCount).toBe(1)
-    expect(user.followedCount).toBe(1)
     expect(user.followedsCount).toBe(1)
   })
   await theirClient
@@ -69,9 +65,7 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
   // verify those counts are no longer visible by the other user
   await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.followCountsHidden).toBeNull()
-    expect(user.followerCount).toBeNull()
     expect(user.followersCount).toBeNull()
-    expect(user.followedCount).toBeNull()
     expect(user.followedsCount).toBeNull()
   })
   await theirClient
@@ -85,9 +79,7 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
   // TODO: should we be able to see this? Or is this a hide-it-from-yourself setting?
   await ourClient.query({query: queries.self}).then(({data: {self}}) => {
     expect(self.followCountsHidden).toBe(true)
-    expect(self.followerCount).toBe(1)
     expect(self.followersCount).toBe(1)
-    expect(self.followedCount).toBe(1)
     expect(self.followedsCount).toBe(1)
   })
   await ourClient.query({query: queries.ourFollowerUsers}).then(({data: {self}}) => {
@@ -107,9 +99,7 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
   // verify the other user can again see those counts
   await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.followCountsHidden).toBeNull()
-    expect(user.followerCount).toBe(1)
     expect(user.followersCount).toBe(1)
-    expect(user.followedCount).toBe(1)
     expect(user.followedsCount).toBe(1)
   })
   await theirClient

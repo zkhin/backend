@@ -83,8 +83,8 @@ module.exports.setUserPrivacyStatus = gql`
     setUserDetails(privacyStatus: $privacyStatus) {
       userId
       privacyStatus
-      followedCount
-      followerCount
+      followedsCount
+      followersCount
     }
   }
 `
@@ -341,7 +341,7 @@ module.exports.followUser = gql`
     followUser(userId: $userId) {
       userId
       followedStatus
-      followerCount
+      followersCount
     }
   }
 `
@@ -351,7 +351,7 @@ module.exports.unfollowUser = gql`
     unfollowUser(userId: $userId) {
       userId
       followedStatus
-      followerCount
+      followersCount
     }
   }
 `
@@ -361,7 +361,7 @@ module.exports.acceptFollowerUser = gql`
     acceptFollowerUser(userId: $userId) {
       userId
       followerStatus
-      followedCount
+      followedsCount
     }
   }
 `
@@ -371,7 +371,7 @@ module.exports.denyFollowerUser = gql`
     denyFollowerUser(userId: $userId) {
       userId
       followerStatus
-      followedCount
+      followedsCount
     }
   }
 `

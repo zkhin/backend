@@ -516,7 +516,6 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followedUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
-  followedCount: Int  # DEPRECATED: use followedsCount
   followedsCount: Int  # only counts users with followStatus = FOLLOWING
 
   # Users the user follows that have stories
@@ -530,7 +529,6 @@ type User {
   #   - followStatus cannot be set to NOT_FOLLOWING
   #   - followStatus can be set to values different from the default only when looking at our own user
   followerUsers(followStatus: FollowStatus = FOLLOWING, limit: Int, nextToken: String): PaginatedUsers
-  followerCount: Int # DEPRECATED: use followersCount
   followersCount(followStatus: FollowStatus = FOLLOWING): Int  # only supports FOLLOWING, REQUESTED (so far)
 
   # Users the user has blocked

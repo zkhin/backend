@@ -160,9 +160,7 @@ module.exports.simpleUserFields = gql`
     followedStatus
     followerStatus
     followCountsHidden
-    followedCount
     followedsCount
-    followerCount
     followersCount
     followersRequestedCount: followersCount(followStatus: REQUESTED)
     languageCode
