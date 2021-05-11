@@ -154,6 +154,19 @@ def google_client():
 
 
 @pytest.fixture
+def id_verification_client():
+    yield mock.Mock(
+        clients.IdVerificationClient(
+            lambda: {
+                'apiToken': 'api-token',
+                'secret': 'secret',
+                'callbackUrl': 'callback-url',
+            }
+        )
+    )
+
+
+@pytest.fixture
 def real_dating_client():
     yield mock.Mock(clients.RealDatingClient())
 
@@ -297,6 +310,7 @@ def user_manager(
     apple_client,
     facebook_client,
     google_client,
+    id_verification_client,
     pinpoint_client,
     elasticsearch_client,
     real_dating_client,
@@ -316,5 +330,6 @@ def user_manager(
             'pinpoint': pinpoint_client,
             'elasticsearch': elasticsearch_client,
             'real_dating': real_dating_client,
+            'id_verification': id_verification_client,
         }
     )

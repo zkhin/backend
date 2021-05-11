@@ -449,3 +449,19 @@ def test_send_dating_matches_notification(user_manager, user1, user2):
     card_id2 = f'{user2.id}:USER_DATING_NEW_MATCHES'
     assert card_manager.get_card(card_id1) is None
     assert card_manager.get_card(card_id2) is None
+
+
+def test_set_id_verification_callback(user_manager, user1):
+    assert 'jumioResponse' not in user1.item
+
+    response = {
+        'jumioIdScanReference': 'test_id_1',
+        'verificationStatus': 'status_1',
+        'rejectReason': 'reason_1',
+    }
+    user_manager.set_id_verification_callback(user1.id, response)
+    assert user1.refresh_item().item['jumioResponse'] == response
+
+    # delete it
+    user_manager.set_id_verification_callback(user1.id, None)
+    assert 'jumioResponse' not in user1.refresh_item().item

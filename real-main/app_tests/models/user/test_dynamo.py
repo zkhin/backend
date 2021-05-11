@@ -1158,3 +1158,53 @@ def test_add_user_promoted_record(user_dynamo):
     assert item['expiresAt'] == expires_at.to_iso8601_string()
     assert item['gsiA1PartitionKey'] == 'userPromoted'
     assert item['gsiA1SortKey'] == granted_at.to_iso8601_string()
+
+
+def test_set_id_verification_callback(user_dynamo):
+    user_id = 'my-user-id'
+    username = 'my-username'
+
+    # create the user, verify user starts with no jumio response
+    user_item = user_dynamo.add_user(user_id, username)
+    assert user_item['userId'] == user_id
+    assert 'jumioResponse' not in user_item
+
+    # set it
+    response_1 = {
+        'jumioIdScanReference': 'test_id_1',
+        'verificationStatus': 'status_1',
+        'rejectReason': 'reason_1',
+    }
+    user_item = user_dynamo.set_id_verification_callback(user_id, response_1)
+    assert user_item['jumioResponse'] == response_1
+
+    # set it again
+    response_2 = {
+        'jumioIdScanReference': 'test_id_2',
+        'verificationStatus': 'status_2',
+        'rejectReason': 'reason_2',
+    }
+    user_item = user_dynamo.set_id_verification_callback(user_id, response_2)
+    assert user_item['jumioResponse'] == response_2
+
+    # delete it
+    user_item = user_dynamo.set_id_verification_callback(user_id, None)
+    assert 'jumioResponse' not in user_item
+
+
+def test_set_id_verification_status(user_dynamo):
+    user_id = 'my-user-id'
+    username = 'my-username'
+
+    # create the user, verify user starts with no id verification status
+    user_item = user_dynamo.add_user(user_id, username)
+    assert user_item['userId'] == user_id
+    assert 'idVerificationStatus' not in user_item
+
+    # set it
+    user_item = user_dynamo.set_id_verification_status(user_id, 'APPROVED')
+    assert user_item['idVerificationStatus'] == 'APPROVED'
+
+    # delete it
+    user_item = user_dynamo.set_id_verification_status(user_id, None)
+    assert 'idVerificationStatus' not in user_item

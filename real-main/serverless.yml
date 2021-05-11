@@ -59,6 +59,7 @@ provider:
     SECRETSMANAGER_POST_VERIFICATION_API_CREDS_NAME: PostVerificationAPICreds-${self:provider.stage}-1
     SECRETSMANAGER_GOOGLE_CLIENT_IDS_NAME: GoogleClientIds-1
     SECRETSMANAGER_REAL_KEY_PAIR_NAME: RealKeyPair-1
+    SECRETSMANAGER_ID_VERIFICATION_API_CREDS_NAME: IdVerificationAPICreds-1
 
     APPLE_AUDIENCE_ID: ${env:AUTHENTICATION_PROVIDER_APPLEID, 'app.real.mobile'}
     TRENDING_POST_MIN_COUNT_TO_KEEP: ${env:TRENDING_POST_MIN_COUNT_TO_KEEP, '1000'}
@@ -732,6 +733,25 @@ functions:
     alarms:
       - functionErrors
       - functionThrottles
+
+  handleIdVerificationCallback:
+    name: ${self:provider.stackName}-handleIdVerificationCallback
+    handler: app.handlers.api.handle_id_verification_callback
+    layers:
+      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
+    events:
+      - http:
+          path: id-verification/{id}/callback
+          method: post
+          request:
+            parameters:
+              paths:
+                id: true
+          private: false
+    alarms:
+      - functionErrors
+      - functionThrottles
+    tracing: PassThrough
 
 # keep this miminal for smaller packages and thus faster deployments
 package:

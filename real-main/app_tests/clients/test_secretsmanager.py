@@ -10,6 +10,7 @@ post_verification_api_creds_name = 'KeyForPV'
 google_client_ids_name = 'KeyForGoogleClientIds'
 apple_appstore_params_name = 'KeyForAppleAppstoreParams'
 amplitude_api_key_name = 'KeyForAmplitudeApiKey'
+id_verification_api_creds_name = 'KeyForIdVerification'
 
 
 @pytest.fixture
@@ -21,6 +22,7 @@ def client():
             google_client_ids_name=google_client_ids_name,
             apple_appstore_params_name=apple_appstore_params_name,
             amplitude_api_key_name=amplitude_api_key_name,
+            id_verification_api_creds_name=id_verification_api_creds_name,
         )
 
 
@@ -137,3 +139,27 @@ def test_retrieve_amplitude_params(client):
     # test caching: remove the secret from the backend store, check again
     client.boto_client.delete_secret(SecretId=amplitude_api_key_name)
     assert client.get_amplitude_api_key() == value
+
+
+def test_retrieve_id_verification_api_creds(client):
+    value = {
+        'apiToken': 'the-api-token',
+        'secret': 'secret',
+        'callbackUrl': 'https://callbackurl.com',
+    }
+
+    # add the secret, then remove it
+    client.boto_client.create_secret(Name=id_verification_api_creds_name, SecretString=json.dumps(value))
+    client.boto_client.delete_secret(SecretId=id_verification_api_creds_name)
+
+    # secret is not in there - test we cannot retrieve it
+    with pytest.raises(client.exceptions.InvalidRequestException):
+        client.get_id_verification_api_creds()
+
+    # restore the value in there, test we can retrieve it
+    client.boto_client.restore_secret(SecretId=id_verification_api_creds_name)
+    assert client.get_id_verification_api_creds() == value
+
+    # test caching: remove the secret from the backend store, check again
+    client.boto_client.delete_secret(SecretId=id_verification_api_creds_name)
+    assert client.get_id_verification_api_creds() == value

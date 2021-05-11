@@ -88,3 +88,24 @@ def send_amplitude_event(event, context):
     return {
         'statusCode': status_code,
     }
+
+
+@handler_logging(event_to_extras=lambda event: {'event': event})
+def handle_id_verification_callback(event, context):
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('handle_id_verification_callback() called')
+
+    try:
+        user_id = event['pathParameters']['id']
+        assert user_id
+        response = json.loads(event.get('body'))
+    except Exception as err:
+        logger.warning(f'ID verification callback client error: `{str(err)}`')
+        status_code = 400
+    else:
+        user_manager.set_id_verification_callback(user_id, response)
+        status_code = 200
+
+    return {
+        'statusCode': status_code,
+    }

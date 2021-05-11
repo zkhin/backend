@@ -19,7 +19,7 @@ from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
 
 from .dynamo import UserContactAttributeDynamo, UserDynamo
-from .enums import UserDatingStatus, UserStatus, UserSubscriptionLevel
+from .enums import IdVerificationStatus, UserDatingStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserAlreadyExists, UserException, UserValidationException
 from .model import User
 
@@ -620,3 +620,17 @@ class UserManager(TrendingManagerMixin, ManagerBase):
                 total_cnt += 1
 
         return total_cnt
+
+    def on_user_jumio_response_update_id_verification_status(self, user_id, new_item, old_item=None):
+        # https://github.com/Jumio/implementation-guides/blob/master/netverify/callback.md#parameters
+        jumio_status = new_item.get('jumioResponse', {}).get('verificationStatus')
+        if jumio_status == 'APPROVED_VERIFIED':
+            verification_status = IdVerificationStatus.APPROVED
+        elif jumio_status.startswith('DENIED_'):
+            verification_status = IdVerificationStatus.REJECTED
+        else:
+            verification_status = IdVerificationStatus.ERROR
+        self.dynamo.set_id_verification_status(user_id, verification_status)
+
+    def set_id_verification_callback(self, user_id, response):
+        self.dynamo.set_id_verification_callback(user_id, response)

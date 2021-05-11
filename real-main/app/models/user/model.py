@@ -12,7 +12,15 @@ from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
 from app.utils import image_size
 
-from .enums import SubscriptionGrantCode, UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .enums import (
+    IdVerificationImageType,
+    IdVerificationStatus,
+    SubscriptionGrantCode,
+    UserDatingStatus,
+    UserPrivacyStatus,
+    UserStatus,
+    UserSubscriptionLevel,
+)
 from .error_codes import PromotionCodeError, UserAuthError, UserDatingMissingError, UserDatingWrongError
 from .exceptions import (
     UserAlreadyGrantedSubscription,
@@ -47,7 +55,15 @@ SUBSCRIPTION_GRANT_DURATION = {SubscriptionGrantCode.FREE_FOR_LIFE: pendulum.dur
 
 class User(TrendingModelMixin):
 
-    client_names = ['cloudfront', 'cognito', 'elasticsearch', 'dynamo', 'pinpoint', 's3_uploads']
+    client_names = [
+        'cloudfront',
+        'cognito',
+        'elasticsearch',
+        'dynamo',
+        'pinpoint',
+        's3_uploads',
+        'id_verification',
+    ]
     item_type = 'user'
     subscription_bonus_duration = pendulum.duration(months=1)
 
@@ -652,3 +668,13 @@ class User(TrendingModelMixin):
 
         user_ids = json.loads(self.real_dating_client.swiped_right_users(self.id)['Payload'].read().decode())
         return user_ids
+
+    def verify_id_document(self, frontside_image, country, id_type, image_type):
+        self.id_verification_client.verify_id(
+            user_id=self.id,
+            frontside_image=frontside_image,
+            country=country,
+            id_type=id_type,
+            mime_type='image/jpeg' if image_type == IdVerificationImageType.JPEG else 'image/png',
+        )
+        self.dynamo.set_id_verification_status(self.id, IdVerificationStatus.SUBMITTED)

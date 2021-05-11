@@ -302,6 +302,14 @@ type Mutation {
   deleteChatMessage(messageId: ID!): ChatMessage
   flagChatMessage(messageId: ID!): ChatMessage
 
+  #ID verification
+  verifyId(
+    frontsideImageData: String!,
+    country: String!,
+    idType: IdVerificationType!,
+    imageType: IdVerificationImageType!,
+  ): User
+
   # Used internally to fire subscription events. Calling externally is an error.
   triggerNotification(input: NotificationInput!): Notification!
   triggerCardNotification(input: CardNotificationInput!): CardNotification!
@@ -993,4 +1001,16 @@ input ContactInput {
 type FoundContact {
   contactId: ID!
   user: User
+}
+
+enum IdVerificationType {
+  PASSPORT
+  DRIVING_LICENSE
+  ID_CARD
+  VISA
+}
+
+enum IdVerificationImageType {
+  JPEG
+  PNG
 }

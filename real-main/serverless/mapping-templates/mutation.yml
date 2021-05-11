@@ -418,3 +418,9 @@
   field: triggerPostNotification
   dataSource: NoneDataSource
   response: PassThru.response.vtl
+
+- type: Mutation
+  field: verifyId
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl

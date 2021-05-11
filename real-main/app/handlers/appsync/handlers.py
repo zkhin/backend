@@ -56,6 +56,7 @@ clients = {
     'elasticsearch': clients.ElasticSearchClient(),
     'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
+    'id_verification': clients.IdVerificationClient(secrets_manager_client.get_id_verification_api_creds),
     'pinpoint': clients.PinpointClient(),
     'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
@@ -1515,6 +1516,29 @@ def flag_chat_message(caller_user, arguments, **kwargs):
     resp = message.serialize(caller_user.id)
     resp['flagStatus'] = FlagStatus.FLAGGED
     return resp
+
+
+@routes.register('Mutation.verifyId')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def verifyId(caller_user, arguments, **kwargs):
+    frontside_image = arguments['frontsideImageData']
+    country = arguments['country']
+    id_type = arguments['idType']
+    image_type = arguments['imageType']
+
+    try:
+        caller_user.verify_id_document(
+            frontside_image=frontside_image,
+            country=country,
+            id_type=id_type,
+            image_type=image_type,
+        )
+    except UserException as err:
+        raise ClientException(str(err)) from err
+
+    return caller_user.serialize(caller_user.id)
 
 
 @routes.register('Mutation.lambdaClientError')

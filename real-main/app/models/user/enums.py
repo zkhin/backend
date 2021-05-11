@@ -41,3 +41,19 @@ class SubscriptionGrantCode:
     FREE_FOR_LIFE = 'FREE_FOR_LIFE'
 
     _ALL = FREE_FOR_LIFE
+
+
+class IdVerificationImageType:
+    JPEG = 'JPEG'
+    PNG = 'PNG'
+
+    _ALL = (JPEG, PNG)
+
+
+class IdVerificationStatus:
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
+    SUBMITTED = 'SUBMITTED'
+    ERROR = 'ERROR'
+
+    _ALL = (APPROVED, REJECTED, SUBMITTED, ERROR)

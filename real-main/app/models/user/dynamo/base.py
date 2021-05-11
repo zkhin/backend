@@ -359,6 +359,30 @@ class UserDynamo:
         }
         return self.client.update_item(query_kwargs)
 
+    def set_id_verification_callback(self, user_id, response):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+        }
+        if response is None:
+            query_kwargs['UpdateExpression'] = 'REMOVE jumioResponse'
+        else:
+            query_kwargs['UpdateExpression'] = 'SET jumioResponse = :jr'
+            query_kwargs['ExpressionAttributeValues'] = {':jr': response}
+
+        return self.client.update_item(query_kwargs)
+
+    def set_id_verification_status(self, user_id, status):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+        }
+        if status:
+            query_kwargs['UpdateExpression'] = 'SET idVerificationStatus = :st'
+            query_kwargs['ExpressionAttributeValues'] = {':st': status}
+        else:
+            query_kwargs['UpdateExpression'] = 'REMOVE idVerificationStatus'
+
+        return self.client.update_item(query_kwargs)
+
     def generate_user_ids_by_birthday(self, birthday):
         "`birthday` should be a string in format MM-DD"
         query_kwargs = {
