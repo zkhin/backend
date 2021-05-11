@@ -10,10 +10,17 @@ from app.clients import RealDatingClient, RedeemPromotionClient
 from app.clients.cognito import InvalidEncryption
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
-from app.models.user.enums import IdVerificationImageType
 from app.utils import image_size
 
-from .enums import SubscriptionGrantCode, UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
+from .enums import (
+    IdVerificationImageType,
+    IdVerificationStatus,
+    SubscriptionGrantCode,
+    UserDatingStatus,
+    UserPrivacyStatus,
+    UserStatus,
+    UserSubscriptionLevel,
+)
 from .error_codes import PromotionCodeError, UserAuthError, UserDatingMissingError, UserDatingWrongError
 from .exceptions import (
     UserAlreadyGrantedSubscription,
@@ -670,3 +677,4 @@ class User(TrendingModelMixin):
             id_type=id_type,
             mime_type='image/jpeg' if image_type == IdVerificationImageType.JPEG else 'image/png',
         )
+        self.dynamo.set_id_verification_status(self.id, IdVerificationStatus.SUBMITTED)

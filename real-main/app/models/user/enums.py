@@ -48,3 +48,11 @@ class IdVerificationImageType:
     PNG = 'PNG'
 
     _ALL = (JPEG, PNG)
+
+
+class IdVerificationStatus:
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
+    SUBMITTED = 'SUBMITTED'
+
+    _ALL = (APPROVED, REJECTED, SUBMITTED)

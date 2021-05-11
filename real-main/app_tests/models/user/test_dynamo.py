@@ -1202,9 +1202,9 @@ def test_set_id_verification_status(user_dynamo):
     assert 'idVerificationStatus' not in user_item
 
     # set it
-    user_item = user_dynamo.set_id_verification_status(user_id, True)
-    assert user_item['idVerificationStatus']
+    user_item = user_dynamo.set_id_verification_status(user_id, 'APPROVED')
+    assert user_item['idVerificationStatus'] == 'APPROVED'
 
     # delete it
-    user_item = user_dynamo.set_id_verification_status(user_id, False)
+    user_item = user_dynamo.set_id_verification_status(user_id, None)
     assert 'idVerificationStatus' not in user_item

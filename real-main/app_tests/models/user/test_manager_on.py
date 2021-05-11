@@ -7,7 +7,7 @@ import pytest
 
 from app.models.appstore.enums import AppStoreSubscriptionStatus
 from app.models.post.enums import PostStatus, PostType
-from app.models.user.enums import UserStatus, UserSubscriptionLevel
+from app.models.user.enums import IdVerificationStatus, UserStatus, UserSubscriptionLevel
 from app.utils import image_size
 
 
@@ -536,7 +536,7 @@ def test_on_user_jumio_response_update_id_verification_status(user_manager, user
     assert user.refresh_item().item['jumioResponse'] == response_1
 
     user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
-    assert user.refresh_item().item['idVerificationStatus']
+    assert user.refresh_item().item['idVerificationStatus'] == IdVerificationStatus.APPROVED
 
     # set reponse
     response_2 = {
@@ -548,11 +548,4 @@ def test_on_user_jumio_response_update_id_verification_status(user_manager, user
     assert user.refresh_item().item['jumioResponse'] == response_2
 
     user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
-    assert 'idVerificationStatus' not in user.refresh_item().item
-
-    # delete it
-    user_manager.set_id_verification_callback(user.id, None)
-    assert 'jumioResponse' not in user.refresh_item().item
-
-    user_manager.on_user_jumio_response_update_id_verification_status(user.id, new_item=user.item)
-    assert 'idVerificationStatus' not in user.refresh_item().item
+    assert user.refresh_item().item['idVerificationStatus'] == IdVerificationStatus.REJECTED
