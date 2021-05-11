@@ -471,7 +471,6 @@ module.exports.addPost = gql`
         followedStatus
       }
       commentsDisabled
-      commentCount
       commentsCount
       comments {
         items {
@@ -481,7 +480,6 @@ module.exports.addPost = gql`
       likesDisabled
       sharingDisabled
       verificationHidden
-      hasNewCommentActivity
       flagStatus
       keywords
     }

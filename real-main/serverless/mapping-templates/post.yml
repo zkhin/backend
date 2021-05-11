@@ -113,11 +113,6 @@
       - $context.source.textTags
 
 - type: Post
-  field: commentCount
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
-
-- type: Post
   field: commentsCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl
@@ -184,8 +179,3 @@
       - $context.identity.cognitoIdentityId
       - $context.source.postId
       - $context.source.postStatus
-
-- type: Post
-  field: hasNewCommentActivity
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl

@@ -493,7 +493,6 @@ type User {
   #   - private to the user themselves
   #   - ordered with post with most recent comment first
   postsWithUnviewedComments(limit: Int, nextToken: String): PaginatedPosts
-  postsByNewCommentActivity(limit: Int, nextToken: String): PaginatedPosts  # DEPRECATED use postsWithUnviewedComments
 
   # User's notification cards
   #   - private to the user themselves
@@ -868,13 +867,8 @@ type Post {
   #   - null if comments are disabled
   #   - ordered by commentedAt, oldest comment first
   comments(limit: Int, nextToken: String, reverse: Boolean): PaginatedComments
-  commentCount: Int  # DEPRECATED: use commentsCount
   commentsCount(viewedStatus: ViewedStatus): Int  # Only post owner may set viewedStatus
   commentsDisabled: Boolean
-
-  # Have new comments appeared on the post since the last time a view of a comment was reported?
-  #   - private to post owner only
-  hasNewCommentActivity: Boolean  # DEPRECATED: use commentsCount(viewedStatus: NOT_VIEWED)
 }
 
 type PaginatedPosts {

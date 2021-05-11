@@ -24,7 +24,6 @@ test('One user adds multiple comments, ordering', async () => {
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
-  expect(resp.data.addPost.commentCount).toBe(0)
   expect(resp.data.addPost.commentsCount).toBe(0)
   expect(resp.data.addPost.comments.items).toHaveLength(0)
 
@@ -45,7 +44,6 @@ test('One user adds multiple comments, ordering', async () => {
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   const post = resp.data.post
   expect(post.postId).toBe(postId)
-  expect(post.commentCount).toBe(2)
   expect(post.commentsCount).toBe(2)
   expect(post.comments.items).toHaveLength(2)
   expect(post.comments.items[0].commentId).toBe(commentId1)
@@ -60,7 +58,6 @@ test('One user adds multiple comments, ordering', async () => {
   // check we can reverse the order of those comments
   resp = await ourClient.query({query: queries.post, variables: {postId, commentsReverse: true}})
   expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentCount).toBe(2)
   expect(resp.data.post.commentsCount).toBe(2)
   expect(resp.data.post.comments.items).toHaveLength(2)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId2)
@@ -77,7 +74,6 @@ test('Comment viewed status reacts to views Post correctly', async () => {
   const postId = uuidv4()
   await ourClient.mutate({mutation: mutations.addPost, variables: {postId, imageData}}).then((resp) => {
     expect(resp.data.addPost.postId).toBe(postId)
-    expect(resp.data.addPost.commentCount).toBe(0)
     expect(resp.data.addPost.commentsCount).toBe(0)
     expect(resp.data.addPost.comments.items).toHaveLength(0)
   })
@@ -203,7 +199,6 @@ test('Comments of private user on public post are visible to all', async () => {
   await misc.sleep(2000)
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)

@@ -199,16 +199,6 @@
       - $context.source.userId
 
 - type: User
-  field: postsByNewCommentActivity
-  dataSource: DynamodbDataSource
-  caching:
-    keys:
-      - $context.args.limit
-      - $context.args.nextToken
-      - $context.identity.cognitoIdentityId
-      - $context.source.userId
-
-- type: User
   field: postViewedByCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl

@@ -105,7 +105,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   expect(ourUserFull.postCount).toBe(1)
   expect(ourUserFull.posts.items).toHaveLength(1)
   expect(ourUserFull.postsWithUnviewedComments.items).toHaveLength(0)
-  expect(ourUserFull.postsByNewCommentActivity.items).toHaveLength(0)
   expect(ourUserFull.postViewedByCount).toBe(0)
   expect(ourUserFull.privacyStatus).toBe('PUBLIC')
   expect(ourUserFull.sharingDisabled).toBe(false)
@@ -164,7 +163,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   ourUserFull.postCount = null
   ourUserFull.posts = null
   ourUserFull.postsWithUnviewedComments = null
-  ourUserFull.postsByNewCommentActivity = null
   ourUserFull.postViewedByCount = null
   ourUserFull.privacyStatus = null
   ourUserFull.sharingDisabled = null

@@ -310,7 +310,6 @@ test('resetUser deletes any comments we have added to posts', async () => {
   // check they can see our comment on the post
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentCount).toBe(1)
   expect(resp.data.post.commentsCount).toBe(1)
   expect(resp.data.post.comments.items).toHaveLength(1)
   expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
@@ -321,7 +320,6 @@ test('resetUser deletes any comments we have added to posts', async () => {
   // check the comment has disappeared
   await misc.sleep(2000)
   resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentCount).toBe(0)
   expect(resp.data.post.commentsCount).toBe(0)
   expect(resp.data.post.comments.items).toHaveLength(0)
 })
