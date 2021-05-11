@@ -54,7 +54,6 @@ test('Create a direct chat with bad word', async () => {
       expect(chat.chatId).toBe(chatId)
       expect(chat.chatType).toBe('DIRECT')
       expect(chat.name).toBeNull()
-      expect(chat.userCount).toBe(2)
       expect(chat.usersCount).toBe(2)
       expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
       expect(chat.messages.items).toHaveLength(1)
@@ -129,7 +128,6 @@ test('Create a direct chat with bad word', async () => {
     expect(user.chatCount).toBe(1)
     expect(user.chats.items).toHaveLength(1)
     expect(user.chats.items[0].chatId).toBe(chatId)
-    expect(user.chats.items[0].messageCount).toBe(0)
   })
   await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
@@ -152,7 +150,6 @@ test('Two way follow, skip bad word detection - direct chat', async () => {
       expect(chat.chatId).toBe(chatId)
       expect(chat.chatType).toBe('DIRECT')
       expect(chat.name).toBeNull()
-      expect(chat.userCount).toBe(2)
       expect(chat.usersCount).toBe(2)
       expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
       expect(chat.messages.items).toHaveLength(1)
@@ -231,7 +228,6 @@ test('Create a group chat with bad word', async () => {
       expect(chat.chatId).toBe(chatId)
       expect(chat.chatType).toBe('GROUP')
       expect(chat.name).toBe('x')
-      expect(chat.userCount).toBe(3)
       expect(chat.usersCount).toBe(3)
       expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
       expect(chat.messages.items).toHaveLength(3)
@@ -282,7 +278,6 @@ test('Create a group chat with bad word', async () => {
   await misc.sleep(2000)
   await otherClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
-    expect(chat.messageCount).toBe(4)
     expect(chat.messagesCount).toBe(4)
     expect(chat.messages.items).toHaveLength(4)
     expect(chat.messages.items[0].messageId).toBe(messageIdSystem0)
@@ -312,7 +307,6 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
       expect(chat.chatId).toBe(chatId)
       expect(chat.chatType).toBe('GROUP')
       expect(chat.name).toBe('x')
-      expect(chat.userCount).toBe(3)
       expect(chat.usersCount).toBe(3)
       expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
       expect(chat.messages.items).toHaveLength(3)
@@ -354,7 +348,6 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
   await misc.sleep(2000)
   await otherClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
-    expect(chat.messageCount).toBe(5)
     expect(chat.messagesCount).toBe(5)
     expect(chat.messages.items).toHaveLength(5)
     expect(chat.messages.items[0].messageId).toBe(messageIdSystem0)
@@ -377,7 +370,6 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
   await misc.sleep(2000)
   await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
-    expect(chat.messageCount).toBe(5)
     expect(chat.messagesCount).toBe(5)
     expect(chat.messages.items).toHaveLength(5)
     expect(chat.messages.items[0].messageId).toBe(messageIdSystem0)

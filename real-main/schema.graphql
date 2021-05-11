@@ -624,11 +624,9 @@ type Chat {
   # Users: ordered by joinedAt, earliest first
   #   - excludeUserId will filter out any user with that userId from the results
   users(limit: Int, nextToken: String, excludeUserId: ID): PaginatedUsers!
-  userCount: Int!  # DEPRECATED: use usersCount
   usersCount: Int!
   # Messages: ordered by createdAt, earliest first by default
   messages(limit: Int, nextToken: String, reverse: Boolean): PaginatedChatMessages!
-  messageCount: Int!  # DEPRECATED: use messagesCount
   messagesCount(viewedStatus: ViewedStatus): Int!
 }
 

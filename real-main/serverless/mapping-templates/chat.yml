@@ -9,11 +9,6 @@
       - $context.source.chatId
 
 - type: Chat
-  field: userCount
-  dataSource: NoneDataSource
-  response: PassThru.response.vtl
-
-- type: Chat
   field: usersCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl
@@ -21,11 +16,6 @@
 - type: Chat
   field: messages
   dataSource: DynamodbDataSource
-  response: PassThru.response.vtl
-
-- type: Chat
-  field: messageCount
-  dataSource: NoneDataSource
   response: PassThru.response.vtl
 
 - type: Chat

@@ -158,9 +158,7 @@ test('POTENTIAL -> CONFIRMED', async () => {
     expect(card.action).toBe('https://real.app/chat/')
     const chat = user.chats.items[0]
     expect(chat.chatType).toBe('DIRECT')
-    expect(chat.messageCount).toBe(1)
     expect(chat.messagesCount).toBe(1)
-    expect(chat.userCount).toBe(2)
     expect(chat.usersCount).toBe(2)
     expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
   })

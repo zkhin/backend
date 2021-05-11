@@ -112,11 +112,9 @@ test('Blocking a user we are in a group chat with', async () => {
   await misc.sleep(1000) // dynamo
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(2)
   expect(resp.data.chat.usersCount).toBe(2)
   expect(resp.data.chat.users.items).toHaveLength(1)
   expect(resp.data.chat.users.items[0].userId).toBe(ourUserId)
-  expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messagesCount).toBe(4)
   expect(resp.data.chat.messages.items).toHaveLength(4)
   expect(resp.data.chat.messages.items[2].messageId).toBe(messageId1)
@@ -127,10 +125,8 @@ test('Blocking a user we are in a group chat with', async () => {
   // check they still see the chat, and still see us and our messages (for now - would be better to block those)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(2)
   expect(resp.data.chat.usersCount).toBe(2)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  expect(resp.data.chat.messageCount).toBe(4)
   expect(resp.data.chat.messagesCount).toBe(4)
   expect(resp.data.chat.messages.items).toHaveLength(4)
   expect(resp.data.chat.messages.items[2].messageId).toBe(messageId1)
@@ -154,7 +150,6 @@ test('Creating a group chat with users with have a blocking relationship skips t
   let variables = {chatId: chatId1, userIds: [theirUserId, otherUserId], messageId: uuidv4(), messageText: 'm1'}
   resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
   expect(resp.data.createGroupChat.chatId).toBe(chatId1)
-  expect(resp.data.createGroupChat.userCount).toBe(2)
   expect(resp.data.createGroupChat.usersCount).toBe(2)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, otherUserId].sort(),
@@ -169,7 +164,6 @@ test('Creating a group chat with users with have a blocking relationship skips t
   variables = {chatId: chatId2, userIds: [ourUserId], messageId: uuidv4(), messageText: 'm1'}
   resp = await theirClient.mutate({mutation: mutations.createGroupChat, variables})
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
-  expect(resp.data.createGroupChat.userCount).toBe(1)
   expect(resp.data.createGroupChat.usersCount).toBe(1)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId)).toEqual([theirUserId])
 
@@ -198,7 +192,6 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   let variables = {chatId, userIds: [], messageId: uuidv4(), messageText: 'm1'}
   resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.userCount).toBe(1)
   expect(resp.data.createGroupChat.usersCount).toBe(1)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 
@@ -206,7 +199,6 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   variables = {chatId, userIds: [other1UserId]}
   resp = await ourClient.mutate({mutation: mutations.addToGroupChat, variables})
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
-  expect(resp.data.addToGroupChat.userCount).toBe(1)
   expect(resp.data.addToGroupChat.usersCount).toBe(1)
   expect(resp.data.addToGroupChat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 
@@ -214,14 +206,12 @@ test('Adding somebody we have a blocking relationship with to a group chat skips
   variables = {chatId, userIds: [other2UserId]}
   resp = await ourClient.mutate({mutation: mutations.addToGroupChat, variables})
   expect(resp.data.addToGroupChat.chatId).toBe(chatId)
-  expect(resp.data.addToGroupChat.userCount).toBe(1)
   expect(resp.data.addToGroupChat.usersCount).toBe(1)
   expect(resp.data.addToGroupChat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 
   // check the chat still shows just us in it
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(1)
   expect(resp.data.chat.usersCount).toBe(1)
   expect(resp.data.chat.users.items.map((u) => u.userId)).toEqual([ourUserId])
 })
@@ -241,7 +231,6 @@ test('A group chat with two users that have a blocking relationship between them
   let variables = {chatId, userIds: [other1UserId, other2UserId], messageId: uuidv4(), messageText: 'm1'}
   resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.userCount).toBe(3)
   expect(resp.data.createGroupChat.usersCount).toBe(3)
   expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, other1UserId, other2UserId].sort(),
@@ -250,7 +239,6 @@ test('A group chat with two users that have a blocking relationship between them
   // check other1 does see other2 in it (for now - maybe we should change this?)
   resp = await other1Client.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(3)
   expect(resp.data.chat.usersCount).toBe(3)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, other1UserId, other2UserId].sort(),
@@ -259,14 +247,12 @@ test('A group chat with two users that have a blocking relationship between them
   // check other2 doesn't see other1 in it
   resp = await other2Client.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(3)
   expect(resp.data.chat.usersCount).toBe(3)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other2UserId].sort())
 
   // check we see everyone in it
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.userCount).toBe(3)
   expect(resp.data.chat.usersCount).toBe(3)
   expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual(
     [ourUserId, other1UserId, other2UserId].sort(),
