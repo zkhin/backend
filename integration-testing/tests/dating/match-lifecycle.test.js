@@ -138,7 +138,7 @@ test('POTENTIAL -> CONFIRMED', async () => {
 
   // they approve us, check statuses
   await theirClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-  await misc.sleep(2000)
+  await misc.sleep(3000)
   await ourClient
     .query({query: queries.user, variables: {userId: theirUserId}})
     .then(({data: {user}}) => expect(user.matchStatus).toBe('CONFIRMED'))
@@ -153,9 +153,14 @@ test('POTENTIAL -> CONFIRMED', async () => {
     expect(user.cardCount).toBeGreaterThanOrEqual(1)
     expect(user.chatCount).toBe(1)
     expect(user.chatsWithUnviewedMessagesCount).toBe(1)
-    const card = user.cards.items[0]
-    expect(card.title).toBe('You have 1 chat with new messages')
-    expect(card.action).toBe('https://real.app/chat/')
+    // Unread chat message card
+    const firstCard = user.cards.items[0]
+    expect(firstCard.title).toBe('You have 1 chat with new messages')
+    expect(firstCard.action).toBe('https://real.app/chat/')
+    // Dating matched card
+    const secondCard = user.cards.items[1]
+    expect(secondCard.title).toBe("It's a match! Kick things off by saying hello!")
+    expect(secondCard.action).toBe(`https://real.app/user/${ourUserId}/dating_matched`)
     const chat = user.chats.items[0]
     expect(chat.chatType).toBe('DIRECT')
     expect(chat.messagesCount).toBe(1)

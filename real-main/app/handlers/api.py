@@ -5,6 +5,7 @@ import pendulum
 
 from app import clients, models
 from app.logging import LogLevelContext, handler_logging
+from app.models.card import templates
 
 from . import xray
 
@@ -23,6 +24,7 @@ clients = {
 }
 
 managers = {}
+card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 chat_manager = managers.get('chat') or models.ChatManager(clients, managers=managers)
 chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
@@ -43,6 +45,12 @@ def create_dating_chat(event, context):
     now = pendulum.now('utc')
     chat = chat_manager.add_direct_chat(chat_id, user_id, match_user_id, now=now)
     chat_message_manager.add_system_message(chat_id, message_text, user_ids=[user_id, match_user_id], now=now)
+
+    # Add dating matched card
+    card_template_1 = templates.UserDatingMatchedCardTemplate(user_id)
+    card_template_2 = templates.UserDatingMatchedCardTemplate(match_user_id)
+    card_manager.add_or_update_card(card_template_1)
+    card_manager.add_or_update_card(card_template_2)
 
     chat.refresh_item(strongly_consistent=True)
     return chat.item
