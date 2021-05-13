@@ -15,7 +15,8 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test('Id verification', async () => {
+// DISABLED while we await an api key from jumio
+test.skip('Id verification', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
 
   await client

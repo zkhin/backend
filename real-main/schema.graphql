@@ -302,13 +302,14 @@ type Mutation {
   deleteChatMessage(messageId: ID!): ChatMessage
   flagChatMessage(messageId: ID!): ChatMessage
 
-  #ID verification
-  verifyId(
-    frontsideImageData: String!,
-    country: String!,
-    idType: IdVerificationType!,
-    imageType: IdVerificationImageType!,
-  ): User
+  # DISABLED while we await an api key from jumio
+  # ID verification
+  #verifyId(
+  #  frontsideImageData: String!,
+  #  country: String!,
+  #  idType: IdVerificationType!,
+  #  imageType: IdVerificationImageType!,
+  #): User
 
   # Used internally to fire subscription events. Calling externally is an error.
   triggerNotification(input: NotificationInput!): Notification!
