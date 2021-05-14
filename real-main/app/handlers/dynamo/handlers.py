@@ -237,6 +237,13 @@ register(
     user_manager.sync_follow_counts_due_to_follow_status,
     {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
+register(
+    'user',
+    'follower',
+    ['INSERT'],
+    user_manager.on_user_new_followers_sync_card,
+    {'followStatus': FollowStatus.NOT_FOLLOWING},
+)
 register('user', 'profile', ['INSERT'], user_manager.on_user_add_delete_user_deleted_subitem)
 register(
     'user',

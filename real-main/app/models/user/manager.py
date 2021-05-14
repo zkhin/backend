@@ -13,13 +13,17 @@ from app.clients import SesClient
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.appstore.enums import AppStoreSubscriptionStatus
-from app.models.card.templates import ContactJoinedCardTemplate, UserNewDatingMatchesTemplate
+from app.models.card.templates import (
+    ContactJoinedCardTemplate,
+    NewFollowersCardTemplate,
+    UserNewDatingMatchesTemplate,
+)
 from app.models.follower.enums import FollowStatus
 from app.models.post.enums import PostStatus
 from app.utils import GqlNotificationType
 
 from .dynamo import UserContactAttributeDynamo, UserDynamo
-from .enums import IdVerificationStatus, UserDatingStatus, UserStatus, UserSubscriptionLevel
+from .enums import IdVerificationStatus, UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from .exceptions import UserAlreadyExists, UserException, UserValidationException
 from .model import User
 
@@ -589,6 +593,16 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             # increase paid_real_so_far according to price
             price = new_item.get('price', Decimal('0'))
             self.dynamo.increment_paid_real_so_far(new_item['userId'], price)
+
+    def on_user_new_followers_sync_card(self, user_id, new_item, old_item=None):
+        followed_user = self.get_user(user_id)
+        followed_user_privacy_status = followed_user.item.get('privacyStatus', UserPrivacyStatus.PUBLIC)
+        follow_status = (new_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
+        card_template = NewFollowersCardTemplate(user_id)
+
+        # followed user's status should be public
+        if follow_status == FollowStatus.FOLLOWING and followed_user_privacy_status == UserPrivacyStatus.PUBLIC:
+            self.card_manager.add_or_update_card(card_template)
 
     def on_user_change_log_amplitude_event(self, user_id, new_item, old_item=None):
         if old_item:

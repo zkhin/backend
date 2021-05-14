@@ -296,3 +296,27 @@ def test_sync_chat_message_deletion_count(user_manager, user2, message, system_m
     # sync a system message deletion, verify no error and no increment
     user_manager.sync_chat_message_deletion_count(system_message.id, old_item=system_message.item)
     assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1
+
+
+def test_on_user_new_followers_sync_card_public_user(user_manager, follower_manager, card_manager, user, user2):
+    follower, followed = user, user2
+    follow = follower_manager.request_to_follow(follower, followed)
+    assert follow.status == FollowStatus.FOLLOWING
+
+    card_id = f'{followed.id}:NEW_FOLLOWERS'
+    user_manager.on_user_new_followers_sync_card(followed.id, new_item=follow.item)
+    assert card_manager.get_card(card_id)
+
+
+def test_on_user_new_followers_sync_card_private_user(user_manager, follower_manager, card_manager, user, user2):
+    follower, followed = user, user2
+    followed.set_privacy_status(UserPrivacyStatus.PRIVATE)
+    follow = follower_manager.request_to_follow(follower, followed)
+    assert follow.status == FollowStatus.REQUESTED
+
+    follow.accept()
+    assert follow.status == FollowStatus.FOLLOWING
+
+    card_id = f'{followed.id}:NEW_FOLLOWERS'
+    user_manager.on_user_new_followers_sync_card(followed.id, new_item=follow.item)
+    assert card_manager.get_card(card_id) is None

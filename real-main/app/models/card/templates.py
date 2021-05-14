@@ -146,6 +146,21 @@ class RequestedFollowersCardTemplate(CardTemplate):
         self.title = f'You have {cnt} pending follow request{"s" if cnt > 1 else ""}'
 
 
+class NewFollowersCardTemplate(CardTemplate):
+
+    notify_user_after = pendulum.duration(hours=24)
+
+    @staticmethod
+    def get_card_id(user_id):
+        return f'{user_id}:NEW_FOLLOWERS'
+
+    def __init__(self, user_id):
+        super().__init__(user_id)
+        self.card_id = self.get_card_id(user_id)
+        self.action = f'https://real.app/user/{user_id}/new_followers'
+        self.title = 'You have new followers'
+
+
 class ContactJoinedCardTemplate(CardTemplate):
 
     notify_user_after = pendulum.duration(hours=24)
