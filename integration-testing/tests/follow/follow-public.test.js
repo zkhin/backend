@@ -36,10 +36,20 @@ test('Follow & unfollow a public user', async () => {
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
   // check we have moved to a FOLLOWING state
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.followedStatus).toBe('FOLLOWING')
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.followerStatus).toBe('FOLLOWING')
+  await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
+    expect(user.followedStatus).toBe('FOLLOWING')
+  })
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
+    expect(user.followerStatus).toBe('FOLLOWING')
+  })
+  // check new follower card
+  await theirClient.query({query: queries.self}).then(({data: {self: user}}) => {
+    expect(user.userId).toBe(theirUserId)
+    expect(user.cardCount).toBeGreaterThanOrEqual(1)
+    const card = user.cards.items[0]
+    expect(card.title).toBe('You have new followers')
+    expect(card.action).toBe(`https://real.app/user/${theirUserId}/new_followers`)
+  })
 
   // we unfollow them, goes through immediately
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
