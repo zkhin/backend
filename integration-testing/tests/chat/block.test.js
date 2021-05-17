@@ -1,11 +1,9 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -30,10 +28,12 @@ test('Blocking a user causes our direct chat with them to disappear to both of u
   expect(resp.data.chat.chatId).toBe(chatId)
 
   // check the chat appears in their list of chats
-  resp = await theirClient.query({query: queries.self})
-  expect(resp.data.self.chatCount).toBe(1)
-  expect(resp.data.self.chats.items).toHaveLength(1)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.self})
+    expect(data.self.chatCount).toBe(1)
+    expect(data.self.chats.items).toHaveLength(1)
+    expect(data.self.chats.items[0].chatId).toBe(chatId)
+  })
 
   // we block them
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
@@ -41,27 +41,36 @@ test('Blocking a user causes our direct chat with them to disappear to both of u
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // check neither of us can directly see the chat anymore
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat).toBeNull()
-
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat).toBeNull()
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeNull()
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeNull()
+  })
 
   // check neither of us see the chat by looking at each other's profiles
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.directChat).toBeNull()
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.directChat).toBeNull()
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.directChat).toBeNull()
+  })
 
   // check niether of us see the chat in our list of chats
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatCount).toBe(0)
-  expect(resp.data.self.chats.items).toHaveLength(0)
-
-  resp = await theirClient.query({query: queries.self})
-  expect(resp.data.self.chatCount).toBe(0)
-  expect(resp.data.self.chats.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatCount).toBe(0)
+    expect(data.self.chats.items).toHaveLength(0)
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.self})
+    expect(data.self.chatCount).toBe(0)
+    expect(data.self.chats.items).toHaveLength(0)
+  })
 })
 
 test('Cannot open a direct chat with a user that blocks us or that we block', async () => {
@@ -109,18 +118,19 @@ test('Blocking a user we are in a group chat with', async () => {
   expect(resp.data.blockUser.blockedStatus).toBe('BLOCKING')
 
   // check we still see the chat, but don't see them in it and their messages have an authorUserId but no author
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.usersCount).toBe(2)
-  expect(resp.data.chat.users.items).toHaveLength(1)
-  expect(resp.data.chat.users.items[0].userId).toBe(ourUserId)
-  expect(resp.data.chat.messagesCount).toBe(4)
-  expect(resp.data.chat.messages.items).toHaveLength(4)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[3].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[3].authorUserId).toBe(theirUserId)
-  expect(resp.data.chat.messages.items[3].author).toBeNull()
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items).toHaveLength(1)
+    expect(data.chat.users.items[0].userId).toBe(ourUserId)
+    expect(data.chat.messagesCount).toBe(4)
+    expect(data.chat.messages.items).toHaveLength(4)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[3].authorUserId).toBe(theirUserId)
+    expect(data.chat.messages.items[3].author).toBeNull()
+  })
 
   // check they still see the chat, and still see us and our messages (for now - would be better to block those)
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})

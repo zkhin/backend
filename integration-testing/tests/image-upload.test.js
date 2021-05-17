@@ -4,8 +4,7 @@ const path = require('path')
 const requestImageSize = require('request-image-size')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../utils/cognito')
-const misc = require('../utils/misc')
+const {cognito, eventually} = require('../utils')
 const {mutations, queries} = require('../schema')
 
 const jpgHeaders = {'Content-Type': 'image/jpeg'}
@@ -28,7 +27,6 @@ const pngData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'grant.pn
 const pngHeight = 320
 const pngWidth = 240
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -55,20 +53,20 @@ test('Uploading image sets width, height and colors', async () => {
     expect(post.image).toBeNull()
   })
 
-  // upload the first of those images, give the s3 trigger a second to fire
+  // upload the first of those images
   await got.put(uploadUrl, {headers: jpgHeaders, body: imageData})
-  await misc.sleepUntilPostProcessed(client, postId)
 
   // check width, height and colors are now set
-  await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.image.height).toBe(imageHeight)
-    expect(post.image.width).toBe(imageWidth)
-    expect(post.image.colors).toHaveLength(5)
-    expect(post.image.colors[0].r).toBeTruthy()
-    expect(post.image.colors[0].g).toBeTruthy()
-    expect(post.image.colors[0].b).toBeTruthy()
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.image.height).toBe(imageHeight)
+    expect(data.post.image.width).toBe(imageWidth)
+    expect(data.post.image.colors).toHaveLength(5)
+    expect(data.post.image.colors[0].r).toBeTruthy()
+    expect(data.post.image.colors[0].g).toBeTruthy()
+    expect(data.post.image.colors[0].b).toBeTruthy()
   })
 })
 
@@ -85,20 +83,20 @@ test('Uploading png image', async () => {
       return post.imageUploadUrl
     })
 
-  // upload a png, give the s3 trigger a second to fire
+  // upload a png
   await got.put(uploadUrl, {headers: pngHeaders, body: pngData})
-  await misc.sleep(5000)
 
-  // check that post ended up in an ERROR state
-  await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.image.height).toBe(pngHeight)
-    expect(post.image.width).toBe(pngWidth)
-    expect(post.image.colors).toHaveLength(5)
-    expect(post.image.colors[0].r).toBeTruthy()
-    expect(post.image.colors[0].g).toBeTruthy()
-    expect(post.image.colors[0].b).toBeTruthy()
+  // check that post ended up in an COMPLETED state
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.image.height).toBe(pngHeight)
+    expect(data.post.image.width).toBe(pngWidth)
+    expect(data.post.image.colors).toHaveLength(5)
+    expect(data.post.image.colors[0].r).toBeTruthy()
+    expect(data.post.image.colors[0].g).toBeTruthy()
+    expect(data.post.image.colors[0].b).toBeTruthy()
   })
 })
 
@@ -116,17 +114,17 @@ test('Upload heic image', async () => {
       return post.imageUploadUrl
     })
 
-  // upload a heic, give the s3 trigger a second to fire
+  // upload a heic
   await got.put(uploadUrl, {headers: heicHeaders, body: heicImageData})
-  await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 20 * 1000})
 
   // check that post completed and generated all thumbnails ok
-  const image = await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.isVerified).toBe(true)
-    expect(post.image).toBeTruthy()
-    return post.image
+  const image = await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.isVerified).toBe(true)
+    expect(data.post.image).toBeTruthy()
+    return data.post.image
   })
 
   // check the native image size dims
@@ -173,15 +171,14 @@ test('Thumbnails built on successful upload', async () => {
       return post.imageUploadUrl
     })
 
-  // upload a big jpeg, give the s3 trigger a second to fire
+  // upload a big jpeg
   await got.put(uploadUrl, {headers: jpgHeaders, body: bigImageData})
-  await misc.sleep(5000) // big jpeg, so takes at least a few seconds to process
-  await misc.sleepUntilPostProcessed(client, postId)
 
-  const image = await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.image).toBeTruthy()
-    return post.image
+  const image = await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.image).toBeTruthy()
+    return data.post.image
   })
 
   // check the native image size dims

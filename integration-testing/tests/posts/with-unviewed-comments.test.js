@@ -1,11 +1,9 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -58,9 +56,8 @@ test('Privacy', async () => {
     })
 
   // check that we can't see their list
-  await misc.sleep(1000) // dynamo
-  await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data, errors}) => {
-    expect(errors).toBeUndefined()
+  await sleep()
+  await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data}) => {
     expect(data.user.userId).toBe(theirUserId)
     expect(data.user.postsWithUnviewedComments).toBeNull()
   })
@@ -103,8 +100,8 @@ test('Add and remove', async () => {
     })
 
   // check that post now has unviewed comments
-  await misc.sleep(1000) // dynamo
-  await ourClient.query({query: queries.self}).then(({data, errors}) => {
+  await eventually(async () => {
+    const {data, errors} = await ourClient.query({query: queries.self})
     expect(errors).toBeUndefined()
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.postsWithUnviewedComments.items).toHaveLength(1)
@@ -120,8 +117,8 @@ test('Add and remove', async () => {
     })
 
   // check that post has no unviewed comments
-  await misc.sleep(1000) // dynamo
-  await ourClient.query({query: queries.self}).then(({data, errors}) => {
+  await eventually(async () => {
+    const {data, errors} = await ourClient.query({query: queries.self})
     expect(errors).toBeUndefined()
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.postsWithUnviewedComments.items).toHaveLength(0)
@@ -162,8 +159,8 @@ test('Order', async () => {
   }
 
   // pull our posts by unviewed comments, check the order is correct
-  await misc.sleep(1000) // dynamo
-  await ourClient.query({query: queries.self}).then(({data, errors}) => {
+  await eventually(async () => {
+    const {data, errors} = await ourClient.query({query: queries.self})
     expect(errors).toBeUndefined()
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.postsWithUnviewedComments.items).toHaveLength(3)

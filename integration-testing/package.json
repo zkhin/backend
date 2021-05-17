@@ -9,8 +9,8 @@
     "lint": "eslint '**/*.js'",
     "test": "jest -c ./jest.config.json",
     "test-all": "yarn run test-concurrent; r1=$?; yarn run test-sequential; r2=$?; [[ $r1 -eq 0 && $r2 -eq 0 ]] && true || false",
-    "test-concurrent": "jest --silent --noStackTrace -c ./jest.concurrent.config.json",
-    "test-sequential": "jest --silent --noStackTrace -c ./jest.sequential.config.json"
+    "test-concurrent": "jest --silent -c ./jest.concurrent.config.json",
+    "test-sequential": "jest --silent -c ./jest.sequential.config.json"
   },
   "eslintConfig": {
     "root": true,

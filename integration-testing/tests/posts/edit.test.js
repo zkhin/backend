@@ -2,14 +2,12 @@ const fs = require('fs')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -119,10 +117,12 @@ test('Edit post edits the copies of posts in followers feeds', async () => {
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
   // check that post text in their feed
-  resp = await theirClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
-  expect(resp.data.self.feed.items[0].text).toBe(postText)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(1)
+    expect(data.self.feed.items[0].postId).toBe(postId)
+    expect(data.self.feed.items[0].text).toBe(postText)
+  })
 
   // edit the post
   const newText = 'no, vous est le fromage!'
@@ -153,12 +153,13 @@ test('Disable comments causes existing comments to disappear, then reappear when
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check we see the comment
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentsDisabled).toBe(false)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.commentsDisabled).toBe(false)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(commentId)
+  })
 
   // disable comments on the post
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, commentsDisabled: true}})

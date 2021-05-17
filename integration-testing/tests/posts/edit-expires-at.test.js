@@ -1,14 +1,13 @@
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
+const errorPolicy = 'all'
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -24,9 +23,10 @@ test('Cant edit Post.expiresAt for post that do not exist', async () => {
     postId: uuidv4(),
     expiresAt: moment().add(moment.duration('P1D')).toISOString(),
   }
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
-    /ClientError: Post .* does not exist/,
-  )
+  await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toMatch(/ClientError: Post .* does not exist/)
+  })
 })
 
 test('Cant edit Post.expiresAt for post that isnt ours', async () => {
@@ -41,9 +41,10 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
 
   // we try to edit its expiresAt
   variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
-    /ClientError: Cannot edit another /,
-  )
+  await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toMatch(/ClientError: Cannot edit another /)
+  })
 })
 
 test('Cant set Post.expiresAt to datetime in the past', async () => {
@@ -57,9 +58,10 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
 
   // we try to edit its expiresAt to a date in the past
   variables = {postId, expiresAt: moment().subtract(moment.duration('PT1M')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
-    /ClientError: Cannot .* in the past/,
-  )
+  await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toMatch(/ClientError: Cannot .* in the past/)
+  })
 })
 
 test('Cant edit Post.expiresAt if we are disabled', async () => {
@@ -78,9 +80,10 @@ test('Cant edit Post.expiresAt if we are disabled', async () => {
 
   // verify we can't edit the expires at
   variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
-    /ClientError: User .* is not ACTIVE/,
-  )
+  await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toMatch(/ClientError: User .* is not ACTIVE/)
+  })
 })
 
 test('Cant set Post.expiresAt with datetime without timezone info', async () => {
@@ -94,9 +97,10 @@ test('Cant set Post.expiresAt with datetime without timezone info', async () => 
 
   // we try to edit its expiresAt to a date in the past, gql schema catches this error not our server code
   variables = {postId, expiresAt: '2019-01-01T01:01:01'}
-  await expect(ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})).rejects.toThrow(
-    'GraphQL error',
-  )
+  await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toMatch("Variable 'expiresAt' has an invalid value.")
+  })
 })
 
 test('Add and remove expiresAt from a Post', async () => {
@@ -220,9 +224,11 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
 
   // check we now have a story
-  resp = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
-  expect(resp.data.user.stories.items).toHaveLength(1)
-  expect(resp.data.user.stories.items[0].postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
+    expect(data.user.stories.items).toHaveLength(1)
+    expect(data.user.stories.items[0].postId).toBe(postId)
+  })
 
   // remove the post's expiresAt, changing it to not be a story
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId}})
@@ -230,8 +236,10 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp.data.editPostExpiresAt.expiresAt).toBeNull()
 
   // check no longer have a story
-  resp = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
-  expect(resp.data.user.stories.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userStories, variables: {userId: ourUserId}})
+    expect(data.user.stories.items).toHaveLength(0)
+  })
 })
 
 test('Clearing Post.expiresAt removes from first followed stories', async () => {
@@ -280,6 +288,12 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: otherUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
 
+  // let those following relationships settle
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.followedsCount).toBe(2)
+  })
+
   // they add a post that is also a story
   let variables = {postId: theirPostId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
@@ -294,10 +308,12 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   expect(resp.data.addPost.expiresAt).toBeTruthy()
 
   // check we see them as expected in our first followed stories
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.followedUsersWithStories.items).toHaveLength(2)
-  expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
-  expect(resp.data.self.followedUsersWithStories.items[1].userId).toBe(otherUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.followedUsersWithStories.items).toHaveLength(2)
+    expect(data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
+    expect(data.self.followedUsersWithStories.items[1].userId).toBe(otherUserId)
+  })
 
   // edit their post's expiration date to a date further in the future
   at.add(moment.duration('PT2H'))

@@ -1,14 +1,12 @@
 const crypto = require('crypto')
 const pwdGenerator = require('generate-password')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, sleep} = require('../../utils')
 const {mutations} = require('../../schema')
 
 let anonClient, anonUserId
 const loginCache = new cognito.AppSyncLoginCache()
 const AuthFlow = cognito.AuthFlow
-jest.retryTimes(1)
 
 const realPublicKeyPem = process.env.REAL_PUBLIC_KEY_PEM
 if (realPublicKeyPem === undefined) throw new Error('Env var REAL_PUBLIC_KEY_PEM must be defined')
@@ -41,7 +39,7 @@ test('Anonymous user cannot setPassword', async () => {
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
 
   // verify new password does not work
-  await misc.sleep(2000)
+  await sleep()
   await expect(
     cognito.userPoolClient
       .initiateAuth({AuthFlow, AuthParameters: {USERNAME: anonUserId, PASSWORD: password}})
@@ -57,7 +55,7 @@ test('Cant set password without encrypting it for transit', async () => {
   ).rejects.toThrow(/ClientError: Unable to decrypt /)
 
   // verify new password does not work, old password does
-  await misc.sleep(2000)
+  await sleep()
   await expect(
     cognito.userPoolClient
       .initiateAuth({AuthFlow, AuthParameters: {USERNAME: userId, PASSWORD: password}})
@@ -77,7 +75,7 @@ test('Cant set password to invalid password', async () => {
   ).rejects.toThrow(/ClientError: Invalid password/)
 
   // verify new password does not work, old password does
-  await misc.sleep(2000)
+  await sleep()
   await expect(
     cognito.userPoolClient
       .initiateAuth({AuthFlow, AuthParameters: {USERNAME: userId, PASSWORD: password}})
@@ -97,7 +95,7 @@ test('Set password success', async () => {
     .then(({data: {setUserPassword: user}}) => expect(user.userId).toBe(userId))
 
   // verify old password does not work, new password does
-  await misc.sleep(2000)
+  await sleep()
   await expect(
     cognito.userPoolClient
       .initiateAuth({AuthFlow, AuthParameters: {USERNAME: userId, PASSWORD: oldPassword}})

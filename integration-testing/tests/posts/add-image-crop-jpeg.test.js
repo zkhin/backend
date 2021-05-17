@@ -6,19 +6,17 @@ const requestImageSize = require('request-image-size')
 const sharp = require('sharp')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const jpegHeight = 32
 const jpegWidth = 64
-const jpegBytes = misc.generateRandomJpeg(jpegWidth, jpegHeight)
+const jpegBytes = generateRandomJpeg(jpegWidth, jpegHeight)
 const jpegData = new Buffer.from(jpegBytes).toString('base64')
 const jpegHeaders = {'Content-Type': 'image/jpeg'}
 const grantBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantData = new Buffer.from(grantBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -102,8 +100,10 @@ test('Invalid jpeg crops, upload via cloudfront', async () => {
       return post.imageUploadUrl
     })
   await got.put(uploadUrl, {headers: jpegHeaders, body: jpegBytes})
-  await misc.sleepUntilPostProcessed(client, postId1)
-  // we check the post ended up in error state at the end of the test
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId: postId1}})
+    expect(data.post.postStatus).toBe('ERROR')
+  })
 
   // can't crop negative
   const postId2 = uuidv4()
@@ -189,14 +189,14 @@ test('Valid jpeg crop, upload via cloudfront', async () => {
       return post.imageUploadUrl
     })
   await got.put(uploadUrl, {headers: jpegHeaders, body: jpegBytes})
-  await misc.sleepUntilPostProcessed(client, postId)
 
   // retrieve the post object, check some image sizes
-  const postImage = await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.image.url).toBeTruthy()
-    return post.image
+  const postImage = await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.image.url).toBeTruthy()
+    return data.post.image
   })
   await requestImageSize(postImage.url).then(({width, height}) => {
     expect(width).toBe(jpegWidth / 2)

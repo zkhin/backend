@@ -2,8 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -20,55 +19,73 @@ afterAll(async () => {
   anonClient = null
 })
 
-test('New anonymous users do not get the add profile photo card', async () => {
-  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+const cardTitle = 'Add a profile photo'
 
-  // verify that new anonymous user do not get this card
-  await misc.sleep(2000)
-  await anonClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(anonUserId)
-    expect(user.email).toBeNull()
-    expect(user.userStatus).toBe('ANONYMOUS')
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
-    let card = user.cards.items[0]
-    expect(card.title).toBe('Reserve your username & sign up!')
+describe('New anonymous users do not get the add profile photo card', () => {
+  beforeAll(async () => {
+    ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+  })
+
+  test('User is indeed anonymous', async () => {
+    await eventually(async () => {
+      const {data} = await anonClient.query({query: queries.self})
+      expect(data.self.userId).toBe(anonUserId)
+      expect(data.self.email).toBeNull()
+      expect(data.self.userStatus).toBe('ANONYMOUS')
+    })
+  })
+
+  test('The card does not appear', async () => {
+    await sleep()
+    await anonClient.query({query: queries.self}).then(({data}) => {
+      expect(data.self.userId).toBe(anonUserId)
+      expect(data.self.cards.items.filter((card) => card.title === cardTitle)).toHaveLength(0)
+    })
   })
 })
 
-test('New normal users without profile photo do get the add profile photo card', async () => {
-  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+describe('New normal users and the add profile photo card', () => {
+  let ourClient, ourUserId
 
-  // verify that new normal user without profile photo do get card
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.email).toBeDefined()
-    expect(user.userStatus).toBe('ACTIVE')
-    expect(user.photoPostId).toBeFalsy()
-    expect(user.cards.items.length).toBe(1)
-
-    let card = user.cards.items[0]
-    expect(card.cardId).toBe(`${ourUserId}:ADD_PROFILE_PHOTO`)
-    expect(card.title).toBe('Add a profile photo')
-    expect(card.action).toBe(`https://real.app/user/${ourUserId}/settings/photo`)
+  beforeAll(async () => {
+    ;({client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin())
   })
 
-  // add a post they will use as a profile photo and verify that card is deleted
-  const postId = uuidv4()
-  await ourClient
-    .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
-    .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+  test('User is indeed normal', async () => {
+    await eventually(async () => {
+      const {data} = await ourClient.query({query: queries.self})
+      expect(data.self.userId).toBe(ourUserId)
+      expect(data.self.email).toBeDefined()
+      expect(data.self.userStatus).toBe('ACTIVE')
+      expect(data.self.photoPostId).toBeFalsy()
+    })
+  })
 
-  await ourClient
-    .mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
-    .then(({data: {setUserDetails: user}}) => expect(user.photo.url).toBeTruthy())
+  test('The card appears by default and has correct format', async () => {
+    await eventually(async () => {
+      const {data} = await ourClient.query({query: queries.self})
+      expect(data.self.cards.items.length).toBe(1)
+      expect(data.self.cards.items[0].cardId).toBe(`${ourUserId}:ADD_PROFILE_PHOTO`)
+      expect(data.self.cards.items[0].title).toBe(cardTitle)
+      expect(data.self.cards.items[0].action).toBe(`https://real.app/user/${ourUserId}/settings/photo`)
+    })
+  })
 
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.userStatus).toBe('ACTIVE')
-    expect(user.photo.url).toBeTruthy()
-    expect(user.cards.items.length).toBe(0)
+  test('The card is automatically dismissed when the user adds a profile photo', async () => {
+    // add a post they will use as a profile photo and verify that card is deleted
+    const postId = uuidv4()
+    await ourClient
+      .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
+      .then(({data: {addPost: post}}) => expect(post.postId).toBe(postId))
+
+    await ourClient
+      .mutate({mutation: mutations.setUserDetails, variables: {photoPostId: postId}})
+      .then(({data: {setUserDetails: user}}) => expect(user.photo.url).toBeTruthy())
+
+    await eventually(async () => {
+      const {data} = await ourClient.query({query: queries.self})
+      expect(data.self.userId).toBe(ourUserId)
+      expect(data.self.cards.items.length).toBe(0)
+    })
   })
 })

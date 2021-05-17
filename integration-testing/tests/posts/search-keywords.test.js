@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(300, 200)
+const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -43,20 +41,18 @@ test('Add post with keywords attribute - serach keywords', async () => {
       expect(post.postId).toBe(postId2)
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
-  await misc.sleep(2000) // dynamo
 
-  let searchKeyword = 'shir'
+  let searchKeyword = 'her'
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
+    expect(data.searchKeywords.sort()).toEqual(['here', 'hera'].sort())
+  })
+
+  searchKeyword = 'shir'
   await ourClient
     .query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
     .then(({data: {searchKeywords: keywords}}) => {
       expect(keywords).toEqual([])
-    })
-
-  searchKeyword = 'her'
-  await ourClient
-    .query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
-    .then(({data: {searchKeywords: keywords}}) => {
-      expect(keywords.sort()).toEqual(['here', 'hera'].sort())
     })
 
   searchKeyword = 'min'
@@ -104,19 +100,16 @@ test('Remove post - serach keywords', async () => {
       expect(post.postId).toBe(postId1)
       expect(post.postStatus).toBe('DELETING')
     })
-  await misc.sleep(2000) // dynamo
 
   searchKeyword = 'min'
-  await ourClient
-    .query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
-    .then(({data: {searchKeywords: keywords}}) => {
-      expect(keywords).toEqual([])
-    })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
+    expect(data.searchKeywords).toEqual([])
+  })
 
   searchKeyword = 'her'
-  await ourClient
-    .query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
-    .then(({data: {searchKeywords: keywords}}) => {
-      expect(keywords).toEqual(['here'])
-    })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.searchKeywords, variables: {keyword: searchKeyword}})
+    expect(data.searchKeywords).toEqual(['here'])
+  })
 })

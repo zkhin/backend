@@ -1,12 +1,10 @@
 const fs = require('fs')
 const path = require('path')
 
-const cognito = require('../utils/cognito')
-// const misc = require('../utils/misc')
+const {cognito /*, eventually*/} = require('../utils')
 const {mutations /*, queries*/} = require('../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -41,10 +39,10 @@ test('Upload app store receipt data success', async () => {
    * run (by any developer) since the last time apple's sandbox was reset.
    */
   /*
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.self})
-    .then(({data: {self}}) => expect(self.subscriptionLevel).toBe('BASIC'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.subscriptionLevel).toBe('BASIC')
+  })
   */
 })
 

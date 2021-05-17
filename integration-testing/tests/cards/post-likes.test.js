@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, deleteDefaultCard, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -19,6 +17,7 @@ afterAll(async () => await loginCache.reset())
 test('PostLikes card generation and format', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+  await deleteDefaultCard(ourClient)
 
   // we add a post
   const postId = uuidv4()
@@ -32,12 +31,12 @@ test('PostLikes card generation and format', async () => {
     .then(({data}) => expect(data.onymouslyLikePost.likeStatus).toBe('ONYMOUSLY_LIKED'))
 
   // verify a card was generated, check format
-  await misc.sleep(2000)
-  const cardId = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    let card = user.cards.items[0]
+  const cardId = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    let card = data.self.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have new likes')
     expect(card.subTitle).toBeNull()
@@ -54,8 +53,6 @@ test('PostLikes card generation and format', async () => {
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card.cardId
   })
 
@@ -65,13 +62,11 @@ test('PostLikes card generation and format', async () => {
     .then(({data}) => expect(data.deleteCard.cardId).toBe(cardId))
 
   // verify a card is really gone
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
-    // first card is the 'Add a profile photo'
-    expect(user.cards.items[0].title).toBe('Add a profile photo')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(0)
+    expect(data.self.cards.items).toHaveLength(0)
   })
 
   // we anonymously like the post
@@ -80,14 +75,12 @@ test('PostLikes card generation and format', async () => {
     .then(({data}) => expect(data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED'))
 
   // verify a card was generated, check format
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    expect(user.cards.items[0].cardId).toBeTruthy()
-    expect(user.cards.items[0].action).toMatch(RegExp('^https://real.app/user/.*/post/.*/likes'))
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    expect(data.self.cards.items[0].cardId).toBeTruthy()
+    expect(data.self.cards.items[0].action).toMatch(RegExp('^https://real.app/user/.*/post/.*/likes'))
   })
 })

@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -58,13 +56,24 @@ test('Reject and approve match - error cases and basic success', async () => {
   await theirClient
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: pid2}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(theirUserId))
-  await misc.sleep(2000)
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
 
   // verify we still can't approve or reject them
   await expect(
@@ -76,11 +85,10 @@ test('Reject and approve match - error cases and basic success', async () => {
 
   // we adjust our details, so now we are a match, so now we can reject them and they can approve us
   await ourClient.mutate({mutation: mutations.setUserDetails, variables: {gender: 'FEMALE'}})
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await misc.sleep(2000)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
   await ourClient.mutate({mutation: mutations.rejectMatch, variables: {userId: theirUserId}})
   await theirClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
 })
@@ -103,30 +111,43 @@ test('POTENTIAL -> CONFIRMED', async () => {
   await theirClient
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: pid2}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(theirUserId))
-  await misc.sleep(2000)
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // we approve them, check statues
   await ourClient.mutate({mutation: mutations.approveMatch, variables: {userId: theirUserId}})
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('APPROVED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('APPROVED')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // check now we can't reject them, or re-approve them
   await expect(
@@ -138,30 +159,30 @@ test('POTENTIAL -> CONFIRMED', async () => {
 
   // they approve us, check statuses
   await theirClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-  await misc.sleep(3000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('CONFIRMED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('CONFIRMED'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('CONFIRMED')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('CONFIRMED')
+  })
 
   // check if the group chat is created with our and their
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBeGreaterThanOrEqual(1)
-    expect(user.chatCount).toBe(1)
-    expect(user.chatsWithUnviewedMessagesCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBeGreaterThanOrEqual(1)
+    expect(data.self.chatCount).toBe(1)
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(1)
     // Unread chat message card
-    const firstCard = user.cards.items[0]
-    expect(firstCard.title).toBe('You have 1 chat with new messages')
-    expect(firstCard.action).toBe('https://real.app/chat/')
-    // Dating matched card
-    const secondCard = user.cards.items[1]
+    const card = data.self.cards.items[0]
+    expect(card.title).toBe('You have 1 chat with new messages')
+    expect(card.action).toBe('https://real.app/chat/')
+    const secondCard = data.user.cards.items[1]
     expect(secondCard.title).toBe("It's a match! Kick things off by saying hello!")
     expect(secondCard.action).toBe(`https://real.app/user/${ourUserId}/dating_matched`)
-    const chat = user.chats.items[0]
+    const chat = data.self.chats.items[0]
     expect(chat.chatType).toBe('DIRECT')
     expect(chat.messagesCount).toBe(1)
     expect(chat.usersCount).toBe(2)
@@ -197,30 +218,43 @@ test('POTENTIAL -> REJECTED & APPROVED', async () => {
     mutation: mutations.setUserDetails,
     variables: {...datingVariables, photoPostId: pid2},
   })
-  await misc.sleep(2000)
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // we reject them, check statues
   await ourClient.mutate({mutation: mutations.rejectMatch, variables: {userId: theirUserId}})
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('REJECTED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('REJECTED')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // check now we can't reject them, or re-approve them
   await expect(
@@ -232,13 +266,14 @@ test('POTENTIAL -> REJECTED & APPROVED', async () => {
 
   // they approve us, check statuses
   await theirClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('REJECTED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('APPROVED'))
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('APPROVED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('REJECTED')
+  })
 
   // check now they can't reject us, or re-approve us
   await expect(

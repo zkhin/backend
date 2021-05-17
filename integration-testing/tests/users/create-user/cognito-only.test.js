@@ -1,10 +1,8 @@
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../../utils/cognito.js')
+const {cognito} = require('../../../utils')
 const {mutations} = require('../../../schema')
-
-jest.retryTimes(1)
 
 describe('cognito-only user', () => {
   let client, accessToken

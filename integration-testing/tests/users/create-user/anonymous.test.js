@@ -1,10 +1,7 @@
 const moment = require('moment')
 
-const misc = require('../../../utils/misc')
-const cognito = require('../../../utils/cognito')
+const {cognito, eventually} = require('../../../utils')
 const {mutations, queries} = require('../../../schema')
-
-jest.retryTimes(1)
 
 let client, userId
 beforeEach(async () => {
@@ -74,16 +71,21 @@ test('Calling Mutation.createAnonymousUser with user that already exists is a Cl
   await client
     .mutate({mutation: mutations.deleteUser})
     .then(({data: {deleteUser: user}}) => expect(user.userStatus).toBe('DELETING'))
-  await misc.sleep(2000)
-  await client.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => expect(user).toBeNull())
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.user, variables: {userId}})
+    expect(data.user).toBeNull()
+  })
+  client = null // signals to the afterEach() that no clean is needed
 
   // verify gone from identity pool as well
-  let errCode = null
-  try {
-    await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
-  } catch (err) {
-    errCode = err.code
-  }
-  expect(errCode).toBe('ResourceNotFoundException')
-  client = null
+  // if the entry still exists in the identity pool, will throw a 'NotAuthorizedException'
+  await eventually(async () => {
+    let errCode
+    try {
+      await cognito.identityPoolClient.getCredentialsForIdentity({IdentityId: userId}).promise()
+    } catch (err) {
+      errCode = err.code
+    }
+    expect(errCode).toBe('ResourceNotFoundException')
+  })
 })

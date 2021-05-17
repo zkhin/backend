@@ -1,5 +1,4 @@
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -14,42 +13,68 @@ afterAll(async () => {
   anonClient = null
 })
 
-test('New normal users do not get the user upsell card', async () => {
-  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+const cardTitle = 'Reserve your username & sign up!'
 
-  // verify that new normal user without profile photo do get card
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.email).toBeDefined()
-    expect(user.userStatus).toBe('ACTIVE')
-    expect(user.cards.items.length).toBe(1)
+describe('New normal users do not get the user upsell card', () => {
+  let ourClient, ourUserId
 
-    let card = user.cards.items[0]
-    expect(card.title).toBe('Add a profile photo')
+  beforeAll(async () => {
+    ;({client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin())
+  })
+
+  test('User is normal', async () => {
+    await eventually(async () => {
+      const {data} = await ourClient.query({query: queries.self})
+      expect(data.self.userId).toBe(ourUserId)
+      expect(data.self.email).toBeDefined()
+      expect(data.self.userStatus).toBe('ACTIVE')
+    })
+  })
+
+  test('User does not get the card', async () => {
+    await sleep()
+    await ourClient.query({query: queries.self}).then(({data}) => {
+      expect(data.self.userId).toBe(ourUserId)
+      expect(data.self.cards.items.filter((card) => card.title === cardTitle)).toHaveLength(0)
+    })
   })
 })
 
-test('New anonymous users do get the user upsell card', async () => {
-  ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+describe('New anonymous users and the user upsell card', () => {
+  let cardId
 
-  // verify that new anonymous user do not get this card
-  await misc.sleep(2000)
-  const cardId = await anonClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(anonUserId)
-    expect(user.email).toBeNull()
-    expect(user.userStatus).toBe('ANONYMOUS')
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
-
-    let card = user.cards.items[0]
-    expect(card.title).toBe('Reserve your username & sign up!')
-    expect(card.action).toBe(`https://real.app/signup/${anonUserId}`)
-    expect(card.cardId).toBe(`${anonUserId}:ANONYMOUS_USER_UPSELL`)
-    return card.cardId
+  beforeAll(async () => {
+    ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
   })
-  // anonymous could dismiss the card
-  await anonClient
-    .mutate({mutation: mutations.deleteCard, variables: {cardId}})
-    .then(({data}) => expect(data.deleteCard.cardId).toBe(cardId))
+
+  test('User is anonymous', async () => {
+    await eventually(async () => {
+      const {data} = await anonClient.query({query: queries.self})
+      expect(data.self.userId).toBe(anonUserId)
+      expect(data.self.email).toBeNull()
+      expect(data.self.userStatus).toBe('ANONYMOUS')
+    })
+  })
+
+  test('User does automatically get the card and it has correct format', async () => {
+    cardId = await eventually(async () => {
+      const {data} = await anonClient.query({query: queries.self})
+      expect(data.self.cards.items).toHaveLength(1)
+      expect(data.self.cards.items[0].title).toBe(cardTitle)
+      expect(data.self.cards.items[0].action).toBe(`https://real.app/signup/${anonUserId}`)
+      expect(data.self.cards.items[0].cardId).toBe(`${anonUserId}:ANONYMOUS_USER_UPSELL`)
+      return data.self.cards.items[0].cardId
+    })
+  })
+
+  test('User can delete the card', async () => {
+    // verify anonymous can dismiss the card
+    await anonClient
+      .mutate({mutation: mutations.deleteCard, variables: {cardId}})
+      .then(({data}) => expect(data.deleteCard.cardId).toBe(cardId))
+    await eventually(async () => {
+      const {data} = await anonClient.query({query: queries.self})
+      expect(data.self.cards.items.length).toBe(0)
+    })
+  })
 })

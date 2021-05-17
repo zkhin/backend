@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -41,13 +39,14 @@ test('Delete comments', async () => {
   expect(resp.data.addComment.commentId).toBe(ourCommentId)
 
   // check we see both comments, in order, on the post
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(2)
-  expect(resp.data.post.comments.items).toHaveLength(2)
-  expect(resp.data.post.comments.items[0].commentId).toBe(theirCommentId)
-  expect(resp.data.post.comments.items[1].commentId).toBe(ourCommentId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(2)
+    expect(data.post.comments.items).toHaveLength(2)
+    expect(data.post.comments.items[0].commentId).toBe(theirCommentId)
+    expect(data.post.comments.items[1].commentId).toBe(ourCommentId)
+  })
 
   // they delete their comment
   variables = {commentId: theirCommentId}
@@ -55,12 +54,13 @@ test('Delete comments', async () => {
   expect(resp.data.deleteComment.commentId).toBe(theirCommentId)
 
   // check we only see one comment on the post now
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(ourCommentId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+  })
 
   // we delete our comment
   variables = {commentId: ourCommentId}
@@ -68,11 +68,12 @@ test('Delete comments', async () => {
   expect(resp.data.deleteComment.commentId).toBe(ourCommentId)
 
   // check no comments appear on the post now
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(0)
-  expect(resp.data.post.comments.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(0)
+    expect(data.post.comments.items).toHaveLength(0)
+  })
 })
 
 test('Delete someone elses comment on our post', async () => {
@@ -94,12 +95,13 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
   // check we can see that comment on the post
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(theirCommentId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(theirCommentId)
+  })
 
   // we delete their comment
   variables = {commentId: theirCommentId}
@@ -107,11 +109,12 @@ test('Delete someone elses comment on our post', async () => {
   expect(resp.data.deleteComment.commentId).toBe(theirCommentId)
 
   // check no comments appear on the post now
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(0)
-  expect(resp.data.post.comments.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(0)
+    expect(data.post.comments.items).toHaveLength(0)
+  })
 })
 
 test('Cant delete a comment that doesnt exist', async () => {
@@ -163,18 +166,28 @@ test('Cant delete someone elses comment on someone elses post', async () => {
   resp = await theirClient.mutate({mutation: mutations.addComment, variables})
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
+  // check they can see that comment on the post
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(theirCommentId)
+  })
+
   // verify we can't delete their comment
   await expect(
     ourClient.mutate({mutation: mutations.deleteComment, variables: {commentId: theirCommentId}}),
   ).rejects.toThrow(/ClientError: .* not authorized to delete/)
 
-  // check they can see that comment on the post
-  await misc.sleep(1000)
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(theirCommentId)
+  // check they can still see that comment on the post
+  await sleep()
+  await theirClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(theirCommentId)
+  })
 })
 
 test('Can delete comments even if we have comments disabled and the post has comments disabled', async () => {
@@ -199,11 +212,14 @@ test('Can delete comments even if we have comments disabled and the post has com
   resp = await ourClient.mutate({mutation: mutations.setUserMentalHealthSettings, variables})
 
   // verify we can see that comment on the post
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(ourCommentId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post).toBeTruthy()
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+  })
 
   // we disable comments on the post
   variables = {postId, commentsDisabled: true}
@@ -247,6 +263,16 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .mutate({mutation: mutations.addComment, variables: {commentId: commentId1, postId, text: 'lore'}})
     .then(({data}) => expect(data.addComment.commentId).toBe(commentId1))
 
+  // give the the system a moment to count that comment
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.commentsViewedCount).toBe(0)
+    expect(data.post.commentsUnviewedCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+  })
+
   // we view the post
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
@@ -269,8 +295,8 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .then(({data}) => expect(data.addComment.commentId).toBe(commentId4))
 
   // check the post has the correct counts
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
     expect(data.post.commentsCount).toBe(4)
     expect(data.post.commentsViewedCount).toBe(2)
@@ -292,8 +318,8 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId4))
 
   // check the post has the correct counts
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
     expect(data.post.commentsCount).toBe(3)
     expect(data.post.commentsViewedCount).toBe(2)
@@ -307,8 +333,8 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId2))
 
   // check the post has the correct counts
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
     expect(data.post.commentsCount).toBe(2)
     expect(data.post.commentsViewedCount).toBe(1)
@@ -330,8 +356,8 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId3))
 
   // check the post has the correct counts
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
     expect(data.post.commentsCount).toBe(1)
     expect(data.post.commentsViewedCount).toBe(1)
@@ -352,8 +378,8 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .then(({data}) => expect(data.deleteComment.commentId).toBe(commentId1))
 
   // check the post has the correct counts
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
     expect(data.post.commentsCount).toBe(0)
     expect(data.post.commentsViewedCount).toBe(0)

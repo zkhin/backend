@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 // https://github.com/real-social-media/bad_words/blob/master/bucket/bad_words.json
 const badWord = 'uoiFZP8bjS'
@@ -46,14 +44,14 @@ test('Add a comment with bad word', async () => {
   })
 
   // check we can see that comment
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.commentsCount).toBe(1)
-    expect(post.comments.items).toHaveLength(1)
-    expect(post.comments.items[0].commentId).toBe(ourCommentId)
-    expect(post.comments.items[0].commentedBy.userId).toBe(ourUserId)
-    expect(post.comments.items[0].text).toBe(ourText)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+    expect(data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
+    expect(data.post.comments.items[0].text).toBe(ourText)
   })
 
   // they comment on the post with bad word, verify comment is removed
@@ -72,14 +70,14 @@ test('Add a comment with bad word', async () => {
   })
 
   // check we see only our comment
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.commentsCount).toBe(1)
-    expect(post.comments.items).toHaveLength(1)
-    expect(post.comments.items[0].commentId).toBe(ourCommentId)
-    expect(post.comments.items[0].commentedBy.userId).toBe(ourUserId)
-    expect(post.comments.items[0].text).toBe(ourText)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+    expect(data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
+    expect(data.post.comments.items[0].text).toBe(ourText)
   })
 })
 
@@ -105,14 +103,14 @@ test('Two way follow, skip bad word detection', async () => {
   })
 
   // check we can see that comment
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.commentsCount).toBe(1)
-    expect(post.comments.items).toHaveLength(1)
-    expect(post.comments.items[0].commentId).toBe(ourCommentId)
-    expect(post.comments.items[0].commentedBy.userId).toBe(ourUserId)
-    expect(post.comments.items[0].text).toBe(ourText)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+    expect(data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
+    expect(data.post.comments.items[0].text).toBe(ourText)
   })
 
   // they follow us
@@ -125,7 +123,17 @@ test('Two way follow, skip bad word detection', async () => {
     .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
     .then(({data}) => expect(data.followUser.followedStatus).toBe('FOLLOWING'))
 
-  await misc.sleep(1000)
+  // make sure dynamo's gsi's have caught up
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.followedUsers.items).toHaveLength(1)
+    expect(data.self.followerUsers.items).toHaveLength(1)
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.self})
+    expect(data.self.followedUsers.items).toHaveLength(1)
+    expect(data.self.followerUsers.items).toHaveLength(1)
+  })
 
   // they comment on the post with bad word, verify comment is added
   const theirCommentId = uuidv4()
@@ -136,14 +144,14 @@ test('Two way follow, skip bad word detection', async () => {
   })
 
   // check we see all comments
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.commentsCount).toBe(2)
-    expect(post.comments.items).toHaveLength(2)
-    expect(post.comments.items[0].commentId).toBe(ourCommentId)
-    expect(post.comments.items[1].commentId).toBe(theirCommentId)
-    expect(post.comments.items[1].commentedBy.userId).toBe(theirUserId)
-    expect(post.comments.items[1].text).toBe(theirText)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(2)
+    expect(data.post.comments.items).toHaveLength(2)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+    expect(data.post.comments.items[1].commentId).toBe(theirCommentId)
+    expect(data.post.comments.items[1].commentedBy.userId).toBe(theirUserId)
+    expect(data.post.comments.items[1].text).toBe(theirText)
   })
 })

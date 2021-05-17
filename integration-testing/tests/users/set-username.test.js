@@ -1,10 +1,8 @@
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, shortRandomString} = require('../../utils')
 const {mutations} = require('../../schema')
 
 const AuthFlow = cognito.AuthFlow
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -33,7 +31,7 @@ test('setting invalid username fails', async () => {
 
 test('changing username succeeds, then can use it to login in lowercase', async () => {
   const {client, password} = await loginCache.getCleanLogin()
-  const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
+  const username = 'TESTERYESnoMAYBEso' + shortRandomString()
   await client.mutate({mutation: mutations.setUsername, variables: {username}})
 
   // try to login as the user in cognito with that new username, lowered
@@ -49,10 +47,10 @@ test('collision on changing username fails, login username is not changed', asyn
   const {client: ourClient, password: ourPassword} = await loginCache.getCleanLogin()
   const {client: theirClient, password: theirPassword} = await loginCache.getCleanLogin()
 
-  const ourUsername = 'TESTERgotSOMEcase' + misc.shortRandomString()
+  const ourUsername = 'TESTERgotSOMEcase' + shortRandomString()
   await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
 
-  const theirUsername = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
+  const theirUsername = 'TESTERYESnoMAYBEso' + shortRandomString()
   await theirClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}})
 
   // try and fail setting user1's username to user2's

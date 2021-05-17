@@ -1,12 +1,10 @@
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries, subscriptions} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -58,34 +56,35 @@ test('Add messages to a direct chat', async () => {
   expect(after >= lastMessageCreatedAt).toBe(true)
 
   // check we see all the messages are there in the expected order
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
-  expect(resp.data.chat.messagesCount).toBe(4)
-  expect(resp.data.chat.messagesViewedCount).toBe(2)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(2)
-  expect(resp.data.chat.messages.items).toHaveLength(4)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[3].messageId).toBe(messageId4)
-  expect(resp.data.chat.messages.items[0].text).toBe(text1)
-  expect(resp.data.chat.messages.items[1].text).toBe(text2)
-  expect(resp.data.chat.messages.items[2].text).toBe(text3)
-  expect(resp.data.chat.messages.items[3].text).toBe(text4)
-  expect(resp.data.chat.messages.items[0].author.userId).toBe(theirUserId)
-  expect(resp.data.chat.messages.items[0].authorUserId).toBe(theirUserId)
-  expect(resp.data.chat.messages.items[1].author.userId).toBe(ourUserId)
-  expect(resp.data.chat.messages.items[1].authorUserId).toBe(ourUserId)
-  expect(resp.data.chat.messages.items[2].author.userId).toBe(ourUserId)
-  expect(resp.data.chat.messages.items[2].authorUserId).toBe(ourUserId)
-  expect(resp.data.chat.messages.items[3].author.userId).toBe(theirUserId)
-  expect(resp.data.chat.messages.items[3].authorUserId).toBe(theirUserId)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('NOT_VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[3].viewedStatus).toBe('NOT_VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
+    expect(data.chat.messagesCount).toBe(4)
+    expect(data.chat.messagesViewedCount).toBe(2)
+    expect(data.chat.messagesUnviewedCount).toBe(2)
+    expect(data.chat.messages.items).toHaveLength(4)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId4)
+    expect(data.chat.messages.items[0].text).toBe(text1)
+    expect(data.chat.messages.items[1].text).toBe(text2)
+    expect(data.chat.messages.items[2].text).toBe(text3)
+    expect(data.chat.messages.items[3].text).toBe(text4)
+    expect(data.chat.messages.items[0].author.userId).toBe(theirUserId)
+    expect(data.chat.messages.items[0].authorUserId).toBe(theirUserId)
+    expect(data.chat.messages.items[1].author.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[1].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[2].author.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[2].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[3].author.userId).toBe(theirUserId)
+    expect(data.chat.messages.items[3].authorUserId).toBe(theirUserId)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('NOT_VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[3].viewedStatus).toBe('NOT_VIEWED')
+  })
 
   // check they can also see them, and in reverse order if they want
   resp = await theirClient.query({query: queries.chat, variables: {chatId, reverse: true}})
@@ -125,33 +124,35 @@ test('Report chat views', async () => {
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check each message's viewedStatus is as expected for us
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(2)
-  expect(resp.data.chat.messagesViewedCount).toBe(0)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(2)
-  expect(resp.data.chat.messages.items).toHaveLength(2)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('NOT_VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('NOT_VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(2)
+    expect(data.chat.messagesViewedCount).toBe(0)
+    expect(data.chat.messagesUnviewedCount).toBe(2)
+    expect(data.chat.messages.items).toHaveLength(2)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('NOT_VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('NOT_VIEWED')
+  })
 
   // we report to have viewed the chat
   resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
 
   // check all messages now appear viewed for us
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(2)
-  expect(resp.data.chat.messagesViewedCount).toBe(2)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
-  expect(resp.data.chat.messages.items).toHaveLength(2)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(2)
+    expect(data.chat.messagesViewedCount).toBe(2)
+    expect(data.chat.messagesUnviewedCount).toBe(0)
+    expect(data.chat.messages.items).toHaveLength(2)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+  })
 
   // they add another message to the chat
   variables = {chatId, messageId: messageId3, text: 'lore'}
@@ -160,37 +161,39 @@ test('Report chat views', async () => {
   expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
 
   // check the new messages now appears unviewed for us
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(3)
-  expect(resp.data.chat.messagesViewedCount).toBe(2)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(1)
-  expect(resp.data.chat.messages.items).toHaveLength(3)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('NOT_VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messagesViewedCount).toBe(2)
+    expect(data.chat.messagesUnviewedCount).toBe(1)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[2].viewedStatus).toBe('NOT_VIEWED')
+  })
 
   // we report to have viewed the chat again
   resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
 
   // check all messages now appear viewed for us
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(3)
-  expect(resp.data.chat.messagesViewedCount).toBe(3)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
-  expect(resp.data.chat.messages.items).toHaveLength(3)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messagesViewedCount).toBe(3)
+    expect(data.chat.messagesUnviewedCount).toBe(0)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+  })
 
   // check all messages appear viewed for them, because they're athor of them all
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
@@ -250,13 +253,26 @@ test('Cant add a message to a chat we are not in', async () => {
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
+  // give the system a minute to get the chat set up
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(1)
+    expect(data.chat.messages.items).toHaveLength(1)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId)
+  })
+
   // verify the rando can't add a message to our chat
   variables = {chatId, messageId: uuidv4(), text: 'lore'}
-  await expect(randoClient.mutate({mutation: mutations.addChatMessage, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await randoClient
+    .mutate({mutation: mutations.addChatMessage, variables, errorPolicy: 'all'})
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // check the chat and verify the rando's message didn't get saved
+  await sleep()
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messagesCount).toBe(1)
@@ -298,19 +314,21 @@ test('Tag users in a chat message', async () => {
   expect(resp.data.addChatMessage.textTaggedUsers).toHaveLength(0)
 
   // check the chat, make sure the tags all look as expected
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(3)
-  expect(resp.data.chat.messages.items).toHaveLength(3)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[0].textTaggedUsers).toHaveLength(2)
-  expect(resp.data.chat.messages.items[1].textTaggedUsers).toHaveLength(1)
-  expect(resp.data.chat.messages.items[1].textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
-  expect(resp.data.chat.messages.items[1].textTaggedUsers[0].user.userId).toBe(theirUserId)
-  expect(resp.data.chat.messages.items[2].textTaggedUsers).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeTruthy()
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[0].textTaggedUsers).toHaveLength(2)
+    expect(data.chat.messages.items[1].textTaggedUsers).toHaveLength(1)
+    expect(data.chat.messages.items[1].textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
+    expect(data.chat.messages.items[1].textTaggedUsers[0].user.userId).toBe(theirUserId)
+    expect(data.chat.messages.items[2].textTaggedUsers).toHaveLength(0)
+  })
 })
 
 test('Edit chat message', async () => {
@@ -389,6 +407,15 @@ test('Delete chat message', async () => {
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
+  // check the initial set of messages
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeTruthy()
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messages.items).toHaveLength(1)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId)
+  })
+
   // verify neither rando nor us can delete the chat message
   variables = {messageId: uuidv4()}
   await expect(randoClient.mutate({mutation: mutations.deleteChatMessage, variables})).rejects.toThrow(
@@ -399,6 +426,7 @@ test('Delete chat message', async () => {
   )
 
   // check the message hasn't changed
+  await sleep()
   resp = await theirClient.query({query: queries.chat, variables: {chatId}})
   expect(resp.data.chat.chatId).toBe(chatId)
   expect(resp.data.chat.messages.items).toHaveLength(1)
@@ -407,15 +435,16 @@ test('Delete chat message', async () => {
   // check they *can* delete the message
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId}})
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId)
-  await misc.sleep(2000) // dynamo
 
   // check that the message has now dissapeared from the db
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(0)
-  expect(resp.data.chat.messagesViewedCount).toBe(0)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
-  expect(resp.data.chat.messages.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(0)
+    expect(data.chat.messagesViewedCount).toBe(0)
+    expect(data.chat.messagesUnviewedCount).toBe(0)
+    expect(data.chat.messages.items).toHaveLength(0)
+  })
 })
 
 test('Deleting chat messages adjusts messages counts correctly', async () => {
@@ -430,6 +459,15 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
       variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'},
     })
     .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
+
+  // give the system a moment to initialize the chat
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(1)
+    expect(data.chat.messagesViewedCount).toBe(0)
+    expect(data.chat.messagesUnviewedCount).toBe(1)
+  })
 
   // we view the chat
   await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
@@ -453,8 +491,8 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
     .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId3))
 
   // check our message counts look correct
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.chatId).toBe(chatId)
     expect(data.chat.messagesCount).toBe(3)
     expect(data.chat.messagesViewedCount).toBe(2)
@@ -467,8 +505,8 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
     .then(({data}) => expect(data.deleteChatMessage.messageId).toBe(messageId1))
 
   // check our message counts look correct
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.chatId).toBe(chatId)
     expect(data.chat.messagesCount).toBe(2)
     expect(data.chat.messagesViewedCount).toBe(1)
@@ -481,8 +519,8 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
     .then(({data}) => expect(data.deleteChatMessage.messageId).toBe(messageId2))
 
   // check our message counts look correct
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.chatId).toBe(chatId)
     expect(data.chat.messagesCount).toBe(1)
     expect(data.chat.messagesViewedCount).toBe(0)
@@ -495,8 +533,8 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
     .then(({data}) => expect(data.deleteChatMessage.messageId).toBe(messageId3))
 
   // check our message counts look correct
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.chatId).toBe(chatId)
     expect(data.chat.messagesCount).toBe(0)
     expect(data.chat.messagesViewedCount).toBe(0)
@@ -522,10 +560,12 @@ test('User.chats sort order should react to message adds, but not to edits and d
   expect(resp.data.createDirectChat.chatId).toBe(chatId2)
 
   // verify we see both those chats in correct order
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chats.items).toHaveLength(2)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
-  expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chats.items).toHaveLength(2)
+    expect(data.self.chats.items[0].chatId).toBe(chatId2)
+    expect(data.self.chats.items[1].chatId).toBe(chatId1)
+  })
 
   // other1 edits their original message
   variables = {messageId: messageId11, text: 'lore ipsum for reals'}
@@ -533,6 +573,7 @@ test('User.chats sort order should react to message adds, but not to edits and d
   expect(resp.data.editChatMessage.messageId).toBe(messageId11)
 
   // verify the order we see chats in has not changed - edits aren't counted as new activity
+  await sleep()
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
@@ -544,6 +585,7 @@ test('User.chats sort order should react to message adds, but not to edits and d
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId11)
 
   // verify the order we see chats in has not changed - deletes aren't counted as new activity
+  await sleep()
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
@@ -556,10 +598,12 @@ test('User.chats sort order should react to message adds, but not to edits and d
   expect(resp.data.addChatMessage.messageId).toBe(messageId13)
 
   // verify the order we see chats in has changed
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chats.items).toHaveLength(2)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
-  expect(resp.data.self.chats.items[1].chatId).toBe(chatId2)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chats.items).toHaveLength(2)
+    expect(data.self.chats.items[0].chatId).toBe(chatId1)
+    expect(data.self.chats.items[1].chatId).toBe(chatId2)
+  })
 
   // we add another message to chat1
   const messageId14 = uuidv4()
@@ -568,6 +612,7 @@ test('User.chats sort order should react to message adds, but not to edits and d
   expect(resp.data.addChatMessage.messageId).toBe(messageId14)
 
   // verify the order we see chats in has _not_ changed
+  await sleep()
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.chats.items).toHaveLength(2)
   expect(resp.data.self.chats.items[0].chatId).toBe(chatId1)
@@ -587,9 +632,10 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.createDirectChat.chatId).toBe(chatId1)
 
   // we should see an unread chat with unread messages
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  })
 
   // check they can't see our count
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
@@ -608,9 +654,10 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.createGroupChat.chatId).toBe(chatId2)
 
   // check our counts
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(2)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(2)
+  })
 
   // check their counts
   resp = await theirClient.query({query: queries.self})
@@ -621,9 +668,10 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.leaveGroupChat.chatId).toBe(chatId2)
 
   // check counts again
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  })
 
   // we report to have viewed the first chat
   resp = await ourClient.mutate({
@@ -632,9 +680,10 @@ test('User.chatsWithUnviewedMessages', async () => {
   })
 
   // check counts again
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(0)
+  })
 
   // they add a new message to the first chat
   const messageId3 = uuidv4()
@@ -645,18 +694,20 @@ test('User.chatsWithUnviewedMessages', async () => {
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // check counts again
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(1)
+  })
 
   // they delete that message
   resp = await theirClient.mutate({mutation: mutations.deleteChatMessage, variables: {messageId: messageId3}})
   expect(resp.data.deleteChatMessage.messageId).toBe(messageId3)
 
   // check counts again
-  await misc.sleep(2000) // dynamo
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatsWithUnviewedMessagesCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(0)
+  })
 })
 
 test('USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED subscription notifications', async () => {
@@ -677,8 +728,8 @@ test('USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED subscription notifications
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // they open up a chat with us, verify
   let nextNotification = new Promise((resolve) => handlers.push(resolve))

@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(300, 200)
+const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -52,12 +50,12 @@ test('Add post with keywords attribute', async () => {
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
 
-  await misc.sleep(2000) // dynamo
   keywords = 'shirt'
-  await ourClient.query({query: queries.findPosts, variables: {keywords}}).then(({data: {findPosts: posts}}) => {
-    expect(posts.items).toHaveLength(1)
-    expect(posts.items.map((post) => post.postId)).toEqual([postId3])
-    expect(posts.items.map((post) => post.postedBy.userId)).toEqual([theirUserId])
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.findPosts, variables: {keywords}})
+    expect(data.findPosts.items).toHaveLength(1)
+    expect(data.findPosts.items.map((post) => post.postId)).toEqual([postId3])
+    expect(data.findPosts.items.map((post) => post.postedBy.userId)).toEqual([theirUserId])
   })
 
   keywords = 'shirt min'

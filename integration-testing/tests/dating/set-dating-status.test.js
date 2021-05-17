@@ -2,14 +2,12 @@ const fs = require('fs')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -79,12 +77,17 @@ test('Enable, disable dating as a BASIC user, privacy', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
   // enable dating, verify value saved
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
   await ourClient
     .query({query: queries.user, variables: {userId: ourUserId}})
     .then(({data: {user}}) => expect(user.datingStatus).toBe('ENABLED'))
@@ -126,17 +129,23 @@ test('DisplayName required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'displayName'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_DISPLAY_NAME'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_DISPLAY_NAME'],
+      message: "ClientError: `{'displayName'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('Profile photo required to enable dating', async () => {
@@ -157,17 +166,23 @@ test('Profile photo required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'photoPostId'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_PHOTO_POST_ID'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_PHOTO_POST_ID'],
+      message: "ClientError: `{'photoPostId'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('Gender required to enable dating', async () => {
@@ -192,17 +207,23 @@ test('Gender required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'gender'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_GENDER'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_GENDER'],
+      message: "ClientError: `{'gender'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('location required to enable dating', async () => {
@@ -227,17 +248,23 @@ test('location required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'location'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_LOCATION'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_LOCATION'],
+      message: "ClientError: `{'location'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('matchAgeRange required to enable dating', async () => {
@@ -262,17 +289,23 @@ test('matchAgeRange required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'matchAgeRange'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_MATCH_AGE_RANGE'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_MATCH_AGE_RANGE'],
+      message: "ClientError: `{'matchAgeRange'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('matchGenders required to enable dating', async () => {
@@ -297,17 +330,23 @@ test('matchGenders required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'matchGenders'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_MATCH_GENDERS'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_MATCH_GENDERS'],
+      message: "ClientError: `{'matchGenders'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('BASIC users require matchLocationRadius to enable dating, DIAMOND users do not', async () => {
@@ -332,17 +371,23 @@ test('BASIC users require matchLocationRadius to enable dating, DIAMOND users do
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'matchLocationRadius'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_MATCH_LOCATION_RADIUS'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_MATCH_LOCATION_RADIUS'],
+      message: "ClientError: `{'matchLocationRadius'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 
   // give ourselves some free DIAMOND
   await client
@@ -377,48 +422,65 @@ test('Age required and must be in allowed age range for enabling dating', async 
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'age'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_AGE'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_AGE'],
+      message: "ClientError: `{'age'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 
   // set age, but too young
   await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '2019-01-01'}})
-  await misc.sleep(2000)
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: age .* must be between /)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['WRONG_AGE_MIN'])
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['WRONG_AGE_MIN'],
+      message: /ClientError: age .* must be between /,
+    })
   })
 
   // set age, but too old
   await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '1900-01-01'}})
-  await misc.sleep(2000)
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: age .* must be between /)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['WRONG_AGE_MAX'])
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['WRONG_AGE_MAX'],
+      message: /ClientError: age .* must be between /,
+    })
   })
 
   // set age to an allowed dating age
   await client.mutate({mutation: mutations.setUserDetails, variables: {dateOfBirth: '1980-01-01'}})
-  await misc.sleep(2000)
-  await client
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await eventually(async () => {
+    const {data, errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
 })
 
 test('Enable dating and remove required fields, check dating is DISABLED', async () => {
@@ -450,15 +512,21 @@ test('Enable dating and remove required fields, check dating is DISABLED', async
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
   // enable dating, verify value saved
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await ourClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.datingStatus).toBe('ENABLED')
+  })
 
   // remove photoPostId, check dating status is disabled in the response
   await ourClient
@@ -466,15 +534,16 @@ test('Enable dating and remove required fields, check dating is DISABLED', async
     .then(({data: {setUserDetails: user}}) => {
       expect(user.datingStatus).toBe('DISABLED')
     })
-  await ourClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.datingStatus).toBe('DISABLED'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.datingStatus).toBe('DISABLED')
+  })
 })
 
 test('Height required to enable dating', async () => {
   const {client} = await loginCache.getCleanLogin()
 
-  // set all the stuff needed for dating, except gender
+  // set all the stuff needed for dating, except height
   const postId = uuidv4()
   await client
     .mutate({mutation: mutations.addPost, variables: {postId, imageData: grantDataB64, takenInReal: true}})
@@ -493,17 +562,23 @@ test('Height required to enable dating', async () => {
       matchHeightRange: {min: 0, max: 110},
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'height'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_HEIGHT'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_HEIGHT'],
+      message: "ClientError: `{'height'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })
 
 test('matchHeightRange required to enable dating', async () => {
@@ -528,15 +603,21 @@ test('matchHeightRange required to enable dating', async () => {
       matchLocationRadius: 50,
     },
   })
-  await misc.sleep(2000)
 
-  // verify can't enable dating
-  await expect(
-    client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}),
-  ).rejects.toThrow(/ClientError: `{'matchHeightRange'}` required to enable dating/)
-
-  // verify the correct error codes are returned
-  await client.mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}}).catch((err) => {
-    expect(err.graphQLErrors[0].errorInfo).toEqual(['MISSING_MATCH_HEIGHT_RANGE'])
+  // verify can't enable dating, correct error returned
+  await eventually(async () => {
+    const {errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatchObject({
+      errorInfo: ['MISSING_MATCH_HEIGHT_RANGE'],
+      message: "ClientError: `{'matchHeightRange'}` required to enable dating",
+    })
   })
+  await client
+    .query({query: queries.self})
+    .then(({data: {self: user}}) => expect(user.datingStatus).toBe('DISABLED'))
 })

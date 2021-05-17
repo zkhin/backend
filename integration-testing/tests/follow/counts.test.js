@@ -1,9 +1,7 @@
-const cognito = require('../../utils/cognito')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
-const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -25,11 +23,12 @@ test('Follow counts public user', async () => {
   // we follow them, their follower count increments
   resp = await ourClient.mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.followersCount).toBe(1)
-  expect(resp.data.user.followersRequestedCount).toBeNull()
-  expect(resp.data.user.followedsCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.followersCount).toBe(1)
+    expect(data.user.followersRequestedCount).toBeNull()
+    expect(data.user.followedsCount).toBe(0)
+  })
 
   // verify their requested followers count didn't change
   resp = await theirClient.query({query: queries.user, variables: {userId: theirUserId}})
@@ -40,25 +39,28 @@ test('Follow counts public user', async () => {
   // they follow us, their followed count increments
   resp = await theirClient.mutate({mutation: mutations.followUser, variables: {userId: ourUserId}})
   expect(resp.data.followUser.followedStatus).toBe('FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.followersCount).toBe(1)
-  expect(resp.data.user.followedsCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.followersCount).toBe(1)
+    expect(data.user.followedsCount).toBe(1)
+  })
 
   // unfollow, counts drop back down
   resp = await ourClient.mutate({mutation: mutations.unfollowUser, variables: {userId: theirUserId}})
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.followedsCount).toBe(1)
-  expect(resp.data.user.followersCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.followedsCount).toBe(1)
+    expect(data.user.followersCount).toBe(0)
+  })
 
   resp = await theirClient.mutate({mutation: mutations.unfollowUser, variables: {userId: ourUserId}})
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.followersCount).toBe(0)
-  expect(resp.data.user.followedsCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.followersCount).toBe(0)
+    expect(data.user.followedsCount).toBe(0)
+  })
 })
 
 test('Follow counts private user', async () => {
@@ -81,10 +83,11 @@ test('Follow counts private user', async () => {
   // u1 requests to follow u2
   resp = await u1Client.mutate({mutation: mutations.followUser, variables: {userId: u2UserId}})
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
-  await misc.sleep(2000) // dynamo
-  resp = await u2Client.query({query: queries.self})
-  expect(resp.data.self.followersCount).toBe(0)
-  expect(resp.data.self.followersRequestedCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await u2Client.query({query: queries.self})
+    expect(data.self.followersCount).toBe(0)
+    expect(data.self.followersRequestedCount).toBe(1)
+  })
   resp = await u1Client.query({query: queries.self})
   expect(resp.data.self.followedsCount).toBe(0)
 
@@ -99,10 +102,11 @@ test('Follow counts private user', async () => {
   // u2 accepts the follow request
   resp = await u2Client.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: u1UserId}})
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await u2Client.query({query: queries.self})
-  expect(resp.data.self.followersCount).toBe(1)
-  expect(resp.data.self.followersRequestedCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await u2Client.query({query: queries.self})
+    expect(data.self.followersCount).toBe(1)
+    expect(data.self.followersRequestedCount).toBe(0)
+  })
   resp = await u1Client.query({query: queries.self})
   expect(resp.data.self.followedsCount).toBe(1)
 
@@ -117,10 +121,11 @@ test('Follow counts private user', async () => {
   // u2 now denies the follow request, counts go down
   resp = await u2Client.mutate({mutation: mutations.denyFollowerUser, variables: {userId: u1UserId}})
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
-  await misc.sleep(2000) // dynamo
-  resp = await u2Client.query({query: queries.self})
-  expect(resp.data.self.followersCount).toBe(0)
-  expect(resp.data.self.followersRequestedCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await u2Client.query({query: queries.self})
+    expect(data.self.followersCount).toBe(0)
+    expect(data.self.followersRequestedCount).toBe(0)
+  })
   resp = await u1Client.query({query: queries.self})
   expect(resp.data.self.followedsCount).toBe(0)
 
@@ -135,10 +140,11 @@ test('Follow counts private user', async () => {
   // u2 re-accepts the follow request, counts go up
   resp = await u2Client.mutate({mutation: mutations.acceptFollowerUser, variables: {userId: u1UserId}})
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await u2Client.query({query: queries.self})
-  expect(resp.data.self.followersCount).toBe(1)
-  expect(resp.data.self.followersRequestedCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await u2Client.query({query: queries.self})
+    expect(data.self.followersCount).toBe(1)
+    expect(data.self.followersRequestedCount).toBe(0)
+  })
   resp = await u1Client.query({query: queries.self})
   expect(resp.data.self.followedsCount).toBe(1)
 
@@ -153,11 +159,12 @@ test('Follow counts private user', async () => {
   // unfollow, counts go back to zero
   resp = await u1Client.mutate({mutation: mutations.unfollowUser, variables: {userId: u2UserId}})
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
-  await misc.sleep(1000) // dynamo
-  resp = await u2Client.query({query: queries.self})
-  expect(resp.data.self.followersCount).toBe(0)
-  expect(resp.data.self.followersRequestedCount).toBe(0)
-  expect(resp.data.self.followedsCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await u2Client.query({query: queries.self})
+    expect(data.self.followersCount).toBe(0)
+    expect(data.self.followersRequestedCount).toBe(0)
+    expect(data.self.followedsCount).toBe(0)
+  })
 
   // verify u1 cannot see u2's counts, lists
   resp = await u1Client.query({query: queries.user, variables: {userId: u2UserId}})
@@ -172,9 +179,10 @@ test('Follow counts private user', async () => {
   expect(resp.data.followUser.followedStatus).toBe('REQUESTED')
   resp = await u2Client.mutate({mutation: mutations.denyFollowerUser, variables: {userId: u1UserId}})
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
-  await misc.sleep(1000) // dynamo
-  resp = await u2Client.query({query: queries.self})
-  expect(resp.data.self.followersCount).toBe(0)
-  expect(resp.data.self.followersRequestedCount).toBe(0)
-  expect(resp.data.self.followedsCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await u2Client.query({query: queries.self})
+    expect(data.self.followersCount).toBe(0)
+    expect(data.self.followersRequestedCount).toBe(0)
+    expect(data.self.followedsCount).toBe(0)
+  })
 })

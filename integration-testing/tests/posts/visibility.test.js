@@ -3,15 +3,13 @@ const got = require('got')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -41,13 +39,12 @@ test('Visiblity of post() and user.posts() for a public user', async () => {
 
   // upload the image, give S3 trigger a second to fire
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we should see the post
-  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.data.user.posts.items).toEqual([expect.objectContaining({postId})])
-  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.data.user.posts.items).toEqual([expect.objectContaining({postId})])
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
+    expect(data.user.posts.items).toEqual([expect.objectContaining({postId})])
+  })
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post).toMatchObject({postId})
 

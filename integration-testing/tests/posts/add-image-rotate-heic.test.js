@@ -4,8 +4,7 @@ const path = require('path')
 const requestImageSize = require('request-image-size')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const heicHeight = 3024
@@ -14,7 +13,6 @@ const heicBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', '
 const heicData = new Buffer.from(heicBytes).toString('base64')
 const heicHeaders = {'Content-Type': 'image/heic'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -91,14 +89,14 @@ test('Valid heic rotate, upload via cloudfront', async () => {
       return post.imageUploadUrl
     })
   await got.put(uploadUrl, {body: heicBytes, headers: heicHeaders})
-  await misc.sleepUntilPostProcessed(client, postId)
 
   // retrieve the post object, check some image sizes
-  const postImage = await client.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.image.url).toBeTruthy()
-    return post.image
+  const postImage = await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.image.url).toBeTruthy()
+    return data.post.image
   })
   await requestImageSize(postImage.url).then(({width, height}) => {
     expect(width).toBe(heicHeight)

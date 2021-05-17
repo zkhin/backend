@@ -1,12 +1,10 @@
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
-const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 let anonClient, anonUserId
 beforeAll(async () => {
@@ -71,14 +69,15 @@ test('Create and edit a group chat', async () => {
   const messageIdSystem1 = chat.messages.items[1].messageId
 
   // check we have the chat
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.chatCount).toBe(1)
-  expect(resp.data.self.chats.items).toHaveLength(1)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
-  expect(resp.data.self.chats.items[0].messagesCount).toBe(3)
-  expect(resp.data.self.chats.items[0].createdAt < resp.data.self.chats.items[0].lastMessageActivityAt).toBe(true)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.chatCount).toBe(1)
+    expect(data.self.chats.items).toHaveLength(1)
+    expect(data.self.chats.items[0].chatId).toBe(chatId)
+    expect(data.self.chats.items[0].messagesCount).toBe(3)
+    expect(data.self.chats.items[0].createdAt < data.self.chats.items[0].lastMessageActivityAt).toBe(true)
+  })
 
   // check other1 has the chat
   resp = await other1Client.query({query: queries.self})
@@ -100,16 +99,17 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.addChatMessage.messageId).toBe(messageId3)
 
   // check other2 sees both those messages
-  await misc.sleep(2000)
-  resp = await other2Client.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(5)
-  expect(resp.data.chat.messages.items).toHaveLength(5)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[3].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[4].messageId).toBe(messageId3)
+  await eventually(async () => {
+    const {data} = await other2Client.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(5)
+    expect(data.chat.messages.items).toHaveLength(5)
+    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
+    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
+  })
 
   // other2 edits the name of the group chat
   variables = {chatId, name: 'new name'}
@@ -118,24 +118,25 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.editGroupChat.name).toBe('new name')
 
   // check we see the updated name and the messages
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.name).toBe('new name')
-  expect(resp.data.chat.messagesCount).toBe(6)
-  expect(resp.data.chat.messages.items).toHaveLength(6)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[3].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[4].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[5].text).toContain(other2Username)
-  expect(resp.data.chat.messages.items[5].text).toContain('changed the name of the group')
-  expect(resp.data.chat.messages.items[5].text).toContain('new name')
-  expect(resp.data.chat.messages.items[5].textTaggedUsers).toHaveLength(1)
-  expect(resp.data.chat.messages.items[5].textTaggedUsers[0].tag).toBe(`@${other2Username}`)
-  expect(resp.data.chat.messages.items[5].textTaggedUsers[0].user.userId).toBe(other2UserId)
-  const messageIdSystem3 = resp.data.chat.messages.items[5].messageId
+  const messageIdSystem3 = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.name).toBe('new name')
+    expect(data.chat.messagesCount).toBe(6)
+    expect(data.chat.messages.items).toHaveLength(6)
+    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
+    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[5].text).toContain(other2Username)
+    expect(data.chat.messages.items[5].text).toContain('changed the name of the group')
+    expect(data.chat.messages.items[5].text).toContain('new name')
+    expect(data.chat.messages.items[5].textTaggedUsers).toHaveLength(1)
+    expect(data.chat.messages.items[5].textTaggedUsers[0].tag).toBe(`@${other2Username}`)
+    expect(data.chat.messages.items[5].textTaggedUsers[0].user.userId).toBe(other2UserId)
+    return data.chat.messages.items[5].messageId
+  })
 
   // we delete the name of the group chat
   variables = {chatId, name: ''}
@@ -144,23 +145,24 @@ test('Create and edit a group chat', async () => {
   expect(resp.data.editGroupChat.name).toBeNull()
 
   // check other1 sees the updated name
-  await misc.sleep(2000)
-  resp = await other1Client.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.name).toBeNull()
-  expect(resp.data.chat.messagesCount).toBe(7)
-  expect(resp.data.chat.messages.items).toHaveLength(7)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[3].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[4].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[5].messageId).toBe(messageIdSystem3)
-  expect(resp.data.chat.messages.items[6].text).toContain(ourUsername)
-  expect(resp.data.chat.messages.items[6].text).toContain('deleted the name of the group')
-  expect(resp.data.chat.messages.items[6].textTaggedUsers).toHaveLength(1)
-  expect(resp.data.chat.messages.items[6].textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
-  expect(resp.data.chat.messages.items[6].textTaggedUsers[0].user.userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await other1Client.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.name).toBeNull()
+    expect(data.chat.messagesCount).toBe(7)
+    expect(data.chat.messages.items).toHaveLength(7)
+    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
+    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[5].messageId).toBe(messageIdSystem3)
+    expect(data.chat.messages.items[6].text).toContain(ourUsername)
+    expect(data.chat.messages.items[6].text).toContain('deleted the name of the group')
+    expect(data.chat.messages.items[6].textTaggedUsers).toHaveLength(1)
+    expect(data.chat.messages.items[6].textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
+    expect(data.chat.messages.items[6].textTaggedUsers[0].user.userId).toBe(ourUserId)
+  })
 })
 
 test('Creating a group chat with our userId in the listed userIds has no affect', async () => {
@@ -238,7 +240,7 @@ test('Anonymous users cannot create nor get added to a group chat', async () => 
       variables: {chatId, userIds: [anonUserId, theirUserId], messageId: uuidv4(), messageText: 'm2'},
     })
     .then(({data: {createGroupChat: chat}}) => expect(chat.chatId).toBe(chatId))
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.chatUsers, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
     expect(chat.usersCount).toBe(2)
@@ -251,7 +253,7 @@ test('Anonymous users cannot create nor get added to a group chat', async () => 
     mutation: mutations.addToGroupChat,
     variables: {chatId, userIds: [anonUserId, otherUserId]},
   })
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.chatUsers, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
     expect(chat.usersCount).toBe(3)
@@ -336,12 +338,14 @@ test('Create a group chat with just us and without a name, add people to it and 
   )
 
   // check they have the chat now
-  resp = await theirClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(theirUserId)
-  expect(resp.data.self.chatCount).toBe(1)
-  expect(resp.data.self.chats.items).toHaveLength(1)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
-  expect(resp.data.self.chats.items[0].messagesCount).toBe(3)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.self})
+    expect(data.self.userId).toBe(theirUserId)
+    expect(data.self.chatCount).toBe(1)
+    expect(data.self.chats.items).toHaveLength(1)
+    expect(data.self.chats.items[0].chatId).toBe(chatId)
+    expect(data.self.chats.items[0].messagesCount).toBe(3)
+  })
 
   // check other can directly access the chat, and they see the system message from adding a user
   resp = await otherClient.query({query: queries.chat, variables: {chatId}})

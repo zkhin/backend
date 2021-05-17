@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -46,7 +44,7 @@ test('Cannot like/dislike posts with likes disabled', async () => {
   )
 
   // verify no likes show up on the post
-  await misc.sleep(2000)
+  await sleep()
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   expect(resp.data.post.postId).toBe(postId)
   expect(resp.data.post.onymousLikeCount).toBeNull()
@@ -70,13 +68,14 @@ test('Likes preservered through period with posts likes disabled', async () => {
   resp = await theirClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}})
 
   // check we can see all of those likes on the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.anonymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.anonymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  })
 
   // now disable likes on the post
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, likesDisabled: true}})
@@ -92,25 +91,27 @@ test('Likes preservered through period with posts likes disabled', async () => {
   )
 
   // verify no likes show up on the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.onymousLikeCount).toBeNull()
-  expect(resp.data.post.anonymousLikeCount).toBeNull()
-  expect(resp.data.post.onymouslyLikedBy).toBeNull()
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.onymousLikeCount).toBeNull()
+    expect(data.post.anonymousLikeCount).toBeNull()
+    expect(data.post.onymouslyLikedBy).toBeNull()
+  })
 
   // now enable likes on the post
   resp = await ourClient.mutate({mutation: mutations.editPost, variables: {postId, likesDisabled: false}})
   expect(resp.data.editPost.likesDisabled).toBe(false)
 
   // verify the original likes now show up on the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.anonymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.anonymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  })
 })
 
 test('User disables likes, cannot like/dislike posts, nor can other users dislike/like their posts', async () => {
@@ -203,13 +204,14 @@ test('Verify likes preserved through period in which user disables their likes',
   resp = await theirClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}})
 
   // check we can see all of those likes on the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.anonymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.anonymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  })
 
   // now we disable likes
   resp = await ourClient.mutate({

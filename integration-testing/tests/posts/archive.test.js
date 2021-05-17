@@ -3,15 +3,13 @@ const got = require('got')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -33,16 +31,17 @@ test('Archive an image post', async () => {
     })
 
   // check we see that post in the feed and in the posts
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.selfFeed}).then(({data: {self: user}}) => {
-    expect(user.feed.items).toHaveLength(1)
-    expect(user.feed.items[0].postId).toBe(postId)
-    expect(user.feed.items[0].image.url).toBeTruthy()
-    expect(user.feed.items[0].imageUploadUrl).toBeNull()
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(1)
+    expect(data.self.feed.items[0].postId).toBe(postId)
+    expect(data.self.feed.items[0].image.url).toBeTruthy()
+    expect(data.self.feed.items[0].imageUploadUrl).toBeNull()
   })
-  await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}}).then(({data: {user}}) => {
-    expect(user.posts.items).toHaveLength(1)
-    expect(user.posts.items[0].postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
+    expect(data.user.posts.items).toHaveLength(1)
+    expect(data.user.posts.items[0].postId).toBe(postId)
   })
 
   // archive the post
@@ -51,13 +50,14 @@ test('Archive an image post', async () => {
     .then(({data: {archivePost: post}}) => expect(post.postStatus).toBe('ARCHIVED'))
 
   // post should be gone from the normal queries - feed, posts
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.selfFeed})
-    .then(({data: {self: user}}) => expect(user.feed.items).toHaveLength(0))
-  await ourClient
-    .query({query: queries.userPosts, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.posts.items).toHaveLength(0))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(0)
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
+    expect(data.user.posts.items).toHaveLength(0)
+  })
 
   // post should be visible when specifically requesting archived posts
   await ourClient
@@ -137,10 +137,13 @@ test('Archiving an image post does not affect image urls', async () => {
   expect(resp.data.archivePost.image.url).toBeTruthy()
 
   // check the url bases have not changed
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.postStatus).toBe('ARCHIVED')
-  const newImage = resp.data.post.image
+  const newImage = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('ARCHIVED')
+    expect(data.post.image).toBeTruthy()
+    return data.post.image
+  })
   expect(image.url.split('?')[0]).toBe(newImage.url.split('?')[0])
   expect(image.url4k.split('?')[0]).toBe(newImage.url4k.split('?')[0])
   expect(image.url1080p.split('?')[0]).toBe(newImage.url1080p.split('?')[0])
@@ -168,16 +171,18 @@ test('Restoring an archived image post', async () => {
   expect(resp.data.restoreArchivedPost.image).toBeTruthy()
 
   // check we see that post in the feed and in the posts
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
-  expect(resp.data.self.feed.items[0].imageUploadUrl).toBeNull()
-  expect(resp.data.self.feed.items[0].image.url).toBeTruthy()
-
-  resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
-  expect(resp.data.user.posts.items).toHaveLength(1)
-  expect(resp.data.user.posts.items[0].postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(1)
+    expect(data.self.feed.items[0].postId).toBe(postId)
+    expect(data.self.feed.items[0].imageUploadUrl).toBeNull()
+    expect(data.self.feed.items[0].image.url).toBeTruthy()
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
+    expect(data.user.posts.items).toHaveLength(1)
+    expect(data.user.posts.items[0].postId).toBe(postId)
+  })
 
   // post should not be visible when specifically requesting archived posts
   resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId, postStatus: 'ARCHIVED'}})
@@ -241,8 +246,10 @@ test('Post count reacts to user archiving posts', async () => {
       expect(post.postId).toBe(postId1)
       expect(post.postStatus).toBe('COMPLETED')
     })
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postCount).toBe(1)
+  })
 
   // add a image post, verify count does not go up immediately
   const postId2 = uuidv4()
@@ -253,18 +260,15 @@ test('Post count reacts to user archiving posts', async () => {
       expect(post.postStatus).toBe('PENDING')
       return post.imageUploadUrl
     })
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
+  await sleep()
+  await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.postCount).toBe(1))
 
-  // upload the image for the post, verify post completes and count now goes up
+  // upload the image for the post, verify post count now goes up
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostProcessed(ourClient, postId2)
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId: postId2}}).then(({data: {post}}) => {
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.postedBy.postCount).toBe(2) // count has incremented
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postCount).toBe(2)
   })
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(2))
 
   // archive that post, verify count goes down
   await ourClient
@@ -273,8 +277,10 @@ test('Post count reacts to user archiving posts', async () => {
       expect(post.postId).toBe(postId2)
       expect(post.postStatus).toBe('ARCHIVED')
     })
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => expect(user.postCount).toBe(1))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postCount).toBe(1)
+  })
 
   // cant test an expiring post is removed from the count yet,
   // because that is done in a cron-like job

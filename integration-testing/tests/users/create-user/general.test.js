@@ -1,10 +1,8 @@
-const cognito = require('../../../utils/cognito.js')
-const misc = require('../../../utils/misc.js')
+const {cognito, shortRandomString} = require('../../../utils')
 const {mutations, queries} = require('../../../schema')
 
 const AuthFlow = cognito.AuthFlow
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -47,7 +45,7 @@ test('User can login with username used in Mutation.createCognitoOnlyUser', asyn
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
   // create a new user with a unique username
-  const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
+  const username = 'TESTERYESnoMAYBEso' + shortRandomString()
   resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
@@ -100,7 +98,7 @@ test('Mutation.createCognitoOnlyUser saves fullName and can pull email from cogn
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
   // create a new user some deets
-  const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
+  const username = 'TESTERYESnoMAYBEso' + shortRandomString()
   const fullName = 'my-full-name'
   resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username, fullName}})
   expect(resp['errors']).toBeUndefined()
@@ -121,7 +119,7 @@ test('Mutation.createCognitoOnlyUser can pull phone from cognito, if set', async
   expect(resp['data']['resetUser']['userId']).toBe(userId)
 
   // create a new user some deets
-  const username = 'TESTERYESnoMAYBEso' + misc.shortRandomString()
+  const username = 'TESTERYESnoMAYBEso' + shortRandomString()
   resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
   expect(resp['errors']).toBeUndefined()
   expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)

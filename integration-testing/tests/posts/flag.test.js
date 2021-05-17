@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -149,9 +147,11 @@ test('Post.flagStatus changes correctly when post is flagged', async () => {
   expect(resp.data.flagPost.flagStatus).toBe('FLAGGED')
 
   // double check that was saved
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.flagStatus).toBe('FLAGGED')
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.flagStatus).toBe('FLAGGED')
+  })
 })
 
 test('Cannot double-flag a post', async () => {

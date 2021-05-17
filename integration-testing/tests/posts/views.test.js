@@ -1,16 +1,14 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient, anonUserId, anonUsername
-const imageData1 = misc.generateRandomJpeg(8, 8)
-const imageData2 = misc.generateRandomJpeg(8, 8)
+const imageData1 = generateRandomJpeg(8, 8)
+const imageData2 = generateRandomJpeg(8, 8)
 const imageData1B64 = new Buffer.from(imageData1).toString('base64')
 const imageData2B64 = new Buffer.from(imageData2).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -71,9 +69,9 @@ test('Report post views', async () => {
   })
 
   // verify our view counts are correct
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(3)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postViewedByCount).toBe(3)
   })
 
   // verify the two posts have the right viewed by counts
@@ -141,13 +139,13 @@ test('Anonymous user can report post views', async () => {
     .then(({data}) => expect(data.reportPostViews).toBe(true))
 
   // check the anonymous user shows up in the post views
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.viewedByCount).toBe(1)
-    expect(post.viewedBy.items).toHaveLength(1)
-    expect(post.viewedBy.items[0].userId).toBe(anonUserId)
-    expect(post.viewedBy.items[0].username).toBe(anonUsername)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.viewedByCount).toBe(1)
+    expect(data.post.viewedBy.items).toHaveLength(1)
+    expect(data.post.viewedBy.items[0].userId).toBe(anonUserId)
+    expect(data.post.viewedBy.items[0].username).toBe(anonUsername)
   })
 })
 
@@ -174,9 +172,10 @@ test('Post.viewedStatus', async () => {
   await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify that's reflected in the viewedStatus
-  await theirClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.viewedStatus).toBe('VIEWED')
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.viewedStatus).toBe('VIEWED')
   })
 })
 
@@ -224,14 +223,14 @@ test('Report post views on non-completed posts are ignored', async () => {
     variables: {postIds: [postId1, postId2]},
   })
 
-  // verify the two posts have no viewed by counts
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId: postId1}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(0)
-  })
-  await ourClient.query({query: queries.post, variables: {postId: postId2}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(0)
-  })
+  // verify the two posts still have no viewed by counts
+  await sleep()
+  await ourClient
+    .query({query: queries.post, variables: {postId: postId1}})
+    .then(({data}) => expect(data.post.viewedByCount).toBe(0))
+  await ourClient
+    .query({query: queries.post, variables: {postId: postId2}})
+    .then(({data}) => expect(data.post.viewedByCount).toBe(0))
 })
 
 test('Post views are de-duplicated by user', async () => {
@@ -251,37 +250,34 @@ test('Post views are de-duplicated by user', async () => {
   await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId, postId]}})
 
   // check counts de-duplicated
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(1)
-  })
-  await ourClient.query({query: queries.post, variables: {postId: postId}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(1)
-  })
+  await sleep()
+  await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.postViewedByCount).toBe(1))
+  await ourClient
+    .query({query: queries.post, variables: {postId: postId}})
+    .then(({data: {post}}) => expect(post.viewedByCount).toBe(1))
 
   // other2 report to have viewed that post once
   await other2Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check counts
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(2)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postViewedByCount).toBe(2)
   })
-  await ourClient.query({query: queries.post, variables: {postId: postId}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(2)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId: postId}})
+    expect(data.post.viewedByCount).toBe(2)
   })
 
   // other1 report to have viewed that post yet again
   await other1Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId, postId]}})
 
   // check counts have not changed
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(2)
-  })
-  await ourClient.query({query: queries.post, variables: {postId: postId}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(2)
-  })
+  await sleep()
+  await ourClient.query({query: queries.self}).then(({data}) => expect(data.self.postViewedByCount).toBe(2))
+  await ourClient
+    .query({query: queries.post, variables: {postId: postId}})
+    .then(({data: {post}}) => expect(post.viewedByCount).toBe(2))
 })
 
 test('Report post views error conditions', async () => {
@@ -321,7 +317,7 @@ test('Post views on duplicate posts are recorded on viewed post and original pos
       expect(addPost.postStatus).toBe('COMPLETED')
       expect(addPost.originalPost.postId).toBe(ourPostId)
     })
-  await misc.sleep(2000)
+  await sleep()
   await theirClient
     .mutate({
       mutation: mutations.addPost,
@@ -348,18 +344,19 @@ test('Post views on duplicate posts are recorded on viewed post and original pos
   // other records one post view on their post
   // verify that shows up as a view on both posts
   await otherClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [theirPostId]}})
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(theirPostId)
-    expect(post.viewedByCount).toBe(1)
-    expect(post.viewedBy.items).toHaveLength(1)
-    expect(post.viewedBy.items[0].userId).toBe(otherUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
+    expect(data.post.postId).toBe(theirPostId)
+    expect(data.post.viewedByCount).toBe(1)
+    expect(data.post.viewedBy.items).toHaveLength(1)
+    expect(data.post.viewedBy.items[0].userId).toBe(otherUserId)
   })
-  await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(ourPostId)
-    expect(post.viewedByCount).toBe(1)
-    expect(post.viewedBy.items).toHaveLength(1)
-    expect(post.viewedBy.items[0].userId).toBe(otherUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId: ourPostId}})
+    expect(data.post.postId).toBe(ourPostId)
+    expect(data.post.viewedByCount).toBe(1)
+    expect(data.post.viewedBy.items).toHaveLength(1)
+    expect(data.post.viewedBy.items[0].userId).toBe(otherUserId)
   })
 
   // verify both of our users also recored a view
@@ -369,31 +366,31 @@ test('Post views on duplicate posts are recorded on viewed post and original pos
   // they record a view on their own post
   // verify it is not recorded as a view on their post, but does get recorded on the original post
   await theirClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [theirPostId]}})
-  await misc.sleep(2000)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId: ourPostId}})
+    expect(data.post.postId).toBe(ourPostId)
+    expect(data.post.viewedByCount).toBe(2)
+    expect(data.post.viewedBy.items).toHaveLength(2)
+    expect(data.post.viewedBy.items[0].userId).toBe(otherUserId)
+    expect(data.post.viewedBy.items[1].userId).toBe(theirUserId)
+  })
   await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(theirPostId)
     expect(post.viewedByCount).toBe(1)
     expect(post.viewedBy.items).toHaveLength(1)
     expect(post.viewedBy.items[0].userId).toBe(otherUserId)
   })
-  await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(ourPostId)
-    expect(post.viewedByCount).toBe(2)
-    expect(post.viewedBy.items).toHaveLength(2)
-    expect(post.viewedBy.items[0].userId).toBe(otherUserId)
-    expect(post.viewedBy.items[1].userId).toBe(theirUserId)
-  })
 
   // we record a post view on their post
   // verify it is not recorded as a view on their post, but does not get recorded on our post
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [theirPostId]}})
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.post, variables: {postId: theirPostId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(theirPostId)
-    expect(post.viewedByCount).toBe(2)
-    expect(post.viewedBy.items).toHaveLength(2)
-    expect(post.viewedBy.items[0].userId).toBe(otherUserId)
-    expect(post.viewedBy.items[1].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
+    expect(data.post.postId).toBe(theirPostId)
+    expect(data.post.viewedByCount).toBe(2)
+    expect(data.post.viewedBy.items).toHaveLength(2)
+    expect(data.post.viewedBy.items[0].userId).toBe(otherUserId)
+    expect(data.post.viewedBy.items[1].userId).toBe(ourUserId)
   })
   await ourClient.query({query: queries.post, variables: {postId: ourPostId}}).then(({data: {post}}) => {
     expect(post.postId).toBe(ourPostId)
@@ -418,11 +415,11 @@ test('Post views and deleted on user delete/reset', async () => {
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify they can see our post view
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(1)
-    expect(post.viewedBy.items).toHaveLength(1)
-    expect(post.viewedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.viewedByCount).toBe(1)
+    expect(data.post.viewedBy.items).toHaveLength(1)
+    expect(data.post.viewedBy.items[0].userId).toBe(ourUserId)
   })
 
   // we reset our user
@@ -431,10 +428,10 @@ test('Post views and deleted on user delete/reset', async () => {
     .then(({data: {resetUser: user}}) => expect(user.userStatus).toBe('RESETTING'))
 
   // verify the view has disappeared
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.viewedByCount).toBe(0)
-    expect(post.viewedBy.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.viewedByCount).toBe(0)
+    expect(data.post.viewedBy.items).toHaveLength(0)
   })
 })
 
@@ -493,9 +490,9 @@ test('Report post views with FOCUS view type', async () => {
   })
 
   // verify our view counts are correct
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.postViewedByCount).toBe(3)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postViewedByCount).toBe(3)
   })
 
   // verify the two posts have the right viewed by counts

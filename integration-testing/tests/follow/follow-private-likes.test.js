@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -49,11 +47,12 @@ test('When we stop following a private user, any likes of ours on their posts di
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: postId1}})
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  })
 
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(1)
@@ -68,10 +67,11 @@ test('When we stop following a private user, any likes of ours on their posts di
   expect(resp.data.unfollowUser.followedStatus).toBe('NOT_FOLLOWING')
 
   // check those likes disappeared from the lists
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.data.post.onymousLikeCount).toBe(0)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: postId1}})
+    expect(data.post.onymousLikeCount).toBe(0)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(0)
+  })
 
   resp = await ourClient.query({query: queries.post, variables: {postId: postId1}})
   expect(resp.data.post).toBeNull() // access denied
@@ -116,11 +116,12 @@ test('When a private user decides to deny our following, any likes of ours on th
   expect(resp.data.anonymouslyLikePost.likeStatus).toBe('ANONYMOUSLY_LIKED')
 
   // check those likes show up in the lists
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: postId1}})
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  })
 
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(1)
@@ -133,10 +134,11 @@ test('When a private user decides to deny our following, any likes of ours on th
   expect(resp.data.denyFollowerUser.followerStatus).toBe('DENIED')
 
   // check we can no longer see lists of likes
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId: postId1}})
-  expect(resp.data.post.onymousLikeCount).toBe(0)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: postId1}})
+    expect(data.post.onymousLikeCount).toBe(0)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(0)
+  })
 
   resp = await ourClient.query({query: queries.self})
   expect(resp.data.self.onymouslyLikedPosts.items).toHaveLength(0)

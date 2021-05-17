@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -48,20 +46,32 @@ test('Cannot comment to image post if the match_status is not confirmed', async 
   await theirClient
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: pid2}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(theirUserId))
-  await misc.sleep(2000)
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // we try to add comment to their post
   const ourCommentId = uuidv4()
@@ -80,14 +90,13 @@ test('Cannot comment to image post if the match_status is not confirmed', async 
 
   // we approve them
   await ourClient.mutate({mutation: mutations.approveMatch, variables: {userId: theirUserId}})
-  await misc.sleep(2000)
 
-  // we try to add comment to their post
+  // verify both parties still cannot comment on each other's posts
+  await sleep()
   variables = {commentId: ourCommentId, postId: pid2, text: ourText}
   await expect(ourClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow(
     /ClientError: Cannot add comment unless it is a confirmed match on dating/,
   )
-  // they try to add comment to our post
   variables = {commentId: theirCommentId, postId: pid1, text: ourText}
   await expect(theirClient.mutate({mutation: mutations.addComment, variables})).rejects.toThrow(
     /ClientError: Cannot add comment unless it is a confirmed match on dating/,
@@ -95,11 +104,19 @@ test('Cannot comment to image post if the match_status is not confirmed', async 
 
   // they approve us
   await theirClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-  await misc.sleep(2000)
 
-  // we try to add comment to their post
-  variables = {commentId: ourCommentId, postId: pid2, text: ourText}
-  await ourClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
-    expect(comment.commentId).toBe(ourCommentId)
+  // verify we can now comment on their post
+  await eventually(async () => {
+    const {errors} = await ourClient.mutate({
+      mutation: mutations.addComment,
+      variables: {commentId: ourCommentId, postId: pid2, text: ourText},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: pid2}})
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
   })
 })

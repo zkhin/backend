@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 // https://github.com/real-social-media/bad_words/blob/master/bucket/bad_words.json
 const badWord = 'uoiFZP8bjS'
@@ -26,7 +24,7 @@ afterEach(async () => {
 })
 
 test('Add comments with bad word - force banned', async () => {
-  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient, email: theirEmail, userId: theirUserId} = await loginCache.getCleanLogin()
   const {client: otherClient} = await loginCache.getCleanLogin()
 
@@ -39,30 +37,19 @@ test('Add comments with bad word - force banned', async () => {
     expect(post.comments.items).toHaveLength(0)
   })
 
-  // we comment on the post
-  const ourCommentId = uuidv4()
-  const ourText = 'nice post'
-  variables = {commentId: ourCommentId, postId, text: ourText}
-  await ourClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
-    expect(comment.commentId).toBe(ourCommentId)
-  })
-
-  // check we can see that comment
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.commentsCount).toBe(1)
-    expect(post.comments.items).toHaveLength(1)
-    expect(post.comments.items[0].commentId).toBe(ourCommentId)
-    expect(post.comments.items[0].commentedBy.userId).toBe(ourUserId)
-    expect(post.comments.items[0].text).toBe(ourText)
-  })
-
   // they comment on the post 5 times
   for (const i of Array(5).keys()) {
     variables = {commentId: uuidv4(), postId, text: `lore ipsum ${i}`}
     await theirClient.mutate({mutation: mutations.addComment, variables})
   }
+
+  // let the system catch up with those comments
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(5)
+    expect(data.post.comments.items).toHaveLength(5)
+  })
 
   // they comment on the post with bad word, verify they are force disabled
   const theirCommentId = uuidv4()
@@ -71,17 +58,17 @@ test('Add comments with bad word - force banned', async () => {
   await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
     expect(comment.commentId).toBe(theirCommentId)
   })
-  await misc.sleep(2000)
-
-  // verify they are force disabled
-  await theirClient.query({query: queries.self}).then(({data}) => expect(data.self.userStatus).toBe('DISABLED'))
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.self})
+    expect(data.self.userStatus).toBe('DISABLED')
+  })
 
   // other tries to change email with banned email and it's also disabled
   await theirClient.mutate({mutation: mutations.deleteUser}).then(({data: {deleteUser: user}}) => {
     expect(user.userId).toBe(theirUserId)
     expect(user.userStatus).toBe('DELETING')
   })
-  await misc.sleep(2000)
+  await sleep()
 
   await expect(
     otherClient.mutate({mutation: mutations.startChangeUserEmail, variables: {email: theirEmail}}),

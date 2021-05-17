@@ -1,8 +1,7 @@
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
-const cognito = require('../../utils/cognito')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin('+15105551333'))
@@ -15,9 +14,11 @@ test('Steal user email and phoneNumber exception', async () => {
   const {email: ourEmail, client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
-  const ourPhoneNumber = await ourClient
-    .query({query: queries.self})
-    .then(({data: {self: user}}) => user.phoneNumber)
+  const ourPhoneNumber = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.phoneNumber).toBeTruthy()
+    return data.self.phoneNumber
+  })
 
   await expect(
     theirClient.mutate({mutation: mutations.startChangeUserEmail, variables: {email: ourEmail}}),

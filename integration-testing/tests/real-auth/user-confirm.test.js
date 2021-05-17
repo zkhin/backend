@@ -2,8 +2,7 @@ const dotenv = require('dotenv')
 const got = require('got')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-jest.retryTimes(1)
+const {cognito} = require('../../utils')
 
 dotenv.config()
 

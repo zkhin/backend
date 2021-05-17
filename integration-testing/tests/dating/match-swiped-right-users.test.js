@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -56,36 +54,55 @@ test('POTENTIAL -> CONFIRMED', async () => {
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: pid3}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(otherUserId))
 
-  await misc.sleep(2000)
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await otherClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await otherClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
 
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await ourClient
-    .query({query: queries.user, variables: {userId: otherUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: otherUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // they and other approve us, check statues
   await theirClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-  await misc.sleep(2000)
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('APPROVED'))
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('APPROVED')
+  })
 
   await otherClient.mutate({mutation: mutations.approveMatch, variables: {userId: ourUserId}})
-  await otherClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('APPROVED'))
+  await eventually(async () => {
+    const {data} = await otherClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('APPROVED')
+  })
 
   // try to fetch swiped right users, should be diamond subscription level
   await expect(ourClient.query({query: queries.swipedRightUsers})).rejects.toThrow(

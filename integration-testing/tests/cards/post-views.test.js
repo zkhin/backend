@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, deleteDefaultCard, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   // yes, we need eight users to run this test
@@ -32,6 +30,7 @@ test('PostViews card generation and format', async () => {
   const {client: u5Client} = await loginCache.getCleanLogin()
   const {client: u6Client} = await loginCache.getCleanLogin()
   const {client: u7Client} = await loginCache.getCleanLogin()
+  await deleteDefaultCard(ourClient)
 
   // we add a post
   const postId = uuidv4()
@@ -47,25 +46,23 @@ test('PostViews card generation and format', async () => {
   await u5Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify no card generated yet
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
-    // first card is the 'Add a profile photo'
-    expect(user.cards.items[0].title).toBe('Add a profile photo')
+    expect(user.cardCount).toBe(0)
+    expect(user.cards.items).toHaveLength(0)
   })
 
   // a sixth user views the post
   await u6Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify a card was generated, check format
-  await misc.sleep(2000)
-  const cardId = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    let card = user.cards.items[0]
+  const cardId = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    let card = data.self.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have new views')
     expect(card.subTitle).toBeNull()
@@ -82,8 +79,6 @@ test('PostViews card generation and format', async () => {
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card.cardId
   })
 
@@ -96,12 +91,10 @@ test('PostViews card generation and format', async () => {
   await u7Client.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify no card generated (card only generates once per post)
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
-    // first card is the 'Add a profile photo'
-    expect(user.cards.items[0].title).toBe('Add a profile photo')
+    expect(user.cardCount).toBe(0)
+    expect(user.cards.items).toHaveLength(0)
   })
 })

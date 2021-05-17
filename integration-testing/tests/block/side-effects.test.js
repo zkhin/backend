@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -26,27 +24,28 @@ test('Blocking a user causes their onymous likes on our posts to dissapear', asy
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
-  await misc.sleep(1000) // dynamo
 
   // they like the post
   resp = await theirClient.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
 
   // verify we can see the like
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(theirUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(theirUserId)
+  })
 
   // we block them
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
   expect(resp.data.blockUser.userId).toBe(theirUserId)
 
   // verify we can see the like has disappeared
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.onymousLikeCount).toBe(0)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.onymousLikeCount).toBe(0)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(0)
+  })
 })
 
 test('Blocking a user causes their anonymous likes on our posts to dissapear', async () => {
@@ -145,9 +144,11 @@ test('Blocking a follower causes unfollowing, our posts in their feed and first 
   expect(resp.data.addPost.postId).toBe(postId)
 
   // verify that post shows up in their feed
-  resp = await theirClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(1)
+    expect(data.self.feed.items[0].postId).toBe(postId)
+  })
 
   // verify we show up in their followed users with stories
   resp = await theirClient.query({query: queries.self})
@@ -236,12 +237,13 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   let variables = {postId, imageData, lifetime: 'PT1H'}
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
-  await misc.sleep(1000) // dynamo
 
   // verify that post shows up in our feed
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(1)
-  expect(resp.data.self.feed.items[0].postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(1)
+    expect(data.self.feed.items[0].postId).toBe(postId)
+  })
 
   // verify they show up in our followed users with stories
   resp = await ourClient.query({query: queries.self})
@@ -252,9 +254,10 @@ test('Blocking a user we follow causes unfollowing, their posts in feed and firs
   resp = await ourClient.mutate({mutation: mutations.blockUser, variables: {userId: theirUserId}})
 
   // verify that post does not show up in our feed
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.selfFeed})
-  expect(resp.data.self.feed.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.selfFeed})
+    expect(data.self.feed.items).toHaveLength(0)
+  })
 
   // verify they do not show up in our followed users with stories
   resp = await ourClient.query({query: queries.self})

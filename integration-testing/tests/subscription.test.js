@@ -2,12 +2,10 @@ const {v4: uuidv4} = require('uuid')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
 
-const cognito = require('../utils/cognito')
-const misc = require('../utils/misc')
+const {cognito, sleep} = require('../utils')
 const {mutations, subscriptions} = require('../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -60,8 +58,8 @@ test('Cannot subscribe to other users notifications', async () => {
     next: (resp) => expect(`Should not be called: ${resp}`).toBeNull(),
     error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
   })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // they open up a chat with us
   const chatId = uuidv4()

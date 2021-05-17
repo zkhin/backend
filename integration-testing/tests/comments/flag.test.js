@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -75,11 +73,12 @@ test('Anybody can flag a comment of private user on post of public user', async 
   expect(resp.data.flagComment.flagStatus).toBe('FLAGGED')
 
   // double check the flag status
-  await misc.sleep(2000)
-  resp = await randoClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
-  expect(resp.data.post.comments.items[0].flagStatus).toBe('FLAGGED')
+  await eventually(async () => {
+    const {data} = await randoClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items[0].commentId).toBe(commentId)
+    expect(data.post.comments.items[0].flagStatus).toBe('FLAGGED')
+  })
 
   // verify can't double-flag
   await expect(randoClient.mutate({mutation: mutations.flagComment, variables: {commentId}})).rejects.toThrow(
@@ -168,7 +167,8 @@ test('Follower can flag comment on post of private user, non-follower cannot', a
   })
 
   // verify the comment flag stuck
-  await theirClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
     expect(data.post.comments.items[0].commentId).toBe(commentId)
     expect(data.post.comments.items[0].flagStatus).toBe('FLAGGED')
@@ -201,8 +201,8 @@ test('Comments flagged by post owner are force-deleted', async () => {
   })
 
   // verify the flagged comment has been deleted
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.commentsCount).toBe(1)
     expect(data.post.comments.items).toHaveLength(1)
     expect(data.post.comments.items[0].commentId).toBe(commentId2)
@@ -212,17 +212,20 @@ test('Comments flagged by post owner are force-deleted', async () => {
   await ourClient
     .mutate({mutation: mutations.setUserPrivacyStatus, variables: {privacyStatus: 'PRIVATE'}})
     .then(({data}) => expect(data.setUserDetails.privacyStatus).toBe('PRIVATE'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.privacyStatus).toBe('PRIVATE')
+  })
 
   // verify we can flag the second comment (as private post owner user)
-  await misc.sleep(2000)
   await ourClient.mutate({mutation: mutations.flagComment, variables: {commentId: commentId2}}).then(({data}) => {
     expect(data.flagComment.commentId).toBe(commentId2)
     expect(data.flagComment.flagStatus).toBe('FLAGGED')
   })
 
   // verify the flagged comment has been deleted
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data}) => {
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.commentsCount).toBe(0)
     expect(data.post.comments.items).toHaveLength(0)
   })

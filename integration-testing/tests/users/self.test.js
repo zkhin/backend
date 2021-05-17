@@ -1,8 +1,6 @@
-const cognito = require('../../utils/cognito')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 const loginCache = new cognito.AppSyncLoginCache()
-const misc = require('../../utils/misc')
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -12,10 +10,11 @@ afterAll(async () => await loginCache.reset())
 
 test('Query.self for user that exists, matches Query.user', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  await misc.sleep(3000)
 
-  const selfItem = await ourClient.query({query: queries.self}).then(({data}) => {
+  const selfItem = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
     expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
     return data.self
   })
 

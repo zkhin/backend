@@ -2,16 +2,14 @@ const fs = require('fs')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
-const misc = require('../../utils/misc')
 
 let anonClient
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const AuthFlow = cognito.AuthFlow
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -60,10 +58,13 @@ test("resetUser really releases the user's username", async () => {
     .then(({data: {resetUser: user}}) => expect(user.userStatus).toBe('RESETTING'))
 
   // verify we cannot login with our username anymore
-  await misc.sleep(2000)
-  await expect(
-    cognito.userPoolClient.initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: ourPassword}}).promise(),
-  ).rejects.toThrow(/Incorrect username or password/)
+  await eventually(async () => {
+    await expect(() =>
+      cognito.userPoolClient
+        .initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: ourPassword}})
+        .promise(),
+    ).rejects.toThrow(/Incorrect username or password/)
+  })
 
   // verify that someone else can now claim our released username and then login with it
   await theirClient
@@ -80,12 +81,13 @@ test("resetUser really releases the user's username", async () => {
     .then(({data: {resetUser: user}}) => expect(user.userStatus).toBe('RESETTING'))
 
   // verify they cannot login with their username anymore
-  await misc.sleep(2000)
-  await expect(
-    cognito.userPoolClient
-      .initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: theirPassword}})
-      .promise(),
-  ).rejects.toThrow(/Incorrect username or password/)
+  await eventually(async () => {
+    await expect(() =>
+      cognito.userPoolClient
+        .initiateAuth({AuthFlow, AuthParameters: {USERNAME, PASSWORD: theirPassword}})
+        .promise(),
+    ).rejects.toThrow(/Incorrect username or password/)
+  })
 })
 
 test("resetUser deletes all the user's data (best effort test)", async () => {
@@ -153,9 +155,10 @@ test("resetUser deletes all the user's data (best effort test)", async () => {
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
   // verify they cannot see our user directly anymore
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user).toBeNull()
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user).toBeNull()
+  })
 
   // verify they do not see us as a followed and a follower
   resp = await theirClient.query({query: queries.ourFollowedUsers})
@@ -187,21 +190,23 @@ test('resetUser deletes any likes we have placed', async () => {
   expect(resp.data.onymouslyLikePost.postId).toBe(postId)
 
   // check the post for that like
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(ourUserId)
+  })
 
   // we reset our account
   resp = await ourClient.mutate({mutation: mutations.resetUser})
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
   // check the post no longer has that like
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.onymousLikeCount).toBe(0)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.onymousLikeCount).toBe(0)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(0)
+  })
 })
 
 test('resetUser deletes all blocks of us and by us', async () => {
@@ -218,23 +223,28 @@ test('resetUser deletes all blocks of us and by us', async () => {
   expect(resp.data.blockUser.userId).toBe(ourUserId)
 
   // verify those blocks show up
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.blockedUsers.items).toHaveLength(1)
-
-  resp = await other2Client.query({query: queries.self})
-  expect(resp.data.self.blockedUsers.items).toHaveLength(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.blockedUsers.items).toHaveLength(1)
+  })
+  await eventually(async () => {
+    const {data} = await other2Client.query({query: queries.self})
+    expect(data.self.blockedUsers.items).toHaveLength(1)
+  })
 
   // reset our user, and re-initialize
   resp = await ourClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ourUsername}})
   expect(resp.data.resetUser.userId).toBe(ourUserId)
 
   // verify both of the blocks have now disappeared
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.blockedUsers.items).toHaveLength(0)
-
-  resp = await other2Client.query({query: queries.self})
-  expect(resp.data.self.blockedUsers.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.blockedUsers.items).toHaveLength(0)
+  })
+  await eventually(async () => {
+    const {data} = await other2Client.query({query: queries.self})
+    expect(data.self.blockedUsers.items).toHaveLength(0)
+  })
 })
 
 test('resetUser deletes users flags of posts', async () => {
@@ -252,16 +262,19 @@ test('resetUser deletes users flags of posts', async () => {
   expect(resp.data.flagPost.postId).toBe(postId)
 
   // check we can see we flagged the post
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.flagStatus).toBe('FLAGGED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.flagStatus).toBe('FLAGGED')
+  })
 
   // we reset our user, should clear the flag
   await ourClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ourUsername}})
 
   // check we can that we have not flagged the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.flagStatus).toBe('NOT_FLAGGED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.flagStatus).toBe('NOT_FLAGGED')
+  })
 })
 
 test('resetUser with optional username intializes new user correctly', async () => {
@@ -278,11 +291,11 @@ test('resetUser with optional username intializes new user correctly', async () 
     })
 
   // make sure it stuck in the DB
-  await misc.sleep(2000)
-  await client.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(userId)
-    expect(user.username).toBe(newUsername)
-    expect(user.email).toBe(email)
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.self})
+    expect(data.self.userId).toBe(userId)
+    expect(data.self.username).toBe(newUsername)
+    expect(data.self.email).toBe(email)
   })
 
   // make sure we can login with the new username
@@ -308,20 +321,22 @@ test('resetUser deletes any comments we have added to posts', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId)
 
   // check they can see our comment on the post
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(commentId)
+  })
 
   // we reset our user, should delete the comment
   await ourClient.mutate({mutation: mutations.resetUser, variables: {newUsername: ourUsername}})
 
   // check the comment has disappeared
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.commentsCount).toBe(0)
-  expect(resp.data.post.comments.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.commentsCount).toBe(0)
+    expect(data.post.comments.items).toHaveLength(0)
+  })
 })
 
 test('resetUser deletes any albums we have added', async () => {
@@ -373,12 +388,16 @@ test('resetUser deletes all of our direct chats', async () => {
   await ourClient.mutate({mutation: mutations.resetUser})
 
   // check other1's chat with us has disappeared
-  resp = await other1Client.query({query: queries.chat, variables: {chatId: chatId1}})
-  expect(resp.data.chat).toBeNull()
+  await eventually(async () => {
+    const {data} = await other1Client.query({query: queries.chat, variables: {chatId: chatId1}})
+    expect(data.chat).toBeNull()
+  })
 
   // check other2's chat with us has disappeared
-  resp = await other2Client.query({query: queries.chat, variables: {chatId: chatId2}})
-  expect(resp.data.chat).toBeNull()
+  await eventually(async () => {
+    const {data} = await other2Client.query({query: queries.chat, variables: {chatId: chatId2}})
+    expect(data.chat).toBeNull()
+  })
 })
 
 test('resetUser causes us to leave group chats', async () => {
@@ -392,36 +411,40 @@ test('resetUser causes us to leave group chats', async () => {
   expect(resp.data.createGroupChat.chatId).toBe(chatId)
 
   // check they see us and our chat message in the second group chat
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.usersCount).toBe(2)
-  expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  expect(resp.data.chat.messagesCount).toBe(3)
-  expect(resp.data.chat.messages.items).toHaveLength(3)
-  expect(resp.data.chat.messages.items[0].authorUserId).toBeNull()
-  expect(resp.data.chat.messages.items[1].authorUserId).toBeNull()
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId)
-  expect(resp.data.chat.messages.items[2].authorUserId).toBe(ourUserId)
-  expect(resp.data.chat.messages.items[2].author.userId).toBe(ourUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeTruthy()
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[0].authorUserId).toBeNull()
+    expect(data.chat.messages.items[1].authorUserId).toBeNull()
+    expect(data.chat.messages.items[2].messageId).toBe(messageId)
+    expect(data.chat.messages.items[2].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[2].author.userId).toBe(ourUserId)
+  })
 
   // reset our user
   await ourClient.mutate({mutation: mutations.resetUser})
 
   // check we disappeared from the chat, and our message now appears without an author
   // and another system message showed up
-  await misc.sleep(2000)
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.usersCount).toBe(1)
-  expect(resp.data.chat.users.items.map((u) => u.userId)).toEqual([theirUserId])
-  expect(resp.data.chat.messagesCount).toBe(4)
-  expect(resp.data.chat.messages.items).toHaveLength(4)
-  expect(resp.data.chat.messages.items[0].authorUserId).toBeNull()
-  expect(resp.data.chat.messages.items[1].authorUserId).toBeNull()
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId)
-  expect(resp.data.chat.messages.items[2].authorUserId).toBe(ourUserId)
-  expect(resp.data.chat.messages.items[2].author).toBeNull()
-  expect(resp.data.chat.messages.items[3].authorUserId).toBeNull()
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.usersCount).toBe(1)
+    expect(data.chat.users.items.map((u) => u.userId)).toEqual([theirUserId])
+    expect(data.chat.messagesCount).toBe(4)
+    expect(data.chat.messages.items).toHaveLength(4)
+    expect(data.chat.messages.items[0].authorUserId).toBeNull()
+    expect(data.chat.messages.items[1].authorUserId).toBeNull()
+    expect(data.chat.messages.items[2].messageId).toBe(messageId)
+    expect(data.chat.messages.items[2].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[2].author).toBeNull()
+    expect(data.chat.messages.items[3].authorUserId).toBeNull()
+  })
 })
 
 test('resetUser changes userStatus', async () => {

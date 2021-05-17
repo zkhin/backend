@@ -1,11 +1,9 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -86,13 +84,14 @@ test('Flag chat success', async () => {
     })
 
   // over 10% of participants in chat have flagged it, so check it was auto-deleted
-  await misc.sleep(2000)
-  await theirClient
-    .query({query: queries.chat, variables: {chatId}})
-    .then(({data: {chat}}) => expect(chat).toBeNull())
-  await ourClient
-    .query({query: queries.chat, variables: {chatId}})
-    .then(({data: {chat}}) => expect(chat).toBeNull())
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeNull()
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat).toBeNull()
+  })
 
   // It would be nice to check the case when the chat is not auto-deleted,
   // (less than 10% of participants in chat have flagged it)

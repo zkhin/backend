@@ -1,9 +1,7 @@
-const cognito = require('../../utils/cognito')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
-const misc = require('../../utils/misc')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -38,11 +36,11 @@ test('hideFollowCounts hides follow counts and followe[r|d]Users lists', async (
     .then(({data: {followUser: user}}) => expect(user.followedStatus).toBe('FOLLOWING'))
 
   // check our followCountsHidden state, and our follow counts, other user can't see our setting
-  await misc.sleep(1000)
-  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
-    expect(user.followCountsHidden).toBeNull()
-    expect(user.followersCount).toBe(1)
-    expect(user.followedsCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.followCountsHidden).toBeNull()
+    expect(data.user.followersCount).toBe(1)
+    expect(data.user.followedsCount).toBe(1)
   })
   await theirClient
     .query({query: queries.followerUsers, variables: {userId: ourUserId}})

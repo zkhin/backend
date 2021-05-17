@@ -3,15 +3,13 @@ const {v4: uuidv4} = require('uuid')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
 
 const imageHeaders = {'Content-Type': 'image/jpeg'}
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -35,8 +33,8 @@ test('POST_COMPLETED notification triggers correctly posts', async () => {
     },
     error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
   })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // create a text-only post, verify it completes automatically and we are notified
   let nextNotification = new Promise((resolve) => handlers.push(resolve))
@@ -112,8 +110,8 @@ test('POST_ERROR notification triggers correctly posts', async () => {
     },
     error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
   })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // create an image post, upload invalid image data along with post, verify
   let nextNotification = new Promise((resolve) => handlers.push(resolve))

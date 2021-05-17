@@ -2,13 +2,11 @@ const {v4: uuidv4} = require('uuid')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
 
-const imageData = new Buffer.from(misc.generateRandomJpeg(8, 8)).toString('base64')
+const imageData = new Buffer.from(generateRandomJpeg(8, 8)).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -106,8 +104,8 @@ test(
         },
         error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
       })
-    const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-    await misc.sleep(2000) // let the subscriptions initialize
+    const subInitTimeout = sleep('subTimeout')
+    await sleep('subInit')
 
     // we enable dating
     await ourClient

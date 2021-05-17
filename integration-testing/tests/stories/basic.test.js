@@ -2,14 +2,12 @@ const fs = require('fs')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -63,16 +61,20 @@ test('Add a post that shows up as story', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // that post should show up as a story for them
-  resp = await ourClient.query({query: queries.userStories, variables: {userId: theirUserId}})
-  expect(resp.data.user.stories.items).toHaveLength(1)
-  expect(resp.data.user.stories.items[0].postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.userStories, variables: {userId: theirUserId}})
+    expect(data.user.stories.items).toHaveLength(1)
+    expect(data.user.stories.items[0].postId).toBe(postId)
+  })
 
   // they should show up as having a story to us
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.followedUsersWithStories.items).toHaveLength(1)
-  expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
-  expect(resp.data.self.followedUsersWithStories.items[0].blockerStatus).toBe('NOT_BLOCKING')
-  expect(resp.data.self.followedUsersWithStories.items[0].followedStatus).toBe('FOLLOWING')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.followedUsersWithStories.items).toHaveLength(1)
+    expect(data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
+    expect(data.self.followedUsersWithStories.items[0].blockerStatus).toBe('NOT_BLOCKING')
+    expect(data.self.followedUsersWithStories.items[0].followedStatus).toBe('FOLLOWING')
+  })
 
   // verify they cannot see our followedUsersWithStories
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
@@ -280,12 +282,16 @@ test('Post that is archived is removed from stories', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // that post should be a story
-  resp = await theirClient.query({query: queries.userStories, variables: {userId: theirUserId}})
-  expect(resp.data.user.stories.items).toHaveLength(1)
-  expect(resp.data.user.stories.items[0].postId).toBe(postId)
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.followedUsersWithStories.items).toHaveLength(1)
-  expect(resp.data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.userStories, variables: {userId: theirUserId}})
+    expect(data.user.stories.items).toHaveLength(1)
+    expect(data.user.stories.items[0].postId).toBe(postId)
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.followedUsersWithStories.items).toHaveLength(1)
+    expect(data.self.followedUsersWithStories.items[0].userId).toBe(theirUserId)
+  })
 
   // they archive that post
   resp = await theirClient.mutate({mutation: mutations.archivePost, variables: {postId}})

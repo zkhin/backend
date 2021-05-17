@@ -2,14 +2,12 @@ const fs = require('fs')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, shortRandomString} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -34,7 +32,6 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
-  await misc.sleepUntilPostProcessed(ourClient, postId)
 
   // we set some details on our profile
   await ourClient
@@ -56,70 +53,71 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
     .mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: 'v2020-01-01.1'}})
     .then(({data: {setUserAcceptedEULAVersion: user}}) => expect(user.acceptedEULAVersion).toBe('v2020-01-01.1'))
 
-  // let dynamo stream processor catch up
-  await misc.sleep(3000)
-
   // retrieve our user object
-  resp = await ourClient.query({query: queries.self})
-  const ourUserFull = resp.data.self
-  expect(ourUserFull.userId).toBe(ourUserId)
-  expect(ourUserFull.username).toBeTruthy()
-  expect(ourUserFull.acceptedEULAVersion).toBeTruthy()
-  expect(ourUserFull.albumCount).toBe(0)
-  expect(ourUserFull.albums.items).toHaveLength(0)
-  expect(ourUserFull.anonymouslyLikedPosts.items).toHaveLength(0)
-  expect(ourUserFull.bio).toBeTruthy()
-  expect(ourUserFull.blockedStatus).toBe('SELF')
-  expect(ourUserFull.blockerStatus).toBe('SELF')
-  expect(ourUserFull.blockedUsers.items).toHaveLength(1)
-  expect(ourUserFull.cardCount).toBe(0)
-  expect(ourUserFull.cards.items).toHaveLength(0)
-  expect(ourUserFull.chatCount).toBe(0)
-  expect(ourUserFull.chats.items).toHaveLength(0)
-  expect(ourUserFull.chatsWithUnviewedMessagesCount).toBe(0)
-  expect(ourUserFull.commentsDisabled).toBe(false)
-  expect(ourUserFull.dateOfBirth).toBe('2020-01-09')
-  expect(ourUserFull.datingStatus).toBe('DISABLED')
-  expect(ourUserFull.directChat).toBeNull()
-  expect(ourUserFull.email).toBeTruthy()
-  expect(ourUserFull.feed.items).toHaveLength(1)
-  expect(ourUserFull.followCountsHidden).toBe(false)
-  expect(ourUserFull.followersCount).toBe(0)
-  expect(ourUserFull.followersRequestedCount).toBe(0)
-  expect(ourUserFull.followedsCount).toBe(0)
-  expect(ourUserFull.followerStatus).toBe('SELF')
-  expect(ourUserFull.followedStatus).toBe('SELF')
-  expect(ourUserFull.followerUsers.items).toHaveLength(0)
-  expect(ourUserFull.followedUsers.items).toHaveLength(0)
-  expect(ourUserFull.followedUsersWithStories.items).toHaveLength(0)
-  expect(ourUserFull.fullName).toBeTruthy()
-  expect(ourUserFull.gender).toBe('FEMALE')
-  expect(ourUserFull.languageCode).toBeTruthy()
-  expect(ourUserFull.likesDisabled).toBe(false)
-  expect(ourUserFull.onymouslyLikedPosts.items).toHaveLength(0)
-  // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
-  // expect(ourUserFull.phoneNumber).toBeTruthy()
-  expect(ourUserFull.photo).toBeTruthy()
-  expect(ourUserFull.postCount).toBe(1)
-  expect(ourUserFull.posts.items).toHaveLength(1)
-  expect(ourUserFull.postsWithUnviewedComments.items).toHaveLength(0)
-  expect(ourUserFull.postViewedByCount).toBe(0)
-  expect(ourUserFull.privacyStatus).toBe('PUBLIC')
-  expect(ourUserFull.sharingDisabled).toBe(false)
-  expect(ourUserFull.signedUpAt).toBeTruthy()
-  expect(ourUserFull.subscriptionLevel).toBe('BASIC')
-  expect(ourUserFull.subscriptionExpiresAt).toBeNull()
-  expect(ourUserFull.themeCode).toBeTruthy()
-  expect(ourUserFull.userStatus).toBe('ACTIVE')
-  expect(ourUserFull.verificationHidden).toBe(false)
-  expect(ourUserFull.viewCountsHidden).toBe(false)
+  const ourUserFull = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.username).toBeTruthy()
+    expect(data.self.acceptedEULAVersion).toBeTruthy()
+    expect(data.self.albumCount).toBe(0)
+    expect(data.self.albums.items).toHaveLength(0)
+    expect(data.self.anonymouslyLikedPosts.items).toHaveLength(0)
+    expect(data.self.bio).toBeTruthy()
+    expect(data.self.blockedStatus).toBe('SELF')
+    expect(data.self.blockerStatus).toBe('SELF')
+    expect(data.self.blockedUsers.items).toHaveLength(1)
+    expect(data.self.cardCount).toBe(0)
+    expect(data.self.cards.items).toHaveLength(0)
+    expect(data.self.chatCount).toBe(0)
+    expect(data.self.chats.items).toHaveLength(0)
+    expect(data.self.chatsWithUnviewedMessagesCount).toBe(0)
+    expect(data.self.commentsDisabled).toBe(false)
+    expect(data.self.dateOfBirth).toBe('2020-01-09')
+    expect(data.self.datingStatus).toBe('DISABLED')
+    expect(data.self.directChat).toBeNull()
+    expect(data.self.email).toBeTruthy()
+    expect(data.self.feed.items).toHaveLength(1)
+    expect(data.self.followCountsHidden).toBe(false)
+    expect(data.self.followersCount).toBe(0)
+    expect(data.self.followersRequestedCount).toBe(0)
+    expect(data.self.followedsCount).toBe(0)
+    expect(data.self.followerStatus).toBe('SELF')
+    expect(data.self.followedStatus).toBe('SELF')
+    expect(data.self.followerUsers.items).toHaveLength(0)
+    expect(data.self.followedUsers.items).toHaveLength(0)
+    expect(data.self.followedUsersWithStories.items).toHaveLength(0)
+    expect(data.self.fullName).toBeTruthy()
+    expect(data.self.gender).toBe('FEMALE')
+    expect(data.self.languageCode).toBeTruthy()
+    expect(data.self.likesDisabled).toBe(false)
+    expect(data.self.onymouslyLikedPosts.items).toHaveLength(0)
+    // skip phone number as that is null for anyone other than SELF, and that's tested elsewhere
+    // expect(data.self.phoneNumber).toBeTruthy()
+    expect(data.self.photo).toBeTruthy()
+    expect(data.self.postCount).toBe(1)
+    expect(data.self.posts.items).toHaveLength(1)
+    expect(data.self.postsWithUnviewedComments.items).toHaveLength(0)
+    expect(data.self.postViewedByCount).toBe(0)
+    expect(data.self.privacyStatus).toBe('PUBLIC')
+    expect(data.self.sharingDisabled).toBe(false)
+    expect(data.self.signedUpAt).toBeTruthy()
+    expect(data.self.subscriptionLevel).toBe('BASIC')
+    expect(data.self.subscriptionExpiresAt).toBeNull()
+    expect(data.self.themeCode).toBeTruthy()
+    expect(data.self.userStatus).toBe('ACTIVE')
+    expect(data.self.verificationHidden).toBe(false)
+    expect(data.self.viewCountsHidden).toBe(false)
+    return data.self
+  })
 
   // verify they see only a absolutely minimal profile of us
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  const ourUserLimited = resp.data.user
-  expect(ourUserLimited.userId).toBe(ourUserFull.userId)
-  expect(ourUserLimited.username).toBe(ourUserFull.username)
-  expect(ourUserLimited.blockerStatus).toBe('BLOCKING')
+  const ourUserLimited = await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.userId).toBe(ourUserFull.userId)
+    expect(data.user.username).toBe(ourUserFull.username)
+    expect(data.user.blockerStatus).toBe('BLOCKING')
+    return data.user
+  })
 
   // adjust everything nulled out or changed, then compare
   ourUserFull.acceptedEULAVersion = null
@@ -178,23 +176,22 @@ test('Blocked cannot see blocker in search results, blocker can see blocked in s
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // change our username to something without a dash https://github.com/Imcloug/Selfly-BackEnd/issues/48
-  const ourUsername = 'TESTER' + misc.shortRandomString()
+  const ourUsername = 'TESTER' + shortRandomString()
   await ourClient.mutate({mutation: mutations.setUsername, variables: {username: ourUsername}})
 
   // change their username to something without a dash https://github.com/Imcloug/Selfly-BackEnd/issues/48
-  const theirUsername = 'TESTER' + misc.shortRandomString()
+  const theirUsername = 'TESTER' + shortRandomString()
   await theirClient.mutate({mutation: mutations.setUsername, variables: {username: theirUsername}})
 
-  // give the search index a good chunk of time to update
-  await misc.sleep(3000)
-
   // verify they show up in our search results
-  let resp = await ourClient.query({query: queries.searchUsers, variables: {searchToken: theirUsername}})
-  expect(resp.data.searchUsers.items).toHaveLength(1)
-  expect(resp.data.searchUsers.items[0].userId).toBe(theirUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.searchUsers, variables: {searchToken: theirUsername}})
+    expect(data.searchUsers.items).toHaveLength(1)
+    expect(data.searchUsers.items[0].userId).toBe(theirUserId)
+  })
 
   // verify we show up in their search results
-  resp = await theirClient.query({query: queries.searchUsers, variables: {searchToken: ourUsername}})
+  let resp = await theirClient.query({query: queries.searchUsers, variables: {searchToken: ourUsername}})
   expect(resp.data.searchUsers.items).toHaveLength(1)
   expect(resp.data.searchUsers.items[0].userId).toBe(ourUserId)
 

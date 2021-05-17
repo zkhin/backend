@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -41,14 +39,15 @@ test('Add a comments', async () => {
   expect(resp.data.addComment.commentId).toBe(ourCommentId)
 
   // check we can see that comment
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(ourCommentId)
-  expect(resp.data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
-  expect(resp.data.post.comments.items[0].text).toBe(ourText)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+    expect(data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
+    expect(data.post.comments.items[0].text).toBe(ourText)
+  })
 
   // they comment on the post
   const theirCommentId = uuidv4()
@@ -58,15 +57,16 @@ test('Add a comments', async () => {
   expect(resp.data.addComment.commentId).toBe(theirCommentId)
 
   // check we see both comments, in order, on the post
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(2)
-  expect(resp.data.post.comments.items).toHaveLength(2)
-  expect(resp.data.post.comments.items[0].commentId).toBe(ourCommentId)
-  expect(resp.data.post.comments.items[1].commentId).toBe(theirCommentId)
-  expect(resp.data.post.comments.items[1].commentedBy.userId).toBe(theirUserId)
-  expect(resp.data.post.comments.items[1].text).toBe(theirText)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(2)
+    expect(data.post.comments.items).toHaveLength(2)
+    expect(data.post.comments.items[0].commentId).toBe(ourCommentId)
+    expect(data.post.comments.items[1].commentId).toBe(theirCommentId)
+    expect(data.post.comments.items[1].commentedBy.userId).toBe(theirUserId)
+    expect(data.post.comments.items[1].text).toBe(theirText)
+  })
 })
 
 test('Verify commentIds cannot be re-used', async () => {

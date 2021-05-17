@@ -5,13 +5,11 @@
 
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const realUser = require('../../utils/real-user')
 const {mutations, queries} = require('../../schema')
 const loginCache = new cognito.AppSyncLoginCache()
 let realLogin
-jest.retryTimes(1)
 
 beforeAll(async () => {
   realLogin = await realUser.getLogin()
@@ -79,22 +77,24 @@ test('If the `real` or `ian` users flag a post, it should be immediately archive
       expect(post.flagStatus).toBe('FLAGGED')
     })
 
+  // check the third post is not archived
+  await sleep()
+  await ourClient.query({query: queries.post, variables: {postId: postId3}}).then(({data}) => {
+    expect(data.post.postId).toBe(postId3)
+    expect(data.post.postStatus).toBe('COMPLETED')
+  })
+
   // check the first post is really archived
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.post, variables: {postId: postId1}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId1)
-    expect(post.postStatus).toBe('ARCHIVED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId: postId1}})
+    expect(data.post.postId).toBe(postId1)
+    expect(data.post.postStatus).toBe('ARCHIVED')
   })
 
   // check the second post is really archived
-  await ourClient.query({query: queries.post, variables: {postId: postId2}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId2)
-    expect(post.postStatus).toBe('ARCHIVED')
-  })
-
-  // check the third post is not archived
-  await ourClient.query({query: queries.post, variables: {postId: postId3}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId3)
-    expect(post.postStatus).toBe('COMPLETED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId: postId2}})
+    expect(data.post.postId).toBe(postId2)
+    expect(data.post.postStatus).toBe('ARCHIVED')
   })
 })

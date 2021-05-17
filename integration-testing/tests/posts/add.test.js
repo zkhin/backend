@@ -1,15 +1,13 @@
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(300, 200)
+const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -32,15 +30,15 @@ test('Add post no expiration', async () => {
   expect(post.postStatus).toBe('COMPLETED')
   expect(post.expiresAt).toBeNull()
   expect(post.originalPost.postId).toBe(postId)
-  await misc.sleep(2000) // dynamo
 
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  post = resp.data.post
-  expect(post.postId).toBe(postId)
-  expect(post.postType).toBe('IMAGE')
-  expect(post.postStatus).toBe('COMPLETED')
-  expect(post.expiresAt).toBeNull()
-  expect(post.originalPost.postId).toBe(postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postType).toBe('IMAGE')
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.expiresAt).toBeNull()
+    expect(data.post.originalPost.postId).toBe(postId)
+  })
 
   resp = await ourClient.query({query: queries.userPosts, variables: {userId: ourUserId}})
   expect(resp.data.user.posts.items).toHaveLength(1)
@@ -256,13 +254,13 @@ test('Add post with keywords attribute', async () => {
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
 
-  await misc.sleep(2000) // dynamo
-  await ourClient.query({query: queries.post, variables: {postId}}).then(({data: {post}}) => {
-    expect(post.postId).toBe(postId)
-    expect(post.postType).toBe('IMAGE')
-    expect(post.postStatus).toBe('COMPLETED')
-    expect(post.expiresAt).toBeNull()
-    expect(post.originalPost.postId).toBe(postId)
-    expect(post.keywords.sort()).toEqual(keywords.sort())
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postType).toBe('IMAGE')
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.expiresAt).toBeNull()
+    expect(data.post.originalPost.postId).toBe(postId)
+    expect(data.post.keywords.sort()).toEqual(keywords.sort())
   })
 })

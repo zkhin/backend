@@ -1,4 +1,4 @@
 {
-  "maxWorkers": 5,
+  "maxWorkers": 8,
   "testTimeout": 60000
 }

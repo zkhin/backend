@@ -1,10 +1,8 @@
-const cognito = require('../utils/cognito')
-const misc = require('../utils/misc')
+const {cognito, eventually} = require('../utils')
 const {queries, mutations} = require('../schema')
 
 let anonClient, anonUsername
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -42,10 +40,10 @@ test('Check username AVAILABLE/NOT_AVAILABLE', async () => {
   await ourClient
     .mutate({mutation: mutations.setUsername, variables: {username: newUsername}})
     .then(({data: {setUserDetails: user}}) => expect(user.username).toBe(newUsername))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.usernameStatus, variables: {username: ourUsername}})
-    .then(({data: {usernameStatus}}) => expect(usernameStatus).toBe('AVAILABLE'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.usernameStatus, variables: {username: ourUsername}})
+    expect(data.usernameStatus).toBe('AVAILABLE')
+  })
   await ourClient
     .query({query: queries.usernameStatus, variables: {username: newUsername}})
     .then(({data: {usernameStatus}}) => expect(usernameStatus).toBe('NOT_AVAILABLE'))

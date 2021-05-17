@@ -1,15 +1,13 @@
 const got = require('got')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -53,7 +51,6 @@ test('Order of users that have onymously liked a post', async () => {
   const postId = uuidv4()
   let variables = {postId, imageData}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  await misc.sleep(1000) // dynamo
 
   // all three of us onymously like it
   resp = await other2Client.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
@@ -61,15 +58,15 @@ test('Order of users that have onymously liked a post', async () => {
   resp = await other1Client.mutate({mutation: mutations.onymouslyLikePost, variables: {postId}})
 
   // check details on the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  let post = resp.data.post
-  expect(post.likeStatus).toBe('ONYMOUSLY_LIKED')
-  expect(post.onymousLikeCount).toBe(3)
-  expect(post.onymouslyLikedBy.items).toHaveLength(3)
-  expect(post.onymouslyLikedBy.items[0].userId).toBe(other2UserId)
-  expect(post.onymouslyLikedBy.items[1].userId).toBe(ourUserId)
-  expect(post.onymouslyLikedBy.items[2].userId).toBe(other1UserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.likeStatus).toBe('ONYMOUSLY_LIKED')
+    expect(data.post.onymousLikeCount).toBe(3)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(3)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(other2UserId)
+    expect(data.post.onymouslyLikedBy.items[1].userId).toBe(ourUserId)
+    expect(data.post.onymouslyLikedBy.items[2].userId).toBe(other1UserId)
+  })
 
   // check order of list of users that onymously liked the post
   resp = await ourClient.query({query: queries.post, variables: {postId}})
@@ -80,7 +77,7 @@ test('Order of users that have onymously liked a post', async () => {
 
   // we dislike it
   resp = await ourClient.mutate({mutation: mutations.dislikePost, variables: {postId}})
-  post = resp.data.dislikePost
+  let post = resp.data.dislikePost
   expect(post.likeStatus).toBe('NOT_LIKED')
   expect(post.onymousLikeCount).toBe(2)
   expect(post.onymouslyLikedBy.items).toHaveLength(2)
@@ -101,13 +98,13 @@ test('Order of users that have onymously liked a post', async () => {
   expect(post.onymouslyLikedBy).toBeNull()
 
   // double check the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  post = resp.data.post
-  expect(post.likeStatus).toBe('NOT_LIKED')
-  expect(post.onymousLikeCount).toBe(1)
-  expect(post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(post.onymouslyLikedBy.items[0].userId).toBe(other1UserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.likeStatus).toBe('NOT_LIKED')
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(other1UserId)
+  })
 })
 
 test('Order of onymously liked posts', async () => {
@@ -181,7 +178,10 @@ test('Media objects show up correctly in lists of liked posts', async () => {
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables: {postId}})
   const uploadUrl = resp.data.addPost.imageUploadUrl
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostProcessed(ourClient, postId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postStatus).toBe('COMPLETED')
+  })
 
   // we anonymously like the post, they onymously like it
   resp = await ourClient.mutate({mutation: mutations.anonymouslyLikePost, variables: {postId}})
@@ -232,13 +232,14 @@ test('Like lists and counts are private to the owner of the post', async () => {
   expect(resp.data.onymouslyLikePost.likeStatus).toBe('ONYMOUSLY_LIKED')
 
   // verify we can see that like reflected in the totals
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.anonymousLikeCount).toBe(0)
-  expect(resp.data.post.onymousLikeCount).toBe(1)
-  expect(resp.data.post.onymouslyLikedBy.items).toHaveLength(1)
-  expect(resp.data.post.onymouslyLikedBy.items[0].userId).toBe(theirUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.anonymousLikeCount).toBe(0)
+    expect(data.post.onymousLikeCount).toBe(1)
+    expect(data.post.onymouslyLikedBy.items).toHaveLength(1)
+    expect(data.post.onymouslyLikedBy.items[0].userId).toBe(theirUserId)
+  })
 
   // verify they cannot see that like reflected in the totals
   resp = await theirClient.query({query: queries.post, variables: {postId}})

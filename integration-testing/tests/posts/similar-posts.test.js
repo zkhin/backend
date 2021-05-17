@@ -1,14 +1,12 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(300, 200)
+const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -36,6 +34,14 @@ test('Add post with keywords attribute', async () => {
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
 
+  keywords = []
+  await theirClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId4, imageData, keywords}})
+    .then(({data: {addPost: post}}) => {
+      expect(post.postId).toBe(postId4)
+      expect(post.keywords).toEqual(keywords)
+    })
+
   keywords = ['tea', 'here']
   await theirClient
     .mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData, keywords}})
@@ -52,22 +58,14 @@ test('Add post with keywords attribute', async () => {
       expect(post.keywords.sort()).toEqual(keywords.sort())
     })
 
-  keywords = []
-  await theirClient
-    .mutate({mutation: mutations.addPost, variables: {postId: postId4, imageData, keywords}})
-    .then(({data: {addPost: post}}) => {
-      expect(post.postId).toBe(postId4)
-      expect(post.keywords).toEqual(keywords)
-    })
-
-  await misc.sleep(2000) // dynamo
-  await ourClient
-    .query({query: queries.similarPosts, variables: {postId: postId1}})
-    .then(({data: {similarPosts: posts}}) => {
-      expect(posts.items).toHaveLength(2)
-      expect(posts.items.map((post) => post.postId).sort()).toEqual([postId1, postId3].sort())
-      expect(posts.items.map((post) => post.postedBy.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-    })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.similarPosts, variables: {postId: postId1}})
+    expect(data.similarPosts.items).toHaveLength(2)
+    expect(data.similarPosts.items.map((post) => post.postId).sort()).toEqual([postId1, postId3].sort())
+    expect(data.similarPosts.items.map((post) => post.postedBy.userId).sort()).toEqual(
+      [ourUserId, theirUserId].sort(),
+    )
+  })
 
   await ourClient
     .query({query: queries.similarPosts, variables: {postId: postId2}})

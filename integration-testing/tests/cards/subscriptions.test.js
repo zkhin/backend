@@ -2,8 +2,7 @@ const {v4: uuidv4} = require('uuid')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
@@ -19,8 +18,8 @@ test('Card message triggers cannot be called from external graphql client', asyn
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
 
   // verify we can't call the trigger method, even with well-formed input
-  await expect(
-    ourClient.mutate({
+  await ourClient
+    .mutate({
       mutation: mutations.triggerCardNotification,
       variables: {
         input: {
@@ -31,8 +30,12 @@ test('Card message triggers cannot be called from external graphql client', asyn
           action: 'https://real.app/go',
         },
       },
-    }),
-  ).rejects.toThrow(/ClientError: Access denied/)
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: Access denied/)
+    })
 })
 
 test('Cannot subscribe to other users notifications', async () => {
@@ -61,8 +64,8 @@ test('Cannot subscribe to other users notifications', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const theirSubInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // they create a post
   const postId = uuidv4()

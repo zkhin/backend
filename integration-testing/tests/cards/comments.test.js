@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, deleteDefaultCard, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries, subscriptions} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -19,6 +17,7 @@ afterAll(async () => await loginCache.reset())
 test('Comment card format, subscription notifications', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+  await deleteDefaultCard(ourClient)
 
   // we subscribe to our cards
   const handlers = []
@@ -32,8 +31,8 @@ test('Comment card format, subscription notifications', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
   let nextNotification = new Promise((resolve) => handlers.push(resolve))
 
   // we add a post
@@ -48,13 +47,11 @@ test('Comment card format, subscription notifications', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify no card generated for our comment
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
-    // first card is the 'Add a profile photo'
-    expect(user.cards.items[0].title).toBe('Add a profile photo')
+    expect(user.cardCount).toBe(0)
+    expect(user.cards.items).toHaveLength(0)
   })
 
   // they comment on our post
@@ -63,12 +60,12 @@ test('Comment card format, subscription notifications', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a card was generated for their comment, check format
-  await misc.sleep(2000)
-  const card1 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    let card = user.cards.items[0]
+  const card1 = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    let card = data.self.cards.items[0]
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 new comment')
     expect(card.subTitle).toBeNull()
@@ -85,8 +82,6 @@ test('Comment card format, subscription notifications', async () => {
     expect(card.thumbnail.url1080p).toContain(postId)
     expect(card.thumbnail.url4k).toContain(postId)
     expect(card.thumbnail.url).toContain(postId)
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card
   })
 
@@ -107,19 +102,17 @@ test('Comment card format, subscription notifications', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify card has changed title, but nothing else
-  await misc.sleep(2000)
-  const card2 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    const card = user.cards.items[0]
+  const card2 = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    const card = data.self.cards.items[0]
     expect(card.title).toBe('You have 2 new comments')
     const {title: cardTitle, ...cardOtherFields} = card
     const {title: card1Title, ...card1OtherFields} = card1
     expect(cardTitle).not.toBe(card1Title)
     expect(cardOtherFields).toEqual(card1OtherFields)
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
     return card
   })
 
@@ -137,11 +130,11 @@ test('Comment card format, subscription notifications', async () => {
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // verify the card has disappeared
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(1)
-    expect(user.cards.items).toHaveLength(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(0)
+    expect(data.self.cards.items).toHaveLength(0)
   })
 
   // verify subscription fired correctly for card deletion
@@ -161,6 +154,7 @@ test('Comment card format, subscription notifications', async () => {
 test('Comment cards are post-specific', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
+  await deleteDefaultCard(ourClient)
 
   // we add two posts
   const [postId1, postId2] = [uuidv4(), uuidv4()]
@@ -186,16 +180,14 @@ test('Comment cards are post-specific', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a card was generated for their comment
-  await misc.sleep(2000)
-  const cardId1 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    expect(user.cards.items[0].action).toContain(postId1)
-    expect(user.cards.items[0].thumbnail).toBeNull()
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
-    return user.cards.items[0].cardId
+  const cardId1 = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    expect(data.self.cards.items[0].action).toContain(postId1)
+    expect(data.self.cards.items[0].thumbnail).toBeNull()
+    return data.self.cards.items[0].cardId
   })
 
   // they comment on our second post
@@ -207,17 +199,15 @@ test('Comment cards are post-specific', async () => {
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
   // verify a second card was generated
-  await misc.sleep(2000)
-  const cardId2 = await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(3)
-    expect(user.cards.items).toHaveLength(3)
-    expect(user.cards.items[1].cardId).toBe(cardId1)
-    expect(user.cards.items[0].action).toContain(postId2)
-    expect(user.cards.items[0].thumbnail).toBeNull()
-    // third card is the 'Add a profile photo'
-    expect(user.cards.items[2].title).toBe('Add a profile photo')
-    return user.cards.items[0].cardId
+  const cardId2 = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(2)
+    expect(data.self.cards.items).toHaveLength(2)
+    expect(data.self.cards.items[1].cardId).toBe(cardId1)
+    expect(data.self.cards.items[0].action).toContain(postId2)
+    expect(data.self.cards.items[0].thumbnail).toBeNull()
+    return data.self.cards.items[0].cardId
   })
 
   // they add another comment on our first post
@@ -228,29 +218,25 @@ test('Comment cards are post-specific', async () => {
     })
     .then(({data}) => expect(data.addComment.commentId).toBeTruthy())
 
-  // verify a second card was generated
-  await misc.sleep(2000)
+  // verify cards did not change
+  await sleep()
   await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
     expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(3)
-    expect(user.cards.items).toHaveLength(3)
+    expect(user.cardCount).toBe(2)
+    expect(user.cards.items).toHaveLength(2)
     expect(user.cards.items[1].cardId).toBe(cardId1)
     expect(user.cards.items[0].cardId).toBe(cardId2)
-    // thidd card is the 'Add a profile photo'
-    expect(user.cards.items[2].title).toBe('Add a profile photo')
   })
 
   // we view first post
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId1]}})
 
   // verify that card has disappeared, the other remains
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.userId).toBe(ourUserId)
-    expect(user.cardCount).toBe(2)
-    expect(user.cards.items).toHaveLength(2)
-    expect(user.cards.items[0].cardId).toBe(cardId2)
-    // second card is the 'Add a profile photo'
-    expect(user.cards.items[1].title).toBe('Add a profile photo')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.cardCount).toBe(1)
+    expect(data.self.cards.items).toHaveLength(1)
+    expect(data.self.cards.items[0].cardId).toBe(cardId2)
   })
 })

@@ -1,17 +1,15 @@
 const got = require('got')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(300, 200)
+const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
-const imageBytes2 = misc.generateRandomJpeg(300, 200)
+const imageBytes2 = generateRandomJpeg(300, 200)
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const heicHeaders = {'Content-Type': 'image/heic'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -48,14 +46,15 @@ test('Cant use jpeg data for an HEIC image', async () => {
 
   // upload some jpeg data pretending to be heic, let the s3 trigger fire
   await got.put(uploadUrl, {headers: heicHeaders, body: imageData})
-  await misc.sleep(3000)
 
   // check the post, make sure it error'd out
-  resp = await client.query({query: queries.post, variables: {postId: postId2}})
-  expect(resp.data.post.postId).toBe(postId2)
-  expect(resp.data.post.postStatus).toBe('ERROR')
-  expect(resp.data.post.isVerified).toBeNull()
-  expect(resp.data.post.image).toBeNull()
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId: postId2}})
+    expect(data.post.postId).toBe(postId2)
+    expect(data.post.postStatus).toBe('ERROR')
+    expect(data.post.isVerified).toBeNull()
+    expect(data.post.image).toBeNull()
+  })
 })
 
 test('Add image post with image data directly included', async () => {
@@ -112,7 +111,11 @@ test('Add image post (with postType specified), check non-duplicates are not mar
 
   // upload the image, give S3 trigger a second to fire
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostProcessed(client, postId)
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post).toBeTruthy()
+    expect(data.post.postStatus).toBe('COMPLETED')
+  })
 
   // add another image post with a different image
   const postId2 = uuidv4()
@@ -120,26 +123,22 @@ test('Add image post (with postType specified), check non-duplicates are not mar
   resp = await client.mutate({mutation: mutations.addPost, variables})
   uploadUrl = resp.data.addPost.imageUploadUrl
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes2})
-  await misc.sleepUntilPostProcessed(client, postId2)
 
-  // check the post has changed status and looks good
-  resp = await client.query({query: queries.post, variables: {postId}})
-  post = resp.data.post
-  expect(post.postId).toBe(postId)
-  expect(post.postStatus).toBe('COMPLETED')
-  expect(post.imageUploadUrl).toBeNull()
-  expect(post.image.url).toBeTruthy()
-  expect(post.originalPost.postId).toBe(postId)
+  // check the first post completes and is original
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.originalPost.postId).toBe(postId)
+  })
 
-  // check the originalPost properties don't point at each other
-  resp = await client.query({query: queries.post, variables: {postId: postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.postStatus).toBe('COMPLETED')
-  expect(resp.data.post.originalPost.postId).toBe(postId)
-  resp = await client.query({query: queries.post, variables: {postId: postId2}})
-  expect(resp.data.post.postId).toBe(postId2)
-  expect(resp.data.post.postStatus).toBe('COMPLETED')
-  expect(resp.data.post.originalPost.postId).toBe(postId2)
+  // check the second post completes and is original
+  await eventually(async () => {
+    const {data} = await client.query({query: queries.post, variables: {postId: postId2}})
+    expect(data.post.postId).toBe(postId2)
+    expect(data.post.postStatus).toBe('COMPLETED')
+    expect(data.post.originalPost.postId).toBe(postId2)
+  })
 })
 
 test('Post.originalPost - duplicates caught on creation, privacy', async () => {
@@ -155,7 +154,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.addPost.postId).toBe(ourPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(1000) // dynamo
+  await sleep('gsi')
 
   // they add another image post with the same image, original should point back to first post
   variables = {postId: theirPostId, imageData}
@@ -163,7 +162,7 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.addPost.postId).toBe(theirPostId)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
   expect(resp.data.addPost.originalPost.postId).toBe(ourPostId)
-  await misc.sleep(1000) // dynamo
+  await sleep('gsi')
 
   // check each others post objects directly
   resp = await theirClient.query({query: queries.post, variables: {postId: ourPostId}})
@@ -206,9 +205,12 @@ test('Post.originalPost - duplicates caught on creation, privacy', async () => {
   expect(resp.data.acceptFollowerUser.followerStatus).toBe('FOLLOWING')
 
   // verify they *can* see their post's originalPost
-  resp = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
-  expect(resp.data.post.postId).toBe(theirPostId)
-  expect(resp.data.post.originalPost.postId).toBe(ourPostId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.post, variables: {postId: theirPostId}})
+    expect(data.post.postId).toBe(theirPostId)
+    expect(data.post.originalPost).toBeTruthy()
+    expect(data.post.originalPost.postId).toBe(ourPostId)
+  })
 })
 
 test('Add post setAsUserPhoto failures', async () => {
@@ -230,14 +232,15 @@ test('Add post setAsUserPhoto failures', async () => {
   let uploadUrl = resp.data.addPost.imageUploadUrl
   expect(uploadUrl).toBeTruthy()
 
-  // upload the image data that isn't a valid image, give it a long time to process
+  // upload the image data that isn't a valid image
   await got.put(uploadUrl, {headers: imageHeaders, body: 'not-a-valid-image'})
-  await misc.sleep(10 * 1000)
 
-  // check that our profile photo has not changed
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.photo).toBeNull()
+  // check that our profile photo does not change
+  await sleep('long')
+  await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.photo).toBeNull()
+  })
 })
 
 test('Add post setAsUserPhoto success', async () => {
@@ -255,13 +258,12 @@ test('Add post setAsUserPhoto success', async () => {
   expect(resp.data.addPost.postId).toBe(postId1)
   expect(resp.data.addPost.postStatus).toBe('COMPLETED')
 
-  // make sure dynamo converges
-  await misc.sleep(2000)
-
-  // check that our profile photo has changed
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.photo.url).toContain(postId1)
+  // check that our profile photo changes
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.photo.url).toContain(postId1)
+  })
 
   // add a post and use setAsUserPhoto, don't include image data directly
   const postId2 = uuidv4()
@@ -274,13 +276,11 @@ test('Add post setAsUserPhoto success', async () => {
 
   // upload the image data
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
-  await misc.sleepUntilPostProcessed(ourClient, postId2)
 
-  // make sure dynamo converges
-  await misc.sleep(2000)
-
-  // check that our profile photo has changed
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(ourUserId)
-  expect(resp.data.self.photo.url).toContain(postId2)
+  // check that our profile photo changes
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userId).toBe(ourUserId)
+    expect(data.self.photo.url).toContain(postId2)
+  })
 })

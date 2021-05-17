@@ -1,11 +1,9 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 let anonClient
 // https://github.com/real-social-media/bad_words/blob/master/bucket/bad_words.json
@@ -65,19 +63,21 @@ test('Create a direct chat with bad word', async () => {
     })
 
   // check we see the chat in our list of chats
-  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
-    expect(user.directChat).toBeNull()
-    expect(user.chatCount).toBe(1)
-    expect(user.chats.items).toHaveLength(1)
-    expect(user.chats.items[0].chatId).toBe(chatId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBe(1)
+    expect(data.user.chats.items).toHaveLength(1)
+    expect(data.user.chats.items[0].chatId).toBe(chatId)
   })
 
   // check they see the chat in their list of chats
-  await theirClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data: {user}}) => {
-    expect(user.directChat).toBeNull()
-    expect(user.chatCount).toBe(1)
-    expect(user.chats.items).toHaveLength(1)
-    expect(user.chats.items[0].chatId).toBe(chatId)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBe(1)
+    expect(data.user.chats.items).toHaveLength(1)
+    expect(data.user.chats.items[0].chatId).toBe(chatId)
   })
 
   // check we can both see the chat directly
@@ -101,7 +101,7 @@ test('Create a direct chat with bad word', async () => {
     })
 
   // verify the bad word chat is removed
-  await misc.sleep(1000)
+  await sleep()
   await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.chatCount).toBe(1)
     expect(user.chats.items).toHaveLength(1)
@@ -123,7 +123,7 @@ test('Create a direct chat with bad word', async () => {
     })
 
   // verify the bad word chat is removed
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.chatCount).toBe(1)
     expect(user.chats.items).toHaveLength(1)
@@ -190,7 +190,7 @@ test('Two way follow, skip bad word detection - direct chat', async () => {
     })
 
   // check we see all chat messages
-  await misc.sleep(1000)
+  await sleep()
   await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
     expect(user.chatCount).toBe(1)
     expect(user.chats.items).toHaveLength(1)
@@ -275,7 +275,7 @@ test('Create a group chat with bad word', async () => {
     })
 
   // verify bad word chat message is removed
-  await misc.sleep(2000)
+  await sleep()
   await otherClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
     expect(chat.messagesCount).toBe(4)
@@ -335,6 +335,13 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
     .mutate({mutation: mutations.followUser, variables: {userId: theirUserId}})
     .then(({data}) => expect(data.followUser.followedStatus).toBe('FOLLOWING'))
 
+  // let the system finish processing those followings
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.self})
+    expect(data.self.followersCount).toBe(2)
+    expect(data.self.followerUsers.items).toHaveLength(2)
+  })
+
   // they add a message with bad word
   const messageId3 = uuidv4()
   variables = {chatId, messageId: messageId3, text: `m3 ${badWord}`}
@@ -345,16 +352,16 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
     })
 
   // verify other can see all messages
-  await misc.sleep(2000)
-  await otherClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
-    expect(chat.chatId).toBe(chatId)
-    expect(chat.messagesCount).toBe(5)
-    expect(chat.messages.items).toHaveLength(5)
-    expect(chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(chat.messages.items[2].messageId).toBe(messageId1)
-    expect(chat.messages.items[3].messageId).toBe(messageId2)
-    expect(chat.messages.items[4].messageId).toBe(messageId3)
+  await eventually(async () => {
+    const {data} = await otherClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+    expect(data.chat.messagesCount).toBe(5)
+    expect(data.chat.messages.items).toHaveLength(5)
+    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
+    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
   })
 
   // we add a message with bad word
@@ -367,7 +374,7 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
     })
 
   // verify our bad chat message is removed
-  await misc.sleep(2000)
+  await sleep()
   await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
     expect(chat.chatId).toBe(chatId)
     expect(chat.messagesCount).toBe(5)

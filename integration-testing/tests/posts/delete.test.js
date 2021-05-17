@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -40,8 +38,10 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp.data.user.stories.items[0].postId).toBe(postId)
 
   // verify our post count reacted
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.postCount).toBe(1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postCount).toBe(1)
+  })
 
   // verify it showed up in their feed
   resp = await theirClient.query({query: queries.selfFeed})
@@ -68,8 +68,10 @@ test('Delete a post that was our next story to expire', async () => {
   expect(resp.data.user.stories.items).toHaveLength(0)
 
   // verify our post count reacted
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.postCount).toBe(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.postCount).toBe(0)
+  })
 
   // verify it disappeared from their feed
   resp = await theirClient.query({query: queries.selfFeed})

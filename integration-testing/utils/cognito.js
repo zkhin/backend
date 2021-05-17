@@ -18,7 +18,7 @@ const pwdGenerator = require('generate-password')
 const {v4: uuidv4} = require('uuid')
 
 const {mutations, queries} = require('../schema')
-const misc = require('./misc')
+const {sleep} = require('./timing')
 
 dotenv.config()
 AWS.config = new AWS.Config()
@@ -238,7 +238,7 @@ class AppSyncLoginCache {
       const {client, username} = login
       await client.clearStore()
       await client.mutate({mutation: mutations.resetUser, variables: {newUsername: username}})
-      this.cleanLogins.push({login, timer: misc.sleep(3000)})
+      this.cleanLogins.push({login, timer: sleep(3)})
       login = this.dirtyLogins.pop()
     }
   }

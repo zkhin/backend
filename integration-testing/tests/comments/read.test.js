@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -40,16 +38,17 @@ test('One user adds multiple comments, ordering', async () => {
   expect(resp.data.addComment.commentId).toBe(commentId2)
 
   // check we see both comments, in order, on the post
-  await misc.sleep(1000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  const post = resp.data.post
-  expect(post.postId).toBe(postId)
-  expect(post.commentsCount).toBe(2)
-  expect(post.comments.items).toHaveLength(2)
-  expect(post.comments.items[0].commentId).toBe(commentId1)
-  expect(post.comments.items[0].commentedBy.userId).toBe(ourUserId)
-  expect(post.comments.items[1].commentId).toBe(commentId2)
-  expect(post.comments.items[1].commentedBy.userId).toBe(ourUserId)
+  const post = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(2)
+    expect(data.post.comments.items).toHaveLength(2)
+    expect(data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(data.post.comments.items[0].commentedBy.userId).toBe(ourUserId)
+    expect(data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(data.post.comments.items[1].commentedBy.userId).toBe(ourUserId)
+    return data.post
+  })
 
   // verify we can supply the default value of reverse and get the same thing
   resp = await ourClient.query({query: queries.post, variables: {postId, commentsReverse: false}})
@@ -97,28 +96,28 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     })
 
   // check we see the comments correctly
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
-    expect(resp.data.post.postId).toBe(postId)
-    expect(resp.data.post.comments.items).toHaveLength(2)
-    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
-    expect(resp.data.post.comments.items[0].viewedStatus).toBe('NOT_VIEWED')
-    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
-    expect(resp.data.post.comments.items[1].viewedStatus).toBe('NOT_VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items).toHaveLength(2)
+    expect(data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(data.post.comments.items[0].viewedStatus).toBe('NOT_VIEWED')
+    expect(data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(data.post.comments.items[1].viewedStatus).toBe('NOT_VIEWED')
   })
 
   // we report to have viewed the post
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check we see the comments correctly
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
-    expect(resp.data.post.postId).toBe(postId)
-    expect(resp.data.post.comments.items).toHaveLength(2)
-    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
-    expect(resp.data.post.comments.items[0].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
-    expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items).toHaveLength(2)
+    expect(data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(data.post.comments.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(data.post.comments.items[1].viewedStatus).toBe('VIEWED')
   })
 
   // we add a comment to the post
@@ -140,36 +139,36 @@ test('Comment viewed status reacts to views Post correctly', async () => {
     })
 
   // check we see the comments correctly
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
-    expect(resp.data.post.postId).toBe(postId)
-    expect(resp.data.post.comments.items).toHaveLength(4)
-    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
-    expect(resp.data.post.comments.items[0].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
-    expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[2].commentId).toBe(commentId3)
-    expect(resp.data.post.comments.items[2].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[3].commentId).toBe(commentId4)
-    expect(resp.data.post.comments.items[3].viewedStatus).toBe('NOT_VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items).toHaveLength(4)
+    expect(data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(data.post.comments.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(data.post.comments.items[1].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[2].commentId).toBe(commentId3)
+    expect(data.post.comments.items[2].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[3].commentId).toBe(commentId4)
+    expect(data.post.comments.items[3].viewedStatus).toBe('NOT_VIEWED')
   })
 
   // we report to have viewed the post again
   await ourClient.mutate({mutation: mutations.reportPostViews, variables: {postIds: [postId]}})
 
   // check we see the comments correctly
-  await misc.sleep(1000)
-  await ourClient.query({query: queries.post, variables: {postId}}).then((resp) => {
-    expect(resp.data.post.postId).toBe(postId)
-    expect(resp.data.post.comments.items).toHaveLength(4)
-    expect(resp.data.post.comments.items[0].commentId).toBe(commentId1)
-    expect(resp.data.post.comments.items[0].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[1].commentId).toBe(commentId2)
-    expect(resp.data.post.comments.items[1].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[2].commentId).toBe(commentId3)
-    expect(resp.data.post.comments.items[2].viewedStatus).toBe('VIEWED')
-    expect(resp.data.post.comments.items[3].commentId).toBe(commentId4)
-    expect(resp.data.post.comments.items[3].viewedStatus).toBe('VIEWED')
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.comments.items).toHaveLength(4)
+    expect(data.post.comments.items[0].commentId).toBe(commentId1)
+    expect(data.post.comments.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[1].commentId).toBe(commentId2)
+    expect(data.post.comments.items[1].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[2].commentId).toBe(commentId3)
+    expect(data.post.comments.items[2].viewedStatus).toBe('VIEWED')
+    expect(data.post.comments.items[3].commentId).toBe(commentId4)
+    expect(data.post.comments.items[3].viewedStatus).toBe('VIEWED')
   })
 })
 
@@ -196,11 +195,12 @@ test('Comments of private user on public post are visible to all', async () => {
   expect(resp.data.addComment.commentedBy.userId).toBe(theirUserId)
 
   // check we can see their comment on the post
-  await misc.sleep(2000)
-  resp = await ourClient.query({query: queries.post, variables: {postId}})
-  expect(resp.data.post.postId).toBe(postId)
-  expect(resp.data.post.commentsCount).toBe(1)
-  expect(resp.data.post.comments.items).toHaveLength(1)
-  expect(resp.data.post.comments.items[0].commentId).toBe(commentId)
-  expect(resp.data.post.comments.items[0].commentedBy.userId).toBe(theirUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.post, variables: {postId}})
+    expect(data.post.postId).toBe(postId)
+    expect(data.post.commentsCount).toBe(1)
+    expect(data.post.comments.items).toHaveLength(1)
+    expect(data.post.comments.items[0].commentId).toBe(commentId)
+    expect(data.post.comments.items[0].commentedBy.userId).toBe(theirUserId)
+  })
 })

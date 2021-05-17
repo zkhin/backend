@@ -9,7 +9,7 @@
  */
 
 const cognito = require('./cognito')
-const misc = require('./misc')
+const {sleep} = require('./timing')
 const {mutations} = require('../schema')
 
 let realLogin = null
@@ -20,7 +20,7 @@ const getLogin = async () => {
     realLogin.username = 'real'
   }
   await realLogin.client.mutate({mutation: mutations.setUsername, variables: {username: realLogin.username}})
-  await misc.sleep(2000) // dynamo
+  await sleep('gsi')
   return realLogin
 }
 

@@ -1,11 +1,9 @@
 const moment = require('moment')
-const cognito = require('../utils/cognito')
-const misc = require('../utils/misc')
+const {cognito, eventually} = require('../utils')
 const {queries, mutations} = require('../schema')
 const {v4: uuidv4} = require('uuid')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -19,7 +17,6 @@ afterAll(async () => await loginCache.reset())
 test('Find contacts by email & phoneNumber too many', async () => {
   const {client, email} = await loginCache.getCleanLogin()
   const contacts = Array(101).fill({contactId: 'contactId', emails: [email]})
-  await misc.sleep(2000)
   await expect(client.query({query: queries.findContacts, variables: {contacts}})).rejects.toThrow(
     /Cannot submit more than 100 contact inputs/,
   )
@@ -27,7 +24,6 @@ test('Find contacts by email & phoneNumber too many', async () => {
 
 test('Find contacts can handle duplicate emails', async () => {
   const {client, userId, email, username} = await loginCache.getCleanLogin()
-  await misc.sleep(2000)
   const contacts = [{contactId: 'contactId', emails: [email, email]}]
   await client.query({query: queries.findContacts, variables: {contacts}}).then(({data: {findContacts}}) => {
     expect(findContacts).toHaveLength(1)
@@ -46,7 +42,6 @@ test('Cannot find user if they block us', async () => {
     email: theirEmail,
     username: theirUsername,
   } = await loginCache.getCleanLogin()
-  await misc.sleep(2000)
 
   let contacts = [{contactId: 'contactId_1', emails: [theirEmail]}]
   await ourClient.query({query: queries.findContacts, variables: {contacts}}).then(({data: {findContacts}}) => {
@@ -83,7 +78,6 @@ test('Find users by email', async () => {
   const {userId: other2UserId, email: other2Email, username: other2Username} = await loginCache.getCleanLogin()
 
   // find no users
-  await misc.sleep(2000)
   let contacts = [{contactId: 'contactId_1', emails: ['x' + ourEmail]}]
   await ourClient.query({query: queries.findContacts, variables: {contacts}}).then(({data: {findContacts}}) => {
     expect(findContacts).toHaveLength(1)
@@ -153,7 +147,6 @@ describe('wrapper to ensure cleanup', () => {
     } = await loginCache.getCleanLogin()
 
     // find them by just phone
-    await misc.sleep(2000)
     let contacts = [{contactId: 'contactId_2', phones: [theirPhone]}]
     await ourClient.query({query: queries.findContacts, variables: {contacts}}).then(({data: {findContacts}}) => {
       expect(findContacts.length).toBe(1)
@@ -205,10 +198,10 @@ test('Find contacts sends cards to the users that were found', async () => {
   })
 
   // check called user has card
-  await misc.sleep(2000)
-  const cardId = await other1Client.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.userId).toBe(other1UserId)
-    const card = self.cards.items[0]
+  const cardId = await eventually(async () => {
+    const {data} = await other1Client.query({query: queries.self})
+    expect(data.self.userId).toBe(other1UserId)
+    const card = data.self.cards.items[0]
     expect(card.cardId).toBe(`${other1UserId}:CONTACT_JOINED:${ourUserId}`)
     expect(card.title).toBe(`${ourUsername} joined REAL`)
     expect(card.subTitle).toBeNull()
@@ -237,10 +230,10 @@ test('Find contacts sends cards to the users that were found', async () => {
     expect(contactIdToUser['contactId_3'].userId).toBe(other2UserId)
   })
   // check first called user has card
-  await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.userId).toBe(other1UserId)
-    expect(self.cards.items[0].cardId).toBe(`${other1UserId}:CONTACT_JOINED:${ourUserId}`)
+  await eventually(async () => {
+    const {data} = await other1Client.query({query: queries.self})
+    expect(data.self.userId).toBe(other1UserId)
+    expect(data.self.cards.items[0].cardId).toBe(`${other1UserId}:CONTACT_JOINED:${ourUserId}`)
   })
   // check second called user has card
   await other2Client.query({query: queries.self}).then(({data: {self}}) => {
@@ -263,10 +256,10 @@ test('Find contacts sends cards to the users that were found', async () => {
     expect(contactIdToUser['contactId_3'].userId).toBe(other2UserId)
   })
   // check first called user has card
-  await misc.sleep(2000)
-  await other1Client.query({query: queries.self}).then(({data: {self}}) => {
-    expect(self.userId).toBe(other1UserId)
-    expect(self.cards.items[0].cardId).toBe(`${other1UserId}:CONTACT_JOINED:${otherUserId}`)
+  await eventually(async () => {
+    const {data} = await other1Client.query({query: queries.self})
+    expect(data.self.userId).toBe(other1UserId)
+    expect(data.self.cards.items[0].cardId).toBe(`${other1UserId}:CONTACT_JOINED:${otherUserId}`)
   })
   // check second called user has card
   await other2Client.query({query: queries.self}).then(({data: {self}}) => {
@@ -293,10 +286,10 @@ test('Find contacts and check lastFoundContactsAt', async () => {
   let after = moment().toISOString()
 
   // Then check lastFoundContactsAt timestamp
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(before <= self.lastFoundContactsAt).toBe(true)
-    expect(after >= self.lastFoundContactsAt).toBe(true)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(before <= data.self.lastFoundContactsAt).toBe(true)
+    expect(after >= data.self.lastFoundContactsAt).toBe(true)
   })
 
   // Check another user can't see lastFoundContactsAt
@@ -309,9 +302,9 @@ test('Find contacts and check lastFoundContactsAt', async () => {
   await ourClient
     .query({query: queries.findContacts, variables: {contacts}})
     .then(({data: {findContacts}}) => expect(findContacts.map((i) => i.user.userId)).toEqual([ourUserId]))
-  await misc.sleep(2000)
 
-  await ourClient.query({query: queries.self}).then(({data: {self}}) => {
-    expect(after <= self.lastFoundContactsAt).toBe(true)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(after <= data.self.lastFoundContactsAt).toBe(true)
   })
 })

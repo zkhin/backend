@@ -1,11 +1,10 @@
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 let anonClient, anonUserId
 beforeAll(async () => {
@@ -68,12 +67,14 @@ test('Create a direct chat', async () => {
   expect(chat.messages.items[0].viewedStatus).toBe('VIEWED')
 
   // check we can see that direct chat when looking at their profile
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.directChat.chatId).toBe(chatId)
-  expect(resp.data.user.directChat.lastMessageActivityAt).toBe(chatCreatedAt)
-  expect(resp.data.user.directChat.messagesCount).toBe(1)
-  expect(resp.data.user.chatCount).toBeNull()
-  expect(resp.data.user.chats).toBeNull()
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.directChat.chatId).toBe(chatId)
+    expect(data.user.directChat.lastMessageActivityAt).toBe(chatCreatedAt)
+    expect(data.user.directChat.messagesCount).toBe(1)
+    expect(data.user.chatCount).toBeNull()
+    expect(data.user.chats).toBeNull()
+  })
 
   // check they can see that direct chat when looking at our profile
   resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
@@ -218,11 +219,13 @@ test('Create multiple direct chats', async () => {
   expect(resp.data.createDirectChat.messages.items[0].text).toBe(messageText2)
 
   // check we see both chats
-  resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.chatCount).toBe(2)
-  expect(resp.data.self.chats.items).toHaveLength(2)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId2)
-  expect(resp.data.self.chats.items[1].chatId).toBe(chatId1)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.chatCount).toBe(2)
+    expect(data.self.chats.items).toHaveLength(2)
+    expect(data.self.chats.items[0].chatId).toBe(chatId2)
+    expect(data.self.chats.items[1].chatId).toBe(chatId1)
+  })
 
   // check other1 sees the direct chat with us
   resp = await other1Client.query({query: queries.user, variables: {userId: ourUserId}})

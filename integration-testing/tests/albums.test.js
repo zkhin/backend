@@ -2,15 +2,13 @@ const got = require('got')
 const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../utils/cognito')
-const misc = require('../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../utils')
 const {mutations, queries} = require('../schema')
 
 let anonClient
-const imageBytes = misc.generateRandomJpeg(8, 8)
+const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -250,10 +248,10 @@ test('User.albums and Query.album block privacy', async () => {
     .then(({data: {addAlbum: album}}) => expect(album.albumId).toBe(albumId))
 
   // check they can see our albums
-  await misc.sleep(2000)
-  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
-    expect(user.albumCount).toBe(1)
-    expect(user.albums.items).toHaveLength(1)
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.albumCount).toBe(1)
+    expect(data.user.albums.items).toHaveLength(1)
   })
 
   // check they can see the album directly
@@ -385,9 +383,10 @@ test('User.albums matches direct access, ordering', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
 
   // check we have no albums
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.albumCount).toBe(0)
-    expect(user.albums.items).toHaveLength(0)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.albumCount).toBe(0)
+    expect(data.self.albums.items).toHaveLength(0)
   })
 
   // we add two albums - one minimal one maximal
@@ -406,12 +405,12 @@ test('User.albums matches direct access, ordering', async () => {
     })
 
   // check they appear correctly in User.albums
-  await misc.sleep(2000)
-  await ourClient.query({query: queries.self}).then(({data: {self: user}}) => {
-    expect(user.albumCount).toBe(2)
-    expect(user.albums.items).toHaveLength(2)
-    expect(user.albums.items[0]).toEqual(album1)
-    expect(user.albums.items[1]).toEqual(album2)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.albumCount).toBe(2)
+    expect(data.self.albums.items).toHaveLength(2)
+    expect(data.self.albums.items[0]).toEqual(album1)
+    expect(data.self.albums.items[1]).toEqual(album2)
   })
   await ourClient.query({query: queries.self, variables: {albumsReverse: true}}).then(({data: {self: user}}) => {
     expect(user.albumCount).toBe(2)
@@ -435,14 +434,15 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
       expect(album.art.url1080p).toBeTruthy()
       expect(album.art.url480p).toBeTruthy()
       expect(album.art.url64p).toBeTruthy()
-      // check we can access the art urls. these will throw an error if response code is not 2XX
-      await got.head(album.art.url)
-      await got.head(album.art.url4k)
-      await got.head(album.art.url1080p)
-      await got.head(album.art.url480p)
-      await got.head(album.art.url64p)
       return album
     })
+
+  // check we can access the art urls. these will throw an error if response code is not 2XX
+  await got.head(albumNoPosts.art.url)
+  await got.head(albumNoPosts.art.url4k)
+  await got.head(albumNoPosts.art.url1080p)
+  await got.head(albumNoPosts.art.url480p)
+  await got.head(albumNoPosts.art.url64p)
 
   // add a post to that album
   await ourClient
@@ -450,29 +450,28 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls and they have changed root
-  await misc.sleep(2000)
-  const albumOnePost = await ourClient
-    .query({query: queries.album, variables: {albumId}})
-    .then(async ({data: {album}}) => {
-      expect(album.albumId).toBe(albumId)
-      expect(album.art.url).toBeTruthy()
-      expect(album.art.url4k).toBeTruthy()
-      expect(album.art.url1080p).toBeTruthy()
-      expect(album.art.url480p).toBeTruthy()
-      expect(album.art.url64p).toBeTruthy()
-      expect(album.art.url.split('?')[0]).not.toBe(albumNoPosts.art.url.split('?')[0])
-      expect(album.art.url4k.split('?')[0]).not.toBe(albumNoPosts.art.url4k.split('?')[0])
-      expect(album.art.url1080p.split('?')[0]).not.toBe(albumNoPosts.art.url1080p.split('?')[0])
-      expect(album.art.url480p.split('?')[0]).not.toBe(albumNoPosts.art.url480p.split('?')[0])
-      expect(album.art.url64p.split('?')[0]).not.toBe(albumNoPosts.art.url64p.split('?')[0])
-      // check we can access those urls
-      await got.head(album.art.url)
-      await got.head(album.art.url4k)
-      await got.head(album.art.url1080p)
-      await got.head(album.art.url480p)
-      await got.head(album.art.url64p)
-      return album
-    })
+  const albumOnePost = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
+    expect(data.album.albumId).toBe(albumId)
+    expect(data.album.art.url).toBeTruthy()
+    expect(data.album.art.url4k).toBeTruthy()
+    expect(data.album.art.url1080p).toBeTruthy()
+    expect(data.album.art.url480p).toBeTruthy()
+    expect(data.album.art.url64p).toBeTruthy()
+    expect(data.album.art.url.split('?')[0]).not.toBe(albumNoPosts.art.url.split('?')[0])
+    expect(data.album.art.url4k.split('?')[0]).not.toBe(albumNoPosts.art.url4k.split('?')[0])
+    expect(data.album.art.url1080p.split('?')[0]).not.toBe(albumNoPosts.art.url1080p.split('?')[0])
+    expect(data.album.art.url480p.split('?')[0]).not.toBe(albumNoPosts.art.url480p.split('?')[0])
+    expect(data.album.art.url64p.split('?')[0]).not.toBe(albumNoPosts.art.url64p.split('?')[0])
+    return data.album
+  })
+
+  // check we can access those urls
+  await got.head(albumOnePost.art.url)
+  await got.head(albumOnePost.art.url4k)
+  await got.head(albumOnePost.art.url1080p)
+  await got.head(albumOnePost.art.url480p)
+  await got.head(albumOnePost.art.url64p)
 
   // add a second and third post to that album
   await ourClient
@@ -485,7 +484,7 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have not changed root
-  await misc.sleep(4000)
+  await sleep()
   await ourClient.query({query: queries.album, variables: {albumId}}).then(({data: {album}}) => {
     expect(album.albumId).toBe(albumId)
     expect(album.art.url).toBeTruthy()
@@ -506,24 +505,26 @@ test('Album art generated for 0, 1 and 4 posts in album', async () => {
     .then(({data: {addPost: post}}) => expect(post.postStatus).toBe('COMPLETED'))
 
   // check album has art urls that have changed root
-  await misc.sleep(4000)
-  await ourClient.query({query: queries.album, variables: {albumId}}).then(async ({data: {album}}) => {
-    expect(album.albumId).toBe(albumId)
-    expect(album.art.url).toBeTruthy()
-    expect(album.art.url4k).toBeTruthy()
-    expect(album.art.url1080p).toBeTruthy()
-    expect(album.art.url480p).toBeTruthy()
-    expect(album.art.url64p).toBeTruthy()
-    expect(album.art.url.split('?')[0]).not.toBe(albumOnePost.art.url.split('?')[0])
-    expect(album.art.url4k.split('?')[0]).not.toBe(albumOnePost.art.url4k.split('?')[0])
-    expect(album.art.url1080p.split('?')[0]).not.toBe(albumOnePost.art.url1080p.split('?')[0])
-    expect(album.art.url480p.split('?')[0]).not.toBe(albumOnePost.art.url480p.split('?')[0])
-    expect(album.art.url64p.split('?')[0]).not.toBe(albumOnePost.art.url64p.split('?')[0])
-    // check we can access those urls
-    await got.head(album.art.url)
-    await got.head(album.art.url4k)
-    await got.head(album.art.url1080p)
-    await got.head(album.art.url480p)
-    await got.head(album.art.url64p)
+  const albumFourPosts = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
+    expect(data.album.albumId).toBe(albumId)
+    expect(data.album.art.url).toBeTruthy()
+    expect(data.album.art.url4k).toBeTruthy()
+    expect(data.album.art.url1080p).toBeTruthy()
+    expect(data.album.art.url480p).toBeTruthy()
+    expect(data.album.art.url64p).toBeTruthy()
+    expect(data.album.art.url.split('?')[0]).not.toBe(albumOnePost.art.url.split('?')[0])
+    expect(data.album.art.url4k.split('?')[0]).not.toBe(albumOnePost.art.url4k.split('?')[0])
+    expect(data.album.art.url1080p.split('?')[0]).not.toBe(albumOnePost.art.url1080p.split('?')[0])
+    expect(data.album.art.url480p.split('?')[0]).not.toBe(albumOnePost.art.url480p.split('?')[0])
+    expect(data.album.art.url64p.split('?')[0]).not.toBe(albumOnePost.art.url64p.split('?')[0])
+    return data.album
   })
+
+  // check we can access those urls
+  await got.head(albumFourPosts.art.url)
+  await got.head(albumFourPosts.art.url4k)
+  await got.head(albumFourPosts.art.url1080p)
+  await got.head(albumFourPosts.art.url480p)
+  await got.head(albumFourPosts.art.url64p)
 })

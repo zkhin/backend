@@ -1,13 +1,11 @@
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
-const imageData = misc.generateRandomJpeg(8, 8)
+const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -45,12 +43,18 @@ test('We do not match ourselves', async () => {
   await client
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: postId}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(userId))
-  await misc.sleep(2000)
-  await client
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
+  await eventually(async () => {
+    const {data, errors} = await client.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
 
   // check we still don't match ourselves
+  await sleep()
   await client
     .query({query: queries.self})
     .then(({data: {self: user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
@@ -82,13 +86,17 @@ test('Enable & disable dating changes match status', async () => {
   await theirClient
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: pid2}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(theirUserId))
-  await misc.sleep(2000)
 
   // we enable dating, but they don't yet, check still no match in either direction
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await misc.sleep(2000)
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
   await ourClient
     .query({query: queries.user, variables: {userId: theirUserId}})
     .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
@@ -97,28 +105,36 @@ test('Enable & disable dating changes match status', async () => {
     .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
 
   // they enable dating, check matches in both directions
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // we disable dating, check matches disappeared
   await ourClient
     .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'DISABLED'}})
     .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('DISABLED'))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('NOT_MATCHED')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('NOT_MATCHED')
+  })
 })
 
 test('Changing match criteria changes match status', async () => {
@@ -139,66 +155,82 @@ test('Changing match criteria changes match status', async () => {
   await theirClient
     .mutate({mutation: mutations.setUserDetails, variables: {...datingVariables, photoPostId: pid2}})
     .then(({data: {setUserDetails: user}}) => expect(user.userId).toBe(theirUserId))
-  await misc.sleep(2000)
 
   // we both enable dating, check matches in both directions
-  await ourClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await theirClient
-    .mutate({mutation: mutations.setUserDatingStatus, variables: {status: 'ENABLED'}})
-    .then(({data: {setUserDatingStatus: user}}) => expect(user.datingStatus).toBe('ENABLED'))
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data, errors} = await ourClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data, errors} = await theirClient.mutate({
+      mutation: mutations.setUserDatingStatus,
+      variables: {status: 'ENABLED'},
+      errorPolicy: 'all',
+    })
+    expect(errors).toBeUndefined()
+    expect(data.setUserDatingStatus.datingStatus).toBe('ENABLED')
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // we adjust our matchGenders, check match disappears
   await ourClient.mutate({mutation: mutations.setUserDetails, variables: {matchGenders: ['MALE']}})
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('NOT_MATCHED')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('NOT_MATCHED')
+  })
 
   // they adjust their gender, check match reappears
   await theirClient.mutate({mutation: mutations.setUserDetails, variables: {gender: 'MALE'}})
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 
   // they adjust their location, check match disappears
   await theirClient.mutate({
     mutation: mutations.setUserDetails,
     variables: {location: {latitude: -30, longitude: -5}},
   })
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('NOT_MATCHED'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('NOT_MATCHED')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('NOT_MATCHED')
+  })
 
   // we adjust our location, check match reappears
   await ourClient.mutate({
     mutation: mutations.setUserDetails,
     variables: {location: {latitude: -30, longitude: -5}},
   })
-  await misc.sleep(2000)
-  await ourClient
-    .query({query: queries.user, variables: {userId: theirUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
-  await theirClient
-    .query({query: queries.user, variables: {userId: ourUserId}})
-    .then(({data: {user}}) => expect(user.matchStatus).toBe('POTENTIAL'))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.matchStatus).toBe('POTENTIAL')
+  })
 })

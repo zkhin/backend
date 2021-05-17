@@ -5,14 +5,12 @@ const {v4: uuidv4} = require('uuid')
 // the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
 global.WebSocket = require('ws')
 
-const cognito = require('../../utils/cognito')
-const misc = require('../../utils/misc')
+const {cognito, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
 
 const grantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -96,7 +94,7 @@ test('Cannot subscribe to other users messages', async () => {
     .then(({data: {addChatMessage: message}}) => expect(message.chat.chatId).toBe(chatId))
 
   // wait for some messages to show up, if they do test will fail
-  await misc.sleep(5000)
+  await sleep()
 
   // we don't unsubscribe from the subscription because
   //  - it's not actually active, although I have yet to find a way to expect() that
@@ -120,7 +118,7 @@ test('Messages in multiple chats fire', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const ourSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  const ourSubInitTimeout = sleep('subTimeout')
 
   // they subscribe to chat messages
   const theirHandlers = []
@@ -134,7 +132,7 @@ test('Messages in multiple chats fire', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
+  const theirSubInitTimeout = sleep('subTimeout')
 
   // other subscribes to chat messages
   const otherHandlers = []
@@ -148,8 +146,8 @@ test('Messages in multiple chats fire', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const otherSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscriptions initialize
+  const otherSubInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // we open a direct chat with them
   let theirNextNotification = new Promise((resolve) => theirHandlers.push(resolve))
@@ -295,8 +293,8 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // they add a message to the chat, verify notification
   let nextNotification = new Promise((resolve) => handlers.push(resolve))
@@ -418,8 +416,8 @@ test('Notifications for a group chat', async () => {
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const subInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const subInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // other1 adds a message to the chat, verify notification
   let nextNotification = new Promise((resolve) => handlers.push(resolve))
@@ -505,8 +503,8 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const theirSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const theirSubInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // we add a message, verify they received notificaiton received without author
   let theirNextNotification = new Promise((resolve) => theirHandlers.push(resolve))
@@ -532,8 +530,8 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
       },
       error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
     })
-  const ourSubInitTimeout = misc.sleep(15000) // https://github.com/awslabs/aws-mobile-appsync-sdk-js/issues/541
-  await misc.sleep(2000) // let the subscription initialize
+  const ourSubInitTimeout = sleep('subTimeout')
+  await sleep('subInit')
 
   // they add a message, verify we receive notification without author
   let ourNextNotification = new Promise((resolve) => ourHandlers.push(resolve))

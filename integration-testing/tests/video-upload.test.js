@@ -5,14 +5,12 @@ const path = require('path')
 const tough = require('tough-cookie')
 const {v4: uuidv4} = require('uuid')
 
-const cognito = require('../utils/cognito')
-const misc = require('../utils/misc')
+const {cognito, eventually} = require('../utils')
 const {mutations, queries} = require('../schema')
 
 const videoData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'sample.mov'))
 const videoHeaders = {'Content-Type': 'video/quicktime'}
 const loginCache = new cognito.AppSyncLoginCache()
-jest.retryTimes(1)
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -37,16 +35,20 @@ test(
 
     // upload our video to that url
     await got.put(videoUploadUrl, {headers: videoHeaders, body: videoData})
-    await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the basic parts of the post is as we expect
-    resp = await client.query({query: queries.post, variables: {postId}})
-    expect(resp.data.post.postId).toBe(postId)
-    expect(resp.data.post.postStatus).toBe('COMPLETED')
-    expect(resp.data.post.videoUploadUrl).toBeNull()
+    const {image, video} = await eventually(
+      async () => {
+        const {data} = await client.query({query: queries.post, variables: {postId}})
+        expect(data.post.postId).toBe(postId)
+        expect(data.post.postStatus).toBe('COMPLETED')
+        expect(data.post.videoUploadUrl).toBeNull()
+        return data.post
+      },
+      {initialDelay: 10, pollingDelay: 5, maxDelay: 60},
+    )
 
     // verify the image urls exist, and we can access them
-    const image = resp.data.post.image
     expect(image.url).toBeTruthy()
     expect(image.url4k).toBeTruthy()
     expect(image.url1080p).toBeTruthy()
@@ -59,13 +61,12 @@ test(
     await got.head(image.url64p)
 
     // verify the video part of the post is all good
-    const videoUrl = resp.data.post.video.urlMasterM3U8
+    const {urlMasterM3U8: videoUrl, accessCookies: cookies} = video
     expect(videoUrl).toContain(userId)
     expect(videoUrl).toContain(postId)
     expect(videoUrl).toContain('hls')
     expect(videoUrl).toContain('video')
     expect(videoUrl).toContain('.m3u8')
-    const cookies = resp.data.post.video.accessCookies
     expect(cookies.domain).toBeTruthy()
     expect(cookies.path).toBeTruthy()
     expect(cookies.expiresAt).toBeTruthy()
@@ -125,23 +126,28 @@ test(
 
     // upload our video to that url
     await got.put(videoUploadUrl, {headers: videoHeaders, body: videoData})
-    await misc.sleepUntilPostProcessed(client, postId, {maxWaitMs: 60 * 1000, pollingIntervalMs: 5 * 1000})
 
     // verify the appears as we expect
-    resp = await client.query({query: queries.post, variables: {postId}})
-    expect(resp.data.post.postId).toBe(postId)
-    expect(resp.data.post.postStatus).toBe('COMPLETED')
-    expect(resp.data.post.videoUploadUrl).toBeNull()
-    expect(resp.data.post.image.url).toBeTruthy()
+    await eventually(
+      async () => {
+        const {data} = await client.query({query: queries.post, variables: {postId}})
+        expect(data.post.postId).toBe(postId)
+        expect(data.post.postStatus).toBe('COMPLETED')
+        expect(data.post.videoUploadUrl).toBeNull()
+        expect(data.post.image.url).toBeTruthy()
+      },
+      {initialDelay: 10, pollingDelay: 5, maxDelay: 60},
+    )
 
     // check the album
-    await misc.sleep(2000)
-    resp = await client.query({query: queries.album, variables: {albumId}})
-    expect(resp.data.album.albumId).toBe(albumId)
-    expect(resp.data.album.postCount).toBe(1)
-    expect(resp.data.album.posts.items).toHaveLength(1)
-    expect(resp.data.album.posts.items[0].postId).toBe(postId)
-    let postAlbumArt = resp.data.album.art
+    const postAlbumArt = await eventually(async () => {
+      const {data} = await client.query({query: queries.album, variables: {albumId}})
+      expect(data.album.albumId).toBe(albumId)
+      expect(data.album.postCount).toBe(1)
+      expect(data.album.posts.items).toHaveLength(1)
+      expect(data.album.posts.items[0].postId).toBe(postId)
+      return data.album.art
+    })
 
     // verify album art urls have changed
     expect(placeholderAlbumArt.url.split('?')[0]).not.toBe(postAlbumArt.url.split('?')[0])
@@ -156,19 +162,18 @@ test(
     expect(resp.data.editPostAlbum.album).toBeNull()
 
     // check the album
-    await misc.sleep(2000)
-    resp = await client.query({query: queries.album, variables: {albumId}})
-    expect(resp.data.album.albumId).toBe(albumId)
-    expect(resp.data.album.postCount).toBe(0)
-    expect(resp.data.album.posts.items).toHaveLength(0)
-    let albumArt = resp.data.album.art
-
-    // verify album art urls are back to placeholders
-    expect(placeholderAlbumArt.url.split('?')[0]).toBe(albumArt.url.split('?')[0])
-    expect(placeholderAlbumArt.url4k.split('?')[0]).toBe(albumArt.url4k.split('?')[0])
-    expect(placeholderAlbumArt.url1080p.split('?')[0]).toBe(albumArt.url1080p.split('?')[0])
-    expect(placeholderAlbumArt.url480p.split('?')[0]).toBe(albumArt.url480p.split('?')[0])
-    expect(placeholderAlbumArt.url64p.split('?')[0]).toBe(albumArt.url64p.split('?')[0])
+    await eventually(async () => {
+      const {data} = await client.query({query: queries.album, variables: {albumId}})
+      expect(data.album.albumId).toBe(albumId)
+      expect(data.album.postCount).toBe(0)
+      expect(data.album.posts.items).toHaveLength(0)
+      // verify album art urls are back to placeholders
+      expect(placeholderAlbumArt.url.split('?')[0]).toBe(data.album.art.url.split('?')[0])
+      expect(placeholderAlbumArt.url4k.split('?')[0]).toBe(data.album.art.url4k.split('?')[0])
+      expect(placeholderAlbumArt.url1080p.split('?')[0]).toBe(data.album.art.url1080p.split('?')[0])
+      expect(placeholderAlbumArt.url480p.split('?')[0]).toBe(data.album.art.url480p.split('?')[0])
+      expect(placeholderAlbumArt.url64p.split('?')[0]).toBe(data.album.art.url64p.split('?')[0])
+    })
 
     // add the post from the album
     resp = await client.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId}})
@@ -176,20 +181,19 @@ test(
     expect(resp.data.editPostAlbum.album.albumId).toBe(albumId)
 
     // check the album
-    await misc.sleep(2000)
-    resp = await client.query({query: queries.album, variables: {albumId}})
-    expect(resp.data.album.albumId).toBe(albumId)
-    expect(resp.data.album.postCount).toBe(1)
-    expect(resp.data.album.posts.items).toHaveLength(1)
-    expect(resp.data.album.posts.items[0].postId).toBe(postId)
-    albumArt = resp.data.album.art
-
-    // verify album art urls are back to those with the posts
-    expect(postAlbumArt.url.split('?')[0]).toBe(albumArt.url.split('?')[0])
-    expect(postAlbumArt.url4k.split('?')[0]).toBe(albumArt.url4k.split('?')[0])
-    expect(postAlbumArt.url1080p.split('?')[0]).toBe(albumArt.url1080p.split('?')[0])
-    expect(postAlbumArt.url480p.split('?')[0]).toBe(albumArt.url480p.split('?')[0])
-    expect(postAlbumArt.url64p.split('?')[0]).toBe(albumArt.url64p.split('?')[0])
+    await eventually(async () => {
+      const {data} = await client.query({query: queries.album, variables: {albumId}})
+      expect(data.album.albumId).toBe(albumId)
+      expect(data.album.postCount).toBe(1)
+      expect(data.album.posts.items).toHaveLength(1)
+      expect(data.album.posts.items[0].postId).toBe(postId)
+      // verify album art urls are back to those with the posts
+      expect(postAlbumArt.url.split('?')[0]).toBe(data.album.art.url.split('?')[0])
+      expect(postAlbumArt.url4k.split('?')[0]).toBe(data.album.art.url4k.split('?')[0])
+      expect(postAlbumArt.url1080p.split('?')[0]).toBe(data.album.art.url1080p.split('?')[0])
+      expect(postAlbumArt.url480p.split('?')[0]).toBe(data.album.art.url480p.split('?')[0])
+      expect(postAlbumArt.url64p.split('?')[0]).toBe(data.album.art.url64p.split('?')[0])
+    })
   },
   90 * 1000,
 )
