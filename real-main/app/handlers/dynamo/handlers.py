@@ -240,7 +240,7 @@ register(
 register(
     'user',
     'follower',
-    ['INSERT'],
+    ['INSERT', 'MODIFY'],
     user_manager.on_user_new_followers_sync_card,
     {'followStatus': FollowStatus.NOT_FOLLOWING},
 )

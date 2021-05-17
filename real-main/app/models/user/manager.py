@@ -595,13 +595,18 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.increment_paid_real_so_far(new_item['userId'], price)
 
     def on_user_new_followers_sync_card(self, user_id, new_item, old_item=None):
+        # make sure old_follow_status is NOT_FOLLOWING before issuing card
+        new_follow_status = new_item.get('followStatus', FollowStatus.NOT_FOLLOWING)
+        old_follow_status = (old_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
+        if new_follow_status != FollowStatus.FOLLOWING or old_follow_status != FollowStatus.NOT_FOLLOWING:
+            return
+
         followed_user = self.get_user(user_id)
         followed_user_privacy_status = followed_user.item.get('privacyStatus', UserPrivacyStatus.PUBLIC)
-        follow_status = (new_item or {}).get('followStatus', FollowStatus.NOT_FOLLOWING)
         card_template = NewFollowersCardTemplate(user_id)
 
         # followed user's status should be public
-        if follow_status == FollowStatus.FOLLOWING and followed_user_privacy_status == UserPrivacyStatus.PUBLIC:
+        if followed_user_privacy_status == UserPrivacyStatus.PUBLIC:
             self.card_manager.add_or_update_card(card_template)
 
     def on_user_change_log_amplitude_event(self, user_id, new_item, old_item=None):
