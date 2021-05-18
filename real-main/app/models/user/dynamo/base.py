@@ -371,6 +371,18 @@ class UserDynamo:
 
         return self.client.update_item(query_kwargs)
 
+    def set_id_analyzer_result(self, user_id, result):
+        query_kwargs = {
+            'Key': self.pk(user_id),
+        }
+        if result is None:
+            query_kwargs['UpdateExpression'] = 'REMOVE idAnalyzerResult'
+        else:
+            query_kwargs['UpdateExpression'] = 'SET idAnalyzerResult = :ias'
+            query_kwargs['ExpressionAttributeValues'] = {':ias': result}
+
+        return self.client.update_item(query_kwargs)
+
     def set_id_verification_status(self, user_id, status):
         query_kwargs = {
             'Key': self.pk(user_id),

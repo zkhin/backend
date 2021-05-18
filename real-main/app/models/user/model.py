@@ -678,3 +678,8 @@ class User(TrendingModelMixin):
             mime_type='image/jpeg' if image_type == IdVerificationImageType.JPEG else 'image/png',
         )
         self.dynamo.set_id_verification_status(self.id, IdVerificationStatus.SUBMITTED)
+
+    def verify_id_document_with_id_analyzer(self, frontside_image):
+        result = self.id_verification_client.verify_id_with_id_analyzer(frontside_image)
+        self.dynamo.set_id_verification_status(self.id, IdVerificationStatus.SUBMITTED)
+        self.dynamo.set_id_analyzer_result(self.id, result)

@@ -7,6 +7,7 @@ logger = logging.getLogger()
 
 
 API_URL = 'https://netverify.com/api/netverify/v2/performNetverify'
+IDANALYZER_API_URL = 'https://api.idanalyzer.com'
 
 
 class IdVerificationClient:
@@ -28,6 +29,10 @@ class IdVerificationClient:
     @property
     def callback_url(self):
         return self.api_creds['callbackUrl']
+
+    @property
+    def id_analyzer_api_key(self):
+        return self.api_creds.get('idAnalyzerApiKey')
 
     def verify_id(self, user_id, frontside_image, country, id_type, mime_type):
         # https://github.com/Jumio/implementation-guides/blob/master/netverify/performNetverify.md
@@ -56,3 +61,20 @@ class IdVerificationClient:
             raise Exception(
                 f'Unable to parse response from jumio verification service with body: `{resp.text}`'
             ) from err
+
+    def verify_id_with_id_analyzer(self, frontside_image):
+        if not self.id_analyzer_api_key:
+            return
+        # https://developer.idanalyzer.com/coreapi_reference.html
+        payload = {'apikey': self.id_analyzer_api_key, 'file_base64': frontside_image}
+        r = requests.post(IDANALYZER_API_URL, data=payload)
+        result = r.json()
+
+        if 'error' in result:
+            # failed
+            raise Exception(
+                f"ID verification service error `{str(result['error']['code'])}` with body `{result['error']['message']}`"
+            )
+        else:
+            # success
+            return result
