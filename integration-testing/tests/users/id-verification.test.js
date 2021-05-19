@@ -16,20 +16,20 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test('Document is not recognized', async () => {
+test.skip('Document is not recognized', async () => {
   const {client} = await loginCache.getCleanLogin()
 
   await expect(
-    client.mutate({mutation: mutations.idAnalyzer, variables: {frontsideImageData: fakeImageData}}),
+    client.mutate({mutation: mutations.verifyIdentity, variables: {frontsideImageData: fakeImageData}}),
   ).rejects.toThrow(/ClientError: .* `Document not recognized`/)
 })
 
-test('Id verification', async () => {
+test.skip('Id verification', async () => {
   const {client, userId} = await loginCache.getCleanLogin()
 
   await client
-    .mutate({mutation: mutations.idAnalyzer, variables: {frontsideImageData: imageData}})
-    .then(({data: {idAnalyzer: user}}) => {
+    .mutate({mutation: mutations.verifyIdentity, variables: {frontsideImageData: imageData}})
+    .then(({data: {verifyIdentity: user}}) => {
       expect(user.userId).toBe(userId)
     })
 })

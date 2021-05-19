@@ -1519,11 +1519,11 @@ def flag_chat_message(caller_user, arguments, **kwargs):
     return resp
 
 
-@routes.register('Mutation.idAnalyzer')
+@routes.register('Mutation.verifyIdentity')
 @validate_caller
 @update_last_client
 @update_last_disable_dating_date
-def id_analyzer(caller_user, arguments, **kwargs):
+def verify_identity(caller_user, arguments, **kwargs):
     frontside_image = arguments['frontsideImageData']
     try:
         caller_user.verify_id_document_with_id_analyzer(frontside_image=frontside_image)
