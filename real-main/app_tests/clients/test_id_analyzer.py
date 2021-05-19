@@ -26,6 +26,7 @@ def test_verify_id_success(id_analyzer_client, requests_mock):
     assert req.json() == {
         'apikey': 'the-api-key',
         'file_base64': 'frontside-image-data',
+        'authenticate': True,
     }
 
 
