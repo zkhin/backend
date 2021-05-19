@@ -415,7 +415,7 @@
   response: PassThru.response.vtl
 
 - type: Mutation
-  field: verifyId
+  field: idAnalyzer
   dataSource: LambdaDataSource
   request: false
   response: Lambda.response.vtl

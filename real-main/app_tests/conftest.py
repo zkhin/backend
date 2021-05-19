@@ -154,9 +154,9 @@ def google_client():
 
 
 @pytest.fixture
-def id_verification_client():
+def jumio_client():
     yield mock.Mock(
-        clients.IdVerificationClient(
+        clients.JumioClient(
             lambda: {
                 'apiToken': 'api-token',
                 'secret': 'secret',
@@ -164,6 +164,11 @@ def id_verification_client():
             }
         )
     )
+
+
+@pytest.fixture
+def id_analyzer_client():
+    yield mock.Mock(clients.IdAnalyzerClient(lambda: {'apiKey': 'api-key'}))
 
 
 @pytest.fixture
@@ -310,7 +315,8 @@ def user_manager(
     apple_client,
     facebook_client,
     google_client,
-    id_verification_client,
+    jumio_client,
+    id_analyzer_client,
     pinpoint_client,
     elasticsearch_client,
     real_dating_client,
@@ -330,6 +336,7 @@ def user_manager(
             'pinpoint': pinpoint_client,
             'elasticsearch': elasticsearch_client,
             'real_dating': real_dating_client,
-            'id_verification': id_verification_client,
+            'jumio_client': jumio_client,
+            'id_analyzer_client': id_analyzer_client,
         }
     )

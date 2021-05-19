@@ -311,6 +311,8 @@ type Mutation {
   #  imageType: IdVerificationImageType!,
   #): User
 
+  idAnalyzer(frontsideImageData: String!): User
+
   # Used internally to fire subscription events. Calling externally is an error.
   triggerNotification(input: NotificationInput!): Notification!
   triggerCardNotification(input: CardNotificationInput!): CardNotification!

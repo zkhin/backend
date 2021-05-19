@@ -56,7 +56,8 @@ clients = {
     'elasticsearch': clients.ElasticSearchClient(),
     'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
-    'id_verification': clients.IdVerificationClient(secrets_manager_client.get_id_verification_api_creds),
+    'jumio': clients.JumioClient(secrets_manager_client.get_jumio_api_creds),
+    'id_analyzer': clients.IdAnalyzerClient(secrets_manager_client.get_id_analyzer_api_key),
     'pinpoint': clients.PinpointClient(),
     'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
@@ -1518,23 +1519,14 @@ def flag_chat_message(caller_user, arguments, **kwargs):
     return resp
 
 
-@routes.register('Mutation.verifyId')
+@routes.register('Mutation.idAnalyzer')
 @validate_caller
 @update_last_client
 @update_last_disable_dating_date
-def verifyId(caller_user, arguments, **kwargs):
+def id_analyzer(caller_user, arguments, **kwargs):
     frontside_image = arguments['frontsideImageData']
-    country = arguments['country']
-    id_type = arguments['idType']
-    image_type = arguments['imageType']
-
     try:
-        caller_user.verify_id_document(
-            frontside_image=frontside_image,
-            country=country,
-            id_type=id_type,
-            image_type=image_type,
-        )
+        caller_user.verify_id_document_with_id_analyzer(frontside_image=frontside_image)
     except UserException as err:
         raise ClientException(str(err)) from err
 

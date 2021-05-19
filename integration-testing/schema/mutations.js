@@ -910,14 +910,9 @@ module.exports.approveMatch = gql`
   }
 `
 
-module.exports.verifyId = gql`
-  mutation VerifyId(
-    $frontsideImageData: String!
-    $country: String!
-    $idType: IdVerificationType!
-    $imageType: IdVerificationImageType!
-  ) {
-    verifyId(frontsideImageData: $frontsideImageData, country: $country, idType: $idType, imageType: $imageType) {
+module.exports.idAnalyzer = gql`
+  mutation IdAnalyzer($frontsideImageData: String!) {
+    idAnalyzer(frontsideImageData: $frontsideImageData) {
       userId
     }
   }

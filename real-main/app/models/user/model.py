@@ -60,9 +60,10 @@ class User(TrendingModelMixin):
         'cognito',
         'elasticsearch',
         'dynamo',
+        'jumio',
+        'id_analyzer',
         'pinpoint',
         's3_uploads',
-        'id_verification',
     ]
     item_type = 'user'
     subscription_bonus_duration = pendulum.duration(months=1)
@@ -669,8 +670,8 @@ class User(TrendingModelMixin):
         user_ids = json.loads(self.real_dating_client.swiped_right_users(self.id)['Payload'].read().decode())
         return user_ids
 
-    def verify_id_document(self, frontside_image, country, id_type, image_type):
-        self.id_verification_client.verify_id(
+    def verify_id_document_with_jumio(self, frontside_image, country, id_type, image_type):
+        self.jumio_client.verify_id(
             user_id=self.id,
             frontside_image=frontside_image,
             country=country,
@@ -680,6 +681,9 @@ class User(TrendingModelMixin):
         self.dynamo.set_id_verification_status(self.id, IdVerificationStatus.SUBMITTED)
 
     def verify_id_document_with_id_analyzer(self, frontside_image):
-        result = self.id_verification_client.verify_id_with_id_analyzer(frontside_image)
+        try:
+            result = self.id_analyzer_client.verify_id(frontside_image)
+        except Exception as err:
+            raise UserException(str(err)) from err
         self.dynamo.set_id_verification_status(self.id, IdVerificationStatus.SUBMITTED)
         self.dynamo.set_id_analyzer_result(self.id, result)
