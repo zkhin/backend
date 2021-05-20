@@ -10,7 +10,8 @@ __all__ = [
     'ElasticSearchClient',
     'FacebookClient',
     'GoogleClient',
-    'IdVerificationClient',
+    'IdAnalyzerClient',
+    'JumioClient',
     'MediaConvertClient',
     'PinpointClient',
     'PostVerificationClient',
@@ -31,7 +32,8 @@ from .dynamo import DynamoClient
 from .elasticsearch import ElasticSearchClient
 from .facebook import FacebookClient
 from .google import GoogleClient
-from .id_verification import IdVerificationClient
+from .id_analyzer import IdAnalyzerClient
+from .jumio import JumioClient
 from .mediaconvert import MediaConvertClient
 from .pinpoint import PinpointClient
 from .post_verification import PostVerificationClient

@@ -9,7 +9,7 @@ logger = logging.getLogger()
 API_URL = 'https://netverify.com/api/netverify/v2/performNetverify'
 
 
-class IdVerificationClient:
+class JumioClient:
     def __init__(self, api_creds_getter):
         self.api_creds_getter = api_creds_getter
 

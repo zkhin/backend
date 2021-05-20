@@ -651,5 +651,13 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             verification_status = IdVerificationStatus.ERROR
         self.dynamo.set_id_verification_status(user_id, verification_status)
 
+    def on_user_id_analyzer_result_update_id_verification_status(self, user_id, new_item, old_item=None):
+        authentication_result = new_item.get('idAnalyzerResult', {}).get('authentication')
+        if authentication_result.get('score') > 0.5:
+            verification_status = IdVerificationStatus.APPROVED
+        else:
+            verification_status = IdVerificationStatus.REJECTED
+        self.dynamo.set_id_verification_status(user_id, verification_status)
+
     def set_id_verification_callback(self, user_id, response):
         self.dynamo.set_id_verification_callback(user_id, response)

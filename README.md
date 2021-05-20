@@ -80,7 +80,8 @@ _Once per AWS Account_
   }
   ```
 - An Amplitude Api Key must be added in order to log events to [Amplitude](https://amplitude.com/). The secret name must match the environment variable defined in `serverless.yml` while the secret value must be a json object with one key `apiKey`. To disable the Amplitude integration, set the value of `apiKey` to `DISABLED`.
-- An ID Verification Api Key must be added in order to log events to [Jumio](https://github.com/Jumio/implementation-guides/blob/master/netverify/performNetverify.md). The secret name must match the environment variable defined in `serverless.yml` while the secret value must be a json object with two keys and one callbackUrl.
+- An ID Verification Api Key must be added in order to log events to [Jumio](https://github.com/Jumio/implementation-guides/blob/master/netverify/performNetverify.md). The secret name must match the environment variable defined in `serverless.yml` while the secret value must be a json object with keys  `apiToken`, `secret`, and `callbackUrl`.
+- An ID Verification Api Key must be added in order to log events to [IdAnalyzer](https://developer.idanalyzer.com/). The secret name must match the environment variable defined in `serverless.yml` while the secret value must be a json object with one key `apiKey`. To disable the integration, set the value of `apiKey` to `DISABLED`.
 
 #### SES
 

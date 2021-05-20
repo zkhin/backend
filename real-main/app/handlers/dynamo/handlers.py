@@ -347,6 +347,13 @@ register(
     user_manager.on_user_jumio_response_update_id_verification_status,
     {'jumioResponse': None},
 )
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    user_manager.on_user_id_analyzer_result_update_id_verification_status,
+    {'idAnalyzerResult': None},
+)
 register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.on_user_change_log_amplitude_event)
 register('user', 'profile', ['REMOVE'], album_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_all_by_user)
