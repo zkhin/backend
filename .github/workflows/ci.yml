@@ -19,13 +19,26 @@ jobs:
         python-version: 3.8
 
     - name: Install Poetry
-      uses: dschep/install-poetry-action@v1.3
+      uses: snok/install-poetry@v1.1.6
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
 
-    - name: Install dependencies
-      run: cd real-auth && poetry install
+    - name: Load cached venv
+      id: load-cached-venv
+      uses: actions/cache@v2
+      with:
+        path: real-auth/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('real-auth/poetry.lock') }}
+
+    - name: Install python packages
+      if: steps.load-cached-venv.outputs.cache-hit != 'true'
+      working-directory: real-auth
+      run: poetry install --no-interaction --no-root
 
     - name: Test with pytest
-      run: cd real-auth && poetry run pytest tests
+      working-directory: real-auth
+      run: poetry run pytest tests
 
   real-main-pytest:
     runs-on: ubuntu-latest
@@ -44,13 +57,26 @@ jobs:
         python-version: 3.8
 
     - name: Install Poetry
-      uses: dschep/install-poetry-action@v1.3
+      uses: snok/install-poetry@v1.1.6
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
 
-    - name: Install dependencies
-      run: cd real-main && poetry install
+    - name: Load cached venv
+      id: load-cached-venv
+      uses: actions/cache@v2
+      with:
+        path: real-main/.venv
+        key: venv-${{ runner.os }}-${{ hashFiles('real-auth/poetry.lock') }}
+
+    - name: Install python packages
+      if: steps.load-cached-venv.outputs.cache-hit != 'true'
+      working-directory: real-main
+      run: poetry install --no-interaction --no-root
 
     - name: Test with pytest
-      run: cd real-main && poetry run pytest -n auto app_tests migrations_tests
+      working-directory: real-main
+      run: poetry run pytest -n auto app_tests migrations_tests
 
     - name: Archive test coverage results
       uses: actions/upload-artifact@v2
@@ -71,8 +97,8 @@ jobs:
 
     - name: Install python lint tools
       run: |
-        pip install --pre 'black<22'
-        pip install 'flake8<4' 'flake8-bugbear<22' 'isort<6' 'pylint<3'
+        pip install --pre 'black~=21.5b1'
+        pip install 'flake8~=3.9.2' 'flake8-bugbear~=21.4.3' 'isort~=5.8.0' 'pylint~=2.8.2'
 
     - name: Lint real-auth
       working-directory: real-auth
@@ -109,10 +135,16 @@ jobs:
       with:
         node-version: '14.x'
 
-    - name: Install dependencies
-      run: |
-        yarn --cwd integration-testing add eslint
+    - name: Load cached node packages
+      uses: actions/cache@v2
+      with:
+        path: 'integration-testing/node_modules'
+        key: ${{ runner.os }}-modules-${{ hashFiles('integration-testing/yarn.lock') }}
+
+    - name: Install node packages
+      working-directory: integration-testing
+      run: yarn install
 
     - name: Lint with eslint
-      run: |
-        yarn --cwd integration-testing run lint
+      working-directory: integration-testing
+      run: yarn run lint
