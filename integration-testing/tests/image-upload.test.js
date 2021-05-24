@@ -44,6 +44,7 @@ test('Uploading image sets width, height and colors', async () => {
     .then(({data: {addPost: post}}) => {
       expect(post.postId).toBe(postId)
       expect(post.image).toBeNull()
+      expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
 
@@ -80,6 +81,7 @@ test('Uploading png image', async () => {
     .then(({data: {addPost: post}}) => {
       expect(post.postId).toBe(postId)
       expect(post.postStatus).toBe('PENDING')
+      expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
 
@@ -168,6 +170,7 @@ test('Thumbnails built on successful upload', async () => {
     .then(({data: {addPost: post}}) => {
       expect(post.postId).toBe(postId)
       expect(post.postStatus).toBe('PENDING')
+      expect(post.imageUploadUrl).toBeTruthy()
       return post.imageUploadUrl
     })
 
