@@ -43,6 +43,6 @@ class AmplitudeClient:
         # https://developers.amplitude.com/docs/http-api-v2#uploadrequestbody
         data = json.dumps({'api_key': self.api_key, 'events': events}, cls=DecimalJsonEncoder)
         try:
-            requests.post(API_URL, data=data)
+            self.session.post(API_URL, data=data)
         except Exception as err:
             logger.warning(f'Failed to send events to Amplitude: {err}')
