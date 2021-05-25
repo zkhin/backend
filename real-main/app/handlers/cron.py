@@ -31,8 +31,6 @@ album_manager = managers.get('album') or models.AlbumManager(clients, managers=m
 card_manager = managers.get('card') or models.CardManager(clients, managers=managers)
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
 user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
-comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
-chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 
 
 @handler_logging
@@ -115,14 +113,6 @@ def auto_disable_dating(event, context):
     cnt = user_manager.clear_expired_dating_status()
     with LogLevelContext(logger, logging.INFO):
         logger.info(f'Disabled user dating status: {cnt}')
-
-
-@handler_logging
-def detect_bad_words(event, context):
-    comment_manager.clear_comment_bad_words()
-    chat_message_manager.clear_chat_message_bad_words()
-    with LogLevelContext(logger, logging.INFO):
-        logger.info('Detect bad words in comments & chat messages')
 
 
 @handler_logging
