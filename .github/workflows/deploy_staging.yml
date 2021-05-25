@@ -16,12 +16,13 @@ jobs:
         uses: actions/cache@v2
         with:
           path: '**/node_modules'
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install Node
         uses: actions/setup-node@v2
         with:
-          node-version: 14
+          # node 14.17 doesn't play well with serverless https://stackoverflow.com/a/67624151
+          node-version: 14.16.1
 
       - name: Install Python
         uses: actions/setup-python@v2
