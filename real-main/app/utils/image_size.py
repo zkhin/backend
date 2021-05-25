@@ -12,6 +12,7 @@ class _ImageSize:
 
 NATIVE_HEIC = _ImageSize('native', None, content_type='image/heic', file_ext='heic')
 NATIVE = _ImageSize('native', None)
+VERIFICATION_RESULT = _ImageSize('verification-result', None, content_type='image/png', file_ext='png')
 K4 = _ImageSize('4K', (3840, 2160))  # TODO: change name to '4k' with lowercase k
 P1080 = _ImageSize('1080p', (1920, 1080))
 P480 = _ImageSize('480p', (854, 480))

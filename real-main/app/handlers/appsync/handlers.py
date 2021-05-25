@@ -808,6 +808,7 @@ def post_image(caller_user_id, arguments, source=None, **kwargs):
             'url480p': post.get_image_readonly_url(image_size.P480),
             'url1080p': post.get_image_readonly_url(image_size.P1080),
             'url4k': post.get_image_readonly_url(image_size.K4),
+            'urlverification': post.get_image_readonly_url(image_size.VERIFICATION_RESULT),
         }
     )
     return image_item

@@ -510,12 +510,18 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         image_url = self.cloudfront_client.generate_presigned_url(path, ['GET', 'HEAD'])
         original_metadata_item = self.original_metadata_dynamo.get(self.id)
 
+        verification_image_path = self.get_image_path(image_size.VERIFICATION_RESULT)
+        verification_image_upload_url = self.cloudfront_client.generate_presigned_url(
+            verification_image_path, ['PUT']
+        )
+
         is_verified = self.post_verification_client.verify_image(
             image_url,
             image_format=self.image_item.get('imageFormat'),
             original_format=self.image_item.get('originalFormat'),
             taken_in_real=self.image_item.get('takenInReal'),
             original_metadata=original_metadata_item.get('originalMetadata') if original_metadata_item else None,
+            verification_image_upload_url=verification_image_upload_url,
         )
         hidden = self.item.get('verificationHidden', False)
         self.item = self.dynamo.set_is_verified(self.id, is_verified, hidden=hidden)
