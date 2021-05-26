@@ -26,6 +26,8 @@ clients = {
 
 managers = {}
 post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
+comment_manager = managers.get('comment') or models.CommentManager(clients, managers=managers)
+chat_message_manager = managers.get('chat_message') or models.ChatMessageManager(clients, managers=managers)
 
 
 def event_to_extras(event):
@@ -138,3 +140,11 @@ def video_post_processed(event, context):
         if not isinstance(err, PostException):
             raise err
         logger.warning(str(err))
+
+
+@handler_logging
+def detect_bad_words(event, context):
+    comment_manager.clear_comment_bad_words()
+    chat_message_manager.clear_chat_message_bad_words()
+    with LogLevelContext(logger, logging.INFO):
+        logger.info('Detect bad words in comments & chat messages')
