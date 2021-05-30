@@ -118,7 +118,7 @@ class CommentManager(FlagManagerMixin, ManagerBase):
             logger.warning(f'Force deleting comment `{comment_id}` from flagging')
             comment.delete(forced=True)
 
-    def on_comment_added_detect_bad_words(self, comment_id, new_item):
+    def on_comment_added_detect_bad_words(self, comment_id, new_item, old_item=None):
         text = new_item['text']
         comment = self.init_comment(new_item)
 
