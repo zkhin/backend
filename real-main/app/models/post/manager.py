@@ -279,8 +279,10 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             source = hit.get('_source')
             if source is not None:
                 post_id = source['postId']
-                trending_score = self.get_post(source['postId']).trending_score
-                post_id_to_trending_score[post_id] = trending_score
+                post = self.get_post(source['postId'])
+                if post:
+                    trending_score = self.get_post(source['postId']).trending_score
+                    post_id_to_trending_score[post_id] = trending_score
 
         if post_id_to_trending_score:
             # sort post ids by trending weight
@@ -485,7 +487,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
     def sync_elasticsearch(self, post_id, new_item, old_item=None):
         self.elasticsearch_client.put_post(post_id, new_item['keywords'])
         # remove old keywords
-        if old_item is not None and old_item['keywords'] is not None:
+        if old_item is not None and old_item.get('keywords') is not None:
             for k in old_item['keywords']:
                 self.elasticsearch_client.delete_keyword(post_id, k)
         # add new keywords
