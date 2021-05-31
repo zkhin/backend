@@ -30,7 +30,7 @@ test('USER_FOLLOWED_USERS_WITH_STORIES_CHANGED triggers correctly when changing 
           handler(notification)
         }
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')

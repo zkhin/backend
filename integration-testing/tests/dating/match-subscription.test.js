@@ -76,7 +76,7 @@ test(
             handler(notification)
           }
         },
-        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+        error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
       })
     const o1Sub = await o1Client
       .subscribe({query: subscriptions.onNotification, variables: {userId: o1UserId}})
@@ -88,7 +88,7 @@ test(
             handler(notification)
           }
         },
-        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+        error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
       })
     const o2Sub = await o2Client
       .subscribe({query: subscriptions.onNotification, variables: {userId: o2UserId}})
@@ -100,7 +100,7 @@ test(
             handler(notification)
           }
         },
-        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+        error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
       })
     const subInitTimeout = sleep('subTimeout')
     await sleep('subInit')

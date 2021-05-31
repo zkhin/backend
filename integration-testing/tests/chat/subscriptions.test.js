@@ -64,8 +64,8 @@ test('Cannot subscribe to other users messages', async () => {
   await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
     .subscribe({
-      next: (resp) => expect(`Subscription should not be called: ${resp}`).toBeNull(),
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
 
   // they open up a chat with us
@@ -114,7 +114,7 @@ test('Messages in multiple chats fire', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const ourSubInitTimeout = sleep('subTimeout')
 
@@ -128,7 +128,7 @@ test('Messages in multiple chats fire', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const theirSubInitTimeout = sleep('subTimeout')
 
@@ -142,7 +142,7 @@ test('Messages in multiple chats fire', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const otherSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -289,7 +289,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -412,7 +412,7 @@ test('Notifications for a group chat', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -499,7 +499,7 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const theirSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -526,7 +526,7 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const ourSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')

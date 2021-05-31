@@ -29,7 +29,7 @@ test('POST_COMPLETED notification triggers correctly posts', async () => {
         handler(notification)
       }
     },
-    error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
   })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -106,7 +106,7 @@ test('POST_ERROR notification triggers correctly posts', async () => {
         handler(notification)
       }
     },
-    error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
   })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')

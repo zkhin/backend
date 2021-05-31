@@ -46,8 +46,8 @@ test('Cannot subscribe to other users notifications', async () => {
   await ourClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}})
     .subscribe({
-      next: (resp) => expect(`Subscription should not be called: ${resp}`).toBeNull(),
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
 
   // they subscribe to their notifications
@@ -60,7 +60,7 @@ test('Cannot subscribe to other users notifications', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const theirSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')

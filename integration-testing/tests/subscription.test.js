@@ -50,11 +50,11 @@ test('Cannot subscribe to other users notifications', async () => {
           handler(notification)
         }
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   await theirClient.subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}}).subscribe({
-    next: (resp) => expect(`Should not be called: ${resp}`).toBeNull(),
-    error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+    next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
+    error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
   })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')

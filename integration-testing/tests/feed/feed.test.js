@@ -35,7 +35,7 @@ test('When followed user adds/deletes a post, our feed reacts', async () => {
           handler(notification)
         }
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -104,7 +104,7 @@ test('When we follow/unfollow a user with posts, our feed reacts', async () => {
           handler(notification)
         }
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
