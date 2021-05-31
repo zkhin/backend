@@ -19,6 +19,9 @@ def test_list_unconfirmed_user_pool_entries(cognito_client):
     pass
 
 
+# Warning caused by python-jose v3.2. Fix has been implemented, just waiting on
+# a new release of python-jose https://github.com/mpdavis/python-jose/commit/b899276
+@pytest.mark.filterwarnings('ignore:int_from_bytes is deprecated, use int.from_bytes instead')
 def test_create_user_pool_entry_no_verified_email(cognito_client):
     user_id, username = str(uuid4()), str(uuid4())
 

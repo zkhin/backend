@@ -64,4 +64,3 @@ env = [
   "AWS_DEFAULT_REGION=us-east-1",
   "AWS_XRAY_SDK_ENABLED=false",
 ]
-filterwarnings = "ignore:the imp module is deprecated in favour of importlib.*:DeprecationWarning:boto:40"
