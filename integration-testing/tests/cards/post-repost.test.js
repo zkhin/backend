@@ -25,7 +25,7 @@ test('PostRepost card generation and format, fullfilling card', async () => {
     .mutate({mutation: mutations.addPost, variables: {postId: originalPostId, imageData: imageDataB64}})
     .then(({data}) => expect(data.addPost.postId).toBe(originalPostId))
 
-  // give the system a moment to hash that image
+  // let the system hash that image
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.post, variables: {postId: originalPostId}})
     expect(data.post.originalPost).toBeTruthy()
@@ -92,7 +92,7 @@ test('PostRepost card deleted when post deleted', async () => {
     .mutate({mutation: mutations.addPost, variables: {postId: originalPostId, imageData: imageDataB64}})
     .then(({data}) => expect(data.addPost.postId).toBe(originalPostId))
 
-  // give the system a moment to hash that image
+  // let the system hash that image
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.post, variables: {postId: originalPostId}})
     expect(data.post.originalPost).toBeTruthy()

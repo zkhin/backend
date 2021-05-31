@@ -1,9 +1,11 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
+const duration = require('dayjs/plugin/duration')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
+dayjs.extend(duration)
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
@@ -21,7 +23,7 @@ test('Cant edit Post.expiresAt for post that do not exist', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const variables = {
     postId: uuidv4(),
-    expiresAt: moment().add(moment.duration('P1D')).toISOString(),
+    expiresAt: dayjs().add(dayjs.duration('P1D')).toISOString(),
   }
   await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
     expect(errors).toHaveLength(1)
@@ -40,7 +42,7 @@ test('Cant edit Post.expiresAt for post that isnt ours', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we try to edit its expiresAt
-  variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
+  variables = {postId, expiresAt: dayjs().add(dayjs.duration('P1D')).toISOString()}
   await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
     expect(errors).toHaveLength(1)
     expect(errors[0].message).toMatch(/ClientError: Cannot edit another /)
@@ -57,7 +59,7 @@ test('Cant set Post.expiresAt to datetime in the past', async () => {
   expect(resp.data.addPost.postId).toBe(postId)
 
   // we try to edit its expiresAt to a date in the past
-  variables = {postId, expiresAt: moment().subtract(moment.duration('PT1M')).toISOString()}
+  variables = {postId, expiresAt: dayjs().subtract(dayjs.duration('PT1M')).toISOString()}
   await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
     expect(errors).toHaveLength(1)
     expect(errors[0].message).toMatch(/ClientError: Cannot .* in the past/)
@@ -79,7 +81,7 @@ test('Cant edit Post.expiresAt if we are disabled', async () => {
   expect(resp.data.disableUser.userStatus).toBe('DISABLED')
 
   // verify we can't edit the expires at
-  variables = {postId, expiresAt: moment().add(moment.duration('P1D')).toISOString()}
+  variables = {postId, expiresAt: dayjs().add(dayjs.duration('P1D')).toISOString()}
   await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables, errorPolicy}).then(({errors}) => {
     expect(errors).toHaveLength(1)
     expect(errors[0].message).toMatch(/ClientError: User .* is not ACTIVE/)
@@ -114,12 +116,12 @@ test('Add and remove expiresAt from a Post', async () => {
   expect(resp.data.addPost.expiresAt).toBeNull()
 
   // we edit the post to give it an expiresAt
-  const expiresAt = moment().add(moment.duration('P1D'))
+  const expiresAt = dayjs().add(dayjs.duration('P1D'))
   variables = {postId, expiresAt: expiresAt.toISOString()}
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
-  expect(moment(resp.data.editPostExpiresAt.expiresAt).isSame(expiresAt)).toBe(true)
+  expect(dayjs(resp.data.editPostExpiresAt.expiresAt).isSame(expiresAt)).toBe(true)
 
   // we edit the post to remove its expiresAt using null
   variables = {postId, expiresAt: null}
@@ -132,7 +134,7 @@ test('Add and remove expiresAt from a Post', async () => {
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables})
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
-  expect(moment(resp.data.editPostExpiresAt.expiresAt).isSame(expiresAt)).toBe(true)
+  expect(dayjs(resp.data.editPostExpiresAt.expiresAt).isSame(expiresAt)).toBe(true)
 
   // we edit the post to remove its expiresAt using undefined
   variables = {postId}
@@ -152,23 +154,23 @@ test('Edit Post.expiresAt with UTC', async () => {
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
-  const at = moment(post.expiresAt)
+  const at = dayjs(post.expiresAt)
 
   // change the expiresAt
-  at.add(moment.duration(lifetime))
+  at.add(dayjs.duration(lifetime))
   const expiresAt = at.toISOString()
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId, expiresAt}})
   post = resp.data.editPostExpiresAt
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
-  expect(moment(post.expiresAt).isSame(at)).toBe(true)
+  expect(dayjs(post.expiresAt).isSame(at)).toBe(true)
 
   // pull the post again to make sure that new value stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
-  expect(moment(post.expiresAt).isSame(at)).toBe(true)
+  expect(dayjs(post.expiresAt).isSame(at)).toBe(true)
 })
 
 test('Edit Post.expiresAt with non-UTC', async () => {
@@ -182,25 +184,24 @@ test('Edit Post.expiresAt with non-UTC', async () => {
   let post = resp.data.addPost
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
-  const at = moment(post.expiresAt)
 
   // change the expiresAt
-  at.add(moment.duration(lifetime))
-  let expiresAt = at.toISOString().replace('Z', '+01:30')
-  at.subtract(moment.duration('PT1H30M')) // account for the timezone offset
+  const expiresAtUtc = dayjs(post.expiresAt).add(dayjs.duration(lifetime))
+  const expiresAt = expiresAtUtc.toISOString().replace('Z', '+01:30')
+  const expectedExpiresAt = expiresAtUtc.subtract(dayjs.duration('PT1H30M')) // account for the timezone offset
 
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId, expiresAt}})
   post = resp.data.editPostExpiresAt
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
-  expect(moment(post.expiresAt).isSame(at)).toBe(true)
+  expect(dayjs(post.expiresAt).isSame(expectedExpiresAt)).toBe(true)
 
   // pull the post again to make sure that new value stuck in DB
   resp = await ourClient.query({query: queries.post, variables: {postId}})
   post = resp.data.post
   expect(post.postId).toBe(postId)
   expect(post.expiresAt).toBeTruthy()
-  expect(moment(post.expiresAt).isSame(at)).toBe(true)
+  expect(dayjs(post.expiresAt).isSame(expectedExpiresAt)).toBe(true)
 })
 
 test('Adding and clearing Post.expiresAt removes and adds it to users stories', async () => {
@@ -218,7 +219,7 @@ test('Adding and clearing Post.expiresAt removes and adds it to users stories', 
   expect(resp.data.user.stories.items).toHaveLength(0)
 
   // set the post's expiresAt, changing it to a story
-  const expiresAt = moment().add(moment.duration('PT1H')).toISOString()
+  const expiresAt = dayjs().add(dayjs.duration('PT1H')).toISOString()
   resp = await ourClient.mutate({mutation: mutations.editPostExpiresAt, variables: {postId, expiresAt}})
   expect(resp.data.editPostExpiresAt.postId).toBe(postId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
@@ -299,7 +300,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   resp = await theirClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(theirPostId)
   expect(resp.data.addPost.expiresAt).toBeTruthy()
-  const at = moment(resp.data.addPost.expiresAt)
+  const expiresAt = dayjs(resp.data.addPost.expiresAt)
 
   // other adds a post that is also a story
   variables = {postId: otherPostId, imageData, lifetime: 'PT2H'}
@@ -316,8 +317,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   })
 
   // edit their post's expiration date to a date further in the future
-  at.add(moment.duration('PT2H'))
-  variables = {postId: theirPostId, expiresAt: at.toISOString()}
+  variables = {postId: theirPostId, expiresAt: expiresAt.add(dayjs.duration('PT2H')).toISOString()}
   resp = await theirClient.mutate({mutation: mutations.editPostExpiresAt, variables})
   expect(resp.data.editPostExpiresAt.postId).toBe(theirPostId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()
@@ -329,8 +329,7 @@ test('Changing Post.expiresAt is reflected in first followed stories', async () 
   expect(resp.data.self.followedUsersWithStories.items[1].userId).toBe(theirUserId)
 
   // edit their post's expiration date to a date closer in the future
-  at.subtract(moment.duration('PT2H'))
-  variables = {postId: theirPostId, expiresAt: at.toISOString()}
+  variables = {postId: theirPostId, expiresAt: expiresAt.toISOString()}
   resp = await theirClient.mutate({mutation: mutations.editPostExpiresAt, variables})
   expect(resp.data.editPostExpiresAt.postId).toBe(theirPostId)
   expect(resp.data.editPostExpiresAt.expiresAt).toBeTruthy()

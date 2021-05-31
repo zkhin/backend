@@ -1,5 +1,5 @@
+const dayjs = require('dayjs')
 const got = require('got')
-const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually, generateRandomJpeg, sleep} = require('../utils')
@@ -27,9 +27,9 @@ test('Add, read, and delete an album', async () => {
   // we add an album with minimal options
   const albumId = uuidv4()
   const orgAlbum = await (async () => {
-    const before = moment().toISOString()
+    const before = dayjs().toISOString()
     const resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'album name'}})
-    const after = moment().toISOString()
+    const after = dayjs().toISOString()
     return {before, album: resp.data.addAlbum, after}
   })().then(({before, album, after}) => {
     expect(album.albumId).toBe(albumId)

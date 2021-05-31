@@ -1,9 +1,11 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
+const duration = require('dayjs/plugin/duration')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually, generateRandomJpeg} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
+dayjs.extend(duration)
 let anonClient
 const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -70,9 +72,8 @@ test('Add post with expiration', async () => {
   expect(post.text).toBe(text)
   expect(post.postedAt).toBeTruthy()
   expect(post.expiresAt).toBeTruthy()
-  const expected_expires_at = moment(post.postedAt)
-  expected_expires_at.add(moment.duration(lifetime))
-  const expires_at = moment(post.expiresAt)
+  const expected_expires_at = dayjs(post.postedAt).add(dayjs.duration(lifetime))
+  const expires_at = dayjs(post.expiresAt)
   expect(expires_at.isSame(expected_expires_at)).toBe(true)
 })
 

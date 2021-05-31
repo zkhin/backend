@@ -1,6 +1,6 @@
+const dayjs = require('dayjs')
 const fs = require('fs')
 const got = require('got')
-const moment = require('moment')
 const path = require('path')
 const tough = require('tough-cookie')
 const {v4: uuidv4} = require('uuid')
@@ -78,7 +78,7 @@ test(
 
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
     const cookieJar = new tough.CookieJar()
-    const expires = moment(cookies.expiresAt).toDate().toUTCString()
+    const expires = dayjs(cookies.expiresAt).toDate().toUTCString()
     const cookieProps = `Secure; Domain=${cookies.domain}; Path=${cookies.path}; Expires=${expires}`
     cookieJar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, videoUrl)
     cookieJar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, videoUrl)

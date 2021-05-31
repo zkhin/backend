@@ -1,5 +1,5 @@
+const dayjs = require('dayjs')
 const fs = require('fs')
-const moment = require('moment')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
@@ -47,7 +47,7 @@ test('Chat message triggers cannot be called from external graphql client', asyn
       type: 'ADDED',
       text: 'lore ipsum',
       textTaggedUserIds: [],
-      createdAt: moment().toISOString(),
+      createdAt: dayjs().toISOString(),
     },
   }
   await expect(ourClient.mutate({mutation, variables})).rejects.toThrow(/ClientError: Access denied/)

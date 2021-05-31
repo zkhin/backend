@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 const AWS = require('aws-sdk')
+const dayjs = require('dayjs')
 const dotenv = require('dotenv')
 const fs = require('fs')
 const jwtDecode = require('jwt-decode')
-const moment = require('moment')
 const prmt = require('prompt')
 const util = require('util')
 
@@ -124,7 +124,7 @@ const trackWithPinpoint = async (endpointId, tokens, creds) => {
             Events: {
               [eventType]: {
                 EventType: eventType,
-                Timestamp: moment().toISOString(),
+                Timestamp: dayjs().toISOString(),
               },
             },
           },

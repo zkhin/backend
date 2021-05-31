@@ -1,4 +1,4 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito} = require('../../../utils')
@@ -123,9 +123,9 @@ describe('cognito-only user', () => {
     test('Mutation.createCognitoOnlyUser succeds if identity pool id and user pool "username" match', async () => {
       // pick a random username, register it, check all is good!
       const username = cognito.generateUsername()
-      const before = moment().toISOString()
+      const before = dayjs().toISOString()
       let resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
-      const after = moment().toISOString()
+      const after = dayjs().toISOString()
       expect(resp['errors']).toBeUndefined()
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
       expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)

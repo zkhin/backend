@@ -263,7 +263,7 @@ test('Deleting comments in the presence of post views adjusts comment counts on 
     .mutate({mutation: mutations.addComment, variables: {commentId: commentId1, postId, text: 'lore'}})
     .then(({data}) => expect(data.addComment.commentId).toBe(commentId1))
 
-  // give the the system a moment to count that comment
+  // verify processing of that comment
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.post, variables: {postId}})
     expect(data.post.postId).toBe(postId)
