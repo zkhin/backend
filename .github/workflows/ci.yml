@@ -67,7 +67,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: real-main/.venv
-        key: venv-${{ runner.os }}-${{ hashFiles('real-auth/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ hashFiles('real-main/poetry.lock') }}
 
     - name: Install python packages
       if: steps.load-cached-venv.outputs.cache-hit != 'true'
