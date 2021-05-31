@@ -2,6 +2,5 @@
   "maxWorkers": 8,
   "testPathIgnorePatterns": ["\\.sequential\\.test\\.js$"],
   "testRegex": "/tests/.*\\.test\\.js$",
-  "testRunner": "jest-circus/runner",
   "testTimeout": 60000
 }

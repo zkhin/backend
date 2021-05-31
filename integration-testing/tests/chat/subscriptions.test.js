@@ -2,8 +2,6 @@ const fs = require('fs')
 const moment = require('moment')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
-// the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
-global.WebSocket = require('ws')
 
 const {cognito, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
