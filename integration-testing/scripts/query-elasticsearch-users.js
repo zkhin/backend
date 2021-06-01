@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dotenv = require('dotenv')
-const elasticsearch = require('elasticsearch')
-const httpAwsEs = require('http-aws-es')
+import AWS from 'aws-sdk'
+import dotenv from 'dotenv'
+import elasticsearch from 'elasticsearch'
+import httpAwsEs from 'http-aws-es'
 
 dotenv.config()
 AWS.config = new AWS.Config()

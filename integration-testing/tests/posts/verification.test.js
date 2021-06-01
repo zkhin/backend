@@ -1,14 +1,13 @@
-const fs = require('fs')
-const got = require('got')
-const path = require('path')
-const {v4: uuidv4} = require('uuid')
+import fs from 'fs'
+import got from 'got'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, fixturePath} from '../../utils'
+import {mutations, queries} from '../../schema'
 
-const smallGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const smallGrantData = fs.readFileSync(fixturePath('grant.jpg'))
 const smallGrantDataB64 = new Buffer.from(smallGrantData).toString('base64')
-const bigGrantData = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'big-grant.jpg'))
+const bigGrantData = fs.readFileSync(fixturePath('big-grant.jpg'))
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const loginCache = new cognito.AppSyncLoginCache()
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dotenv = require('dotenv')
-const fs = require('fs')
-const prmt = require('prompt')
+import AWS from 'aws-sdk'
+import dotenv from 'dotenv'
+import fs from 'fs'
+import prmt from 'prompt'
 
 dotenv.config()
 

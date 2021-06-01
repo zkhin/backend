@@ -1,7 +1,7 @@
-const {v4: uuidv4} = require('uuid')
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, generateRandomJpeg} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 let anonClient
 const imageBytes = generateRandomJpeg(300, 200)

@@ -1,8 +1,8 @@
-const got = require('got')
-const {v4: uuidv4} = require('uuid')
+import got from 'got'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, generateRandomJpeg, sleep} = require('../../utils')
-const {mutations, subscriptions} = require('../../schema')
+import {cognito, generateRandomJpeg, sleep} from '../../utils'
+import {mutations, subscriptions} from '../../schema'
 
 const imageHeaders = {'Content-Type': 'image/jpeg'}
 const imageBytes = generateRandomJpeg(8, 8)

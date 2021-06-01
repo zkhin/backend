@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dotenv = require('dotenv')
-const prmt = require('prompt')
-const pwdGenerator = require('generate-password')
+import AWS from 'aws-sdk'
+import dotenv from 'dotenv'
+import prmt from 'prompt'
+import pwdGenerator from 'generate-password'
 
 dotenv.config()
 

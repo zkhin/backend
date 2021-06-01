@@ -1,5 +1,5 @@
-const {cognito, shortRandomString} = require('../../utils')
-const {mutations} = require('../../schema')
+import {cognito, shortRandomString} from '../../utils'
+import {mutations} from '../../schema'
 
 const AuthFlow = cognito.AuthFlow
 const loginCache = new cognito.AppSyncLoginCache()

@@ -1,7 +1,7 @@
-const AWS = require('aws-sdk')
-const dotenv = require('dotenv')
-const pwdGenerator = require('generate-password')
-const {v4: uuidv4} = require('uuid')
+import AWS from 'aws-sdk'
+import dotenv from 'dotenv'
+import pwdGenerator from 'generate-password'
+import {v4 as uuidv4} from 'uuid'
 
 dotenv.config()
 

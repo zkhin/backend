@@ -2,11 +2,11 @@
  * This test suite cannot run in parrallel with others because it
  * depends on global state - namely the 'real' user.
  */
-const {v4: uuidv4} = require('uuid')
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
-const realUser = require('../../utils/real-user')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, generateRandomJpeg, sleep} from '../../utils'
+import {realUser} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')

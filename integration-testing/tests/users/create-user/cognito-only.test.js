@@ -1,8 +1,8 @@
-const dayjs = require('dayjs')
-const {v4: uuidv4} = require('uuid')
+import dayjs from 'dayjs'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito} = require('../../../utils')
-const {mutations} = require('../../../schema')
+import {cognito} from '../../../utils'
+import {mutations} from '../../../schema'
 
 describe('cognito-only user', () => {
   let client, accessToken

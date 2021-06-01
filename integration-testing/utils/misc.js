@@ -1,13 +1,14 @@
 /* Misc utils functions for use in tests */
 
-const jpeg = require('jpeg-js')
+import jpeg from 'jpeg-js'
+import path from 'path'
 
-const {eventually} = require('./timing')
-const {mutations, queries} = require('../schema')
+import {eventually} from './timing'
+import {mutations, queries} from '../schema'
 
-const shortRandomString = () => Math.random().toString(36).substring(7)
+export const shortRandomString = () => Math.random().toString(36).substring(7)
 
-const generateRandomJpeg = (width, height) => {
+export const generateRandomJpeg = (width, height) => {
   const buf = Buffer.alloc(width * height * 4)
   let i = 0
   while (i < buf.length) {
@@ -22,7 +23,7 @@ const generateRandomJpeg = (width, height) => {
   return jpeg.encode(imgData, quality).data
 }
 
-const deleteDefaultCard = async (client) => {
+export const deleteDefaultCard = async (client) => {
   const cardId = await eventually(async () => {
     const {data} = await client.query({query: queries.self})
     expect(data.self.cards.items).toHaveLength(1)
@@ -35,8 +36,6 @@ const deleteDefaultCard = async (client) => {
   })
 }
 
-module.exports = {
-  deleteDefaultCard,
-  generateRandomJpeg,
-  shortRandomString,
-}
+export const repoRoot = path.resolve(new URL(import.meta.url).pathname, '../../../')
+export const moduleRoot = path.resolve(new URL(import.meta.url).pathname, '../../')
+export const fixturePath = (filename) => path.resolve(moduleRoot, 'fixtures', filename)

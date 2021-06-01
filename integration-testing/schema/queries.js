@@ -1,14 +1,14 @@
-const gql = require('graphql-tag')
+import gql from 'graphql-tag'
 
-const fragments = require('./fragments.js')
+import * as fragments from './fragments.js'
 
-module.exports.usernameStatus = gql`
+export const usernameStatus = gql`
   query UsernameStatus($username: String!) {
     usernameStatus(username: $username)
   }
 `
 
-module.exports.self = gql`
+export const self = gql`
   query Self($anonymouslyLikedPostsLimit: Int, $onymouslyLikedPostsLimit: Int, $albumsReverse: Boolean) {
     self {
       userId
@@ -106,7 +106,7 @@ module.exports.self = gql`
   ${fragments.simpleUserFields}
 `
 
-module.exports.user = gql`
+export const user = gql`
   query User($userId: ID!) {
     user(userId: $userId) {
       userId
@@ -202,7 +202,7 @@ module.exports.user = gql`
   ${fragments.simpleUserFields}
 `
 
-module.exports.searchUsers = gql`
+export const searchUsers = gql`
   query SearchUsers($searchToken: String!) {
     searchUsers(searchToken: $searchToken) {
       items {
@@ -217,7 +217,7 @@ module.exports.searchUsers = gql`
   }
 `
 
-module.exports.findContacts = gql`
+export const findContacts = gql`
   query FindContacts($contacts: [ContactInput!]!) {
     findContacts(contacts: $contacts) {
       contactId
@@ -231,7 +231,7 @@ module.exports.findContacts = gql`
   }
 `
 
-module.exports.post = gql`
+export const post = gql`
   query Post($postId: ID!, $onymouslyLikedByLimit: Int, $commentsReverse: Boolean) {
     post(postId: $postId) {
       postId
@@ -305,7 +305,7 @@ module.exports.post = gql`
   ${fragments.video}
 `
 
-module.exports.findPosts = gql`
+export const findPosts = gql`
   query FindPosts($keywords: String!) {
     findPosts(keywords: $keywords) {
       items {
@@ -326,7 +326,7 @@ module.exports.findPosts = gql`
   }
 `
 
-module.exports.similarPosts = gql`
+export const similarPosts = gql`
   query SimilarPosts($postId: ID!) {
     similarPosts(postId: $postId) {
       items {
@@ -347,13 +347,13 @@ module.exports.similarPosts = gql`
   }
 `
 
-module.exports.searchKeywords = gql`
+export const searchKeywords = gql`
   query SearchKeywords($keyword: String!) {
     searchKeywords(keyword: $keyword)
   }
 `
 
-module.exports.postsThree = gql`
+export const postsThree = gql`
   query Posts($postId1: ID!, $postId2: ID!, $postId3: ID!) {
     post1: post(postId: $postId1) {
       postId
@@ -370,7 +370,7 @@ module.exports.postsThree = gql`
   }
 `
 
-module.exports.userPosts = gql`
+export const userPosts = gql`
   query UserPosts($userId: ID!, $postStatus: PostStatus, $postType: PostType) {
     user(userId: $userId) {
       posts(postStatus: $postStatus, postType: $postType) {
@@ -396,7 +396,7 @@ module.exports.userPosts = gql`
   }
 `
 
-module.exports.followedUsers = gql`
+export const followedUsers = gql`
   query FollowedUsers($userId: ID!, $followStatus: FollowStatus) {
     user(userId: $userId) {
       followedUsers(followStatus: $followStatus) {
@@ -410,7 +410,7 @@ module.exports.followedUsers = gql`
   }
 `
 
-module.exports.followerUsers = gql`
+export const followerUsers = gql`
   query FollowerUsers($userId: ID!, $followStatus: FollowStatus) {
     user(userId: $userId) {
       followerUsers(followStatus: $followStatus) {
@@ -424,7 +424,7 @@ module.exports.followerUsers = gql`
   }
 `
 
-module.exports.ourFollowedUsers = gql`
+export const ourFollowedUsers = gql`
   query OurFollowedUsers($followStatus: FollowStatus) {
     self {
       followedUsers(followStatus: $followStatus) {
@@ -443,7 +443,7 @@ module.exports.ourFollowedUsers = gql`
   }
 `
 
-module.exports.ourFollowerUsers = gql`
+export const ourFollowerUsers = gql`
   query OurFollowerUsers($followStatus: FollowStatus) {
     self {
       followerUsers(followStatus: $followStatus) {
@@ -457,7 +457,7 @@ module.exports.ourFollowerUsers = gql`
   }
 `
 
-module.exports.userStories = gql`
+export const userStories = gql`
   query UserStories($userId: ID!) {
     user(userId: $userId) {
       stories {
@@ -480,7 +480,7 @@ module.exports.userStories = gql`
   }
 `
 
-module.exports.selfFeed = gql`
+export const selfFeed = gql`
   query SelfFeed($limit: Int) {
     self {
       feed(limit: $limit) {
@@ -506,7 +506,7 @@ module.exports.selfFeed = gql`
   }
 `
 
-module.exports.allTrending = gql`
+export const allTrending = gql`
   query AllTrending {
     trendingUsers {
       items {
@@ -521,7 +521,7 @@ module.exports.allTrending = gql`
   }
 `
 
-module.exports.trendingUsers = gql`
+export const trendingUsers = gql`
   query TrendingUsers($limit: Int) {
     trendingUsers(limit: $limit) {
       items {
@@ -532,7 +532,7 @@ module.exports.trendingUsers = gql`
   }
 `
 
-module.exports.trendingPosts = gql`
+export const trendingPosts = gql`
   query TrendingPosts($viewedStatus: ViewedStatus, $limit: Int, $isVerified: Boolean, $nextToken: String = null) {
     trendingPosts(limit: $limit, nextToken: $nextToken) {
       items(viewedStatus: $viewedStatus, isVerified: $isVerified) {
@@ -550,7 +550,7 @@ module.exports.trendingPosts = gql`
   }
 `
 
-module.exports.album = gql`
+export const album = gql`
   query Album($albumId: ID!) {
     album(albumId: $albumId) {
       ...AlbumFragment
@@ -559,7 +559,7 @@ module.exports.album = gql`
   ${fragments.album}
 `
 
-module.exports.chat = gql`
+export const chat = gql`
   query Chat($chatId: ID!, $reverse: Boolean) {
     chat(chatId: $chatId) {
       ...ChatFragment
@@ -576,7 +576,7 @@ module.exports.chat = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.chatUsers = gql`
+export const chatUsers = gql`
   query Chat($chatId: ID!, $excludeUserId: ID) {
     chat(chatId: $chatId) {
       chatId
@@ -590,7 +590,7 @@ module.exports.chatUsers = gql`
   }
 `
 
-module.exports.matchedUsers = gql`
+export const matchedUsers = gql`
   query MatchedUsers($matchStatus: MatchStatus!) {
     self {
       userId
@@ -603,7 +603,7 @@ module.exports.matchedUsers = gql`
   }
 `
 
-module.exports.allMatchedUsersForUser = gql`
+export const allMatchedUsersForUser = gql`
   query MatchedUsers($userId: ID!) {
     user(userId: $userId) {
       userId
@@ -631,7 +631,7 @@ module.exports.allMatchedUsersForUser = gql`
   }
 `
 
-module.exports.swipedRightUsers = gql`
+export const swipedRightUsers = gql`
   query SwipedRightUsers {
     swipedRightUsers {
       userId

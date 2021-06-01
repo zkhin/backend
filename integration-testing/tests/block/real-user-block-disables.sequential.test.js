@@ -3,9 +3,8 @@
  * depends on global state - namely the 'real' user.
  */
 
-const {cognito, eventually} = require('../../utils')
-const realUser = require('../../utils/real-user')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, realUser} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 const loginCache = new cognito.AppSyncLoginCache()
 let realLogin

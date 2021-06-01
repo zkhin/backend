@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dayjs = require('dayjs')
-const dotenv = require('dotenv')
-const prmt = require('prompt')
-const util = require('util')
+import AWS from 'aws-sdk'
+import dayjs from 'dayjs'
+import dotenv from 'dotenv'
+import prmt from 'prompt'
+import util from 'util'
 
 dotenv.config()
 

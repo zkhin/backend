@@ -1,20 +1,19 @@
-const exifReader = require('exif-reader')
-const fs = require('fs')
-const got = require('got')
-const path = require('path')
-const requestImageSize = require('request-image-size')
-const sharp = require('sharp')
-const {v4: uuidv4} = require('uuid')
+import exifReader from 'exif-reader'
+import fs from 'fs'
+import got from 'got'
+import requestImageSize from 'request-image-size'
+import sharp from 'sharp'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, fixturePath, generateRandomJpeg} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 const jpegHeight = 32
 const jpegWidth = 64
 const jpegBytes = generateRandomJpeg(jpegWidth, jpegHeight)
 const jpegData = new Buffer.from(jpegBytes).toString('base64')
 const jpegHeaders = {'Content-Type': 'image/jpeg'}
-const grantBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+const grantBytes = fs.readFileSync(fixturePath('grant.jpg'))
 const grantData = new Buffer.from(grantBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
 

@@ -1,8 +1,8 @@
-const dayjs = require('dayjs')
-const {v4: uuidv4} = require('uuid')
+import dayjs from 'dayjs'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, sleep} = require('../../utils')
-const {mutations, queries, subscriptions} = require('../../schema')
+import {cognito, eventually, sleep} from '../../utils'
+import {mutations, queries, subscriptions} from '../../schema'
 
 const loginCache = new cognito.AppSyncLoginCache()
 

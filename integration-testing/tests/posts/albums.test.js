@@ -1,9 +1,9 @@
-const dayjs = require('dayjs')
-const got = require('got')
-const {v4: uuidv4} = require('uuid')
+import dayjs from 'dayjs'
+import got from 'got'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, generateRandomJpeg, sleep} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')

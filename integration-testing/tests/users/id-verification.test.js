@@ -1,12 +1,11 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
 
-const {cognito} = require('../../utils')
-const {mutations} = require('../../schema')
+import {cognito, fixturePath} from '../../utils'
+import {mutations} from '../../schema'
 
-const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'dl.png'))
+const imageBytes = fs.readFileSync(fixturePath('dl.png'))
 const imageData = new Buffer.from(imageBytes).toString('base64')
-const fakeImageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.png'))
+const fakeImageBytes = fs.readFileSync(fixturePath('grant.png'))
 const fakeImageData = new Buffer.from(fakeImageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
 

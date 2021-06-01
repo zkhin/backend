@@ -1,8 +1,7 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
 
-const {cognito /*, eventually*/} = require('../utils')
-const {mutations /*, queries*/} = require('../schema')
+import {cognito /*, eventually*/, fixturePath} from '../utils'
+import {mutations /*, queries*/} from '../schema'
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -12,9 +11,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-const validSandboxReceipt = fs
-  .readFileSync(path.join(__dirname, '..', 'fixtures', 'appstore.receipt'), 'utf-8')
-  .trim()
+const validSandboxReceipt = fs.readFileSync(fixturePath('appstore.receipt'), 'utf-8').trim()
 
 test('Upload app store receipt data success', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()

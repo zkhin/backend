@@ -1,8 +1,8 @@
-const crypto = require('crypto')
-const pwdGenerator = require('generate-password')
+import crypto from 'crypto'
+import pwdGenerator from 'generate-password'
 
-const {cognito, sleep} = require('../../utils')
-const {mutations} = require('../../schema')
+import {cognito, sleep} from '../../utils'
+import {mutations} from '../../schema'
 
 let anonClient, anonUserId
 const loginCache = new cognito.AppSyncLoginCache()

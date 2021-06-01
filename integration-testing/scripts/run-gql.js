@@ -2,20 +2,22 @@
 
 /* eslint no-unused-vars: 0 */
 
-const AWS = require('aws-sdk')
-const {default: AWSAppSyncClient, createAppSyncLink} = require('aws-appsync')
-const {setContext} = require('apollo-link-context')
-const {ApolloLink} = require('apollo-link')
-const {createHttpLink} = require('apollo-link-http')
-const dotenv = require('dotenv')
-const fs = require('fs')
-const gql = require('graphql-tag')
-const util = require('util')
-const {v4: uuidv4} = require('uuid')
-global.fetch = require('cross-fetch')
+import AWS from 'aws-sdk'
+import {AWSAppSyncClient, createAppSyncLink} from 'aws-appsync'
+import {setContext} from 'apollo-link-context'
+import {ApolloLink} from 'apollo-link'
+import {createHttpLink} from 'apollo-link-http'
+import dotenv from 'dotenv'
+import fetch from 'cross-fetch'
+import fs from 'fs'
+import gql from 'graphql-tag'
+import util from 'util'
+import {v4 as uuidv4} from 'uuid'
 
-const {mutations, queries} = require('../schema')
+import * as mutations from '../schema/mutations.js'
+import * as queries from '../schema/queries.js'
 
+global.fetch = fetch
 dotenv.config()
 AWS.config = new AWS.Config()
 

@@ -1,9 +1,8 @@
-const fs = require('fs')
-const path = require('path')
-const {v4: uuidv4} = require('uuid')
+import fs from 'fs'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, fixturePath, generateRandomJpeg} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -83,7 +82,7 @@ test('Add a post that shows up as story', async () => {
 
 test('Add posts with images show up in stories', async () => {
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  const imageBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'grant.jpg'))
+  const imageBytes = fs.readFileSync(fixturePath('grant.jpg'))
   const imageData = new Buffer.from(imageBytes).toString('base64')
 
   // we add a image post, give s3 trigger a second to fire

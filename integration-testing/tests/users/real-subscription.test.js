@@ -1,8 +1,8 @@
-const dayjs = require('dayjs')
-const duration = require('dayjs/plugin/duration')
+import dayjs from 'dayjs'
+import duration from 'dayjs/plugin/duration'
 
-const {cognito} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 dayjs.extend(duration)
 const loginCache = new cognito.AppSyncLoginCache()

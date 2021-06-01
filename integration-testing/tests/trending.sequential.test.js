@@ -4,11 +4,11 @@
  * Any call to addPost() in general will affect the trending indexes.
  */
 
-const got = require('got')
-const {v4: uuidv4} = require('uuid')
+import got from 'got'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg, sleep} = require('../utils')
-const {mutations, queries} = require('../schema')
+import {cognito, eventually, generateRandomJpeg, sleep} from '../utils'
+import {mutations, queries} from '../schema'
 
 const imageData = generateRandomJpeg(8, 8)
 const imageDataB64 = new Buffer.from(imageData).toString('base64')

@@ -1,7 +1,7 @@
-const {v4: uuidv4} = require('uuid')
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito} = require('../../utils')
-const {mutations} = require('../../schema')
+import {cognito} from '../../utils'
+import {mutations} from '../../schema'
 
 const loginCache = new cognito.AppSyncLoginCache()
 

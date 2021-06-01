@@ -1,28 +1,26 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dotenv = require('dotenv')
-const elasticsearch = require('elasticsearch')
-const httpAwsEs = require('http-aws-es')
+import AWS from 'aws-sdk'
+import dotenv from 'dotenv'
+import elasticsearch from 'elasticsearch'
+import httpAwsEs from 'http-aws-es'
 
 dotenv.config()
-AWS.config = new AWS.Config()  // https://github.com/TheDeveloper/http-aws-es/issues/74
+AWS.config = new AWS.Config() // https://github.com/TheDeveloper/http-aws-es/issues/74
 
 const endpoint = process.env.ELASTICSEARCH_ENDPOINT
 if (endpoint === undefined) throw new Error('Env var ELASTICSEARCH_ENDPOINT must be defined')
 
-
 const main = async () => {
-
   const esClient = elasticsearch.Client({
-    hosts: [ 'https://' + endpoint ],
+    hosts: ['https://' + endpoint],
     connectionClass: httpAwsEs,
   })
 
   let resp = await esClient.search({
     index: 'users',
     body: {
-      query: { match_all: { } },
+      query: {match_all: {}},
     },
   })
 
@@ -32,13 +30,12 @@ const main = async () => {
   resp = await esClient.deleteByQuery({
     index: 'users',
     body: {
-      query: { match_all: { } },
+      query: {match_all: {}},
     },
   })
 
   const totalDeleted = resp.total
   console.log(`Deleted ${totalDeleted} documents.`)
-
 }
 
 main()

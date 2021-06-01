@@ -1,7 +1,7 @@
-const dotenv = require('dotenv')
-const got = require('got')
+import dotenv from 'dotenv'
+import got from 'got'
 
-const {cognito} = require('../../utils')
+import {cognito} from '../../utils'
 
 dotenv.config()
 

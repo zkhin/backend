@@ -1,7 +1,7 @@
-const got = require('got')
+import got from 'got'
 
-const {cognito} = require('../../../utils')
-const {mutations} = require('../../../schema')
+import {cognito} from '../../../utils'
+import {mutations} from '../../../schema'
 
 /* Run me as a one-off, as you'll have to get a valid google id token
  * for our app. Can be generated from https://developers.google.com/oauthplayground/

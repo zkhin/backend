@@ -1,5 +1,5 @@
-const {cognito} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 let anonClient, anonUserId
 const loginCache = new cognito.AppSyncLoginCache()

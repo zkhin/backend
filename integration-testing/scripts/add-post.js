@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const AWSAppSyncClient = require('aws-appsync').default
-const dayjs = require('dayjs')
-const dotenv = require('dotenv')
-const fs = require('fs')
-const gql = require('graphql-tag')
-const got = require('got')
-const http = require('http')
-const path = require('path')
-const prmt = require('prompt')
-const tough = require('tough-cookie')
-const {v4: uuidv4} = require('uuid')
-global.fetch = require('cross-fetch')
+import AWS from 'aws-sdk'
+import {AWSAppSyncClient} from 'aws-appsync'
+import dayjs from 'dayjs'
+import dotenv from 'dotenv'
+import fetch from 'cross-fetch'
+import fs from 'fs'
+import gql from 'graphql-tag'
+import got from 'got'
+import http from 'http'
+import path from 'path'
+import prmt from 'prompt'
+import tough from 'tough-cookie'
+import {v4 as uuidv4} from 'uuid'
 
+global.fetch = fetch
 dotenv.config()
 AWS.config = new AWS.Config()
 

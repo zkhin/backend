@@ -1,8 +1,8 @@
-const gql = require('graphql-tag')
+import gql from 'graphql-tag'
 
-const fragments = require('./fragments.js')
+import * as fragments from './fragments.js'
 
-module.exports.createAnonymousUser = gql`
+export const createAnonymousUser = gql`
   mutation CreateAnonymousUser {
     createAnonymousUser {
       AccessToken
@@ -14,7 +14,7 @@ module.exports.createAnonymousUser = gql`
   }
 `
 
-module.exports.createCognitoOnlyUser = gql`
+export const createCognitoOnlyUser = gql`
   mutation CreateCognitoOnlyUser($username: String!, $fullName: String) {
     createCognitoOnlyUser(username: $username, fullName: $fullName) {
       userId
@@ -27,7 +27,7 @@ module.exports.createCognitoOnlyUser = gql`
   }
 `
 
-module.exports.createAppleUser = gql`
+export const createAppleUser = gql`
   mutation CreateAppleUser($username: String!, $fullName: String, $appleIdToken: String!) {
     createAppleUser(username: $username, fullName: $fullName, appleIdToken: $appleIdToken) {
       userId
@@ -38,7 +38,7 @@ module.exports.createAppleUser = gql`
   }
 `
 
-module.exports.createFacebookUser = gql`
+export const createFacebookUser = gql`
   mutation CreateFacebookUser($username: String!, $fullName: String, $facebookAccessToken: String!) {
     createFacebookUser(username: $username, fullName: $fullName, facebookAccessToken: $facebookAccessToken) {
       userId
@@ -49,7 +49,7 @@ module.exports.createFacebookUser = gql`
   }
 `
 
-module.exports.createGoogleUser = gql`
+export const createGoogleUser = gql`
   mutation CreateGoogleUser($username: String!, $fullName: String, $googleIdToken: String!) {
     createGoogleUser(username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {
       userId
@@ -60,7 +60,7 @@ module.exports.createGoogleUser = gql`
   }
 `
 
-module.exports.setPassword = gql`
+export const setPassword = gql`
   mutation SetPassword($encryptedPassword: String!) {
     setUserPassword(encryptedPassword: $encryptedPassword) {
       userId
@@ -69,7 +69,7 @@ module.exports.setPassword = gql`
   }
 `
 
-module.exports.setUsername = gql`
+export const setUsername = gql`
   mutation SetUsername($username: String!) {
     setUserDetails(username: $username) {
       userId
@@ -78,7 +78,7 @@ module.exports.setUsername = gql`
   }
 `
 
-module.exports.setUserPrivacyStatus = gql`
+export const setUserPrivacyStatus = gql`
   mutation SetUserPrivacyStatus($privacyStatus: PrivacyStatus!) {
     setUserDetails(privacyStatus: $privacyStatus) {
       userId
@@ -89,7 +89,7 @@ module.exports.setUserPrivacyStatus = gql`
   }
 `
 
-module.exports.setUserAcceptedEULAVersion = gql`
+export const setUserAcceptedEULAVersion = gql`
   mutation SetUserEULAVersion($version: String!) {
     setUserAcceptedEULAVersion(version: $version) {
       userId
@@ -98,7 +98,7 @@ module.exports.setUserAcceptedEULAVersion = gql`
   }
 `
 
-module.exports.setUserAPNSToken = gql`
+export const setUserAPNSToken = gql`
   mutation SetUserAPNSToken($token: String!) {
     setUserAPNSToken(token: $token) {
       userId
@@ -106,7 +106,7 @@ module.exports.setUserAPNSToken = gql`
   }
 `
 
-module.exports.setUserFollowCountsHidden = gql`
+export const setUserFollowCountsHidden = gql`
   mutation SetUserFollowCountsHidden($value: Boolean!) {
     setUserDetails(followCountsHidden: $value) {
       userId
@@ -115,7 +115,7 @@ module.exports.setUserFollowCountsHidden = gql`
   }
 `
 
-module.exports.setUserViewCountsHidden = gql`
+export const setUserViewCountsHidden = gql`
   mutation SetUserViewCountsHidden($value: Boolean!) {
     setUserDetails(viewCountsHidden: $value) {
       userId
@@ -124,7 +124,7 @@ module.exports.setUserViewCountsHidden = gql`
   }
 `
 
-module.exports.setUserDetails = gql`
+export const setUserDetails = gql`
   mutation SetUserDetails(
     $bio: String
     $fullName: String
@@ -173,7 +173,7 @@ module.exports.setUserDetails = gql`
   ${fragments.image}
 `
 
-module.exports.setUserLanguageCode = gql`
+export const setUserLanguageCode = gql`
   mutation SetUserLanguageCode($languageCode: String) {
     setUserDetails(languageCode: $languageCode) {
       userId
@@ -182,7 +182,7 @@ module.exports.setUserLanguageCode = gql`
   }
 `
 
-module.exports.setThemeCode = gql`
+export const setThemeCode = gql`
   mutation SetThemeCode($themeCode: String!) {
     setThemeCode(themeCode: $themeCode) {
       userId
@@ -191,7 +191,7 @@ module.exports.setThemeCode = gql`
   }
 `
 
-module.exports.setUserMentalHealthSettings = gql`
+export const setUserMentalHealthSettings = gql`
   mutation SetUserMentalHealthSettings(
     $adsDisabled: Boolean
     $commentsDisabled: Boolean
@@ -216,7 +216,7 @@ module.exports.setUserMentalHealthSettings = gql`
   }
 `
 
-module.exports.setUserLocation = gql`
+export const setUserLocation = gql`
   mutation SetUserLocation($latitude: Float!, $longitude: Float!, $accuracy: Int) {
     setUserDetails(location: {latitude: $latitude, longitude: $longitude, accuracy: $accuracy}) {
       userId
@@ -229,7 +229,7 @@ module.exports.setUserLocation = gql`
   }
 `
 
-module.exports.setUserAgeRange = gql`
+export const setUserAgeRange = gql`
   mutation SetUserAgeRange($min: Int, $max: Int) {
     setUserDetails(matchAgeRange: {min: $min, max: $max}) {
       userId
@@ -241,7 +241,7 @@ module.exports.setUserAgeRange = gql`
   }
 `
 
-module.exports.setUserDatingStatus = gql`
+export const setUserDatingStatus = gql`
   mutation SetUserDatingStatus($status: DatingStatus!) {
     setUserDatingStatus(status: $status) {
       userId
@@ -250,7 +250,7 @@ module.exports.setUserDatingStatus = gql`
   }
 `
 
-module.exports.startChangeUserEmail = gql`
+export const startChangeUserEmail = gql`
   mutation StartChangeUserEmail($email: AWSEmail!) {
     startChangeUserEmail(email: $email) {
       userId
@@ -261,7 +261,7 @@ module.exports.startChangeUserEmail = gql`
   }
 `
 
-module.exports.startChangeUserPhoneNumber = gql`
+export const startChangeUserPhoneNumber = gql`
   mutation StartChangeUserPhoneNumber($phoneNumber: AWSPhone!) {
     startChangeUserPhoneNumber(phoneNumber: $phoneNumber) {
       userId
@@ -272,7 +272,7 @@ module.exports.startChangeUserPhoneNumber = gql`
   }
 `
 
-module.exports.updateUserContactInfo = gql`
+export const updateUserContactInfo = gql`
   mutation SetUserContactInfo($accessToken: String!) {
     updateUserContactInfo(authProvider: COGNITO, accessToken: $accessToken) {
       userId
@@ -282,7 +282,7 @@ module.exports.updateUserContactInfo = gql`
   }
 `
 
-module.exports.disableUser = gql`
+export const disableUser = gql`
   mutation DisableUser {
     disableUser {
       userId
@@ -292,7 +292,7 @@ module.exports.disableUser = gql`
   }
 `
 
-module.exports.deleteUser = gql`
+export const deleteUser = gql`
   mutation DeleteUser {
     deleteUser {
       userId
@@ -302,7 +302,7 @@ module.exports.deleteUser = gql`
   }
 `
 
-module.exports.grantUserSubscriptionBonus = gql`
+export const grantUserSubscriptionBonus = gql`
   mutation GrantUserSubscriptionBonus($grantCode: SubscriptionGrantCode) {
     grantUserSubscriptionBonus(grantCode: $grantCode) {
       userId
@@ -312,7 +312,7 @@ module.exports.grantUserSubscriptionBonus = gql`
   }
 `
 
-module.exports.redeemPromotion = gql`
+export const redeemPromotion = gql`
   mutation RedeemPromotion($code: String!) {
     redeemPromotion(code: $code) {
       userId
@@ -322,13 +322,13 @@ module.exports.redeemPromotion = gql`
   }
 `
 
-module.exports.addAppStoreReceipt = gql`
+export const addAppStoreReceipt = gql`
   mutation AddAppStoreReceipt($receiptData: String!) {
     addAppStoreReceipt(receiptData: $receiptData)
   }
 `
 
-module.exports.resetUser = gql`
+export const resetUser = gql`
   mutation ResetUser($newUsername: String) {
     resetUser(newUsername: $newUsername) {
       userId
@@ -339,7 +339,7 @@ module.exports.resetUser = gql`
   }
 `
 
-module.exports.followUser = gql`
+export const followUser = gql`
   mutation FollowUser($userId: ID!) {
     followUser(userId: $userId) {
       userId
@@ -349,7 +349,7 @@ module.exports.followUser = gql`
   }
 `
 
-module.exports.unfollowUser = gql`
+export const unfollowUser = gql`
   mutation UnfollowUser($userId: ID!) {
     unfollowUser(userId: $userId) {
       userId
@@ -359,7 +359,7 @@ module.exports.unfollowUser = gql`
   }
 `
 
-module.exports.acceptFollowerUser = gql`
+export const acceptFollowerUser = gql`
   mutation AcceptFollowerUser($userId: ID!) {
     acceptFollowerUser(userId: $userId) {
       userId
@@ -369,7 +369,7 @@ module.exports.acceptFollowerUser = gql`
   }
 `
 
-module.exports.denyFollowerUser = gql`
+export const denyFollowerUser = gql`
   mutation DenyFollowerUser($userId: ID!) {
     denyFollowerUser(userId: $userId) {
       userId
@@ -379,7 +379,7 @@ module.exports.denyFollowerUser = gql`
   }
 `
 
-module.exports.blockUser = gql`
+export const blockUser = gql`
   mutation BlockUser($userId: ID!) {
     blockUser(userId: $userId) {
       userId
@@ -388,7 +388,7 @@ module.exports.blockUser = gql`
   }
 `
 
-module.exports.unblockUser = gql`
+export const unblockUser = gql`
   mutation UnblockUser($userId: ID!) {
     unblockUser(userId: $userId) {
       userId
@@ -397,7 +397,7 @@ module.exports.unblockUser = gql`
   }
 `
 
-module.exports.addPost = gql`
+export const addPost = gql`
   mutation AddPost(
     $postId: ID!
     $postType: PostType
@@ -498,7 +498,7 @@ module.exports.addPost = gql`
   ${fragments.textTaggedUser}
 `
 
-module.exports.editPost = gql`
+export const editPost = gql`
   mutation EditPost(
     $postId: ID!
     $text: String
@@ -542,7 +542,7 @@ module.exports.editPost = gql`
   ${fragments.textTaggedUser}
 `
 
-module.exports.editPostAlbum = gql`
+export const editPostAlbum = gql`
   mutation EditPostAlbum($postId: ID!, $albumId: ID) {
     editPostAlbum(postId: $postId, albumId: $albumId) {
       postId
@@ -553,7 +553,7 @@ module.exports.editPostAlbum = gql`
   }
 `
 
-module.exports.editPostAlbumOrder = gql`
+export const editPostAlbumOrder = gql`
   mutation EditPostAlbumOrder($postId: ID!, $precedingPostId: ID) {
     editPostAlbumOrder(postId: $postId, precedingPostId: $precedingPostId) {
       postId
@@ -564,7 +564,7 @@ module.exports.editPostAlbumOrder = gql`
   }
 `
 
-module.exports.editPostExpiresAt = gql`
+export const editPostExpiresAt = gql`
   mutation EditPostExpiresAt($postId: ID!, $expiresAt: AWSDateTime) {
     editPostExpiresAt(postId: $postId, expiresAt: $expiresAt) {
       postId
@@ -573,7 +573,7 @@ module.exports.editPostExpiresAt = gql`
   }
 `
 
-module.exports.flagPost = gql`
+export const flagPost = gql`
   mutation FlagPost($postId: ID!) {
     flagPost(postId: $postId) {
       postId
@@ -583,7 +583,7 @@ module.exports.flagPost = gql`
   }
 `
 
-module.exports.deletePost = gql`
+export const deletePost = gql`
   mutation DeletePost($postId: ID!) {
     deletePost(postId: $postId) {
       postId
@@ -592,7 +592,7 @@ module.exports.deletePost = gql`
   }
 `
 
-module.exports.archivePost = gql`
+export const archivePost = gql`
   mutation ArchivePost($postId: ID!) {
     archivePost(postId: $postId) {
       postId
@@ -612,7 +612,7 @@ module.exports.archivePost = gql`
   }
 `
 
-module.exports.restoreArchivedPost = gql`
+export const restoreArchivedPost = gql`
   mutation RestoreArchivePost($postId: ID!) {
     restoreArchivedPost(postId: $postId) {
       postId
@@ -630,7 +630,7 @@ module.exports.restoreArchivedPost = gql`
   }
 `
 
-module.exports.approveAdPost = gql`
+export const approveAdPost = gql`
   mutation ApproveAdPost($postId: ID!) {
     approveAdPost(postId: $postId) {
       postId
@@ -639,7 +639,7 @@ module.exports.approveAdPost = gql`
   }
 `
 
-module.exports.onymouslyLikePost = gql`
+export const onymouslyLikePost = gql`
   mutation OnymouslyLikePost($postId: ID!) {
     onymouslyLikePost(postId: $postId) {
       postId
@@ -655,7 +655,7 @@ module.exports.onymouslyLikePost = gql`
   }
 `
 
-module.exports.anonymouslyLikePost = gql`
+export const anonymouslyLikePost = gql`
   mutation AnonymouslyLikePost($postId: ID!) {
     anonymouslyLikePost(postId: $postId) {
       postId
@@ -671,7 +671,7 @@ module.exports.anonymouslyLikePost = gql`
   }
 `
 
-module.exports.dislikePost = gql`
+export const dislikePost = gql`
   mutation DislikePost($postId: ID!) {
     dislikePost(postId: $postId) {
       postId
@@ -687,19 +687,19 @@ module.exports.dislikePost = gql`
   }
 `
 
-module.exports.reportPostViews = gql`
+export const reportPostViews = gql`
   mutation ReportPostViews($postIds: [ID!]!, $viewType: ViewType) {
     reportPostViews(postIds: $postIds, viewType: $viewType)
   }
 `
 
-module.exports.reportScreenViews = gql`
+export const reportScreenViews = gql`
   mutation ReportScreenViews($screens: [String!]!) {
     reportScreenViews(screens: $screens)
   }
 `
 
-module.exports.deleteCard = gql`
+export const deleteCard = gql`
   mutation DeleteCard($cardId: ID!) {
     deleteCard(cardId: $cardId) {
       ...CardFragment
@@ -708,7 +708,7 @@ module.exports.deleteCard = gql`
   ${fragments.card}
 `
 
-module.exports.addComment = gql`
+export const addComment = gql`
   mutation AddComment($commentId: ID!, $postId: ID!, $text: String!) {
     addComment(commentId: $commentId, postId: $postId, text: $text) {
       ...CommentFragment
@@ -717,7 +717,7 @@ module.exports.addComment = gql`
   ${fragments.comment}
 `
 
-module.exports.deleteComment = gql`
+export const deleteComment = gql`
   mutation DeleteComment($commentId: ID!) {
     deleteComment(commentId: $commentId) {
       ...CommentFragment
@@ -726,7 +726,7 @@ module.exports.deleteComment = gql`
   ${fragments.comment}
 `
 
-module.exports.flagComment = gql`
+export const flagComment = gql`
   mutation FlagComment($commentId: ID!) {
     flagComment(commentId: $commentId) {
       commentId
@@ -735,7 +735,7 @@ module.exports.flagComment = gql`
   }
 `
 
-module.exports.addAlbum = gql`
+export const addAlbum = gql`
   mutation AddAlbum($albumId: ID!, $name: String!, $description: String) {
     addAlbum(albumId: $albumId, name: $name, description: $description) {
       ...AlbumFragment
@@ -744,7 +744,7 @@ module.exports.addAlbum = gql`
   ${fragments.album}
 `
 
-module.exports.editAlbum = gql`
+export const editAlbum = gql`
   mutation EditAlbum($albumId: ID!, $name: String, $description: String) {
     editAlbum(albumId: $albumId, name: $name, description: $description) {
       ...AlbumFragment
@@ -753,7 +753,7 @@ module.exports.editAlbum = gql`
   ${fragments.album}
 `
 
-module.exports.deleteAlbum = gql`
+export const deleteAlbum = gql`
   mutation DeleteAlbum($albumId: ID!) {
     deleteAlbum(albumId: $albumId) {
       ...AlbumFragment
@@ -762,7 +762,7 @@ module.exports.deleteAlbum = gql`
   ${fragments.album}
 `
 
-module.exports.createDirectChat = gql`
+export const createDirectChat = gql`
   mutation CreateDirectChat($chatId: ID!, $userId: ID!, $messageId: ID!, $messageText: String!) {
     createDirectChat(chatId: $chatId, userId: $userId, messageId: $messageId, messageText: $messageText) {
       ...ChatFragment
@@ -779,7 +779,7 @@ module.exports.createDirectChat = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.createGroupChat = gql`
+export const createGroupChat = gql`
   mutation CreateGroupChat(
     $chatId: ID!
     $name: String
@@ -808,7 +808,7 @@ module.exports.createGroupChat = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.editGroupChat = gql`
+export const editGroupChat = gql`
   mutation EditGroupChat($chatId: ID!, $name: String!) {
     editGroupChat(chatId: $chatId, name: $name) {
       ...ChatFragment
@@ -825,7 +825,7 @@ module.exports.editGroupChat = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.addToGroupChat = gql`
+export const addToGroupChat = gql`
   mutation AddToGroupChat($chatId: ID!, $userIds: [ID!]!) {
     addToGroupChat(chatId: $chatId, userIds: $userIds) {
       ...ChatFragment
@@ -842,7 +842,7 @@ module.exports.addToGroupChat = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.leaveGroupChat = gql`
+export const leaveGroupChat = gql`
   mutation LeaveGroupChat($chatId: ID!) {
     leaveGroupChat(chatId: $chatId) {
       ...ChatFragment
@@ -859,13 +859,13 @@ module.exports.leaveGroupChat = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.reportChatViews = gql`
+export const reportChatViews = gql`
   mutation ReportChatViews($chatIds: [ID!]!) {
     reportChatViews(chatIds: $chatIds)
   }
 `
 
-module.exports.flagChat = gql`
+export const flagChat = gql`
   mutation FlagChat($chatId: ID!) {
     flagChat(chatId: $chatId) {
       chatId
@@ -874,7 +874,7 @@ module.exports.flagChat = gql`
   }
 `
 
-module.exports.addChatMessage = gql`
+export const addChatMessage = gql`
   mutation AddChatMessage($chatId: ID!, $messageId: ID!, $text: String!) {
     addChatMessage(chatId: $chatId, messageId: $messageId, text: $text) {
       ...ChatMessageFragment
@@ -885,7 +885,7 @@ module.exports.addChatMessage = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.editChatMessage = gql`
+export const editChatMessage = gql`
   mutation EditChatMessage($messageId: ID!, $text: String!) {
     editChatMessage(messageId: $messageId, text: $text) {
       ...ChatMessageFragment
@@ -896,7 +896,7 @@ module.exports.editChatMessage = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.deleteChatMessage = gql`
+export const deleteChatMessage = gql`
   mutation DeleteChatMessage($messageId: ID!) {
     deleteChatMessage(messageId: $messageId) {
       ...ChatMessageFragment
@@ -907,7 +907,7 @@ module.exports.deleteChatMessage = gql`
   ${fragments.chatMessage}
 `
 
-module.exports.flagChatMessage = gql`
+export const flagChatMessage = gql`
   mutation FlagChatMessage($messageId: ID!) {
     flagChatMessage(messageId: $messageId) {
       messageId
@@ -916,19 +916,19 @@ module.exports.flagChatMessage = gql`
   }
 `
 
-module.exports.rejectMatch = gql`
+export const rejectMatch = gql`
   mutation RejectMatch($userId: ID!) {
     rejectMatch(userId: $userId)
   }
 `
 
-module.exports.approveMatch = gql`
+export const approveMatch = gql`
   mutation ApproveMatch($userId: ID!) {
     approveMatch(userId: $userId)
   }
 `
 
-module.exports.verifyIdentity = gql`
+export const verifyIdentity = gql`
   mutation VerifyIdentity($frontsideImageData: String!) {
     verifyIdentity(frontsideImageData: $frontsideImageData) {
       userId
@@ -936,7 +936,7 @@ module.exports.verifyIdentity = gql`
   }
 `
 
-module.exports.triggerNotification = gql`
+export const triggerNotification = gql`
   mutation TriggerNotification($input: NotificationInput!) {
     triggerNotification(input: $input) {
       userId
@@ -944,7 +944,7 @@ module.exports.triggerNotification = gql`
   }
 `
 
-module.exports.triggerCardNotification = gql`
+export const triggerCardNotification = gql`
   mutation TriggerCardNotification($input: CardNotificationInput!) {
     triggerCardNotification(input: $input) {
       userId
@@ -952,7 +952,7 @@ module.exports.triggerCardNotification = gql`
   }
 `
 
-module.exports.triggerChatMessageNotification = gql`
+export const triggerChatMessageNotification = gql`
   mutation TriggerChatMessageNotification($input: ChatMessageNotificationInput!) {
     triggerChatMessageNotification(input: $input) {
       userId

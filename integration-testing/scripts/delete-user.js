@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const AWSAppSyncClient = require('aws-appsync').default
-const dotenv = require('dotenv')
-const fs = require('fs')
-const gql = require('graphql-tag')
-global.fetch = require('cross-fetch')
+import AWS from 'aws-sdk'
+import {AWSAppSyncClient} from 'aws-appsync'
+import dotenv from 'dotenv'
+import fetch from 'cross-fetch'
+import fs from 'fs'
+import gql from 'graphql-tag'
 
+global.fetch = fetch
 dotenv.config()
 AWS.config = new AWS.Config()
 

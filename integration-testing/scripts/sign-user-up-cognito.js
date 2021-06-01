@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dayjs = require('dayjs')
-const dotenv = require('dotenv')
-const prmt = require('prompt')
-const pwdGenerator = require('generate-password')
-const util = require('util')
-const {v4: uuidv4} = require('uuid')
+import AWS from 'aws-sdk'
+import dayjs from 'dayjs'
+import dotenv from 'dotenv'
+import prmt from 'prompt'
+import pwdGenerator from 'generate-password'
+import util from 'util'
+import {v4 as uuidv4} from 'uuid'
 
 dotenv.config()
 

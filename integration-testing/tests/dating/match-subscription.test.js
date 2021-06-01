@@ -1,7 +1,7 @@
-const {v4: uuidv4} = require('uuid')
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, generateRandomJpeg, sleep} = require('../../utils')
-const {mutations, subscriptions} = require('../../schema')
+import {cognito, generateRandomJpeg, sleep} from '../../utils'
+import {mutations, subscriptions} from '../../schema'
 
 const imageData = new Buffer.from(generateRandomJpeg(8, 8)).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()

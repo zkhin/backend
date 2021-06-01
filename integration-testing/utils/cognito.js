@@ -3,24 +3,27 @@
  * Mostly for help in setup and teardown.
  */
 
-global.WebSocket = require('ws') // required by aws-appsync#aws-appsync-subscription-link
+// required by aws-appsync#aws-appsync-subscription-link
+import ws from 'ws'
+global.WebSocket = ws
 
-const AWS = require('aws-sdk')
-const {default: AWSAppSyncClient, createAppSyncLink} = require('aws-appsync')
-const {setContext} = require('apollo-link-context')
-const {ApolloLink} = require('apollo-link')
-const {createHttpLink} = require('apollo-link-http')
-const callerId = require('caller-id')
-const dotenv = require('dotenv')
-const fetch = require('cross-fetch')
-const jwtDecode = require('jwt-decode')
-const md5 = require('md5')
-const path = require('path')
-const pwdGenerator = require('generate-password')
-const {v4: uuidv4} = require('uuid')
+import AWS from 'aws-sdk'
+import {AWSAppSyncClient, createAppSyncLink} from 'aws-appsync'
+import {setContext} from 'apollo-link-context'
+import {ApolloLink} from 'apollo-link'
+import {createHttpLink} from 'apollo-link-http'
+import callsites from 'callsites'
+import dotenv from 'dotenv'
+import fetch from 'cross-fetch'
+import jwtDecode from 'jwt-decode'
+import md5 from 'md5'
+import path from 'path'
+import pwdGenerator from 'generate-password'
+import {v4 as uuidv4} from 'uuid'
 
-const {mutations, queries} = require('../schema')
-const {sleep} = require('./timing')
+import {mutations, queries} from '../schema'
+import {repoRoot} from './misc'
+import {sleep} from './timing'
 
 dotenv.config()
 AWS.config = new AWS.Config()
@@ -37,40 +40,39 @@ if (identityPoolId === undefined) throw new Error('Env var COGNITO_IDENTITY_POOL
 const userPoolId = process.env.COGNITO_USER_POOL_ID
 if (userPoolId === undefined) throw new Error('Env var COGNITO_USER_POOL_ID must be defined')
 
-const identityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
-const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
+export const identityPoolClient = new AWS.CognitoIdentity({params: {IdentityPoolId: identityPoolId}})
+export const userPoolClient = new AWS.CognitoIdentityServiceProvider({params: {ClientId: cognitoClientId}})
 
 // All users the test client creates must have this family name (or the sign up
 // will be rejected). This is to make it easier to clean them out later.
-const familyName = 'TESTER'
+export const familyName = 'TESTER'
 
-const AuthFlow = 'USER_PASSWORD_AUTH'
+export const AuthFlow = 'USER_PASSWORD_AUTH'
 
 // To be used in the `Logins` parameter when calling the identity pool
-const userPoolLoginsKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`
-const googleLoginsKey = 'accounts.google.com'
-const facebookLoginsKey = 'graph.facebook.com'
+export const userPoolLoginsKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`
+export const googleLoginsKey = 'accounts.google.com'
+export const facebookLoginsKey = 'graph.facebook.com'
 
-const generatePassword = () => {
+export const generatePassword = () => {
   return pwdGenerator.generate({length: 8})
 }
 
-const generateUsername = () => familyName + uuidv4().substring(24)
+export const generateUsername = () => familyName + uuidv4().substring(24)
 
-const generateEmail = (substr) => {
+export const generateEmail = (substr) => {
   substr = substr || uuidv4().substring(24)
   return 'success+' + substr + '@simulator.amazonses.com'
 }
 
 /**
- * Given a set of callerData as returned by the callerId package,
+ * Given a callsite object as returned by the callsites package,
  * generate and return a random-repeatable uuid v4
  */
-const generateRRUuid = (callerData) => {
+export const generateRRUuid = (callsite) => {
   // parse the caller data
-  const repoRoot = path.dirname(path.dirname(__dirname))
-  const callerFilePath = path.relative(repoRoot, callerData.filePath)
-  const callerOrigin = callerFilePath + '#L' + callerData.lineNumber
+  const callerFilePath = path.relative(repoRoot, callsite.getFileName())
+  const callerOrigin = callerFilePath + '#L' + callsite.getLineNumber()
   const callerHash = md5(callerOrigin) // 32-char hex string
 
   // covert to an 16-element byte array https://stackoverflow.com/a/34356351
@@ -82,7 +84,7 @@ const generateRRUuid = (callerData) => {
   return uuidv4({random: callerBytes})
 }
 
-const getAppSyncClient = async (creds) => {
+export const getAppSyncClient = async (creds) => {
   const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
   const appSyncConfig = {
     url: appsyncApiUrl,
@@ -118,8 +120,8 @@ const getAppSyncClient = async (creds) => {
  * Re-uses the same login based on the file and line number from which this function is called.
  * @param newUserPhone If a new user is created, use this phone number.
  */
-const getAppSyncLogin = async (newUserPhone) => {
-  const myUuid = generateRRUuid(callerId.getData())
+export const getAppSyncLogin = async (newUserPhone) => {
+  const myUuid = generateRRUuid(callsites()[1])
   const email = generateEmail(myUuid.substring(24).toLowerCase())
   const password = myUuid + '-1.Aa' // fulfill password requirements
 
@@ -201,7 +203,7 @@ const getAppSyncLogin = async (newUserPhone) => {
 /**
  * Generate an new anonymous user with a ready-to-go fully-initialized gql client.
  **/
-const getAnonymousAppSyncLogin = async () => {
+export const getAnonymousAppSyncLogin = async () => {
   const {IdentityId} = await identityPoolClient.getId().promise()
   const {Credentials} = await identityPoolClient.getCredentialsForIdentity({IdentityId}).promise()
   const client = await getAppSyncClient(Credentials)
@@ -214,7 +216,7 @@ const getAnonymousAppSyncLogin = async () => {
  * A class to help each test file re-use the same logins, thus
  * speeding up the tests and reducing orphaned objects.
  */
-class AppSyncLoginCache {
+export class AppSyncLoginCache {
   constructor() {
     this.cleanLogins = []
     this.dirtyLogins = []
@@ -257,29 +259,4 @@ class AppSyncLoginCache {
       await client.mutate({mutation: mutations.resetUser})
     }
   }
-}
-
-module.exports = {
-  // most common
-  AppSyncLoginCache,
-  getAppSyncLogin,
-  getAnonymousAppSyncLogin,
-
-  // clients
-  userPoolClient,
-  identityPoolClient,
-  getAppSyncClient,
-
-  // helpers
-  generatePassword,
-  generateUsername,
-  generateEmail,
-  generateRRUuid,
-
-  // constants
-  familyName,
-  userPoolLoginsKey,
-  googleLoginsKey,
-  facebookLoginsKey,
-  AuthFlow,
 }

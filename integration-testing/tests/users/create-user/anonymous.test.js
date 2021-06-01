@@ -1,7 +1,7 @@
-const dayjs = require('dayjs')
+import dayjs from 'dayjs'
 
-const {cognito, eventually} = require('../../../utils')
-const {mutations, queries} = require('../../../schema')
+import {cognito, eventually} from '../../../utils'
+import {mutations, queries} from '../../../schema'
 
 let client, userId
 beforeEach(async () => {

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-const AWS = require('aws-sdk')
-const dayjs = require('dayjs')
-const dotenv = require('dotenv')
-const fs = require('fs')
-const jwtDecode = require('jwt-decode')
-const prmt = require('prompt')
-const util = require('util')
+import AWS from 'aws-sdk'
+import dayjs from 'dayjs'
+import dotenv from 'dotenv'
+import fs from 'fs'
+import jwtDecode from 'jwt-decode'
+import prmt from 'prompt'
+import util from 'util'
 
 dotenv.config()
 AWS.config = new AWS.Config()

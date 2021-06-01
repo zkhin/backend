@@ -7,7 +7,7 @@
  *
  * Also accepts various keywords, which is the preferred way to call
  * to avoid having random constants defined throughout the code */
-const sleep = (input) => {
+export const sleep = (input) => {
   const sec = (() => {
     if (typeof input === 'number') return input
     if (input === 'gsi') return 1
@@ -24,7 +24,10 @@ const sleep = (input) => {
  *  - no jest.except()'s fail OR
  *  - maxDelay is reached
  */
-const eventually = async (target, {initialDelay = 0, pollingDelay = 1, maxDelay = 10} = {} /* in seconds */) => {
+export const eventually = async (
+  target,
+  {initialDelay = 0, pollingDelay = 1, maxDelay = 10} = {} /* in seconds */,
+) => {
   const start = Date.now() / 1000
   const forceStop = start + maxDelay
   let nextDelay = initialDelay
@@ -42,9 +45,4 @@ const eventually = async (target, {initialDelay = 0, pollingDelay = 1, maxDelay 
     nextDelay = pollingDelay
   }
   throw jestError || new Error('Target function never ran')
-}
-
-module.exports = {
-  eventually,
-  sleep,
 }

@@ -1,9 +1,9 @@
-const dayjs = require('dayjs')
-const duration = require('dayjs/plugin/duration')
-const {v4: uuidv4} = require('uuid')
+import dayjs from 'dayjs'
+import duration from 'dayjs/plugin/duration'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually, generateRandomJpeg} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, generateRandomJpeg} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 dayjs.extend(duration)
 const imageBytes = generateRandomJpeg(8, 8)

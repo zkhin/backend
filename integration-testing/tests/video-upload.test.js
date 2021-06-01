@@ -1,14 +1,13 @@
-const dayjs = require('dayjs')
-const fs = require('fs')
-const got = require('got')
-const path = require('path')
-const tough = require('tough-cookie')
-const {v4: uuidv4} = require('uuid')
+import dayjs from 'dayjs'
+import fs from 'fs'
+import got from 'got'
+import tough from 'tough-cookie'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually} = require('../utils')
-const {mutations, queries} = require('../schema')
+import {cognito, eventually, fixturePath} from '../utils'
+import {mutations, queries} from '../schema'
 
-const videoData = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'sample.mov'))
+const videoData = fs.readFileSync(fixturePath('sample.mov'))
 const videoHeaders = {'Content-Type': 'video/quicktime'}
 const loginCache = new cognito.AppSyncLoginCache()
 

@@ -1,15 +1,14 @@
-const fs = require('fs')
-const got = require('got')
-const path = require('path')
-const requestImageSize = require('request-image-size')
-const {v4: uuidv4} = require('uuid')
+import fs from 'fs'
+import got from 'got'
+import requestImageSize from 'request-image-size'
+import {v4 as uuidv4} from 'uuid'
 
-const {cognito, eventually} = require('../../utils')
-const {mutations, queries} = require('../../schema')
+import {cognito, eventually, fixturePath} from '../../utils'
+import {mutations, queries} from '../../schema'
 
 const heicHeight = 3024
 const heicWidth = 4032
-const heicBytes = fs.readFileSync(path.join(__dirname, '..', '..', 'fixtures', 'IMG_0265.HEIC'))
+const heicBytes = fs.readFileSync(fixturePath('IMG_0265.HEIC'))
 const heicData = new Buffer.from(heicBytes).toString('base64')
 const heicHeaders = {'Content-Type': 'image/heic'}
 const loginCache = new cognito.AppSyncLoginCache()

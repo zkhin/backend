@@ -8,15 +8,15 @@
  * work consistently due to server-side caching of the real user.
  */
 
-const cognito = require('./cognito')
-const {sleep} = require('./timing')
-const {mutations} = require('../schema')
+import {getAppSyncLogin} from './cognito'
+import {sleep} from './timing'
+import {mutations} from '../schema'
 
 let realLogin = null
 
-const getLogin = async () => {
+export const getLogin = async () => {
   if (!realLogin) {
-    realLogin = await cognito.getAppSyncLogin()
+    realLogin = await getAppSyncLogin()
     realLogin.username = 'real'
   }
   await realLogin.client.mutate({mutation: mutations.setUsername, variables: {username: realLogin.username}})
@@ -24,18 +24,12 @@ const getLogin = async () => {
   return realLogin
 }
 
-const cleanLogin = async () => {
+export const cleanLogin = async () => {
   if (realLogin)
     await realLogin.client.mutate({mutation: mutations.resetUser, variables: {newUsername: realLogin.username}})
 }
 
-const resetLogin = async () => {
+export const resetLogin = async () => {
   if (realLogin) await realLogin.client.mutate({mutation: mutations.resetUser})
   realLogin = null
-}
-
-module.exports = {
-  getLogin,
-  cleanLogin,
-  resetLogin,
 }

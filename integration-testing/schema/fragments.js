@@ -1,8 +1,8 @@
 /* GraphQL query fragments */
 
-const gql = require('graphql-tag')
+import gql from 'graphql-tag'
 
-module.exports.chat = gql`
+export const chat = gql`
   fragment ChatFragment on Chat {
     chatId
     chatType
@@ -22,7 +22,7 @@ module.exports.chat = gql`
   }
 `
 
-module.exports.chatMessage = gql`
+export const chatMessage = gql`
   fragment ChatMessageFragment on ChatMessage {
     messageId
     text
@@ -48,7 +48,7 @@ module.exports.chatMessage = gql`
   }
 `
 
-module.exports.image = gql`
+export const image = gql`
   fragment ImageFragment on Image {
     url
     url4k
@@ -65,7 +65,7 @@ module.exports.image = gql`
   }
 `
 
-module.exports.video = gql`
+export const video = gql`
   fragment VideoFragment on Video {
     urlMasterM3U8
     accessCookies {
@@ -79,7 +79,7 @@ module.exports.video = gql`
   }
 `
 
-module.exports.album = gql`
+export const album = gql`
   fragment AlbumFragment on Album {
     albumId
     ownedBy {
@@ -99,10 +99,10 @@ module.exports.album = gql`
       }
     }
   }
-  ${module.exports.image}
+  ${image}
 `
 
-module.exports.card = gql`
+export const card = gql`
   fragment CardFragment on Card {
     cardId
     title
@@ -112,10 +112,10 @@ module.exports.card = gql`
       ...ImageFragment
     }
   }
-  ${module.exports.image}
+  ${image}
 `
 
-module.exports.comment = gql`
+export const comment = gql`
   fragment CommentFragment on Comment {
     commentId
     commentedAt
@@ -135,7 +135,7 @@ module.exports.comment = gql`
   }
 `
 
-module.exports.textTaggedUser = gql`
+export const textTaggedUser = gql`
   fragment TextTaggedUserFragment on TextTaggedUser {
     tag
     user {
@@ -145,7 +145,7 @@ module.exports.textTaggedUser = gql`
   }
 `
 
-module.exports.simpleUserFields = gql`
+export const simpleUserFields = gql`
   fragment SimpleUserFields on User {
     username
     fullName

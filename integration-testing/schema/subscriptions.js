@@ -1,8 +1,8 @@
-const gql = require('graphql-tag')
+import gql from 'graphql-tag'
 
-const fragments = require('./fragments.js')
+import * as fragments from './fragments.js'
 
-module.exports.onNotification = gql`
+export const onNotification = gql`
   subscription OnNotification($userId: ID!) {
     onNotification(userId: $userId) {
       userId
@@ -15,7 +15,7 @@ module.exports.onNotification = gql`
   }
 `
 
-module.exports.onCardNotification = gql`
+export const onCardNotification = gql`
   subscription OnCardNotification($userId: ID!) {
     onCardNotification(userId: $userId) {
       userId
@@ -30,7 +30,7 @@ module.exports.onCardNotification = gql`
   }
 `
 
-module.exports.onChatMessageNotification = gql`
+export const onChatMessageNotification = gql`
   subscription OnChatMessageNotification($userId: ID!) {
     onChatMessageNotification(userId: $userId) {
       userId
