@@ -1,9 +1,7 @@
+const dayjs = require('dayjs')
 const fs = require('fs')
-const moment = require('moment')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
-// the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
-global.WebSocket = require('ws')
 
 const {cognito, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
@@ -49,7 +47,7 @@ test('Chat message triggers cannot be called from external graphql client', asyn
       type: 'ADDED',
       text: 'lore ipsum',
       textTaggedUserIds: [],
-      createdAt: moment().toISOString(),
+      createdAt: dayjs().toISOString(),
     },
   }
   await expect(ourClient.mutate({mutation, variables})).rejects.toThrow(/ClientError: Access denied/)
@@ -66,8 +64,8 @@ test('Cannot subscribe to other users messages', async () => {
   await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
     .subscribe({
-      next: (resp) => expect(`Subscription should not be called: ${resp}`).toBeNull(),
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
 
   // they open up a chat with us
@@ -116,7 +114,7 @@ test('Messages in multiple chats fire', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const ourSubInitTimeout = sleep('subTimeout')
 
@@ -130,7 +128,7 @@ test('Messages in multiple chats fire', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const theirSubInitTimeout = sleep('subTimeout')
 
@@ -144,7 +142,7 @@ test('Messages in multiple chats fire', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const otherSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -291,7 +289,7 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -414,7 +412,7 @@ test('Notifications for a group chat', async () => {
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -501,7 +499,7 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const theirSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')
@@ -528,7 +526,7 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const ourSubInitTimeout = sleep('subTimeout')
   await sleep('subInit')

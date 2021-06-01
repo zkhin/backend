@@ -1,8 +1,10 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
+const duration = require('dayjs/plugin/duration')
 
 const {cognito} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
+dayjs.extend(duration)
 const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
@@ -31,12 +33,12 @@ test('Grant a user a free diamond subscription', async () => {
   })
 
   // we give grant ourselves our subscription bonus
-  const subscriptionDuration = moment.duration(1, 'months')
-  const before = moment().add(subscriptionDuration).toISOString()
+  const subscriptionDuration = dayjs.duration({months: 1})
+  const before = dayjs().add(subscriptionDuration).toISOString()
   const expiresAt = await ourClient
     .mutate({mutation: mutations.grantUserSubscriptionBonus})
     .then(({data: {grantUserSubscriptionBonus: user}}) => {
-      const after = moment().add(subscriptionDuration).toISOString()
+      const after = dayjs().add(subscriptionDuration).toISOString()
       expect(user.userId).toBe(ourUserId)
       expect(user.subscriptionLevel).toBe('DIAMOND')
       expect(user.subscriptionExpiresAt > before).toBe(true)

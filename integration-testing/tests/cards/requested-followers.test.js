@@ -27,7 +27,7 @@ test('Requested followers card with correct format, subscription notifications',
         expect(handler).toBeDefined()
         handler(notification)
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')

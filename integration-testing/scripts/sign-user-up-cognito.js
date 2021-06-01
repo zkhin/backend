@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const AWS = require('aws-sdk')
+const dayjs = require('dayjs')
 const dotenv = require('dotenv')
-const moment = require('moment')
 const prmt = require('prompt')
 const pwdGenerator = require('generate-password')
 const util = require('util')
@@ -153,7 +153,7 @@ const trackWithPinpoint = async (userId, autoconfirm) => {
               Events: {
                 [eventType]: {
                   EventType: eventType,
-                  Timestamp: moment().toISOString(),
+                  Timestamp: dayjs().toISOString(),
                 },
               },
             },

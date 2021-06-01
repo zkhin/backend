@@ -1,4 +1,4 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
 
 const {cognito, eventually} = require('../../../utils')
 const {mutations, queries} = require('../../../schema')
@@ -16,11 +16,11 @@ afterEach(async () => {
 
 test('Mutation.createAnonymousUser success', async () => {
   // pick a random username, register it, check all is good!
-  const before = moment().toISOString()
+  const before = dayjs().toISOString()
   const after = await client
     .mutate({mutation: mutations.createAnonymousUser})
     .then(({data: {createAnonymousUser: cognitoTokens}}) => {
-      const after = moment().toISOString()
+      const after = dayjs().toISOString()
       expect(cognitoTokens.AccessToken).toBeTruthy()
       expect(cognitoTokens.ExpiresIn).toBeGreaterThan(0)
       expect(cognitoTokens.TokenType).toBe('Bearer')

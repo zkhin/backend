@@ -1,5 +1,5 @@
+const dayjs = require('dayjs')
 const got = require('got')
-const moment = require('moment')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
@@ -41,7 +41,7 @@ test('Create a posts in an album, album post ordering', async () => {
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(1)
     expect(data.album.postsLastUpdatedAt > postedAt).toBe(true)
-    expect(data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
+    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId1)
   })
@@ -52,7 +52,7 @@ test('Create a posts in an album, album post ordering', async () => {
   resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   expect(resp.data.addPost.postId).toBe(postId2)
   let uploadUrl = resp.data.addPost.imageUploadUrl
-  let before = moment()
+  let before = dayjs()
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
 
   // check the album
@@ -61,7 +61,7 @@ test('Create a posts in an album, album post ordering', async () => {
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(2)
     expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
+    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
     expect(data.album.posts.items).toHaveLength(2)
     expect(data.album.posts.items[0].postId).toBe(postId1)
     expect(data.album.posts.items[1].postId).toBe(postId2)
@@ -223,7 +223,7 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp.data.addPost.album).toBeNull()
 
   // move that post into the 2nd album
-  let before = moment()
+  let before = dayjs()
   resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: albumId2}})
   expect(resp.data.editPostAlbum.postId).toBe(postId)
   expect(resp.data.editPostAlbum.album.albumId).toBe(albumId2)
@@ -236,7 +236,7 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId)
     expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
+    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
   })
 
   // add an unrelated text-only post to the first album
@@ -248,7 +248,7 @@ test('Add, remove, change albums for an existing post', async () => {
   expect(resp.data.addPost.album.albumId).toBe(albumId1)
 
   // move the original post out of the 2nd album and into the first
-  before = moment()
+  before = dayjs()
   resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: albumId1}})
   expect(resp.data.editPostAlbum.postId).toBe(postId)
   expect(resp.data.editPostAlbum.album.albumId).toBe(albumId1)
@@ -260,7 +260,7 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.postCount).toBe(0)
     expect(data.album.posts.items).toHaveLength(0)
     expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
+    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
   })
 
   // check the first album, including post order - new post should be at the back
@@ -272,11 +272,11 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.posts.items[0].postId).toBe(postId2)
     expect(data.album.posts.items[1].postId).toBe(postId)
     expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
+    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
   })
 
   // remove the post from that album
-  before = moment()
+  before = dayjs()
   resp = await ourClient.mutate({mutation: mutations.editPostAlbum, variables: {postId, albumId: null}})
   expect(resp.data.editPostAlbum.postId).toBe(postId)
   expect(resp.data.editPostAlbum.album).toBeNull()
@@ -289,7 +289,7 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId2)
     expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < moment().toISOString()).toBe(true)
+    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
   })
 })
 

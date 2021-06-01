@@ -8,7 +8,6 @@ authors = ["Mike Fogel <mike@real.app>"]
 python = "^3.8"
 requests = "^2.22.0"
 cryptography = "^3.4.7"
-isodate = "^0.6.0"
 requests-aws4auth = "^0.9"
 pillow = "^7.2.0"
 elasticsearch = "^7.5.1"

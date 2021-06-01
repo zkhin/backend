@@ -2,12 +2,12 @@
 
 const AWS = require('aws-sdk')
 const AWSAppSyncClient = require('aws-appsync').default
+const dayjs = require('dayjs')
 const dotenv = require('dotenv')
 const fs = require('fs')
 const gql = require('graphql-tag')
 const got = require('got')
 const http = require('http')
-const moment = require('moment')
 const path = require('path')
 const prmt = require('prompt')
 const tough = require('tough-cookie')
@@ -201,7 +201,7 @@ prmt.get(prmtSchema, async (err, result) => {
     if (post.postType === 'VIDEO') {
       const url = post.video.urlMasterM3U8
       const cookies = post.video.accessCookies
-      const expires = moment(cookies.expiresAt).toDate().toUTCString()
+      const expires = dayjs(cookies.expiresAt).toDate().toUTCString()
       const cookieProps = `Secure; Domain=${cookies.domain}; Path=${cookies.path}; Expires=${expires}`
       cookieJar.setCookie(`CloudFront-Policy=${cookies.policy}; ${cookieProps}`, url)
       cookieJar.setCookie(`CloudFront-Signature=${cookies.signature}; ${cookieProps}`, url)

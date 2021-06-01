@@ -1,6 +1,4 @@
 const {v4: uuidv4} = require('uuid')
-// the aws-appsync-subscription-link pacakge expects WebSocket to be globaly defined, like in the browser
-global.WebSocket = require('ws')
 
 const {cognito, generateRandomJpeg, sleep} = require('../../utils')
 const {mutations, subscriptions} = require('../../schema')
@@ -78,7 +76,7 @@ test(
             handler(notification)
           }
         },
-        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+        error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
       })
     const o1Sub = await o1Client
       .subscribe({query: subscriptions.onNotification, variables: {userId: o1UserId}})
@@ -90,7 +88,7 @@ test(
             handler(notification)
           }
         },
-        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+        error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
       })
     const o2Sub = await o2Client
       .subscribe({query: subscriptions.onNotification, variables: {userId: o2UserId}})
@@ -102,7 +100,7 @@ test(
             handler(notification)
           }
         },
-        error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+        error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
       })
     const subInitTimeout = sleep('subTimeout')
     await sleep('subInit')

@@ -1,4 +1,4 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually, sleep} = require('../../utils')
@@ -33,9 +33,9 @@ test('Create and edit a group chat', async () => {
     messageId: messageId1,
     messageText: 'm',
   }
-  let before = moment().toISOString()
+  let before = dayjs().toISOString()
   let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  let after = moment().toISOString()
+  let after = dayjs().toISOString()
   let chat = resp.data.createGroupChat
   expect(chat.chatId).toBe(chatId)
   expect(chat.chatType).toBe('GROUP')

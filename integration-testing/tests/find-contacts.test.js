@@ -1,4 +1,4 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
 const {cognito, eventually} = require('../utils')
 const {queries, mutations} = require('../schema')
 const {v4: uuidv4} = require('uuid')
@@ -278,12 +278,12 @@ test('Find contacts and check lastFoundContactsAt', async () => {
   })
 
   // Run the findContacts Query
-  let before = moment().toISOString()
+  let before = dayjs().toISOString()
   const contacts = [{contactId: 'contactId_1', emails: [ourEmail]}]
   await ourClient
     .query({query: queries.findContacts, variables: {contacts}})
     .then(({data: {findContacts}}) => expect(findContacts.map((i) => i.user.userId)).toEqual([ourUserId]))
-  let after = moment().toISOString()
+  let after = dayjs().toISOString()
 
   // Then check lastFoundContactsAt timestamp
   await eventually(async () => {

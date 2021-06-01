@@ -1,4 +1,4 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually} = require('../../utils')
@@ -44,9 +44,9 @@ test('Create a direct chat', async () => {
   const [chatId, messageId] = [uuidv4(), uuidv4()]
   const messageText = 'lore ipsum'
   let variables = {userId: theirUserId, chatId, messageId, messageText}
-  let before = moment().toISOString()
+  let before = dayjs().toISOString()
   resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  let after = moment().toISOString()
+  let after = dayjs().toISOString()
   let chat = resp.data.createDirectChat
   expect(chat.chatId).toBe(chatId)
   expect(chat.chatType).toBe('DIRECT')

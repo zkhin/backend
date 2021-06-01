@@ -1,4 +1,4 @@
-const moment = require('moment')
+const dayjs = require('dayjs')
 const {v4: uuidv4} = require('uuid')
 
 const {cognito, eventually, sleep} = require('../../utils')
@@ -45,9 +45,9 @@ test('Add messages to a direct chat', async () => {
   // they add another message to the chat, check the timestamp
   const [messageId4, text4] = [uuidv4(), 'msg 4']
   variables = {chatId, messageId: messageId4, text: text4}
-  let before = moment().toISOString()
+  let before = dayjs().toISOString()
   resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  let after = moment().toISOString()
+  let after = dayjs().toISOString()
   expect(resp.data.addChatMessage.messageId).toBe(messageId4)
   expect(resp.data.addChatMessage.text).toBe(text4)
   expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
@@ -253,7 +253,7 @@ test('Cant add a message to a chat we are not in', async () => {
   let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.data.createDirectChat.chatId).toBe(chatId)
 
-  // give the system a minute to get the chat set up
+  // verify chat initialization
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.chatId).toBe(chatId)
@@ -367,9 +367,9 @@ test('Edit chat message', async () => {
 
   // check they *can* edit the message
   let newText = `lore new, @${ourUsername}`
-  let before = moment().toISOString()
+  let before = dayjs().toISOString()
   resp = await theirClient.mutate({mutation: mutations.editChatMessage, variables: {messageId, text: newText}})
-  let after = moment().toISOString()
+  let after = dayjs().toISOString()
   expect(resp.data.editChatMessage.messageId).toBe(messageId)
   expect(resp.data.editChatMessage.text).toBe(newText)
   expect(resp.data.editChatMessage.textTaggedUsers).toHaveLength(1)
@@ -460,7 +460,7 @@ test('Deleting chat messages adjusts messages counts correctly', async () => {
     })
     .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
 
-  // give the system a moment to initialize the chat
+  // verify chat initialization
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.chatId).toBe(chatId)
@@ -726,7 +726,7 @@ test('USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED subscription notifications
           handler(notification)
         }
       },
-      error: (resp) => expect(`Subscription error: ${resp}`).toBeNull(),
+      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
     })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')

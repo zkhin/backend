@@ -3,6 +3,8 @@
  * Mostly for help in setup and teardown.
  */
 
+global.WebSocket = require('ws') // required by aws-appsync#aws-appsync-subscription-link
+
 const AWS = require('aws-sdk')
 const {default: AWSAppSyncClient, createAppSyncLink} = require('aws-appsync')
 const {setContext} = require('apollo-link-context')
